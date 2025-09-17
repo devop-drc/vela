@@ -12,8 +12,9 @@ const Settings = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
       const jwt = session.access_token;
-      // Pass the user's JWT to the function via a query parameter
-      window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?jwt=${jwt}`;
+      const origin = window.location.origin;
+      // Pass the user's JWT and the app's origin to the function
+      window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?jwt=${jwt}&origin=${encodeURIComponent(origin)}`;
     } else {
       showError("You must be logged in to connect your Instagram account.");
     }

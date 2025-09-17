@@ -30,10 +30,16 @@ serve(async (req) => {
     // Step 2: Handle the callback from Facebook
     try {
       const code = url.searchParams.get('code');
-      const state = url.searchParams.get('state'); // The user's JWT
+      const encodedState = url.searchParams.get('state');
 
       if (!code) throw new Error('Authorization code not found.');
-      if (!state) throw new Error('State (JWT) not found in callback.');
+      if (!encodedState) throw new Error('State not found in callback.');
+
+      const statePayload = atob(encodedState);
+      const { jwt, origin } = JSON.parse(statePayload);
+
+      if (!jwt) throw new Error('JWT not found in state.');
+      if (!origin) throw new Error('Origin not found in state.');
 
       // Step 3: Exchange code for a short-lived access token
       const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${FACEBOOK_APP_ID}&redirect_uri=${REDIRECT_URI}&client_secret=${FACEBOOK_APP_SECRET}&code=${code}`;
@@ -61,7 +67,7 @@ serve(async (req) => {
       const supabase = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-        { global: { headers: { Authorization: `Bearer ${state}` } } }
+        { global: { headers: { Authorization: `Bearer ${jwt}` } } }
       );
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -71,14 +77,14 @@ serve(async (req) => {
         .from('integrations')
         .upsert({
           user_id: user.id,
-          provider: 'facebook', // Use 'facebook' as the provider
+          provider: 'facebook',
           access_token: longLivedToken,
         }, { onConflict: 'user_id,provider' });
 
       if (upsertError) throw upsertError;
 
       // Step 6: Redirect user back to the app
-      const appUrl = Deno.env.get('SUPABASE_URL')?.includes('localhost') ? 'http://localhost:8080' : `https://${url.hostname.split('.').slice(1).join('.')}`;
+      const appUrl = origin;
       return Response.redirect(`${appUrl}/products?instagram_connected=true`, 302);
 
     } catch (error) {
@@ -92,14 +98,19 @@ serve(async (req) => {
     // Step 1: Redirect user to Facebook for authorization
     try {
       const jwt = url.searchParams.get('jwt');
+      const origin = url.searchParams.get('origin');
       if (!jwt) throw new Error('Missing JWT in query parameters. User must be logged in.');
+      if (!origin) throw new Error('Missing origin in query parameters.');
+
+      const statePayload = JSON.stringify({ jwt, origin });
+      const encodedState = btoa(statePayload);
 
       const scopes = 'public_profile,pages_show_list,instagram_basic,instagram_content_publish,pages_read_engagement';
       const authUrl = new URL('https://www.facebook.com/v19.0/dialog/oauth');
       authUrl.searchParams.set('client_id', FACEBOOK_APP_ID);
       authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
       authUrl.searchParams.set('scope', scopes);
-      authUrl.searchParams.set('state', jwt); // Pass JWT as state
+      authUrl.searchParams.set('state', encodedState);
       
       return Response.redirect(authUrl.toString(), 302);
     } catch (error) {
