@@ -22,6 +22,8 @@ interface Product {
   caption: string;
   category: string;
   features: string[];
+  pricing_type: 'one_time' | 'subscription';
+  billing_interval: 'month' | 'year' | null;
 }
 
 const Products = () => {
@@ -82,8 +84,6 @@ const Products = () => {
 
   const handleProductUpdate = () => {
     fetchProducts();
-    // The modal will close itself on delete, but stay open on other updates.
-    // We refetch to ensure both the table and the modal have the latest data.
     if (selectedProduct) {
       supabase.from('products').select('*').eq('id', selectedProduct.id).single().then(({data}) => {
         setSelectedProduct(data as Product);
@@ -157,7 +157,11 @@ const Products = () => {
                           {product.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>${product.price ? product.price.toFixed(2) : 'N/A'}</TableCell>
+                      <TableCell>
+                        {product.pricing_type === 'subscription'
+                          ? `$${product.price ? product.price.toFixed(2) : '0.00'} / ${product.billing_interval}`
+                          : `$${product.price ? product.price.toFixed(2) : 'N/A'}`}
+                      </TableCell>
                       <TableCell>{product.inventory} in stock</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -170,7 +174,7 @@ const Products = () => {
                           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                             <DropdownMenuItem onClick={() => setSelectedProduct(product)}>View & Edit</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => setSelectedProduct(product)}>Delete</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
