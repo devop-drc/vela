@@ -136,7 +136,7 @@ const Settings = () => {
               <CardDescription>
                 Connect your Instagram account to import posts. Note: An Instagram Business or Creator account is required.
               </CardDescription>
-            </Header>
+            </CardHeader>
             <CardContent>
               {integrationStatus === 'loading' && <Skeleton className="h-10 w-48" />}
               {integrationStatus === 'disconnected' && (
@@ -166,7 +166,7 @@ const Settings = () => {
               <CardDescription>
                 Manage your shop's public information.
               </CardDescription>
-            </Header>
+            </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">Shop settings will be displayed here.</p>
             </CardContent>
