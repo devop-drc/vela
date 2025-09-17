@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
+const FACEBOOK_APP_ID = Deno.env.get('FACEBOOK_APP_ID');
+const FACEBOOK_APP_SECRET = Deno.env.get('FACEBOOK_APP_SECRET');
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -34,10 +37,30 @@ serve(async (req) => {
         status: 200,
       });
     }
+    const userAccessToken = integration.access_token;
 
-    const accessToken = integration.access_token;
+    // New Diagnostic Step: Debug the user's token to verify permissions
+    if (!FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
+        throw new Error("App secrets are not configured.");
+    }
+    const appAccessToken = `${FACEBOOK_APP_ID}|${FACEBOOK_APP_SECRET}`;
+    const debugUrl = `https://graph.facebook.com/debug_token?input_token=${userAccessToken}&access_token=${appAccessToken}`;
+    const debugResponse = await fetch(debugUrl);
+    const debugData = await debugResponse.json();
 
-    const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account,name&access_token=${accessToken}`;
+    if (!debugData.data || !debugData.data.is_valid) {
+        console.error("Token validation failed:", debugData);
+        throw new Error("Your Facebook connection is invalid or has expired. Please disconnect and reconnect in the settings.");
+    }
+
+    const grantedScopes = debugData.data.scopes || [];
+    if (!grantedScopes.includes('pages_show_list')) {
+        const errorMessage = `The essential 'pages_show_list' permission was not granted. This means we can't see your Facebook Pages. Please try removing the app from your Facebook 'Business Integrations' settings and reconnecting, ensuring all permissions are approved.`;
+        throw new Error(errorMessage);
+    }
+
+    // Original logic to fetch pages
+    const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account,name&access_token=${userAccessToken}`;
     const pagesResponse = await fetch(pagesUrl);
     if (!pagesResponse.ok) {
         const errorData = await pagesResponse.json();
@@ -47,7 +70,7 @@ serve(async (req) => {
     const pagesData = await pagesResponse.json();
 
     if (!pagesData.data || pagesData.data.length === 0) {
-      throw new Error('No Facebook Pages were found for your account. During the connection process, please ensure you grant the app access to at least one of your pages.');
+      throw new Error('No Facebook Pages were found, even though permissions seem correct. Please ensure you are an admin of the page and that it is correctly linked to your Instagram Business Account.');
     }
 
     const igAccount = pagesData.data?.find((page: any) => page.instagram_business_account);
@@ -58,9 +81,8 @@ serve(async (req) => {
     }
     
     const igAccountId = igAccount.instagram_business_account.id;
-
     const fields = 'id,media_type,media_url,permalink,thumbnail_url,timestamp,caption';
-    const mediaUrl = `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=${fields}&access_token=${accessToken}`;
+    const mediaUrl = `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=${fields}&access_token=${userAccessToken}`;
 
     const mediaResponse = await fetch(mediaUrl);
     if (!mediaResponse.ok) {
@@ -79,7 +101,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Function Error:', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 200, // Always return 200 OK, with the error in the JSON body
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
