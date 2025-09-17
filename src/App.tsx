@@ -11,7 +11,9 @@ import Orders from "./pages/Orders";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
+import Onboarding from "./pages/Onboarding";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
+import OnboardingGuard from "./components/layout/OnboardingGuard";
 import { AppearanceProvider } from "./contexts/AppearanceContext";
 
 const queryClient = new QueryClient();
@@ -26,12 +28,15 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route element={<ProtectedRoute />}>
-              <Route element={<DashboardLayout />}>
-                <Route path="/" element={<Index />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="/settings" element={<Settings />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route element={<OnboardingGuard />}>
+                <Route element={<DashboardLayout />}>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/products" element={<Products />} />
+                  <Route path="/orders" element={<Orders />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Route>
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />

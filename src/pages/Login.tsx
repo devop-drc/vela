@@ -1,31 +1,45 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { ShoppingBag, Facebook } from "lucide-react";
 
 const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN") {
+    // Redirect if already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
         navigate("/");
       }
     });
-
-    return () => subscription.unsubscribe();
   }, [navigate]);
 
+  const handleFacebookLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'facebook',
+      options: {
+        scopes: 'public_profile,email,pages_show_list,instagram_basic,instagram_content_publish,pages_read_engagement,business_management',
+        redirectTo: window.location.origin,
+      }
+    });
+  };
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold text-center">InstaShopify</h1>
-        <Auth
-          supabaseClient={supabase}
-          appearance={{ theme: ThemeSupa }}
-          theme="light"
-        />
+    <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
+      <div className="w-full max-w-md p-8 space-y-8 text-center">
+        <div className="flex justify-center items-center gap-4 mb-4">
+          <ShoppingBag className="h-10 w-10 text-primary" />
+          <h1 className="text-4xl font-bold font-heading">InstaShopify</h1>
+        </div>
+        <p className="text-muted-foreground">
+          Create your account and start selling by connecting your Instagram Business profile.
+        </p>
+        <Button onClick={handleFacebookLogin} size="lg" className="w-full">
+          <Facebook className="mr-2 h-5 w-5" />
+          Connect with Facebook
+        </Button>
       </div>
     </div>
   );
