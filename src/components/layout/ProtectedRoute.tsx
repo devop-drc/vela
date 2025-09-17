@@ -20,22 +20,23 @@ const ProtectedRoute = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_IN') {
-          if (session?.provider_token) {
-            const { error } = await supabase
-              .from('integrations')
-              .upsert({
-                user_id: session.user.id,
-                provider: 'facebook',
-                access_token: session.provider_token,
-              }, { onConflict: 'user_id,provider' });
+        // This event fires when a user links an OAuth provider
+        if (event === 'USER_UPDATED' && session?.provider_token) {
+          const { error } = await supabase
+            .from('integrations')
+            .upsert({
+              user_id: session.user.id,
+              provider: 'facebook',
+              access_token: session.provider_token,
+            }, { onConflict: 'user_id,provider' });
 
-            if (error) {
-              showError("Could not save your Instagram connection. Please try reconnecting in settings.");
-              console.error("Error saving provider token:", error);
-            } else {
-              showSuccess("Successfully connected to Instagram!");
-            }
+          if (error) {
+            showError("Could not save your Instagram connection. Please try again.");
+            console.error("Error saving provider token:", error);
+          } else {
+            showSuccess("Successfully connected to Instagram!");
+            // Redirect to products page to encourage import
+            navigate('/products?instagram_connected=true');
           }
         } else if (event === 'SIGNED_OUT') {
           navigate("/login");
