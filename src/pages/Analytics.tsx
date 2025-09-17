@@ -1,5 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ShoppingCart, Users, Activity } from "lucide-react";
+import {
+  Funnel,
+  FunnelChart,
+  LabelList,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
+
+const funnelData = [
+  { value: 100, name: "Visitors", fill: "#8884d8" },
+  { value: 80, name: "Viewed Product", fill: "#83a6ed" },
+  { value: 50, name: "Added to Cart", fill: "#8dd1e1" },
+  { value: 40, name: "Started Checkout", fill: "#82ca9d" },
+  { value: 25, name: "Purchased", fill: "#a4de6c" },
+];
 
 const Analytics = () => {
   return (
@@ -32,7 +47,9 @@ const Analytics = () => {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Conversion Rate
+            </CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -55,13 +72,24 @@ const Analytics = () => {
           </CardContent>
         </Card>
       </div>
-      {/* Placeholder for more charts and data */}
       <Card>
         <CardHeader>
           <CardTitle>Sales Funnel</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">Sales funnel chart will be displayed here.</p>
+          <ResponsiveContainer width="100%" height={300}>
+            <FunnelChart>
+              <Tooltip />
+              <Funnel dataKey="value" data={funnelData} isAnimationActive>
+                <LabelList
+                  position="right"
+                  fill="#000"
+                  stroke="none"
+                  dataKey="name"
+                />
+              </Funnel>
+            </FunnelChart>
+          </ResponsiveContainer>
         </CardContent>
       </Card>
     </div>
