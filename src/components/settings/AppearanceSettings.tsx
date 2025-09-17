@@ -112,8 +112,8 @@ const AdvancedCustomization = () => {
                 </div>
             </div>
         </motion.div>
-    )
-}
+    );
+};
 
 export const AppearanceSettings = () => {
   const { settings, updateSetting, resetSettings, isLoading, isAdvanced, setAdvanced } = useAppearance();
@@ -169,7 +169,7 @@ export const AppearanceSettings = () => {
                         <AlertDialogTitle>Enable Advanced Customization?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This will allow you to override the preset theme with your own custom values. You can always reset to the default themes later if you change your mind.
-                        </Description>
+                        </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
