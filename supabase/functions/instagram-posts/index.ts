@@ -15,6 +15,7 @@ serve(async (req) => {
   }
 
   try {
+    console.log("--- Instagram Posts Function Initiated ---");
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -23,7 +24,9 @@ serve(async (req) => {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not found');
+    console.log("Authenticated user:", user.id);
 
+    console.log("Fetching integration token from database...");
     const { data: integration, error: integrationError } = await supabase
       .from('integrations')
       .select('access_token')
@@ -32,17 +35,20 @@ serve(async (req) => {
       .single();
 
     if (integrationError || !integration) {
+      console.log("No integration found for user. Returning empty posts array.");
       return new Response(JSON.stringify({ posts: [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });
     }
     const userAccessToken = integration.access_token;
+    console.log("Integration token found.");
 
     // Diagnostic Step: Debug the user's token to verify permissions
     if (!FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
         throw new Error("App secrets are not configured.");
     }
+    console.log("Debugging user token to verify permissions...");
     const appAccessToken = `${FACEBOOK_APP_ID}|${FACEBOOK_APP_SECRET}`;
     const debugUrl = `https://graph.facebook.com/debug_token?input_token=${userAccessToken}&access_token=${appAccessToken}`;
     const debugResponse = await fetch(debugUrl);
@@ -52,6 +58,7 @@ serve(async (req) => {
         console.error("Token validation failed:", debugData);
         throw new Error("Your Facebook connection is invalid or has expired. Please disconnect and reconnect in the settings.");
     }
+    console.log("Token is valid. Granted scopes:", debugData.data.scopes);
 
     const grantedScopes = debugData.data.scopes || [];
     if (!grantedScopes.includes('pages_show_list')) {
@@ -60,6 +67,7 @@ serve(async (req) => {
     }
 
     // Fetch pages
+    console.log("Fetching user's Facebook pages...");
     const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account,name&access_token=${userAccessToken}`;
     const pagesResponse = await fetch(pagesUrl);
     if (!pagesResponse.ok) {
@@ -68,22 +76,27 @@ serve(async (req) => {
         throw new Error('Failed to fetch Facebook pages. Please try reconnecting your account.');
     }
     const pagesData = await pagesResponse.json();
+    console.log("Facebook pages response received. Found", pagesData.data?.length || 0, "pages.");
 
     if (!pagesData.data || pagesData.data.length === 0) {
+      console.log("No Facebook pages found in the API response.");
       throw new Error('Permissions are correct, but no Facebook Pages were found for your account. To fix this, please go to your Facebook Page settings and ensure your personal Facebook profile is listed as an Admin with "Full control". A lower role like "Editor" may not be sufficient for API access.');
     }
 
     const igAccount = pagesData.data?.find((page: any) => page.instagram_business_account);
     if (!igAccount) {
       const pageNames = pagesData.data.map((page: any) => page.name).join(', ');
+      console.log(`Found pages: ${pageNames}, but none have a linked Instagram Business Account.`);
       const detailedError = `We found the following Facebook Page(s): ${pageNames}. However, none of them have a linked Instagram Business Account that this app has permission to access. Please try disconnecting and reconnecting. During the Facebook login process, ensure you click "Edit Settings" and grant all requested permissions for both your Facebook Page and your Instagram account.`;
       throw new Error(detailedError);
     }
     
     const igAccountId = igAccount.instagram_business_account.id;
+    console.log("Found linked Instagram Business Account ID:", igAccountId);
     const fields = 'id,media_type,media_url,permalink,thumbnail_url,timestamp,caption';
     const mediaUrl = `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=${fields}&access_token=${userAccessToken}`;
 
+    console.log("Fetching Instagram media...");
     const mediaResponse = await fetch(mediaUrl);
     if (!mediaResponse.ok) {
       const errorData = await mediaResponse.json();
@@ -92,6 +105,8 @@ serve(async (req) => {
     }
 
     const { data } = await mediaResponse.json();
+    console.log("Successfully fetched", data?.length || 0, "Instagram media items.");
+    console.log("--- Instagram Posts Function Complete ---");
 
     return new Response(JSON.stringify({ posts: data }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
