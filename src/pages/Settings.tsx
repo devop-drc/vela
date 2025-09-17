@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const Settings = () => {
   const [integrationStatus, setIntegrationStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const integrationError = searchParams.get('integration_error');
+    if (integrationError) {
+      showError(`Integration failed: ${integrationError}`);
+      // Clean up the URL
+      searchParams.delete('integration_error');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     const checkIntegration = async () => {

@@ -29,17 +29,34 @@ serve(async (req) => {
   if (isCallback) {
     // Step 2: Handle the callback from Facebook
     try {
-      const code = url.searchParams.get('code');
+      const error = url.searchParams.get('error');
+      const errorDescription = url.searchParams.get('error_description');
       const encodedState = url.searchParams.get('state');
+      
+      let origin = '/'; // Default fallback
+      if (encodedState) {
+        try {
+          const statePayload = atob(encodedState);
+          const { origin: stateOrigin } = JSON.parse(statePayload);
+          if (stateOrigin) origin = stateOrigin;
+        } catch (e) {
+          console.error("Failed to parse state:", e);
+        }
+      }
 
-      if (!code) throw new Error('Authorization code not found.');
-      if (!encodedState) throw new Error('State not found in callback.');
+      if (error) {
+        const friendlyError = errorDescription || 'Permissions were denied on Facebook.';
+        const redirectUrl = new URL(`${origin}/settings`);
+        redirectUrl.searchParams.set('integration_error', friendlyError);
+        return Response.redirect(redirectUrl.toString(), 302);
+      }
+
+      const code = url.searchParams.get('code');
+      if (!code || !encodedState) throw new Error('Authorization code or state not found in callback.');
 
       const statePayload = atob(encodedState);
-      const { jwt, origin } = JSON.parse(statePayload);
-
+      const { jwt } = JSON.parse(statePayload);
       if (!jwt) throw new Error('JWT not found in state.');
-      if (!origin) throw new Error('Origin not found in state.');
 
       // Step 3: Exchange code for a short-lived access token
       const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${FACEBOOK_APP_ID}&redirect_uri=${REDIRECT_URI}&client_secret=${FACEBOOK_APP_SECRET}&code=${code}`;
@@ -84,15 +101,15 @@ serve(async (req) => {
       if (upsertError) throw upsertError;
 
       // Step 6: Redirect user back to the app
-      const appUrl = origin;
-      return Response.redirect(`${appUrl}/products?instagram_connected=true`, 302);
+      return Response.redirect(`${origin}/products?instagram_connected=true`, 302);
 
     } catch (error) {
       console.error('OAuth Callback Error:', error.message);
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      // Generic error redirect
+      const genericErrorUrl = new URL(req.headers.get('origin') || Deno.env.get('SUPABASE_URL') || '/');
+      genericErrorUrl.pathname = '/settings';
+      genericErrorUrl.searchParams.set('integration_error', error.message);
+      return Response.redirect(genericErrorUrl.toString(), 302);
     }
   } else {
     // Step 1: Redirect user to Facebook for authorization
