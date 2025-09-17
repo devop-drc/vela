@@ -11,19 +11,44 @@ const googleFonts = [
   "PT Sans", "Karla", "DM Sans", "Rubik", "Manrope", "Space Grotesk", "Syne",
 ].map(font => ({ value: font, label: font }));
 
-const fontPairings = [
-  { name: "Modern", heading: "Syne", body: "Inter" },
-  { name: "Elegant", heading: "Playfair Display", body: "Lato" },
-  { name: "Minimalist", heading: "Inter", body: "Inter" },
-  { name: "Classic", heading: "Lora", body: "Source Sans Pro" },
-];
+const fontCategories = {
+  Modern: {
+    headings: ["Syne", "Space Grotesk", "Manrope", "DM Sans", "Rubik", "Work Sans"],
+    body: ["Inter", "Roboto", "Work Sans", "Manrope", "DM Sans", "Rubik"],
+  },
+  Elegant: {
+    headings: ["Playfair Display", "Cormorant Garamond", "Libre Baskerville", "Lora", "Merriweather"],
+    body: ["Lato", "Source Sans Pro", "Karla", "Nunito Sans", "Raleway"],
+  },
+  Minimalist: {
+    headings: ["Inter", "Roboto", "Lato", "Source Sans Pro", "Nunito Sans", "Karla"],
+    body: ["Inter", "Roboto", "Lato", "Source Sans Pro", "Nunito Sans", "Karla"],
+  },
+  Classic: {
+    headings: ["Lora", "Merriweather", "PT Sans", "Arimo", "Libre Baskerville"],
+    body: ["Source Sans Pro", "Lato", "Open Sans", "PT Sans", "Arimo"],
+  },
+};
+
+const getRandomItem = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 
 export const FontSelector = () => {
   const { settings, updateSetting } = useAppearance();
 
-  const setFontPairing = (heading: string, body: string) => {
-    updateSetting('fontHeading', heading);
-    updateSetting('fontSans', body);
+  const generateFontPairing = (category: keyof typeof fontCategories) => {
+    const { headings, body } = fontCategories[category];
+    let headingFont = getRandomItem(headings);
+    let bodyFont = getRandomItem(body);
+
+    // Avoid same font for heading/body unless it's minimalist
+    if (category !== 'Minimalist') {
+      while (headingFont === bodyFont) {
+        bodyFont = getRandomItem(body);
+      }
+    }
+
+    updateSetting('fontHeading', headingFont);
+    updateSetting('fontSans', bodyFont);
   };
 
   return (
@@ -31,14 +56,14 @@ export const FontSelector = () => {
       <div>
         <h3 className="font-semibold mb-3">Typography</h3>
         <p className="text-sm text-muted-foreground">
-          Choose a recommended pairing or select individual fonts below.
+          Generate a pairing or select individual fonts below.
         </p>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {fontPairings.map(pair => (
-          <Button key={pair.name} variant="outline" onClick={() => setFontPairing(pair.heading, pair.body)}>
+        {Object.keys(fontCategories).map(category => (
+          <Button key={category} variant="outline" onClick={() => generateFontPairing(category as keyof typeof fontCategories)}>
             <Sparkles className="mr-2 h-4 w-4 text-amber-400" />
-            {pair.name}
+            {category}
           </Button>
         ))}
       </div>

@@ -1,8 +1,11 @@
 import { NavLink } from "react-router-dom";
 import { Home, ShoppingBag, BarChart2, Settings, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppearance } from "@/contexts/AppearanceContext";
 
 const Sidebar = () => {
+  const { settings } = useAppearance();
+
   const navItems = [
     { to: "/", icon: Home, label: "Dashboard" },
     { to: "/products", icon: Package, label: "Products" },
@@ -12,8 +15,16 @@ const Sidebar = () => {
   ];
 
   return (
-    <aside className="hidden md:flex md:flex-col md:w-64 bg-primary text-primary-foreground">
-      <div className="p-4 border-b border-primary-foreground/10 flex items-center">
+    <aside className={cn(
+      "hidden md:flex md:flex-col md:w-64 transition-colors",
+      settings.sidebarStyle === 'primary'
+        ? "bg-primary text-primary-foreground"
+        : "bg-card border-r"
+    )}>
+      <div className={cn(
+        "p-4 border-b flex items-center",
+        settings.sidebarStyle === 'primary' ? 'border-primary-foreground/10' : 'border-border'
+      )}>
         <ShoppingBag className="h-6 w-6 mr-2" />
         <h1 className="text-xl font-bold">InstaShopify</h1>
       </div>
@@ -24,8 +35,13 @@ const Sidebar = () => {
             to={item.to}
             className={({ isActive }) =>
               cn(
-                "flex items-center px-3 py-2 text-primary-foreground/70 rounded-lg text-sm font-medium hover:bg-primary-foreground/10",
-                isActive && "bg-primary-foreground/10 text-primary-foreground"
+                "flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                settings.sidebarStyle === 'primary'
+                  ? "text-primary-foreground/70 hover:bg-primary-foreground/10"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                isActive && (settings.sidebarStyle === 'primary'
+                  ? "bg-primary-foreground/10 text-primary-foreground"
+                  : "bg-accent text-accent-foreground")
               )
             }
           >

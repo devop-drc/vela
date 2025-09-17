@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ThemeSelector } from "./ThemeSelector";
 import { FontSelector } from "./FontSelector";
@@ -115,7 +116,7 @@ const AdvancedCustomization = () => {
 }
 
 export const AppearanceSettings = () => {
-  const { resetSettings, isLoading, isAdvanced, setAdvanced } = useAppearance();
+  const { settings, updateSetting, resetSettings, isLoading, isAdvanced, setAdvanced } = useAppearance();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   if (isLoading) {
@@ -132,6 +133,29 @@ export const AppearanceSettings = () => {
       </CardHeader>
       <CardContent className="space-y-8">
         <ThemeSelector />
+        <div className="space-y-4 pt-8 border-t">
+            <h3 className="font-semibold">Sidebar Style</h3>
+            <RadioGroup 
+                value={settings.sidebarStyle} 
+                onValueChange={(value) => updateSetting('sidebarStyle', value)}
+                className="flex gap-4"
+            >
+                <Label className="flex items-center gap-2 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-primary flex-1">
+                    <RadioGroupItem value="primary" id="sidebar-primary" />
+                    <div>
+                        <p className="font-medium">Vibrant</p>
+                        <p className="text-sm text-muted-foreground">Uses your primary brand color for a bold look.</p>
+                    </div>
+                </Label>
+                <Label className="flex items-center gap-2 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-primary flex-1">
+                    <RadioGroupItem value="card" id="sidebar-card" />
+                     <div>
+                        <p className="font-medium">Subtle</p>
+                        <p className="text-sm text-muted-foreground">A clean, minimal style that blends with the content.</p>
+                    </div>
+                </Label>
+            </RadioGroup>
+        </div>
         <FontSelector />
         <div className="flex items-center gap-4 pt-8 border-t">
             <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -145,7 +169,7 @@ export const AppearanceSettings = () => {
                         <AlertDialogTitle>Enable Advanced Customization?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This will allow you to override the preset theme with your own custom values. You can always reset to the default themes later if you change your mind.
-                        </AlertDialogDescription>
+                        </Description>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>

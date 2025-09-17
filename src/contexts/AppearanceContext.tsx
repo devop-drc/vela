@@ -64,6 +64,7 @@ export const presetThemes: Theme[] = [
 interface DesignSettings {
   themeName: string;
   isAdvanced: boolean;
+  sidebarStyle: 'primary' | 'card';
   '--background': string;
   '--foreground': string;
   '--primary': string;
@@ -77,6 +78,7 @@ interface DesignSettings {
 const defaultSettings: DesignSettings = {
   themeName: 'Onyx',
   isAdvanced: false,
+  sidebarStyle: 'primary',
   ...presetThemes[0].light,
   '--radius': '1.5rem',
   fontSans: 'Inter',
@@ -86,7 +88,7 @@ const defaultSettings: DesignSettings = {
 interface AppearanceContextType {
   settings: DesignSettings;
   setTheme: (themeName: string) => void;
-  updateSetting: (key: keyof DesignSettings, value: string) => void;
+  updateSetting: (key: keyof DesignSettings, value: string | boolean) => void;
   resetSettings: () => void;
   isLoading: boolean;
   isAdvanced: boolean;
@@ -188,7 +190,7 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const updateSetting = (key: keyof DesignSettings, value: string) => {
+  const updateSetting = (key: keyof DesignSettings, value: string | boolean) => {
     setSettings(prev => {
       const newSettings = { ...prev, [key]: value };
       if (key.startsWith('--')) {
@@ -200,11 +202,7 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const setAdvanced = (isAdvanced: boolean) => {
-    setSettings(prev => {
-        const newSettings = { ...prev, isAdvanced };
-        debouncedSave(newSettings);
-        return newSettings;
-    });
+    updateSetting('isAdvanced', isAdvanced);
   };
 
   const resetSettings = () => {
