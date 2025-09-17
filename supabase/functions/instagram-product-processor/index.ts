@@ -55,15 +55,6 @@ serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not found');
 
-    const { data: business, error: businessError } = await supabase
-      .from('businesses')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (businessError) throw new Error('Could not find a business associated with this user.');
-    if (!business) throw new Error('No business found for this user.');
-
     // 1. Fetch Instagram posts using the existing function
     const { data: postsData, error: invokeError } = await supabase.functions.invoke('instagram-posts');
     if (invokeError) throw invokeError;
@@ -74,10 +65,11 @@ serve(async (req) => {
       });
     }
 
-    // 2. Get existing product post IDs to avoid reprocessing (RLS handles security)
+    // 2. Get existing product post IDs to avoid reprocessing
     const { data: existingProducts, error: productsError } = await supabase
       .from('products')
-      .select('instagram_post_id');
+      .select('instagram_post_id')
+      .eq('user_id', user.id);
     if (productsError) throw productsError;
     const existingPostIds = new Set(existingProducts.map(p => p.instagram_post_id));
 
@@ -111,7 +103,7 @@ serve(async (req) => {
       if (analysis.isProductPost && analysis.product) {
         const p = analysis.product;
         const { error: insertError } = await supabase.from('products').insert({
-          business_id: business.id,
+          user_id: user.id,
           name: p.name,
           status: 'Draft',
           price: p.price,

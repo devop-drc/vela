@@ -60,7 +60,10 @@ serve(async (req) => {
     if (invokeError) throw invokeError;
     
     if (postsData.error) {
-      throw new Error(postsData.error);
+      return new Response(JSON.stringify({ error: postsData.error }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
     }
 
     if (!postsData.posts) {

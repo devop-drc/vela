@@ -24,40 +24,42 @@ const Settings = () => {
     }
   }, [searchParams, setSearchParams]);
 
-  const checkIntegration = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data, error } = await supabase
-        .from('integrations')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('provider', 'facebook')
-        .maybeSingle();
+  useEffect(() => {
+    const checkIntegration = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from('integrations')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('provider', 'facebook')
+          .maybeSingle();
 
-      if (error) {
-        console.error("Error checking integration status:", error);
-        setIntegrationStatus('disconnected');
-      } else if (data) {
-        setIntegrationStatus('connected');
+        if (error) {
+          console.error("Error checking integration status:", error);
+          setIntegrationStatus('disconnected');
+        } else if (data) {
+          setIntegrationStatus('connected');
+        } else {
+          setIntegrationStatus('disconnected');
+        }
       } else {
         setIntegrationStatus('disconnected');
       }
-    } else {
-      setIntegrationStatus('disconnected');
-    }
-  };
+    };
 
-  useEffect(() => {
     checkIntegration();
   }, []);
 
   const handleConnectInstagram = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'facebook',
-      options: {
-        scopes: 'public_profile,pages_show_list,instagram_basic,instagram_content_publish,pages_read_engagement,business_management',
-      }
-    });
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const jwt = session.access_token;
+      const origin = window.location.origin;
+      window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?jwt=${jwt}&origin=${encodeURIComponent(origin)}`;
+    } else {
+      showError("You must be logged in to connect your Instagram account.");
+    }
   };
 
   const handleDisconnectInstagram = async () => {
@@ -78,20 +80,6 @@ const Settings = () => {
         }
     }
   };
-
-  // Listen for changes to the integration status
-  useEffect(() => {
-    const channel = supabase.channel('integrations-channel');
-    const subscription = channel
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'integrations' }, () => {
-        checkIntegration();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   return (
     <div className="space-y-4">
@@ -152,10 +140,10 @@ const Settings = () => {
             <CardContent>
               {integrationStatus === 'loading' && <Skeleton className="h-10 w-48" />}
               {integrationStatus === 'disconnected' && (
-                 <Button onClick={handleConnectInstagram}>
-                    <Instagram className="mr-2 h-5 w-5" />
-                    Connect with Facebook
-                  </Button>
+                <Button onClick={handleConnectInstagram}>
+                  <Instagram className="mr-2 h-4 w-4" />
+                  Connect with Facebook
+                </Button>
               )}
               {integrationStatus === 'connected' && (
                 <div className="flex items-center space-x-4">

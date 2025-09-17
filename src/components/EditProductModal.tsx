@@ -49,19 +49,8 @@ export const EditProductModal = ({ isOpen, onClose, onSave, productData, post }:
       return;
     }
 
-    const { data: business, error: businessError } = await supabase
-      .from('businesses')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (businessError || !business) {
-      showError("Could not find your business. Please contact support.");
-      return;
-    }
-
     const { error } = await supabase.from('products').insert({
-      business_id: business.id,
+      user_id: user.id,
       name: data.name,
       caption: data.description,
       category: data.category,
