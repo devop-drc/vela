@@ -15,25 +15,19 @@ serve(async (req) => {
   }
 
   const url = new URL(req.url);
-  const path = url.pathname.replace('/functions/v1/instagram-auth', '');
+  const isCallback = url.pathname.endsWith('/callback');
 
-  // Step 1: Redirect user to Instagram for authorization
-  if (path === '' || path === '/') {
-    const authUrl = new URL('https://api.instagram.com/oauth/authorize');
-    authUrl.searchParams.set('client_id', INSTAGRAM_APP_ID);
-    authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
-    authUrl.searchParams.set('scope', 'user_profile,user_media');
-    authUrl.searchParams.set('response_type', 'code');
-    
-    return Response.redirect(authUrl.toString(), 302);
-  }
-
-  // Step 2: Handle the callback from Instagram
-  if (path === '/callback') {
+  if (isCallback) {
+    // Step 2: Handle the callback from Instagram
     try {
       const code = url.searchParams.get('code');
+      const state = url.searchParams.get('state'); // The user's JWT
+
       if (!code) {
         throw new Error('Authorization code not found.');
+      }
+      if (!state) {
+        throw new Error('State (JWT) not found in callback.');
       }
 
       const INSTAGRAM_APP_SECRET = Deno.env.get('INSTAGRAM_APP_SECRET');
@@ -63,7 +57,7 @@ serve(async (req) => {
       const tokenData = await tokenResponse.json();
       const shortLivedToken = tokenData.access_token;
 
-      // Step 4: Exchange the short-lived token for a long-lived token
+      // Step 4: Exchange for a long-lived token
       const longLivedTokenResponse = await fetch(`https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${INSTAGRAM_APP_SECRET}&access_token=${shortLivedToken}`);
       
       if (!longLivedTokenResponse.ok) {
@@ -75,21 +69,16 @@ serve(async (req) => {
       const longLivedTokenData = await longLivedTokenResponse.json();
       const longLivedToken = longLivedTokenData.access_token;
 
-      // Step 5: Save the long-lived token to the database
-      const authHeader = req.headers.get('Authorization');
-      if (!authHeader) {
-        throw new Error('Missing authorization header');
-      }
-
+      // Step 5: Save the token using the JWT from the 'state' parameter for auth
       const supabase = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-        { global: { headers: { Authorization: authHeader } } }
+        { global: { headers: { Authorization: `Bearer ${state}` } } }
       );
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        throw new Error('User not found');
+        throw new Error('User not found from JWT in state.');
       }
 
       const { error: upsertError } = await supabase
@@ -115,10 +104,29 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-  }
+  } else {
+    // Step 1: Redirect user to Instagram for authorization
+    try {
+      // The JWT is now passed as a query parameter from the client
+      const jwt = url.searchParams.get('jwt');
+      if (!jwt) {
+        throw new Error('Missing JWT in query parameters. User must be logged in.');
+      }
 
-  return new Response(JSON.stringify({ message: 'Not Found' }), {
-    status: 404,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+      const authUrl = new URL('https://api.instagram.com/oauth/authorize');
+      authUrl.searchParams.set('client_id', INSTAGRAM_APP_ID);
+      authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
+      authUrl.searchParams.set('scope', 'user_profile,user_media');
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('state', jwt); // Pass JWT as state for CSRF protection and user identification
+      
+      return Response.redirect(authUrl.toString(), 302);
+    } catch (error) {
+      console.error('OAuth Initial Redirect Error:', error.message);
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+  }
 });

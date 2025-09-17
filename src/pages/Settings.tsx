@@ -4,11 +4,19 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Instagram } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { showError } from "@/utils/toast";
 
 const Settings = () => {
-  const handleConnectInstagram = () => {
-    // This URL points to the Edge Function that starts the OAuth flow
-    window.location.href = 'https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth';
+  const handleConnectInstagram = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const jwt = session.access_token;
+      // Pass the user's JWT to the function via a query parameter
+      window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?jwt=${jwt}`;
+    } else {
+      showError("You must be logged in to connect your Instagram account.");
+    }
   };
 
   return (
@@ -78,7 +86,7 @@ const Settings = () => {
               <CardDescription>
                 Manage your shop's public information.
               </CardDescription>
-            </CardHeader>
+            </Header>
             <CardContent>
               <p className="text-muted-foreground">Shop settings will be displayed here.</p>
             </CardContent>
