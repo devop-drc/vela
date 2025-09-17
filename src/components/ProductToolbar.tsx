@@ -2,7 +2,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Search, ListFilter } from "lucide-react";
+import { Search, ListFilter, LayoutGrid, List } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface ProductToolbarProps {
   searchTerm: string;
@@ -11,10 +13,13 @@ interface ProductToolbarProps {
   onSortChange: (value: string) => void;
   statusFilter: string[];
   onStatusFilterChange: (statuses: string[]) => void;
+  viewMode: 'grid' | 'table';
+  onViewChange: (view: 'grid' | 'table') => void;
 }
 
-export const ProductToolbar = ({ searchTerm, onSearchChange, sortOption, onSortChange, statusFilter, onStatusFilterChange }: ProductToolbarProps) => {
-  
+export const ProductToolbar = ({ searchTerm, onSearchChange, sortOption, onSortChange, statusFilter, onStatusFilterChange, viewMode, onViewChange }: ProductToolbarProps) => {
+  const isMobile = useIsMobile();
+
   const handleStatusChange = (status: 'Active' | 'Draft') => {
     const newFilter = statusFilter.includes(status)
       ? statusFilter.filter(s => s !== status)
@@ -36,7 +41,7 @@ export const ProductToolbar = ({ searchTerm, onSearchChange, sortOption, onSortC
       <div className="flex items-center gap-2 w-full md:w-auto">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="w-full md:w-auto">
+            <Button variant="outline" className="w-full md:w-auto justify-start">
               <ListFilter className="mr-2 h-4 w-4" />
               Filter
             </Button>
@@ -71,6 +76,16 @@ export const ProductToolbar = ({ searchTerm, onSearchChange, sortOption, onSortC
             <SelectItem value="name-desc">Name: Z-A</SelectItem>
           </SelectContent>
         </Select>
+        {!isMobile && (
+          <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+            <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => onViewChange('grid')} className="h-8 w-8">
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" onClick={() => onViewChange('table')} className="h-8 w-8">
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -9,7 +9,10 @@ import { InstagramPostModal } from "@/components/InstagramPostModal";
 import { ProductDetailModal } from "@/components/ProductDetailModal";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductToolbar } from "@/components/ProductToolbar";
+import { ProductTableView } from "@/components/ProductTableView";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface Product {
   id: string;
@@ -34,10 +37,12 @@ const Products = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const isMobile = useIsMobile();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState("newest");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
@@ -144,6 +149,8 @@ const Products = () => {
       });
   }, [products, searchTerm, statusFilter, sortOption]);
 
+  const currentView = isMobile ? 'grid' : viewMode;
+
   return (
     <>
       {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={fetchProducts} />}
@@ -186,29 +193,43 @@ const Products = () => {
           onSortChange={setSortOption}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
+          viewMode={viewMode}
+          onViewChange={setViewMode}
         />
 
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-[350px] w-full rounded-lg" />)}
           </div>
+        ) : filteredAndSortedProducts.length > 0 ? (
+          currentView === 'grid' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredAndSortedProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onEdit={setSelectedProduct}
+                  onDelete={setProductToDelete}
+                  onStatusChange={handleStatusChange}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <ProductTableView
+                  products={filteredAndSortedProducts}
+                  onEdit={setSelectedProduct}
+                  onDelete={setProductToDelete}
+                  onStatusChange={handleStatusChange}
+                />
+              </CardContent>
+            </Card>
+          )
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredAndSortedProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onEdit={setSelectedProduct}
-                onDelete={setProductToDelete}
-                onStatusChange={handleStatusChange}
-              />
-            ))}
-          </div>
-        )}
-        {!isLoading && filteredAndSortedProducts.length === 0 && (
           <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg">
             <h3 className="text-lg font-semibold">No Products Found</h3>
-            <p className="text-sm mt-1">Try adjusting your search or filters.</p>
+            <p className="text-sm mt-1">Try adjusting your search or filters, or import from Instagram.</p>
           </div>
         )}
       </div>
