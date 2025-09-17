@@ -58,8 +58,16 @@ serve(async (req) => {
     if (!user) throw new Error('User not found');
 
     const { data: postsData, error: invokeError } = await supabase.functions.invoke('instagram-posts');
+    
     if (invokeError) throw invokeError;
-    if (postsData.error) throw new Error(postsData.error);
+    
+    if (postsData.error) {
+      return new Response(JSON.stringify({ error: postsData.error }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
+
     if (!postsData.posts) {
         return new Response(JSON.stringify({ posts: [] }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
