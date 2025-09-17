@@ -46,10 +46,17 @@ serve(async (req) => {
     }
     const pagesData = await pagesResponse.json();
 
+    if (!pagesData.data || pagesData.data.length === 0) {
+      throw new Error('No Facebook Pages were found for your account. During the connection process, please ensure you grant the app access to at least one of your pages.');
+    }
+
     const igAccount = pagesData.data?.find((page: any) => page.instagram_business_account);
     if (!igAccount) {
-      throw new Error('No linked Instagram Business Account found. Please ensure your Facebook Page is connected to an Instagram Business or Creator account and that you granted all permissions during the connection process.');
+      const pageNames = pagesData.data.map((page: any) => page.name).join(', ');
+      const detailedError = `We found the following Facebook Page(s): ${pageNames}. However, none of them have a linked Instagram Business Account that this app has permission to access. Please try disconnecting and reconnecting. During the Facebook login process, ensure you click "Edit Settings" and grant all requested permissions for both your Facebook Page and your Instagram account.`;
+      throw new Error(detailedError);
     }
+    
     const igAccountId = igAccount.instagram_business_account.id;
 
     const fields = 'id,media_type,media_url,permalink,thumbnail_url,timestamp,caption';
