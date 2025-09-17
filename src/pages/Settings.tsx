@@ -3,8 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Instagram } from "lucide-react";
 
 const Settings = () => {
+  const handleConnectInstagram = () => {
+    // This URL points to the Edge Function that starts the OAuth flow
+    window.location.href = 'https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth';
+  };
+
   return (
     <div className="space-y-4">
       <h1 className="text-3xl font-bold">Settings</h1>
@@ -54,11 +60,14 @@ const Settings = () => {
             <CardHeader>
               <CardTitle>Integrations</CardTitle>
               <CardDescription>
-                Connect your Instagram and other accounts.
+                Connect your Instagram account to import posts and create products.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Integration options will be displayed here.</p>
+              <Button onClick={handleConnectInstagram}>
+                <Instagram className="mr-2 h-4 w-4" />
+                Connect Instagram
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

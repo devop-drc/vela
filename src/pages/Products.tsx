@@ -1,8 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Instagram } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
+import { NavLink } from "react-router-dom";
 
 const products = [
   { name: "Minimalist Tee", status: "Active", price: "$49.99", inventory: "250 in stock" },
@@ -11,9 +15,41 @@ const products = [
   { name: "Leather Boots", status: "Archived", price: "$199.99", inventory: "50 in stock" },
 ];
 
+interface InstagramPost {
+  id: string;
+  media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM';
+  media_url: string;
+  thumbnail_url?: string;
+  caption?: string;
+}
+
 const Products = () => {
+  const [instagramPosts, setInstagramPosts] = useState<InstagramPost[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchInstagramPosts = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const { data, error } = await supabase.functions.invoke('instagram-posts');
+        if (error) throw error;
+        if (data.error) throw new Error(data.error);
+        setInstagramPosts(data.posts || []);
+      } catch (err: any) {
+        console.error("Error fetching Instagram posts:", err);
+        setError("Failed to load Instagram posts. Please try reconnecting your account.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInstagramPosts();
+  }, []);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Products</h1>
         <Button>
@@ -21,6 +57,55 @@ const Products = () => {
           Add Product
         </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Instagram Posts</CardTitle>
+          <CardDescription>
+            Select an Instagram post to create a new product.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => <Skeleton key={i} className="aspect-square rounded-lg" />)}
+            </div>
+          ) : error ? (
+            <p className="text-destructive">{error}</p>
+          ) : instagramPosts.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {instagramPosts.map((post) => (
+                <div key={post.id} className="relative group aspect-square">
+                  <img
+                    src={post.media_type === 'VIDEO' ? post.thumbnail_url : post.media_url}
+                    alt={post.caption?.substring(0, 50) || 'Instagram Post'}
+                    className="object-cover w-full h-full rounded-lg"
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 flex items-center justify-center rounded-lg">
+                    <Button variant="secondary" className="opacity-0 group-hover:opacity-100">
+                      Create Product
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10 border-2 border-dashed rounded-lg">
+              <Instagram className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No Instagram posts found</h3>
+              <p className="mt-1 text-sm text-gray-500">Connect your Instagram account to get started.</p>
+              <div className="mt-6">
+                <Button asChild>
+                  <NavLink to="/settings">
+                    Go to Settings
+                  </NavLink>
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Your Product Catalog</CardTitle>
