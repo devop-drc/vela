@@ -46,7 +46,7 @@ const hexToHsl = (hex: string) => {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 };
 
-export const ColorInput = ({ label, value, onChange }: { label: string, value: string, onChange: (val: string) => void }) => (
+export const CustomColorPicker = ({ label, value, onChange }: { label: string, value: string, onChange: (val: string) => void }) => (
   <div className="space-y-2">
     <Label>{label}</Label>
     <div className="flex items-center gap-2">

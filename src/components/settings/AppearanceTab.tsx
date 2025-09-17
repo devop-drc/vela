@@ -9,11 +9,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ThemeSelector } from "./ThemeSelector";
 import { FontSelector } from "./FontSelector";
-import { AdvancedAppearance } from "./AdvancedAppearance";
+import { AdvancedSettings } from "./AdvancedSettings";
 import { AnimatePresence } from "framer-motion";
 import { Sparkles } from "lucide-react";
 
-export const AppearanceSettingsTab = () => {
+export const AppearanceTab = () => {
   const { settings, updateSetting, resetSettings, isLoading, isAdvanced, setAdvanced, randomizeTheme } = useAppearance();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const radiusValue = parseFloat(settings['--radius']) * 16;
@@ -104,7 +104,7 @@ export const AppearanceSettingsTab = () => {
             <Button variant="ghost" onClick={resetSettings}>Reset to Defaults</Button>
         </div>
         <AnimatePresence>
-            {isAdvanced && <AdvancedAppearance />}
+            {isAdvanced && <AdvancedSettings />}
         </AnimatePresence>
       </CardContent>
     </Card>
