@@ -13,7 +13,6 @@ import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
 import { AppearanceProvider } from "./contexts/AppearanceContext";
-import { BusinessProvider } from "./contexts/BusinessContext";
 
 const queryClient = new QueryClient();
 
@@ -27,15 +26,13 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route element={<ProtectedRoute />}>
-              <BusinessProvider>
-                <Route element={<DashboardLayout />}>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/products" element={<Products />} />
-                  <Route path="/orders" element={<Orders />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/settings" element={<Settings />} />
-                </Route>
-              </BusinessProvider>
+              <Route element={<DashboardLayout />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/orders" element={<Orders />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/settings" element={<Settings />} />
+              </Route>
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -10,12 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppearancePanel } from "@/components/settings/AppearancePanel";
-import { useBusiness } from "@/contexts/BusinessContext";
-import { CreateBusinessForm } from "@/components/settings/CreateBusinessForm";
-import { ShopDetailsForm } from "@/components/settings/ShopDetailsForm";
 
 const Settings = () => {
-  const { business, isLoading: isBusinessLoading } = useBusiness();
   const [integrationStatus, setIntegrationStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading');
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -85,23 +81,10 @@ const Settings = () => {
     }
   };
 
-  if (isBusinessLoading) {
-    return (
-      <div className="space-y-4">
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <Skeleton className="h-96 w-full" />
-      </div>
-    );
-  }
-
-  if (!business) {
-    return <CreateBusinessForm />;
-  }
-
   return (
     <div className="space-y-4">
       <h1 className="text-3xl font-bold">Settings</h1>
-      <Tabs defaultValue="shop" className="w-full">
+      <Tabs defaultValue="account" className="w-full">
         <TabsList>
           <TabsTrigger value="shop">Shop Details</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
@@ -110,7 +93,15 @@ const Settings = () => {
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
         </TabsList>
         <TabsContent value="shop">
-          <ShopDetailsForm />
+          <Card>
+            <CardHeader>
+              <CardTitle>Shop Details</CardTitle>
+              <CardDescription>Manage your shop's public information.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">This section is under construction.</p>
+            </CardContent>
+          </Card>
         </TabsContent>
         <TabsContent value="account">
           <Card>
