@@ -11,18 +11,19 @@ const corsHeaders = {
 
 const getForceProductAnalysisPrompt = (caption: string) => {
   return `
-    You are an expert e-commerce assistant. Your task is to creatively interpret an Instagram post caption and generate plausible product details, even if it's not explicitly a sales post. Assume there IS a product or service being sold.
+    You are an expert e-commerce assistant for a platform that can sell ANY type of product or service. Your task is to creatively interpret an Instagram post caption and generate plausible product details, even if it's not explicitly a sales post. Assume there IS a product or service being sold.
 
     Analyze the following caption and generate product details:
     ---
     ${caption}
     ---
 
-    Respond ONLY with a valid JSON object in the following structure. Do not include markdown backticks or any other text.
+    Respond ONLY with a valid JSON object. Do not include markdown backticks.
     {
       "name": "A creative and concise name for a potential product or service based on the caption.",
-      "category": "A suitable category (e.g., 'Art Print', 'Consulting Session', 'Recipe Book', 'Handmade Item').",
+      "category": "A suitable category (e.g., 'Software', 'Art Print', 'Consulting Session', 'Recipe Book').",
       "description": "A compelling one or two-sentence product description derived from the caption's content and tone.",
+      "features": ["A list of key features or selling points inferred from the caption.", "Be creative and generate at least 2-3 plausible features."],
       "price": "A plausible price as a number. If a price is mentioned, use it. Otherwise, suggest a reasonable one (e.g., 25).",
       "inventory": "Suggest a plausible inventory count (e.g., 10 for a physical item, 100 for a digital one)."
     }

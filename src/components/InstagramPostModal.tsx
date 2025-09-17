@@ -156,9 +156,21 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                       </CardHeader>
                       <CardContent>
                         {selectedPost.analysis ? (
-                          <div className="flex items-start gap-4">
-                            {selectedPost.analysis.isProductPost ? <Badge className="mt-1">Product</Badge> : <Badge variant="secondary" className="mt-1">General</Badge>}
-                            <p className="text-sm text-muted-foreground flex-1">{selectedPost.analysis.reasoning}</p>
+                          <div className="space-y-4">
+                            <div className="flex items-start gap-4">
+                              {selectedPost.analysis.isProductPost ? <Badge className="mt-1">Product</Badge> : <Badge variant="secondary" className="mt-1">General</Badge>}
+                              <p className="text-sm text-muted-foreground flex-1">{selectedPost.analysis.reasoning}</p>
+                            </div>
+                            {selectedPost.analysis.product?.features?.length > 0 && (
+                               <div className="border-t pt-4 mt-4">
+                                <h4 className="font-semibold text-sm mb-2">Extracted Features:</h4>
+                                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                                    {selectedPost.analysis.product.features.map((feature: string, index: number) => (
+                                        <li key={index}>{feature}</li>
+                                    ))}
+                                </ul>
+                               </div>
+                            )}
                           </div>
                         ) : (
                           <p className="text-sm text-muted-foreground">No caption to analyze.</p>
@@ -190,8 +202,8 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
 
       {isImageViewerOpen && selectedPost && (
         <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
-          <DialogContent className="max-w-4xl h-[90vh]">
-            <img src={selectedPost.media_url} alt="Full size post" className="max-w-full max-h-full object-contain mx-auto" />
+          <DialogContent className="max-w-4xl h-[90vh] p-2 flex items-center justify-center">
+            <img src={selectedPost.media_url} alt="Full size post" className="max-w-full max-h-full object-contain" />
           </DialogContent>
         </Dialog>
       )}

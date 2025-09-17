@@ -11,28 +11,28 @@ const corsHeaders = {
 
 const getProductAnalysisPrompt = (caption: string) => {
   return `
-    You are an expert e-commerce assistant. Your task is to analyze an Instagram post caption to determine if it describes a product or service for sale.
+    You are an expert e-commerce assistant for a platform that can sell ANY type of product or service (e.g., software, food, consulting, physical goods). Your task is to analyze an Instagram post caption to determine if it describes something for sale.
 
     Analyze the following caption:
     ---
     ${caption}
     ---
 
-    Respond in JSON format with the following structure:
+    Respond ONLY with a valid JSON object. Do not include markdown backticks.
     {
       "isProductPost": boolean,
-      "reasoning": "A brief explanation of why you decided it is or is not a product post.",
+      "reasoning": "A brief explanation of your decision. Be neutral and objective.",
       "product": {
         "name": "A concise name for the product or service.",
-        "category": "A suitable category (e.g., 'Clothing', 'Food', 'Digital Service', 'Jewelry'). Be generic.",
+        "category": "A suitable category (e.g., 'Software', 'Food', 'Consulting', 'Apparel'). Be specific but concise.",
         "description": "A one or two-sentence description based on the caption.",
+        "features": ["A list of key features or selling points mentioned in the caption.", "Extract at least 2-3 if possible."],
         "price": "A number representing the price. Extract it if available, otherwise null.",
-        "currency": "The currency, e.g., 'leke', 'EUR', 'USD'. Infer if possible, otherwise null."
+        "currency": "The currency, e.g., 'EUR', 'USD'. Infer if possible, otherwise null."
       } | null
     }
 
-    If isProductPost is false, the "product" field should be null.
-    If the caption is a product post, extract all available details accurately.
+    If isProductPost is false, the "product" field must be null.
   `;
 };
 
