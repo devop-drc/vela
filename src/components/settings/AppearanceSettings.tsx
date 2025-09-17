@@ -1,13 +1,18 @@
+import { useState } from "react";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ThemeSelector } from "./ThemeSelector";
+import { AnimatePresence, motion } from "framer-motion";
 
 // Helper to convert HSL string to HEX for color input
 const hslToHex = (hslStr: string) => {
-  const [h, s, l] = hslStr.split(' ').map(parseFloat);
+  if (!hslStr) return '#000000';
+  const [h, s, l] = hslStr.split(' ').map(val => parseFloat(val.replace('%', '')));
   const sNorm = s / 100;
   const lNorm = l / 100;
   const c = (1 - Math.abs(2 * lNorm - 1)) * sNorm;
@@ -69,14 +74,52 @@ const ColorInput = ({ label, value, onChange }: { label: string, value: string, 
   </div>
 );
 
+const AdvancedCustomization = () => {
+    const { settings, updateSetting } = useAppearance();
+    const radiusValue = parseFloat(settings['--radius']) * 16;
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-8 pt-8"
+        >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4 p-4 border rounded-lg">
+                    <h3 className="font-semibold">Custom Colors</h3>
+                    <ColorInput label="Background" value={settings['--background']} onChange={(v) => updateSetting('--background', v)} />
+                    <ColorInput label="Foreground / Text" value={settings['--foreground']} onChange={(v) => updateSetting('--foreground', v)} />
+                    <ColorInput label="Card Background" value={settings['--card']} onChange={(v) => updateSetting('--card', v)} />
+                    <ColorInput label="Primary Button" value={settings['--primary']} onChange={(v) => updateSetting('--primary', v)} />
+                    <ColorInput label="Primary Button Text" value={settings['--primary-foreground']} onChange={(v) => updateSetting('--primary-foreground', v)} />
+                </div>
+                <div className="space-y-4 p-4 border rounded-lg">
+                    <h3 className="font-semibold">Borders & Radius</h3>
+                    <div className="space-y-2">
+                        <Label>Corner Radius: {radiusValue.toFixed(0)}px</Label>
+                        <Input
+                            type="range"
+                            min="0"
+                            max="48"
+                            step="1"
+                            value={radiusValue}
+                            onChange={(e) => updateSetting('--radius', `${parseFloat(e.target.value) / 16}rem`)}
+                        />
+                    </div>
+                </div>
+            </div>
+        </motion.div>
+    )
+}
+
 export const AppearanceSettings = () => {
-  const { settings, updateSetting, resetSettings, isLoading } = useAppearance();
+  const { resetSettings, isLoading, isAdvanced, setAdvanced } = useAppearance();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   if (isLoading) {
     return <Skeleton className="h-96 w-full" />;
   }
-
-  const radiusValue = parseFloat(settings['--radius']) * 16; // Convert rem to px for slider
 
   return (
     <Card>
@@ -87,31 +130,32 @@ export const AppearanceSettings = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4 p-4 border rounded-lg">
-            <h3 className="font-semibold">Colors</h3>
-            <ColorInput label="Background" value={settings['--background']} onChange={(v) => updateSetting('--background', v)} />
-            <ColorInput label="Foreground / Text" value={settings['--foreground']} onChange={(v) => updateSetting('--foreground', v)} />
-            <ColorInput label="Card Background" value={settings['--card']} onChange={(v) => updateSetting('--card', v)} />
-            <ColorInput label="Primary Button" value={settings['--primary']} onChange={(v) => updateSetting('--primary', v)} />
-            <ColorInput label="Primary Button Text" value={settings['--primary-foreground']} onChange={(v) => updateSetting('--primary-foreground', v)} />
-          </div>
-          <div className="space-y-4 p-4 border rounded-lg">
-            <h3 className="font-semibold">Borders & Radius</h3>
-            <div className="space-y-2">
-              <Label>Corner Radius: {radiusValue.toFixed(0)}px</Label>
-              <Input
-                type="range"
-                min="0"
-                max="48"
-                step="1"
-                value={radiusValue}
-                onChange={(e) => updateSetting('--radius', `${parseFloat(e.target.value) / 16}rem`)}
-              />
-            </div>
-          </div>
+        <ThemeSelector />
+        <div className="flex items-center gap-4 pt-4 border-t">
+            <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <AlertDialogTrigger asChild>
+                    <Button variant="outline" onClick={() => isAdvanced ? setAdvanced(false) : setIsModalOpen(true)}>
+                        {isAdvanced ? "Disable Advanced Mode" : "Advanced Customization"}
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Enable Advanced Customization?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will allow you to override the preset theme with your own custom values. You can always reset to the default themes later if you change your mind.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => setAdvanced(true)}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <Button variant="ghost" onClick={resetSettings}>Reset to Defaults</Button>
         </div>
-        <Button variant="outline" onClick={resetSettings}>Reset to Defaults</Button>
+        <AnimatePresence>
+            {isAdvanced && <AdvancedCustomization />}
+        </AnimatePresence>
       </CardContent>
     </Card>
   );
