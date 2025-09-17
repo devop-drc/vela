@@ -51,17 +51,6 @@ const Settings = () => {
     checkIntegration();
   }, []);
 
-  const handleConnectInstagram = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      const jwt = session.access_token;
-      const origin = window.location.origin;
-      window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?jwt=${jwt}&origin=${encodeURIComponent(origin)}`;
-    } else {
-      showError("You must be logged in to connect your Instagram account.");
-    }
-  };
-
   const handleDisconnectInstagram = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -140,10 +129,10 @@ const Settings = () => {
             <CardContent>
               {integrationStatus === 'loading' && <Skeleton className="h-10 w-48" />}
               {integrationStatus === 'disconnected' && (
-                <Button onClick={handleConnectInstagram}>
-                  <Instagram className="mr-2 h-4 w-4" />
-                  Connect with Facebook
-                </Button>
+                 <div className="flex items-center text-destructive">
+                    <Instagram className="mr-2 h-5 w-5" />
+                    <span className="font-medium">Not Connected</span>
+                  </div>
               )}
               {integrationStatus === 'connected' && (
                 <div className="flex items-center space-x-4">
