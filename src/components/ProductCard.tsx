@@ -22,6 +22,7 @@ interface Product {
 interface ProductCardProps {
   product: Product;
   isSelected: boolean;
+  isSelectionActive: boolean;
   onSelect: (productId: string) => void;
   onEdit: (product: Product) => void;
   onDelete: (productId: string) => void;
@@ -52,12 +53,12 @@ const StatusToggle = ({ status, onToggle }: { status: 'Active' | 'Draft', onTogg
   );
 };
 
-export const ProductCard = ({ product, isSelected, onSelect, onEdit, onDelete, onStatusChange }: ProductCardProps) => {
+export const ProductCard = ({ product, isSelected, isSelectionActive, onSelect, onEdit, onDelete, onStatusChange }: ProductCardProps) => {
   const categoryColor = getCategoryColor(product.category);
 
   return (
     <motion.div layout whileHover={{ y: -3, transition: { duration: 0.2 } }} className="relative">
-      <div className={cn("absolute top-3 right-3 z-10 transition-opacity", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+      <div className={cn("absolute top-3 right-3 z-10 transition-opacity", isSelectionActive || isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
         <Checkbox
           checked={isSelected}
           onCheckedChange={() => onSelect(product.id)}

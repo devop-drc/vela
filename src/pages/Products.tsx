@@ -193,6 +193,7 @@ const Products = () => {
   };
 
   const currentView = isMobile ? 'grid' : viewMode;
+  const isSelectionActive = selectedProducts.length > 0;
 
   return (
     <>
@@ -254,6 +255,7 @@ const Products = () => {
                   key={product.id}
                   product={product}
                   isSelected={selectedProducts.includes(product.id)}
+                  isSelectionActive={isSelectionActive}
                   onSelect={handleSelectProduct}
                   onEdit={setSelectedProduct}
                   onDelete={setProductToDelete}
