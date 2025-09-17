@@ -80,7 +80,7 @@ serve(async (req) => {
 
     if (!pagesData.data || pagesData.data.length === 0) {
       console.log("No Facebook pages found in the API response.");
-      throw new Error('Permissions are correct, but no Facebook Pages were found for your account. To fix this, please go to your Facebook Page settings and ensure your personal Facebook profile is listed as an Admin with "Full control". A lower role like "Editor" may not be sufficient for API access.');
+      throw new Error('No Facebook Pages were found for your account. This can happen even with correct permissions. Please try this: 1) Open your Instagram app settings. 2) Go to "Accounts Center" > "Sharing across profiles". 3) Re-select your Facebook Page to refresh the connection. 4) Disconnect and reconnect here.');
     }
 
     const igAccount = pagesData.data?.find((page: any) => page.instagram_business_account);
