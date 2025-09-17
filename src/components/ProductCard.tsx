@@ -6,6 +6,7 @@ import { AspectRatio } from "./ui/aspect-ratio";
 import { getCategoryColor } from "@/lib/colorUtils";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { Checkbox } from "./ui/checkbox";
 
 interface Product {
   id: string;
@@ -20,6 +21,8 @@ interface Product {
 
 interface ProductCardProps {
   product: Product;
+  isSelected: boolean;
+  onSelect: (productId: string) => void;
   onEdit: (product: Product) => void;
   onDelete: (productId: string) => void;
   onStatusChange: (productId: string, newStatus: 'Active' | 'Draft') => void;
@@ -49,11 +52,19 @@ const StatusToggle = ({ status, onToggle }: { status: 'Active' | 'Draft', onTogg
   );
 };
 
-export const ProductCard = ({ product, onEdit, onDelete, onStatusChange }: ProductCardProps) => {
+export const ProductCard = ({ product, isSelected, onSelect, onEdit, onDelete, onStatusChange }: ProductCardProps) => {
   const categoryColor = getCategoryColor(product.category);
 
   return (
-    <motion.div layout whileHover={{ y: -3, transition: { duration: 0.2 } }}>
+    <motion.div layout whileHover={{ y: -3, transition: { duration: 0.2 } }} className="relative">
+      <div className={cn("absolute top-3 right-3 z-10 transition-opacity", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={() => onSelect(product.id)}
+          className="h-5 w-5 bg-white border-gray-400"
+          aria-label={`Select ${product.name}`}
+        />
+      </div>
       <Card className="group w-full overflow-hidden rounded-xl border-0 shadow-md transition-shadow duration-300 hover:shadow-xl flex flex-col">
         <div className="relative cursor-pointer" onClick={() => onEdit(product)}>
           <AspectRatio ratio={1} className="overflow-hidden bg-muted">

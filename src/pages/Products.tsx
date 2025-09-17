@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { PlusCircle, RefreshCw, Import } from "lucide-react";
+import { RefreshCw, Import } from "lucide-react";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +13,8 @@ import { ProductTableView } from "@/components/ProductTableView";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
+import { BulkActionsToolbar } from "@/components/BulkActionsToolbar";
+import { AnimatePresence } from "framer-motion";
 
 interface Product {
   id: string;
@@ -36,9 +38,11 @@ const Products = () => {
   const [isImporterOpen, setIsImporterOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
 
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState("newest");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
@@ -149,6 +153,45 @@ const Products = () => {
       });
   }, [products, searchTerm, statusFilter, sortOption]);
 
+  const handleSelectProduct = (productId: string) => {
+    setSelectedProducts(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedProducts(filteredAndSortedProducts.map(p => p.id));
+    } else {
+      setSelectedProducts([]);
+    }
+  };
+
+  const handleBulkStatusChange = async (status: 'Active' | 'Draft') => {
+    const { error } = await supabase.from('products').update({ status }).in('id', selectedProducts);
+    if (error) {
+      showError(`Failed to update products: ${error.message}`);
+    } else {
+      showSuccess(`Successfully updated ${selectedProducts.length} products.`);
+      setSelectedProducts([]);
+      fetchProducts();
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const { error } = await supabase.from('products').delete().in('id', selectedProducts);
+    if (error) {
+      showError(`Failed to delete products: ${error.message}`);
+    } else {
+      showSuccess(`Successfully deleted ${selectedProducts.length} products.`);
+      setSelectedProducts([]);
+      fetchProducts();
+    }
+    setBulkDeleteConfirm(false);
+  };
+
   const currentView = isMobile ? 'grid' : viewMode;
 
   return (
@@ -166,6 +209,12 @@ const Products = () => {
           <AlertDialogFooter><AlertDialogCancel onClick={() => setProductToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Delete {selectedProducts.length} products?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -178,10 +227,6 @@ const Products = () => {
             <Button onClick={handleSync} disabled={isSyncing} className="flex-1 md:flex-none">
               <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
               Sync
-            </Button>
-            <Button className="flex-1 md:flex-none">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Product
             </Button>
           </div>
         </div>
@@ -208,6 +253,8 @@ const Products = () => {
                 <ProductCard
                   key={product.id}
                   product={product}
+                  isSelected={selectedProducts.includes(product.id)}
+                  onSelect={handleSelectProduct}
                   onEdit={setSelectedProduct}
                   onDelete={setProductToDelete}
                   onStatusChange={handleStatusChange}
@@ -219,6 +266,9 @@ const Products = () => {
               <CardContent className="p-0">
                 <ProductTableView
                   products={filteredAndSortedProducts}
+                  selectedProducts={selectedProducts}
+                  onSelectAll={handleSelectAll}
+                  onSelectOne={handleSelectProduct}
                   onEdit={setSelectedProduct}
                   onDelete={setProductToDelete}
                   onStatusChange={handleStatusChange}
@@ -233,6 +283,16 @@ const Products = () => {
           </div>
         )}
       </div>
+      <AnimatePresence>
+        {selectedProducts.length > 0 && (
+          <BulkActionsToolbar 
+            selectedCount={selectedProducts.length}
+            onClear={() => setSelectedProducts([])}
+            onSetStatus={handleBulkStatusChange}
+            onDelete={() => setBulkDeleteConfirm(true)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 };

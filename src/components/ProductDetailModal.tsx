@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Edit, Trash2, CheckCircle, XCircle, Tag, FileText, ListChecks, DollarSign, Boxes, Repeat } from "lucide-react";
+import { Loader2, Edit, Trash2, CheckCircle, XCircle, Tag, FileText, ListChecks, DollarSign, Boxes } from "lucide-react";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
