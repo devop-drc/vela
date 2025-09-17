@@ -44,9 +44,18 @@ const Products = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const { data, error } = await supabase.functions.invoke('instagram-posts');
-        if (error) throw error;
-        if (data.error) throw new Error(data.error);
+        const { data, error: invokeError } = await supabase.functions.invoke('instagram-posts');
+        
+        if (invokeError) {
+          // This will now only catch network/auth errors from the invoke call itself
+          throw invokeError;
+        }
+
+        if (data.error) {
+          // This catches the application-level error returned from our function
+          throw new Error(data.error);
+        }
+
         setInstagramPosts(data.posts || []);
       } catch (err: any) {
         console.error("Error fetching Instagram posts:", err);
