@@ -86,37 +86,30 @@ const Settings = () => {
       <h1 className="text-3xl font-bold">Settings</h1>
       <Tabs defaultValue="account" className="w-full">
         <TabsList>
-          <TabsTrigger value="shop">Shop Details</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          <TabsTrigger value="shop">Shop Details</TabsTrigger>
         </TabsList>
-        <TabsContent value="shop">
-          <Card>
-            <CardHeader>
-              <CardTitle>Shop Details</CardTitle>
-              <CardDescription>Manage your shop's public information.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">This section is under construction.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
         <TabsContent value="account">
           <Card>
             <CardHeader>
               <CardTitle>Account</CardTitle>
               <CardDescription>
-                Manage your account settings.
+                Manage your account settings and set your e-mail preferences.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" defaultValue={supabase.auth.getUser().data?.user?.email} disabled />
+                <Label htmlFor="name">Name</Label>
+                <Input id="name" defaultValue="Shadcn" />
               </div>
-              <Button disabled>Changes are managed via your login provider</Button>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" defaultValue="shadcn@example.com" />
+              </div>
+              <Button>Save Changes</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -163,6 +156,19 @@ const Settings = () => {
                   </Button>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="shop">
+          <Card>
+            <CardHeader>
+              <CardTitle>Shop Details</CardTitle>
+              <CardDescription>
+                Manage your shop's public information.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Shop settings will be displayed here.</p>
             </CardContent>
           </Card>
         </TabsContent>

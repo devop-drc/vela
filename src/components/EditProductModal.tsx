@@ -27,10 +27,9 @@ interface EditProductModalProps {
   onSave: () => void;
   productData: any;
   post: any;
-  businessId: string;
 }
 
-export const EditProductModal = ({ isOpen, onClose, onSave, productData, post, businessId }: EditProductModalProps) => {
+export const EditProductModal = ({ isOpen, onClose, onSave, productData, post }: EditProductModalProps) => {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -44,13 +43,14 @@ export const EditProductModal = ({ isOpen, onClose, onSave, productData, post, b
   });
 
   const onSubmit = async (data: ProductFormData) => {
-    if (!businessId) {
-      showError("Business not found. Cannot create product.");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showError("You must be logged in to create a product.");
       return;
     }
 
     const { error } = await supabase.from('products').insert({
-      business_id: businessId,
+      user_id: user.id,
       name: data.name,
       caption: data.description,
       category: data.category,

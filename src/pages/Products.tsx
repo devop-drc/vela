@@ -15,7 +15,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { BulkActionsToolbar } from "@/components/BulkActionsToolbar";
 import { AnimatePresence } from "framer-motion";
-import { useBusiness } from "@/contexts/BusinessContext";
 
 interface Product {
   id: string;
@@ -33,7 +32,6 @@ interface Product {
 }
 
 const Products = () => {
-  const { business, isLoading: isBusinessLoading } = useBusiness();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -51,16 +49,10 @@ const Products = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   const fetchProducts = useCallback(async () => {
-    if (!business) {
-      setProducts([]);
-      setIsLoading(false);
-      return;
-    }
     setIsLoading(true);
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .eq('business_id', business.id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -70,7 +62,7 @@ const Products = () => {
       setProducts(data as Product[]);
     }
     setIsLoading(false);
-  }, [business]);
+  }, []);
 
   useEffect(() => {
     if (searchParams.get("instagram_connected") === "true") {
@@ -79,10 +71,8 @@ const Products = () => {
       searchParams.delete("instagram_connected");
       setSearchParams(searchParams, { replace: true });
     }
-    if (business) {
-      fetchProducts();
-    }
-  }, [fetchProducts, searchParams, setSearchParams, business]);
+    fetchProducts();
+  }, [fetchProducts, searchParams, setSearchParams]);
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -205,26 +195,9 @@ const Products = () => {
   const currentView = isMobile ? 'grid' : viewMode;
   const isSelectionActive = selectedProducts.length > 0;
 
-  if (isBusinessLoading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-[420px] w-full rounded-lg" />)}
-      </div>
-    );
-  }
-
-  if (!business) {
-    return (
-      <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg">
-        <h3 className="text-lg font-semibold">Create Your Business First</h3>
-        <p className="text-sm mt-1">You need to create a business in the settings page before you can add products.</p>
-      </div>
-    );
-  }
-
   return (
     <>
-      {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={fetchProducts} businessId={business.id} />}
+      {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={fetchProducts} />}
       <ProductDetailModal 
         isOpen={!!selectedProduct}
         onClose={() => setSelectedProduct(null)}

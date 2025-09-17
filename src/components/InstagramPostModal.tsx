@@ -23,12 +23,11 @@ interface AnalyzedPost {
 interface InstagramPostModalProps {
   onClose: () => void;
   onImport: () => void;
-  businessId: string;
 }
 
 const CACHE_KEY = 'instagram_posts_cache';
 
-export const InstagramPostModal = ({ onClose, onImport, businessId }: InstagramPostModalProps) => {
+export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProps) => {
   const [posts, setPosts] = useState<AnalyzedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -216,7 +215,6 @@ export const InstagramPostModal = ({ onClose, onImport, businessId }: InstagramP
           onSave={handleSaveProduct}
           productData={productToEdit}
           post={selectedPost}
-          businessId={businessId}
         />
       )}
     </>
