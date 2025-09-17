@@ -45,9 +45,6 @@ serve(async (req) => {
         throw new Error('Failed to fetch Facebook pages. Please try reconnecting your account.');
     }
     const pagesData = await pagesResponse.json();
-    
-    // Diagnostic logging
-    console.log('Facebook Pages Response:', JSON.stringify(pagesData, null, 2));
 
     const igAccount = pagesData.data?.find((page: any) => page.instagram_business_account);
     if (!igAccount) {
