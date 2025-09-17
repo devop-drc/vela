@@ -27,14 +27,13 @@ serve(async (req) => {
   const isCallback = url.pathname.endsWith('/callback');
 
   if (isCallback) {
-    // Step 2: Handle the callback from Facebook
+    let origin = '/'; // Declare origin outside the try block to be accessible in catch
     try {
       console.log("--- Instagram Auth Callback Initiated ---");
       const error = url.searchParams.get('error');
       const errorDescription = url.searchParams.get('error_description');
-      const encodedState = url.search_params.get('state');
+      const encodedState = url.searchParams.get('state'); // Corrected: searchParams instead of search_params
       
-      let origin = '/'; // Default fallback
       if (encodedState) {
         try {
           const statePayload = atob(encodedState);
@@ -148,7 +147,7 @@ serve(async (req) => {
 
     } catch (error) {
       console.error('OAuth Callback Error:', error.message);
-      const genericErrorUrl = new URL(req.headers.get('origin') || Deno.env.get('SUPABASE_URL') || '/');
+      const genericErrorUrl = new URL(origin);
       genericErrorUrl.pathname = '/settings';
       genericErrorUrl.searchParams.set('integration_error', error.message);
       return Response.redirect(genericErrorUrl.toString(), 302);
