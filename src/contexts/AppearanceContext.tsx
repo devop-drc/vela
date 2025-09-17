@@ -19,48 +19,44 @@ interface Theme {
 
 export const presetThemes: Theme[] = [
   {
-    name: 'Default',
-    light: {
-      '--background': '220 10% 98%', '--foreground': '220 10% 20%', '--primary': '220 10% 15%',
-      '--primary-foreground': '0 0% 100%', '--card': '220 10% 100%',
-    },
-    dark: {
-      '--background': '220 10% 10%', '--foreground': '220 10% 95%', '--primary': '220 10% 98%',
-      '--primary-foreground': '220 10% 10%', '--card': '220 10% 15%',
-    },
+    name: 'Onyx',
+    light: { '--background': '0 0% 100%', '--foreground': '240 10% 3.9%', '--primary': '240 5.9% 10%', '--primary-foreground': '0 0% 98%', '--card': '0 0% 100%' },
+    dark: { '--background': '240 10% 3.9%', '--foreground': '0 0% 98%', '--primary': '0 0% 98%', '--primary-foreground': '240 5.9% 10%', '--card': '240 10% 3.9%' },
   },
   {
-    name: 'Forest',
-    light: {
-      '--background': '120 15% 97%', '--foreground': '120 25% 15%', '--primary': '120 35% 30%',
-      '--primary-foreground': '120 15% 95%', '--card': '120 10% 100%',
-    },
-    dark: {
-      '--background': '120 25% 10%', '--foreground': '120 10% 90%', '--primary': '120 30% 70%',
-      '--primary-foreground': '120 25% 15%', '--card': '120 25% 15%',
-    },
+    name: 'Nautical',
+    light: { '--background': '204 100% 96%', '--foreground': '215 60% 22%', '--primary': '210 79% 46%', '--primary-foreground': '0 0% 100%', '--card': '204 100% 99%' },
+    dark: { '--background': '215 60% 12%', '--foreground': '204 20% 94%', '--primary': '210 90% 66%', '--primary-foreground': '215 60% 12%', '--card': '215 60% 16%' },
   },
   {
-    name: 'Rose',
-    light: {
-      '--background': '350 100% 98%', '--foreground': '350 40% 25%', '--primary': '350 70% 45%',
-      '--primary-foreground': '350 100% 98%', '--card': '350 100% 100%',
-    },
-    dark: {
-      '--background': '350 30% 12%', '--foreground': '350 30% 90%', '--primary': '350 80% 75%',
-      '--primary-foreground': '350 40% 15%', '--card': '350 30% 18%',
-    },
+    name: 'Sakura',
+    light: { '--background': '345 100% 97%', '--foreground': '343 35% 30%', '--primary': '343 85% 65%', '--primary-foreground': '0 0% 100%', '--card': '345 100% 99%' },
+    dark: { '--background': '343 35% 12%', '--foreground': '345 20% 94%', '--primary': '343 90% 75%', '--primary-foreground': '343 35% 12%', '--card': '343 35% 16%' },
   },
   {
-    name: 'Ocean',
-    light: {
-      '--background': '205 100% 97%', '--foreground': '215 50% 20%', '--primary': '210 80% 45%',
-      '--primary-foreground': '205 100% 98%', '--card': '205 100% 100%',
-    },
-    dark: {
-      '--background': '215 50% 10%', '--foreground': '205 30% 90%', '--primary': '205 90% 70%',
-      '--primary-foreground': '215 50% 15%', '--card': '215 50% 15%',
-    },
+    name: 'Evergreen',
+    light: { '--background': '140 70% 97%', '--foreground': '140 40% 18%', '--primary': '140 60% 30%', '--primary-foreground': '0 0% 100%', '--card': '140 70% 99%' },
+    dark: { '--background': '140 40% 8%', '--foreground': '140 20% 94%', '--primary': '140 70% 60%', '--primary-foreground': '140 40% 8%', '--card': '140 40% 12%' },
+  },
+  {
+    name: 'Sunset',
+    light: { '--background': '30 100% 97%', '--foreground': '25 50% 25%', '--primary': '20 90% 55%', '--primary-foreground': '0 0% 100%', '--card': '30 100% 99%' },
+    dark: { '--background': '25 50% 10%', '--foreground': '30 20% 94%', '--primary': '30 95% 70%', '--primary-foreground': '25 50% 10%', '--card': '25 50% 14%' },
+  },
+  {
+    name: 'Latte',
+    light: { '--background': '38 60% 96%', '--foreground': '38 30% 25%', '--primary': '38 50% 45%', '--primary-foreground': '0 0% 100%', '--card': '38 60% 99%' },
+    dark: { '--background': '38 30% 10%', '--foreground': '38 20% 94%', '--primary': '38 70% 70%', '--primary-foreground': '38 30% 10%', '--card': '38 30% 14%' },
+  },
+  {
+    name: 'Mint',
+    light: { '--background': '160 70% 97%', '--foreground': '160 40% 20%', '--primary': '160 60% 40%', '--primary-foreground': '0 0% 100%', '--card': '160 70% 99%' },
+    dark: { '--background': '160 40% 10%', '--foreground': '160 20% 94%', '--primary': '160 70% 65%', '--primary-foreground': '160 40% 10%', '--card': '160 40% 14%' },
+  },
+  {
+    name: 'Lavender',
+    light: { '--background': '250 100% 98%', '--foreground': '250 40% 25%', '--primary': '250 65% 60%', '--primary-foreground': '0 0% 100%', '--card': '250 100% 99%' },
+    dark: { '--background': '250 40% 12%', '--foreground': '250 20% 94%', '--primary': '250 80% 80%', '--primary-foreground': '250 40% 12%', '--card': '250 40% 16%' },
   },
 ];
 // --- END THEME DEFINITIONS ---
@@ -79,7 +75,7 @@ interface DesignSettings {
 }
 
 const defaultSettings: DesignSettings = {
-  themeName: 'Default',
+  themeName: 'Onyx',
   isAdvanced: false,
   ...presetThemes[0].light,
   '--radius': '1.5rem',
