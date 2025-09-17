@@ -54,7 +54,6 @@ serve(async (req) => {
       const code = url.searchParams.get('code');
       if (!code) throw new Error('Authorization code not found in callback.');
 
-      // Exchange code for a long-lived access token
       const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${FACEBOOK_APP_ID}&redirect_uri=${REDIRECT_URI}&client_secret=${FACEBOOK_APP_SECRET}&code=${code}`;
       const tokenResponse = await fetch(tokenUrl);
       const tokenData = await tokenResponse.json();
@@ -67,7 +66,6 @@ serve(async (req) => {
       if (!longLivedTokenResponse.ok) throw new Error(longLivedTokenData.error.message);
       const longLivedToken = longLivedTokenData.access_token;
 
-      // Get user info from Facebook
       const profileUrl = `https://graph.facebook.com/v19.0/me?fields=id,email,first_name,last_name,picture&access_token=${longLivedToken}`;
       const profileResponse = await fetch(profileUrl);
       const profileData = await profileResponse.json();
@@ -76,14 +74,16 @@ serve(async (req) => {
       const { email, first_name, last_name, picture } = profileData;
       if (!email) throw new Error("Could not retrieve email from Facebook. Please ensure your account has a verified email and you granted email permissions.");
 
-      // Find or create user in Supabase
       const supabaseAdmin = getSupabaseAdmin();
       let userId: string;
-      const { data: existingUser, error: getUserError } = await supabaseAdmin.auth.admin.getUserByEmail(email);
-      
-      if (existingUser?.user) {
-        userId = existingUser.user.id;
-      } else if (getUserError?.message === 'User not found') {
+
+      // Correctly check for an existing user
+      const { data: users, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({ email: email });
+      if (listUsersError) throw listUsersError;
+
+      if (users && users.users.length > 0) {
+        userId = users.users[0].id;
+      } else {
         const tempPassword = crypto.randomUUID();
         const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
           email: email,
@@ -98,11 +98,8 @@ serve(async (req) => {
         });
         if (createUserError) throw createUserError;
         userId = newUser.user.id;
-      } else {
-        throw getUserError;
       }
 
-      // Save the integration token
       const { error: upsertError } = await supabaseAdmin.from('integrations').upsert({
         user_id: userId,
         provider: 'facebook',
@@ -110,7 +107,6 @@ serve(async (req) => {
       }, { onConflict: 'user_id,provider' });
       if (upsertError) throw upsertError;
 
-      // Generate Magic Link for login
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
         email: email,
@@ -118,7 +114,6 @@ serve(async (req) => {
       });
       if (linkError) throw linkError;
 
-      // Redirect to magic link to establish session
       return Response.redirect(linkData.properties.action_link, 302);
 
     } catch (error) {
@@ -128,7 +123,6 @@ serve(async (req) => {
       return Response.redirect(errorUrl.toString(), 302);
     }
   } else {
-    // Initial redirect to Facebook
     try {
       const origin = url.searchParams.get('origin');
       if (!origin) throw new Error('Missing origin parameter.');
