@@ -1,22 +1,71 @@
+import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Instagram } from "lucide-react";
+import { Instagram, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { showError } from "@/utils/toast";
+import { showError, showSuccess } from "@/utils/toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Settings = () => {
+  const [integrationStatus, setIntegrationStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading');
+
+  useEffect(() => {
+    const checkIntegration = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from('integrations')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('provider', 'facebook')
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error checking integration status:", error);
+          setIntegrationStatus('disconnected');
+        } else if (data) {
+          setIntegrationStatus('connected');
+        } else {
+          setIntegrationStatus('disconnected');
+        }
+      } else {
+        setIntegrationStatus('disconnected');
+      }
+    };
+
+    checkIntegration();
+  }, []);
+
   const handleConnectInstagram = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
       const jwt = session.access_token;
       const origin = window.location.origin;
-      // Pass the user's JWT and the app's origin to the function
       window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?jwt=${jwt}&origin=${encodeURIComponent(origin)}`;
     } else {
       showError("You must be logged in to connect your Instagram account.");
+    }
+  };
+
+  const handleDisconnectInstagram = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+        const { error } = await supabase
+            .from('integrations')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('provider', 'facebook');
+
+        if (error) {
+            showError("Failed to disconnect. Please try again.");
+            console.error("Error disconnecting:", error);
+        } else {
+            showSuccess("Successfully disconnected your account.");
+            setIntegrationStatus('disconnected');
+        }
     }
   };
 
@@ -69,14 +118,28 @@ const Settings = () => {
             <CardHeader>
               <CardTitle>Integrations</CardTitle>
               <CardDescription>
-                Connect your Instagram account to import posts and create products.
+                Connect your Instagram account to import posts. Note: An Instagram Business or Creator account is required.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={handleConnectInstagram}>
-                <Instagram className="mr-2 h-4 w-4" />
-                Connect with Facebook
-              </Button>
+              {integrationStatus === 'loading' && <Skeleton className="h-10 w-48" />}
+              {integrationStatus === 'disconnected' && (
+                <Button onClick={handleConnectInstagram}>
+                  <Instagram className="mr-2 h-4 w-4" />
+                  Connect with Facebook
+                </Button>
+              )}
+              {integrationStatus === 'connected' && (
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center text-green-600">
+                    <CheckCircle className="mr-2 h-5 w-5" />
+                    <span className="font-medium">Connected to Facebook</span>
+                  </div>
+                  <Button variant="destructive" onClick={handleDisconnectInstagram}>
+                    Disconnect
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
