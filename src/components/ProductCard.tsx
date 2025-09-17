@@ -25,11 +25,35 @@ interface ProductCardProps {
   onStatusChange: (productId: string, newStatus: 'Active' | 'Draft') => void;
 }
 
+const StatusToggle = ({ status, onToggle }: { status: 'Active' | 'Draft', onToggle: () => void }) => {
+  return (
+    <button
+      onClick={onToggle}
+      className="relative flex h-8 w-[84px] items-center rounded-full bg-muted"
+    >
+      <span className="w-1/2 text-center text-xs font-medium text-muted-foreground">Draft</span>
+      <span className="w-1/2 text-center text-xs font-medium text-muted-foreground">Active</span>
+      <motion.div
+        className="absolute left-0 top-0 flex h-full w-1/2 items-center justify-center rounded-full bg-background shadow"
+        animate={{ x: status === 'Active' ? '100%' : '0%' }}
+        transition={{ type: "spring", stiffness: 500, damping: 40 }}
+      >
+        <span className={cn(
+          "text-xs font-bold",
+          status === 'Active' ? 'text-green-600' : 'text-amber-600'
+        )}>
+          {status}
+        </span>
+      </motion.div>
+    </button>
+  );
+};
+
 export const ProductCard = ({ product, onEdit, onDelete, onStatusChange }: ProductCardProps) => {
   const categoryColor = getCategoryColor(product.category);
 
   return (
-    <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }}>
+    <motion.div layout whileHover={{ y: -3, transition: { duration: 0.2 } }}>
       <Card className="group w-full overflow-hidden rounded-xl border-0 shadow-md transition-shadow duration-300 hover:shadow-xl flex flex-col">
         <div className="relative cursor-pointer" onClick={() => onEdit(product)}>
           <AspectRatio ratio={1} className="overflow-hidden bg-muted">
@@ -59,19 +83,10 @@ export const ProductCard = ({ product, onEdit, onDelete, onStatusChange }: Produ
               {product.pricing_type === 'subscription' && <span className="text-sm font-normal text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>}
             </p>
             <div className="flex items-center gap-1">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => onStatusChange(product.id, product.status === 'Active' ? 'Draft' : 'Active')}
-                className={cn(
-                  "w-[75px] font-semibold", 
-                  product.status === 'Active' 
-                    ? 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800' 
-                    : 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800'
-                )}
-              >
-                {product.status}
-              </Button>
+              <StatusToggle 
+                status={product.status} 
+                onToggle={() => onStatusChange(product.id, product.status === 'Active' ? 'Draft' : 'Active')} 
+              />
               <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => onEdit(product)}>
                 <Edit className="h-4 w-4" />
               </Button>
