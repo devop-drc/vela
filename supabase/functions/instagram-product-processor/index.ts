@@ -11,7 +11,7 @@ const corsHeaders = {
 
 const getProductAnalysisPrompt = (caption: string) => {
   return `
-    You are an expert e-commerce assistant for a fashion store. Your task is to analyze an Instagram post caption and determine if it describes a product for sale.
+    You are an expert e-commerce assistant. Your task is to analyze an Instagram post caption to determine if it describes a product or service for sale.
 
     Analyze the following caption:
     ---
@@ -23,18 +23,16 @@ const getProductAnalysisPrompt = (caption: string) => {
       "isProductPost": boolean,
       "reasoning": "A brief explanation of why you decided it is or is not a product post.",
       "product": {
-        "name": "The product name, extracted from the 'Art-' line or inferred. Be concise.",
-        "category": "e.g., 'Kepuce', 'Sandale', 'Cante'",
-        "material": "e.g., 'lekure', 'kamosh'",
-        "referenceCode": "The code following 'Art-'",
-        "sizes": ["An", "array", "of", "available", "sizes"],
-        "price": "A number representing the price.",
-        "currency": "The currency, e.g., 'leke' or 'EUR'"
+        "name": "A concise name for the product or service.",
+        "category": "A suitable category (e.g., 'Clothing', 'Food', 'Digital Service', 'Jewelry'). Be generic.",
+        "description": "A one or two-sentence description based on the caption.",
+        "price": "A number representing the price. Extract it if available, otherwise null.",
+        "currency": "The currency, e.g., 'leke', 'EUR', 'USD'. Infer if possible, otherwise null."
       } | null
     }
 
     If isProductPost is false, the "product" field should be null.
-    If the caption is a product post, extract all details accurately. The price and sizes are the most critical fields. The currency is usually 'leke'.
+    If the caption is a product post, extract all available details accurately.
   `;
 };
 
@@ -106,17 +104,13 @@ serve(async (req) => {
         const p = analysis.product;
         const { error: insertError } = await supabase.from('products').insert({
           user_id: user.id,
-          name: p.name || p.referenceCode,
+          name: p.name,
           status: 'Draft',
           price: p.price,
-          inventory: p.sizes?.length || 0,
           instagram_post_id: post.id,
           media_url: post.media_type === 'VIDEO' ? post.thumbnail_url : post.media_url,
-          caption: post.caption,
+          caption: p.description || post.caption,
           category: p.category,
-          material: p.material,
-          reference_code: p.referenceCode,
-          sizes: p.sizes?.join(', '),
         });
 
         if (insertError) {

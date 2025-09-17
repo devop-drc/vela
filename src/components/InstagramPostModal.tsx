@@ -6,22 +6,9 @@ import { Skeleton } from "./ui/skeleton";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { CheckCircle, Image as ImageIcon, Loader2, RefreshCw } from "lucide-react";
+import { CheckCircle, Image as ImageIcon, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-
-interface PostAnalysis {
-  isProductPost: boolean;
-  reasoning: string;
-  product: {
-    name: string;
-    category: string;
-    material: string;
-    referenceCode: string;
-    sizes: string[];
-    price: number;
-    currency: string;
-  } | null;
-}
+import { EditProductModal } from "./EditProductModal";
 
 interface AnalyzedPost {
   id: string;
@@ -30,7 +17,7 @@ interface AnalyzedPost {
   thumbnail_url?: string;
   caption?: string;
   isImported: boolean;
-  analysis: PostAnalysis | null;
+  analysis: any | null;
 }
 
 interface InstagramPostModalProps {
@@ -46,7 +33,12 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPost, setSelectedPost] = useState<AnalyzedPost | null>(null);
-  const [isImporting, setIsImporting] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+
+  // State for modals
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<any>(null);
 
   const fetchAndAnalyzePosts = useCallback(async (forceRefresh = false) => {
     if (forceRefresh) setIsRefreshing(true);
@@ -89,125 +81,130 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
     fetchAndAnalyzePosts();
   }, [fetchAndAnalyzePosts]);
 
-  const handleImport = async (post: AnalyzedPost) => {
-    if (!post.analysis?.product) return;
-    setIsImporting(post.id);
-    const p = post.analysis.product;
-    const { data: { user } } = await supabase.auth.getUser();
-
-    const { error } = await supabase.from('products').insert({
-      user_id: user?.id,
-      name: p.name || p.referenceCode,
-      status: 'Draft',
-      price: p.price,
-      inventory: p.sizes?.length || 0,
-      instagram_post_id: post.id,
-      media_url: post.media_type === 'VIDEO' ? post.thumbnail_url : post.media_url,
-      caption: post.caption,
-      category: p.category,
-      material: p.material,
-      reference_code: p.referenceCode,
-      sizes: p.sizes?.join(', '),
-    });
-
-    if (error) {
-      showError(`Failed to import product: ${error.message}`);
-    } else {
-      showSuccess("Product imported successfully!");
-      const updatedPosts = posts.map(p => p.id === post.id ? { ...p, isImported: true } : p);
-      setPosts(updatedPosts);
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify(updatedPosts));
-      setSelectedPost(prev => prev ? { ...prev, isImported: true } : null);
-      onImport();
+  const handleCreateProduct = async (post: AnalyzedPost) => {
+    setIsCreating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('force-product-analysis', {
+        body: { caption: post.caption },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      
+      setProductToEdit(data);
+      setIsEditModalOpen(true);
+    } catch (err: any) {
+      showError(err.message || "Failed to generate product details.");
+    } finally {
+      setIsCreating(false);
     }
-    setIsImporting(null);
+  };
+
+  const handleSaveProduct = () => {
+    const updatedPosts = posts.map(p => p.id === selectedPost?.id ? { ...p, isImported: true } : p);
+    setPosts(updatedPosts);
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(updatedPosts));
+    setSelectedPost(prev => prev ? { ...prev, isImported: true } : null);
+    onImport();
   };
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Import from Instagram</DialogTitle>
-          <DialogDescription>Select a post to view its details and import it as a product.</DialogDescription>
-        </DialogHeader>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-0">
-          <div className="md:col-span-1 flex flex-col min-h-0">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-semibold">Your Posts</h3>
-              <Button variant="ghost" size="sm" onClick={() => fetchAndAnalyzePosts(true)} disabled={isRefreshing}>
-                <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            </div>
-            <ScrollArea className="flex-1 pr-4 border rounded-lg">
-              <div className="grid grid-cols-3 gap-2 p-2">
-                {isLoading ? (
-                  Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="aspect-square" />)
-                ) : error ? (
-                  <div className="col-span-3 text-destructive p-4 border border-destructive/50 rounded-md">{error}</div>
-                ) : (
-                  posts.map(post => (
-                    <button key={post.id} onClick={() => setSelectedPost(post)} className={`relative aspect-square rounded-md overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${selectedPost?.id === post.id ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
-                      <img src={post.thumbnail_url || post.media_url} alt="Instagram post" className="w-full h-full object-cover" />
-                      {post.isImported && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><CheckCircle className="text-white h-8 w-8" /></div>}
-                    </button>
-                  ))
-                )}
+    <>
+      <Dialog open={true} onOpenChange={onClose}>
+        <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Import from Instagram</DialogTitle>
+            <DialogDescription>Select a post to view its details and create a product.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-0">
+            <div className="md:col-span-1 flex flex-col min-h-0">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-semibold">Your Posts</h3>
+                <Button variant="ghost" size="sm" onClick={() => fetchAndAnalyzePosts(true)} disabled={isRefreshing}>
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
               </div>
-            </ScrollArea>
-          </div>
-          <div className="md:col-span-2 flex flex-col min-h-0">
-            <h3 className="text-lg font-semibold mb-2">Post Details</h3>
-            <ScrollArea className="flex-1 pr-4">
-              {selectedPost ? (
-                <div className="space-y-4">
-                  <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                    <img src={selectedPost.media_url} alt="Selected post" className="w-full h-full object-contain" />
-                  </div>
-                  <Card>
-                    <CardHeader><CardTitle>AI Analysis</CardTitle></CardHeader>
-                    <CardContent>
-                      {selectedPost.analysis ? (
-                        <div className="space-y-4">
+              <ScrollArea className="flex-1 pr-4 border rounded-lg">
+                <div className="grid grid-cols-3 gap-2 p-2">
+                  {isLoading ? (
+                    Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="aspect-square" />)
+                  ) : error ? (
+                    <div className="col-span-3 text-destructive p-4 border border-destructive/50 rounded-md">{error}</div>
+                  ) : (
+                    posts.map(post => (
+                      <button key={post.id} onClick={() => setSelectedPost(post)} className={`relative aspect-square rounded-md overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${selectedPost?.id === post.id ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
+                        <img src={post.thumbnail_url || post.media_url} alt="Instagram post" className="w-full h-full object-cover" />
+                        {post.isImported && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><CheckCircle className="text-white h-8 w-8" /></div>}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+            <div className="md:col-span-2 flex flex-col min-h-0">
+              <h3 className="text-lg font-semibold mb-2">Post Details</h3>
+              <ScrollArea className="flex-1 pr-4">
+                {selectedPost ? (
+                  <div className="space-y-4">
+                    <button onClick={() => setIsImageViewerOpen(true)} className="w-full h-64 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                      <img src={selectedPost.media_url} alt="Selected post" className="max-w-full max-h-full object-contain" />
+                    </button>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>AI Analysis</CardTitle>
+                        <CardDescription>Initial analysis of the post caption.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {selectedPost.analysis ? (
                           <div className="flex items-start gap-4">
                             {selectedPost.analysis.isProductPost ? <Badge className="mt-1">Product</Badge> : <Badge variant="secondary" className="mt-1">General</Badge>}
                             <p className="text-sm text-muted-foreground flex-1">{selectedPost.analysis.reasoning}</p>
                           </div>
-                          {selectedPost.analysis.product && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm border-t pt-4 mt-4">
-                              <div><strong>Name:</strong> {selectedPost.analysis.product.name}</div>
-                              <div><strong>Category:</strong> {selectedPost.analysis.product.category}</div>
-                              <div><strong>Material:</strong> {selectedPost.analysis.product.material}</div>
-                              <div><strong>Code:</strong> {selectedPost.analysis.product.referenceCode}</div>
-                              <div><strong>Price:</strong> {selectedPost.analysis.product.price} {selectedPost.analysis.product.currency}</div>
-                              <div><strong>Sizes:</strong> {selectedPost.analysis.product.sizes.join(', ')}</div>
-                            </div>
-                          )}
-                          <Button onClick={() => handleImport(selectedPost)} disabled={!selectedPost.analysis?.isProductPost || selectedPost.isImported || !!isImporting} className="mt-4">
-                            {isImporting === selectedPost.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {selectedPost.isImported ? "Already Imported" : "Import as Product"}
-                          </Button>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No analysis available for this post (e.g., no caption).</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                   <Card>
-                    <CardHeader><CardTitle>Original Caption</CardTitle></CardHeader>
-                    <CardContent><p className="text-sm whitespace-pre-wrap text-muted-foreground">{selectedPost.caption || "No caption."}</p></CardContent>
-                  </Card>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground border rounded-lg">
-                  <ImageIcon className="h-16 w-16 mb-4" />
-                  <p>Select a post from the left to see its details.</p>
-                </div>
-              )}
-            </ScrollArea>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No caption to analyze.</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Original Caption</CardTitle>
+                      </CardHeader>
+                      <CardContent><p className="text-sm whitespace-pre-wrap text-muted-foreground">{selectedPost.caption || "No caption."}</p></CardContent>
+                    </Card>
+                    <Button onClick={() => handleCreateProduct(selectedPost)} disabled={selectedPost.isImported || isCreating} className="w-full">
+                      {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                      {selectedPost.isImported ? "Already Imported" : "Create Product from this Post"}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground border rounded-lg">
+                    <ImageIcon className="h-16 w-16 mb-4" />
+                    <p>Select a post from the left to see its details.</p>
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {isImageViewerOpen && selectedPost && (
+        <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
+          <DialogContent className="max-w-4xl h-[90vh]">
+            <img src={selectedPost.media_url} alt="Full size post" className="max-w-full max-h-full object-contain mx-auto" />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {isEditModalOpen && productToEdit && selectedPost && (
+        <EditProductModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={handleSaveProduct}
+          productData={productToEdit}
+          post={selectedPost}
+        />
+      )}
+    </>
   );
 };
