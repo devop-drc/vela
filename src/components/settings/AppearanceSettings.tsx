@@ -77,53 +77,6 @@ const ColorInput = ({ label, value, onChange }: { label: string, value: string, 
   </div>
 );
 
-const StyleSettings = () => {
-  const { settings, updateSetting } = useAppearance();
-  const radiusValue = parseFloat(settings['--radius']) * 16;
-
-  return (
-    <div className="space-y-8 pt-8 border-t">
-      <div className="space-y-4">
-        <h3 className="font-semibold">Sidebar Style</h3>
-        <RadioGroup 
-            value={settings.sidebarStyle} 
-            onValueChange={(value) => updateSetting('sidebarStyle', value as 'primary' | 'card')}
-            className="flex gap-4"
-        >
-            <Label className="flex items-center gap-2 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-primary flex-1">
-                <RadioGroupItem value="primary" id="sidebar-primary" />
-                <div>
-                    <p className="font-medium">Vibrant</p>
-                    <p className="text-sm text-muted-foreground">Uses your primary brand color for a bold look.</p>
-                </div>
-            </Label>
-            <Label className="flex items-center gap-2 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-primary flex-1">
-                <RadioGroupItem value="card" id="sidebar-card" />
-                 <div>
-                    <p className="font-medium">Subtle</p>
-                    <p className="text-sm text-muted-foreground">A clean, minimal style that blends with the content.</p>
-                </div>
-            </Label>
-        </RadioGroup>
-      </div>
-      <div className="space-y-4">
-        <h3 className="font-semibold">Corner Radius</h3>
-        <div className="space-y-2">
-            <Label>Radius: {radiusValue.toFixed(0)}px</Label>
-            <Input
-                type="range"
-                min="0"
-                max="32"
-                step="1"
-                value={radiusValue}
-                onChange={(e) => updateSetting('--radius', `${parseFloat(e.target.value) / 16}rem`)}
-            />
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const AdvancedCustomization = () => {
     const { settings, updateSetting } = useAppearance();
 
@@ -149,8 +102,9 @@ const AdvancedCustomization = () => {
 };
 
 export const AppearanceSettings = () => {
-  const { resetSettings, isLoading, isAdvanced, setAdvanced, randomizeTheme } = useAppearance();
+  const { settings, updateSetting, resetSettings, isLoading, isAdvanced, setAdvanced, randomizeTheme } = useAppearance();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const radiusValue = parseFloat(settings['--radius']) * 16;
 
   if (isLoading) {
     return <Skeleton className="h-96 w-full" />;
@@ -172,8 +126,49 @@ export const AppearanceSettings = () => {
       </CardHeader>
       <CardContent className="space-y-8">
         <ThemeSelector />
-        <StyleSettings />
+        
+        <div className="space-y-8 pt-8 border-t">
+          <div className="space-y-4">
+            <h3 className="font-semibold">Sidebar Style</h3>
+            <RadioGroup 
+                value={settings.sidebarStyle} 
+                onValueChange={(value) => updateSetting('sidebarStyle', value as 'primary' | 'card')}
+                className="flex gap-4"
+            >
+                <Label className="flex items-center gap-2 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-primary flex-1">
+                    <RadioGroupItem value="primary" id="sidebar-primary" />
+                    <div>
+                        <p className="font-medium">Vibrant</p>
+                        <p className="text-sm text-muted-foreground">Uses your primary brand color for a bold look.</p>
+                    </div>
+                </Label>
+                <Label className="flex items-center gap-2 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-primary flex-1">
+                    <RadioGroupItem value="card" id="sidebar-card" />
+                     <div>
+                        <p className="font-medium">Subtle</p>
+                        <p className="text-sm text-muted-foreground">A clean, minimal style that blends with the content.</p>
+                    </div>
+                </Label>
+            </RadioGroup>
+          </div>
+          <div className="space-y-4">
+            <h3 className="font-semibold">Corner Radius</h3>
+            <div className="space-y-2">
+                <Label>Radius: {radiusValue.toFixed(0)}px</Label>
+                <Input
+                    type="range"
+                    min="0"
+                    max="32"
+                    step="1"
+                    value={radiusValue}
+                    onChange={(e) => updateSetting('--radius', `${parseFloat(e.target.value) / 16}rem`)}
+                />
+            </div>
+          </div>
+        </div>
+
         <FontSelector />
+
         <div className="flex items-center gap-4 pt-8 border-t">
             <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <AlertDialogTrigger asChild>
