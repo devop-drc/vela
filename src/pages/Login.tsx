@@ -1,29 +1,11 @@
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, Facebook } from "lucide-react";
 
 const Login = () => {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Redirect if already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/");
-      }
-    });
-  }, [navigate]);
-
-  const handleFacebookLogin = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'facebook',
-      options: {
-        scopes: 'public_profile,email,pages_show_list,instagram_basic,instagram_content_publish,pages_read_engagement,business_management',
-        redirectTo: window.location.origin,
-      }
-    });
+  const handleFacebookLogin = () => {
+    const origin = window.location.origin;
+    // Redirect to our custom Edge Function to handle the entire auth flow
+    window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?origin=${encodeURIComponent(origin)}`;
   };
 
   return (
