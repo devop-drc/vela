@@ -57,7 +57,7 @@ const Settings = () => {
               <CardDescription>
                 Manage your billing information and view your invoices.
               </CardDescription>
-            </Header>
+            </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">Billing details will be displayed here.</p>
             </CardContent>
@@ -70,7 +70,7 @@ const Settings = () => {
               <CardDescription>
                 Connect your Instagram account to import posts and create products.
               </CardDescription>
-            </Header>
+            </CardHeader>
             <CardContent>
               <Button onClick={handleConnectInstagram}>
                 <Instagram className="mr-2 h-4 w-4" />
@@ -86,7 +86,7 @@ const Settings = () => {
               <CardDescription>
                 Manage your shop's public information.
               </CardDescription>
-            </Header>
+            </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">Shop settings will be displayed here.</p>
             </CardContent>
