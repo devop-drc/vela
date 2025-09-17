@@ -7,7 +7,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { CheckCircle, Image as ImageIcon, Loader2, RefreshCw, Sparkles } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { EditProductModal } from "./EditProductModal";
 
 interface AnalyzedPost {
