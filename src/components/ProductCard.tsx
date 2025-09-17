@@ -1,9 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
 import { AspectRatio } from "./ui/aspect-ratio";
-import { getCategoryColor } from "@/lib/colorUtils";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Checkbox } from "./ui/checkbox";
@@ -25,26 +21,28 @@ interface ProductCardProps {
   isSelectionActive: boolean;
   onSelect: (productId: string) => void;
   onEdit: (product: Product) => void;
-  onDelete: (productId: string) => void;
   onStatusChange: (productId: string, newStatus: 'Active' | 'Draft') => void;
 }
 
-const StatusToggle = ({ status, onToggle }: { status: 'Active' | 'Draft', onToggle: () => void }) => {
+const StatusToggle = ({ status, onToggle }: { status: 'Active' | 'Draft', onToggle: (e: React.MouseEvent) => void }) => {
+  const stopPropagation = (e: React.MouseEvent) => e.stopPropagation();
+
   return (
     <button
       onClick={onToggle}
-      className="relative flex h-8 w-[84px] items-center rounded-full bg-muted"
+      onMouseDown={stopPropagation}
+      className="relative flex h-9 w-24 items-center rounded-full bg-secondary p-1"
     >
       <span className="w-1/2 text-center text-xs font-medium text-muted-foreground">Draft</span>
       <span className="w-1/2 text-center text-xs font-medium text-muted-foreground">Active</span>
       <motion.div
-        className="absolute left-0 top-0 flex h-full w-1/2 items-center justify-center rounded-full bg-background shadow"
-        animate={{ x: status === 'Active' ? '100%' : '0%' }}
+        className="absolute top-1 left-1 flex h-7 w-1/2 items-center justify-center rounded-full bg-card shadow"
+        animate={{ x: status === 'Active' ? '92%' : '0%' }}
         transition={{ type: "spring", stiffness: 500, damping: 40 }}
       >
         <span className={cn(
           "text-xs font-bold",
-          status === 'Active' ? 'text-green-600' : 'text-amber-600'
+          status === 'Active' ? 'text-emerald-500' : 'text-amber-500'
         )}>
           {status}
         </span>
@@ -53,59 +51,57 @@ const StatusToggle = ({ status, onToggle }: { status: 'Active' | 'Draft', onTogg
   );
 };
 
-export const ProductCard = ({ product, isSelected, isSelectionActive, onSelect, onEdit, onDelete, onStatusChange }: ProductCardProps) => {
-  const categoryColor = getCategoryColor(product.category);
+export const ProductCard = ({ product, isSelected, isSelectionActive, onSelect, onEdit, onStatusChange }: ProductCardProps) => {
+  const handleStatusToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onStatusChange(product.id, product.status === 'Active' ? 'Draft' : 'Active');
+  };
 
   return (
-    <motion.div layout whileHover={{ y: -3, transition: { duration: 0.2 } }} className="relative">
-      <div className={cn("absolute top-3 right-3 z-10 transition-opacity", isSelectionActive || isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+    <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative">
+      <div className={cn("absolute top-4 right-4 z-10 transition-opacity", isSelectionActive || isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
         <Checkbox
           checked={isSelected}
           onCheckedChange={() => onSelect(product.id)}
-          className="h-5 w-5 bg-white border-gray-400"
+          className="h-6 w-6 bg-white/80 backdrop-blur-sm border-gray-400 rounded-md"
           aria-label={`Select ${product.name}`}
         />
       </div>
-      <Card className="group w-full overflow-hidden rounded-xl border-0 shadow-md transition-shadow duration-300 hover:shadow-xl flex flex-col">
-        <div className="relative cursor-pointer" onClick={() => onEdit(product)}>
-          <AspectRatio ratio={1} className="overflow-hidden bg-muted">
-            <img
-              src={product.media_url}
-              alt={product.name}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          </AspectRatio>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-          <div className="absolute bottom-0 left-0 p-4">
-            <Badge variant="outline" className={cn("border-0 font-semibold", categoryColor.bg, categoryColor.text)}>
+      <Card 
+        onClick={() => onEdit(product)}
+        className="group w-full overflow-hidden rounded-lg shadow-premium transition-shadow duration-300 flex flex-col cursor-pointer"
+      >
+        <AspectRatio ratio={1} className="overflow-hidden bg-muted">
+          <img
+            src={product.media_url}
+            alt={product.name}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        </AspectRatio>
+
+        <div className="bg-card p-4 flex-1 flex flex-col justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               {product.category || 'Uncategorized'}
-            </Badge>
-            <h3 className="mt-1 truncate text-lg font-bold text-white shadow-sm">
+            </p>
+            <h3 className="mt-1 truncate text-2xl font-light tracking-wide">
               {product.name}
             </h3>
           </div>
-        </div>
-
-        <div className="bg-card p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-2xl font-extrabold">
-              {product.pricing_type === 'subscription'
-                ? `$${product.price ? product.price.toFixed(2) : '0.00'}`
-                : `$${product.price ? product.price.toFixed(2) : 'N/A'}`}
-              {product.pricing_type === 'subscription' && <span className="text-sm font-normal text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>}
-            </p>
-            <div className="flex items-center gap-1">
-              <StatusToggle 
-                status={product.status} 
-                onToggle={() => onStatusChange(product.id, product.status === 'Active' ? 'Draft' : 'Active')} 
-              />
-              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => onEdit(product)}>
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:text-destructive" onClick={() => onDelete(product.id)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
+          <div className="flex items-end justify-between mt-4">
+            <div className="flex flex-col">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">Price</p>
+              <p className="font-semibold text-2xl">
+                {product.pricing_type === 'subscription'
+                  ? `$${product.price ? product.price.toFixed(2) : '0.00'}`
+                  : `$${product.price ? product.price.toFixed(2) : 'N/A'}`}
+                {product.pricing_type === 'subscription' && <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>}
+              </p>
             </div>
+            <StatusToggle 
+              status={product.status} 
+              onToggle={handleStatusToggle} 
+            />
           </div>
         </div>
       </Card>

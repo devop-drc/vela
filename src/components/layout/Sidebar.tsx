@@ -12,8 +12,8 @@ const Sidebar = () => {
   ];
 
   return (
-    <aside className="hidden md:flex md:flex-col md:w-64 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center">
+    <aside className="hidden md:flex md:flex-col md:w-64 bg-primary text-primary-foreground">
+      <div className="p-4 border-b border-primary-foreground/10 flex items-center">
         <ShoppingBag className="h-6 w-6 mr-2" />
         <h1 className="text-xl font-bold">InstaShopify</h1>
       </div>
@@ -24,8 +24,8 @@ const Sidebar = () => {
             to={item.to}
             className={({ isActive }) =>
               cn(
-                "flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 rounded-md text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-800",
-                isActive && "bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white"
+                "flex items-center px-3 py-2 text-primary-foreground/70 rounded-lg text-sm font-medium hover:bg-primary-foreground/10",
+                isActive && "bg-primary-foreground/10 text-primary-foreground"
               )
             }
           >
