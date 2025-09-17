@@ -16,7 +16,7 @@ import { Sparkles } from "lucide-react";
 export const AppearancePanel = () => {
   const { settings, updateSetting, resetSettings, isLoading, isAdvanced, setAdvanced, randomizeTheme } = useAppearance();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const radiusValue = parseFloat(settings['--radius']) * 16;
+  const radiusValue = parseFloat(settings['--radius'] || '0') * 16;
 
   if (isLoading) {
     return <Skeleton className="h-96 w-full" />;
@@ -93,7 +93,7 @@ export const AppearancePanel = () => {
                         <AlertDialogTitle>Enable Advanced Customization?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This will allow you to override the preset theme with your own custom values. You can always reset to the default themes later if you change your mind.
-                        </Description>
+                        </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
