@@ -1,21 +1,20 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { PlusCircle, RefreshCw, Import, MoreHorizontal } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { PlusCircle, RefreshCw, Import } from "lucide-react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchParams } from "react-router-dom";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { InstagramPostModal } from "@/components/InstagramPostModal";
 import { ProductDetailModal } from "@/components/ProductDetailModal";
+import { ProductCard } from "@/components/ProductCard";
+import { ProductToolbar } from "@/components/ProductToolbar";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Product {
   id: string;
   name: string;
-  status: string;
+  status: 'Active' | 'Draft';
   price: number;
   inventory: number;
   media_url: string;
@@ -24,6 +23,7 @@ interface Product {
   features: string[];
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
+  created_at: string;
 }
 
 const Products = () => {
@@ -32,7 +32,12 @@ const Products = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isImporterOpen, setIsImporterOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortOption, setSortOption] = useState("newest");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
@@ -82,14 +87,62 @@ const Products = () => {
     }
   };
 
-  const handleProductUpdate = () => {
+  const handleProductUpdate = useCallback(() => {
     fetchProducts();
     if (selectedProduct) {
-      supabase.from('products').select('*').eq('id', selectedProduct.id).single().then(({data}) => {
-        setSelectedProduct(data as Product);
+      supabase.from('products').select('*').eq('id', selectedProduct.id).single().then(({ data }) => {
+        if (data) setSelectedProduct(data as Product);
+        else setSelectedProduct(null);
       });
     }
+  }, [fetchProducts, selectedProduct]);
+
+  const handleStatusChange = async (productId: string, newStatus: 'Active' | 'Draft') => {
+    const originalProducts = [...products];
+    const updatedProducts = products.map(p => p.id === productId ? { ...p, status: newStatus } : p);
+    setProducts(updatedProducts);
+
+    const { error } = await supabase.from('products').update({ status: newStatus }).eq('id', productId);
+    if (error) {
+      showError(`Failed to update status: ${error.message}`);
+      setProducts(originalProducts);
+    } else {
+      showSuccess(`Product is now ${newStatus.toLowerCase()}.`);
+    }
   };
+
+  const handleDeleteConfirm = async () => {
+    if (!productToDelete) return;
+    const { error } = await supabase.from('products').delete().eq('id', productToDelete);
+    if (error) {
+      showError(`Failed to delete product: ${error.message}`);
+    } else {
+      showSuccess("Product deleted.");
+      fetchProducts();
+    }
+    setProductToDelete(null);
+  };
+
+  const filteredAndSortedProducts = useMemo(() => {
+    return products
+      .filter(product => {
+        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter.length === 0 || statusFilter.includes(product.status);
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => {
+        switch (sortOption) {
+          case 'price-asc': return (a.price || 0) - (b.price || 0);
+          case 'price-desc': return (b.price || 0) - (a.price || 0);
+          case 'name-asc': return a.name.localeCompare(b.name);
+          case 'name-desc': return b.name.localeCompare(a.name);
+          case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          case 'newest':
+          default:
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }
+      });
+  }, [products, searchTerm, statusFilter, sortOption]);
 
   return (
     <>
@@ -100,97 +153,64 @@ const Products = () => {
         product={selectedProduct}
         onUpdate={handleProductUpdate}
       />
+      <AlertDialog open={!!productToDelete} onOpenChange={(open) => !open && setProductToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the product.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel onClick={() => setProductToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Products</h1>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setIsImporterOpen(true)}>
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <h1 className="text-3xl font-bold self-start">Products</h1>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <Button variant="outline" onClick={() => setIsImporterOpen(true)} className="flex-1 md:flex-none">
               <Import className="mr-2 h-4 w-4" />
-              Import from Instagram
+              Import
             </Button>
-            <Button onClick={handleSync} disabled={isSyncing}>
+            <Button onClick={handleSync} disabled={isSyncing} className="flex-1 md:flex-none">
               <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              {isSyncing ? 'Syncing...' : 'Background Sync'}
+              Sync
             </Button>
-            <Button>
+            <Button className="flex-1 md:flex-none">
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Product
             </Button>
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Product Catalog</CardTitle>
-            <CardDescription>
-              Click a product to view and edit its details.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-2">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[80px]">Image</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Inventory</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {products.length > 0 ? products.map((product) => (
-                    <TableRow key={product.id} onClick={() => setSelectedProduct(product)} className="cursor-pointer">
-                      <TableCell>
-                        <img src={product.media_url} alt={product.name} className="h-12 w-12 object-cover rounded-md" />
-                      </TableCell>
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell>
-                        <Badge variant={product.status === 'Active' ? 'default' : 'secondary'}>
-                          {product.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {product.pricing_type === 'subscription'
-                          ? `$${product.price ? product.price.toFixed(2) : '0.00'} / ${product.billing_interval}`
-                          : `$${product.price ? product.price.toFixed(2) : 'N/A'}`}
-                      </TableCell>
-                      <TableCell>{product.inventory} in stock</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenuItem onClick={() => setSelectedProduct(product)}>View & Edit</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={() => setSelectedProduct(product)}>Delete</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  )) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
-                        No products found. Import from Instagram to get started.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+        <ProductToolbar
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          sortOption={sortOption}
+          onSortChange={setSortOption}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+        />
+
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-[350px] w-full rounded-lg" />)}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredAndSortedProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onEdit={setSelectedProduct}
+                onDelete={setProductToDelete}
+                onStatusChange={handleStatusChange}
+              />
+            ))}
+          </div>
+        )}
+        {!isLoading && filteredAndSortedProducts.length === 0 && (
+          <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg">
+            <h3 className="text-lg font-semibold">No Products Found</h3>
+            <p className="text-sm mt-1">Try adjusting your search or filters.</p>
+          </div>
+        )}
       </div>
     </>
   );
