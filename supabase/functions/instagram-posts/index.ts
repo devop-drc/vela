@@ -39,7 +39,7 @@ serve(async (req) => {
     }
     const userAccessToken = integration.access_token;
 
-    // New Diagnostic Step: Debug the user's token to verify permissions
+    // Diagnostic Step: Debug the user's token to verify permissions
     if (!FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
         throw new Error("App secrets are not configured.");
     }
@@ -59,7 +59,7 @@ serve(async (req) => {
         throw new Error(errorMessage);
     }
 
-    // Original logic to fetch pages
+    // Fetch pages
     const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account,name&access_token=${userAccessToken}`;
     const pagesResponse = await fetch(pagesUrl);
     if (!pagesResponse.ok) {
@@ -70,7 +70,7 @@ serve(async (req) => {
     const pagesData = await pagesResponse.json();
 
     if (!pagesData.data || pagesData.data.length === 0) {
-      throw new Error('No Facebook Pages were found, even though permissions seem correct. Please ensure you are an admin of the page and that it is correctly linked to your Instagram Business Account.');
+      throw new Error('Permissions are correct, but no Facebook Pages were found for your account. To fix this, please go to your Facebook Page settings and ensure your personal Facebook profile is listed as an Admin with "Full control". A lower role like "Editor" may not be sufficient for API access.');
     }
 
     const igAccount = pagesData.data?.find((page: any) => page.instagram_business_account);
