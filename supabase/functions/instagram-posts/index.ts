@@ -44,7 +44,6 @@ serve(async (req) => {
     const userAccessToken = integration.access_token;
     console.log("Integration token found.");
 
-    // Diagnostic Step: Debug the user's token to verify permissions
     if (!FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
         throw new Error("App secrets are not configured.");
     }
@@ -66,7 +65,6 @@ serve(async (req) => {
         throw new Error(errorMessage);
     }
 
-    // Fetch pages
     console.log("Fetching user's Facebook pages...");
     const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account,name&access_token=${userAccessToken}`;
     const pagesResponse = await fetch(pagesUrl);
@@ -80,7 +78,7 @@ serve(async (req) => {
 
     if (!pagesData.data || pagesData.data.length === 0) {
       console.log("No Facebook pages found in the API response.");
-      throw new Error('No Facebook Pages were found for your account. This can happen with correct permissions. Please try this: 1) Open your Instagram app settings. 2) Go to "Accounts Center" > "Sharing across profiles". 3) Re-select your Facebook Page to refresh the connection. 4) Disconnect and reconnect here.');
+      throw new Error('No Facebook Pages were found for your account. This can happen even with correct permissions. Please try this: 1) Open your Instagram app settings. 2) Go to "Accounts Center" > "Sharing across profiles". 3) Re-select your Facebook Page to refresh the connection. 4) Disconnect and reconnect here.');
     }
 
     const igAccount = pagesData.data?.find((page: any) => page.instagram_business_account);
@@ -92,23 +90,35 @@ serve(async (req) => {
     }
     
     const igAccountId = igAccount.instagram_business_account.id;
-    console.log("Found linked Instagram Business Account ID:", igAccountId);
     const fields = 'id,media_type,media_url,permalink,thumbnail_url,timestamp,caption';
-    const mediaUrl = `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=${fields}&access_token=${userAccessToken}`;
+    let allMedia: any[] = [];
+    let mediaUrl: string | null = `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=${fields}&access_token=${userAccessToken}&limit=100`;
 
-    console.log("Fetching Instagram media...");
-    const mediaResponse = await fetch(mediaUrl);
-    if (!mediaResponse.ok) {
-      const errorData = await mediaResponse.json();
-      console.error('Instagram Graph API Error:', errorData);
-      throw new Error(errorData.error.message || 'Failed to fetch media from Instagram.');
+    console.log("Fetching Instagram media (with pagination)...");
+    
+    while (mediaUrl) {
+        const mediaResponse = await fetch(mediaUrl);
+        if (!mediaResponse.ok) {
+            const errorData = await mediaResponse.json();
+            console.error('Instagram Graph API Error:', errorData);
+            throw new Error(errorData.error.message || 'Failed to fetch media from Instagram.');
+        }
+
+        const pageData = await mediaResponse.json();
+        if (pageData.data) {
+            allMedia = allMedia.concat(pageData.data);
+        }
+
+        mediaUrl = pageData.paging?.next || null;
+        if (mediaUrl) {
+            console.log(`Fetching next page of media... (fetched ${allMedia.length} so far)`);
+        }
     }
 
-    const { data } = await mediaResponse.json();
-    console.log("Successfully fetched", data?.length || 0, "Instagram media items.");
+    console.log("Successfully fetched", allMedia.length, "Instagram media items in total.");
     console.log("--- Instagram Posts Function Complete ---");
 
-    return new Response(JSON.stringify({ posts: data }), {
+    return new Response(JSON.stringify({ posts: allMedia }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
