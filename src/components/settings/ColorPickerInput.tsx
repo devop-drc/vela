@@ -1,7 +1,6 @@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
-// Helper to convert HSL string to HEX for color input
 const hslToHex = (hslStr: string) => {
   if (!hslStr) return '#000000';
   const [h, s, l] = hslStr.split(' ').map(val => parseFloat(val.replace('%', '')));
@@ -23,7 +22,6 @@ const hslToHex = (hslStr: string) => {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 };
 
-// Helper to convert HEX to HSL string
 const hexToHsl = (hex: string) => {
   let r = parseInt(hex.substring(1, 3), 16) / 255;
   let g = parseInt(hex.substring(3, 5), 16) / 255;
@@ -46,7 +44,7 @@ const hexToHsl = (hex: string) => {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 };
 
-export const CustomColorPicker = ({ label, value, onChange }: { label: string, value: string, onChange: (val: string) => void }) => (
+export const ColorPickerInput = ({ label, value, onChange }: { label: string, value: string, onChange: (val: string) => void }) => (
   <div className="space-y-2">
     <Label>{label}</Label>
     <div className="flex items-center gap-2">

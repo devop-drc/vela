@@ -9,7 +9,7 @@ import { Instagram, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AppearanceTab } from "@/components/settings/AppearanceTab";
+import { AppearancePanel } from "@/components/settings/AppearancePanel";
 
 const Settings = () => {
   const [integrationStatus, setIntegrationStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading');
@@ -19,7 +19,6 @@ const Settings = () => {
     const integrationError = searchParams.get('integration_error');
     if (integrationError) {
       showError(`Integration failed: ${integrationError}`);
-      // Clean up the URL
       searchParams.delete('integration_error');
       setSearchParams(searchParams, { replace: true });
     }
@@ -115,7 +114,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
         <TabsContent value="appearance">
-          <AppearanceTab />
+          <AppearancePanel />
         </TabsContent>
         <TabsContent value="billing">
           <Card>
