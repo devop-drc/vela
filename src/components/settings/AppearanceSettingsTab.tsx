@@ -13,7 +13,7 @@ import { AdvancedAppearance } from "./AdvancedAppearance";
 import { AnimatePresence } from "framer-motion";
 import { Sparkles } from "lucide-react";
 
-export const AppearanceSettings = () => {
+export const AppearanceSettingsTab = () => {
   const { settings, updateSetting, resetSettings, isLoading, isAdvanced, setAdvanced, randomizeTheme } = useAppearance();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const radiusValue = parseFloat(settings['--radius']) * 16;

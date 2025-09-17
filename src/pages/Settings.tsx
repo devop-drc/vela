@@ -9,7 +9,7 @@ import { Instagram, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
+import { AppearanceSettingsTab } from "@/components/settings/AppearanceSettingsTab";
 
 const Settings = () => {
   const [integrationStatus, setIntegrationStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading');
@@ -115,7 +115,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
         <TabsContent value="appearance">
-          <AppearanceSettings />
+          <AppearanceSettingsTab />
         </TabsContent>
         <TabsContent value="billing">
           <Card>
