@@ -105,13 +105,13 @@ serve(async (req) => {
       const statePayload = JSON.stringify({ jwt, origin });
       const encodedState = btoa(statePayload);
 
-      const scopes = 'public_profile,pages_show_list,instagram_basic,instagram_content_publish,pages_read_engagement';
+      const scopes = 'public_profile,pages_show_list,instagram_basic,instagram_content_publish,pages_read_engagement,business_management';
       const authUrl = new URL('https://www.facebook.com/v19.0/dialog/oauth');
       authUrl.searchParams.set('client_id', FACEBOOK_APP_ID);
       authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
       authUrl.searchParams.set('scope', scopes);
       authUrl.searchParams.set('state', encodedState);
-      authUrl.searchParams.set('auth_type', 'rerequest'); // Corrected typo here
+      authUrl.searchParams.set('auth_type', 'rerequest');
       
       return Response.redirect(authUrl.toString(), 302);
     } catch (error) {
