@@ -1,4 +1,4 @@
-import { useAppearance } from "@/contexts/AppearanceContext";
+import { useAppearance, fontCategories } from "@/contexts/AppearanceContext";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { FontCombobox } from "./FontCombobox";
@@ -10,25 +10,6 @@ const googleFonts = [
   "Roboto Condensed", "Work Sans", "Cormorant Garamond", "Libre Baskerville", "Arimo",
   "PT Sans", "Karla", "DM Sans", "Rubik", "Manrope", "Space Grotesk", "Syne",
 ].map(font => ({ value: font, label: font }));
-
-const fontCategories = {
-  Modern: {
-    headings: ["Syne", "Space Grotesk", "Manrope", "DM Sans", "Rubik", "Work Sans"],
-    body: ["Inter", "Roboto", "Work Sans", "Manrope", "DM Sans", "Rubik"],
-  },
-  Elegant: {
-    headings: ["Playfair Display", "Cormorant Garamond", "Libre Baskerville", "Lora", "Merriweather"],
-    body: ["Lato", "Source Sans Pro", "Karla", "Nunito Sans", "Raleway"],
-  },
-  Minimalist: {
-    headings: ["Inter", "Roboto", "Lato", "Source Sans Pro", "Nunito Sans", "Karla"],
-    body: ["Inter", "Roboto", "Lato", "Source Sans Pro", "Nunito Sans", "Karla"],
-  },
-  Classic: {
-    headings: ["Lora", "Merriweather", "PT Sans", "Arimo", "Libre Baskerville"],
-    body: ["Source Sans Pro", "Lato", "Open Sans", "PT Sans", "Arimo"],
-  },
-};
 
 const getRandomItem = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 

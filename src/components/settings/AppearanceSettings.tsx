@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ThemeSelector } from "./ThemeSelector";
 import { FontSelector } from "./FontSelector";
 import { AnimatePresence, motion } from "framer-motion";
+import { Sparkles } from "lucide-react";
 
 // Helper to convert HSL string to HEX for color input
 const hslToHex = (hslStr: string) => {
@@ -76,9 +77,55 @@ const ColorInput = ({ label, value, onChange }: { label: string, value: string, 
   </div>
 );
 
+const StyleSettings = () => {
+  const { settings, updateSetting } = useAppearance();
+  const radiusValue = parseFloat(settings['--radius']) * 16;
+
+  return (
+    <div className="space-y-8 pt-8 border-t">
+      <div className="space-y-4">
+        <h3 className="font-semibold">Sidebar Style</h3>
+        <RadioGroup 
+            value={settings.sidebarStyle} 
+            onValueChange={(value) => updateSetting('sidebarStyle', value as 'primary' | 'card')}
+            className="flex gap-4"
+        >
+            <Label className="flex items-center gap-2 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-primary flex-1">
+                <RadioGroupItem value="primary" id="sidebar-primary" />
+                <div>
+                    <p className="font-medium">Vibrant</p>
+                    <p className="text-sm text-muted-foreground">Uses your primary brand color for a bold look.</p>
+                </div>
+            </Label>
+            <Label className="flex items-center gap-2 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-primary flex-1">
+                <RadioGroupItem value="card" id="sidebar-card" />
+                 <div>
+                    <p className="font-medium">Subtle</p>
+                    <p className="text-sm text-muted-foreground">A clean, minimal style that blends with the content.</p>
+                </div>
+            </Label>
+        </RadioGroup>
+      </div>
+      <div className="space-y-4">
+        <h3 className="font-semibold">Corner Radius</h3>
+        <div className="space-y-2">
+            <Label>Radius: {radiusValue.toFixed(0)}px</Label>
+            <Input
+                type="range"
+                min="0"
+                max="32"
+                step="1"
+                value={radiusValue}
+                onChange={(e) => updateSetting('--radius', `${parseFloat(e.target.value) / 16}rem`)}
+            />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AdvancedCustomization = () => {
     const { settings, updateSetting } = useAppearance();
-    const radiusValue = parseFloat(settings['--radius']) * 16;
 
     return (
         <motion.div
@@ -87,28 +134,14 @@ const AdvancedCustomization = () => {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-8 pt-8"
         >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4 p-4 border rounded-lg">
-                    <h3 className="font-semibold">Custom Colors</h3>
+            <div className="space-y-4 p-4 border rounded-lg">
+                <h3 className="font-semibold">Custom Colors</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <ColorInput label="Background" value={settings['--background']} onChange={(v) => updateSetting('--background', v)} />
                     <ColorInput label="Foreground / Text" value={settings['--foreground']} onChange={(v) => updateSetting('--foreground', v)} />
                     <ColorInput label="Card Background" value={settings['--card']} onChange={(v) => updateSetting('--card', v)} />
                     <ColorInput label="Primary Button" value={settings['--primary']} onChange={(v) => updateSetting('--primary', v)} />
                     <ColorInput label="Primary Button Text" value={settings['--primary-foreground']} onChange={(v) => updateSetting('--primary-foreground', v)} />
-                </div>
-                <div className="space-y-4 p-4 border rounded-lg">
-                    <h3 className="font-semibold">Borders & Radius</h3>
-                    <div className="space-y-2">
-                        <Label>Corner Radius: {radiusValue.toFixed(0)}px</Label>
-                        <Input
-                            type="range"
-                            min="0"
-                            max="48"
-                            step="1"
-                            value={radiusValue}
-                            onChange={(e) => updateSetting('--radius', `${parseFloat(e.target.value) / 16}rem`)}
-                        />
-                    </div>
                 </div>
             </div>
         </motion.div>
@@ -116,7 +149,7 @@ const AdvancedCustomization = () => {
 };
 
 export const AppearanceSettings = () => {
-  const { settings, updateSetting, resetSettings, isLoading, isAdvanced, setAdvanced } = useAppearance();
+  const { resetSettings, isLoading, isAdvanced, setAdvanced, randomizeTheme } = useAppearance();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   if (isLoading) {
@@ -125,37 +158,21 @@ export const AppearanceSettings = () => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Appearance</CardTitle>
-        <CardDescription>
-          Customize the look and feel of your application. Changes are saved automatically.
-        </CardDescription>
+      <CardHeader className="flex flex-row items-start justify-between">
+        <div>
+          <CardTitle>Appearance</CardTitle>
+          <CardDescription>
+            Customize the look and feel of your application. Changes are saved automatically.
+          </CardDescription>
+        </div>
+        <Button onClick={randomizeTheme} variant="outline">
+          <Sparkles className="mr-2 h-4 w-4 text-amber-400" />
+          Inspire Me
+        </Button>
       </CardHeader>
       <CardContent className="space-y-8">
         <ThemeSelector />
-        <div className="space-y-4 pt-8 border-t">
-            <h3 className="font-semibold">Sidebar Style</h3>
-            <RadioGroup 
-                value={settings.sidebarStyle} 
-                onValueChange={(value) => updateSetting('sidebarStyle', value)}
-                className="flex gap-4"
-            >
-                <Label className="flex items-center gap-2 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-primary flex-1">
-                    <RadioGroupItem value="primary" id="sidebar-primary" />
-                    <div>
-                        <p className="font-medium">Vibrant</p>
-                        <p className="text-sm text-muted-foreground">Uses your primary brand color for a bold look.</p>
-                    </div>
-                </Label>
-                <Label className="flex items-center gap-2 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-primary flex-1">
-                    <RadioGroupItem value="card" id="sidebar-card" />
-                     <div>
-                        <p className="font-medium">Subtle</p>
-                        <p className="text-sm text-muted-foreground">A clean, minimal style that blends with the content.</p>
-                    </div>
-                </Label>
-            </RadioGroup>
-        </div>
+        <StyleSettings />
         <FontSelector />
         <div className="flex items-center gap-4 pt-8 border-t">
             <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -169,7 +186,7 @@ export const AppearanceSettings = () => {
                         <AlertDialogTitle>Enable Advanced Customization?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This will allow you to override the preset theme with your own custom values. You can always reset to the default themes later if you change your mind.
-                        </AlertDialogDescription>
+                        </Description>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>

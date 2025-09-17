@@ -61,6 +61,25 @@ export const presetThemes: Theme[] = [
 ];
 // --- END THEME DEFINITIONS ---
 
+export const fontCategories = {
+  Modern: {
+    headings: ["Syne", "Space Grotesk", "Manrope", "DM Sans", "Rubik", "Work Sans"],
+    body: ["Inter", "Roboto", "Work Sans", "Manrope", "DM Sans", "Rubik"],
+  },
+  Elegant: {
+    headings: ["Playfair Display", "Cormorant Garamond", "Libre Baskerville", "Lora", "Merriweather"],
+    body: ["Lato", "Source Sans Pro", "Karla", "Nunito Sans", "Raleway"],
+  },
+  Minimalist: {
+    headings: ["Inter", "Roboto", "Lato", "Source Sans Pro", "Nunito Sans", "Karla"],
+    body: ["Inter", "Roboto", "Lato", "Source Sans Pro", "Nunito Sans", "Karla"],
+  },
+  Classic: {
+    headings: ["Lora", "Merriweather", "PT Sans", "Arimo", "Libre Baskerville"],
+    body: ["Source Sans Pro", "Lato", "Open Sans", "PT Sans", "Arimo"],
+  },
+};
+
 interface DesignSettings {
   themeName: string;
   isAdvanced: boolean;
@@ -90,6 +109,7 @@ interface AppearanceContextType {
   setTheme: (themeName: string) => void;
   updateSetting: (key: keyof DesignSettings, value: string | boolean) => void;
   resetSettings: () => void;
+  randomizeTheme: () => void;
   isLoading: boolean;
   isAdvanced: boolean;
   setAdvanced: (isAdvanced: boolean) => void;
@@ -210,8 +230,37 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
     debouncedSave(defaultSettings);
   };
 
+  const randomizeTheme = () => {
+    const randomTheme = presetThemes[Math.floor(Math.random() * presetThemes.length)];
+    const randomCategoryName = Object.keys(fontCategories)[Math.floor(Math.random() * Object.keys(fontCategories).length)] as keyof typeof fontCategories;
+    const randomCategory = fontCategories[randomCategoryName];
+    let headingFont = randomCategory.headings[Math.floor(Math.random() * randomCategory.headings.length)];
+    let bodyFont = randomCategory.body[Math.floor(Math.random() * randomCategory.body.length)];
+    if (randomCategoryName !== 'Minimalist') {
+      while (headingFont === bodyFont) {
+        bodyFont = randomCategory.body[Math.floor(Math.random() * randomCategory.body.length)];
+      }
+    }
+    const randomSidebarStyle = (Math.random() > 0.5 ? 'primary' : 'card') as 'primary' | 'card';
+    const randomRadius = `${(Math.random() * 1.5 + 0.25).toFixed(2)}rem`;
+
+    const newSettings: DesignSettings = {
+      ...defaultSettings,
+      ...randomTheme.light,
+      themeName: randomTheme.name,
+      fontHeading: headingFont,
+      fontSans: bodyFont,
+      sidebarStyle: randomSidebarStyle,
+      '--radius': randomRadius,
+      isAdvanced: false,
+    };
+
+    setSettings(newSettings);
+    debouncedSave(newSettings);
+  };
+
   return (
-    <AppearanceContext.Provider value={{ settings, setTheme, updateSetting, resetSettings, isLoading, isAdvanced: settings.isAdvanced, setAdvanced }}>
+    <AppearanceContext.Provider value={{ settings, setTheme, updateSetting, resetSettings, isLoading, isAdvanced: settings.isAdvanced, setAdvanced, randomizeTheme }}>
       {children}
     </AppearanceContext.Provider>
   );
