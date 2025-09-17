@@ -111,7 +111,7 @@ serve(async (req) => {
       authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
       authUrl.searchParams.set('scope', scopes);
       authUrl.searchParams.set('state', encodedState);
-      authUrl.search_params.set('auth_type', 'rerequest'); // Force re-request of permissions
+      authUrl.searchParams.set('auth_type', 'rerequest'); // Corrected typo here
       
       return Response.redirect(authUrl.toString(), 302);
     } catch (error) {
