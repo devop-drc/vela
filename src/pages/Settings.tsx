@@ -86,7 +86,7 @@ const Settings = () => {
               <CardDescription>
                 Manage your shop's public information.
               </CardDescription>
-            </Header>
+            </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">Shop settings will be displayed here.</p>
             </CardContent>
