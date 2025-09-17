@@ -10,8 +10,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppearancePanel } from "@/components/settings/AppearancePanel";
+import { useBusiness } from "@/contexts/BusinessContext";
+import { CreateBusinessForm } from "@/components/settings/CreateBusinessForm";
+import { ShopDetailsForm } from "@/components/settings/ShopDetailsForm";
 
 const Settings = () => {
+  const { business, isLoading: isBusinessLoading } = useBusiness();
   const [integrationStatus, setIntegrationStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading');
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -81,35 +85,47 @@ const Settings = () => {
     }
   };
 
+  if (isBusinessLoading) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-3xl font-bold">Settings</h1>
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
+
+  if (!business) {
+    return <CreateBusinessForm />;
+  }
+
   return (
     <div className="space-y-4">
       <h1 className="text-3xl font-bold">Settings</h1>
-      <Tabs defaultValue="account" className="w-full">
+      <Tabs defaultValue="shop" className="w-full">
         <TabsList>
+          <TabsTrigger value="shop">Shop Details</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
-          <TabsTrigger value="shop">Shop Details</TabsTrigger>
         </TabsList>
+        <TabsContent value="shop">
+          <ShopDetailsForm />
+        </TabsContent>
         <TabsContent value="account">
           <Card>
             <CardHeader>
               <CardTitle>Account</CardTitle>
               <CardDescription>
-                Manage your account settings and set your e-mail preferences.
+                Manage your account settings.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" defaultValue="Shadcn" />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" defaultValue="shadcn@example.com" />
+                <Input id="email" type="email" defaultValue={supabase.auth.getUser().data?.user?.email} disabled />
               </div>
-              <Button>Save Changes</Button>
+              <Button disabled>Changes are managed via your login provider</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -156,19 +172,6 @@ const Settings = () => {
                   </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="shop">
-          <Card>
-            <CardHeader>
-              <CardTitle>Shop Details</CardTitle>
-              <CardDescription>
-                Manage your shop's public information.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Shop settings will be displayed here.</p>
             </CardContent>
           </Card>
         </TabsContent>
