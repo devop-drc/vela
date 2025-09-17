@@ -71,7 +71,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
             <TableCell>
               {product.pricing_type === 'subscription'
                 ? `$${product.price ? product.price.toFixed(2) : '0.00'} / ${product.billing_interval}`
-                : `$${product.price ? product.price.toFixed(2) : 'N/A'}`}
+                - `$${product.price ? product.price.toFixed(2) : 'N/A'}`}
             </TableCell>
             <TableCell>{product.inventory}</TableCell>
             <TableCell className="text-right">
