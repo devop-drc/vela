@@ -6,7 +6,8 @@ import { PlusCircle, Instagram } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { NavLink } from "react-router-dom";
+import { NavLink, useSearchParams } from "react-router-dom";
+import { showSuccess } from "@/utils/toast";
 
 const products = [
   { name: "Minimalist Tee", status: "Active", price: "$49.99", inventory: "250 in stock" },
@@ -27,6 +28,16 @@ const Products = () => {
   const [instagramPosts, setInstagramPosts] = useState<InstagramPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("instagram_connected") === "true") {
+      showSuccess("Successfully connected your Instagram account!");
+      // Clean up the URL
+      searchParams.delete("instagram_connected");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     const fetchInstagramPosts = async () => {
@@ -39,7 +50,7 @@ const Products = () => {
         setInstagramPosts(data.posts || []);
       } catch (err: any) {
         console.error("Error fetching Instagram posts:", err);
-        setError("Failed to load Instagram posts. Please try reconnecting your account.");
+        setError(err.message || "Failed to load Instagram posts. Please try reconnecting your account.");
       } finally {
         setIsLoading(false);
       }
@@ -71,7 +82,16 @@ const Products = () => {
               {[...Array(4)].map((_, i) => <Skeleton key={i} className="aspect-square rounded-lg" />)}
             </div>
           ) : error ? (
-            <p className="text-destructive">{error}</p>
+            <div className="text-center py-10 border-2 border-dashed rounded-lg">
+                <p className="text-destructive">{error}</p>
+                <div className="mt-6">
+                    <Button asChild>
+                    <NavLink to="/settings">
+                        Go to Settings
+                    </NavLink>
+                    </Button>
+                </div>
+            </div>
           ) : instagramPosts.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {instagramPosts.map((post) => (

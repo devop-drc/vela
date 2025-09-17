@@ -50,9 +50,7 @@ serve(async (req) => {
     // Step 2: Find the first page with a connected Instagram account
     const igAccount = pagesData.data?.find((page: any) => page.instagram_business_account);
     if (!igAccount) {
-      return new Response(JSON.stringify({ posts: [] }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      throw new Error('No Instagram Business Account found. Please ensure your Facebook Page is connected to an Instagram Business Account and try reconnecting.');
     }
     const igAccountId = igAccount.instagram_business_account.id;
 
