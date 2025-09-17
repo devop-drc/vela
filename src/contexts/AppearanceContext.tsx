@@ -14,7 +14,7 @@ interface ColorScheme {
 interface Theme {
   name: string;
   light: ColorScheme;
-  dark: ColorScheme; // Note: Dark mode is defined but not yet implemented via a toggle.
+  dark: ColorScheme;
 }
 
 export const presetThemes: Theme[] = [
@@ -74,6 +74,8 @@ interface DesignSettings {
   '--primary-foreground': string;
   '--card': string;
   '--radius': string;
+  fontSans: string;
+  fontHeading: string;
 }
 
 const defaultSettings: DesignSettings = {
@@ -81,6 +83,8 @@ const defaultSettings: DesignSettings = {
   isAdvanced: false,
   ...presetThemes[0].light,
   '--radius': '1.5rem',
+  fontSans: 'Inter',
+  fontHeading: 'Inter',
 };
 
 interface AppearanceContextType {
@@ -95,11 +99,33 @@ interface AppearanceContextType {
 
 const AppearanceContext = createContext<AppearanceContextType | undefined>(undefined);
 
+const loadedFonts = new Set();
+const loadGoogleFont = (fontName: string) => {
+  if (loadedFonts.has(fontName) || fontName === 'Inter' || fontName.includes('system-ui')) {
+    return;
+  }
+  const fontUrl = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@300;400;500;600;700&display=swap`;
+  const link = document.createElement('link');
+  link.id = `font-${fontName}`;
+  link.href = fontUrl;
+  link.rel = 'stylesheet';
+  document.head.appendChild(link);
+  loadedFonts.add(fontName);
+};
+
 const applySettingsToDOM = (settings: Partial<DesignSettings>) => {
   for (const [key, value] of Object.entries(settings)) {
     if (key.startsWith('--')) {
       document.documentElement.style.setProperty(key, value as string);
     }
+  }
+  if (settings.fontSans) {
+    document.documentElement.style.setProperty('--font-sans', `'${settings.fontSans}', sans-serif`);
+    loadGoogleFont(settings.fontSans);
+  }
+  if (settings.fontHeading) {
+    document.documentElement.style.setProperty('--font-heading', `'${settings.fontHeading}', sans-serif`);
+    loadGoogleFont(settings.fontHeading);
   }
 };
 
@@ -128,7 +154,6 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
         const savedSettings = data.settings as Partial<DesignSettings>;
         const theme = presetThemes.find(t => t.name === savedSettings.themeName) || presetThemes[0];
         
-        // If not in advanced mode, apply the theme colors. Otherwise, use saved custom colors.
         const themeColors = theme.light;
         const finalSettings = {
           ...defaultSettings,
@@ -169,7 +194,10 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
 
   const updateSetting = (key: keyof DesignSettings, value: string) => {
     setSettings(prev => {
-      const newSettings = { ...prev, [key]: value, themeName: 'Custom' };
+      const newSettings = { ...prev, [key]: value };
+      if (key.startsWith('--')) {
+        newSettings.themeName = 'Custom';
+      }
       debouncedSave(newSettings);
       return newSettings;
     });

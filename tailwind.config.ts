@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import defaultTheme from "tailwindcss/defaultTheme";
 
 export default {
   darkMode: ["class"],
@@ -59,7 +60,8 @@ export default {
         sm: "calc(var(--radius) - 16px)",
       },
       fontFamily: {
-        sans: ["var(--font-sans)"],
+        sans: ["var(--font-sans)", ...defaultTheme.fontFamily.sans],
+        heading: ["var(--font-heading)", ...defaultTheme.fontFamily.sans],
       },
       boxShadow: {
         premium: '0 25px 50px -12px rgba(0, 0, 0, 0.1), 0 10px 20px -10px rgba(0, 0, 0, 0.08)',

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ThemeSelector } from "./ThemeSelector";
+import { FontSelector } from "./FontSelector";
 import { AnimatePresence, motion } from "framer-motion";
 
 // Helper to convert HSL string to HEX for color input
@@ -131,7 +132,8 @@ export const AppearanceSettings = () => {
       </CardHeader>
       <CardContent className="space-y-8">
         <ThemeSelector />
-        <div className="flex items-center gap-4 pt-4 border-t">
+        <FontSelector />
+        <div className="flex items-center gap-4 pt-8 border-t">
             <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <AlertDialogTrigger asChild>
                     <Button variant="outline" onClick={() => isAdvanced ? setAdvanced(false) : setIsModalOpen(true)}>

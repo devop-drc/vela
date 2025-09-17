@@ -27,6 +27,7 @@
 
     /* Typography */
     --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --font-heading: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   }
 
   /* Note: A dark theme can be defined here later if needed */
@@ -60,6 +61,6 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-light tracking-wide;
+    @apply font-heading font-light tracking-wide;
   }
 }
