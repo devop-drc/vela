@@ -28,7 +28,8 @@ const getProductAnalysisPrompt = (caption: string) => {
         "description": "A one or two-sentence description based on the caption.",
         "features": ["A list of key features or selling points mentioned in the caption.", "Extract at least 2-3 if possible."],
         "price": "A number representing the price. Extract it if available, otherwise null.",
-        "currency": "The currency, e.g., 'EUR', 'USD'. Infer if possible, otherwise null."
+        "currency": "The currency, e.g., 'EUR', 'USD'. Infer if possible, otherwise null.",
+        "tags": ["A list of 3-5 relevant keywords or tags based on the caption."]
       } | null
     }
 

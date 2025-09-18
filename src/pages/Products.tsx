@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BulkActionsToolbar } from "@/components/BulkActionsToolbar";
 import { AnimatePresence } from "framer-motion";
 import { SaleModal, SaleFormData } from "@/components/SaleModal";
+import { cn } from "@/lib/utils";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 
@@ -29,10 +30,21 @@ interface Product {
   caption: string;
   category: string;
   features: string[];
+  tags: string[];
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
   created_at: string;
 }
+
+const gridColClasses: { [key: number]: string } = {
+  2: "lg:grid-cols-2",
+  3: "lg:grid-cols-3",
+  4: "lg:grid-cols-4",
+  5: "lg:grid-cols-5",
+  6: "lg:grid-cols-6",
+  7: "lg:grid-cols-7",
+  8: "lg:grid-cols-8",
+};
 
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -52,6 +64,7 @@ const Products = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [isSelectionModeActive, setIsSelectionModeActive] = useState(false);
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
+  const [gridCols, setGridCols] = useState(5);
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
@@ -156,7 +169,7 @@ const Products = () => {
         } else {
           newPrice = currentPrice - saleData.value;
         }
-        return { id: p.id, price: Math.max(0, newPrice) }; // Ensure price doesn't go below 0
+        return { id: p.id, price: Math.max(0, newPrice) };
       });
 
     if (updates.length > 0) {
@@ -205,15 +218,16 @@ const Products = () => {
           statusFilter={statusFilter} onStatusFilterChange={setStatusFilter}
           viewMode={viewMode} onViewChange={setViewMode}
           isSelectionModeActive={isSelectionModeActive} onToggleSelectionMode={toggleSelectionMode}
+          gridCols={gridCols} onGridColsChange={setGridCols}
         />
 
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+          <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", gridColClasses[gridCols] || "lg:grid-cols-5")}>
             {Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-[340px] w-full rounded-lg" />)}
           </div>
         ) : filteredAndSortedProducts.length > 0 ? (
           currentView === 'grid' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+            <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", gridColClasses[gridCols] || "lg:grid-cols-5")}>
               {filteredAndSortedProducts.map((product) => (
                 <ProductCard
                   key={product.id} product={product}

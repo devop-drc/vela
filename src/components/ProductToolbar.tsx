@@ -2,8 +2,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Search, ListFilter, LayoutGrid, List, CheckSquare } from "lucide-react";
+import { Search, ListFilter, LayoutGrid, List, CheckSquare, Minus, Plus } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Slider } from "@/components/ui/slider";
 
 interface ProductToolbarProps {
   searchTerm: string;
@@ -16,9 +17,11 @@ interface ProductToolbarProps {
   onViewChange: (view: 'grid' | 'table') => void;
   isSelectionModeActive: boolean;
   onToggleSelectionMode: () => void;
+  gridCols: number;
+  onGridColsChange: (value: number) => void;
 }
 
-export const ProductToolbar = ({ searchTerm, onSearchChange, sortOption, onSortChange, statusFilter, onStatusFilterChange, viewMode, onViewChange, isSelectionModeActive, onToggleSelectionMode }: ProductToolbarProps) => {
+export const ProductToolbar = ({ searchTerm, onSearchChange, sortOption, onSortChange, statusFilter, onStatusFilterChange, viewMode, onViewChange, isSelectionModeActive, onToggleSelectionMode, gridCols, onGridColsChange }: ProductToolbarProps) => {
   const isMobile = useIsMobile();
 
   const handleStatusChange = (status: 'Active' | 'Draft' | 'Out of Stock') => {
@@ -30,7 +33,7 @@ export const ProductToolbar = ({ searchTerm, onSearchChange, sortOption, onSortC
 
   return (
     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-      <div className="relative w-full md:max-w-sm">
+      <div className="relative w-full md:flex-1">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search products..."
@@ -66,17 +69,23 @@ export const ProductToolbar = ({ searchTerm, onSearchChange, sortOption, onSortC
             <SelectItem value="name-desc">Name: Z-A</SelectItem>
           </SelectContent>
         </Select>
-        {!isMobile && viewMode === 'grid' && (
-          <Button variant="outline" onClick={onToggleSelectionMode}>
-            <CheckSquare className="mr-2 h-4 w-4" />
-            {isSelectionModeActive ? 'Cancel' : 'Select'}
-          </Button>
-        )}
         {!isMobile && (
-          <Button variant="outline" size="icon" onClick={() => onViewChange(viewMode === 'grid' ? 'table' : 'grid')} className="w-10 h-10 flex-shrink-0">
-            {viewMode === 'grid' ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
-            <span className="sr-only">Toggle view</span>
-          </Button>
+          <>
+            {viewMode === 'grid' && (
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" onClick={() => onGridColsChange(Math.max(2, gridCols - 1))}><Minus className="h-4 w-4" /></Button>
+                <Slider value={[gridCols]} onValueChange={(value) => onGridColsChange(value[0])} min={2} max={8} step={1} className="w-24" />
+                <Button variant="outline" size="icon" onClick={() => onGridColsChange(Math.min(8, gridCols + 1))}><Plus className="h-4 w-4" /></Button>
+              </div>
+            )}
+            <Button variant="outline" size="icon" onClick={() => onViewChange(viewMode === 'grid' ? 'table' : 'grid')} className="w-10 h-10 flex-shrink-0">
+              {viewMode === 'grid' ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+            </Button>
+            <Button variant={isSelectionModeActive ? "secondary" : "outline"} onClick={onToggleSelectionMode}>
+              <CheckSquare className="mr-2 h-4 w-4" />
+              {isSelectionModeActive ? 'Cancel' : 'Select'}
+            </Button>
+          </>
         )}
       </div>
     </div>

@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Edit, Trash2, CheckCircle, XCircle, Tag, FileText, ListChecks, DollarSign, Boxes } from "lucide-react";
+import { Loader2, Edit, Trash2, CheckCircle, XCircle, Tag, FileText, ListChecks, DollarSign, Boxes, X } from "lucide-react";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -23,6 +23,7 @@ const productSchema = z.object({
   price: z.coerce.number().min(0, "Price must be a positive number"),
   inventory: z.coerce.number().int().min(0, "Inventory must be a positive integer"),
   features: z.string().optional(),
+  tags: z.array(z.string()).optional(),
   pricing_type: z.enum(['one_time', 'subscription']),
   billing_interval: z.enum(['month', 'year']).optional().nullable(),
 }).refine(data => {
@@ -47,6 +48,7 @@ interface Product {
   caption: string;
   category: string;
   features: string[];
+  tags: string[];
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
 }
@@ -58,12 +60,52 @@ interface ProductDetailModalProps {
   onUpdate: () => void;
 }
 
+const TagInput = ({ value = [], onChange }: { value: string[], onChange: (tags: string[]) => void }) => {
+  const [inputValue, setInputValue] = useState('');
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && inputValue.trim()) {
+      e.preventDefault();
+      if (!value.includes(inputValue.trim())) {
+        onChange([...value, inputValue.trim()]);
+      }
+      setInputValue('');
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    onChange(value.filter(tag => tag !== tagToRemove));
+  };
+
+  return (
+    <div className="space-y-2">
+      <Input
+        id="tags"
+        placeholder="Add a tag and press Enter..."
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+      />
+      <div className="flex flex-wrap gap-2">
+        {value.map(tag => (
+          <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+            {tag}
+            <button onClick={() => removeTag(tag)} className="rounded-full hover:bg-muted-foreground/20">
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: ProductDetailModalProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<ProductFormData>({
+  const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
   });
 
@@ -78,6 +120,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
         price: product.price || 0,
         inventory: product.inventory || 0,
         features: (product.features || []).join(", "),
+        tags: product.tags || [],
         pricing_type: product.pricing_type || 'one_time',
         billing_interval: product.billing_interval,
       });
@@ -97,6 +140,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
         price: data.price,
         inventory: data.inventory,
         features: data.features ? data.features.split(',').map(f => f.trim()) : null,
+        tags: data.tags,
         pricing_type: data.pricing_type,
         billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
       })
@@ -149,6 +193,9 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
           {product.features?.length > 0 && (
             <div className="flex items-start gap-3"><ListChecks className="h-5 w-5 text-muted-foreground mt-1 flex-shrink-0" /><div><Label className="text-xs text-muted-foreground">Features</Label><ul className="list-disc list-inside text-sm">{product.features.map((f, i) => <li key={i}>{f}</li>)}</ul></div></div>
           )}
+          {product.tags?.length > 0 && (
+            <div className="flex items-start gap-3"><Tag className="h-5 w-5 text-muted-foreground mt-1 flex-shrink-0" /><div><Label className="text-xs text-muted-foreground">Tags</Label><div className="flex flex-wrap gap-2">{product.tags.map((t, i) => <Badge key={i} variant="secondary">{t}</Badge>)}</div></div></div>
+          )}
           <div className="flex items-center gap-8 pt-2">
             <div className="flex items-center gap-3"><DollarSign className="h-5 w-5 text-muted-foreground" /><div><Label className="text-xs text-muted-foreground">Price</Label><p className="text-lg font-semibold">{product.pricing_type === 'subscription' ? `$${product.price?.toFixed(2)} / ${product.billing_interval}` : `$${product.price?.toFixed(2)}`}</p></div></div>
             <div className="flex items-center gap-3"><Boxes className="h-5 w-5 text-muted-foreground" /><div><Label className="text-xs text-muted-foreground">Inventory</Label><p className="text-lg font-semibold">{product.inventory || 0}</p></div></div>
@@ -172,6 +219,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
       <div className="space-y-2"><Label htmlFor="category">Category</Label><Input id="category" {...register("category")} /></div>
       <div className="space-y-2"><Label htmlFor="caption">Description</Label><Textarea id="caption" {...register("caption")} rows={3} /></div>
       <div className="space-y-2"><Label htmlFor="features">Features (comma-separated)</Label><Textarea id="features" {...register("features")} rows={2} /></div>
+      <div className="space-y-2"><Label htmlFor="tags">Tags</Label><Controller control={control} name="tags" render={({ field }) => <TagInput value={field.value} onChange={field.onChange} />} /></div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start border p-4 rounded-lg">
         <div className="space-y-2">
