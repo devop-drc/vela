@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Search, ListFilter, LayoutGrid, List } from "lucide-react";
+import { Search, ListFilter, LayoutGrid, List, CheckSquare } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ProductToolbarProps {
@@ -14,12 +14,14 @@ interface ProductToolbarProps {
   onStatusFilterChange: (statuses: string[]) => void;
   viewMode: 'grid' | 'table';
   onViewChange: (view: 'grid' | 'table') => void;
+  isSelectionModeActive: boolean;
+  onToggleSelectionMode: () => void;
 }
 
-export const ProductToolbar = ({ searchTerm, onSearchChange, sortOption, onSortChange, statusFilter, onStatusFilterChange, viewMode, onViewChange }: ProductToolbarProps) => {
+export const ProductToolbar = ({ searchTerm, onSearchChange, sortOption, onSortChange, statusFilter, onStatusFilterChange, viewMode, onViewChange, isSelectionModeActive, onToggleSelectionMode }: ProductToolbarProps) => {
   const isMobile = useIsMobile();
 
-  const handleStatusChange = (status: 'Active' | 'Draft') => {
+  const handleStatusChange = (status: 'Active' | 'Draft' | 'Out of Stock') => {
     const newFilter = statusFilter.includes(status)
       ? statusFilter.filter(s => s !== status)
       : [...statusFilter, status];
@@ -48,24 +50,13 @@ export const ProductToolbar = ({ searchTerm, onSearchChange, sortOption, onSortC
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem
-              checked={statusFilter.includes('Active')}
-              onCheckedChange={() => handleStatusChange('Active')}
-            >
-              Active
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={statusFilter.includes('Draft')}
-              onCheckedChange={() => handleStatusChange('Draft')}
-            >
-              Draft
-            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem checked={statusFilter.includes('Active')} onCheckedChange={() => handleStatusChange('Active')}>Active</DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem checked={statusFilter.includes('Draft')} onCheckedChange={() => handleStatusChange('Draft')}>Draft</DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem checked={statusFilter.includes('Out of Stock')} onCheckedChange={() => handleStatusChange('Out of Stock')}>Out of Stock</DropdownMenuCheckboxItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <Select value={sortOption} onValueChange={onSortChange}>
-          <SelectTrigger className="w-full md:w-[180px]">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
+          <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Sort by" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="newest">Newest</SelectItem>
             <SelectItem value="oldest">Oldest</SelectItem>
@@ -75,6 +66,12 @@ export const ProductToolbar = ({ searchTerm, onSearchChange, sortOption, onSortC
             <SelectItem value="name-desc">Name: Z-A</SelectItem>
           </SelectContent>
         </Select>
+        {!isMobile && viewMode === 'grid' && (
+          <Button variant="outline" onClick={onToggleSelectionMode}>
+            <CheckSquare className="mr-2 h-4 w-4" />
+            {isSelectionModeActive ? 'Cancel' : 'Select'}
+          </Button>
+        )}
         {!isMobile && (
           <Button variant="outline" size="icon" onClick={() => onViewChange(viewMode === 'grid' ? 'table' : 'grid')} className="w-10 h-10 flex-shrink-0">
             {viewMode === 'grid' ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}

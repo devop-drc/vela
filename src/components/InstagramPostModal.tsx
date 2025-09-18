@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { showError, showSuccess } from "@/utils/toast";
+import { showError } from "@/utils/toast";
 import { Skeleton } from "./ui/skeleton";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { CheckCircle, Image as ImageIcon, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { CheckCircle, Image as ImageIcon, Loader2, RefreshCw, Sparkles, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { CreateProductModal } from "./CreateProductModal";
 
@@ -34,8 +34,8 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
   const [error, setError] = useState<string | null>(null);
   const [selectedPost, setSelectedPost] = useState<AnalyzedPost | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [dismissedPostIds, setDismissedPostIds] = useState<string[]>([]);
 
-  // State for modals
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [productToCreate, setProductToCreate] = useState<any>(null);
@@ -107,6 +107,15 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
     onImport();
   };
 
+  const handleDismissPost = (postId: string) => {
+    setDismissedPostIds(prev => [...prev, postId]);
+    if (selectedPost?.id === postId) {
+      setSelectedPost(null);
+    }
+  };
+
+  const visiblePosts = posts.filter(p => !dismissedPostIds.includes(p.id));
+
   return (
     <>
       <Dialog open={true} onOpenChange={onClose}>
@@ -131,11 +140,16 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                   ) : error ? (
                     <div className="col-span-3 text-destructive p-4 border border-destructive/50 rounded-md">{error}</div>
                   ) : (
-                    posts.map(post => (
-                      <button key={post.id} onClick={() => setSelectedPost(post)} className={`relative aspect-square rounded-md overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${selectedPost?.id === post.id ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
-                        <img src={post.thumbnail_url || post.media_url} alt="Instagram post" className="w-full h-full object-cover" />
-                        {post.isImported && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><CheckCircle className="text-white h-8 w-8" /></div>}
-                      </button>
+                    visiblePosts.map(post => (
+                      <div key={post.id} className="relative group">
+                        <button onClick={() => setSelectedPost(post)} className={`w-full relative aspect-square rounded-md overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${selectedPost?.id === post.id ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
+                          <img src={post.thumbnail_url || post.media_url} alt="Instagram post" className="w-full h-full object-cover" />
+                          {post.isImported && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><CheckCircle className="text-white h-8 w-8" /></div>}
+                        </button>
+                        <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDismissPost(post.id)}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     ))
                   )}
                 </div>
@@ -150,10 +164,7 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                       <img src={selectedPost.media_url} alt="Selected post" className="max-w-full max-h-full object-contain" />
                     </button>
                     <Card>
-                      <CardHeader>
-                        <CardTitle>AI Analysis</CardTitle>
-                        <CardDescription>Initial analysis of the post caption.</CardDescription>
-                      </CardHeader>
+                      <CardHeader><CardTitle>AI Analysis</CardTitle><CardDescription>Initial analysis of the post caption.</CardDescription></CardHeader>
                       <CardContent>
                         {selectedPost.analysis ? (
                           <div className="space-y-4">
@@ -165,22 +176,16 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                                <div className="border-t pt-4 mt-4">
                                 <h4 className="font-semibold text-sm mb-2">Extracted Features:</h4>
                                 <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                                    {selectedPost.analysis.product.features.map((feature: string, index: number) => (
-                                        <li key={index}>{feature}</li>
-                                    ))}
+                                    {selectedPost.analysis.product.features.map((feature: string, index: number) => (<li key={index}>{feature}</li>))}
                                 </ul>
                                </div>
                             )}
                           </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">No caption to analyze.</p>
-                        )}
+                        ) : (<p className="text-sm text-muted-foreground">No caption to analyze.</p>)}
                       </CardContent>
                     </Card>
                     <Card>
-                      <CardHeader>
-                        <CardTitle>Original Caption</CardTitle>
-                      </CardHeader>
+                      <CardHeader><CardTitle>Original Caption</CardTitle></CardHeader>
                       <CardContent><p className="text-sm whitespace-pre-wrap text-muted-foreground">{selectedPost.caption || "No caption."}</p></CardContent>
                     </Card>
                     <Button onClick={() => handleCreateProduct(selectedPost)} disabled={selectedPost.isImported || isCreating} className="w-full">
@@ -209,13 +214,7 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
       )}
 
       {isCreateModalOpen && productToCreate && selectedPost && (
-        <CreateProductModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          onSave={handleSaveProduct}
-          productData={productToCreate}
-          post={selectedPost}
-        />
+        <CreateProductModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onSave={handleSaveProduct} productData={productToCreate} post={selectedPost} />
       )}
     </>
   );

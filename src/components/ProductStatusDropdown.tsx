@@ -1,0 +1,44 @@
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { CheckCircle, XCircle, Archive } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
+
+interface ProductStatusDropdownProps {
+  currentStatus: ProductStatus;
+  onStatusChange: (newStatus: ProductStatus) => void;
+}
+
+const statusConfig = {
+  'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
+  'Draft': { icon: XCircle, color: "text-amber-600", label: "Draft" },
+  'Out of Stock': { icon: Archive, color: "text-slate-600", label: "Out of Stock" },
+};
+
+export const ProductStatusDropdown = ({ currentStatus, onStatusChange }: ProductStatusDropdownProps) => {
+  const CurrentIcon = statusConfig[currentStatus]?.icon || XCircle;
+  const currentColor = statusConfig[currentStatus]?.color || "text-amber-600";
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+        <Button variant="ghost" size="sm" className={cn("font-semibold", currentColor)}>
+          <CurrentIcon className="mr-2 h-4 w-4" />
+          {statusConfig[currentStatus]?.label || 'Draft'}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+        {(Object.keys(statusConfig) as ProductStatus[]).map((status) => {
+          const { icon: Icon, color, label } = statusConfig[status];
+          return (
+            <DropdownMenuItem key={status} onClick={() => onStatusChange(status)} disabled={status === currentStatus}>
+              <Icon className={cn("mr-2 h-4 w-4", color)} />
+              <span className={color}>{label}</span>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};

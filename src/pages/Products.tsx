@@ -15,11 +15,14 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { BulkActionsToolbar } from "@/components/BulkActionsToolbar";
 import { AnimatePresence } from "framer-motion";
+import { SaleModal, SaleFormData } from "@/components/SaleModal";
+
+type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 
 interface Product {
   id: string;
   name: string;
-  status: 'Active' | 'Draft';
+  status: ProductStatus;
   price: number | null;
   inventory: number;
   media_url: string;
@@ -47,39 +50,20 @@ const Products = () => {
   const [sortOption, setSortOption] = useState("newest");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [isSelectionModeActive, setIsSelectionModeActive] = useState(false);
+  const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
+    if (!user) { setIsLoading(false); return; }
 
-    const { data: business, error: businessError } = await supabase
-      .from('businesses')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
+    const { data: business, error: businessError } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
+    if (businessError || !business) { showError("Could not find your business profile."); setIsLoading(false); return; }
 
-    if (businessError || !business) {
-      showError("Could not find your business profile.");
-      setIsLoading(false);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq('business_id', business.id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      showError("Could not fetch your product catalog.");
-      console.error(error);
-    } else {
-      setProducts(data as Product[]);
-    }
+    const { data, error } = await supabase.from("products").select("*").eq('business_id', business.id).order('created_at', { ascending: false });
+    if (error) { showError("Could not fetch your product catalog."); console.error(error); } 
+    else { setProducts(data as Product[]); }
     setIsLoading(false);
   }, []);
 
@@ -95,21 +79,17 @@ const Products = () => {
 
   const handleSync = async () => {
     setIsSyncing(true);
-    const toastId = showLoading("Starting background sync with AI... This may take a moment.");
+    const toastId = showLoading("Starting background sync with AI...");
     try {
       const { data, error } = await supabase.functions.invoke('instagram-product-processor');
-      
       dismissToast(toastId);
-
       if (error) throw error;
       if (data.error) throw new Error(data.error);
-      
       showSuccess(data.message || "Sync complete!");
       await fetchProducts();
     } catch (err: any) {
       dismissToast(toastId);
       showError(err.message || "An unknown error occurred during sync.");
-      console.error("Sync error:", err);
     } finally {
       setIsSyncing(false);
     }
@@ -125,39 +105,17 @@ const Products = () => {
     }
   }, [fetchProducts, selectedProduct]);
 
-  const handleStatusChange = async (productId: string, newStatus: 'Active' | 'Draft') => {
+  const handleStatusChange = async (productId: string, newStatus: ProductStatus) => {
     const originalProducts = [...products];
-    const updatedProducts = products.map(p => p.id === productId ? { ...p, status: newStatus } : p);
-    setProducts(updatedProducts);
-
+    setProducts(products.map(p => p.id === productId ? { ...p, status: newStatus } : p));
     const { error } = await supabase.from('products').update({ status: newStatus }).eq('id', productId);
-    if (error) {
-      showError(`Failed to update status: ${error.message}`);
-      setProducts(originalProducts);
-    } else {
-      showSuccess(`Product is now ${newStatus.toLowerCase()}.`);
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!productToDelete) return;
-    const { error } = await supabase.from('products').delete().eq('id', productToDelete);
-    if (error) {
-      showError(`Failed to delete product: ${error.message}`);
-    } else {
-      showSuccess("Product deleted.");
-      fetchProducts();
-    }
-    setProductToDelete(null);
+    if (error) { showError(`Failed to update status: ${error.message}`); setProducts(originalProducts); } 
+    else { showSuccess(`Product is now ${newStatus.toLowerCase()}.`); }
   };
 
   const filteredAndSortedProducts = useMemo(() => {
     return products
-      .filter(product => {
-        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter.length === 0 || statusFilter.includes(product.status);
-        return matchesSearch && matchesStatus;
-      })
+      .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) && (statusFilter.length === 0 || statusFilter.includes(p.status)))
       .sort((a, b) => {
         switch (sortOption) {
           case 'price-asc': return (a.price || 0) - (b.price || 0);
@@ -165,70 +123,63 @@ const Products = () => {
           case 'name-asc': return a.name.localeCompare(b.name);
           case 'name-desc': return b.name.localeCompare(a.name);
           case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          case 'newest':
-          default:
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         }
       });
   }, [products, searchTerm, statusFilter, sortOption]);
 
   const handleSelectProduct = (productId: string) => {
-    setSelectedProducts(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
+    setSelectedProducts(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
   };
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedProducts(filteredAndSortedProducts.map(p => p.id));
-    } else {
-      setSelectedProducts([]);
-    }
-  };
-
-  const handleBulkStatusChange = async (status: 'Active' | 'Draft') => {
+  const handleBulkStatusChange = async (status: ProductStatus) => {
     const { error } = await supabase.from('products').update({ status }).in('id', selectedProducts);
-    if (error) {
-      showError(`Failed to update products: ${error.message}`);
-    } else {
-      showSuccess(`Successfully updated ${selectedProducts.length} products.`);
-      setSelectedProducts([]);
-      fetchProducts();
-    }
+    if (error) { showError(`Failed to update products: ${error.message}`); } 
+    else { showSuccess(`Successfully updated ${selectedProducts.length} products.`); setSelectedProducts([]); fetchProducts(); }
   };
 
   const handleBulkDelete = async () => {
     const { error } = await supabase.from('products').delete().in('id', selectedProducts);
-    if (error) {
-      showError(`Failed to delete products: ${error.message}`);
-    } else {
-      showSuccess(`Successfully deleted ${selectedProducts.length} products.`);
-      setSelectedProducts([]);
-      fetchProducts();
-    }
+    if (error) { showError(`Failed to delete products: ${error.message}`); } 
+    else { showSuccess(`Successfully deleted ${selectedProducts.length} products.`); setSelectedProducts([]); fetchProducts(); }
     setBulkDeleteConfirm(false);
   };
 
+  const handleApplySale = async (saleData: SaleFormData) => {
+    const updates = products
+      .filter(p => selectedProducts.includes(p.id) && p.price != null)
+      .map(p => {
+        const currentPrice = p.price!;
+        let newPrice;
+        if (saleData.type === 'percentage') {
+          newPrice = currentPrice * (1 - saleData.value / 100);
+        } else {
+          newPrice = currentPrice - saleData.value;
+        }
+        return { id: p.id, price: Math.max(0, newPrice) }; // Ensure price doesn't go below 0
+      });
+
+    if (updates.length > 0) {
+      const { error } = await supabase.from('products').upsert(updates);
+      if (error) { showError(`Failed to apply sale: ${error.message}`); } 
+      else { showSuccess(`Sale applied to ${updates.length} products.`); fetchProducts(); }
+    }
+    setSelectedProducts([]);
+    setIsSaleModalOpen(false);
+  };
+
+  const toggleSelectionMode = () => {
+    setIsSelectionModeActive(!isSelectionModeActive);
+    if (isSelectionModeActive) { setSelectedProducts([]); }
+  };
+
   const currentView = isMobile ? 'grid' : viewMode;
-  const isSelectionActive = selectedProducts.length > 0;
 
   return (
     <>
       {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={fetchProducts} />}
-      <ProductDetailModal 
-        isOpen={!!selectedProduct}
-        onClose={() => setSelectedProduct(null)}
-        product={selectedProduct}
-        onUpdate={handleProductUpdate}
-      />
-      <AlertDialog open={!!productToDelete} onOpenChange={(open) => !open && setProductToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the product.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel onClick={() => setProductToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ProductDetailModal isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={handleProductUpdate} />
+      {isSaleModalOpen && <SaleModal isOpen={isSaleModalOpen} onClose={() => setIsSaleModalOpen(false)} onApply={handleApplySale} productCount={selectedProducts.length} />}
       <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>Delete {selectedProducts.length} products?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
@@ -240,61 +191,38 @@ const Products = () => {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <h1 className="text-3xl font-bold self-start">Products</h1>
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <Button variant="outline" onClick={() => setIsImporterOpen(true)} className="flex-1 md:flex-none">
-              <Import className="mr-2 h-4 w-4" />
-              Import
-            </Button>
-            <Button onClick={handleSync} disabled={isSyncing} className="flex-1 md:flex-none">
-              <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              Sync
-            </Button>
+            <Button variant="outline" onClick={() => setIsImporterOpen(true)} className="flex-1 md:flex-none"><Import className="mr-2 h-4 w-4" />Import</Button>
+            <Button onClick={handleSync} disabled={isSyncing} className="flex-1 md:flex-none"><RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />Sync</Button>
           </div>
         </div>
 
         <ProductToolbar
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          sortOption={sortOption}
-          onSortChange={setSortOption}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-          viewMode={viewMode}
-          onViewChange={setViewMode}
+          searchTerm={searchTerm} onSearchChange={setSearchTerm}
+          sortOption={sortOption} onSortChange={setSortOption}
+          statusFilter={statusFilter} onStatusFilterChange={setStatusFilter}
+          viewMode={viewMode} onViewChange={setViewMode}
+          isSelectionModeActive={isSelectionModeActive} onToggleSelectionMode={toggleSelectionMode}
         />
 
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-[420px] w-full rounded-lg" />)}
+            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-[380px] w-full rounded-lg" />)}
           </div>
         ) : filteredAndSortedProducts.length > 0 ? (
           currentView === 'grid' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredAndSortedProducts.map((product) => (
                 <ProductCard
-                  key={product.id}
-                  product={product}
+                  key={product.id} product={product}
                   isSelected={selectedProducts.includes(product.id)}
-                  isSelectionActive={isSelectionActive}
-                  onSelect={handleSelectProduct}
-                  onEdit={setSelectedProduct}
+                  isSelectionModeActive={isSelectionModeActive}
+                  onSelect={handleSelectProduct} onEdit={setSelectedProduct}
                   onStatusChange={handleStatusChange}
                 />
               ))}
             </div>
           ) : (
-            <Card>
-              <CardContent className="p-0">
-                <ProductTableView
-                  products={filteredAndSortedProducts}
-                  selectedProducts={selectedProducts}
-                  onSelectAll={handleSelectAll}
-                  onSelectOne={handleSelectProduct}
-                  onEdit={setSelectedProduct}
-                  onDelete={setProductToDelete}
-                  onStatusChange={handleStatusChange}
-                />
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-0"><ProductTableView products={filteredAndSortedProducts} selectedProducts={selectedProducts} onSelectAll={(checked) => setSelectedProducts(checked ? filteredAndSortedProducts.map(p => p.id) : [])} onSelectOne={handleSelectProduct} onEdit={setSelectedProduct} onDelete={setProductToDelete} onStatusChange={handleStatusChange} /></CardContent></Card>
           )
         ) : (
           <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg">
@@ -310,6 +238,7 @@ const Products = () => {
             onClear={() => setSelectedProducts([])}
             onSetStatus={handleBulkStatusChange}
             onDelete={() => setBulkDeleteConfirm(true)}
+            onAddSale={() => setIsSaleModalOpen(true)}
           />
         )}
       </AnimatePresence>
