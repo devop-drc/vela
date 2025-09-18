@@ -9,7 +9,7 @@ const Login = () => {
       provider: 'facebook',
       options: {
         redirectTo: `${window.location.origin}/`,
-        scopes: 'email,public_profile,instagram_basic',
+        scopes: 'email,public_profile',
       },
     });
     if (error) {
