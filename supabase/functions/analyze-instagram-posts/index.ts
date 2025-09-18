@@ -72,10 +72,25 @@ serve(async (req) => {
         });
     }
 
+    const { data: business, error: businessError } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (businessError || !business) {
+      // If there's no business, there can be no products, so return early.
+      const analyzedPosts = postsData.posts.map((post: any) => ({ ...post, isImported: false, analysis: null }));
+      return new Response(JSON.stringify({ posts: analyzedPosts }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { data: existingProducts, error: productsError } = await supabase
       .from('products')
       .select('instagram_post_id')
-      .eq('user_id', user.id);
+      .eq('business_id', business.id);
+
     if (productsError) throw productsError;
     const existingPostIds = new Set(existingProducts.map(p => p.instagram_post_id));
 
