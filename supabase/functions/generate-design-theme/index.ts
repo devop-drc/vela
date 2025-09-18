@@ -12,32 +12,32 @@ const corsHeaders = {
 
 const getDesignPrompt = (profile: any) => {
   return `
-    You are a world-class branding and UI/UX designer. Your task is to analyze an Instagram profile icon and bio to generate a complete design system theme for a web dashboard.
+    You are a UI/UX design expert specializing in creating accessible and beautiful color palettes for web applications. Your task is to analyze the attached brand logo and the following brand information to generate a complete design system theme.
+
+    **Brand Information:**
+    - Shop Name: "${profile.shop_name}"
+    - Bio: "${profile.description}"
 
     **Instructions:**
 
-    1.  **Analyze the attached Profile Icon:**
-        *   Extract a harmonious 5-color palette directly from the image.
-        *   The palette must be suitable for a light-mode web dashboard.
-        *   Define colors for 'primary', 'background', 'foreground', 'card', and 'accent'.
-        *   Ensure the 'foreground' color has excellent contrast (WCAG AA) on the 'background' and 'card' colors.
-        *   The 'primary' color should be the most dominant or representative color from the icon.
+    1.  **Generate a Color Palette:**
+        *   Derive a harmonious color palette *inspired by the logo*.
+        *   **CRITICAL:** The palette must be functional for a light-mode UI. Prioritize legibility and accessibility above all else.
+        *   `background` and `card` colors must be light, near-neutral colors (like off-white or very light gray).
+        *   `foreground` (text color) MUST have a WCAG AA contrast ratio against both `background` and `card`.
+        *   `primary` (for buttons) should be a vibrant, representative color inspired by the logo.
+        *   `accent` should be a complementary color for highlights.
 
-    2.  **Analyze the Brand Identity from Text:**
-        *   Shop Name: "${profile.shop_name}"
-        *   Bio: "${profile.description}"
-        *   Based *only* on this text, determine the brand's personality (e.g., "minimalist and clean," "bold and energetic," "luxurious and elegant").
-
-    3.  **Generate UI Styles based on the Brand Personality:**
-        *   **Typography:** Choose one font for headings and one for body text from the Google Fonts library that matches the brand's style.
-        *   **Corner Radius:** Choose an appropriate corner radius (e.g., "0.5rem" for modern, "1.5rem" for playful).
-        *   **Sidebar Style:** Choose a style ('primary' for bold, 'card' for subtle).
+    2.  **Generate UI Styles:**
+        *   Based on the brand's personality from its name and bio, select a suitable Google Font pairing (one for headings, one for body).
+        *   Choose an appropriate corner `radius` (e.g., "0.5rem" for modern, "1.5rem" for playful).
+        *   Choose a `sidebarStyle` ('primary' for a bold look, 'card' for a subtle, integrated look).
 
     **Output Format:**
     Respond ONLY with a single, valid JSON object. Do not include markdown backticks or any other text.
 
     {
-      "themeName": "A creative name for the generated theme (e.g., 'Urban Explorer', 'Coastal Calm').",
+      "themeName": "A creative name for the generated theme.",
       "colors": {
         "primary": "#HEXCODE",
         "primaryForeground": "#HEXCODE",
