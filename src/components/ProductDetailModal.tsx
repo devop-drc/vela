@@ -64,6 +64,15 @@ interface ProductDetailModalProps {
   onUpdate: () => void;
 }
 
+const DetailDisplayRow = ({ label, children }: { label: string, children: React.ReactNode }) => (
+    <div className="flex flex-col">
+        <Label className="text-xs text-muted-foreground">{label}</Label>
+        <div className="font-medium flex flex-wrap items-center gap-1.5 text-sm">
+            {children}
+        </div>
+    </div>
+);
+
 export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: ProductDetailModalProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -197,18 +206,28 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
             <CardHeader><CardTitle className="text-base flex items-center gap-2"><Settings2 className="h-4 w-4" />Product Details</CardTitle></CardHeader>
             <CardContent>
                 {type && type.fields.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                         {type.fields.map(field => {
                             const value = product.details?.[field.name];
                             if (!value || (Array.isArray(value) && value.length === 0)) return null;
                             
                             return (
-                                <div key={field.name} className="flex flex-col">
-                                    <Label className="text-xs text-muted-foreground">{field.label}</Label>
-                                    <p className="font-medium">
-                                        {Array.isArray(value) ? value.join(', ') : value}
-                                    </p>
-                                </div>
+                                <DetailDisplayRow key={field.name} label={field.label}>
+                                    {field.name === 'colors' && Array.isArray(value) ? (
+                                      value.map(color => (
+                                        <div 
+                                          key={color} 
+                                          title={color}
+                                          className="h-5 w-5 rounded-full border border-black/10"
+                                          style={{ backgroundColor: color }}
+                                        />
+                                      ))
+                                    ) : field.name === 'sizes' && Array.isArray(value) ? (
+                                      value.map(size => <Badge key={size} variant="outline" className="px-1.5 py-0.5 text-xs font-mono">{size}</Badge>)
+                                    ) : (
+                                      <p>{Array.isArray(value) ? value.join(', ') : value}</p>
+                                    )}
+                                </DetailDisplayRow>
                             );
                         })}
                     </div>

@@ -206,8 +206,8 @@ const Products = () => {
             {!isMobile && (
               <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 'auto', opacity: 1 }} exit={{ width: 0, opacity: 0 }} className="flex items-center gap-2 overflow-hidden">
                 <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline"><Group className="mr-2 h-4 w-4" />Group</Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuRadioGroup value={grouping} onValueChange={(v) => setGrouping(v as GroupingType)}><DropdownMenuRadioItem value="none">None</DropdownMenuRadioItem><DropdownMenuRadioItem value="category">By Category</DropdownMenuRadioItem></DropdownMenuRadioGroup></DropdownMenuContent></DropdownMenu>
-                {viewMode === 'grid' && <Button variant="outline" onClick={cycleGridSize} className="w-28 justify-start"><LayoutGrid className="mr-2 h-4 w-4" />{sizeLabels[gridSize]}</Button>}
                 <Button variant="outline" size="icon" onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}>{viewMode === 'grid' ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}</Button>
+                {viewMode === 'grid' && <Button variant="outline" onClick={cycleGridSize} className="w-28 justify-start"><LayoutGrid className="mr-2 h-4 w-4" />{sizeLabels[gridSize]}</Button>}
                 {viewMode === 'grid' && <Button variant={isSelectionModeActive ? "secondary" : "outline"} onClick={toggleSelectionMode}><CheckSquare className="mr-2 h-4 w-4" />{isSelectionModeActive ? 'Cancel' : 'Select'}</Button>}
               </motion.div>
             )}
