@@ -16,6 +16,7 @@ import ProtectedRoute from "./components/layout/ProtectedRoute";
 import OnboardingGuard from "./components/layout/OnboardingGuard";
 import { AppearanceProvider } from "./contexts/AppearanceContext";
 import { PageTitleProvider } from "./contexts/PageTitleContext";
+import OutOfStock from "./pages/OutOfStock";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
                     <Route path="/orders" element={<Orders />} />
                     <Route path="/analytics" element={<Analytics />} />
                     <Route path="/settings" element={<Settings />} />
+                    <Route path="/out-of-stock" element={<OutOfStock />} />
                   </Route>
                 </Route>
               </Route>

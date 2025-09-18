@@ -1,13 +1,13 @@
 import { NavLink } from "react-router-dom";
-import { Home, Package, ShoppingBag, BarChart2, Settings } from "lucide-react";
+import { Home, Package, ShoppingBag, Archive, Settings } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/", icon: Home, label: "Home" },
   { to: "/products", icon: Package, label: "Products" },
+  { to: "/out-of-stock", icon: Archive, label: "Out of Stock" },
   { to: "/orders", icon: ShoppingBag, label: "Orders" },
-  { to: "/analytics", icon: BarChart2, label: "Analytics" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
