@@ -39,30 +39,44 @@ const getDesignPrompt = (profile: any) => {
     {
       "themeName": "A creative name for the generated theme.",
       "colors": {
-        "primary": "#HEXCODE",
-        "primaryForeground": "#HEXCODE",
-        "secondary": "#HEXCODE",
-        "secondaryForeground": "#HEXCODE",
-        "background": "#HEXCODE",
-        "foreground": "#HEXCODE",
-        "card": "#HEXCODE",
-        "cardForeground": "#HEXCODE",
-        "accent": "#HEXCODE"
+        "primary": "#HEXCODE", "primaryForeground": "#HEXCODE", "secondary": "#HEXCODE", "secondaryForeground": "#HEXCODE",
+        "background": "#HEXCODE", "foreground": "#HEXCODE", "card": "#HEXCODE", "cardForeground": "#HEXCODE", "accent": "#HEXCODE"
       },
-      "fonts": {
-        "heading": "Google Font Name",
-        "body": "Google Font Name"
+      "fonts": { "heading": "Google Font Name", "body": "Google Font Name" },
+      "radius": "X.Xrem", "sidebarStyle": "primary"
+    }
+  `;
+};
+
+const getTextOnlyDesignPrompt = (profile: any) => {
+  return `
+    You are a UI/UX design expert. Your task is to generate a complete design system theme based on the "vibe" of a brand's name and bio. The previous attempt to analyze their logo failed, so you must rely solely on the text provided.
+
+    **Brand Information:**
+    - Shop Name: "${profile.shop_name}"
+    - Bio: "${profile.description}"
+
+    **Instructions:**
+    1.  **Determine Brand Vibe:** Analyze the text to understand the brand's personality (e.g., "minimalist and clean," "bold and energetic," "luxurious and elegant").
+    2.  **Generate a Random but Cohesive Color Palette:** Create a harmonious color palette that matches the brand's vibe. The palette must be functional for a light-mode UI with excellent contrast (WCAG AA). 'background' and 'card' colors must be light and near-neutral.
+    3.  **Generate UI Styles:** Choose a suitable Google Font pairing, corner 'radius', and 'sidebarStyle' ('primary' or 'card') that fits the vibe.
+
+    **Output Format:**
+    Respond ONLY with a single, valid JSON object. Do not include markdown backticks.
+    {
+      "themeName": "A creative name for the generated theme.",
+      "colors": {
+        "primary": "#HEXCODE", "primaryForeground": "#HEXCODE", "secondary": "#HEXCODE", "secondaryForeground": "#HEXCODE",
+        "background": "#HEXCODE", "foreground": "#HEXCODE", "card": "#HEXCODE", "cardForeground": "#HEXCODE", "accent": "#HEXCODE"
       },
-      "radius": "X.Xrem",
-      "sidebarStyle": "primary"
+      "fonts": { "heading": "Google Font Name", "body": "Google Font Name" },
+      "radius": "X.Xrem", "sidebarStyle": "primary"
     }
   `;
 };
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') { return new Response(null, { headers: corsHeaders }); }
 
   try {
     if (!GEMINI_API_KEY) throw new Error("Gemini API key is not configured.");
@@ -80,54 +94,54 @@ serve(async (req) => {
     if (profileError) throw profileError;
     if (profileData.error) throw new Error(profileData.error);
 
-    if (!profileData.logo_url) {
-      throw new Error("No profile icon found to analyze.");
+    let analysis;
+
+    try {
+      if (!profileData.logo_url) throw new Error("No profile icon found, falling back to text analysis.");
+      
+      const imageResponse = await fetch(profileData.logo_url);
+      if (!imageResponse.ok) throw new Error(`Failed to fetch profile image. Status: ${imageResponse.status}`);
+      
+      const imageMimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
+      const imageBuffer = await imageResponse.arrayBuffer();
+      const imageBase64 = encode(imageBuffer);
+      const imagePrompt = getDesignPrompt(profileData);
+      
+      const geminiResponse = await fetch(GEMINI_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: imagePrompt }, { inline_data: { mime_type: imageMimeType, data: imageBase64 } }] }] }),
+      });
+
+      if (!geminiResponse.ok) throw new Error(`Gemini API error (image analysis): ${await geminiResponse.text()}`);
+      
+      const geminiData = await geminiResponse.json();
+      if (!geminiData.candidates || geminiData.candidates.length === 0) throw new Error("AI failed to generate a response from image. Falling back.");
+      
+      const jsonString = geminiData.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+      analysis = JSON.parse(jsonString);
+
+    } catch (imageAnalysisError) {
+      console.warn("Image-based design generation failed:", imageAnalysisError.message);
+      console.log("Attempting fallback to text-only design generation...");
+
+      const textPrompt = getTextOnlyDesignPrompt(profileData);
+      const geminiResponse = await fetch(GEMINI_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: textPrompt }] }] }),
+      });
+
+      if (!geminiResponse.ok) throw new Error(`Gemini API error (text analysis): ${await geminiResponse.text()}`);
+      
+      const geminiData = await geminiResponse.json();
+      if (!geminiData.candidates || geminiData.candidates.length === 0) throw new Error("AI failed to generate a response from text as well.");
+      
+      const jsonString = geminiData.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+      analysis = JSON.parse(jsonString);
     }
 
-    const imageResponse = await fetch(profileData.logo_url);
-    if (!imageResponse.ok) {
-      throw new Error(`Failed to fetch profile image. Status: ${imageResponse.status}`);
-    }
-    const imageMimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
-    const imageBuffer = await imageResponse.arrayBuffer();
-    const imageBase64 = encode(imageBuffer);
-
-    const prompt = getDesignPrompt(profileData);
-    
-    const geminiResponse = await fetch(GEMINI_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            {
-              inline_data: {
-                mime_type: imageMimeType,
-                data: imageBase64
-              }
-            }
-          ]
-        }]
-      }),
-    });
-
-    if (!geminiResponse.ok) {
-      const errorText = await geminiResponse.text();
-      throw new Error(`Gemini API error: ${errorText}`);
-    }
-
-    const geminiData = await geminiResponse.json();
-    if (!geminiData.candidates || geminiData.candidates.length === 0) {
-        console.error("Gemini response missing candidates:", geminiData);
-        throw new Error("AI failed to generate a response. Please try again.");
-    }
-    const jsonString = geminiData.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
-    const analysis = JSON.parse(jsonString);
-
-    return new Response(JSON.stringify(analysis), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify(analysis), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {
     console.error('Function Error:', error.message);
