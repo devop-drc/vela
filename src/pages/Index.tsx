@@ -1,192 +1,140 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { DollarSign, ShoppingCart, Users, Activity } from "lucide-react";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { DollarSign, Package, Users, CreditCard } from "lucide-react";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { RecentSales } from "@/components/dashboard/RecentSales";
+import { OverviewChart } from "@/components/dashboard/OverviewChart";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const overviewData = [
-  { name: "Jan", total: Math.floor(Math.random() * 2000) + 1000 },
-  { name: "Feb", total: Math.floor(Math.random() * 2000) + 1500 },
-  { name: "Mar", total: Math.floor(Math.random() * 2000) + 2200 },
-  { name: "Apr", total: Math.floor(Math.random() * 2000) + 2500 },
-  { name: "May", total: Math.floor(Math.random() * 2000) + 1800 },
-  { name: "Jun", total: Math.floor(Math.random() * 2000) + 3000 },
-  { name: "Jul", total: Math.floor(Math.random() * 2000) + 3200 },
-];
+interface DashboardData {
+  totalRevenue: number;
+  salesCount: number;
+  activeProducts: number;
+  customers: number;
+  recentOrders: any[];
+  chartData: { name: string; total: number }[];
+}
 
 const Index = () => {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Get business ID
+      const { data: business, error: businessError } = await supabase
+        .from('businesses')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (businessError || !business) {
+        console.error("Could not fetch business:", businessError);
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch orders and products
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders')
+        .select('total_amount, customer_name, customer_email, created_at, id')
+        .eq('business_id', business.id)
+        .order('created_at', { ascending: false });
+
+      const { data: products, error: productsError } = await supabase
+        .from('products')
+        .select('status')
+        .eq('business_id', business.id);
+
+      if (ordersError || productsError) {
+        console.error("Error fetching data:", ordersError, productsError);
+        setIsLoading(false);
+        return;
+      }
+
+      // Process data
+      const totalRevenue = orders?.reduce((acc, order) => acc + order.total_amount, 0) || 0;
+      const salesCount = orders?.length || 0;
+      const activeProducts = products?.filter(p => p.status === 'Active').length || 0;
+      const uniqueCustomers = new Set(orders?.map(o => o.customer_email)).size;
+      const recentOrders = orders?.slice(0, 5) || [];
+
+      // Process chart data (sales per month for last 6 months)
+      const monthlySales: { [key: string]: number } = {};
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+      orders?.forEach(order => {
+        const orderDate = new Date(order.created_at);
+        if (orderDate > sixMonthsAgo) {
+          const month = orderDate.toLocaleString('default', { month: 'short' });
+          monthlySales[month] = (monthlySales[month] || 0) + order.total_amount;
+        }
+      });
+      
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const currentMonth = new Date().getMonth();
+      const chartData = Array.from({ length: 6 }, (_, i) => {
+        const monthIndex = (currentMonth - 5 + i + 12) % 12;
+        const monthName = monthNames[monthIndex];
+        return { name: monthName, total: monthlySales[monthName] || 0 };
+      });
+
+      setData({
+        totalRevenue,
+        salesCount,
+        activeProducts,
+        customers: uniqueCustomers,
+        recentOrders,
+        chartData,
+      });
+
+      setIsLoading(false);
+    };
+
+    fetchData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <Skeleton className="col-span-4 h-96" />
+          <Skeleton className="col-span-3 h-96" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return <div className="text-center py-10">No data to display. Start by adding some products and orders!</div>;
+  }
+
   return (
     <div className="space-y-4">
       <h1 className="text-3xl font-bold text-left">Dashboard</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">$45,231.89</div>
-            <p className="text-xs text-muted-foreground">
-              +20.1% from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sales</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+1,234</div>
-            <p className="text-xs text-muted-foreground">
-              +19% from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Visitors</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+2,350</div>
-            <p className="text-xs text-muted-foreground">
-              +180.1% from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Engagement</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+573</div>
-            <p className="text-xs text-muted-foreground">
-              +201 since last hour
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard title="Total Revenue" value={`$${data.totalRevenue.toFixed(2)}`} icon={DollarSign} description="All-time revenue" />
+        <StatCard title="Sales" value={`+${data.salesCount}`} icon={CreditCard} description="All-time sales count" />
+        <StatCard title="Active Products" value={data.activeProducts.toString()} icon={Package} description="Products available for sale" />
+        <StatCard title="Unique Customers" value={`+${data.customers}`} icon={Users} description="Total unique customers" />
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={overviewData}>
-                <XAxis
-                  dataKey="name"
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `$${value}`}
-                />
-                <Bar
-                  dataKey="total"
-                  fill="currentColor"
-                  radius={[4, 4, 0, 0]}
-                  className="fill-primary"
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Recent Sales</CardTitle>
-            <CardDescription>
-              You made 265 sales this month.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-8">
-              <div className="flex items-center">
-                <Avatar className="h-9 w-9">
-                  <AvatarFallback>OM</AvatarFallback>
-                </Avatar>
-                <div className="ml-4 space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    Olivia Martin
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    olivia.martin@email.com
-                  </p>
-                </div>
-                <div className="ml-auto font-medium">+$1,999.00</div>
-              </div>
-              <div className="flex items-center">
-                <Avatar className="flex h-9 w-9 items-center justify-center space-y-0 border">
-                  <AvatarFallback>JL</AvatarFallback>
-                </Avatar>
-                <div className="ml-4 space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    Jackson Lee
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    jackson.lee@email.com
-                  </p>
-                </div>
-                <div className="ml-auto font-medium">+$39.00</div>
-              </div>
-              <div className="flex items-center">
-                <Avatar className="h-9 w-9">
-                  <AvatarFallback>IN</AvatarFallback>
-                </Avatar>
-                <div className="ml-4 space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    Isabella Nguyen
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    isabella.nguyen@email.com
-                  </p>
-                </div>
-                <div className="ml-auto font-medium">+$299.00</div>
-              </div>
-              <div className="flex items-center">
-                <Avatar className="h-9 w-9">
-                  <AvatarFallback>WK</AvatarFallback>
-                </Avatar>
-                <div className="ml-4 space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    William Kim
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    will@email.com
-                  </p>
-                </div>
-                <div className="ml-auto font-medium">+$99.00</div>
-              </div>
-              <div className="flex items-center">
-                <Avatar className="h-9 w-9">
-                  <AvatarFallback>SD</AvatarFallback>
-                </Avatar>
-                <div className="ml-4 space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    Sofia Davis
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    sofia.davis@email.com
-                  </p>
-                </div>
-                <div className="ml-auto font-medium">+$39.00</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+        <OverviewChart data={data.chartData} />
+        <RecentSales orders={data.recentOrders} />
       </div>
     </div>
   );
