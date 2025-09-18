@@ -166,7 +166,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
     return (
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
         <ScrollArea className="flex-1">
-          <div className="p-2.5 space-y-4">
+          <div className="p-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
               <div className="md:col-span-4">
                 <button onClick={() => setIsMediaViewerOpen(true)} className="w-full rounded-lg overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-shadow hover:shadow-lg">
@@ -239,7 +239,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
             )}
           </div>
         </ScrollArea>
-        <DialogFooter className="p-2.5">
+        <DialogFooter className="p-4 border-t">
           <Button variant="outline" onClick={() => setIsEditing(true)} disabled={isSubmitting}><Edit className="mr-2 h-4 w-4" />Edit</Button>
           <Button variant="destructive" onClick={() => setIsDeleting(true)} disabled={isSubmitting}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>
         </DialogFooter>
@@ -249,9 +249,11 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
 
   const EditMode = () => (
     <motion.form key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
+      <DialogHeader className="p-4 border-b">
+        <DialogTitle>Update Product</DialogTitle>
+      </DialogHeader>
       <ScrollArea className="flex-1">
-        <div className="p-2.5">
-            <h2 className="text-2xl font-bold tracking-tight mb-4">Update Product</h2>
+        <div className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                     <div>
@@ -292,7 +294,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
             </div>
         </div>
       </ScrollArea>
-      <DialogFooter className="p-2.5">
+      <DialogFooter className="p-4 border-t">
         <Button type="button" variant="ghost" onClick={() => setIsEditing(false)} disabled={isSubmitting}>Cancel</Button>
         <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button>
       </DialogFooter>
@@ -302,7 +304,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setIsEditing(false); } }}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-[10px]">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Product Details: {product.name}</DialogTitle>
             <DialogDescription>View or edit product details for {product.name}.</DialogDescription>
