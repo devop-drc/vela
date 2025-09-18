@@ -1,21 +1,22 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ShieldCheck, AlertTriangle } from 'lucide-react';
 
-const SESSION_STORAGE_KEY = 'integration_prompt_dismissed';
-
 export const IntegrationPrompt = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
-    const checkIntegration = async () => {
-      const dismissed = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      if (dismissed) {
-        return;
-      }
+    // Don't show the prompt on the settings page where they can connect, or on login/onboarding
+    if (location.pathname.startsWith('/settings') || location.pathname.startsWith('/login') || location.pathname.startsWith('/onboarding')) {
+      setIsOpen(false);
+      return;
+    }
 
+    const checkIntegration = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -33,17 +34,13 @@ export const IntegrationPrompt = () => {
 
       if (!data) {
         setIsOpen(true);
+      } else {
+        setIsOpen(false);
       }
     };
 
-    const timer = setTimeout(checkIntegration, 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleDismiss = () => {
-    sessionStorage.setItem(SESSION_STORAGE_KEY, 'true');
-    setIsOpen(false);
-  };
+    checkIntegration();
+  }, [location.pathname]);
 
   const handleConnect = () => {
     setIsOpen(false);
@@ -71,8 +68,7 @@ export const IntegrationPrompt = () => {
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="ghost" onClick={handleDismiss}>Remind Me Later</Button>
-          <Button onClick={handleConnect}>
+          <Button onClick={handleConnect} className="w-full">
             <ShieldCheck className="mr-2 h-4 w-4" />
             Accept Permissions
           </Button>
