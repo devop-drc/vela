@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface TagInputProps {
   value: string[];
@@ -28,7 +29,10 @@ export const TagInput = ({ value = [], onChange, placeholder = "Add..." }: TagIn
   };
 
   return (
-    <div className="border rounded-lg p-2 flex flex-wrap gap-2 items-center">
+    <div className={cn(
+      "border border-input rounded-lg p-2 flex flex-wrap gap-2 items-center transition-all",
+      "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+    )}>
       {value.map(tag => (
         <Badge key={tag} variant="secondary" className="flex items-center gap-1 text-sm py-1">
           {tag}

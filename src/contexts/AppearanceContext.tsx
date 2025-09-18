@@ -6,18 +6,27 @@ import { Session } from '@supabase/supabase-js';
 interface ColorScheme {
   '--background': string;
   '--foreground': string;
+  '--muted': string;
+  '--muted-foreground': string;
+  '--popover': string;
+  '--popover-foreground': string;
+  '--card': string;
+  '--card-foreground': string;
+  '--border': string;
+  '--input': string;
   '--primary': string;
   '--primary-foreground': string;
   '--secondary': string;
   '--secondary-foreground': string;
-  '--card': string;
-  '--border': string;
+  '--accent': string;
+  '--accent-foreground': string;
   '--destructive': string;
   '--destructive-foreground': string;
   '--warning': string;
   '--warning-foreground': string;
   '--info': string;
   '--info-foreground': string;
+  '--ring': string;
 }
 
 interface Theme {
@@ -38,23 +47,23 @@ const sharedColors = {
 export const presetThemes: Theme[] = [
   {
     name: 'Onyx',
-    light: { '--background': '0 0% 100%', '--foreground': '240 10% 3.9%', '--primary': '240 5.9% 10%', '--primary-foreground': '0 0% 98%', '--secondary': '0 0% 96%', '--secondary-foreground': '240 5.9% 10%', '--card': '0 0% 100%', '--border': '0 0% 89.8%', '--destructive': sharedColors.destructive, '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': sharedColors.info, '--info-foreground': sharedColors.infoForeground },
-    dark: { '--background': '240 10% 3.9%', '--foreground': '0 0% 98%', '--primary': '0 0% 98%', '--primary-foreground': '240 5.9% 10%', '--secondary': '240 10% 8%', '--secondary-foreground': '0 0% 98%', '--card': '240 10% 3.9%', '--border': '0 0% 14.9%', '--destructive': '0 72% 51%', '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': '217.2 91.2% 59.8%', '--info-foreground': sharedColors.infoForeground },
+    light: { '--background': '0 0% 100%', '--foreground': '240 10% 3.9%', '--muted': '0 0% 96.1%', '--muted-foreground': '240 3.8% 46.1%', '--popover': '0 0% 100%', '--popover-foreground': '240 10% 3.9%', '--card': '0 0% 100%', '--card-foreground': '240 10% 3.9%', '--border': '0 0% 89.8%', '--input': '0 0% 89.8%', '--primary': '240 5.9% 10%', '--primary-foreground': '0 0% 98%', '--secondary': '0 0% 96.1%', '--secondary-foreground': '240 5.9% 10%', '--accent': '0 0% 94.1%', '--accent-foreground': '240 5.9% 10%', '--ring': '240 5.9% 10%', '--destructive': sharedColors.destructive, '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': sharedColors.info, '--info-foreground': sharedColors.infoForeground },
+    dark: { '--background': '240 10% 3.9%', '--foreground': '0 0% 98%', '--muted': '240 3.7% 15.9%', '--muted-foreground': '240 5% 64.9%', '--popover': '240 10% 3.9%', '--popover-foreground': '0 0% 98%', '--card': '240 10% 3.9%', '--card-foreground': '0 0% 98%', '--border': '240 3.7% 15.9%', '--input': '240 3.7% 15.9%', '--primary': '0 0% 98%', '--primary-foreground': '240 5.9% 10%', '--secondary': '240 3.7% 15.9%', '--secondary-foreground': '0 0% 98%', '--accent': '240 3.7% 15.9%', '--accent-foreground': '0 0% 98%', '--ring': '0 0% 98%', '--destructive': '0 72% 51%', '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': '217.2 91.2% 59.8%', '--info-foreground': sharedColors.infoForeground },
   },
   {
     name: 'Nautical',
-    light: { '--background': '204 100% 96%', '--foreground': '215 60% 22%', '--primary': '210 79% 46%', '--primary-foreground': '0 0% 100%', '--secondary': '204 100% 92%', '--secondary-foreground': '215 60% 22%', '--card': '204 100% 99%', '--border': '204 100% 88%', '--destructive': sharedColors.destructive, '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': sharedColors.info, '--info-foreground': sharedColors.infoForeground },
-    dark: { '--background': '215 60% 12%', '--foreground': '204 20% 94%', '--primary': '210 90% 66%', '--primary-foreground': '215 60% 12%', '--secondary': '215 60% 16%', '--secondary-foreground': '204 20% 94%', '--card': '215 60% 16%', '--border': '215 60% 20%', '--destructive': '0 72% 51%', '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': '217.2 91.2% 59.8%', '--info-foreground': sharedColors.infoForeground },
+    light: { '--background': '204 100% 96%', '--foreground': '215 60% 22%', '--muted': '204 100% 92%', '--muted-foreground': '215 60% 42%', '--popover': '204 100% 99%', '--popover-foreground': '215 60% 22%', '--card': '204 100% 99%', '--card-foreground': '215 60% 22%', '--border': '204 100% 88%', '--input': '204 100% 88%', '--primary': '210 79% 46%', '--primary-foreground': '0 0% 100%', '--secondary': '204 100% 92%', '--secondary-foreground': '215 60% 22%', '--accent': '204 100% 90%', '--accent-foreground': '215 60% 22%', '--ring': '210 79% 46%', '--destructive': sharedColors.destructive, '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': sharedColors.info, '--info-foreground': sharedColors.infoForeground },
+    dark: { '--background': '215 60% 12%', '--foreground': '204 20% 94%', '--muted': '215 60% 16%', '--muted-foreground': '204 20% 74%', '--popover': '215 60% 12%', '--popover-foreground': '204 20% 94%', '--card': '215 60% 16%', '--card-foreground': '204 20% 94%', '--border': '215 60% 20%', '--input': '215 60% 20%', '--primary': '210 90% 66%', '--primary-foreground': '215 60% 12%', '--secondary': '215 60% 16%', '--secondary-foreground': '204 20% 94%', '--accent': '215 60% 20%', '--accent-foreground': '204 20% 94%', '--ring': '210 90% 66%', '--destructive': '0 72% 51%', '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': '217.2 91.2% 59.8%', '--info-foreground': sharedColors.infoForeground },
   },
   {
     name: 'Sakura',
-    light: { '--background': '345 100% 97%', '--foreground': '343 35% 30%', '--primary': '343 85% 65%', '--primary-foreground': '0 0% 100%', '--secondary': '345 100% 93%', '--secondary-foreground': '343 35% 30%', '--card': '345 100% 99%', '--border': '345 100% 89%', '--destructive': sharedColors.destructive, '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': sharedColors.info, '--info-foreground': sharedColors.infoForeground },
-    dark: { '--background': '343 35% 12%', '--foreground': '345 20% 94%', '--primary': '343 90% 75%', '--primary-foreground': '343 35% 12%', '--secondary': '343 35% 16%', '--secondary-foreground': '345 20% 94%', '--card': '343 35% 16%', '--border': '343 35% 20%', '--destructive': '0 72% 51%', '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': '217.2 91.2% 59.8%', '--info-foreground': sharedColors.infoForeground },
+    light: { '--background': '345 100% 97%', '--foreground': '343 35% 30%', '--muted': '345 100% 93%', '--muted-foreground': '343 35% 50%', '--popover': '345 100% 99%', '--popover-foreground': '343 35% 30%', '--card': '345 100% 99%', '--card-foreground': '343 35% 30%', '--border': '345 100% 89%', '--input': '345 100% 89%', '--primary': '343 85% 65%', '--primary-foreground': '0 0% 100%', '--secondary': '345 100% 93%', '--secondary-foreground': '343 35% 30%', '--accent': '345 100% 91%', '--accent-foreground': '343 35% 30%', '--ring': '343 85% 65%', '--destructive': sharedColors.destructive, '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': sharedColors.info, '--info-foreground': sharedColors.infoForeground },
+    dark: { '--background': '343 35% 12%', '--foreground': '345 20% 94%', '--muted': '343 35% 16%', '--muted-foreground': '345 20% 74%', '--popover': '343 35% 12%', '--popover-foreground': '345 20% 94%', '--card': '343 35% 16%', '--card-foreground': '345 20% 94%', '--border': '343 35% 20%', '--input': '343 35% 20%', '--primary': '343 90% 75%', '--primary-foreground': '343 35% 12%', '--secondary': '343 35% 16%', '--secondary-foreground': '345 20% 94%', '--accent': '343 35% 20%', '--accent-foreground': '345 20% 94%', '--ring': '343 90% 75%', '--destructive': '0 72% 51%', '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': '217.2 91.2% 59.8%', '--info-foreground': sharedColors.infoForeground },
   },
   {
     name: 'Evergreen',
-    light: { '--background': '140 70% 97%', '--foreground': '140 40% 18%', '--primary': '140 60% 30%', '--primary-foreground': '0 0% 100%', '--secondary': '140 70% 93%', '--secondary-foreground': '140 40% 18%', '--card': '140 70% 99%', '--border': '140 70% 89%', '--destructive': sharedColors.destructive, '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': sharedColors.info, '--info-foreground': sharedColors.infoForeground },
-    dark: { '--background': '140 40% 8%', '--foreground': '140 20% 94%', '--primary': '140 70% 60%', '--primary-foreground': '140 40% 8%', '--secondary': '140 40% 12%', '--secondary-foreground': '140 20% 94%', '--card': '140 40% 12%', '--border': '140 40% 16%', '--destructive': '0 72% 51%', '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': '217.2 91.2% 59.8%', '--info-foreground': sharedColors.infoForeground },
+    light: { '--background': '140 70% 97%', '--foreground': '140 40% 18%', '--muted': '140 70% 93%', '--muted-foreground': '140 40% 38%', '--popover': '140 70% 99%', '--popover-foreground': '140 40% 18%', '--card': '140 70% 99%', '--card-foreground': '140 40% 18%', '--border': '140 70% 89%', '--input': '140 70% 89%', '--primary': '140 60% 30%', '--primary-foreground': '0 0% 100%', '--secondary': '140 70% 93%', '--secondary-foreground': '140 40% 18%', '--accent': '140 70% 91%', '--accent-foreground': '140 40% 18%', '--ring': '140 60% 30%', '--destructive': sharedColors.destructive, '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': sharedColors.info, '--info-foreground': sharedColors.infoForeground },
+    dark: { '--background': '140 40% 8%', '--foreground': '140 20% 94%', '--muted': '140 40% 12%', '--muted-foreground': '140 20% 74%', '--popover': '140 40% 8%', '--popover-foreground': '140 20% 94%', '--card': '140 40% 12%', '--card-foreground': '140 20% 94%', '--border': '140 40% 16%', '--input': '140 40% 16%', '--primary': '140 70% 60%', '--primary-foreground': '140 40% 8%', '--secondary': '140 40% 12%', '--secondary-foreground': '140 20% 94%', '--accent': '140 40% 16%', '--accent-foreground': '140 20% 94%', '--ring': '140 70% 60%', '--destructive': '0 72% 51%', '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': '217.2 91.2% 59.8%', '--info-foreground': sharedColors.infoForeground },
   },
 ];
 // --- END THEME DEFINITIONS ---
@@ -78,27 +87,13 @@ export const fontCategories = {
   },
 };
 
-interface DesignSettings {
+interface DesignSettings extends ColorScheme {
   themeName: string;
   isAdvanced: boolean;
   sidebarStyle: 'primary' | 'card';
-  '--background': string;
-  '--foreground': string;
-  '--primary': string;
-  '--primary-foreground': string;
-  '--secondary': string;
-  '--secondary-foreground': string;
-  '--card': string;
   '--radius': string;
   fontSans: string;
   fontHeading: string;
-  '--border': string;
-  '--destructive': string;
-  '--destructive-foreground': string;
-  '--warning': string;
-  '--warning-foreground': string;
-  '--info': string;
-  '--info-foreground': string;
   backgroundImageUrl?: string;
   backgroundSize?: 'cover' | 'contain' | 'auto';
   backgroundRepeat?: 'no-repeat' | 'repeat';
