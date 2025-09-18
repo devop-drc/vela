@@ -3,9 +3,11 @@ import { AspectRatio } from "./ui/aspect-ratio";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Checkbox } from "./ui/checkbox";
-import { AlertTriangle, Boxes, Tag, Palette, Ruler } from "lucide-react";
+import { AlertTriangle, Palette, Ruler, Tag } from "lucide-react";
 import { ProductStatusDropdown } from "./ProductStatusDropdown";
 import { Badge } from "./ui/badge";
+import { getTextColorForBackground } from "@/lib/colorUtils";
+import { productCategories } from "@/lib/productTypes";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 
@@ -24,6 +26,7 @@ interface Product {
   details: {
     sizes?: string[];
     colors?: string[];
+    material?: string;
     [key: string]: any;
   };
 }
@@ -38,8 +41,8 @@ interface ProductCardProps {
 }
 
 const DetailRow = ({ icon: Icon, children }: { icon: React.ElementType, children: React.ReactNode }) => (
-  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-    <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+    <Icon className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
     <div className="flex flex-wrap items-center gap-1.5">{children}</div>
   </div>
 );
@@ -53,7 +56,9 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, onSele
     }
   };
 
-  const { details, caption, tags } = product;
+  const { details, caption, category: categoryValue } = product;
+  const categoryInfo = productCategories.find(c => c.value === categoryValue);
+  const typeInfo = categoryInfo?.types.find(t => t.value === details?.type);
 
   return (
     <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative">
@@ -81,26 +86,25 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, onSele
           />
         </AspectRatio>
 
-        <div className="bg-card p-3 flex-1 flex flex-col justify-between">
+        <div className="bg-card p-3 flex-1 flex flex-col justify-between space-y-3">
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <div className="flex items-center gap-1.5 truncate">
-                <Tag className="h-3 w-3" />
-                <span className="truncate font-medium">{product.category || 'Uncategorized'}</span>
-              </div>
-              {product.pricing_type !== 'subscription' && (
-                <div className="flex items-center gap-1.5">
-                  <Boxes className="h-3 w-3" />
-                  <span>{product.inventory} in stock</span>
-                </div>
-              )}
+            <div className="text-xs text-muted-foreground font-medium">
+              <span>{categoryInfo?.label || 'Uncategorized'}</span>
+              {typeInfo && <span> &middot; {typeInfo.label}</span>}
             </div>
+
             <h3 className="font-semibold tracking-tight leading-snug">
               {product.name}
             </h3>
+
             {caption && <p className="text-xs text-muted-foreground line-clamp-2">{caption}</p>}
             
             <div className="space-y-1.5 pt-1">
+              {details?.material && (
+                <DetailRow icon={Tag}>
+                  <span className="font-medium">{details.material}</span>
+                </DetailRow>
+              )}
               {details?.sizes?.length > 0 && (
                 <DetailRow icon={Ruler}>
                   {details.sizes.map(size => <Badge key={size} variant="outline" className="px-1.5 py-0 text-xs font-mono">{size}</Badge>)}
@@ -108,18 +112,21 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, onSele
               )}
               {details?.colors?.length > 0 && (
                 <DetailRow icon={Palette}>
-                  {details.colors.map(color => <Badge key={color} variant="outline" className="px-1.5 py-0 text-xs">{color}</Badge>)}
+                  {details.colors.map(color => (
+                    <Badge 
+                      key={color} 
+                      style={{ backgroundColor: color }}
+                      className={cn("px-2 py-0.5 text-xs border border-black/10", getTextColorForBackground(color))}
+                    >
+                      {color}
+                    </Badge>
+                  ))}
                 </DetailRow>
               )}
             </div>
-
-            {tags?.length > 0 && (
-              <div className="flex items-center gap-1.5 truncate pt-1">
-                {tags.slice(0, 3).map(tag => <Badge key={tag} variant="secondary" className="font-normal text-xs">{tag}</Badge>)}
-              </div>
-            )}
           </div>
-          <div className="flex items-end justify-between mt-3">
+
+          <div className="flex items-end justify-between pt-2">
             {product.price != null ? (
               <p className="font-semibold text-lg">
                 {`$${product.price.toFixed(2)}`}
