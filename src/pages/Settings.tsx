@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Instagram, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppearancePanel } from "@/components/settings/AppearancePanel";
+import { AccountSettings } from "@/components/settings/AccountSettings";
+import { ShopDetailsForm } from "@/components/settings/ShopDetailsForm";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 
 const Settings = () => {
@@ -93,7 +93,7 @@ const Settings = () => {
   return (
     <div className="space-y-4">
       <Tabs defaultValue={defaultTab} className="w-full">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
@@ -101,25 +101,7 @@ const Settings = () => {
           <TabsTrigger value="shop">Shop Details</TabsTrigger>
         </TabsList>
         <TabsContent value="account">
-          <Card>
-            <CardHeader>
-              <CardTitle>Account</CardTitle>
-              <CardDescription>
-                Manage your account settings and set your e-mail preferences.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" defaultValue="Shadcn" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" defaultValue="shadcn@example.com" />
-              </div>
-              <Button>Save Changes</Button>
-            </CardContent>
-          </Card>
+          <AccountSettings />
         </TabsContent>
         <TabsContent value="appearance">
           <AppearancePanel />
@@ -168,17 +150,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
         <TabsContent value="shop">
-          <Card>
-            <CardHeader>
-              <CardTitle>Shop Details</CardTitle>
-              <CardDescription>
-                Manage your shop's public information.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Shop settings will be displayed here.</p>
-            </CardContent>
-          </Card>
+          <ShopDetailsForm />
         </TabsContent>
       </Tabs>
     </div>

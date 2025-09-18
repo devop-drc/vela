@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ThemeSelector } from "./ThemeSelector";
 import { FontSelector } from "./FontSelector";
 import { AdvancedPanel } from "./AdvancedPanel";
+import { BackgroundImageSelector } from "./BackgroundImageSelector";
 import { AnimatePresence } from "framer-motion";
 import { Sparkles } from "lucide-react";
 
@@ -80,6 +81,8 @@ export const AppearancePanel = () => {
         </div>
 
         <FontSelector />
+
+        <BackgroundImageSelector />
 
         <div className="flex items-center gap-4 pt-8 border-t">
             <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>

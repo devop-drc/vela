@@ -99,6 +99,10 @@ interface DesignSettings {
   '--warning-foreground': string;
   '--info': string;
   '--info-foreground': string;
+  backgroundImageUrl?: string;
+  backgroundSize?: 'cover' | 'contain' | 'auto';
+  backgroundRepeat?: 'no-repeat' | 'repeat';
+  backgroundBrightness?: number;
 }
 
 const defaultSettings: DesignSettings = {
@@ -109,12 +113,13 @@ const defaultSettings: DesignSettings = {
   '--radius': '1.5rem',
   fontSans: 'Inter',
   fontHeading: 'Inter',
+  backgroundBrightness: 100,
 };
 
 interface AppearanceContextType {
   settings: DesignSettings;
   setTheme: (themeName: string) => void;
-  updateSetting: (key: keyof DesignSettings, value: string | boolean) => void;
+  updateSetting: (key: keyof DesignSettings, value: string | boolean | number) => void;
   resetSettings: () => void;
   randomizeTheme: () => void;
   isLoading: boolean;
@@ -139,19 +144,33 @@ const loadGoogleFont = (fontName: string) => {
 };
 
 const applySettingsToDOM = (settings: Partial<DesignSettings>) => {
+  const root = document.documentElement;
   for (const [key, value] of Object.entries(settings)) {
     if (key.startsWith('--')) {
-      document.documentElement.style.setProperty(key, value as string);
+      root.style.setProperty(key, value as string);
     }
   }
   if (settings.fontSans) {
-    document.documentElement.style.setProperty('--font-sans', `'${settings.fontSans}', sans-serif`);
+    root.style.setProperty('--font-sans', `'${settings.fontSans}', sans-serif`);
     loadGoogleFont(settings.fontSans);
   }
   if (settings.fontHeading) {
-    document.documentElement.style.setProperty('--font-heading', `'${settings.fontHeading}', sans-serif`);
+    root.style.setProperty('--font-heading', `'${settings.fontHeading}', sans-serif`);
     loadGoogleFont(settings.fontHeading);
   }
+
+  const bgOverlay = document.getElementById('background-overlay');
+  if (!bgOverlay) return;
+
+  if (settings.backgroundImageUrl) {
+    bgOverlay.style.backgroundImage = `url(${settings.backgroundImageUrl})`;
+    bgOverlay.style.backgroundSize = settings.backgroundSize || 'cover';
+    bgOverlay.style.backgroundRepeat = settings.backgroundRepeat || 'no-repeat';
+    bgOverlay.style.backgroundPosition = 'center';
+  } else {
+    bgOverlay.style.backgroundImage = 'none';
+  }
+  bgOverlay.style.filter = `brightness(${settings.backgroundBrightness || 100}%)`;
 };
 
 export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
@@ -217,7 +236,7 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const updateSetting = (key: keyof DesignSettings, value: string | boolean) => {
+  const updateSetting = (key: keyof DesignSettings, value: string | boolean | number) => {
     setSettings(prev => {
       const newSettings = { ...prev, [key]: value };
       if (key.startsWith('--')) {
