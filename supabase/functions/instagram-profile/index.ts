@@ -42,7 +42,7 @@ serve(async (req) => {
     if (!igAccount) throw new Error('No linked Instagram Business Account found.');
     
     const igAccountId = igAccount.instagram_business_account.id;
-    const fields = 'name,username,profile_picture_url,biography';
+    const fields = 'name,username,profile_picture_url,biography,followers_count,media_count';
     const igProfileUrl = `https://graph.facebook.com/v19.0/${igAccountId}?fields=${fields}&access_token=${userAccessToken}`;
     
     const igProfileResponse = await fetch(igProfileUrl);
@@ -54,7 +54,9 @@ serve(async (req) => {
       username: igProfileData.username,
       description: igProfileData.biography,
       logo_url: igProfileData.profile_picture_url,
-      favicon_url: igAccount.picture?.data?.url, // Using FB page picture as a fallback for favicon
+      favicon_url: igAccount.picture?.data?.url,
+      followers_count: igProfileData.followers_count,
+      media_count: igProfileData.media_count,
     };
 
     return new Response(JSON.stringify(shopData), {
