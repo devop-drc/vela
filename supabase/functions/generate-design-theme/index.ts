@@ -23,15 +23,15 @@ const getDesignPrompt = (profile: any) => {
     1.  **Generate a Color Palette:**
         *   Derive a harmonious color palette *inspired by the logo*.
         *   **CRITICAL:** The palette must be functional for a light-mode UI. Prioritize legibility and accessibility above all else.
-        *   `background` and `card` colors must be light, near-neutral colors (like off-white or very light gray).
-        *   `foreground` (text color) MUST have a WCAG AA contrast ratio against both `background` and `card`.
-        *   `primary` (for buttons) should be a vibrant, representative color inspired by the logo.
-        *   `accent` should be a complementary color for highlights.
+        *   'background' and 'card' colors must be light, near-neutral colors (like off-white or very light gray).
+        *   'foreground' (text color) MUST have a WCAG AA contrast ratio against both 'background' and 'card'.
+        *   'primary' (for buttons) should be a vibrant, representative color inspired by the logo.
+        *   'accent' should be a complementary color for highlights.
 
     2.  **Generate UI Styles:**
         *   Based on the brand's personality from its name and bio, select a suitable Google Font pairing (one for headings, one for body).
-        *   Choose an appropriate corner `radius` (e.g., "0.5rem" for modern, "1.5rem" for playful).
-        *   Choose a `sidebarStyle` ('primary' for a bold look, 'card' for a subtle, integrated look).
+        *   Choose an appropriate corner 'radius' (e.g., "0.5rem" for modern, "1.5rem" for playful).
+        *   Choose a 'sidebarStyle' ('primary' for a bold look, 'card' for a subtle, integrated look).
 
     **Output Format:**
     Respond ONLY with a single, valid JSON object. Do not include markdown backticks or any other text.
