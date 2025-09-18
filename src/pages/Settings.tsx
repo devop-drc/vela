@@ -10,10 +10,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppearancePanel } from "@/components/settings/AppearancePanel";
+import { usePageTitle } from "@/contexts/PageTitleContext";
 
 const Settings = () => {
+  const { setTitle } = usePageTitle();
   const [integrationStatus, setIntegrationStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading');
   const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    setTitle("Settings");
+  }, [setTitle]);
 
   useEffect(() => {
     const integrationError = searchParams.get('integration_error');
@@ -83,7 +89,6 @@ const Settings = () => {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold">Settings</h1>
       <Tabs defaultValue="account" className="w-full">
         <TabsList>
           <TabsTrigger value="account">Account</TabsTrigger>

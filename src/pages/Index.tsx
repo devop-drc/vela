@@ -5,6 +5,7 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { RecentSales } from "@/components/dashboard/RecentSales";
 import { OverviewChart } from "@/components/dashboard/OverviewChart";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePageTitle } from "@/contexts/PageTitleContext";
 
 interface DashboardData {
   totalRevenue: number;
@@ -16,8 +17,13 @@ interface DashboardData {
 }
 
 const Index = () => {
+  const { setTitle } = usePageTitle();
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setTitle("Dashboard");
+  }, [setTitle]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -125,7 +131,6 @@ const Index = () => {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold text-left">Dashboard</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Total Revenue" value={`$${data.totalRevenue.toFixed(2)}`} icon={DollarSign} description="All-time revenue" />
         <StatCard title="Sales" value={`+${data.salesCount}`} icon={CreditCard} description="All-time sales count" />

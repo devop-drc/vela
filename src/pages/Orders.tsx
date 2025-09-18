@@ -9,6 +9,7 @@ import { showError } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OrderDetailModal } from "@/components/OrderDetailModal";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/contexts/PageTitleContext";
 
 type Order = {
   id: string;
@@ -20,9 +21,14 @@ type Order = {
 };
 
 const Orders = () => {
+  const { setTitle } = usePageTitle();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  useEffect(() => {
+    setTitle("Orders");
+  }, [setTitle]);
 
   const fetchOrders = async () => {
     setIsLoading(true);
@@ -132,7 +138,6 @@ const Orders = () => {
         }}
       />
       <div className="space-y-4">
-        <h1 className="text-3xl font-bold">Orders</h1>
         <Tabs defaultValue="All">
           <TabsList>
             <TabsTrigger value="All">All</TabsTrigger>

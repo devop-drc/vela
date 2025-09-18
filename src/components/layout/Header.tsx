@@ -12,7 +12,11 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
-const Header = () => {
+interface HeaderProps {
+  title: string;
+}
+
+const Header = ({ title }: HeaderProps) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -22,13 +26,16 @@ const Header = () => {
 
   return (
     <header className="flex items-center justify-between h-16 px-4 md:px-6 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
-      <div className="relative flex-1 max-w-md">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-        <Input
-          type="search"
-          placeholder="Search products, orders..."
-          className="pl-8 w-full"
-        />
+      <div className="flex items-center gap-4">
+        <h1 className="text-xl font-bold hidden md:block">{title}</h1>
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+          <Input
+            type="search"
+            placeholder="Search..."
+            className="pl-8 w-full"
+          />
+        </div>
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

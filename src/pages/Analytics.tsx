@@ -7,6 +7,8 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
+import { usePageTitle } from "@/contexts/PageTitleContext";
+import { useEffect } from "react";
 
 const funnelData = [
   { value: 100, name: "Visitors", fill: "#8884d8" },
@@ -17,9 +19,14 @@ const funnelData = [
 ];
 
 const Analytics = () => {
+  const { setTitle } = usePageTitle();
+
+  useEffect(() => {
+    setTitle("Analytics");
+  }, [setTitle]);
+
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold">Analytics</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

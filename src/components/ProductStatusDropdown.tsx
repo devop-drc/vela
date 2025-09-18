@@ -5,7 +5,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Archive, MoreHorizontal } from "lucide-react";
+import { CheckCircle, XCircle, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
@@ -22,6 +22,9 @@ const statusConfig = {
 };
 
 export const ProductStatusDropdown = ({ currentStatus, onStatusChange }: ProductStatusDropdownProps) => {
+  const CurrentIcon = statusConfig[currentStatus]?.icon || XCircle;
+  const currentColor = statusConfig[currentStatus]?.color || "text-amber-600";
+
   const handleSelect = (e: React.MouseEvent, status: ProductStatus) => {
     e.stopPropagation();
     onStatusChange(status);
@@ -30,8 +33,9 @@ export const ProductStatusDropdown = ({ currentStatus, onStatusChange }: Product
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <MoreHorizontal className="h-4 w-4" />
+        <Button variant="ghost" size="sm" className={cn("font-semibold", currentColor)}>
+          <CurrentIcon className="mr-2 h-4 w-4" />
+          {statusConfig[currentStatus]?.label || 'Draft'}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
