@@ -49,8 +49,19 @@ export const EditProductModal = ({ isOpen, onClose, onSave, productData, post }:
       return;
     }
 
+    const { data: business, error: businessError } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (businessError || !business) {
+      showError("Could not find your business profile to associate the product with.");
+      return;
+    }
+
     const { error } = await supabase.from('products').insert({
-      user_id: user.id,
+      business_id: business.id,
       name: data.name,
       caption: data.description,
       category: data.category,

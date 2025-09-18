@@ -50,9 +50,28 @@ const Products = () => {
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
+    const { data: business, error: businessError } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (businessError || !business) {
+      showError("Could not find your business profile.");
+      setIsLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("products")
       .select("*")
+      .eq('business_id', business.id)
       .order('created_at', { ascending: false });
 
     if (error) {
