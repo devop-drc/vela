@@ -54,8 +54,8 @@ const Settings = () => {
                   <CardDescription>Manage your subscription.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-3 border rounded-lg bg-accent/50">
-                    <div><h4 className="font-semibold">Pro Plan</h4><p className="text-sm text-muted-foreground">$25.00 per month</p></div>
+                  <div className="flex items-center justify-between p-3 border rounded-lg bg-accent text-accent-foreground">
+                    <div><h4 className="font-semibold">Pro Plan</h4><p className="text-sm text-accent-foreground/80">$25.00 per month</p></div>
                     <Button variant="outline" size="sm">Manage</Button>
                   </div>
                   <div className="space-y-2">

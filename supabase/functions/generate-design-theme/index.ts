@@ -34,6 +34,7 @@ const getDesignPrompt = (profile: any) => {
     - **Background & Card:** Choose a very light, near-white, or subtly tinted neutral. This is for readability. It should complement the primary color.
     - **Foreground (Text):** Choose a very dark, near-black, or tinted charcoal. It MUST have a high contrast ratio (WCAG AA+) against the background.
     - **Accent Color:** This MUST be harmonious with the primary color. First, try to pick a secondary color from the logo. If one isn't available, create an analogous color (next to the primary on the color wheel) or a different shade of the primary color. It should be used for highlights and hover states. **AVOID complementary (opposite) colors.**
+    - **Accent Foreground:** This MUST be a color that has a high contrast ratio (WCAG AA or higher) against the Accent Color. It will be used for text on accent backgrounds.
     - **Secondary:** A subtle, neutral color for secondary buttons and elements.
 
     **Step 3: Select Expressive Typography**
@@ -52,7 +53,7 @@ const getDesignPrompt = (profile: any) => {
       "themeName": "A creative, evocative name for this unique theme.",
       "colors": {
         "primary": "#HEXCODE", "primaryForeground": "#HEXCODE", "secondary": "#HEXCODE", "secondaryForeground": "#HEXCODE",
-        "background": "#HEXCODE", "foreground": "#HEXCODE", "card": "#HEXCODE", "cardForeground": "#HEXCODE", "accent": "#HEXCODE"
+        "background": "#HEXCODE", "foreground": "#HEXCODE", "card": "#HEXCODE", "cardForeground": "#HEXCODE", "accent": "#HEXCODE", "accentForeground": "#HEXCODE"
       },
       "fonts": { "heading": "Google Font Name", "body": "Google Font Name" },
       "radius": "X.Xrem", "sidebarStyle": "primary"
@@ -79,6 +80,7 @@ const getTextOnlyDesignPrompt = (profile: any) => {
     - **Background/Card:** Must be very light and near-neutral.
     - **Foreground/Text:** Must be very dark and high-contrast.
     - **Primary & Accent:** These should be the most expressive colors that capture the brand's essence. They MUST be harmonious. The accent color should complement the primary color, not clash with it. Think analogous colors or different shades, **not complementary (opposite) colors.**
+    - **Accent Foreground:** This MUST be a color that has a high contrast ratio (WCAG AA or higher) against the Accent Color.
 
     **Step 3: Select Expressive Typography**
     - Based on the vibe, choose a compelling Google Font pairing.
@@ -96,7 +98,7 @@ const getTextOnlyDesignPrompt = (profile: any) => {
       "themeName": "A creative, evocative name for this unique theme.",
       "colors": {
         "primary": "#HEXCODE", "primaryForeground": "#HEXCODE", "secondary": "#HEXCODE", "secondaryForeground": "#HEXCODE",
-        "background": "#HEXCODE", "foreground": "#HEXCODE", "card": "#HEXCODE", "cardForeground": "#HEXCODE", "accent": "#HEXCODE"
+        "background": "#HEXCODE", "foreground": "#HEXCODE", "card": "#HEXCODE", "cardForeground": "#HEXCODE", "accent": "#HEXCODE", "accentForeground": "#HEXCODE"
       },
       "fonts": { "heading": "Google Font Name", "body": "Google Font Name" },
       "radius": "X.Xrem", "sidebarStyle": "primary"

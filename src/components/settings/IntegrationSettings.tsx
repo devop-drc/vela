@@ -69,9 +69,9 @@ export const IntegrationSettings = () => {
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : integration ? (
-          <div className="flex items-center justify-between p-4 border rounded-lg bg-accent/50">
+          <div className="flex items-center justify-between p-4 border rounded-lg bg-accent text-accent-foreground">
             <div className="flex items-center gap-3">
-              <Facebook className="h-6 w-6 text-blue-600" />
+              <Facebook className="h-6 w-6" />
               <div>
                 <p className="font-semibold">Facebook & Instagram</p>
                 <div className="flex items-center gap-1 text-sm text-emerald-600">
