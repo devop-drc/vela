@@ -82,7 +82,11 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
                 </span>
               )}
             </TableCell>
-            <TableCell>{product.inventory}</TableCell>
+            <TableCell>
+              {product.pricing_type === 'subscription' 
+                ? <span className="text-muted-foreground">—</span> 
+                : product.inventory}
+            </TableCell>
             <TableCell className="text-right">
               <div className="flex items-center justify-end gap-2">
                 <Button variant="ghost" size="icon" onClick={() => onEdit(product)}>

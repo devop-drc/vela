@@ -188,7 +188,9 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
           )}
           <div className="flex items-center gap-8 pt-2">
             <div className="flex items-center gap-3"><DollarSign className="h-5 w-5 text-muted-foreground" /><div><Label className="text-xs text-muted-foreground">Price</Label><p className="text-lg font-semibold">{product.pricing_type === 'subscription' ? `$${product.price?.toFixed(2)} / ${product.billing_interval}` : `$${product.price?.toFixed(2)}`}</p></div></div>
-            <div className="flex items-center gap-3"><Boxes className="h-5 w-5 text-muted-foreground" /><div><Label className="text-xs text-muted-foreground">Inventory</Label><p className="text-lg font-semibold">{product.inventory || 0}</p></div></div>
+            {product.pricing_type !== 'subscription' && (
+              <div className="flex items-center gap-3"><Boxes className="h-5 w-5 text-muted-foreground" /><div><Label className="text-xs text-muted-foreground">Inventory</Label><p className="text-lg font-semibold">{product.inventory || 0}</p></div></div>
+            )}
           </div>
         </div>
       </div>
@@ -247,7 +249,13 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2"><Label htmlFor="price">Price</Label><Input id="price" type="number" step="0.01" {...register("price")} />{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}</div>
-        <div className="space-y-2"><Label htmlFor="inventory">Inventory</Label><Input id="inventory" type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div>
+        <AnimatePresence>
+          {pricingType !== 'subscription' && (
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              <div className="space-y-2"><Label htmlFor="inventory">Inventory</Label><Input id="inventory" type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       <DialogFooter className="pt-4">
         <Button type="button" variant="ghost" onClick={() => setIsEditing(false)} disabled={isSubmitting}>Cancel</Button>
