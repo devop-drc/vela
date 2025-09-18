@@ -73,10 +73,12 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, onSele
                 <Tag className="h-3 w-3" />
                 <span className="truncate">{product.category || 'Uncategorized'}</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Boxes className="h-3 w-3" />
-                <span>{product.inventory} in stock</span>
-              </div>
+              {product.pricing_type !== 'subscription' && (
+                <div className="flex items-center gap-1.5">
+                  <Boxes className="h-3 w-3" />
+                  <span>{product.inventory} in stock</span>
+                </div>
+              )}
             </div>
             <h3 className="mt-2 truncate font-semibold tracking-tight">
               {product.name}

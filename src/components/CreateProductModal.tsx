@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -10,14 +10,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
+import { TagInput } from "./TagInput";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { AnimatePresence, motion } from "framer-motion";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   description: z.string().optional(),
   category: z.string().optional(),
   price: z.coerce.number().min(0, "Price must be a positive number"),
-  inventory: z.coerce.number().int().min(0, "Inventory must be a positive integer"),
-  features: z.string().optional(),
+  inventory: z.coerce.number().int().min(0, "Inventory must be a positive integer").optional(),
+  tags: z.array(z.string()).optional(),
+  pricing_type: z.enum(['one_time', 'subscription']),
+  details: z.any(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -30,36 +35,64 @@ interface CreateProductModalProps {
   post: any;
 }
 
+const DetailField = ({ name, control, label }: { name: string, control: any, label: string }) => (
+  <div className="space-y-2">
+    <Label htmlFor={name}>{label}</Label>
+    <Controller
+      name={`details.${name}`}
+      control={control}
+      render={({ field }) => <Input id={name} {...field} />}
+    />
+  </div>
+);
+
+const ClothingDetails = ({ control }: { control: any }) => (
+  <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-2 col-span-2">
+      <Label>Sizes</Label>
+      <Controller name="details.sizes" control={control} render={({ field }) => <TagInput {...field} placeholder="Add size..." />} />
+    </div>
+    <DetailField name="material" control={control} label="Material" />
+    <DetailField name="reference_code" control={control} label="Reference Code" />
+    <div className="space-y-2 col-span-2">
+      <Label>Colors</Label>
+      <Controller name="details.colors" control={control} render={({ field }) => <TagInput {...field} placeholder="Add color..." />} />
+    </div>
+  </div>
+);
+
+const GenericDetails = () => <p className="text-sm text-muted-foreground">No specific details for this category.</p>;
+
+const categoryForms: { [key: string]: React.FC<any> } = {
+  "Clothing": ClothingDetails,
+  "Generic": GenericDetails,
+};
+
 export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post }: CreateProductModalProps) => {
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
+  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: productData?.name || "",
       description: productData?.description || post?.caption || "",
-      category: productData?.category || "",
+      category: productData?.category || "Generic",
       price: productData?.price || 0,
-      inventory: productData?.inventory || 10,
-      features: (productData?.features || []).join(", "),
+      inventory: 10,
+      tags: productData?.tags || [],
+      pricing_type: 'one_time',
+      details: productData?.details || {},
     },
   });
 
+  const pricingType = useWatch({ control, name: "pricing_type" });
+  const category = useWatch({ control, name: "category" });
+  const DetailsComponent = categoryForms[category || 'Generic'] || GenericDetails;
+
   const onSubmit = async (data: ProductFormData) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      showError("You must be logged in to create a product.");
-      return;
-    }
+    if (!user) { showError("You must be logged in to create a product."); return; }
 
-    const { data: business, error: businessError } = await supabase
-      .from('businesses')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (businessError || !business) {
-      showError("Could not find your business profile to associate the product with.");
-      return;
-    }
+    const { data: business, error: businessError } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
+    if (businessError || !business) { showError("Could not find your business profile."); return; }
 
     const { error } = await supabase.from('products').insert({
       business_id: business.id,
@@ -67,20 +100,17 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
       caption: data.description,
       category: data.category,
       price: data.price,
-      inventory: data.inventory,
-      features: data.features ? data.features.split(',').map(f => f.trim()) : null,
+      inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
+      tags: data.tags,
+      details: data.details,
+      pricing_type: data.pricing_type,
       status: 'Draft',
       instagram_post_id: post.id,
       media_url: post.media_type === 'VIDEO' ? post.thumbnail_url : post.media_url,
     });
 
-    if (error) {
-      showError(`Failed to create product: ${error.message}`);
-    } else {
-      showSuccess("Product created successfully!");
-      onSave();
-      onClose();
-    }
+    if (error) { showError(`Failed to create product: ${error.message}`); } 
+    else { showSuccess("Product created successfully!"); onSave(); onClose(); }
   };
 
   return (
@@ -88,58 +118,31 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
       <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>Create New Product from Post</DialogTitle>
-          <DialogDescription>
-            The AI has generated the following details. Review, edit, and save to create the product.
-          </DialogDescription>
+          <DialogDescription>The AI has generated the following details. Review, edit, and save.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+            <Card className="overflow-hidden h-fit"><CardContent className="p-0"><img src={post.media_url} alt="Instagram Post" className="w-full h-auto object-cover aspect-square" /></CardContent></Card>
             <div className="space-y-4">
-              <Card className="overflow-hidden">
-                <CardContent className="p-0">
-                  <img src={post.media_url} alt="Instagram Post" className="w-full h-auto object-cover aspect-square" />
-                </CardContent>
-              </Card>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" {...register("description")} rows={4} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="features">Features (comma-separated)</Label>
-                <Textarea id="features" {...register("features")} rows={3} />
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Product Name</Label>
-                <Input id="name" {...register("name")} />
-                {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Input id="category" {...register("category")} />
-              </div>
+              <div className="space-y-2"><Label htmlFor="name">Product Name</Label><Input id="name" {...register("name")} />{errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}</div>
+              <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" {...register("description")} rows={4} /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price</Label>
-                  <Input id="price" type="number" step="0.01" {...register("price")} />
-                  {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="inventory">Inventory</Label>
-                  <Input id="inventory" type="number" {...register("inventory")} />
-                  {errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}
-                </div>
+                <div className="space-y-2"><Label htmlFor="price">Price</Label><Input id="price" type="number" step="0.01" {...register("price")} />{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}</div>
+                <div className="space-y-2"><Label htmlFor="category">Category</Label><Input id="category" {...register("category")} /></div>
               </div>
+              <div className="space-y-2"><Label>Pricing Model</Label><Controller name="pricing_type" control={control} render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="one_time" id="one_time" /><Label htmlFor="one_time">One-time</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="subscription" id="subscription" /><Label htmlFor="subscription">Subscription</Label></div></RadioGroup>)} /></div>
+              <AnimatePresence>
+                {pricingType === 'one_time' && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                    <div className="space-y-2 pt-2"><Label htmlFor="inventory">Inventory</Label><Input id="inventory" type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <div className="space-y-2"><Label>Tags</Label><Controller name="tags" control={control} render={({ field }) => <TagInput {...field} placeholder="Add tag..." />} /></div>
+              <div className="space-y-2"><Label>Details</Label><div className="p-4 border rounded-lg space-y-4"><DetailsComponent control={control} /></div></div>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Product
-            </Button>
-          </DialogFooter>
+          <DialogFooter><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save Product</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

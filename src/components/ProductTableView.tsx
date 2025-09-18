@@ -84,7 +84,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
             </TableCell>
             <TableCell>
               {product.pricing_type === 'subscription' 
-                ? <span className="text-muted-foreground">—</span> 
+                ? <span className="text-emerald-600">Available</span> 
                 : product.inventory}
             </TableCell>
             <TableCell className="text-right">
