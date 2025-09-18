@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
+import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
+import { hexToHsl } from '@/utils/colors';
 
 // --- THEME DEFINITIONS ---
 interface ColorScheme {
@@ -32,7 +34,6 @@ interface ColorScheme {
 interface Theme {
   name: string;
   light: ColorScheme;
-  dark: ColorScheme;
 }
 
 const sharedColors = {
@@ -44,27 +45,35 @@ const sharedColors = {
   infoForeground: '0 0% 98%',
 };
 
+const createTheme = (name: string, p: string, s: string, a: string, bg: string, fg: string): Theme => {
+  const pFg = `${p.split(' ')[0]} 20% 98%`;
+  const sFg = fg;
+  const aFg = fg;
+  return {
+    name,
+    light: {
+      '--background': bg, '--foreground': fg, '--muted': `${bg.split(' ')[0]} 10% 96%`, '--muted-foreground': `${fg.split(' ')[0]} 5% 45%`,
+      '--popover': bg, '--popover-foreground': fg, '--card': `${bg.split(' ')[0]} 10% 99%`, '--card-foreground': fg,
+      '--border': `${bg.split(' ')[0]} 10% 90%`, '--input': `${bg.split(' ')[0]} 10% 90%`, '--primary': p, '--primary-foreground': pFg,
+      '--secondary': s, '--secondary-foreground': sFg, '--accent': a, '--accent-foreground': aFg, '--ring': p,
+      ...sharedColors,
+    },
+  };
+};
+
 export const presetThemes: Theme[] = [
-  {
-    name: 'Onyx',
-    light: { '--background': '0 0% 100%', '--foreground': '240 10% 3.9%', '--muted': '0 0% 96.1%', '--muted-foreground': '240 3.8% 46.1%', '--popover': '0 0% 100%', '--popover-foreground': '240 10% 3.9%', '--card': '0 0% 100%', '--card-foreground': '240 10% 3.9%', '--border': '0 0% 89.8%', '--input': '0 0% 89.8%', '--primary': '240 5.9% 10%', '--primary-foreground': '0 0% 98%', '--secondary': '0 0% 96.1%', '--secondary-foreground': '240 5.9% 10%', '--accent': '0 0% 94.1%', '--accent-foreground': '240 5.9% 10%', '--ring': '240 5.9% 10%', '--destructive': sharedColors.destructive, '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': sharedColors.info, '--info-foreground': sharedColors.infoForeground },
-    dark: { '--background': '240 10% 3.9%', '--foreground': '0 0% 98%', '--muted': '240 3.7% 15.9%', '--muted-foreground': '240 5% 64.9%', '--popover': '240 10% 3.9%', '--popover-foreground': '0 0% 98%', '--card': '240 10% 3.9%', '--card-foreground': '0 0% 98%', '--border': '240 3.7% 15.9%', '--input': '240 3.7% 15.9%', '--primary': '0 0% 98%', '--primary-foreground': '240 5.9% 10%', '--secondary': '240 3.7% 15.9%', '--secondary-foreground': '0 0% 98%', '--accent': '240 3.7% 15.9%', '--accent-foreground': '0 0% 98%', '--ring': '0 0% 98%', '--destructive': '0 72% 51%', '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': '217.2 91.2% 59.8%', '--info-foreground': sharedColors.infoForeground },
-  },
-  {
-    name: 'Nautical',
-    light: { '--background': '204 100% 96%', '--foreground': '215 60% 22%', '--muted': '204 100% 92%', '--muted-foreground': '215 60% 42%', '--popover': '204 100% 99%', '--popover-foreground': '215 60% 22%', '--card': '204 100% 99%', '--card-foreground': '215 60% 22%', '--border': '204 100% 88%', '--input': '204 100% 88%', '--primary': '210 79% 46%', '--primary-foreground': '0 0% 100%', '--secondary': '204 100% 92%', '--secondary-foreground': '215 60% 22%', '--accent': '204 100% 90%', '--accent-foreground': '215 60% 22%', '--ring': '210 79% 46%', '--destructive': sharedColors.destructive, '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': sharedColors.info, '--info-foreground': sharedColors.infoForeground },
-    dark: { '--background': '215 60% 12%', '--foreground': '204 20% 94%', '--muted': '215 60% 16%', '--muted-foreground': '204 20% 74%', '--popover': '215 60% 12%', '--popover-foreground': '204 20% 94%', '--card': '215 60% 16%', '--card-foreground': '204 20% 94%', '--border': '215 60% 20%', '--input': '215 60% 20%', '--primary': '210 90% 66%', '--primary-foreground': '215 60% 12%', '--secondary': '215 60% 16%', '--secondary-foreground': '204 20% 94%', '--accent': '215 60% 20%', '--accent-foreground': '204 20% 94%', '--ring': '210 90% 66%', '--destructive': '0 72% 51%', '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': '217.2 91.2% 59.8%', '--info-foreground': sharedColors.infoForeground },
-  },
-  {
-    name: 'Sakura',
-    light: { '--background': '345 100% 97%', '--foreground': '343 35% 30%', '--muted': '345 100% 93%', '--muted-foreground': '343 35% 50%', '--popover': '345 100% 99%', '--popover-foreground': '343 35% 30%', '--card': '345 100% 99%', '--card-foreground': '343 35% 30%', '--border': '345 100% 89%', '--input': '345 100% 89%', '--primary': '343 85% 65%', '--primary-foreground': '0 0% 100%', '--secondary': '345 100% 93%', '--secondary-foreground': '343 35% 30%', '--accent': '345 100% 91%', '--accent-foreground': '343 35% 30%', '--ring': '343 85% 65%', '--destructive': sharedColors.destructive, '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': sharedColors.info, '--info-foreground': sharedColors.infoForeground },
-    dark: { '--background': '343 35% 12%', '--foreground': '345 20% 94%', '--muted': '343 35% 16%', '--muted-foreground': '345 20% 74%', '--popover': '343 35% 12%', '--popover-foreground': '345 20% 94%', '--card': '343 35% 16%', '--card-foreground': '345 20% 94%', '--border': '343 35% 20%', '--input': '343 35% 20%', '--primary': '343 90% 75%', '--primary-foreground': '343 35% 12%', '--secondary': '343 35% 16%', '--secondary-foreground': '345 20% 94%', '--accent': '343 35% 20%', '--accent-foreground': '345 20% 94%', '--ring': '343 90% 75%', '--destructive': '0 72% 51%', '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': '217.2 91.2% 59.8%', '--info-foreground': sharedColors.infoForeground },
-  },
-  {
-    name: 'Evergreen',
-    light: { '--background': '140 70% 97%', '--foreground': '140 40% 18%', '--muted': '140 70% 93%', '--muted-foreground': '140 40% 38%', '--popover': '140 70% 99%', '--popover-foreground': '140 40% 18%', '--card': '140 70% 99%', '--card-foreground': '140 40% 18%', '--border': '140 70% 89%', '--input': '140 70% 89%', '--primary': '140 60% 30%', '--primary-foreground': '0 0% 100%', '--secondary': '140 70% 93%', '--secondary-foreground': '140 40% 18%', '--accent': '140 70% 91%', '--accent-foreground': '140 40% 18%', '--ring': '140 60% 30%', '--destructive': sharedColors.destructive, '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': sharedColors.info, '--info-foreground': sharedColors.infoForeground },
-    dark: { '--background': '140 40% 8%', '--foreground': '140 20% 94%', '--muted': '140 40% 12%', '--muted-foreground': '140 20% 74%', '--popover': '140 40% 8%', '--popover-foreground': '140 20% 94%', '--card': '140 40% 12%', '--card-foreground': '140 20% 94%', '--border': '140 40% 16%', '--input': '140 40% 16%', '--primary': '140 70% 60%', '--primary-foreground': '140 40% 8%', '--secondary': '140 40% 12%', '--secondary-foreground': '140 20% 94%', '--accent': '140 40% 16%', '--accent-foreground': '140 20% 94%', '--ring': '140 70% 60%', '--destructive': '0 72% 51%', '--destructive-foreground': sharedColors.destructiveForeground, '--warning': sharedColors.warning, '--warning-foreground': sharedColors.warningForeground, '--info': '217.2 91.2% 59.8%', '--info-foreground': sharedColors.infoForeground },
-  },
+  createTheme('Onyx', '240 5.9% 10%', '0 0% 96.1%', '0 0% 94.1%', '0 0% 100%', '240 10% 3.9%'),
+  createTheme('Nautical', '210 79% 46%', '204 100% 92%', '204 100% 90%', '204 100% 96%', '215 60% 22%'),
+  createTheme('Sakura', '343 85% 65%', '345 100% 93%', '345 100% 91%', '345 100% 97%', '343 35% 30%'),
+  createTheme('Evergreen', '140 60% 30%', '140 70% 93%', '140 70% 91%', '140 70% 97%', '140 40% 18%'),
+  createTheme('Sunset', '25 95% 53%', '20 90% 94%', '20 90% 92%', '20 100% 97%', '20 50% 25%'),
+  createTheme('Minty', '160 70% 40%', '160 80% 94%', '160 80% 92%', '160 100% 98%', '160 50% 20%'),
+  createTheme('Industrial', '220 15% 40%', '220 10% 95%', '220 10% 93%', '220 10% 98%', '220 20% 15%'),
+  createTheme('Rose Gold', '350 80% 60%', '350 100% 94%', '350 100% 92%', '350 100% 98%', '350 40% 25%'),
+  createTheme('Cyberpunk', '260 90% 60%', '320 90% 15%', '320 90% 20%', '260 50% 5%', '260 20% 95%'),
+  createTheme('Latte', '30 40% 40%', '30 30% 95%', '30 30% 93%', '30 20% 98%', '30 60% 15%'),
+  createTheme('Oceanic', '200 80% 50%', '200 90% 94%', '200 90% 92%', '200 100% 98%', '200 60% 20%'),
+  createTheme('Crimson', '0 70% 50%', '0 80% 96%', '0 80% 94%', '0 100% 99%', '0 50% 20%'),
 ];
 // --- END THEME DEFINITIONS ---
 
@@ -117,6 +126,7 @@ interface AppearanceContextType {
   updateSetting: (key: keyof DesignSettings, value: string | boolean | number) => void;
   resetSettings: () => void;
   randomizeTheme: () => void;
+  generateAIDesign: () => Promise<void>;
   isLoading: boolean;
   isAdvanced: boolean;
   setAdvanced: (isAdvanced: boolean) => void;
@@ -255,23 +265,39 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const randomizeTheme = () => {
-    const randomTheme = presetThemes[Math.floor(Math.random() * presetThemes.length)];
+    const randomHue = Math.floor(Math.random() * 360);
+    const complementaryHue = (randomHue + 180) % 360;
+
+    const randomColors = {
+      '--primary': `${randomHue} ${Math.floor(Math.random() * 30 + 70)}% ${Math.floor(Math.random() * 20 + 40)}%`,
+      '--primary-foreground': `${randomHue} 20% 95%`,
+      '--background': `${randomHue} 20% 98%`,
+      '--foreground': `${randomHue} 10% 10%`,
+      '--card': `${randomHue} 20% 99%`,
+      '--card-foreground': `${randomHue} 10% 10%`,
+      '--secondary': `${randomHue} 20% 94%`,
+      '--secondary-foreground': `${randomHue} 10% 10%`,
+      '--accent': `${complementaryHue} 80% 95%`,
+      '--accent-foreground': `${complementaryHue} 10% 10%`,
+      '--border': `${randomHue} 20% 90%`,
+      '--input': `${randomHue} 20% 90%`,
+      '--ring': `${randomHue} ${Math.floor(Math.random() * 30 + 70)}% ${Math.floor(Math.random() * 20 + 40)}%`,
+    };
+
     const randomCategoryName = Object.keys(fontCategories)[Math.floor(Math.random() * Object.keys(fontCategories).length)] as keyof typeof fontCategories;
     const randomCategory = fontCategories[randomCategoryName];
     let headingFont = randomCategory.headings[Math.floor(Math.random() * randomCategory.headings.length)];
     let bodyFont = randomCategory.body[Math.floor(Math.random() * randomCategory.body.length)];
     if (randomCategoryName !== 'Minimalist') {
-      while (headingFont === bodyFont) {
-        bodyFont = randomCategory.body[Math.floor(Math.random() * randomCategory.body.length)];
-      }
+      while (headingFont === bodyFont) { bodyFont = randomCategory.body[Math.floor(Math.random() * randomCategory.body.length)]; }
     }
     const randomSidebarStyle = (Math.random() > 0.5 ? 'primary' : 'card') as 'primary' | 'card';
     const randomRadius = `${(Math.random() * 1.5 + 0.25).toFixed(2)}rem`;
 
     const newSettings: DesignSettings = {
       ...defaultSettings,
-      ...randomTheme.light,
-      themeName: randomTheme.name,
+      ...randomColors,
+      themeName: 'Random',
       fontHeading: headingFont,
       fontSans: bodyFont,
       sidebarStyle: randomSidebarStyle,
@@ -283,8 +309,56 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
     debouncedSave(newSettings);
   };
 
+  const generateAIDesign = async () => {
+    const toastId = showLoading("Analyzing your brand with AI...");
+    try {
+        const { data, error } = await supabase.functions.invoke('generate-design-theme');
+        if (error) throw error;
+        if (data.error) throw new Error(data.error);
+
+        const { themeName, colors, fonts, radius, sidebarStyle } = data;
+
+        const newSettings: Partial<DesignSettings> = {
+            themeName: themeName || 'AI Generated',
+            '--primary': hexToHsl(colors.primary),
+            '--primary-foreground': hexToHsl(colors.primaryForeground),
+            '--secondary': hexToHsl(colors.secondary),
+            '--secondary-foreground': hexToHsl(colors.secondaryForeground),
+            '--background': hexToHsl(colors.background),
+            '--foreground': hexToHsl(colors.foreground),
+            '--card': hexToHsl(colors.card),
+            '--card-foreground': hexToHsl(colors.cardForeground),
+            '--accent': hexToHsl(colors.accent),
+            '--accent-foreground': hexToHsl(colors.foreground),
+            '--border': hexToHsl(colors.card).replace(/(\d+)%$/, (match, p1) => `${Math.max(0, parseInt(p1) - 5)}%`),
+            '--ring': hexToHsl(colors.primary),
+            fontHeading: fonts.heading,
+            fontSans: fonts.body,
+            '--radius': radius,
+            sidebarStyle: sidebarStyle,
+            isAdvanced: false,
+        };
+        
+        newSettings['--input'] = newSettings['--border'];
+        newSettings['--muted'] = newSettings['--secondary'];
+        newSettings['--muted-foreground'] = newSettings['--secondary-foreground']?.replace(/(\d+)%$/, (match, p1) => `${Math.max(0, parseInt(p1) - 20)}%`);
+        newSettings['--popover'] = newSettings['--background'];
+        newSettings['--popover-foreground'] = newSettings['--foreground'];
+
+        const finalSettings = { ...settings, ...newSettings };
+        setSettings(finalSettings as DesignSettings);
+        debouncedSave(finalSettings as DesignSettings);
+        dismissToast(toastId);
+        showSuccess("AI theme applied! ✨");
+
+    } catch (err: any) {
+        dismissToast(toastId);
+        showError(err.message || "Failed to generate AI theme.");
+    }
+  };
+
   return (
-    <AppearanceContext.Provider value={{ settings, setTheme, updateSetting, resetSettings, isLoading, isAdvanced: settings.isAdvanced, setAdvanced, randomizeTheme }}>
+    <AppearanceContext.Provider value={{ settings, setTheme, updateSetting, resetSettings, isLoading, isAdvanced: settings.isAdvanced, setAdvanced, randomizeTheme, generateAIDesign }}>
       {children}
     </AppearanceContext.Provider>
   );

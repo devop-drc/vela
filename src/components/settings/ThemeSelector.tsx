@@ -9,7 +9,7 @@ export const ThemeSelector = () => {
   return (
     <div className="space-y-4">
       <h3 className="font-semibold">Color Palette</h3>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {presetThemes.map((theme) => (
           <div key={theme.name} className="space-y-2">
             <button
