@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Instagram, CheckCircle } from "lucide-react";
+import { Instagram, CheckCircle, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +11,7 @@ import { AppearancePanel } from "@/components/settings/AppearancePanel";
 import { AccountSettings } from "@/components/settings/AccountSettings";
 import { ShopSettings } from "@/components/settings/ShopSettings";
 import { usePageTitle } from "@/contexts/PageTitleContext";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const Settings = () => {
   const { setTitle } = usePageTitle();
@@ -91,7 +92,57 @@ const Settings = () => {
             </Card>
             <Card>
               <CardHeader><CardTitle>Billing</CardTitle><CardDescription>Manage your billing information and view your invoices.</CardDescription></CardHeader>
-              <CardContent><p className="text-muted-foreground">Billing details will be displayed here.</p></CardContent>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h4 className="font-semibold">Pro Plan</h4>
+                    <p className="text-sm text-muted-foreground">$25.00 per month</p>
+                  </div>
+                  <Button variant="outline">Manage Subscription</Button>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-semibold">Payment Method</h4>
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <CreditCard className="h-6 w-6" />
+                      <div>
+                        <p className="font-medium">Visa ending in 1234</p>
+                        <p className="text-sm text-muted-foreground">Expires 06/2025</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm">Update</Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-semibold">Billing History</h4>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead className="text-right">Invoice</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell>June 1, 2024</TableCell>
+                        <TableCell>$25.00</TableCell>
+                        <TableCell className="text-right"><Button variant="outline" size="sm">Download</Button></TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>May 1, 2024</TableCell>
+                        <TableCell>$25.00</TableCell>
+                        <TableCell className="text-right"><Button variant="outline" size="sm">Download</Button></TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>April 1, 2024</TableCell>
+                        <TableCell>$25.00</TableCell>
+                        <TableCell className="text-right"><Button variant="outline" size="sm">Download</Button></TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
             </Card>
           </div>
         </TabsContent>
