@@ -3,7 +3,7 @@ import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Dialog, DialogContent, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Edit, Trash2, X } from "lucide-react";
+import { Loader2, Edit, Trash2 } from "lucide-react";
 import { TagInput } from "./TagInput";
 import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -184,9 +184,9 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
                     <Badge variant={product.status === 'Active' ? 'default' : 'secondary'}>{product.status}</Badge>
                   </h1>
                 </div>
-                <p className="text-base text-muted-foreground">{product.caption || 'No description provided.'}</p>
+                <p className="text-base text-muted-foreground flex-1">{product.caption || 'No description provided.'}</p>
                 {product.tags?.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-2">
+                  <div className="flex flex-wrap gap-2">
                     {product.tags.map((t, i) => <Badge key={i} variant="secondary">{t}</Badge>)}
                   </div>
                 )}
@@ -250,7 +250,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
   const EditMode = () => (
     <motion.form key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
       <ScrollArea className="flex-1">
-        <div className="p-2.5 space-y-4">
+        <div className="p-2.5">
             <h2 className="text-2xl font-bold tracking-tight mb-4">Update Product</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
@@ -304,12 +304,6 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setIsEditing(false); } }}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-[10px]">
           <AnimatePresence mode="wait">{isEditing ? <EditMode /> : <ViewMode />}</AnimatePresence>
-          <DialogClose asChild>
-            <Button variant="ghost" size="icon" className="absolute top-4 right-4 rounded-full z-10">
-              <X className="h-4 w-4" />
-              <span className="sr-only">Close</span>
-            </Button>
-          </DialogClose>
         </DialogContent>
       </Dialog>
       <Dialog open={isMediaViewerOpen} onOpenChange={setIsMediaViewerOpen}>
