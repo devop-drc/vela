@@ -24,6 +24,13 @@
     --accent: 220 10% 92%;
     --accent-foreground: 220 10% 15%;
 
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --warning: 48 96% 59%;
+    --warning-foreground: 48 96% 10%;
+    --info: 210 90% 50%;
+    --info-foreground: 0 0% 98%;
+
     --border: 220 10% 85%; /* Subtle border for inputs */
     --input: 220 10% 85%; /* Input line color */
     --ring: 220 10% 15%; /* Focus ring color */
@@ -56,6 +63,13 @@
 
     --accent: 220 10% 20%;
     --accent-foreground: 220 10% 98%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --warning: 48 96% 59%;
+    --warning-foreground: 48 96% 10%;
+    --info: 210 90% 60%;
+    --info-foreground: 0 0% 98%;
 
     --border: 220 10% 30%;
     --input: 220 10% 30%;

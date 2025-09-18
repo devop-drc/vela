@@ -22,6 +22,10 @@ export const AdvancedPanel = () => {
                     <ColorPickerInput label="Primary Button Text" value={settings['--primary-foreground']} onChange={(v) => updateSetting('--primary-foreground', v)} />
                     <ColorPickerInput label="Secondary Background" value={settings['--secondary']} onChange={(v) => updateSetting('--secondary', v)} />
                     <ColorPickerInput label="Secondary Text" value={settings['--secondary-foreground']} onChange={(v) => updateSetting('--secondary-foreground', v)} />
+                    <ColorPickerInput label="Borders" value={settings['--border']} onChange={(v) => updateSetting('--border', v)} />
+                    <ColorPickerInput label="Destructive / Error" value={settings['--destructive']} onChange={(v) => updateSetting('--destructive', v)} />
+                    <ColorPickerInput label="Warning" value={settings['--warning']} onChange={(v) => updateSetting('--warning', v)} />
+                    <ColorPickerInput label="Informational" value={settings['--info']} onChange={(v) => updateSetting('--info', v)} />
                 </div>
             </div>
         </motion.div>
