@@ -6,10 +6,10 @@ import { Checkbox } from "./ui/checkbox";
 import { AlertTriangle, Palette, Ruler, Tag } from "lucide-react";
 import { ProductStatusDropdown } from "./ProductStatusDropdown";
 import { Badge } from "./ui/badge";
-import { getTextColorForBackground } from "@/lib/colorUtils";
 import { productCategories } from "@/lib/productTypes";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
+type GridSizeType = 'sm' | 'md' | 'lg';
 
 interface Product {
   id: string;
@@ -35,6 +35,7 @@ interface ProductCardProps {
   product: Product;
   isSelected: boolean;
   isSelectionModeActive: boolean;
+  gridSize: GridSizeType;
   onSelect: (productId: string) => void;
   onEdit: (product: Product) => void;
   onStatusChange: (productId: string, newStatus: ProductStatus) => void;
@@ -47,7 +48,7 @@ const DetailRow = ({ icon: Icon, children }: { icon: React.ElementType, children
   </div>
 );
 
-export const ProductCard = ({ product, isSelected, isSelectionModeActive, onSelect, onEdit, onStatusChange }: ProductCardProps) => {
+export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSize, onSelect, onEdit, onStatusChange }: ProductCardProps) => {
   const handleCardClick = () => {
     if (isSelectionModeActive) {
       onSelect(product.id);
@@ -97,33 +98,36 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, onSele
               {product.name}
             </h3>
 
-            {caption && <p className="text-xs text-muted-foreground line-clamp-2">{caption}</p>}
+            {(gridSize === 'md' || gridSize === 'lg') && caption && (
+              <p className="text-xs text-muted-foreground line-clamp-2">{caption}</p>
+            )}
             
-            <div className="space-y-1.5 pt-1">
-              {details?.material && (
-                <DetailRow icon={Tag}>
-                  <span className="font-medium">{details.material}</span>
-                </DetailRow>
-              )}
-              {details?.sizes?.length > 0 && (
-                <DetailRow icon={Ruler}>
-                  {details.sizes.map(size => <Badge key={size} variant="outline" className="px-1.5 py-0 text-xs font-mono">{size}</Badge>)}
-                </DetailRow>
-              )}
-              {details?.colors?.length > 0 && (
-                <DetailRow icon={Palette}>
-                  {details.colors.map(color => (
-                    <Badge 
-                      key={color} 
-                      style={{ backgroundColor: color }}
-                      className={cn("px-2 py-0.5 text-xs border border-black/10", getTextColorForBackground(color))}
-                    >
-                      {color}
-                    </Badge>
-                  ))}
-                </DetailRow>
-              )}
-            </div>
+            {gridSize === 'lg' && (
+              <div className="space-y-1.5 pt-1">
+                {details?.material && (
+                  <DetailRow icon={Tag}>
+                    <span className="font-medium">{details.material}</span>
+                  </DetailRow>
+                )}
+                {details?.sizes?.length > 0 && (
+                  <DetailRow icon={Ruler}>
+                    {details.sizes.map(size => <Badge key={size} variant="outline" className="px-1.5 py-0 text-xs font-mono">{size}</Badge>)}
+                  </DetailRow>
+                )}
+                {details?.colors?.length > 0 && (
+                  <DetailRow icon={Palette}>
+                    {details.colors.map(color => (
+                      <div 
+                        key={color} 
+                        title={color}
+                        className="h-4 w-4 rounded-full border border-black/10"
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </DetailRow>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-end justify-between pt-2">

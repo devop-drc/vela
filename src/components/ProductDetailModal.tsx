@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Edit, Trash2, Tag, FileText, DollarSign, Boxes, CheckSquare, Settings2, Palette, Ruler } from "lucide-react";
+import { Loader2, Edit, Trash2, Tag, FileText, DollarSign, Settings2 } from "lucide-react";
 import { TagInput } from "./TagInput";
 import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -108,6 +108,18 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
 
   const handleSave = async (data: ProductFormData) => {
     setIsSubmitting(true);
+
+    const { type: currentTypeDefinition } = getCategoryAndType(data.category, data.details.type);
+    const cleanedDetails: { [key: string]: any } = { type: data.details.type };
+
+    if (currentTypeDefinition) {
+        currentTypeDefinition.fields.forEach(field => {
+            if (data.details[field.name] !== undefined) {
+                cleanedDetails[field.name] = data.details[field.name];
+            }
+        });
+    }
+
     const { error } = await supabase
       .from('products')
       .update({
@@ -120,7 +132,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
         tags: data.tags,
         pricing_type: data.pricing_type,
         billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
-        details: data.details,
+        details: cleanedDetails,
       })
       .eq('id', product.id);
 
@@ -181,7 +193,30 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
               <div><Label className="text-xs">Type</Label><p className="font-medium">{type?.label || 'N/A'}</p></div>
             </CardContent>
           </Card>
-          {/* TODO: Render specific details here */}
+          <Card>
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Settings2 className="h-4 w-4" />Product Details</CardTitle></CardHeader>
+            <CardContent>
+                {type && type.fields.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                        {type.fields.map(field => {
+                            const value = product.details?.[field.name];
+                            if (!value || (Array.isArray(value) && value.length === 0)) return null;
+                            
+                            return (
+                                <div key={field.name} className="flex flex-col">
+                                    <Label className="text-xs text-muted-foreground">{field.label}</Label>
+                                    <p className="font-medium">
+                                        {Array.isArray(value) ? value.join(', ') : value}
+                                    </p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground">No specific details for this product type.</p>
+                )}
+            </CardContent>
+          </Card>
         </div>
       </div>
       <DialogFooter className="pt-4">
