@@ -8,7 +8,7 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { CheckCircle, Image as ImageIcon, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
-import { EditProductModal } from "./EditProductModal";
+import { CreateProductModal } from "./CreateProductModal";
 
 interface AnalyzedPost {
   id: string;
@@ -37,8 +37,8 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
 
   // State for modals
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [productToEdit, setProductToEdit] = useState<any>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [productToCreate, setProductToCreate] = useState<any>(null);
 
   const fetchAndAnalyzePosts = useCallback(async (forceRefresh = false) => {
     if (forceRefresh) setIsRefreshing(true);
@@ -90,8 +90,8 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
       if (error) throw error;
       if (data.error) throw new Error(data.error);
       
-      setProductToEdit(data);
-      setIsEditModalOpen(true);
+      setProductToCreate(data);
+      setIsCreateModalOpen(true);
     } catch (err: any) {
       showError(err.message || "Failed to generate product details.");
     } finally {
@@ -208,12 +208,12 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
         </Dialog>
       )}
 
-      {isEditModalOpen && productToEdit && selectedPost && (
-        <EditProductModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
+      {isCreateModalOpen && productToCreate && selectedPost && (
+        <CreateProductModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
           onSave={handleSaveProduct}
-          productData={productToEdit}
+          productData={productToCreate}
           post={selectedPost}
         />
       )}

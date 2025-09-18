@@ -3,12 +3,13 @@ import { AspectRatio } from "./ui/aspect-ratio";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Checkbox } from "./ui/checkbox";
+import { AlertTriangle } from "lucide-react";
 
 interface Product {
   id: string;
   name: string;
   status: 'Active' | 'Draft';
-  price: number;
+  price: number | null;
   media_url: string;
   category: string;
   pricing_type: 'one_time' | 'subscription';
@@ -79,24 +80,31 @@ export const ProductCard = ({ product, isSelected, isSelectionActive, onSelect, 
           />
         </AspectRatio>
 
-        <div className="bg-card p-4 flex-1 flex flex-col justify-between">
+        <div className="bg-card p-3 flex-1 flex flex-col justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               {product.category || 'Uncategorized'}
             </p>
-            <h3 className="mt-1 truncate text-2xl font-light tracking-wide">
+            <h3 className="mt-1 truncate text-lg font-medium tracking-tight">
               {product.name}
             </h3>
           </div>
           <div className="flex items-end justify-between mt-4">
             <div className="flex flex-col">
               <p className="text-xs uppercase tracking-widest text-muted-foreground">Price</p>
-              <p className="font-semibold text-2xl">
-                {product.pricing_type === 'subscription'
-                  ? `$${product.price ? product.price.toFixed(2) : '0.00'}`
-                  : `$${product.price ? product.price.toFixed(2) : 'N/A'}`}
-                {product.pricing_type === 'subscription' && <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>}
-              </p>
+              {product.price != null ? (
+                <p className="font-semibold text-xl">
+                  {product.pricing_type === 'subscription'
+                    ? `$${product.price.toFixed(2)}`
+                    : `$${product.price.toFixed(2)}`}
+                  {product.pricing_type === 'subscription' && <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>}
+                </p>
+              ) : (
+                <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-600">
+                  <AlertTriangle className="h-4 w-4" />
+                  Set Price
+                </div>
+              )}
             </div>
             <StatusToggle 
               status={product.status} 

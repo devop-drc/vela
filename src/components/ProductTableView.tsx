@@ -1,13 +1,13 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, AlertTriangle } from "lucide-react";
 import { Checkbox } from "./ui/checkbox";
 
 interface Product {
   id: string;
   name: string;
   status: 'Active' | 'Draft';
-  price: number;
+  price: number | null;
   inventory: number;
   media_url: string;
   pricing_type: 'one_time' | 'subscription';
@@ -69,9 +69,18 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
               </Button>
             </TableCell>
             <TableCell>
-              {product.pricing_type === 'subscription'
-                ? `$${product.price ? product.price.toFixed(2) : '0.00'} / ${product.billing_interval}`
-                : `$${product.price ? product.price.toFixed(2) : 'N/A'}`}
+              {product.price != null ? (
+                <span>
+                  {product.pricing_type === 'subscription'
+                    ? `$${product.price.toFixed(2)} / ${product.billing_interval}`
+                    : `$${product.price.toFixed(2)}`}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 text-xs text-amber-600">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Manual Entry
+                </span>
+              )}
             </TableCell>
             <TableCell>{product.inventory}</TableCell>
             <TableCell className="text-right">

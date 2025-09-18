@@ -20,7 +20,7 @@ interface Product {
   id: string;
   name: string;
   status: 'Active' | 'Draft';
-  price: number;
+  price: number | null;
   inventory: number;
   media_url: string;
   caption: string;

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Loader2 } from "lucide-react";
+import { Card, CardContent } from "./ui/card";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -21,7 +22,7 @@ const productSchema = z.object({
 
 type ProductFormData = z.infer<typeof productSchema>;
 
-interface EditProductModalProps {
+interface CreateProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
@@ -29,7 +30,7 @@ interface EditProductModalProps {
   post: any;
 }
 
-export const EditProductModal = ({ isOpen, onClose, onSave, productData, post }: EditProductModalProps) => {
+export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post }: CreateProductModalProps) => {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -37,7 +38,7 @@ export const EditProductModal = ({ isOpen, onClose, onSave, productData, post }:
       description: productData?.description || post?.caption || "",
       category: productData?.category || "",
       price: productData?.price || 0,
-      inventory: productData?.inventory || 0,
+      inventory: productData?.inventory || 10,
       features: (productData?.features || []).join(", "),
     },
   });
@@ -84,43 +85,52 @@ export const EditProductModal = ({ isOpen, onClose, onSave, productData, post }:
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Create New Product</DialogTitle>
+          <DialogTitle>Create New Product from Post</DialogTitle>
           <DialogDescription>
             The AI has generated the following details. Review, edit, and save to create the product.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Product Name</Label>
-              <Input id="name" {...register("name")} />
-              {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+            <div className="space-y-4">
+              <Card className="overflow-hidden">
+                <CardContent className="p-0">
+                  <img src={post.media_url} alt="Instagram Post" className="w-full h-auto object-cover aspect-square" />
+                </CardContent>
+              </Card>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea id="description" {...register("description")} rows={4} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="features">Features (comma-separated)</Label>
+                <Textarea id="features" {...register("features")} rows={3} />
+              </div>
             </div>
-             <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
-              <Input id="category" {...register("category")} />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea id="description" {...register("description")} rows={3} />
-          </div>
-           <div className="space-y-2">
-            <Label htmlFor="features">Features (comma-separated)</Label>
-            <Textarea id="features" {...register("features")} rows={2} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="price">Price</Label>
-              <Input id="price" type="number" step="0.01" {...register("price")} />
-              {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="inventory">Inventory</Label>
-              <Input id="inventory" type="number" {...register("inventory")} />
-              {errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Product Name</Label>
+                <Input id="name" {...register("name")} />
+                {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Input id="category" {...register("category")} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="price">Price</Label>
+                  <Input id="price" type="number" step="0.01" {...register("price")} />
+                  {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="inventory">Inventory</Label>
+                  <Input id="inventory" type="number" {...register("inventory")} />
+                  {errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
