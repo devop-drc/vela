@@ -3,7 +3,7 @@ import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Dialog, DialogContent, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -166,9 +166,9 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
     return (
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
         <ScrollArea className="flex-1">
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-10 gap-6 md:gap-8">
-              <div className="md:col-span-4 p-1.5">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
+              <div className="md:col-span-4">
                 <button onClick={() => setIsMediaViewerOpen(true)} className="w-full rounded-lg overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-shadow hover:shadow-lg">
                   <img src={product.media_url} alt={product.name} className="object-cover w-full aspect-square bg-muted" />
                 </button>
@@ -239,7 +239,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
             )}
           </div>
         </ScrollArea>
-        <DialogFooter className="p-6 border-t">
+        <DialogFooter className="pt-4">
           <Button variant="outline" onClick={() => setIsEditing(true)} disabled={isSubmitting}><Edit className="mr-2 h-4 w-4" />Edit</Button>
           <Button variant="destructive" onClick={() => setIsDeleting(true)} disabled={isSubmitting}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>
         </DialogFooter>
@@ -250,11 +250,11 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
   const EditMode = () => (
     <motion.form key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
       <ScrollArea className="flex-1">
-        <div className="p-6 space-y-4">
+        <div className="space-y-4">
             <h2 className="text-2xl font-bold tracking-tight mb-4">Update Product</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                    <div className="p-1.5">
+                    <div>
                         <img src={product.media_url} alt={product.name} className="rounded-lg object-cover w-full aspect-square bg-muted" />
                     </div>
                     <Card>
@@ -292,7 +292,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
             </div>
         </div>
       </ScrollArea>
-      <DialogFooter className="p-6 border-t">
+      <DialogFooter className="pt-4">
         <Button type="button" variant="ghost" onClick={() => setIsEditing(false)} disabled={isSubmitting}>Cancel</Button>
         <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button>
       </DialogFooter>
@@ -302,14 +302,8 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setIsEditing(false); } }}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-1.5">
           <AnimatePresence mode="wait">{isEditing ? <EditMode /> : <ViewMode />}</AnimatePresence>
-          <DialogClose asChild>
-            <Button variant="ghost" size="icon" className="absolute top-4 right-4 rounded-full z-10">
-              <X className="h-4 w-4" />
-              <span className="sr-only">Close</span>
-            </Button>
-          </DialogClose>
         </DialogContent>
       </Dialog>
       <Dialog open={isMediaViewerOpen} onOpenChange={setIsMediaViewerOpen}>
