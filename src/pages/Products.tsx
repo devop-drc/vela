@@ -187,11 +187,15 @@ const Products = () => {
             </div>
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" className="justify-start"><ListFilter className="mr-2 h-4 w-4" />Filter</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>Filter by Status</DropdownMenuLabel><DropdownMenuSeparator /><DropdownMenuCheckboxItem checked={statusFilter.includes('Active')} onCheckedChange={() => handleStatusFilterChange('Active')}>Active</DropdownMenuCheckboxItem><DropdownMenuCheckboxItem checked={statusFilter.includes('Draft')} onCheckedChange={() => handleStatusFilterChange('Draft')}>Draft</DropdownMenuCheckboxItem><DropdownMenuCheckboxItem checked={statusFilter.includes('Out of Stock')} onCheckedChange={() => handleStatusFilterChange('Out of Stock')}>Out of Stock</DropdownMenuCheckboxItem></DropdownMenuContent></DropdownMenu>
             <Select value={sortOption} onValueChange={setSortOption}><SelectTrigger className="w-[180px]"><SelectValue placeholder="Sort by" /></SelectTrigger><SelectContent><SelectItem value="newest">Newest</SelectItem><SelectItem value="oldest">Oldest</SelectItem><SelectItem value="price-asc">Price: Low to High</SelectItem><SelectItem value="price-desc">Price: High to Low</SelectItem><SelectItem value="name-asc">Name: A-Z</SelectItem><SelectItem value="name-desc">Name: Z-A</SelectItem></SelectContent></Select>
-            {!isMobile && (<>
-              {viewMode === 'grid' && <Button variant="outline" onClick={cycleGridSize} className="w-28 justify-start"><LayoutGrid className="mr-2 h-4 w-4" />{sizeLabels[gridSize]}</Button>}
-              <Button variant="outline" size="icon" onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}>{viewMode === 'grid' ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}</Button>
-              <Button variant={isSelectionModeActive ? "secondary" : "outline"} onClick={toggleSelectionMode}><CheckSquare className="mr-2 h-4 w-4" />{isSelectionModeActive ? 'Cancel' : 'Select'}</Button>
-            </>)}
+            <AnimatePresence>
+            {!isMobile && (
+              <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 'auto', opacity: 1 }} exit={{ width: 0, opacity: 0 }} className="flex items-center gap-2 overflow-hidden">
+                {viewMode === 'grid' && <Button variant="outline" onClick={cycleGridSize} className="w-28 justify-start"><LayoutGrid className="mr-2 h-4 w-4" />{sizeLabels[gridSize]}</Button>}
+                <Button variant="outline" size="icon" onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}>{viewMode === 'grid' ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}</Button>
+                {viewMode === 'grid' && <Button variant={isSelectionModeActive ? "secondary" : "outline"} onClick={toggleSelectionMode}><CheckSquare className="mr-2 h-4 w-4" />{isSelectionModeActive ? 'Cancel' : 'Select'}</Button>}
+              </motion.div>
+            )}
+            </AnimatePresence>
           </div>
           <div className="flex items-center gap-2 w-full md:w-auto">
             <Button variant="outline" onClick={() => setIsImporterOpen(true)} className="flex-1 md:flex-none"><Import className="mr-2 h-4 w-4" />Import</Button>
