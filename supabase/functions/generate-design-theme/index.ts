@@ -12,36 +12,44 @@ const corsHeaders = {
 
 const getDesignPrompt = (profile: any) => {
   return `
-    You are a professional UI/UX designer with a deep understanding of color theory, branding, and accessibility (WCAG). Your task is to analyze the attached brand logo and the following brand information to generate a sophisticated and functional design system theme for a web application.
+    You are a world-class brand identity and UI designer. Your mission is to create a stunning, unique, and functional web application theme based on a user's Instagram brand. You must be creative but also adhere to strict design principles.
 
-    **Brand Information:**
-    - Shop Name: "${profile.shop_name}"
-    - Bio: "${profile.description}"
+    **INPUT:**
+    1.  **Brand Logo:** (Attached as an image)
+    2.  **Brand Info:**
+        - Name: "${profile.shop_name}"
+        - Bio: "${profile.description}"
 
-    **CRITICAL INSTRUCTIONS:**
+    **YOUR TASK (Step-by-Step):**
 
-    1.  **LOGO COLOR ANALYSIS (Most Important Step):**
-        *   Thoroughly analyze the colors in the attached logo.
-        *   Identify the most dominant, brand-representative color. This will be your starting point.
-        *   Identify any secondary or accent colors present in the logo.
+    **Step 1: Deep Brand Analysis**
+    - **Visuals:** Scrutinize the logo. What is the dominant color? What are the secondary colors? What is the overall style (e.g., geometric, hand-drawn, minimalist)?
+    - **Text:** Analyze the name and bio. What is the brand's personality? Is it playful, luxurious, modern, rustic, techy? What are they selling?
+    - **Synthesize:** Combine your visual and textual analysis to form a cohesive "brand essence."
 
-    2.  **PALETTE GENERATION (Strict Rules):**
-        *   **Primary Color:** This MUST be the dominant color you identified from the logo. It will be used for buttons and key interactive elements.
-        *   **Primary Foreground:** This MUST be a color (typically white or near-black) that has a high contrast ratio (WCAG AA or higher) against the Primary Color.
-        *   **Background & Card:** These MUST be very light, near-neutral colors (e.g., off-white, a very light gray with a hint of the primary color). DO NOT use saturated colors for backgrounds. This is for maximum readability.
-        *   **Foreground (Text):** This MUST be a dark color (e.g., a dark charcoal, not pure black) that has a high contrast ratio (WCAG AA or higher) against the Background and Card colors.
-        *   **Accent Color:** This should be a secondary color from the logo or a color that is complementary to the Primary Color based on color theory. It's for highlights and secondary actions.
+    **Step 2: Create a "Cool & Unique" Color Palette**
+    - **The Golden Rule:** The color palette MUST be derived from and harmonious with the logo's colors.
+    - **Primary Color:** This MUST be the most dominant and representative color from the logo. No exceptions.
+    - **Primary Foreground:** This MUST be a color (typically white or near-black) that has a high contrast ratio (WCAG AA or higher) against the Primary Color.
+    - **Background & Card:** Choose a very light, near-white, or subtly tinted neutral. This is for readability. It should complement the primary color.
+    - **Foreground (Text):** Choose a very dark, near-black, or tinted charcoal. It MUST have a high contrast ratio (WCAG AA+) against the background.
+    - **Accent Color:** Get creative here. Pick a secondary color from the logo or a complementary color that POPS against the primary color. Use it for highlights.
+    - **Secondary:** A subtle, neutral color for secondary buttons and elements.
 
-    3.  **UI STYLES:**
-        *   Based on the brand's personality (e.g., modern, elegant, playful), select a suitable Google Font pairing.
-        *   Choose an appropriate corner 'radius' (e.g., "0.5rem" for modern, "1.5rem" for playful).
-        *   Choose a 'sidebarStyle' ('primary' for a bold, branded look, or 'card' for a subtle, integrated look).
+    **Step 3: Select Expressive Typography**
+    - Based on the "brand essence," choose a compelling Google Font pairing.
+    - **Headings:** Something with personality that matches the brand (e.g., "Syne" for modern, "Playfair Display" for elegant).
+    - **Body:** Something highly readable that complements the heading font (e.g., "Inter", "Lato").
 
-    **OUTPUT FORMAT:**
-    Respond ONLY with a single, valid JSON object. Do not include markdown backticks or any other text.
+    **Step 4: Define the UI Shape & Style**
+    - **Corner Radius:** Match the brand. "0.25rem" for sharp/techy, "0.75rem" for modern/friendly, "1.5rem" for soft/playful.
+    - **Sidebar Style:** 'primary' for a bold, immersive feel, or 'card' for a clean, minimalist layout.
+
+    **FINAL OUTPUT:**
+    Respond ONLY with a single, valid JSON object. Do not include any other text or markdown.
 
     {
-      "themeName": "A creative name for the generated theme that reflects the brand.",
+      "themeName": "A creative, evocative name for this unique theme.",
       "colors": {
         "primary": "#HEXCODE", "primaryForeground": "#HEXCODE", "secondary": "#HEXCODE", "secondaryForeground": "#HEXCODE",
         "background": "#HEXCODE", "foreground": "#HEXCODE", "card": "#HEXCODE", "cardForeground": "#HEXCODE", "accent": "#HEXCODE"
@@ -54,21 +62,38 @@ const getDesignPrompt = (profile: any) => {
 
 const getTextOnlyDesignPrompt = (profile: any) => {
   return `
-    You are a UI/UX design expert. Your task is to generate a complete design system theme based on the "vibe" of a brand's name and bio. The previous attempt to analyze their logo failed, so you must rely solely on the text provided.
+    You are a world-class brand identity and UI designer. Your mission is to create a stunning, unique, and functional web application theme based *only* on the "vibe" of a user's brand name and bio, as their logo could not be analyzed.
 
-    **Brand Information:**
-    - Shop Name: "${profile.shop_name}"
+    **INPUT:**
+    - Name: "${profile.shop_name}"
     - Bio: "${profile.description}"
 
-    **Instructions:**
-    1.  **Determine Brand Vibe:** Analyze the text to understand the brand's personality (e.g., "minimalist and clean," "bold and energetic," "luxurious and elegant").
-    2.  **Generate a Random but Cohesive Color Palette:** Create a harmonious color palette that matches the brand's vibe. The palette must be functional for a light-mode UI with excellent contrast (WCAG AA). 'background' and 'card' colors must be light and near-neutral.
-    3.  **Generate UI Styles:** Choose a suitable Google Font pairing, corner 'radius', and 'sidebarStyle' ('primary' or 'card') that fits the vibe.
+    **YOUR TASK (Step-by-Step):**
 
-    **Output Format:**
-    Respond ONLY with a single, valid JSON object. Do not include markdown backticks.
+    **Step 1: Vibe Check**
+    - Analyze the name and bio. What is the brand's personality? Is it playful, luxurious, modern, rustic, techy? What are they selling? Create a "mood board" in your mind.
+
+    **Step 2: Invent a "Cool & Unique" Color Palette**
+    - Based on the vibe, invent a harmonious and creative color palette.
+    - **CRITICAL:** The palette must be functional for a light-mode UI. Prioritize legibility and accessibility (WCAG AA+ contrast).
+    - **Background/Card:** Must be very light and near-neutral.
+    - **Foreground/Text:** Must be very dark and high-contrast.
+    - **Primary & Accent:** These should be the most expressive colors that capture the brand's essence.
+
+    **Step 3: Select Expressive Typography**
+    - Based on the vibe, choose a compelling Google Font pairing.
+    - **Headings:** Something with personality.
+    - **Body:** Something highly readable.
+
+    **Step 4: Define the UI Shape & Style**
+    - **Corner Radius:** Match the vibe.
+    - **Sidebar Style:** 'primary' for bold, 'card' for clean.
+
+    **FINAL OUTPUT:**
+    Respond ONLY with a single, valid JSON object. Do not include any other text or markdown.
+    
     {
-      "themeName": "A creative name for the generated theme.",
+      "themeName": "A creative, evocative name for this unique theme.",
       "colors": {
         "primary": "#HEXCODE", "primaryForeground": "#HEXCODE", "secondary": "#HEXCODE", "secondaryForeground": "#HEXCODE",
         "background": "#HEXCODE", "foreground": "#HEXCODE", "card": "#HEXCODE", "cardForeground": "#HEXCODE", "accent": "#HEXCODE"
