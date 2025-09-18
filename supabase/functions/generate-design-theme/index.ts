@@ -27,13 +27,13 @@ const getDesignPrompt = (profile: any) => {
     - **Text:** Analyze the name and bio. What is the brand's personality? Is it playful, luxurious, modern, rustic, techy? What are they selling?
     - **Synthesize:** Combine your visual and textual analysis to form a cohesive "brand essence."
 
-    **Step 2: Create a "Cool & Unique" Color Palette**
+    **Step 2: Create a Harmonious Color Palette**
     - **The Golden Rule:** The color palette MUST be derived from and harmonious with the logo's colors.
     - **Primary Color:** This MUST be the most dominant and representative color from the logo. No exceptions.
     - **Primary Foreground:** This MUST be a color (typically white or near-black) that has a high contrast ratio (WCAG AA or higher) against the Primary Color.
     - **Background & Card:** Choose a very light, near-white, or subtly tinted neutral. This is for readability. It should complement the primary color.
     - **Foreground (Text):** Choose a very dark, near-black, or tinted charcoal. It MUST have a high contrast ratio (WCAG AA+) against the background.
-    - **Accent Color:** Get creative here. Pick a secondary color from the logo or a complementary color that POPS against the primary color. Use it for highlights.
+    - **Accent Color:** This MUST be harmonious with the primary color. First, try to pick a secondary color from the logo. If one isn't available, create an analogous color (next to the primary on the color wheel) or a different shade of the primary color. It should be used for highlights and hover states. **AVOID complementary (opposite) colors.**
     - **Secondary:** A subtle, neutral color for secondary buttons and elements.
 
     **Step 3: Select Expressive Typography**
@@ -73,12 +73,12 @@ const getTextOnlyDesignPrompt = (profile: any) => {
     **Step 1: Vibe Check**
     - Analyze the name and bio. What is the brand's personality? Is it playful, luxurious, modern, rustic, techy? What are they selling? Create a "mood board" in your mind.
 
-    **Step 2: Invent a "Cool & Unique" Color Palette**
+    **Step 2: Invent a Harmonious Color Palette**
     - Based on the vibe, invent a harmonious and creative color palette.
     - **CRITICAL:** The palette must be functional for a light-mode UI. Prioritize legibility and accessibility (WCAG AA+ contrast).
     - **Background/Card:** Must be very light and near-neutral.
     - **Foreground/Text:** Must be very dark and high-contrast.
-    - **Primary & Accent:** These should be the most expressive colors that capture the brand's essence.
+    - **Primary & Accent:** These should be the most expressive colors that capture the brand's essence. They MUST be harmonious. The accent color should complement the primary color, not clash with it. Think analogous colors or different shades, **not complementary (opposite) colors.**
 
     **Step 3: Select Expressive Typography**
     - Based on the vibe, choose a compelling Google Font pairing.
