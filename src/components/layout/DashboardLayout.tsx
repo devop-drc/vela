@@ -3,6 +3,7 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import BottomNav from "./BottomNav";
 import { usePageTitle } from "@/contexts/PageTitleContext";
+import { IntegrationPrompt } from "./IntegrationPrompt";
 
 const DashboardLayout = () => {
   const { title } = usePageTitle();
@@ -17,6 +18,7 @@ const DashboardLayout = () => {
         </main>
       </div>
       <BottomNav />
+      <IntegrationPrompt />
     </div>
   );
 };

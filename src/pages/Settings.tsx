@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,8 @@ const Settings = () => {
   const { setTitle } = usePageTitle();
   const [integrationStatus, setIntegrationStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading');
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const defaultTab = location.state?.focus === 'integrations' ? 'integrations' : 'account';
 
   useEffect(() => {
     setTitle("Settings");
@@ -90,7 +92,7 @@ const Settings = () => {
 
   return (
     <div className="space-y-4">
-      <Tabs defaultValue="account" className="w-full">
+      <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList>
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
