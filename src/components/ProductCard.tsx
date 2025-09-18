@@ -39,7 +39,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, onSele
 
   return (
     <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative">
-      <div className={cn("absolute top-3 right-3 z-10 transition-opacity", isSelectionModeActive ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+      <div className={cn("absolute top-3 right-3 z-10 transition-opacity", isSelectionModeActive ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <Checkbox
           checked={isSelected}
           onCheckedChange={() => onSelect(product.id)}
@@ -63,20 +63,20 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, onSele
           />
         </AspectRatio>
 
-        <div className="bg-card p-2.5 flex-1 flex flex-col justify-between">
+        <div className="bg-card p-2 flex-1 flex flex-col justify-between">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               {product.category || 'Uncategorized'}
             </p>
-            <h3 className="mt-1 truncate font-semibold tracking-tight">
+            <h3 className="mt-1 truncate font-medium">
               {product.name}
             </h3>
           </div>
-          <div className="flex items-end justify-between mt-3">
+          <div className="flex items-end justify-between mt-2">
             <div className="flex flex-col">
               <p className="text-xs uppercase tracking-wider text-muted-foreground">Price</p>
               {product.price != null ? (
-                <p className="font-semibold text-lg">
+                <p className="font-semibold">
                   {product.pricing_type === 'subscription'
                     ? `$${product.price.toFixed(2)}`
                     : `$${product.price.toFixed(2)}`}
