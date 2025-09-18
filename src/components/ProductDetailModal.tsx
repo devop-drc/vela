@@ -302,7 +302,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setIsEditing(false); } }}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-2.5">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-[10px]">
           <AnimatePresence mode="wait">{isEditing ? <EditMode /> : <ViewMode />}</AnimatePresence>
           <DialogClose asChild>
             <Button variant="ghost" size="icon" className="absolute top-4 right-4 rounded-full z-10">
