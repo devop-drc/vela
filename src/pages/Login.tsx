@@ -1,11 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, Facebook } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { showError } from "@/utils/toast";
 
 const Login = () => {
-  const handleFacebookLogin = () => {
-    const origin = window.location.origin;
-    // Redirect to our custom Edge Function to handle the entire auth flow
-    window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?origin=${encodeURIComponent(origin)}`;
+  const handleFacebookLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'facebook',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+    if (error) {
+      showError(`Login failed: ${error.message}`);
+    }
   };
 
   return (

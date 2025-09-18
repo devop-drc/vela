@@ -46,8 +46,8 @@ serve(async (req) => {
       const error = url.searchParams.get('error');
       if (error) {
         const errorDescription = url.searchParams.get('error_description') || 'Permissions were denied.';
-        const redirectUrl = new URL(`${origin}/login`);
-        redirectUrl.searchParams.set('error', errorDescription);
+        const redirectUrl = new URL(origin);
+        redirectUrl.searchParams.set('integration_error', errorDescription);
         return Response.redirect(redirectUrl.toString(), 302);
       }
 
@@ -110,7 +110,7 @@ serve(async (req) => {
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
         email: email,
-        options: { redirectTo: `${origin}/` }
+        options: { redirectTo: `${origin}?integration_success=true` }
       });
       if (linkError) throw linkError;
 
@@ -118,8 +118,8 @@ serve(async (req) => {
 
     } catch (error) {
       console.error('OAuth Callback Error:', error.message);
-      const errorUrl = new URL(`${origin}/login`);
-      errorUrl.searchParams.set('error', error.message);
+      const errorUrl = new URL(origin);
+      errorUrl.searchParams.set('integration_error', error.message);
       return Response.redirect(errorUrl.toString(), 302);
     }
   } else {

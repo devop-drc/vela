@@ -28,6 +28,13 @@ const Settings = () => {
       searchParams.delete('integration_error');
       setSearchParams(searchParams, { replace: true });
     }
+    const integrationSuccess = searchParams.get('integration_success');
+    if (integrationSuccess) {
+      showSuccess("Successfully connected your Instagram account!");
+      setIntegrationStatus('connected');
+      searchParams.delete('integration_success');
+      setSearchParams(searchParams, { replace: true });
+    }
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
@@ -58,14 +65,8 @@ const Settings = () => {
   }, []);
 
   const handleConnectInstagram = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      const jwt = session.access_token;
-      const origin = window.location.origin;
-      window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?jwt=${jwt}&origin=${encodeURIComponent(origin)}`;
-    } else {
-      showError("You must be logged in to connect your Instagram account.");
-    }
+    const origin = `${window.location.origin}/settings`;
+    window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?origin=${encodeURIComponent(origin)}`;
   };
 
   const handleDisconnectInstagram = async () => {
