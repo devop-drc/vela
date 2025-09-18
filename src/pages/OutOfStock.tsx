@@ -11,7 +11,7 @@ import { ProductTableView } from "@/components/ProductTableView";
 import { ProductDetailModal } from "@/components/ProductDetailModal";
 import { SaleModal, SaleFormData } from "@/components/SaleModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { BulkActionsToolbar } from "@/components/BulkActionsToolbar";
+import { OutOfStockActionsToolbar } from "@/components/OutOfStockActionsToolbar";
 import { AnimatePresence } from "framer-motion";
 import { showError, showSuccess } from "@/utils/toast";
 
@@ -159,11 +159,10 @@ const OutOfStock = () => {
       </div>
       <AnimatePresence>
         {selectedProducts.length > 0 && (
-          <BulkActionsToolbar
-            pageContext="out-of-stock"
+          <OutOfStockActionsToolbar
             selectedCount={selectedProducts.length}
             onClear={() => setSelectedProducts([])}
-            onSetStatus={handleBulkStatusChange as any}
+            onSetStatus={handleBulkStatusChange}
             onDelete={() => setBulkDeleteConfirm(true)}
             onAddSale={() => setIsSaleModalOpen(true)}
           />
