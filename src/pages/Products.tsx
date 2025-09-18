@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Import, ChevronDown, LayoutGrid, List, CheckSquare, Group, ShieldCheck, AlertTriangle } from "lucide-react";
+import { RefreshCw, Import, ChevronDown, LayoutGrid, List, CheckSquare, Group } from "lucide-react";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,7 +10,6 @@ import { ProductDetailModal } from "@/components/ProductDetailModal";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductTableView } from "@/components/ProductTableView";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { BulkActionsToolbar } from "@/components/BulkActionsToolbar";
@@ -22,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Search, ListFilter } from "lucide-react";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useIntegration } from "@/contexts/IntegrationContext";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 type GridSizeType = 'sm' | 'md' | 'lg';
@@ -68,6 +68,7 @@ const itemVariants = {
 
 const Products = () => {
   const { setTitle } = usePageTitle();
+  const { runWithIntegrationCheck } = useIntegration();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -87,25 +88,8 @@ const Products = () => {
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
   const [gridSize, setGridSize] = useState<GridSizeType>('md');
   const [grouping, setGrouping] = useState<GroupingType>('none');
-  const [isActionPromptOpen, setIsActionPromptOpen] = useState(false);
 
   useEffect(() => { setTitle("Products"); }, [setTitle]);
-
-  const checkIntegration = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
-    const { data } = await supabase.from('integrations').select('id').eq('user_id', user.id).eq('provider', 'facebook').maybeSingle();
-    return !!data;
-  }, []);
-
-  const runWithIntegrationCheck = async (action: () => void) => {
-    const isConnected = await checkIntegration();
-    if (isConnected) {
-      action();
-    } else {
-      setIsActionPromptOpen(true);
-    }
-  };
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
@@ -223,8 +207,7 @@ const Products = () => {
       <ProductDetailModal isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={handleProductUpdate} />
       {isSaleModalOpen && <SaleModal isOpen={isSaleModalOpen} onClose={() => setIsSaleModalOpen(false)} onApply={handleApplySale} productCount={selectedProducts.length} />}
       <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {selectedProducts.length} products?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-      <Dialog open={isActionPromptOpen} onOpenChange={setIsActionPromptOpen}><DialogContent><DialogHeader><DialogTitle className="flex items-center gap-2"><AlertTriangle className="h-6 w-6 text-amber-500" />Connect Your Instagram Account</DialogTitle><DialogDescription className="pt-2 text-left">This feature requires a connection to your Instagram Business account to function.</DialogDescription></DialogHeader><DialogFooter><Button onClick={() => { setIsActionPromptOpen(false); const origin = `${window.location.origin}/settings`; window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?origin=${encodeURIComponent(origin)}`; }} className="w-full"><ShieldCheck className="mr-2 h-4 w-4" />Connect Now</Button></DialogFooter></DialogContent></Dialog>
-
+      
       <div className="space-y-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">

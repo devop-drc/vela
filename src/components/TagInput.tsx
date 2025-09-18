@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, forwardRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
@@ -10,7 +10,7 @@ interface TagInputProps {
   placeholder?: string;
 }
 
-export const TagInput = ({ value = [], onChange, placeholder = "Add..." }: TagInputProps) => {
+export const TagInput = forwardRef<HTMLDivElement, TagInputProps>(({ value = [], onChange, placeholder = "Add..." }, ref) => {
   const [inputValue, setInputValue] = useState('');
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -29,7 +29,7 @@ export const TagInput = ({ value = [], onChange, placeholder = "Add..." }: TagIn
   };
 
   return (
-    <div className={cn(
+    <div ref={ref} className={cn(
       "border border-input rounded-lg p-2 flex flex-wrap gap-2 items-center transition-all",
       "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
     )}>
@@ -50,4 +50,5 @@ export const TagInput = ({ value = [], onChange, placeholder = "Add..." }: TagIn
       />
     </div>
   );
-};
+});
+TagInput.displayName = "TagInput";

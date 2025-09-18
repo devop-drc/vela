@@ -17,6 +17,8 @@ import OnboardingGuard from "./components/layout/OnboardingGuard";
 import { AppearanceProvider } from "./contexts/AppearanceContext";
 import { PageTitleProvider } from "./contexts/PageTitleContext";
 import OutOfStock from "./pages/OutOfStock";
+import { IntegrationProvider } from "./contexts/IntegrationContext";
+import { IntegrationPrompt } from "./components/layout/IntegrationPrompt";
 
 const queryClient = new QueryClient();
 
@@ -28,23 +30,26 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <PageTitleProvider>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route element={<ProtectedRoute />}>
-                <Route path="/onboarding" element={<Onboarding />} />
-                <Route element={<OnboardingGuard />}>
-                  <Route element={<DashboardLayout />}>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/products" element={<Products />} />
-                    <Route path="/orders" element={<Orders />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/out-of-stock" element={<OutOfStock />} />
+            <IntegrationProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/onboarding" element={<Onboarding />} />
+                  <Route element={<OnboardingGuard />}>
+                    <Route element={<DashboardLayout />}>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/products" element={<Products />} />
+                      <Route path="/orders" element={<Orders />} />
+                      <Route path="/analytics" element={<Analytics />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/out-of-stock" element={<OutOfStock />} />
+                    </Route>
                   </Route>
                 </Route>
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <IntegrationPrompt />
+            </IntegrationProvider>
           </PageTitleProvider>
         </BrowserRouter>
       </TooltipProvider>

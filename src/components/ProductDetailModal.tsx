@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { useForm, Controller, useWatch } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleComponent } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,7 +17,7 @@ import { showError, showSuccess } from "@/utils/toast";
 import { Loader2, Edit, Trash2 } from "lucide-react";
 import { TagInput } from "./TagInput";
 import { productCategories, getCategoryAndType } from "@/lib/productTypes";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
 
 const productSchema = z.object({
@@ -258,7 +258,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
                         <img src={product.media_url} alt={product.name} className="rounded-lg object-cover w-full aspect-square bg-muted" />
                     </div>
                     <Card>
-                        <CardHeader><CardTitle className="text-base">Core Details</CardTitle></CardHeader>
+                        <CardHeader><CardTitleComponent className="text-base">Core Details</CardTitleComponent></CardHeader>
                         <CardContent className="space-y-4">
                         <div className="space-y-2"><Label htmlFor="name">Product Name</Label><Input id="name" {...register("name")} />{errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}</div>
                         <div className="space-y-2"><Label htmlFor="caption">Description</Label><Textarea id="caption" {...register("caption")} rows={3} /></div>
@@ -268,7 +268,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
                 </div>
                 <div className="space-y-4">
                     <Card>
-                        <CardHeader><CardTitle className="text-base">Pricing & Status</CardTitle></CardHeader>
+                        <CardHeader><CardTitleComponent className="text-base">Pricing & Status</CardTitleComponent></CardHeader>
                         <CardContent className="space-y-4">
                         <div className="space-y-2"><Label>Status</Label><Controller control={control} name="status" render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="Draft" id="draft" /><Label htmlFor="draft">Draft</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="Active" id="active" /><Label htmlFor="active">Active</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="Out of Stock" id="out-of-stock" /><Label htmlFor="out-of-stock">Out of Stock</Label></div></RadioGroup>)} /></div>
                         <div className="space-y-2"><Label>Pricing Model</Label><Controller control={control} name="pricing_type" render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="one_time" id="one_time" /><Label htmlFor="one_time">One-time</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="subscription" id="subscription" /><Label htmlFor="subscription">Subscription</Label></div></RadioGroup>)} /></div>
@@ -279,7 +279,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
                         </CardContent>
                     </Card>
                     <Card>
-                        <CardHeader><CardTitle className="text-base">Categorization & Details</CardTitle></CardHeader>
+                        <CardHeader><CardTitleComponent className="text-base">Categorization & Details</CardTitleComponent></CardHeader>
                         <CardContent className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2"><Label>Category</Label><Controller name="category" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent></Select>)} /></div>
@@ -303,6 +303,9 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setIsEditing(false); } }}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-[10px]">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Product Details: {product.name}</DialogTitle>
+          </DialogHeader>
           <AnimatePresence mode="wait">{isEditing ? <EditMode /> : <ViewMode />}</AnimatePresence>
         </DialogContent>
       </Dialog>
@@ -311,7 +314,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
           <img src={product.media_url} alt="Full size view" className="max-w-full max-h-full object-contain rounded-lg" />
         </DialogContent>
       </Dialog>
-      <AlertDialog open={isDeleting} onOpenChange={setIsDeleting}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the product.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete product</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <AlertDialog open={isDeleting} onOpenChange={setIsDeleting}><AlertDialogContent><AlertDialogHeader><AlertDialogTitleComponent>Are you absolutely sure?</AlertDialogTitleComponent><AlertDialogDescription>This action cannot be undone. This will permanently delete the product.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete product</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </>
   );
 };
