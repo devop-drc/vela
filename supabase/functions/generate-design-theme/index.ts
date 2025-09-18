@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { encode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
@@ -9,22 +10,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const getDesignPrompt = (profile: any, posts: any[]) => {
-  const postCaptions = posts.map(p => `- ${p.caption}`).join('\n');
+const getDesignPrompt = (profile: any) => {
   return `
-    You are a world-class branding and UI/UX designer. Your task is to analyze an Instagram profile and generate a complete design system theme for a web dashboard.
-
-    **Analysis Data:**
-    - Shop Name: ${profile.shop_name}
-    - Bio: ${profile.description}
-    - Latest Post Captions:
-    ${postCaptions}
+    You are a world-class branding and UI/UX designer. Your task is to analyze an Instagram profile icon and bio to generate a complete design system theme for a web dashboard.
 
     **Instructions:**
-    1.  **Analyze the Brand Identity:** Based on all the provided data, determine the brand's personality (e.g., "minimalist and clean," "bold and energetic," "earthy and organic," "luxurious and elegant").
-    2.  **Generate a Color Palette:** Create a harmonious light-mode color palette that reflects the brand identity. Provide colors in HEX format. Ensure text is legible on backgrounds (WCAG AA).
-    3.  **Select Typography:** Choose one font for headings and one for body text from the Google Fonts library that matches the brand's style.
-    4.  **Determine UI Style:** Decide on an appropriate corner radius and sidebar style.
+
+    1.  **Analyze the attached Profile Icon:**
+        *   Extract a harmonious 5-color palette directly from the image.
+        *   The palette must be suitable for a light-mode web dashboard.
+        *   Define colors for 'primary', 'background', 'foreground', 'card', and 'accent'.
+        *   Ensure the 'foreground' color has excellent contrast (WCAG AA) on the 'background' and 'card' colors.
+        *   The 'primary' color should be the most dominant or representative color from the icon.
+
+    2.  **Analyze the Brand Identity from Text:**
+        *   Shop Name: "${profile.shop_name}"
+        *   Bio: "${profile.description}"
+        *   Based *only* on this text, determine the brand's personality (e.g., "minimalist and clean," "bold and energetic," "luxurious and elegant").
+
+    3.  **Generate UI Styles based on the Brand Personality:**
+        *   **Typography:** Choose one font for headings and one for body text from the Google Fonts library that matches the brand's style.
+        *   **Corner Radius:** Choose an appropriate corner radius (e.g., "0.5rem" for modern, "1.5rem" for playful).
+        *   **Sidebar Style:** Choose a style ('primary' for bold, 'card' for subtle).
 
     **Output Format:**
     Respond ONLY with a single, valid JSON object. Do not include markdown backticks or any other text.
@@ -69,22 +76,40 @@ serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not found');
 
-    const [profileRes, postsRes] = await Promise.all([
-      supabase.functions.invoke('instagram-profile'),
-      supabase.functions.invoke('instagram-posts', { body: { limit: 5 } })
-    ]);
+    const { data: profileData, error: profileError } = await supabase.functions.invoke('instagram-profile');
+    if (profileError) throw profileError;
+    if (profileData.error) throw new Error(profileData.error);
 
-    if (profileRes.error) throw profileRes.error;
-    if (profileRes.data.error) throw new Error(profileRes.data.error);
-    if (postsRes.error) throw postsRes.error;
-    if (postsRes.data.error) throw new Error(postsRes.data.error);
+    if (!profileData.logo_url) {
+      throw new Error("No profile icon found to analyze.");
+    }
 
-    const prompt = getDesignPrompt(profileRes.data, postsRes.data.posts || []);
+    const imageResponse = await fetch(profileData.logo_url);
+    if (!imageResponse.ok) {
+      throw new Error(`Failed to fetch profile image. Status: ${imageResponse.status}`);
+    }
+    const imageMimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const imageBase64 = encode(imageBuffer);
+
+    const prompt = getDesignPrompt(profileData);
     
     const geminiResponse = await fetch(GEMINI_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt },
+            {
+              inline_data: {
+                mime_type: imageMimeType,
+                data: imageBase64
+              }
+            }
+          ]
+        }]
+      }),
     });
 
     if (!geminiResponse.ok) {
@@ -93,6 +118,10 @@ serve(async (req) => {
     }
 
     const geminiData = await geminiResponse.json();
+    if (!geminiData.candidates || geminiData.candidates.length === 0) {
+        console.error("Gemini response missing candidates:", geminiData);
+        throw new Error("AI failed to generate a response. Please try again.");
+    }
     const jsonString = geminiData.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
     const analysis = JSON.parse(jsonString);
 
