@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Import, ChevronDown, LayoutGrid, List, CheckSquare, TextQuote } from "lucide-react";
+import { RefreshCw, Import, ChevronDown, LayoutGrid, List, CheckSquare } from "lucide-react";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { BulkActionsToolbar } from "@/components/BulkActionsToolbar";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { SaleModal, SaleFormData } from "@/components/SaleModal";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/contexts/PageTitleContext";
