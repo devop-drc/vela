@@ -16,9 +16,22 @@ const DashboardLayout = () => {
     if (shopDetails) {
       document.title = `${title} | ${shopDetails.shop_name}`;
 
-      const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-      if (favicon && shopDetails.favicon_url) {
-        favicon.href = shopDetails.favicon_url;
+      const setFavicon = (url: string) => {
+        let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+        if (link) {
+          link.href = url;
+        } else {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          link.href = url;
+          document.head.appendChild(link);
+        }
+      };
+
+      if (shopDetails.favicon_url) {
+        // Use a proxy to avoid potential CORS issues and resize for favicon use
+        const proxiedFaviconUrl = `https://images.weserv.nl/?url=${encodeURIComponent(shopDetails.favicon_url)}&w=32&h=32&fit=contain&mask=circle`;
+        setFavicon(proxiedFaviconUrl);
       }
     }
   }, [shopDetails, title]);
