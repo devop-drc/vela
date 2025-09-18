@@ -36,14 +36,10 @@ interface Product {
   created_at: string;
 }
 
-const gridColClasses: { [key: number]: string } = {
-  2: "lg:grid-cols-2",
-  3: "lg:grid-cols-3",
-  4: "lg:grid-cols-4",
-  5: "lg:grid-cols-5",
-  6: "lg:grid-cols-6",
-  7: "lg:grid-cols-7",
-  8: "lg:grid-cols-8",
+const gridSizeClasses: { [key: string]: string } = {
+  sm: "lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8",
+  md: "lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6",
+  lg: "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5",
 };
 
 const Products = () => {
@@ -64,7 +60,7 @@ const Products = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [isSelectionModeActive, setIsSelectionModeActive] = useState(false);
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
-  const [gridCols, setGridCols] = useState(5);
+  const [gridSize, setGridSize] = useState<'sm' | 'md' | 'lg'>('md');
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
@@ -218,16 +214,16 @@ const Products = () => {
           statusFilter={statusFilter} onStatusFilterChange={setStatusFilter}
           viewMode={viewMode} onViewChange={setViewMode}
           isSelectionModeActive={isSelectionModeActive} onToggleSelectionMode={toggleSelectionMode}
-          gridCols={gridCols} onGridColsChange={setGridCols}
+          gridSize={gridSize} onGridSizeChange={setGridSize}
         />
 
         {isLoading ? (
-          <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", gridColClasses[gridCols] || "lg:grid-cols-5")}>
+          <div className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>
             {Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-[340px] w-full rounded-lg" />)}
           </div>
         ) : filteredAndSortedProducts.length > 0 ? (
           currentView === 'grid' ? (
-            <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4", gridColClasses[gridCols] || "lg:grid-cols-5")}>
+            <div className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>
               {filteredAndSortedProducts.map((product) => (
                 <ProductCard
                   key={product.id} product={product}

@@ -2,9 +2,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Search, ListFilter, LayoutGrid, List, CheckSquare, Minus, Plus } from "lucide-react";
+import { Search, ListFilter, LayoutGrid, List, CheckSquare, TextQuote } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Slider } from "@/components/ui/slider";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface ProductToolbarProps {
   searchTerm: string;
@@ -17,11 +17,11 @@ interface ProductToolbarProps {
   onViewChange: (view: 'grid' | 'table') => void;
   isSelectionModeActive: boolean;
   onToggleSelectionMode: () => void;
-  gridCols: number;
-  onGridColsChange: (value: number) => void;
+  gridSize: 'sm' | 'md' | 'lg';
+  onGridSizeChange: (value: 'sm' | 'md' | 'lg') => void;
 }
 
-export const ProductToolbar = ({ searchTerm, onSearchChange, sortOption, onSortChange, statusFilter, onStatusFilterChange, viewMode, onViewChange, isSelectionModeActive, onToggleSelectionMode, gridCols, onGridColsChange }: ProductToolbarProps) => {
+export const ProductToolbar = ({ searchTerm, onSearchChange, sortOption, onSortChange, statusFilter, onStatusFilterChange, viewMode, onViewChange, isSelectionModeActive, onToggleSelectionMode, gridSize, onGridSizeChange }: ProductToolbarProps) => {
   const isMobile = useIsMobile();
 
   const handleStatusChange = (status: 'Active' | 'Draft' | 'Out of Stock') => {
@@ -72,11 +72,11 @@ export const ProductToolbar = ({ searchTerm, onSearchChange, sortOption, onSortC
         {!isMobile && (
           <>
             {viewMode === 'grid' && (
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" onClick={() => onGridColsChange(Math.max(2, gridCols - 1))}><Minus className="h-4 w-4" /></Button>
-                <Slider value={[gridCols]} onValueChange={(value) => onGridColsChange(value[0])} min={2} max={8} step={1} className="w-24" />
-                <Button variant="outline" size="icon" onClick={() => onGridColsChange(Math.min(8, gridCols + 1))}><Plus className="h-4 w-4" /></Button>
-              </div>
+              <ToggleGroup type="single" value={gridSize} onValueChange={(value) => { if (value) onGridSizeChange(value as 'sm' | 'md' | 'lg') }} aria-label="Grid size">
+                <ToggleGroupItem value="sm" aria-label="Small grid"><TextQuote className="h-4 w-4 rotate-90 scale-y-[-1]" /></ToggleGroupItem>
+                <ToggleGroupItem value="md" aria-label="Medium grid"><TextQuote className="h-4 w-4 rotate-90" /></ToggleGroupItem>
+                <ToggleGroupItem value="lg" aria-label="Large grid"><TextQuote className="h-4 w-4 rotate-90 scale-y-[1]" /></ToggleGroupItem>
+              </ToggleGroup>
             )}
             <Button variant="outline" size="icon" onClick={() => onViewChange(viewMode === 'grid' ? 'table' : 'grid')} className="w-10 h-10 flex-shrink-0">
               {viewMode === 'grid' ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
