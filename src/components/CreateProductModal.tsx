@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -12,12 +13,14 @@ import { Loader2 } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
 import { TagInput } from "./TagInput";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AnimatePresence, motion } from "framer-motion";
+import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   description: z.string().optional(),
-  category: z.string().optional(),
+  category: z.string().min(1, "Category is required"),
   price: z.coerce.number().min(0, "Price must be a positive number"),
   inventory: z.coerce.number().int().min(0, "Inventory must be a positive integer").optional(),
   tags: z.array(z.string()).optional(),
@@ -35,57 +38,35 @@ interface CreateProductModalProps {
   post: any;
 }
 
-const DetailField = ({ name, control, label }: { name: string, control: any, label: string }) => (
-  <div className="space-y-2">
-    <Label htmlFor={name}>{label}</Label>
-    <Controller
-      name={`details.${name}`}
-      control={control}
-      render={({ field }) => <Input id={name} {...field} />}
-    />
-  </div>
-);
-
-const ClothingDetails = ({ control }: { control: any }) => (
-  <div className="grid grid-cols-2 gap-4">
-    <div className="space-y-2 col-span-2">
-      <Label>Sizes</Label>
-      <Controller name="details.sizes" control={control} render={({ field }) => <TagInput {...field} placeholder="Add size..." />} />
-    </div>
-    <DetailField name="material" control={control} label="Material" />
-    <DetailField name="reference_code" control={control} label="Reference Code" />
-    <div className="space-y-2 col-span-2">
-      <Label>Colors</Label>
-      <Controller name="details.colors" control={control} render={({ field }) => <TagInput {...field} placeholder="Add color..." />} />
-    </div>
-  </div>
-);
-
-const GenericDetails = () => <p className="text-sm text-muted-foreground">No specific details for this category.</p>;
-
-const categoryForms: { [key: string]: React.FC<any> } = {
-  "Clothing": ClothingDetails,
-  "Generic": GenericDetails,
-};
-
 export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post }: CreateProductModalProps) => {
-  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
+  const { register, handleSubmit, control, setValue, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: productData?.name || "",
       description: productData?.description || post?.caption || "",
-      category: productData?.category || "Generic",
+      category: productData?.category || "generic",
       price: productData?.price || 0,
       inventory: 10,
       tags: productData?.tags || [],
       pricing_type: 'one_time',
-      details: productData?.details || {},
+      details: productData?.details || { type: 'generic' },
     },
   });
 
   const pricingType = useWatch({ control, name: "pricing_type" });
-  const category = useWatch({ control, name: "category" });
-  const DetailsComponent = categoryForms[category || 'Generic'] || GenericDetails;
+  const categoryValue = useWatch({ control, name: "category" });
+  const typeValue = useWatch({ control, name: "details.type" });
+
+  const { category, type } = getCategoryAndType(categoryValue, typeValue);
+  const DetailsComponent = type?.component;
+
+  useEffect(() => {
+    // When category changes, reset the type to the first available one
+    const newCategory = productCategories.find(c => c.value === categoryValue);
+    if (newCategory && newCategory.types.length > 0) {
+      setValue("details.type", newCategory.types[0].value);
+    }
+  }, [categoryValue, setValue]);
 
   const onSubmit = async (data: ProductFormData) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -122,26 +103,31 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+            {/* Left Column */}
             <div className="space-y-4">
-                <Card className="overflow-hidden h-fit"><CardContent className="p-0"><img src={post.media_url} alt="Instagram Post" className="w-full h-auto object-cover aspect-square" /></CardContent></Card>
-                <div className="space-y-2"><Label htmlFor="name">Product Name</Label><Input id="name" {...register("name")} />{errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}</div>
-                <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" {...register("description")} rows={4} /></div>
+              <Card className="overflow-hidden h-fit"><CardContent className="p-0"><img src={post.media_url} alt="Instagram Post" className="w-full h-auto object-cover aspect-square" /></CardContent></Card>
+              <div className="space-y-2"><Label htmlFor="name">Product Name</Label><Input id="name" {...register("name")} />{errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}</div>
+              <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" {...register("description")} rows={4} /></div>
+              <div className="space-y-2"><Label>Tags</Label><Controller name="tags" control={control} render={({ field }) => <TagInput {...field} placeholder="Add tag..." />} /></div>
             </div>
+            {/* Right Column */}
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label htmlFor="price">Price</Label><Input id="price" type="number" step="0.01" {...register("price")} />{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}</div>
-                <div className="space-y-2"><Label htmlFor="category">Category</Label><Input id="category" {...register("category")} /></div>
+                <div className="space-y-2"><Label>Category</Label><Controller name="category" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent></Select>)} /></div>
+                <div className="space-y-2"><Label>Type</Label><Controller name="details.type" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}><SelectTrigger><SelectValue placeholder="Select type..." /></SelectTrigger><SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select>)} /></div>
               </div>
               <div className="space-y-2"><Label>Pricing Model</Label><Controller name="pricing_type" control={control} render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="one_time" id="one_time" /><Label htmlFor="one_time">One-time</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="subscription" id="subscription" /><Label htmlFor="subscription">Subscription</Label></div></RadioGroup>)} /></div>
-              <AnimatePresence>
-                {pricingType === 'one_time' && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                    <div className="space-y-2 pt-2"><Label htmlFor="inventory">Inventory</Label><Input id="inventory" type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <div className="space-y-2"><Label>Tags</Label><Controller name="tags" control={control} render={({ field }) => <TagInput {...field} placeholder="Add tag..." />} /></div>
-              <div className="space-y-2"><Label>Details</Label><div className="p-4 border rounded-lg space-y-4"><DetailsComponent control={control} /></div></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2"><Label htmlFor="price">Price</Label><Input id="price" type="number" step="0.01" {...register("price")} />{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}</div>
+                <AnimatePresence>
+                  {pricingType === 'one_time' && (
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden">
+                      <div className="space-y-2"><Label htmlFor="inventory">Inventory</Label><Input id="inventory" type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              <div className="space-y-2"><Label>Specific Details</Label><Card><CardContent className="p-4">{DetailsComponent ? <DetailsComponent control={control} /> : <p>Select a category and type.</p>}</CardContent></Card></div>
             </div>
           </div>
           <DialogFooter><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save Product</Button></DialogFooter>
