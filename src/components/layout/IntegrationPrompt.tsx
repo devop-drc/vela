@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Instagram, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, AlertTriangle } from 'lucide-react';
 
 const SESSION_STORAGE_KEY = 'integration_prompt_dismissed';
 
 export const IntegrationPrompt = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const checkIntegration = async () => {
@@ -49,7 +47,8 @@ export const IntegrationPrompt = () => {
 
   const handleConnect = () => {
     setIsOpen(false);
-    navigate('/settings', { state: { focus: 'integrations' } });
+    const origin = `${window.location.origin}/settings`;
+    window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?origin=${encodeURIComponent(origin)}`;
   };
 
   return (
@@ -60,17 +59,22 @@ export const IntegrationPrompt = () => {
             <AlertTriangle className="h-6 w-6 text-amber-500" />
             Connect Your Instagram Account
           </DialogTitle>
-          <DialogDescription className="pt-2">
-            To start importing posts and creating products, you need to connect your Instagram Business account. This allows the app to securely access your media.
-            <br /><br />
-            Without this connection, most of the app's features will not be available.
+          <DialogDescription className="pt-2 text-left">
+            To import posts and create products, we need your permission to access your Instagram Business account via Facebook. We only request the permissions essential for the app to function:
+            <ul className="list-disc pl-5 mt-2 space-y-1 text-muted-foreground text-sm">
+              <li><strong>Find Your Pages:</strong> To identify the Instagram Business account linked to your Facebook Page.</li>
+              <li><strong>Read Your Content:</strong> To access your posts, media, and captions for product creation.</li>
+              <li><strong>Business Management:</strong> Required by Facebook to ensure the app can interact with your business assets securely.</li>
+            </ul>
+            <br />
+            Without these permissions, the app's core features will not be available.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="ghost" onClick={handleDismiss}>Remind Me Later</Button>
           <Button onClick={handleConnect}>
-            <Instagram className="mr-2 h-4 w-4" />
-            Go to Settings to Connect
+            <ShieldCheck className="mr-2 h-4 w-4" />
+            Accept Permissions
           </Button>
         </DialogFooter>
       </DialogContent>
