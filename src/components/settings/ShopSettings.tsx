@@ -7,6 +7,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Instagram, Users, Image as ImageIcon, ExternalLink, RefreshCw } from 'lucide-react';
 import { Button } from '../ui/button';
 
+const CACHE_KEY = 'shop_details_cache';
+
 interface ShopData {
   shop_name: string;
   username: string;
@@ -29,6 +31,7 @@ export const ShopSettings = () => {
       if (invokeError) throw invokeError;
       if (data.error) throw new Error(data.error);
       setShopData(data);
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
     } catch (err: any) {
       setError(err.message);
     }
@@ -37,7 +40,12 @@ export const ShopSettings = () => {
   useEffect(() => {
     const initialFetch = async () => {
       setIsLoading(true);
-      await fetchShopDetails();
+      const cachedData = sessionStorage.getItem(CACHE_KEY);
+      if (cachedData) {
+        setShopData(JSON.parse(cachedData));
+      } else {
+        await fetchShopDetails();
+      }
       setIsLoading(false);
     };
     initialFetch();
@@ -45,6 +53,7 @@ export const ShopSettings = () => {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
+    sessionStorage.removeItem(CACHE_KEY);
     await fetchShopDetails();
     setIsRefreshing(false);
   };

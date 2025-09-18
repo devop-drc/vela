@@ -2,23 +2,31 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Button } from '@/components/ui/button';
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { User } from '@supabase/supabase-js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Facebook } from 'lucide-react';
+import { Facebook, ExternalLink } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 
 export const AccountSettings = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [facebookId, setFacebookId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
       setIsLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+      if (user) {
+        const facebookIdentity = user.identities?.find(i => i.provider === 'facebook');
+        if (facebookIdentity) {
+          setFacebookId(facebookIdentity.id);
+        }
+      }
       setIsLoading(false);
     };
     fetchUser();
@@ -44,8 +52,16 @@ export const AccountSettings = () => {
           <Alert>
             <Facebook className="h-4 w-4" />
             <AlertTitle>Synced from Facebook</AlertTitle>
-            <AlertDescription>
+            <AlertDescription className="flex items-center justify-between">
               To update your profile details, please make the changes directly on your Facebook account.
+              {facebookId && (
+                <Button asChild variant="outline" size="sm">
+                  <a href={`https://facebook.com/${facebookId}`} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    View on Facebook
+                  </a>
+                </Button>
+              )}
             </AlertDescription>
           </Alert>
           <div className="flex items-center gap-4 pt-2">
