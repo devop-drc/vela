@@ -4,10 +4,24 @@ import Header from "./Header";
 import BottomNav from "./BottomNav";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { AnimatePresence, motion } from "framer-motion";
+import { useShop } from "@/contexts/ShopContext";
+import { useEffect } from "react";
 
 const DashboardLayout = () => {
   const { title } = usePageTitle();
   const location = useLocation();
+  const { shopDetails } = useShop();
+
+  useEffect(() => {
+    if (shopDetails) {
+      document.title = `${title} | ${shopDetails.shop_name}`;
+
+      const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (favicon && shopDetails.favicon_url) {
+        favicon.href = shopDetails.favicon_url;
+      }
+    }
+  }, [shopDetails, title]);
 
   return (
     <>

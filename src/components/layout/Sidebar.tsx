@@ -3,9 +3,11 @@ import { Home, ShoppingBag, BarChart2, Settings, Package, Archive } from "lucide
 import { cn } from "@/lib/utils";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { motion } from "framer-motion";
+import { useShop } from "@/contexts/ShopContext";
 
 const Sidebar = () => {
   const { settings } = useAppearance();
+  const { shopDetails, isLoading } = useShop();
 
   const navItems = [
     { to: "/", icon: Home, label: "Dashboard" },
@@ -28,7 +30,9 @@ const Sidebar = () => {
         settings.sidebarStyle === 'primary' ? 'border-primary-foreground/10' : 'border-border'
       )}>
         <ShoppingBag className="h-6 w-6 mr-2" />
-        <h1 className="text-xl font-bold">InstaShopify</h1>
+        <h1 className="text-xl font-bold truncate">
+          {isLoading ? 'Loading...' : shopDetails?.shop_name || 'InstaShopify'}
+        </h1>
       </div>
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map((item) => (
