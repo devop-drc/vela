@@ -14,10 +14,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Edit, Trash2, CheckCircle, XCircle, Tag, FileText, ListChecks, DollarSign, Boxes, X } from "lucide-react";
+import { Loader2, Edit, Trash2, Tag, FileText, ListChecks, DollarSign, Boxes, X } from "lucide-react";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
+  status: z.enum(['Active', 'Draft', 'Out of Stock']),
   caption: z.string().optional(),
   category: z.string().optional(),
   price: z.coerce.number().min(0, "Price must be a positive number"),
@@ -41,7 +42,7 @@ type ProductFormData = z.infer<typeof productSchema>;
 interface Product {
   id: string;
   name: string;
-  status: string;
+  status: 'Active' | 'Draft' | 'Out of Stock';
   price: number;
   inventory: number;
   media_url: string;
@@ -105,7 +106,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<ProductFormData>({
+  const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
   });
 
@@ -115,6 +116,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
     if (product) {
       reset({
         name: product.name || "",
+        status: product.status || "Draft",
         caption: product.caption || "",
         category: product.category || "",
         price: product.price || 0,
@@ -135,6 +137,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
       .from('products')
       .update({
         name: data.name,
+        status: data.status,
         caption: data.caption,
         category: data.category,
         price: data.price,
@@ -170,19 +173,6 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
     setIsDeleting(false);
   };
 
-  const handleTogglePublish = async () => {
-    setIsSubmitting(true);
-    const newStatus = product.status === 'Active' ? 'Draft' : 'Active';
-    const { error } = await supabase.from('products').update({ status: newStatus }).eq('id', product.id);
-    if (error) {
-      showError(`Failed to update status: ${error.message}`);
-    } else {
-      showSuccess(`Product is now ${newStatus.toLowerCase()}.`);
-      onUpdate();
-    }
-    setIsSubmitting(false);
-  };
-
   const ViewMode = () => (
     <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -205,18 +195,26 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
       <DialogFooter className="pt-4">
         <Button variant="outline" onClick={() => setIsEditing(true)} disabled={isSubmitting}><Edit className="mr-2 h-4 w-4" />Edit</Button>
         <Button variant="destructive" onClick={() => setIsDeleting(true)} disabled={isSubmitting}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>
-        <Button onClick={handleTogglePublish} disabled={isSubmitting}>
-          {product.status === 'Active' ? <XCircle className="mr-2 h-4 w-4" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-          {product.status === 'Active' ? 'Unpublish' : 'Publish'}
-        </Button>
       </DialogFooter>
     </motion.div>
   );
 
   const EditMode = () => (
     <motion.form key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
-      <div className="space-y-2"><Label htmlFor="name">Product Name</Label><Input id="name" {...register("name")} />{errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}</div>
-      <div className="space-y-2"><Label htmlFor="category">Category</Label><Input id="category" {...register("category")} /></div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2"><Label htmlFor="name">Product Name</Label><Input id="name" {...register("name")} />{errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}</div>
+        <div className="space-y-2"><Label htmlFor="category">Category</Label><Input id="category" {...register("category")} /></div>
+      </div>
+      <div className="space-y-2">
+        <Label>Status</Label>
+        <Controller control={control} name="status" render={({ field }) => (
+          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-4">
+            <div className="flex items-center space-x-2"><RadioGroupItem value="Draft" id="draft" /><Label htmlFor="draft">Draft</Label></div>
+            <div className="flex items-center space-x-2"><RadioGroupItem value="Active" id="active" /><Label htmlFor="active">Active</Label></div>
+            <div className="flex items-center space-x-2"><RadioGroupItem value="Out of Stock" id="out-of-stock" /><Label htmlFor="out-of-stock">Out of Stock</Label></div>
+          </RadioGroup>
+        )} />
+      </div>
       <div className="space-y-2"><Label htmlFor="caption">Description</Label><Textarea id="caption" {...register("caption")} rows={3} /></div>
       <div className="space-y-2"><Label htmlFor="features">Features (comma-separated)</Label><Textarea id="features" {...register("features")} rows={2} /></div>
       <div className="space-y-2"><Label htmlFor="tags">Tags</Label><Controller control={control} name="tags" render={({ field }) => <TagInput value={field.value} onChange={field.onChange} />} /></div>

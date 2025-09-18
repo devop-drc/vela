@@ -2,8 +2,9 @@ import { Card } from "@/components/ui/card";
 import { AspectRatio } from "./ui/aspect-ratio";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { AlertTriangle, CheckCircle, Circle } from "lucide-react";
-import { ProductStatusDropdown } from "./ProductStatusDropdown";
+import { Checkbox } from "./ui/checkbox";
+import { AlertTriangle } from "lucide-react";
+import { ProductStatusToggle } from "./ProductStatusToggle";
 import { Badge } from "./ui/badge";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
@@ -40,35 +41,28 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, onSele
 
   return (
     <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative">
+      <div className={cn("absolute top-3 right-3 z-10 transition-opacity", isSelectionModeActive ? "opacity-100" : "opacity-0 pointer-events-none")}>
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={() => onSelect(product.id)}
+          className="h-6 w-6 bg-white/80 backdrop-blur-sm border-gray-400 rounded-md"
+          aria-label={`Select ${product.name}`}
+        />
+      </div>
       <Card 
         onClick={handleCardClick}
         className={cn(
           "group w-full overflow-hidden rounded-lg shadow-sm transition-all duration-300 flex flex-col cursor-pointer",
+          isSelectionModeActive && "shadow-md",
           isSelected && "ring-2 ring-primary ring-offset-2"
         )}
       >
-        <AspectRatio ratio={1} className="overflow-hidden bg-muted relative">
+        <AspectRatio ratio={1} className="overflow-hidden bg-muted">
           <img
             src={product.media_url}
             alt={product.name}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
-          <AnimatePresence>
-            {isSelectionModeActive && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/30 flex items-center justify-center"
-              >
-                {isSelected ? (
-                  <CheckCircle className="h-12 w-12 text-white drop-shadow-lg" />
-                ) : (
-                  <Circle className="h-12 w-12 text-white/70 drop-shadow-lg opacity-0 group-hover:opacity-100 transition-opacity" />
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
         </AspectRatio>
 
         <div className="bg-card p-2.5 flex-1 flex flex-col justify-between">
@@ -95,7 +89,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, onSele
                 </div>
               )}
             </div>
-            <ProductStatusDropdown 
+            <ProductStatusToggle 
               currentStatus={product.status} 
               onStatusChange={(newStatus) => onStatusChange(product.id, newStatus)} 
             />
