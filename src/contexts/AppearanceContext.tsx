@@ -237,6 +237,9 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
       if (key.startsWith('--')) {
         newSettings.themeName = 'Custom';
       }
+      if (key === '--border') {
+        newSettings['--input'] = value as string;
+      }
       debouncedSave(newSettings);
       return newSettings;
     });

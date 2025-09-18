@@ -3,7 +3,6 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import BottomNav from "./BottomNav";
 import { usePageTitle } from "@/contexts/PageTitleContext";
-import { IntegrationPrompt } from "./IntegrationPrompt";
 import { AnimatePresence, motion } from "framer-motion";
 
 const DashboardLayout = () => {
@@ -32,7 +31,6 @@ const DashboardLayout = () => {
           </main>
         </div>
         <BottomNav />
-        <IntegrationPrompt />
       </div>
     </>
   );

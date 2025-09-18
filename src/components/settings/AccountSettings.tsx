@@ -10,6 +10,7 @@ import { User } from '@supabase/supabase-js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Facebook, ExternalLink } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { IntegrationSettings } from './IntegrationSettings';
 
 export const AccountSettings = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -37,6 +38,7 @@ export const AccountSettings = () => {
       <div className="space-y-8">
         <Skeleton className="h-96 w-full" />
         <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-48 w-full" />
       </div>
     );
   }
@@ -86,6 +88,9 @@ export const AccountSettings = () => {
           </div>
         </CardContent>
       </Card>
+
+      <IntegrationSettings />
+
       <Card>
         <CardHeader>
           <CardTitle>Preferences</CardTitle>
