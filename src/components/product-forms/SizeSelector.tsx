@@ -1,4 +1,5 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { forwardRef } from "react";
 
 const SIZES = ["2XS", "XS", "S", "M", "L", "XL", "2XL"];
 
@@ -7,9 +8,10 @@ interface SizeSelectorProps {
   onChange: (sizes: string[]) => void;
 }
 
-export const SizeSelector = ({ value = [], onChange }: SizeSelectorProps) => {
+export const SizeSelector = forwardRef<HTMLDivElement, SizeSelectorProps>(({ value = [], onChange }, ref) => {
   return (
     <ToggleGroup
+      ref={ref}
       type="multiple"
       variant="outline"
       value={value}
@@ -23,4 +25,5 @@ export const SizeSelector = ({ value = [], onChange }: SizeSelectorProps) => {
       ))}
     </ToggleGroup>
   );
-};
+});
+SizeSelector.displayName = "SizeSelector";
