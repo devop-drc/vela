@@ -3,7 +3,7 @@ import { AspectRatio } from "./ui/aspect-ratio";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Checkbox } from "./ui/checkbox";
-import { AlertTriangle, Boxes, Tag } from "lucide-react";
+import { AlertTriangle, Boxes, Tag, Palette, Ruler } from "lucide-react";
 import { ProductStatusDropdown } from "./ProductStatusDropdown";
 import { Badge } from "./ui/badge";
 
@@ -16,10 +16,16 @@ interface Product {
   price: number | null;
   inventory: number;
   media_url: string;
+  caption: string;
   category: string;
   tags: string[];
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
+  details: {
+    sizes?: string[];
+    colors?: string[];
+    [key: string]: any;
+  };
 }
 
 interface ProductCardProps {
@@ -31,6 +37,13 @@ interface ProductCardProps {
   onStatusChange: (productId: string, newStatus: ProductStatus) => void;
 }
 
+const DetailRow = ({ icon: Icon, children }: { icon: React.ElementType, children: React.ReactNode }) => (
+  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+    <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+    <div className="flex flex-wrap items-center gap-1.5">{children}</div>
+  </div>
+);
+
 export const ProductCard = ({ product, isSelected, isSelectionModeActive, onSelect, onEdit, onStatusChange }: ProductCardProps) => {
   const handleCardClick = () => {
     if (isSelectionModeActive) {
@@ -39,6 +52,8 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, onSele
       onEdit(product);
     }
   };
+
+  const { details, caption, tags } = product;
 
   return (
     <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative">
@@ -67,11 +82,11 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, onSele
         </AspectRatio>
 
         <div className="bg-card p-3 flex-1 flex flex-col justify-between">
-          <div>
+          <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <div className="flex items-center gap-1.5 truncate">
                 <Tag className="h-3 w-3" />
-                <span className="truncate">{product.category || 'Uncategorized'}</span>
+                <span className="truncate font-medium">{product.category || 'Uncategorized'}</span>
               </div>
               {product.pricing_type !== 'subscription' && (
                 <div className="flex items-center gap-1.5">
@@ -80,12 +95,29 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, onSele
                 </div>
               )}
             </div>
-            <h3 className="mt-2 truncate font-semibold tracking-tight">
+            <h3 className="font-semibold tracking-tight leading-snug">
               {product.name}
             </h3>
-            <div className="flex items-center gap-1.5 truncate mt-1">
-              {(product.tags || []).slice(0, 2).map(tag => <Badge key={tag} variant="secondary" className="font-normal text-xs">{tag}</Badge>)}
+            {caption && <p className="text-xs text-muted-foreground line-clamp-2">{caption}</p>}
+            
+            <div className="space-y-1.5 pt-1">
+              {details?.sizes?.length > 0 && (
+                <DetailRow icon={Ruler}>
+                  {details.sizes.map(size => <Badge key={size} variant="outline" className="px-1.5 py-0 text-xs font-mono">{size}</Badge>)}
+                </DetailRow>
+              )}
+              {details?.colors?.length > 0 && (
+                <DetailRow icon={Palette}>
+                  {details.colors.map(color => <Badge key={color} variant="outline" className="px-1.5 py-0 text-xs">{color}</Badge>)}
+                </DetailRow>
+              )}
             </div>
+
+            {tags?.length > 0 && (
+              <div className="flex items-center gap-1.5 truncate pt-1">
+                {tags.slice(0, 3).map(tag => <Badge key={tag} variant="secondary" className="font-normal text-xs">{tag}</Badge>)}
+              </div>
+            )}
           </div>
           <div className="flex items-end justify-between mt-3">
             {product.price != null ? (
