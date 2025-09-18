@@ -129,7 +129,7 @@ serve(async (req) => {
 
       const statePayload = JSON.stringify({ origin });
       const encodedState = btoa(statePayload);
-      const scopes = 'public_profile,email,pages_show_list,instagram_basic,instagram_content_publish,pages_read_engagement,business_management';
+      const scopes = 'public_profile,email,pages_show_list,instagram_basic,pages_read_engagement';
       
       const authUrl = new URL('https://www.facebook.com/v19.0/dialog/oauth');
       authUrl.searchParams.set('client_id', FACEBOOK_APP_ID);
