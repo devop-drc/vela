@@ -10,15 +10,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Edit, Trash2 } from "lucide-react";
+import { Loader2, Edit, Trash2, CheckCircle, XCircle, Archive, PlayCircle } from "lucide-react";
 import { TagInput } from "./TagInput";
 import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { cn } from "@/lib/utils";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -50,6 +52,7 @@ interface Product {
   price: number;
   inventory: number;
   media_url: string;
+  media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM';
   caption: string;
   category: string;
   tags: string[];
@@ -65,6 +68,12 @@ interface ProductDetailModalProps {
   onUpdate: () => void;
 }
 
+const statusConfig = {
+  'Active': { icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200" },
+  'Draft': { icon: XCircle, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200" },
+  'Out of Stock': { icon: Archive, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" },
+};
+
 const DetailDisplayRow = ({ label, children }: { label: string, children: React.ReactNode }) => (
     <div className="flex flex-col">
         <Label className="text-sm text-muted-foreground">{label}</Label>
@@ -78,7 +87,6 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
 
   const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -87,6 +95,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
   const pricingType = watch("pricing_type");
   const categoryValue = watch("category");
   const typeValue = watch("details.type");
+  const statusValue = watch("status");
 
   const { category, type } = getCategoryAndType(categoryValue, typeValue);
   const DetailsComponent = type?.component;
@@ -169,9 +178,26 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
           <div className="p-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
               <div className="md:col-span-4">
-                <button onClick={() => setIsMediaViewerOpen(true)} className="w-full rounded-lg overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-shadow hover:shadow-lg">
-                  <img src={product.media_url} alt={product.name} className="object-cover w-full aspect-square bg-muted" />
-                </button>
+                <Carousel className="w-full rounded-lg overflow-hidden group">
+                  <CarouselContent>
+                    <CarouselItem>
+                      <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
+                        {product.media_type === 'VIDEO' ? (
+                          <>
+                            <video src={product.media_url} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <PlayCircle className="h-16 w-16 text-white/80" />
+                            </div>
+                          </>
+                        ) : (
+                          <img src={product.media_url} alt={product.name} className="object-cover w-full h-full" />
+                        )}
+                      </div>
+                    </CarouselItem>
+                  </CarouselContent>
+                  <CarouselPrevious className="left-2" />
+                  <CarouselNext className="right-2" />
+                </Carousel>
               </div>
               <div className="md:col-span-6 flex flex-col space-y-4">
                 <div>
@@ -261,19 +287,13 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
             </div>
             <div className="md:col-span-6 flex flex-col space-y-4">
               <div>
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <div className="flex-1 space-y-1">
-                    <Label>Category</Label>
-                    <Controller name="category" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent></Select>)} />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <Label>Type</Label>
-                    <Controller name="details.type" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}><SelectTrigger className="border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Select type..." /></SelectTrigger><SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select>)} />
-                  </div>
+                <div className="flex items-center gap-4 text-sm font-medium">
+                  <Controller name="category" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9"><SelectValue placeholder="Category..." /></SelectTrigger><SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent></Select>)} />
+                  <Controller name="details.type" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}><SelectTrigger className="border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9"><SelectValue placeholder="Type..." /></SelectTrigger><SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select>)} />
                 </div>
                 <div className="flex items-center gap-2 mt-4">
                   <Input id="name" {...register("name")} placeholder="Product Name" className="border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors flex-1" />
-                  <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Set status..." /></SelectTrigger><SelectContent><SelectItem value="Draft">Draft</SelectItem><SelectItem value="Active">Active</SelectItem><SelectItem value="Out of Stock">Out of Stock</SelectItem></SelectContent></Select>)} />
+                  <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn("w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50", statusConfig[statusValue as keyof typeof statusConfig]?.color)}><SelectValue placeholder="Set status..." /></SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
                 </div>
                 {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
               </div>
@@ -285,7 +305,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
               <div className="space-y-2 pt-2">
                 <Label>Pricing & Inventory</Label>
                 <div className="flex items-center gap-4">
-                  <Controller control={control} name="pricing_type" render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="one_time" id="one_time_edit" /><Label htmlFor="one_time_edit">One-time</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="subscription" id="subscription_edit" /><Label htmlFor="subscription_edit">Subscription</Label></div></RadioGroup>)} />
+                  <Controller control={control} name="pricing_type" render={({ field }) => (<ToggleGroup type="single" onValueChange={field.onChange} value={field.value} variant="outline" size="sm"><ToggleGroupItem value="one_time">One-time</ToggleGroupItem><ToggleGroupItem value="subscription">Subscription</ToggleGroupItem></ToggleGroup>)} />
                   <div className="flex-1 flex items-center gap-2">
                     <Input id="price" type="number" step="0.01" {...register("price")} className="w-24 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
                     <AnimatePresence>
@@ -324,15 +344,6 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
             <DialogDescription>View or edit product details for {product.name}.</DialogDescription>
           </DialogHeader>
           <AnimatePresence mode="wait">{isEditing ? <EditMode /> : <ViewMode />}</AnimatePresence>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={isMediaViewerOpen} onOpenChange={setIsMediaViewerOpen}>
-        <DialogContent className="max-w-4xl h-[90vh] p-2 flex items-center justify-center bg-transparent border-none shadow-none">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Image Viewer: {product.name}</DialogTitle>
-            <DialogDescription>A larger view of the product image.</DialogDescription>
-          </DialogHeader>
-          <img src={product.media_url} alt="Full size view" className="max-w-full max-h-full object-contain rounded-lg" />
         </DialogContent>
       </Dialog>
       <AlertDialog open={isDeleting} onOpenChange={setIsDeleting}><AlertDialogContent><AlertDialogHeader><AlertDialogTitleComponent>Are you absolutely sure?</AlertDialogTitleComponent><AlertDialogDescriptionComponent>This action cannot be undone. This will permanently delete the product.</AlertDialogDescriptionComponent></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete product</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>

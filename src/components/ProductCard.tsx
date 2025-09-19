@@ -18,6 +18,7 @@ interface Product {
   price: number | null;
   inventory: number;
   media_url: string;
+  thumbnail_url?: string;
   caption: string;
   category: string;
   tags: string[];
@@ -78,7 +79,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
       >
         <AspectRatio ratio={1} className="overflow-hidden bg-muted">
           <img
-            src={product.media_url}
+            src={product.thumbnail_url || product.media_url}
             alt={product.name}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />

@@ -87,7 +87,9 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
       pricing_type: data.pricing_type,
       status: 'Draft',
       instagram_post_id: post.id,
-      media_url: post.media_type === 'VIDEO' ? post.thumbnail_url : post.media_url,
+      media_url: post.media_url,
+      thumbnail_url: post.thumbnail_url,
+      media_type: post.media_type,
     });
 
     if (error) { showError(`Failed to create product: ${error.message}`); } 
