@@ -18,19 +18,17 @@ const DetailField = ({ name, control, label, className }: { name: string; contro
 );
 
 export const ClothingDetailsForm = ({ control }: DetailFormProps) => (
-  <div className="space-y-6">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-      <div className="space-y-2">
-        <Label>Available Sizes</Label>
-        <Controller name="details.sizes" control={control} render={({ field }) => <SizeSelector {...field} />} />
-      </div>
-      <div className="space-y-2">
-        <Label>Available Colors</Label>
-        <Controller name="details.colors" control={control} render={({ field }) => <ColorInput {...field} />} />
-      </div>
+  <div className="space-y-4">
+    <div className="space-y-2">
+      <Label>Available Sizes</Label>
+      <Controller name="details.sizes" control={control} render={({ field }) => <SizeSelector {...field} />} />
     </div>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-      <div className="space-y-2">
+    <div className="space-y-2">
+      <Label>Available Colors</Label>
+      <Controller name="details.colors" control={control} render={({ field }) => <ColorInput {...field} />} />
+    </div>
+    <div className="flex flex-wrap gap-4">
+      <div className="space-y-2 flex-1 min-w-[150px]">
         <Label>Material</Label>
         <Controller name="details.material" control={control} render={({ field }) => (
           <Select onValueChange={field.onChange} value={field.value}>
@@ -41,32 +39,32 @@ export const ClothingDetailsForm = ({ control }: DetailFormProps) => (
           </Select>
         )} />
       </div>
-      <DetailField name="reference_code" control={control} label="Reference Code" />
+      <DetailField name="reference_code" control={control} label="Reference Code" className="flex-1 min-w-[150px]" />
     </div>
   </div>
 );
 
 export const ElectronicsDetailsForm = ({ control }: DetailFormProps) => (
-    <div className="grid grid-cols-2 gap-4">
-        <DetailField name="model_number" control={control} label="Model Number" />
-        <DetailField name="processor" control={control} label="Processor" />
-        <DetailField name="ram" control={control} label="RAM" />
-        <DetailField name="storage" control={control} label="Storage" />
+    <div className="flex flex-wrap gap-4">
+        <DetailField name="model_number" control={control} label="Model Number" className="flex-1 min-w-[150px]" />
+        <DetailField name="processor" control={control} label="Processor" className="flex-1 min-w-[150px]" />
+        <DetailField name="ram" control={control} label="RAM" className="w-24" />
+        <DetailField name="storage" control={control} label="Storage" className="w-24" />
     </div>
 );
 
 export const ArtDetailsForm = ({ control }: DetailFormProps) => (
-    <div className="grid grid-cols-2 gap-4">
-        <DetailField name="dimensions" control={control} label="Dimensions" />
-        <DetailField name="medium" control={control} label="Medium" />
-        <DetailField name="framed" control={control} label="Framing" />
+    <div className="flex flex-wrap gap-4">
+        <DetailField name="dimensions" control={control} label="Dimensions" className="flex-1 min-w-[150px]" />
+        <DetailField name="medium" control={control} label="Medium" className="flex-1 min-w-[150px]" />
+        <DetailField name="framed" control={control} label="Framing" className="flex-1 min-w-[150px]" />
     </div>
 );
 
 export const ServiceDetailsForm = ({ control }: DetailFormProps) => (
-    <div className="grid grid-cols-2 gap-4">
-        <DetailField name="duration" control={control} label="Duration" />
-        <DetailField name="format" control={control} label="Format" />
+    <div className="flex flex-wrap gap-4">
+        <DetailField name="duration" control={control} label="Duration" className="flex-1 min-w-[150px]" />
+        <DetailField name="format" control={control} label="Format" className="flex-1 min-w-[150px]" />
     </div>
 );
 

@@ -46,7 +46,7 @@ export const TagInput = forwardRef<HTMLDivElement, TagInputProps>(({ value = [],
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="w-auto min-w-[6rem] border-none shadow-none focus-visible:ring-0 h-auto py-0 px-1 bg-transparent"
+        className="flex-1 border-none shadow-none focus-visible:ring-0 h-auto py-0 px-1 bg-transparent"
       />
     </div>
   );
