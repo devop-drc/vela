@@ -208,7 +208,7 @@ const ProductEditMode = ({ product, mediaItems, handleImageUpload, handleImageDe
     const DetailsComponent = type?.component;
 
     return (
-      <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
+      <div key="edit" className="flex-1 flex flex-col min-h-0">
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Update Product</DialogTitle>
@@ -316,7 +316,7 @@ const ProductEditMode = ({ product, mediaItems, handleImageUpload, handleImageDe
             <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button>
           </DialogFooter>
         </form>
-      </motion.div>
+      </div>
     )
 };
 
