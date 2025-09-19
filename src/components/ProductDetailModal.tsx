@@ -176,8 +176,8 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
         <ScrollArea className="flex-1 overflow-y-auto">
           <div className="p-4 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-1">
+            <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
+              <div className="md:col-span-4">
                 <Carousel className="w-full rounded-lg overflow-hidden group">
                   <CarouselContent>
                     <CarouselItem>
@@ -199,7 +199,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
                   <CarouselNext className="right-2" />
                 </Carousel>
               </div>
-              <div className="md:col-span-1 flex flex-col space-y-4">
+              <div className="md:col-span-6 flex flex-col space-y-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
                     <span>{category?.label || 'Uncategorized'}</span>
@@ -281,11 +281,11 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
       </DialogHeader>
       <ScrollArea className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-1">
+          <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
+            <div className="md:col-span-4">
               <img src={product.media_url} alt={product.name} className="rounded-lg object-cover w-full aspect-square bg-muted" />
             </div>
-            <div className="md:col-span-1 flex flex-col space-y-4">
+            <div className="md:col-span-6 flex flex-col space-y-4">
               <div>
                 <div className="flex items-center gap-4 text-sm font-medium">
                   <Controller name="category" control={control} render={({ field }) => (
@@ -311,7 +311,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
                 </div>
                 {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
               </div>
-              <Textarea id="caption" {...register("caption")} placeholder="A compelling description of your product..." className="border-0 border-b-2 rounded-none bg-transparent p-0 text-base text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors resize-none flex-1" />
+              <Textarea id="caption" {...register("caption")} placeholder="No description provided." className="border-0 border-b-2 rounded-none bg-transparent p-0 text-base text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors resize-none flex-1" />
               <div>
                 <Label>Tags</Label>
                 <Controller control={control} name="tags" render={({ field }) => <TagInput {...field} />} />
@@ -321,9 +321,9 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
                 <div className="flex items-center gap-4">
                   <Controller control={control} name="pricing_type" render={({ field }) => (<ToggleGroup type="single" onValueChange={field.onChange} value={field.value} variant="outline" size="sm"><ToggleGroupItem value="one_time">One-time</ToggleGroupItem><ToggleGroupItem value="subscription">Subscription</ToggleGroupItem></ToggleGroup>)} />
                   <div className="flex-1 flex items-center gap-2">
-                    <Input id="price" type="number" step="0.01" {...register("price")} placeholder="0.00" className="w-24 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
+                    <Input id="price" type="number" step="0.01" {...register("price")} className="w-24 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
                     <AnimatePresence>
-                      {pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="flex items-center gap-2 overflow-hidden"><Label htmlFor="inventory" className="text-sm text-muted-foreground">Stock:</Label><Input id="inventory" type="number" {...register("inventory")} placeholder="0" className="w-20 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" /></motion.div>)}
+                      {pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="flex items-center gap-2 overflow-hidden"><Label htmlFor="inventory" className="text-sm text-muted-foreground">Stock:</Label><Input id="inventory" type="number" {...register("inventory")} className="w-20 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" /></motion.div>)}
                       {pricingType === 'subscription' && (<motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="flex items-center gap-2 overflow-hidden"><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} /></motion.div>)}
                     </AnimatePresence>
                   </div>
