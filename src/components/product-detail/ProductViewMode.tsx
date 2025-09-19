@@ -6,10 +6,30 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Edit, Trash2 } from "lucide-react";
+import { getCategoryAndType } from "@/lib/productTypes";
 import { DialogFooter } from "../ui/dialog";
-import { DynamicDetailRenderer } from "./DynamicDetailRenderer";
+
+const DetailDisplayRow = ({ label, children }: { label: string, children: React.ReactNode }) => (
+    <div className="flex flex-col">
+        <Label className="text-sm text-muted-foreground">{label}</Label>
+        <div className="font-medium flex flex-wrap items-center gap-1.5 text-base">
+            {children}
+        </div>
+    </div>
+);
 
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
+    const { category, type } = getCategoryAndType(product.category, product.details?.type);
+    const optionFieldNames = ['sizes', 'colors', 'framed'];
+    
+    const allDetails = type?.fields.filter(field => {
+        const value = product.details?.[field.name];
+        return value && (!Array.isArray(value) || value.length > 0);
+    }) || [];
+
+    const options = allDetails.filter(f => optionFieldNames.includes(f.name));
+    const specifications = allDetails.filter(f => !optionFieldNames.includes(f.name));
+
     return (
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
         <ScrollArea className="flex-1 overflow-y-auto">
@@ -34,8 +54,9 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </div>
               <div className="md:col-span-6 flex flex-col space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground capitalize">
-                    <span>{product.category || 'Uncategorized'}</span>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    <span>{category?.label || 'Uncategorized'}</span>
+                    {type && <span> &middot; {type.label}</span>}
                   </p>
                   <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2 mt-1">
                     {product.name}
@@ -55,12 +76,47 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </div>
             </div>
 
-            <Card>
-                <CardHeader><CardTitleComponent className="text-base">Product Details</CardTitleComponent></CardHeader>
-                <CardContent className="p-4">
-                    <DynamicDetailRenderer details={product.details} />
+            {(options.length > 0 || specifications.length > 0) && (
+              <Card>
+                <CardHeader><CardTitleComponent className="text-base">Options & Specifications</CardTitleComponent></CardHeader>
+                <CardContent className="p-4 space-y-4">
+                  {options.length > 0 && (
+                    <div>
+                      <h3 className="text-base font-semibold mb-3">Options & Variants</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                        {options.map(field => {
+                          const value = product.details?.[field.name];
+                          return (
+                            <DetailDisplayRow key={field.name} label={field.label}>
+                              {field.name === 'colors' && Array.isArray(value) ? (
+                                value.map(color => <div key={color} title={color} className="h-5 w-5 rounded-full border border-black/10" style={{ backgroundColor: color }} />)
+                              ) : field.name === 'sizes' && Array.isArray(value) ? (
+                                value.map(size => <Badge key={size} variant="outline" className="px-1.5 py-0.5 text-sm font-mono">{size}</Badge>)
+                              ) : (
+                                <p className="text-base">{Array.isArray(value) ? value.join(', ') : value}</p>
+                              )}
+                            </DetailDisplayRow>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {options.length > 0 && specifications.length > 0 && <hr />}
+                  {specifications.length > 0 && (
+                    <div>
+                      <h3 className="text-base font-semibold mb-3">Specifications</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                        {specifications.map(field => (
+                          <DetailDisplayRow key={field.name} label={field.label}>
+                            <p className="text-base">{product.details?.[field.name]}</p>
+                          </DetailDisplayRow>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
-            </Card>
+              </Card>
+            )}
           </div>
         </ScrollArea>
         <DialogFooter className="p-4 border-t">

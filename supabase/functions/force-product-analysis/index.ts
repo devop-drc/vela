@@ -19,27 +19,30 @@ const getForceProductAnalysisPrompt = (caption: string) => {
     ---
 
     **Instructions:**
-    1.  **Extract All Details:** Scrutinize the caption for every possible product attribute.
-    2.  **Structure Details:** For each attribute, create an object with the following keys:
-        *   \`name\`: A user-friendly name for the attribute (e.g., "Available Sizes", "Material").
-        *   \`value\`: The extracted value. If there are multiple options (like sizes or colors), this should be an array of strings. For a boolean option, use \`true\` or \`false\`. Otherwise, it's a string or number.
-        *   \`unit\`: The unit of measurement, if applicable (e.g., "inches", "kg", null).
-        *   \`type\`: The best UI input type for this attribute. Choose from: "tags" (for multiple freeform options like colors or sizes), "select" (for a single choice from a limited set), "input" (for short text/numbers), "textarea" (for long text), "switch" (for boolean yes/no options).
+    1.  **Categorize:** Classify the product into ONE of the following categories: "Clothing", "Electronics", "Art", "Service", "Generic".
+    2.  **Extract All Details:** Scrutinize the caption for every possible product attribute. This includes, but is not limited to:
+        - **Options:** Sizes (S, M, L), colors (Red, Blue), flavors, etc.
+        - **Specifications:** Materials (Cotton, Linen), dimensions (e.g., "24x36 inches", "50ml"), technical specs (Processor, RAM), ingredients, etc.
+        - **Identifiers:** SKU, model number, reference code.
+        - **Pricing:** Extract the price as a number. Crucially, identify the currency symbol or code (e.g., $, €, £, USD, EUR) and include it. If no price is mentioned, suggest a plausible one.
     3.  **Format Output:** Respond ONLY with a single, valid JSON object. Do not include markdown backticks or any other text.
 
-    **JSON Structure Example:**
+    **JSON Structure:**
     {
       "name": "A creative and concise name for the product/service.",
+      "category": "The category you identified (e.g., 'Clothing').",
       "description": "A compelling one or two-sentence product description.",
-      "price": 29.99,
-      "currency": "USD",
-      "tags": ["handmade", "organic", "summer"],
-      "details": [
-        { "name": "Available Sizes", "value": ["S", "M", "L"], "unit": null, "type": "tags" },
-        { "name": "Material", "value": "100% Organic Cotton", "unit": null, "type": "input" },
-        { "name": "Care Instructions", "value": "Machine wash cold, tumble dry low.", "unit": null, "type": "textarea" },
-        { "name": "Gift Wrapping", "value": true, "unit": null, "type": "switch" }
-      ]
+      "price": "A plausible price as a number (e.g., 25.99).",
+      "currency": "The currency symbol or code extracted from the caption (e.g., '$', '€', 'USD'). Default to 'USD' if not specified.",
+      "tags": ["A list of 3-5 relevant keywords or tags."],
+      "details": {
+        // This object's content depends on the category and the caption.
+        // Populate it with ALL extracted details.
+        // For "Clothing": { "sizes": ["S", "M", "L"], "material": "100% Organic Cotton", "colors": ["Ocean Blue", "Sunset Orange"], "reference_code": "TSHIRT-001" }
+        // For "Art": { "dimensions": "24x36 inches", "medium": "Oil on canvas", "framing": "Unframed" }
+        // For "Service": { "duration": "60 minutes", "format": "1-on-1 video call" }
+        // Be precise with units (e.g., inches, cm, ml, oz).
+      }
     }
   `;
 };
@@ -75,11 +78,6 @@ serve(async (req) => {
     const geminiData = await geminiResponse.json();
     const jsonString = geminiData.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
     const analysis = JSON.parse(jsonString);
-
-    // Ensure details is always an array
-    if (!analysis.details || !Array.isArray(analysis.details)) {
-      analysis.details = [];
-    }
 
     return new Response(JSON.stringify(analysis), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
