@@ -327,8 +327,10 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
 
     useAutosizeTextArea(textAreaRef.current, captionValue || "");
 
+    const MotionForm = motion.form;
+
     return (
-      <motion.form key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
+      <MotionForm key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
         <DialogHeader className="sr-only">
           <DialogTitle>Update Product</DialogTitle>
         </DialogHeader>
@@ -434,7 +436,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
           <Button type="button" variant="ghost" onClick={() => setIsEditing(false)} disabled={isSubmitting}>Cancel</Button>
           <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button>
         </DialogFooter>
-      </motion.form>
+      </MotionForm>
     )
   };
 
