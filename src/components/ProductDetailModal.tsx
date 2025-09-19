@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "
 import { ScrollArea } from "./ui/scroll-area";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { cn } from "@/lib/utils";
+import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -54,7 +55,6 @@ interface Product {
   media_url: string;
   media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM';
   caption: string;
-  category: string;
   tags: string[];
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
@@ -274,85 +274,102 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
     );
   };
 
-  const EditMode = () => (
-    <motion.form key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
-      <DialogHeader className="sr-only">
-        <DialogTitle>Update Product</DialogTitle>
-      </DialogHeader>
-      <ScrollArea className="flex-1 overflow-y-auto">
-        <div className="p-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
-            <div className="md:col-span-4">
-              <img src={product.media_url} alt={product.name} className="rounded-lg object-cover w-full aspect-square bg-muted" />
-            </div>
-            <div className="md:col-span-6 flex flex-col space-y-4">
-              <div>
-                <div className="flex items-center gap-4 text-sm font-medium">
-                  <Controller name="category" control={control} render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="w-auto border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9 px-2">
-                        <SelectValue placeholder="Category..." />
-                      </SelectTrigger>
-                      <SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent>
-                    </Select>
-                  )} />
-                  <Controller name="details.type" control={control} render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}>
-                      <SelectTrigger className="w-auto border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9 px-2">
-                        <SelectValue placeholder="Type..." />
-                      </SelectTrigger>
-                      <SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-                    </Select>
-                  )} />
-                </div>
-                <div className="flex items-center gap-2 mt-4">
-                  <Input id="name" {...register("name")} placeholder="Product Name" className="border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors flex-1" />
-                  <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn("w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50", statusConfig[statusValue as keyof typeof statusConfig]?.color)}><SelectValue placeholder="Set status..." /></SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
-                </div>
-                {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
+  const EditMode = () => {
+    const captionValue = watch("caption");
+    const textAreaRef = useRef<HTMLTextAreaElement>(null);
+    const { ref: rhfRef, ...captionProps } = register("caption");
+
+    useAutosizeTextArea(textAreaRef.current, captionValue || "");
+
+    return (
+      <motion.form key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Update Product</DialogTitle>
+        </DialogHeader>
+        <ScrollArea className="flex-1 overflow-y-auto">
+          <div className="p-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
+              <div className="md:col-span-4">
+                <img src={product.media_url} alt={product.name} className="rounded-lg object-cover w-full aspect-square bg-muted" />
               </div>
-              <Textarea id="caption" {...register("caption")} placeholder="No description provided." className="border-0 border-b-2 rounded-none bg-transparent p-0 text-base text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors resize-none flex-1" />
-              <div>
-                <Label>Tags</Label>
-                <Controller control={control} name="tags" render={({ field }) => <TagInput {...field} />} />
-              </div>
-              <div className="space-y-2 pt-2">
-                <Label>Pricing & Inventory</Label>
-                <div className="flex items-center gap-4">
-                  <Controller control={control} name="pricing_type" render={({ field }) => (<ToggleGroup type="single" onValueChange={field.onChange} value={field.value} variant="outline" size="sm"><ToggleGroupItem value="one_time">One-time</ToggleGroupItem><ToggleGroupItem value="subscription">Subscription</ToggleGroupItem></ToggleGroup>)} />
-                  <div className="flex-1 flex items-center gap-2">
-                    <Input id="price" type="number" step="0.01" {...register("price")} className="w-24 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
-                    <AnimatePresence>
-                      {pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="flex items-center gap-2 overflow-hidden"><Label htmlFor="inventory" className="text-sm text-muted-foreground">Stock:</Label><Input id="inventory" type="number" {...register("inventory")} className="w-20 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" /></motion.div>)}
-                      {pricingType === 'subscription' && (<motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="flex items-center gap-2 overflow-hidden"><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} /></motion.div>)}
-                    </AnimatePresence>
+              <div className="md:col-span-6 flex flex-col space-y-4">
+                <div>
+                  <div className="flex items-center gap-4 text-sm font-medium">
+                    <Controller name="category" control={control} render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="w-auto border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9 px-2">
+                          <SelectValue placeholder="Category..." />
+                        </SelectTrigger>
+                        <SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent>
+                      </Select>
+                    )} />
+                    <Controller name="details.type" control={control} render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}>
+                        <SelectTrigger className="w-auto border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9 px-2">
+                          <SelectValue placeholder="Type..." />
+                        </SelectTrigger>
+                        <SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                      </Select>
+                    )} />
                   </div>
+                  <div className="flex items-center gap-2 mt-4">
+                    <Input id="name" {...register("name")} placeholder="Product Name" className="border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors flex-1" />
+                    <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn("w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50", statusConfig[statusValue as keyof typeof statusConfig]?.color)}><SelectValue placeholder="Set status..." /></SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
+                  </div>
+                  {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
                 </div>
-                {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
-                {errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}
-                {errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}
+                <Textarea
+                  id="caption"
+                  {...captionProps}
+                  ref={(e) => {
+                    rhfRef(e);
+                    textAreaRef.current = e as HTMLTextAreaElement;
+                  }}
+                  placeholder="No description provided."
+                  className="border-0 border-b-2 rounded-none bg-transparent p-0 text-base text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors resize-none"
+                />
+                <div>
+                  <Label>Tags</Label>
+                  <Controller control={control} name="tags" render={({ field }) => <TagInput {...field} />} />
+                </div>
+                <div className="space-y-2 pt-2">
+                  <Label>Pricing & Inventory</Label>
+                  <div className="flex items-center gap-4">
+                    <Controller control={control} name="pricing_type" render={({ field }) => (<ToggleGroup type="single" onValueChange={field.onChange} value={field.value} variant="outline" size="sm"><ToggleGroupItem value="one_time">One-time</ToggleGroupItem><ToggleGroupItem value="subscription">Subscription</ToggleGroupItem></ToggleGroup>)} />
+                    <div className="flex-1 flex items-center gap-2">
+                      <Input id="price" type="number" step="0.01" {...register("price")} className="w-24 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
+                      <AnimatePresence>
+                        {pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="flex items-center gap-2 overflow-hidden"><Label htmlFor="inventory" className="text-sm text-muted-foreground">Stock:</Label><Input id="inventory" type="number" {...register("inventory")} className="w-20 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" /></motion.div>)}
+                        {pricingType === 'subscription' && (<motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="flex items-center gap-2 overflow-hidden"><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} /></motion.div>)}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                  {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
+                  {errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}
+                  {errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}
+                </div>
               </div>
             </div>
+            <Card>
+              <CardHeader><CardTitleComponent className="text-base">Options & Specifications</CardTitleComponent></CardHeader>
+              <CardContent>
+                {DetailsComponent ? <DetailsComponent control={control} /> : <p className="text-sm text-muted-foreground text-center">Select a category and type to see specific details.</p>}
+              </CardContent>
+            </Card>
           </div>
-          <Card>
-            <CardHeader><CardTitleComponent className="text-base">Options & Specifications</CardTitleComponent></CardHeader>
-            <CardContent>
-              {DetailsComponent ? <DetailsComponent control={control} /> : <p className="text-sm text-muted-foreground text-center">Select a category and type to see specific details.</p>}
-            </CardContent>
-          </Card>
-        </div>
-      </ScrollArea>
-      <DialogFooter className="p-4 border-t">
-        <Button type="button" variant="ghost" onClick={() => setIsEditing(false)} disabled={isSubmitting}>Cancel</Button>
-        <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button>
-      </DialogFooter>
-    </motion.form>
-  );
+        </ScrollArea>
+        <DialogFooter className="p-4 border-t">
+          <Button type="button" variant="ghost" onClick={() => setIsEditing(false)} disabled={isSubmitting}>Cancel</Button>
+          <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button>
+        </DialogFooter>
+      </motion.form>
+    )
+  };
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setIsEditing(false); } }}>
-        <DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="sm:max-w-6xl max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Product Details: {product.name}</DialogTitle>
             <DialogDescription>View or edit product details for {product.name}.</DialogDescription>
