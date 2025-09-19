@@ -352,7 +352,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setIsEditing(false); } }}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Product Details: {product.name}</DialogTitle>
             <DialogDescription>View or edit product details for {product.name}.</DialogDescription>
