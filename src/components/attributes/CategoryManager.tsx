@@ -160,10 +160,10 @@ export const CategoryManager = () => {
                     <Input placeholder="Category Name" {...register('name')} />
                     {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
                     <Controller name="parent_id" control={control} render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value || ''}>
+                      <Select onValueChange={(value) => field.onChange(value === 'no-parent' ? null : value)} value={field.value || 'no-parent'}>
                         <SelectTrigger><SelectValue placeholder="Select Parent (Optional)" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No Parent</SelectItem>
+                          <SelectItem value="no-parent">No Parent</SelectItem>
                           {categories.filter(c => c.id !== selectedCategory?.id).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
