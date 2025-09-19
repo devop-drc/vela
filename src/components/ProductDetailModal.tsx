@@ -249,49 +249,70 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
 
   const EditMode = () => (
     <motion.form key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
-      <DialogHeader className="p-4 border-b">
+      <DialogHeader className="sr-only">
         <DialogTitle>Update Product</DialogTitle>
       </DialogHeader>
       <ScrollArea className="flex-1 overflow-y-auto">
-        <div className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                    <div>
-                        <img src={product.media_url} alt={product.name} className="rounded-lg object-cover w-full aspect-square bg-muted" />
-                    </div>
-                    <Card>
-                        <CardHeader><CardTitleComponent className="text-base">Core Details</CardTitleComponent></CardHeader>
-                        <CardContent className="space-y-4">
-                        <div className="space-y-2"><Label htmlFor="name">Product Name</Label><Input id="name" {...register("name")} />{errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}</div>
-                        <div className="space-y-2"><Label htmlFor="caption">Description</Label><Textarea id="caption" {...register("caption")} rows={3} /></div>
-                        <div className="space-y-2"><Label htmlFor="tags">Tags</Label><Controller control={control} name="tags" render={({ field }) => <TagInput {...field} />} /></div>
-                        </CardContent>
-                    </Card>
-                </div>
-                <div className="space-y-4">
-                    <Card>
-                        <CardHeader><CardTitleComponent className="text-base">Pricing & Status</CardTitleComponent></CardHeader>
-                        <CardContent className="space-y-4">
-                        <div className="space-y-2"><Label>Status</Label><Controller control={control} name="status" render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="Draft" id="draft" /><Label htmlFor="draft">Draft</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="Active" id="active" /><Label htmlFor="active">Active</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="Out of Stock" id="out-of-stock" /><Label htmlFor="out-of-stock">Out of Stock</Label></div></RadioGroup>)} /></div>
-                        <div className="space-y-2"><Label>Pricing Model</Label><Controller control={control} name="pricing_type" render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="one_time" id="one_time" /><Label htmlFor="one_time">One-time</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="subscription" id="subscription" /><Label htmlFor="subscription">Subscription</Label></div></RadioGroup>)} /></div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2"><Label htmlFor="price">Price</Label><Input id="price" type="number" step="0.01" {...register("price")} />{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}</div>
-                            <AnimatePresence>{pricingType !== 'subscription' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}><div className="space-y-2"><Label htmlFor="inventory">Inventory</Label><Input id="inventory" type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}</AnimatePresence>
-                        </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader><CardTitleComponent className="text-base">Categorization & Details</CardTitleComponent></CardHeader>
-                        <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2"><Label>Category</Label><Controller name="category" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent></Select>)} /></div>
-                            <div className="space-y-2"><Label>Type</Label><Controller name="details.type" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}><SelectTrigger><SelectValue placeholder="Select type..." /></SelectTrigger><SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select>)} /></div>
-                        </div>
-                        <div className="pt-2">{DetailsComponent ? <DetailsComponent control={control} /> : <p className="text-sm text-muted-foreground text-center">Select a category and type to see specific details.</p>}</div>
-                        </CardContent>
-                    </Card>
-                </div>
+        <div className="p-4 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
+            <div className="md:col-span-4">
+              <img src={product.media_url} alt={product.name} className="rounded-lg object-cover w-full aspect-square bg-muted" />
             </div>
+            <div className="md:col-span-6 flex flex-col space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Controller name="category" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent></Select>)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Type</Label>
+                  <Controller name="details.type" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}><SelectTrigger><SelectValue placeholder="Select type..." /></SelectTrigger><SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select>)} />
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="space-y-2 flex-1">
+                  <Label htmlFor="name">Product Name</Label>
+                  <Input id="name" {...register("name")} />
+                  {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-[140px]"><SelectValue placeholder="Set status..." /></SelectTrigger><SelectContent><SelectItem value="Draft">Draft</SelectItem><SelectItem value="Active">Active</SelectItem><SelectItem value="Out of Stock">Out of Stock</SelectItem></SelectContent></Select>)} />
+                </div>
+              </div>
+              <div className="space-y-2 flex-1 flex flex-col">
+                <Label htmlFor="caption">Description</Label>
+                <Textarea id="caption" {...register("caption")} className="flex-1" rows={3} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tags">Tags</Label>
+                <Controller control={control} name="tags" render={({ field }) => <TagInput {...field} />} />
+              </div>
+              <div className="space-y-4 pt-2">
+                <div className="space-y-2">
+                  <Label>Pricing Model</Label>
+                  <Controller control={control} name="pricing_type" render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="one_time" id="one_time_edit" /><Label htmlFor="one_time_edit">One-time</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="subscription" id="subscription_edit" /><Label htmlFor="subscription_edit">Subscription</Label></div></RadioGroup>)} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Price</Label>
+                    <Input id="price" type="number" step="0.01" {...register("price")} />
+                    {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
+                  </div>
+                  <AnimatePresence>
+                    {pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}><div className="space-y-2"><Label htmlFor="inventory">Inventory</Label><Input id="inventory" type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}
+                    {pricingType === 'subscription' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}><div className="space-y-2"><Label>Billing Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger><SelectValue placeholder="Select interval..." /></SelectTrigger><SelectContent><SelectItem value="month">Monthly</SelectItem><SelectItem value="year">Yearly</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</div></motion.div>)}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </div>
+          </div>
+          <Card>
+            <CardHeader><CardTitleComponent className="text-base">Specific Details</CardTitleComponent></CardHeader>
+            <CardContent>
+              {DetailsComponent ? <DetailsComponent control={control} /> : <p className="text-sm text-muted-foreground text-center">Select a category and type to see specific details.</p>}
+            </CardContent>
+          </Card>
         </div>
       </ScrollArea>
       <DialogFooter className="p-4 border-t">
