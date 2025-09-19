@@ -288,8 +288,22 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
             <div className="md:col-span-6 flex flex-col space-y-4">
               <div>
                 <div className="flex items-center gap-4 text-sm font-medium">
-                  <Controller name="category" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9"><SelectValue placeholder="Category..." /></SelectTrigger><SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent></Select>)} />
-                  <Controller name="details.type" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}><SelectTrigger className="border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9"><SelectValue placeholder="Type..." /></SelectTrigger><SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select>)} />
+                  <Controller name="category" control={control} render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="w-auto border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9 px-2">
+                        <SelectValue placeholder="Category..." />
+                      </SelectTrigger>
+                      <SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  )} />
+                  <Controller name="details.type" control={control} render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}>
+                      <SelectTrigger className="w-auto border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9 px-2">
+                        <SelectValue placeholder="Type..." />
+                      </SelectTrigger>
+                      <SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  )} />
                 </div>
                 <div className="flex items-center gap-2 mt-4">
                   <Input id="name" {...register("name")} placeholder="Product Name" className="border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors flex-1" />
