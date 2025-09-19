@@ -34,6 +34,9 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </div>
               <div className="md:col-span-6 flex flex-col space-y-4">
                 <div>
+                  <p className="text-sm font-medium text-muted-foreground capitalize">
+                    <span>{product.category || 'Uncategorized'}</span>
+                  </p>
                   <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2 mt-1">
                     {product.name}
                     <Badge variant={product.status === 'Active' ? 'default' : 'secondary'}>{product.status}</Badge>
