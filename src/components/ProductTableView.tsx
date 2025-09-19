@@ -8,6 +8,7 @@ interface Product {
   name: string;
   status: 'Active' | 'Draft';
   price: number | null;
+  currency: string | null;
   inventory: number;
   media_url: string;
   pricing_type: 'one_time' | 'subscription';
@@ -72,8 +73,8 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
               {product.price != null ? (
                 <span>
                   {product.pricing_type === 'subscription'
-                    ? `$${product.price.toFixed(2)} / ${product.billing_interval}`
-                    : `$${product.price.toFixed(2)}`}
+                    ? `${product.currency || '$'}${product.price.toFixed(2)} / ${product.billing_interval}`
+                    : `${product.currency || '$'}${product.price.toFixed(2)}`}
                 </span>
               ) : (
                 <span className="flex items-center gap-1.5 text-xs text-amber-600">

@@ -16,6 +16,7 @@ interface Product {
   name: string;
   status: ProductStatus;
   price: number | null;
+  currency: string | null;
   inventory: number;
   media_url: string;
   thumbnail_url?: string;
@@ -139,7 +140,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
           <div className="flex items-end justify-between pt-2">
             {product.price != null ? (
               <p className="font-semibold text-lg">
-                {`$${product.price.toFixed(2)}`}
+                {`${product.currency || '$'}${product.price.toFixed(2)}`}
                 {product.pricing_type === 'subscription' && <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>}
               </p>
             ) : (

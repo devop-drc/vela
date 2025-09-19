@@ -22,6 +22,7 @@ const productSchema = z.object({
   description: z.string().optional(),
   category: z.string().min(1, "Category is required"),
   price: z.coerce.number().min(0, "Price must be a positive number"),
+  currency: z.string().optional(),
   inventory: z.coerce.number().int().min(0, "Inventory must be a positive integer").optional(),
   tags: z.array(z.string()).optional(),
   pricing_type: z.enum(['one_time', 'subscription']),
@@ -46,6 +47,7 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
       description: productData?.description || post?.caption || "",
       category: productData?.category || "generic",
       price: productData?.price || 0,
+      currency: productData?.currency || 'USD',
       inventory: 10,
       tags: productData?.tags || [],
       pricing_type: 'one_time',
@@ -81,6 +83,7 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
       caption: data.description,
       category: data.category,
       price: data.price,
+      currency: data.currency,
       inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
       tags: data.tags,
       details: data.details,
@@ -120,7 +123,14 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
               </div>
               <div className="space-y-2"><Label>Pricing Model</Label><Controller name="pricing_type" control={control} render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="one_time" id="one_time" /><Label htmlFor="one_time">One-time</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="subscription" id="subscription" /><Label htmlFor="subscription">Subscription</Label></div></RadioGroup>)} /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label htmlFor="price">Price</Label><Input id="price" type="number" step="0.01" {...register("price")} />{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}</div>
+                <div className="space-y-2">
+                  <Label htmlFor="price">Price</Label>
+                  <div className="flex items-center gap-2">
+                    <Input id="price" type="number" step="0.01" {...register("price")} className="flex-1" />
+                    <Input {...register("currency")} className="w-20" placeholder="USD" />
+                  </div>
+                  {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
+                </div>
                 <AnimatePresence>
                   {pricingType === 'one_time' && (
                     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden">
