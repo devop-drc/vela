@@ -30,8 +30,8 @@ export const TagInput = forwardRef<HTMLDivElement, TagInputProps>(({ value = [],
 
   return (
     <div ref={ref} className={cn(
-      "border border-input rounded-lg p-2 flex flex-wrap gap-2 items-center transition-all",
-      "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+      "border-b border-input bg-transparent rounded-none p-2 flex flex-wrap gap-2 items-center transition-all",
+      "focus-within:bg-muted/50"
     )}>
       {value.map(tag => (
         <Badge key={tag} variant="secondary" className="flex items-center gap-1 text-sm py-1">
@@ -46,7 +46,7 @@ export const TagInput = forwardRef<HTMLDivElement, TagInputProps>(({ value = [],
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="flex-1 border-none shadow-none focus-visible:ring-0 h-auto py-0 px-1"
+        className="flex-1 border-none shadow-none focus-visible:ring-0 h-auto py-0 px-1 bg-transparent"
       />
     </div>
   );

@@ -13,7 +13,7 @@ interface DetailFormProps {
 const DetailField = ({ name, control, label }: { name: string; control: Control<any>; label: string }) => (
   <div className="space-y-2">
     <Label htmlFor={name}>{label}</Label>
-    <Controller name={`details.${name}`} control={control} render={({ field }) => <Input id={name} {...field} value={field.value || ''} />} />
+    <Controller name={`details.${name}`} control={control} render={({ field }) => <Input id={name} {...field} value={field.value || ''} className="border-0 border-b rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />} />
   </div>
 );
 
@@ -32,7 +32,9 @@ export const ClothingDetailsForm = ({ control }: DetailFormProps) => (
         <Label>Material</Label>
         <Controller name="details.material" control={control} render={({ field }) => (
           <Select onValueChange={field.onChange} value={field.value}>
-            <SelectTrigger><SelectValue placeholder="Select material..." /></SelectTrigger>
+            <SelectTrigger className="border-0 border-b rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50">
+                <SelectValue placeholder="Select material..." />
+            </SelectTrigger>
             <SelectContent>{clothingMaterials.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
           </Select>
         )} />
