@@ -47,26 +47,26 @@ export const ClothingDetailsForm = ({ control }: DetailFormProps) => (
 );
 
 export const ElectronicsDetailsForm = ({ control }: DetailFormProps) => (
-    <div className="flex flex-wrap gap-4">
-        <DetailField name="model_number" control={control} label="Model Number" className="flex-1 min-w-[150px]" />
-        <DetailField name="processor" control={control} label="Processor" className="flex-1 min-w-[150px]" />
-        <DetailField name="ram" control={control} label="RAM" className="w-24" />
-        <DetailField name="storage" control={control} label="Storage" className="w-24" />
+    <div className="grid grid-cols-2 gap-4">
+        <DetailField name="model_number" control={control} label="Model Number" />
+        <DetailField name="processor" control={control} label="Processor" />
+        <DetailField name="ram" control={control} label="RAM" />
+        <DetailField name="storage" control={control} label="Storage" />
     </div>
 );
 
 export const ArtDetailsForm = ({ control }: DetailFormProps) => (
-    <div className="flex flex-wrap gap-4">
-        <DetailField name="dimensions" control={control} label="Dimensions" className="flex-1 min-w-[150px]" />
-        <DetailField name="medium" control={control} label="Medium" className="flex-1 min-w-[150px]" />
-        <DetailField name="framed" control={control} label="Framing" className="flex-1 min-w-[150px]" />
+    <div className="grid grid-cols-2 gap-4">
+        <DetailField name="dimensions" control={control} label="Dimensions" />
+        <DetailField name="medium" control={control} label="Medium" />
+        <DetailField name="framed" control={control} label="Framing" />
     </div>
 );
 
 export const ServiceDetailsForm = ({ control }: DetailFormProps) => (
-    <div className="flex flex-wrap gap-4">
-        <DetailField name="duration" control={control} label="Duration" className="flex-1 min-w-[150px]" />
-        <DetailField name="format" control={control} label="Format" className="flex-1 min-w-[150px]" />
+    <div className="grid grid-cols-2 gap-4">
+        <DetailField name="duration" control={control} label="Duration" />
+        <DetailField name="format" control={control} label="Format" />
     </div>
 );
 
