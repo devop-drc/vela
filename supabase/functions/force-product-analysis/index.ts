@@ -19,28 +19,29 @@ const getForceProductAnalysisPrompt = (caption: string) => {
     ---
 
     **Instructions:**
-    1.  **Categorize:** Classify the product into ONE of the following categories: "Clothing", "Electronics", "Art", "Service", "Generic".
+    1.  **Categorize:** Classify the product into ONE of the following categories: "clothing", "electronics", "art", "service", "generic".
     2.  **Extract All Details:** Scrutinize the caption for every possible product attribute. This includes, but is not limited to:
         - **Options:** Sizes (S, M, L), colors (Red, Blue), flavors, etc.
         - **Specifications:** Materials (Cotton, Linen), dimensions (e.g., "24x36 inches", "50ml"), technical specs (Processor, RAM), ingredients, etc.
         - **Identifiers:** SKU, model number, reference code.
-        - **Pricing:** Extract the price as a number. Crucially, identify the currency symbol or code (e.g., $, €, £, USD, EUR) and include it. If no price is mentioned, suggest a plausible one.
+        - **Pricing:** Extract the price as a number. Crucially, identify the currency symbol or code (e.g., $, €, £, USD, EUR) and include it.
     3.  **Format Output:** Respond ONLY with a single, valid JSON object. Do not include markdown backticks or any other text.
 
     **JSON Structure:**
     {
       "name": "A creative and concise name for the product/service.",
-      "category": "The category you identified (e.g., 'Clothing').",
+      "category": "The category you identified (e.g., 'clothing').",
       "description": "A compelling one or two-sentence product description.",
-      "price": "A plausible price as a number (e.g., 25.99).",
+      "price": "A plausible price as a number (e.g., 25.99). If no price is mentioned, this should be 0.",
       "currency": "The currency symbol or code extracted from the caption (e.g., '$', '€', 'USD'). Default to 'USD' if not specified.",
       "tags": ["A list of 3-5 relevant keywords or tags."],
       "details": {
+        "type": "A specific type within the category (e.g., 't-shirt', 'print', 'consulting', 'generic-device'). Default to the first available type for the category.",
         // This object's content depends on the category and the caption.
         // Populate it with ALL extracted details.
-        // For "Clothing": { "sizes": ["S", "M", "L"], "material": "100% Organic Cotton", "colors": ["Ocean Blue", "Sunset Orange"], "reference_code": "TSHIRT-001" }
-        // For "Art": { "dimensions": "24x36 inches", "medium": "Oil on canvas", "framing": "Unframed" }
-        // For "Service": { "duration": "60 minutes", "format": "1-on-1 video call" }
+        // For "clothing": { "sizes": ["S", "M", "L"], "material": "100% Organic Cotton", "colors": ["Ocean Blue", "Sunset Orange"], "reference_code": "TSHIRT-001" }
+        // For "art": { "dimensions": "24x36 inches", "medium": "Oil on canvas", "framed": "Unframed" }
+        // For "service": { "duration": "60 minutes", "format": "1-on-1 video call" }
         // Be precise with units (e.g., inches, cm, ml, oz).
       }
     }
