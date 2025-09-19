@@ -14,8 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "
 import { TagInput } from "@/components/TagInput";
 import { Loader2, XCircle, PlusCircle, CheckCircle, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
+import { DynamicDetailEditor } from "./DynamicDetailEditor";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -26,16 +26,11 @@ const statusConfig = {
 export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting }: any) => {
     const { register, handleSubmit, control, watch, formState: { errors } } = form;
     const pricingType = watch("pricing_type");
-    const categoryValue = watch("category");
-    const typeValue = watch("details.type");
     const statusValue = watch("status");
     const captionValue = watch("caption");
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const { ref: rhfRef, ...captionProps } = register("caption");
     useAutosizeTextArea(textAreaRef.current, captionValue || "");
-
-    const { category, type } = getCategoryAndType(categoryValue, typeValue);
-    const DetailsComponent = type?.component;
 
     return (
       <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -76,31 +71,12 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                   </div>
                 </div>
                 <div className="md:col-span-6 flex flex-col space-y-4">
-                  <div>
-                    <div className="flex items-center gap-4 text-sm font-medium">
-                      <Controller name="category" control={control} render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className="w-auto border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9 px-2">
-                            <SelectValue placeholder="Category..." />
-                          </SelectTrigger>
-                          <SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent>
-                        </Select>
-                      )} />
-                      <Controller name="details.type" control={control} render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}>
-                          <SelectTrigger className="w-auto border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9 px-2">
-                            <SelectValue placeholder="Type..." />
-                          </SelectTrigger>
-                          <SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-                        </Select>
-                      )} />
-                    </div>
-                    <div className="flex items-center gap-2 mt-4">
-                      <Input id="name" {...register("name")} placeholder="Product Name" className="w-auto border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors" />
-                      <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn("w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50", statusConfig[statusValue as keyof typeof statusConfig]?.color)}>{statusValue && statusConfig[statusValue as keyof typeof statusConfig] ? (<div className="flex items-center gap-2"><statusConfig[statusValue as keyof typeof statusConfig].icon className="h-4 w-4" /><span>{statusConfig[statusValue as keyof typeof statusConfig].label}</span></div>) : <SelectValue placeholder="Set status..." />}</SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
-                    </div>
-                    {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
+                  <div className="flex items-center gap-2">
+                    <Input id="name" {...register("name")} placeholder="Product Name" className="w-auto border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors" />
+                    <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn("w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50", statusConfig[statusValue as keyof typeof statusConfig]?.color)}>{statusValue && statusConfig[statusValue as keyof typeof statusConfig] ? (<div className="flex items-center gap-2"><statusConfig[statusValue as keyof typeof statusConfig].icon className="h-4 w-4" /><span>{statusConfig[statusValue as keyof typeof statusConfig].label}</span></div>) : <SelectValue placeholder="Set status..." />}</SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
                   </div>
+                  {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
+                  
                   <Textarea
                     id="caption"
                     {...captionProps}
@@ -138,9 +114,9 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                 </div>
               </div>
               <Card>
-                <CardHeader><CardTitleComponent className="text-base">Options & Specifications</CardTitleComponent></CardHeader>
+                <CardHeader><CardTitleComponent className="text-base">Product Details</CardTitleComponent></CardHeader>
                 <CardContent>
-                  {DetailsComponent ? <DetailsComponent control={control} /> : <p className="text-sm text-muted-foreground text-center">Select a category and type to see specific details.</p>}
+                  <DynamicDetailEditor control={control} />
                 </CardContent>
               </Card>
             </div>
