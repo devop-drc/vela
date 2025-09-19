@@ -164,7 +164,17 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
     const specifications = allDetails.filter(f => !optionFieldNames.includes(f.name));
 
     return (
-      <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
+      <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex flex-col">
+        <DialogHeader className="p-4 border-b flex flex-row justify-between items-start">
+          <div>
+            <DialogTitle className="text-2xl font-bold tracking-tight">{product.name}</DialogTitle>
+            <DialogDescription className="mt-1">
+              <span>{category?.label || 'Uncategorized'}</span>
+              {type && <span> &middot; {type.label}</span>}
+            </DialogDescription>
+          </div>
+          <Badge variant={product.status === 'Active' ? 'default' : 'secondary'} className="mt-1">{product.status}</Badge>
+        </DialogHeader>
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
@@ -174,16 +184,6 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
                 </button>
               </div>
               <div className="md:col-span-6 flex flex-col space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    <span>{category?.label || 'Uncategorized'}</span>
-                    {type && <span> &middot; {type.label}</span>}
-                  </p>
-                  <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2 mt-1">
-                    {product.name}
-                    <Badge variant={product.status === 'Active' ? 'default' : 'secondary'}>{product.status}</Badge>
-                  </h1>
-                </div>
                 <p className="text-base text-muted-foreground flex-1">{product.caption || 'No description provided.'}</p>
                 {product.tags?.length > 0 && (
                   <div className="flex flex-wrap gap-2">
@@ -248,7 +248,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
   };
 
   const EditMode = () => (
-    <motion.form key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
+    <motion.form key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex flex-col">
       <DialogHeader className="p-4 border-b">
         <DialogTitle>Update Product</DialogTitle>
       </DialogHeader>
@@ -309,7 +309,9 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
             <DialogTitle>Product Details: {product.name}</DialogTitle>
             <DialogDescription>View or edit product details for {product.name}.</DialogDescription>
           </DialogHeader>
-          <AnimatePresence mode="wait">{isEditing ? <EditMode /> : <ViewMode />}</AnimatePresence>
+          <div className="flex-1 flex flex-col min-h-0">
+            <AnimatePresence mode="wait">{isEditing ? <EditMode /> : <ViewMode />}</AnimatePresence>
+          </div>
         </DialogContent>
       </Dialog>
       <Dialog open={isMediaViewerOpen} onOpenChange={setIsMediaViewerOpen}>
