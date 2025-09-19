@@ -165,7 +165,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
 
     return (
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 overflow-y-auto">
           <div className="p-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
               <div className="md:col-span-4">
@@ -252,7 +252,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
       <DialogHeader className="p-4 border-b">
         <DialogTitle>Update Product</DialogTitle>
       </DialogHeader>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 overflow-y-auto">
         <div className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
