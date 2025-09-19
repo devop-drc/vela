@@ -264,37 +264,39 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <div className="flex-1 space-y-1">
                     <Label>Category</Label>
-                    <Controller name="category" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="border-0 border-b rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent></Select>)} />
+                    <Controller name="category" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent></Select>)} />
                   </div>
                   <div className="flex-1 space-y-1">
                     <Label>Type</Label>
-                    <Controller name="details.type" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}><SelectTrigger className="border-0 border-b rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Select type..." /></SelectTrigger><SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select>)} />
+                    <Controller name="details.type" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}><SelectTrigger className="border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Select type..." /></SelectTrigger><SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select>)} />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-4">
-                  <Input id="name" {...register("name")} placeholder="Product Name" className="border-0 border-b rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors flex-1" />
-                  <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-[140px] border-0 border-b rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Set status..." /></SelectTrigger><SelectContent><SelectItem value="Draft">Draft</SelectItem><SelectItem value="Active">Active</SelectItem><SelectItem value="Out of Stock">Out of Stock</SelectItem></SelectContent></Select>)} />
+                  <Input id="name" {...register("name")} placeholder="Product Name" className="border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors flex-1" />
+                  <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Set status..." /></SelectTrigger><SelectContent><SelectItem value="Draft">Draft</SelectItem><SelectItem value="Active">Active</SelectItem><SelectItem value="Out of Stock">Out of Stock</SelectItem></SelectContent></Select>)} />
                 </div>
                 {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
               </div>
-              <Textarea id="caption" {...register("caption")} placeholder="No description provided." className="border-0 border-b rounded-none bg-transparent p-0 text-base text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors resize-none flex-1" />
+              <Textarea id="caption" {...register("caption")} placeholder="No description provided." className="border-0 border-b-2 rounded-none bg-transparent p-0 text-base text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors resize-none flex-1" />
               <div>
                 <Label>Tags</Label>
                 <Controller control={control} name="tags" render={({ field }) => <TagInput {...field} />} />
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="space-y-2">
-                  <Label>Pricing</Label>
-                  <Controller control={control} name="pricing_type" render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-4 pt-1"><div className="flex items-center space-x-2"><RadioGroupItem value="one_time" id="one_time_edit" /><Label htmlFor="one_time_edit">One-time</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="subscription" id="subscription_edit" /><Label htmlFor="subscription_edit">Subscription</Label></div></RadioGroup>)} />
-                  <Input id="price" type="number" step="0.01" {...register("price")} className="mt-2 border-0 border-b rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
-                  {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
+              <div className="space-y-2 pt-2">
+                <Label>Pricing & Inventory</Label>
+                <div className="flex items-center gap-4">
+                  <Controller control={control} name="pricing_type" render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="one_time" id="one_time_edit" /><Label htmlFor="one_time_edit">One-time</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="subscription" id="subscription_edit" /><Label htmlFor="subscription_edit">Subscription</Label></div></RadioGroup>)} />
+                  <div className="flex-1 flex items-center gap-2">
+                    <Input id="price" type="number" step="0.01" {...register("price")} className="w-24 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
+                    <AnimatePresence>
+                      {pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="flex items-center gap-2 overflow-hidden"><Label htmlFor="inventory" className="text-sm text-muted-foreground">Stock:</Label><Input id="inventory" type="number" {...register("inventory")} className="w-20 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" /></motion.div>)}
+                      {pricingType === 'subscription' && (<motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="flex items-center gap-2 overflow-hidden"><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} /></motion.div>)}
+                    </AnimatePresence>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <AnimatePresence>
-                    {pricingType === 'one_time' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><Label>Inventory</Label><Input id="inventory" type="number" {...register("inventory")} className="mt-1 border-0 border-b rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</motion.div>)}
-                    {pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><Label>Billing Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="mt-1 border-0 border-b rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Select interval..." /></SelectTrigger><SelectContent><SelectItem value="month">Monthly</SelectItem><SelectItem value="year">Yearly</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}
-                  </AnimatePresence>
-                </div>
+                {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
+                {errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}
+                {errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}
               </div>
             </div>
           </div>

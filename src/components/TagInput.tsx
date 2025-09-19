@@ -30,7 +30,7 @@ export const TagInput = forwardRef<HTMLDivElement, TagInputProps>(({ value = [],
 
   return (
     <div ref={ref} className={cn(
-      "border-b border-input bg-transparent rounded-none p-2 flex flex-wrap gap-2 items-center transition-all",
+      "border-b-2 border-input bg-transparent rounded-none p-2 flex flex-wrap gap-2 items-center transition-all",
       "focus-within:bg-muted/50"
     )}>
       {value.map(tag => (
