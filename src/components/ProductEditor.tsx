@@ -50,14 +50,14 @@ interface Product {
   details: any;
 }
 
-interface ProductDetailModalProps {
+interface ProductEditorProps {
   product: Product | null;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: () => void;
 }
 
-export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: ProductDetailModalProps) => {
+export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEditorProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
