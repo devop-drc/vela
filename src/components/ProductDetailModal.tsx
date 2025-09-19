@@ -14,7 +14,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Edit, Trash2, CheckCircle, XCircle, Archive, PlayCircle } from "lucide-react";
+import { Loader2, Edit, Trash2, CheckCircle, XCircle, Archive, PlayCircle, Upload, PlusCircle } from "lucide-react";
 import { TagInput } from "./TagInput";
 import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "./ui/card";
@@ -54,6 +54,7 @@ interface Product {
   inventory: number;
   media_url: string;
   media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM';
+  media_gallery: string[] | null;
   caption: string;
   tags: string[];
   pricing_type: 'one_time' | 'subscription';
@@ -69,9 +70,9 @@ interface ProductDetailModalProps {
 }
 
 const statusConfig = {
-  'Active': { icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200" },
-  'Draft': { icon: XCircle, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200" },
-  'Out of Stock': { icon: Archive, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" },
+  'Active': { icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", label: "Active" },
+  'Draft': { icon: XCircle, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", label: "Draft" },
+  'Out of Stock': { icon: Archive, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200", label: "Out of Stock" },
 };
 
 const DetailDisplayRow = ({ label, children }: { label: string, children: React.ReactNode }) => (
@@ -87,6 +88,8 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mediaItems, setMediaItems] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -106,7 +109,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
         name: product.name || "",
         status: product.status || "Draft",
         caption: product.caption || "",
-        category: product.category || "generic",
+        category: product.category || "",
         price: product.price || 0,
         inventory: product.inventory || 0,
         tags: product.tags || [],
@@ -114,6 +117,10 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
         billing_interval: product.billing_interval,
         details: product.details || { type: 'generic' },
       });
+      const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
+      setMediaItems(gallery);
+    } else {
+      setMediaItems([]);
     }
   }, [product, reset]);
   
@@ -125,6 +132,47 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
   }, [categoryValue, setValue, typeValue]);
 
   if (!product) return null;
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showError("You must be logged in to upload.");
+      setIsUploading(false);
+      return;
+    }
+
+    const filePath = `${user.id}/${product.id}/${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from('design-assets').upload(filePath, file);
+
+    if (error) {
+      showError(`Upload failed: ${error.message}`);
+    } else {
+      const { data: { publicUrl } } = supabase.storage.from('design-assets').getPublicUrl(filePath);
+      setMediaItems(prev => [...prev, publicUrl]);
+    }
+    setIsUploading(false);
+  };
+
+  const handleImageDelete = async (urlToDelete: string) => {
+    const fileName = urlToDelete.split('/').pop();
+    if (!fileName) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const filePath = `${user.id}/${product.id}/${fileName}`;
+    const { error } = await supabase.storage.from('design-assets').remove([filePath]);
+
+    if (error) {
+      showError(`Failed to delete image: ${error.message}`);
+    } else {
+      setMediaItems(prev => prev.filter(url => url !== urlToDelete));
+    }
+  };
 
   const handleSave = async (data: ProductFormData) => {
     setIsSubmitting(true);
@@ -145,6 +193,9 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
         tags: data.tags, pricing_type: data.pricing_type,
         billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
         details: cleanedDetails,
+        media_gallery: mediaItems,
+        media_url: mediaItems[0] || null,
+        thumbnail_url: mediaItems[0] || null,
       }).eq('id', product.id);
 
     if (error) { showError(`Failed to update product: ${error.message}`); } 
@@ -180,23 +231,18 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
               <div className="md:col-span-4">
                 <Carousel className="w-full rounded-lg overflow-hidden group">
                   <CarouselContent>
-                    <CarouselItem>
-                      <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
-                        {product.media_type === 'VIDEO' ? (
-                          <>
-                            <video src={product.media_url} autoPlay loop muted playsInline className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              <PlayCircle className="h-16 w-16 text-white/80" />
-                            </div>
-                          </>
-                        ) : (
-                          <img src={product.media_url} alt={product.name} className="object-cover w-full h-full" />
-                        )}
-                      </div>
-                    </CarouselItem>
+                    {mediaItems.map((url, index) => (
+                      <CarouselItem key={index}>
+                        <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
+                          <img src={url} alt={`${product.name} - image ${index + 1}`} className="object-cover w-full h-full" />
+                        </div>
+                      </CarouselItem>
+                    ))}
                   </CarouselContent>
-                  <CarouselPrevious className="left-2" />
-                  <CarouselNext className="right-2" />
+                  {mediaItems.length > 1 && <>
+                    <CarouselPrevious className="left-2" />
+                    <CarouselNext className="right-2" />
+                  </>}
                 </Carousel>
               </div>
               <div className="md:col-span-6 flex flex-col space-y-4">
@@ -290,7 +336,33 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
           <div className="p-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
               <div className="md:col-span-4">
-                <img src={product.media_url} alt={product.name} className="rounded-lg object-cover w-full aspect-square bg-muted" />
+                <Carousel className="w-full rounded-lg overflow-hidden group">
+                  <CarouselContent>
+                    {mediaItems.map((url, index) => (
+                      <CarouselItem key={index}>
+                        <img src={url} alt={`${product.name} - image ${index + 1}`} className="object-cover w-full aspect-square bg-muted" />
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  {mediaItems.length > 1 && <>
+                    <CarouselPrevious className="left-2" />
+                    <CarouselNext className="right-2" />
+                  </>}
+                </Carousel>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {mediaItems.map((url) => (
+                    <div key={url} className="relative group">
+                      <img src={url} className="h-16 w-16 rounded-md object-cover border" />
+                      <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100" onClick={() => handleImageDelete(url)}><XCircle className="h-4 w-4" /></Button>
+                    </div>
+                  ))}
+                  <Button asChild size="icon" variant="outline" className="h-16 w-16 rounded-md">
+                    <label htmlFor="image-upload" className="cursor-pointer">
+                      {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <PlusCircle className="h-6 w-6 text-muted-foreground" />}
+                    </label>
+                  </Button>
+                  <Input id="image-upload" type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={isUploading} />
+                </div>
               </div>
               <div className="md:col-span-6 flex flex-col space-y-4">
                 <div>
@@ -313,8 +385,8 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
                     )} />
                   </div>
                   <div className="flex items-center gap-2 mt-4">
-                    <Input id="name" {...register("name")} placeholder="Product Name" className="border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors flex-1" />
-                    <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn("w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50", statusConfig[statusValue as keyof typeof statusConfig]?.color)}><SelectValue placeholder="Set status..." /></SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
+                    <Input id="name" {...register("name")} placeholder="Product Name" className="w-auto border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors" />
+                    <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn("w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50", statusConfig[statusValue as keyof typeof statusConfig]?.color)}>{statusValue && statusConfig[statusValue as keyof typeof statusConfig] ? (<div className="flex items-center gap-2"><statusConfig[statusValue as keyof typeof statusConfig].icon className="h-4 w-4" /><span>{statusConfig[statusValue as keyof typeof statusConfig].label}</span></div>) : <SelectValue placeholder="Set status..." />}</SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
                   </div>
                   {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
                 </div>

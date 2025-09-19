@@ -18,17 +18,19 @@ const DetailField = ({ name, control, label, className }: { name: string; contro
 );
 
 export const ClothingDetailsForm = ({ control }: DetailFormProps) => (
-  <div className="space-y-4">
-    <div className="space-y-2">
-      <Label>Available Sizes</Label>
-      <Controller name="details.sizes" control={control} render={({ field }) => <SizeSelector {...field} />} />
+  <div className="space-y-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+      <div className="space-y-2">
+        <Label>Available Sizes</Label>
+        <Controller name="details.sizes" control={control} render={({ field }) => <SizeSelector {...field} />} />
+      </div>
+      <div className="space-y-2">
+        <Label>Available Colors</Label>
+        <Controller name="details.colors" control={control} render={({ field }) => <ColorInput {...field} />} />
+      </div>
     </div>
-    <div className="space-y-2">
-      <Label>Available Colors</Label>
-      <Controller name="details.colors" control={control} render={({ field }) => <ColorInput {...field} />} />
-    </div>
-    <div className="flex flex-wrap gap-4">
-      <div className="space-y-2 flex-1 min-w-[150px]">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+      <div className="space-y-2">
         <Label>Material</Label>
         <Controller name="details.material" control={control} render={({ field }) => (
           <Select onValueChange={field.onChange} value={field.value}>
@@ -39,7 +41,7 @@ export const ClothingDetailsForm = ({ control }: DetailFormProps) => (
           </Select>
         )} />
       </div>
-      <DetailField name="reference_code" control={control} label="Reference Code" className="flex-1 min-w-[150px]" />
+      <DetailField name="reference_code" control={control} label="Reference Code" />
     </div>
   </div>
 );
