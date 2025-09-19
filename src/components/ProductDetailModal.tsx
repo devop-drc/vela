@@ -164,82 +164,77 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
     const specifications = allDetails.filter(f => !optionFieldNames.includes(f.name));
 
     return (
-      <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex flex-col">
-        <DialogHeader className="p-4 border-b flex flex-row justify-between items-start">
-          <div>
-            <DialogTitle className="text-2xl font-bold tracking-tight">{product.name}</DialogTitle>
-            <DialogDescription className="mt-1">
-              <span>{category?.label || 'Uncategorized'}</span>
-              {type && <span> &middot; {type.label}</span>}
-            </DialogDescription>
-          </div>
-          <Badge variant={product.status === 'Active' ? 'default' : 'secondary'} className="mt-1">{product.status}</Badge>
+      <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold tracking-tight">{product.name}</DialogTitle>
+          <DialogDescription>
+            <span>{category?.label || 'Uncategorized'}</span>
+            {type && <span> &middot; {type.label}</span>}
+          </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-1">
-          <div className="p-4 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
-              <div className="md:col-span-4">
-                <button onClick={() => setIsMediaViewerOpen(true)} className="w-full rounded-lg overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-shadow hover:shadow-lg">
-                  <img src={product.media_url} alt={product.name} className="object-cover w-full aspect-square bg-muted" />
-                </button>
-              </div>
-              <div className="md:col-span-6 flex flex-col space-y-4">
-                <p className="text-base text-muted-foreground flex-1">{product.caption || 'No description provided.'}</p>
-                {product.tags?.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {product.tags.map((t, i) => <Badge key={i} variant="secondary">{t}</Badge>)}
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div><Label className="text-sm">Price</Label><p className="font-semibold text-2xl">{product.pricing_type === 'subscription' ? `$${product.price?.toFixed(2)} / ${product.billing_interval}` : `$${product.price?.toFixed(2)}`}</p></div>
-                  {product.pricing_type !== 'subscription' && (<div><Label className="text-sm">Inventory</Label><p className="font-semibold text-2xl">{product.inventory || 0}</p></div>)}
+        <div className="py-4 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
+            <div className="md:col-span-4">
+              <button onClick={() => setIsMediaViewerOpen(true)} className="w-full rounded-lg overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-shadow hover:shadow-lg">
+                <img src={product.media_url} alt={product.name} className="object-cover w-full aspect-square bg-muted" />
+              </button>
+            </div>
+            <div className="md:col-span-6 flex flex-col space-y-4">
+              <p className="text-base text-muted-foreground flex-1">{product.caption || 'No description provided.'}</p>
+              {product.tags?.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {product.tags.map((t, i) => <Badge key={i} variant="secondary">{t}</Badge>)}
                 </div>
+              )}
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div><Label className="text-sm">Price</Label><p className="font-semibold text-2xl">{product.pricing_type === 'subscription' ? `$${product.price?.toFixed(2)} / ${product.billing_interval}` : `$${product.price?.toFixed(2)}`}</p></div>
+                {product.pricing_type !== 'subscription' && (<div><Label className="text-sm">Inventory</Label><p className="font-semibold text-2xl">{product.inventory || 0}</p></div>)}
               </div>
             </div>
-
-            {(options.length > 0 || specifications.length > 0) && (
-              <Card>
-                <CardContent className="p-4 space-y-4">
-                  {options.length > 0 && (
-                    <div>
-                      <h3 className="text-base font-semibold mb-3">Options & Variants</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                        {options.map(field => {
-                          const value = product.details?.[field.name];
-                          return (
-                            <DetailDisplayRow key={field.name} label={field.label}>
-                              {field.name === 'colors' && Array.isArray(value) ? (
-                                value.map(color => <div key={color} title={color} className="h-5 w-5 rounded-full border border-black/10" style={{ backgroundColor: color }} />)
-                              ) : field.name === 'sizes' && Array.isArray(value) ? (
-                                value.map(size => <Badge key={size} variant="outline" className="px-1.5 py-0.5 text-sm font-mono">{size}</Badge>)
-                              ) : (
-                                <p className="text-base">{Array.isArray(value) ? value.join(', ') : value}</p>
-                              )}
-                            </DetailDisplayRow>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  {options.length > 0 && specifications.length > 0 && <hr />}
-                  {specifications.length > 0 && (
-                    <div>
-                      <h3 className="text-base font-semibold mb-3">Specifications</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                        {specifications.map(field => (
-                          <DetailDisplayRow key={field.name} label={field.label}>
-                            <p className="text-base">{product.details?.[field.name]}</p>
-                          </DetailDisplayRow>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
           </div>
-        </ScrollArea>
-        <DialogFooter className="p-4 border-t">
+
+          {(options.length > 0 || specifications.length > 0) && (
+            <Card>
+              <CardContent className="p-4 space-y-4">
+                {options.length > 0 && (
+                  <div>
+                    <h3 className="text-base font-semibold mb-3">Options & Variants</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                      {options.map(field => {
+                        const value = product.details?.[field.name];
+                        return (
+                          <DetailDisplayRow key={field.name} label={field.label}>
+                            {field.name === 'colors' && Array.isArray(value) ? (
+                              value.map(color => <div key={color} title={color} className="h-5 w-5 rounded-full border border-black/10" style={{ backgroundColor: color }} />)
+                            ) : field.name === 'sizes' && Array.isArray(value) ? (
+                              value.map(size => <Badge key={size} variant="outline" className="px-1.5 py-0.5 text-sm font-mono">{size}</Badge>)
+                            ) : (
+                              <p className="text-base">{Array.isArray(value) ? value.join(', ') : value}</p>
+                            )}
+                          </DetailDisplayRow>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {options.length > 0 && specifications.length > 0 && <hr />}
+                {specifications.length > 0 && (
+                  <div>
+                    <h3 className="text-base font-semibold mb-3">Specifications</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                      {specifications.map(field => (
+                        <DetailDisplayRow key={field.name} label={field.label}>
+                          <p className="text-base">{product.details?.[field.name]}</p>
+                        </DetailDisplayRow>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+        <DialogFooter>
           <Button variant="outline" onClick={() => setIsEditing(true)} disabled={isSubmitting}><Edit className="mr-2 h-4 w-4" />Edit</Button>
           <Button variant="destructive" onClick={() => setIsDeleting(true)} disabled={isSubmitting}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>
         </DialogFooter>
@@ -248,53 +243,51 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
   };
 
   const EditMode = () => (
-    <motion.form key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex flex-col">
-      <DialogHeader className="p-4 border-b">
+    <motion.form key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <DialogHeader>
         <DialogTitle>Update Product</DialogTitle>
       </DialogHeader>
-      <ScrollArea className="flex-1">
-        <div className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                    <div>
-                        <img src={product.media_url} alt={product.name} className="rounded-lg object-cover w-full aspect-square bg-muted" />
-                    </div>
-                    <Card>
-                        <CardHeader><CardTitleComponent className="text-base">Core Details</CardTitleComponent></CardHeader>
-                        <CardContent className="space-y-4">
-                        <div className="space-y-2"><Label htmlFor="name">Product Name</Label><Input id="name" {...register("name")} />{errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}</div>
-                        <div className="space-y-2"><Label htmlFor="caption">Description</Label><Textarea id="caption" {...register("caption")} rows={3} /></div>
-                        <div className="space-y-2"><Label htmlFor="tags">Tags</Label><Controller control={control} name="tags" render={({ field }) => <TagInput {...field} />} /></div>
-                        </CardContent>
-                    </Card>
-                </div>
-                <div className="space-y-4">
-                    <Card>
-                        <CardHeader><CardTitleComponent className="text-base">Pricing & Status</CardTitleComponent></CardHeader>
-                        <CardContent className="space-y-4">
-                        <div className="space-y-2"><Label>Status</Label><Controller control={control} name="status" render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="Draft" id="draft" /><Label htmlFor="draft">Draft</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="Active" id="active" /><Label htmlFor="active">Active</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="Out of Stock" id="out-of-stock" /><Label htmlFor="out-of-stock">Out of Stock</Label></div></RadioGroup>)} /></div>
-                        <div className="space-y-2"><Label>Pricing Model</Label><Controller control={control} name="pricing_type" render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="one_time" id="one_time" /><Label htmlFor="one_time">One-time</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="subscription" id="subscription" /><Label htmlFor="subscription">Subscription</Label></div></RadioGroup>)} /></div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2"><Label htmlFor="price">Price</Label><Input id="price" type="number" step="0.01" {...register("price")} />{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}</div>
-                            <AnimatePresence>{pricingType !== 'subscription' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}><div className="space-y-2"><Label htmlFor="inventory">Inventory</Label><Input id="inventory" type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}</AnimatePresence>
-                        </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader><CardTitleComponent className="text-base">Categorization & Details</CardTitleComponent></CardHeader>
-                        <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2"><Label>Category</Label><Controller name="category" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent></Select>)} /></div>
-                            <div className="space-y-2"><Label>Type</Label><Controller name="details.type" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}><SelectTrigger><SelectValue placeholder="Select type..." /></SelectTrigger><SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select>)} /></div>
-                        </div>
-                        <div className="pt-2">{DetailsComponent ? <DetailsComponent control={control} /> : <p className="text-sm text-muted-foreground text-center">Select a category and type to see specific details.</p>}</div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        </div>
-      </ScrollArea>
-      <DialogFooter className="p-4 border-t">
+      <div className="py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                  <div>
+                      <img src={product.media_url} alt={product.name} className="rounded-lg object-cover w-full aspect-square bg-muted" />
+                  </div>
+                  <Card>
+                      <CardHeader><CardTitleComponent className="text-base">Core Details</CardTitleComponent></CardHeader>
+                      <CardContent className="space-y-4">
+                      <div className="space-y-2"><Label htmlFor="name">Product Name</Label><Input id="name" {...register("name")} />{errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}</div>
+                      <div className="space-y-2"><Label htmlFor="caption">Description</Label><Textarea id="caption" {...register("caption")} rows={3} /></div>
+                      <div className="space-y-2"><Label htmlFor="tags">Tags</Label><Controller control={control} name="tags" render={({ field }) => <TagInput {...field} />} /></div>
+                      </CardContent>
+                  </Card>
+              </div>
+              <div className="space-y-4">
+                  <Card>
+                      <CardHeader><CardTitleComponent className="text-base">Pricing & Status</CardTitleComponent></CardHeader>
+                      <CardContent className="space-y-4">
+                      <div className="space-y-2"><Label>Status</Label><Controller control={control} name="status" render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="Draft" id="draft" /><Label htmlFor="draft">Draft</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="Active" id="active" /><Label htmlFor="active">Active</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="Out of Stock" id="out-of-stock" /><Label htmlFor="out-of-stock">Out of Stock</Label></div></RadioGroup>)} /></div>
+                      <div className="space-y-2"><Label>Pricing Model</Label><Controller control={control} name="pricing_type" render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="one_time" id="one_time" /><Label htmlFor="one_time">One-time</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="subscription" id="subscription" /><Label htmlFor="subscription">Subscription</Label></div></RadioGroup>)} /></div>
+                      <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2"><Label htmlFor="price">Price</Label><Input id="price" type="number" step="0.01" {...register("price")} />{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}</div>
+                          <AnimatePresence>{pricingType !== 'subscription' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}><div className="space-y-2"><Label htmlFor="inventory">Inventory</Label><Input id="inventory" type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}</AnimatePresence>
+                      </div>
+                      </CardContent>
+                  </Card>
+                  <Card>
+                      <CardHeader><CardTitleComponent className="text-base">Categorization & Details</CardTitleComponent></CardHeader>
+                      <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2"><Label>Category</Label><Controller name="category" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent></Select>)} /></div>
+                          <div className="space-y-2"><Label>Type</Label><Controller name="details.type" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}><SelectTrigger><SelectValue placeholder="Select type..." /></SelectTrigger><SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select>)} /></div>
+                      </div>
+                      <div className="pt-2">{DetailsComponent ? <DetailsComponent control={control} /> : <p className="text-sm text-muted-foreground text-center">Select a category and type to see specific details.</p>}</div>
+                      </CardContent>
+                  </Card>
+              </div>
+          </div>
+      </div>
+      <DialogFooter>
         <Button type="button" variant="ghost" onClick={() => setIsEditing(false)} disabled={isSubmitting}>Cancel</Button>
         <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button>
       </DialogFooter>
@@ -304,22 +297,12 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setIsEditing(false); } }}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Product Details: {product.name}</DialogTitle>
-            <DialogDescription>View or edit product details for {product.name}.</DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 flex flex-col min-h-0">
-            <AnimatePresence mode="wait">{isEditing ? <EditMode /> : <ViewMode />}</AnimatePresence>
-          </div>
+        <DialogContent className="sm:max-w-4xl">
+          <AnimatePresence mode="wait">{isEditing ? <EditMode /> : <ViewMode />}</AnimatePresence>
         </DialogContent>
       </Dialog>
       <Dialog open={isMediaViewerOpen} onOpenChange={setIsMediaViewerOpen}>
         <DialogContent className="max-w-4xl h-[90vh] p-2 flex items-center justify-center bg-transparent border-none shadow-none">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Image Viewer: {product.name}</DialogTitle>
-            <DialogDescription>A larger view of the product image.</DialogDescription>
-          </DialogHeader>
           <img src={product.media_url} alt="Full size view" className="max-w-full max-h-full object-contain rounded-lg" />
         </DialogContent>
       </Dialog>
