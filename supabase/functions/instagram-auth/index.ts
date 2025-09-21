@@ -20,7 +20,7 @@ const getSupabaseAdmin = () => {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   if (!FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {

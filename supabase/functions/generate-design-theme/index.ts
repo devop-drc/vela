@@ -107,7 +107,7 @@ const getTextOnlyDesignPrompt = (profile: any) => {
 };
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') { return new Response(null, { headers: corsHeaders }); }
+  if (req.method === 'OPTIONS') { return new Response('ok', { headers: corsHeaders }); }
 
   try {
     if (!GEMINI_API_KEY) throw new Error("Gemini API key is not configured.");
