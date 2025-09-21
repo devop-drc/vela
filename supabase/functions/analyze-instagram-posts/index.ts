@@ -1,40 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
-const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-const getProductAnalysisPrompt = (caption: string) => {
-  return `
-    You are an expert e-commerce assistant for a platform that can sell ANY type of product or service (e.g., software, food, consulting, physical goods). Your task is to analyze an Instagram post caption to determine if it describes something for sale.
-
-    Analyze the following caption:
-    ---
-    ${caption}
-    ---
-
-    Respond ONLY with a valid JSON object. Do not include markdown backticks.
-    {
-      "isProductPost": boolean,
-      "reasoning": "A brief explanation of your decision. Be neutral and objective.",
-      "product": {
-        "name": "A concise name for the product or service.",
-        "category": "A suitable category (e.g., 'Software', 'Food', 'Consulting', 'Apparel'). Be specific but concise.",
-        "description": "A one or two-sentence description based on the caption.",
-        "features": ["A list of key features or selling points mentioned in the caption.", "Extract at least 2-3 if possible."],
-        "price": "A number representing the price. Extract it if available, otherwise null.",
-        "currency": "The currency, e.g., 'EUR', 'USD'. Infer if possible, otherwise null.",
-        "tags": ["A list of 3-5 relevant keywords or tags based on the caption."]
-      } | null
-    }
-
-    If isProductPost is false, the "product" field must be null.
-  `;
 };
 
 serve(async (req) => {
@@ -43,10 +12,6 @@ serve(async (req) => {
   }
 
   try {
-    if (!GEMINI_API_KEY) {
-      throw new Error("Gemini API key is not configured.");
-    }
-
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -56,65 +21,46 @@ serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not found');
 
+    // Step 1: Get all Instagram posts
     const { data: postsData, error: invokeError } = await supabase.functions.invoke('instagram-posts');
-    
     if (invokeError) throw invokeError;
-    
     if (postsData.error) {
       return new Response(JSON.stringify({ error: postsData.error }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });
     }
-
     if (!postsData.posts) {
         return new Response(JSON.stringify({ posts: [] }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }
 
+    // Step 2: Get existing products to check for imports
     const { data: business, error: businessError } = await supabase
-      .from('businesses')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
+      .from('businesses').select('id').eq('user_id', user.id).single();
 
-    if (businessError || !business) {
-      // If there's no business, there can be no products, so return early.
-      const analyzedPosts = postsData.posts.map((post: any) => ({ ...post, isImported: false, analysis: null }));
-      return new Response(JSON.stringify({ posts: analyzedPosts }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    let existingPostIds = new Set();
+    if (business && !businessError) {
+      const { data: existingProducts, error: productsError } = await supabase
+        .from('products').select('instagram_post_id').eq('business_id', business.id);
+      if (productsError) throw productsError;
+      existingPostIds = new Set(existingProducts.map(p => p.instagram_post_id));
     }
 
-    const { data: existingProducts, error: productsError } = await supabase
-      .from('products')
-      .select('instagram_post_id')
-      .eq('business_id', business.id);
-
-    if (productsError) throw productsError;
-    const existingPostIds = new Set(existingProducts.map(p => p.instagram_post_id));
-
+    // Step 3: Analyze each post using the new chain-of-thought function
     const analysisPromises = postsData.posts.map(async (post: any) => {
       let analysis = null;
       if (post.caption) {
         try {
-          const prompt = getProductAnalysisPrompt(post.caption);
-          const geminiResponse = await fetch(GEMINI_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+          const { data: analysisData, error: analysisError } = await supabase.functions.invoke('ai-product-analyzer', {
+            body: { caption: post.caption },
           });
-
-          if (geminiResponse.ok) {
-            const geminiData = await geminiResponse.json();
-            const jsonString = geminiData.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
-            analysis = JSON.parse(jsonString);
-          } else {
-             console.error(`Gemini API error for post ${post.id}:`, await geminiResponse.text());
-          }
+          if (analysisError) throw analysisError;
+          if (analysisData.error) console.error(`Analysis error for post ${post.id}:`, analysisData.error);
+          else analysis = analysisData;
         } catch (e) {
-          console.error(`Failed to parse Gemini response for post ${post.id}:`, e);
+          console.error(`Failed to analyze post ${post.id}:`, e.message);
         }
       }
       return {

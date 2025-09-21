@@ -17,7 +17,11 @@ interface AnalyzedPost {
   thumbnail_url?: string;
   caption?: string;
   isImported: boolean;
-  analysis: any | null;
+  analysis: {
+    isProductPost: boolean;
+    product?: any;
+    reasoning?: string;
+  } | null;
 }
 
 interface InstagramPostModalProps {
@@ -170,13 +174,13 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                           <div className="space-y-4">
                             <div className="flex items-start gap-4">
                               {selectedPost.analysis.isProductPost ? <Badge className="mt-1">Product</Badge> : <Badge variant="secondary" className="mt-1">General</Badge>}
-                              <p className="text-sm text-muted-foreground flex-1">{selectedPost.analysis.reasoning}</p>
+                              <p className="text-sm text-muted-foreground flex-1">{selectedPost.analysis.reasoning || "AI analysis determined this is a product post."}</p>
                             </div>
-                            {selectedPost.analysis.product?.features?.length > 0 && (
+                            {selectedPost.analysis.product?.details?.features?.length > 0 && (
                                <div className="border-t pt-4 mt-4">
                                 <h4 className="font-semibold text-sm mb-2">Extracted Features:</h4>
                                 <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                                    {selectedPost.analysis.product.features.map((feature: string, index: number) => (<li key={index}>{feature}</li>))}
+                                    {selectedPost.analysis.product.details.features.map((feature: string, index: number) => (<li key={index}>{feature}</li>))}
                                 </ul>
                                </div>
                             )}
