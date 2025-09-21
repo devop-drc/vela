@@ -149,8 +149,55 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     }
   };
 
+  const logFeedback = async (originalProduct: Product, newData: ProductFormData) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const feedbackEntries = [];
+    const fieldsToCompare: (keyof ProductFormData)[] = ['name', 'caption', 'category', 'price', 'currency', 'inventory'];
+
+    for (const field of fieldsToCompare) {
+      const originalValue = String(originalProduct[field as keyof Product] ?? '');
+      const correctedValue = String(newData[field] ?? '');
+      if (originalValue !== correctedValue) {
+        feedbackEntries.push({
+          user_id: user.id,
+          product_id: originalProduct.id,
+          field_name: field,
+          original_value: originalValue,
+          corrected_value: correctedValue,
+        });
+      }
+    }
+    
+    // Compare details object
+    const originalDetails = originalProduct.details || {};
+    const correctedDetails = newData.details || {};
+    for (const key in correctedDetails) {
+        const originalValue = String(originalDetails[key] ?? '');
+        const correctedValue = String(correctedDetails[key] ?? '');
+        if (originalValue !== correctedValue) {
+            feedbackEntries.push({
+                user_id: user.id,
+                product_id: originalProduct.id,
+                field_name: `details.${key}`,
+                original_value: originalValue,
+                corrected_value: correctedValue,
+            });
+        }
+    }
+
+    if (feedbackEntries.length > 0) {
+      await supabase.from('ai_feedback').insert(feedbackEntries);
+    }
+  };
+
   const handleSave = async (data: ProductFormData) => {
     setIsSubmitting(true);
+
+    // Log feedback before updating
+    await logFeedback(product, data);
+
     const { type: currentTypeDefinition } = getCategoryAndType(data.category, data.details.type);
     const cleanedDetails: { [key: string]: any } = { type: data.details.type };
 
