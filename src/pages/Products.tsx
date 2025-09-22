@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchParams } from "react-router-dom";
-import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
+import { showError, showSuccess } from "@/utils/toast";
 import { InstagramPostModal } from "@/components/InstagramPostModal";
 import { ProductDetailModal } from "@/components/ProductDetailModal";
 import { ProductCard } from "@/components/ProductCard";
@@ -146,18 +146,18 @@ const Products = () => {
   const handleSync = async (syncType: 'quick' | 'full') => {
     runWithIntegrationCheck(async () => {
       setIsSyncing(true);
-      const toastId = showLoading(`Starting ${syncType} sync...`);
+      toast.loading("Initiating sync job...", { id: 'sync-initiating' });
       try {
-        const { data, error } = await supabase.functions.invoke(`${syncType}-sync`);
-        dismissToast(toastId);
+        const { data, error } = await supabase.functions.invoke('background-sync', {
+          body: { syncType },
+        });
+        toast.dismiss('sync-initiating');
         if (error) throw error;
         if (data.error) throw new Error(data.error);
-        showSuccess(data.message || "Sync complete!");
-        fetchProducts();
+        toast.info("Sync job started! You'll see progress updates here.", { id: data.jobId });
       } catch (err: any) {
-        dismissToast(toastId);
-        showError(err.message || `Failed to run ${syncType} sync.`);
-      } finally {
+        toast.dismiss('sync-initiating');
+        showError(err.message || `Failed to start ${syncType} sync.`);
         setIsSyncing(false);
       }
     });
