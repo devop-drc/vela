@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Controller } from "react-hook-form";
 import { DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -12,10 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { TagInput } from "@/components/TagInput";
-import { Loader2, XCircle, PlusCircle, CheckCircle, Archive } from "lucide-react";
+import { Loader2, XCircle, PlusCircle, CheckCircle, Archive, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { showError, showSuccess } from "@/utils/toast";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -24,7 +26,9 @@ const statusConfig = {
 };
 
 export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting }: any) => {
-    const { register, handleSubmit, control, watch, formState: { errors } } = form;
+    const { register, handleSubmit, control, watch, setValue, getValues } = form;
+    const [isFindingSpecs, setIsFindingSpecs] = useState(false);
+
     const pricingType = watch("pricing_type");
     const categoryValue = watch("category");
     const typeValue = watch("details.type");
@@ -36,6 +40,31 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
 
     const { category, type } = getCategoryAndType(categoryValue, typeValue);
     const DetailsComponent = type?.component;
+
+    const handleFindSpecs = async () => {
+      setIsFindingSpecs(true);
+      const { name, category, details } = getValues();
+      const { category: catInfo, type: typeInfo } = getCategoryAndType(category, details.type);
+
+      try {
+        const { data, error } = await supabase.functions.invoke('ai-spec-finder', {
+          body: { productName: name, categoryName: catInfo?.label, typeName: typeInfo?.label },
+        });
+        if (error) throw error;
+        if (data.error) throw new Error(data.error);
+
+        // Merge new specs with existing details
+        const currentDetails = getValues('details');
+        const newDetails = { ...currentDetails, ...data };
+        setValue('details', newDetails, { shouldDirty: true });
+        showSuccess("AI has populated product specifications!");
+
+      } catch (err: any) {
+        showError(err.message || "Failed to find specifications.");
+      } finally {
+        setIsFindingSpecs(false);
+      }
+    };
 
     return (
       <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -139,7 +168,13 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                 </div>
               </div>
               <Card>
-                <CardHeader><CardTitleComponent className="text-base">Options & Specifications</CardTitleComponent></CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitleComponent className="text-base">Options & Specifications</CardTitleComponent>
+                  <Button type="button" variant="outline" size="sm" onClick={handleFindSpecs} disabled={isFindingSpecs}>
+                    {isFindingSpecs ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    Find Specs with AI
+                  </Button>
+                </CardHeader>
                 <CardContent>
                   {DetailsComponent ? <DetailsComponent control={control} /> : <p className="text-sm text-muted-foreground text-center">Select a category and type to see specific details.</p>}
                 </CardContent>

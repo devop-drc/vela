@@ -8,7 +8,7 @@ const Attributes = () => {
   const { setTitle } = usePageTitle();
 
   useEffect(() => {
-    setTitle("Product Types");
+    setTitle("Categories & Attributes");
   }, [setTitle]);
 
   return (

@@ -13,7 +13,7 @@ const Sidebar = () => {
     { to: "/out-of-stock", icon: Archive, label: "Out of Stock" },
     { to: "/orders", icon: ShoppingBag, label: "Orders" },
     { to: "/analytics", icon: BarChart2, label: "Analytics" },
-    { to: "/attributes", icon: ListTree, label: "Product Types" },
+    { to: "/attributes", icon: ListTree, label: "Categories & Attributes" },
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
 
