@@ -146,15 +146,18 @@ const Products = () => {
   const handleSync = async (syncType: 'quick' | 'full') => {
     runWithIntegrationCheck(async () => {
       setIsSyncing(true);
+      const toastId = showLoading(`Starting ${syncType} sync...`);
       try {
-        const { data, error } = await supabase.functions.invoke('background-sync', {
-          body: { syncType },
-        });
+        const { data, error } = await supabase.functions.invoke(`${syncType}-sync`);
+        dismissToast(toastId);
         if (error) throw error;
         if (data.error) throw new Error(data.error);
-        toast.loading("Sync job started...", { id: data.jobId, description: "You can safely close this page." });
+        showSuccess(data.message || "Sync complete!");
+        fetchProducts();
       } catch (err: any) {
-        showError(err.message || "Failed to start sync job.");
+        dismissToast(toastId);
+        showError(err.message || `Failed to run ${syncType} sync.`);
+      } finally {
         setIsSyncing(false);
       }
     });
