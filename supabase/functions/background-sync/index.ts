@@ -57,26 +57,42 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
       return;
     }
 
-    const analysisPromises = newPosts
-      .filter(post => post.caption)
-      .map(post => 
-        supabaseAdmin.functions.invoke('ai-product-analyzer', { body: { caption: post.caption } })
-          .then(({ data, error }) => ({ post, analysis: data, error }))
-      );
-    
-    const analysisResults = await Promise.all(analysisPromises);
-    
-    const productsToInsert = analysisResults
-      .filter(r => !r.error && r.analysis && r.analysis.isProductPost)
-      .map(({ post, analysis }) => {
+    const productsToInsert = [];
+    let processedCount = 0;
+
+    for (const post of newPosts) {
+      if (!post.caption) continue;
+
+      try {
+        const { data: analysis, error: analysisError } = await supabaseAdmin.functions.invoke('ai-product-analyzer', { body: { caption: post.caption } });
+        if (analysisError || !analysis || !analysis.isProductPost) continue;
+
         const p = analysis.product;
-        return {
+        let enrichedDetails = p.details || {};
+
+        if (p.name && p.category && p.details?.type) {
+          const { data: specData, error: specError } = await supabaseAdmin.functions.invoke('ai-spec-finder', {
+            body: { productName: p.name, categoryName: p.category, typeName: p.details.type }
+          });
+          if (!specError && specData && !specData.error) {
+            enrichedDetails = { ...enrichedDetails, ...specData };
+          }
+        }
+        
+        productsToInsert.push({
           business_id: business.id, name: p.name, caption: p.description, category: p.category,
-          price: p.price, currency: p.currency, tags: p.tags, details: p.details,
+          price: p.price, currency: p.currency, tags: p.tags, details: enrichedDetails,
           status: 'Draft', instagram_post_id: post.id, media_url: post.media_url,
           thumbnail_url: post.thumbnail_url, media_type: post.media_type,
-        };
-      });
+        });
+
+      } catch (e) {
+        console.error(`Error processing post ${post.id}:`, e.message);
+      }
+      
+      processedCount++;
+      await updateJobProgress(supabaseAdmin, jobId, processedCount, total, `Analyzed ${processedCount} of ${total} posts...`);
+    }
 
     if (productsToInsert.length > 0) {
       await updateJobProgress(supabaseAdmin, jobId, total, total, `Saving ${productsToInsert.length} new products...`);
@@ -85,14 +101,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
     }
 
     if (syncType === 'full') {
-        await updateJobProgress(supabaseAdmin, jobId, total, total, "Checking for deleted posts...");
-        const allInstagramPostIds = new Set(allPosts.map((p: any) => p.id));
-        const productsToArchive = existingProducts.filter(p => p.instagram_post_id && !allInstagramPostIds.has(p.instagram_post_id));
-        
-        if (productsToArchive.length > 0) {
-            const idsToUpdate = productsToArchive.map(p => p.id);
-            await supabaseAdmin.from('products').update({ status: 'Draft' }).in('id', idsToUpdate);
-        }
+        await supabaseAdmin.from('businesses').update({ last_full_sync_at: new Date().toISOString() }).eq('id', business.id);
     }
 
     const finalMessage = `Sync complete. Added ${productsToInsert.length} new products.`;
@@ -126,6 +135,7 @@ serve(async (req) => {
 
     if (jobError) throw jobError;
 
+    // Do not await this call, let it run in the background
     syncProcess(supabaseAdmin, { ...user, token }, job.id, syncType);
 
     return new Response(JSON.stringify({ jobId: job.id }), {
