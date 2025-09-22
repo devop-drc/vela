@@ -61,6 +61,10 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
     let processedCount = 0;
 
     for (const post of newPosts) {
+      processedCount++;
+      const captionSnippet = post.caption ? `"${post.caption.substring(0, 40)}..."` : `post without caption`;
+      await updateJobProgress(supabaseAdmin, jobId, processedCount, total, `Analyzing: ${captionSnippet}`);
+
       if (!post.caption) continue;
 
       try {
@@ -89,9 +93,6 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
       } catch (e) {
         console.error(`Error processing post ${post.id}:`, e.message);
       }
-      
-      processedCount++;
-      await updateJobProgress(supabaseAdmin, jobId, processedCount, total, `Analyzed ${processedCount} of ${total} posts...`);
     }
 
     if (productsToInsert.length > 0) {
