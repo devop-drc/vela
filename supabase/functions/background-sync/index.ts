@@ -1,0 +1,141 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Use the Service Role Key for admin-level access
+const getSupabaseAdmin = () => createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  { auth: { persistSession: false } }
+);
+
+const updateJobProgress = async (supabase: SupabaseClient, jobId: string, progress: number, total: number, message: string) => {
+  await supabase.from('sync_jobs').update({ progress, total, message, status: 'in_progress', updated_at: new Date().toISOString() }).eq('id', jobId);
+};
+
+const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: string, syncType: 'quick' | 'full') => {
+  try {
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses').select('id').eq('user_id', user.id).single();
+    if (businessError || !business) throw new Error("Could not find business profile.");
+
+    await updateJobProgress(supabaseAdmin, jobId, 0, 100, "Fetching Instagram posts...");
+    
+    const { data: postsData, error: postsError } = await supabaseAdmin.functions.invoke('instagram-posts', {
+      headers: { Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` }, // Assuming the function needs auth
+    });
+    if (postsError) throw postsError;
+    if (postsData.error) throw new Error(postsData.error);
+
+    const allPosts = postsData.posts || [];
+    if (allPosts.length === 0) {
+      await supabaseAdmin.from('sync_jobs').update({ status: 'completed', message: 'No posts found to sync.' }).eq('id', jobId);
+      return;
+    }
+
+    const { data: existingProducts, error: productsError } = await supabaseAdmin
+      .from('products').select('instagram_post_id').eq('business_id', business.id);
+    if (productsError) throw productsError;
+    const existingPostIds = new Set(existingProducts.map(p => p.instagram_post_id));
+
+    let postsToProcess = allPosts;
+    if (syncType === 'quick') {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      postsToProcess = allPosts.filter((p: any) => new Date(p.timestamp) > thirtyDaysAgo);
+    }
+
+    const newPosts = postsToProcess.filter((p: any) => !existingPostIds.has(p.id));
+    const total = newPosts.length;
+    await updateJobProgress(supabaseAdmin, jobId, 0, total, `Found ${total} new posts to analyze.`);
+
+    let newProductsCount = 0;
+    for (let i = 0; i < newPosts.length; i++) {
+      const post = newPosts[i];
+      await updateJobProgress(supabaseAdmin, jobId, i, total, `Analyzing post ${i + 1} of ${total}...`);
+      
+      if (!post.caption) continue;
+
+      const { data: analysis, error: analysisError } = await supabaseAdmin.functions.invoke('ai-product-analyzer', {
+        body: { caption: post.caption },
+      });
+
+      if (analysisError || (analysis && analysis.error)) {
+        console.error(`Failed to analyze post ${post.id}:`, analysisError || (analysis && analysis.error));
+        continue;
+      }
+
+      if (analysis.isProductPost) {
+        const p = analysis.product;
+        const { error: insertError } = await supabaseAdmin.from('products').insert({
+          business_id: business.id, name: p.name, caption: p.description, category: p.category,
+          price: p.price, currency: p.currency, tags: p.tags, details: p.details,
+          status: 'Draft', instagram_post_id: post.id, media_url: post.media_url,
+          thumbnail_url: post.thumbnail_url, media_type: post.media_type,
+        });
+        if (insertError) console.error(`Failed to insert product for post ${post.id}:`, insertError);
+        else newProductsCount++;
+      }
+    }
+
+    // Handle deleted/archived posts for full sync
+    if (syncType === 'full') {
+        await updateJobProgress(supabaseAdmin, jobId, total, total, "Checking for deleted posts...");
+        const allInstagramPostIds = new Set(allPosts.map((p: any) => p.id));
+        const productsToArchive = existingProducts.filter(p => p.instagram_post_id && !allInstagramPostIds.has(p.instagram_post_id));
+        
+        if (productsToArchive.length > 0) {
+            const idsToArchive = productsToArchive.map(p => p.instagram_post_id);
+            await supabaseAdmin.from('products').update({ status: 'Draft' }).in('instagram_post_id', idsToArchive);
+        }
+    }
+
+    const finalMessage = `Sync complete. Added ${newProductsCount} new products.`;
+    await supabaseAdmin.from('sync_jobs').update({ status: 'completed', progress: total, total, message: finalMessage }).eq('id', jobId);
+
+  } catch (error) {
+    console.error('Background Sync Error:', error.message);
+    await supabaseAdmin.from('sync_jobs').update({ status: 'failed', message: error.message }).eq('id', jobId);
+  }
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { syncType } = await req.json();
+
+    const authHeader = req.headers.get('Authorization')!;
+    const { data: { user } } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (!user) throw new Error('User not found');
+
+    const { data: job, error: jobError } = await supabaseAdmin
+      .from('sync_jobs')
+      .insert({ user_id: user.id, status: 'starting' })
+      .select('id')
+      .single();
+
+    if (jobError) throw jobError;
+
+    // IMPORTANT: Do not await this. This lets the function return a response
+    // to the client immediately while the sync process runs in the background.
+    syncProcess(supabaseAdmin, user, job.id, syncType);
+
+    return new Response(JSON.stringify({ jobId: job.id }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});

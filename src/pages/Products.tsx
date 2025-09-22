@@ -22,6 +22,7 @@ import { Search, ListFilter } from "lucide-react";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIntegration } from "@/contexts/IntegrationContext";
+import { toast } from "sonner";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 type GridSizeType = 'sm' | 'md' | 'lg';
@@ -116,21 +117,44 @@ const Products = () => {
     fetchProducts();
   }, [fetchProducts, searchParams, setSearchParams]);
 
+  useEffect(() => {
+    const channel = supabase.channel('sync_jobs')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sync_jobs' }, (payload) => {
+        const job = payload.new as any;
+        if (job.status === 'in_progress') {
+          const percentage = job.total > 0 ? (job.progress / job.total) * 100 : 0;
+          toast.loading(job.message, {
+            id: job.id,
+            description: `Progress: ${Math.round(percentage)}%`,
+          });
+        } else if (job.status === 'completed') {
+          toast.success(job.message, { id: job.id, duration: 5000 });
+          setIsSyncing(false);
+          fetchProducts();
+        } else if (job.status === 'failed') {
+          toast.error(job.message, { id: job.id, duration: 5000 });
+          setIsSyncing(false);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchProducts]);
+
   const handleSync = async (syncType: 'quick' | 'full') => {
     runWithIntegrationCheck(async () => {
       setIsSyncing(true);
-      const toastId = showLoading(`Starting ${syncType} sync with AI...`);
       try {
-        const { data, error } = await supabase.functions.invoke(`${syncType}-sync`);
-        dismissToast(toastId);
+        const { data, error } = await supabase.functions.invoke('background-sync', {
+          body: { syncType },
+        });
         if (error) throw error;
         if (data.error) throw new Error(data.error);
-        showSuccess(data.message || "Sync complete!");
-        await fetchProducts();
+        toast.loading("Sync job started...", { id: data.jobId, description: "You can safely close this page." });
       } catch (err: any) {
-        dismissToast(toastId);
-        showError(err.message || "An unknown error occurred during sync.");
-      } finally {
+        showError(err.message || "Failed to start sync job.");
         setIsSyncing(false);
       }
     });
