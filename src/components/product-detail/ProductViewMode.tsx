@@ -18,6 +18,14 @@ const DetailDisplayRow = ({ label, children }: { label: string, children: React.
     </div>
 );
 
+const formatCurrency = (amount: number, currency: string) => {
+    try {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency }).format(amount);
+    } catch (e) {
+        return `${currency} ${amount.toFixed(2)}`;
+    }
+}
+
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
     const { category, type } = getCategoryAndType(product.category, product.details?.type);
     const optionFieldNames = ['sizes', 'colors', 'framed'];
@@ -70,7 +78,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div><Label className="text-sm">Price</Label><p className="font-semibold text-2xl">{product.pricing_type === 'subscription' ? `${product.currency || '$'}${product.price?.toFixed(2)} / ${product.billing_interval}` : `${product.currency || '$'}${product.price?.toFixed(2)}`}</p></div>
+                  <div><Label className="text-sm">Price</Label><p className="font-semibold text-2xl">{product.pricing_type === 'subscription' ? `${formatCurrency(product.price || 0, product.currency || 'USD')} / ${product.billing_interval}` : formatCurrency(product.price || 0, product.currency || 'USD')}</p></div>
                   {product.pricing_type !== 'subscription' && (<div><Label className="text-sm">Inventory</Label><p className="font-semibold text-2xl">{product.inventory || 0}</p></div>)}
                 </div>
               </div>

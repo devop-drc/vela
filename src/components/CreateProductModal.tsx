@@ -16,13 +16,14 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AnimatePresence, motion } from "framer-motion";
 import { productCategories, getCategoryAndType } from "@/lib/productTypes";
+import { useShop } from "@/contexts/ShopContext";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   description: z.string().optional(),
   category: z.string().min(1, "Category is required"),
   price: z.coerce.number().min(0, "Price must be a positive number"),
-  currency: z.string().optional(),
+  currency: z.string().min(3, "Currency code is required").max(3),
   inventory: z.coerce.number().int().min(0, "Inventory must be a positive integer").optional(),
   tags: z.array(z.string()).optional(),
   pricing_type: z.enum(['one_time', 'subscription']),
@@ -40,20 +41,25 @@ interface CreateProductModalProps {
 }
 
 export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post }: CreateProductModalProps) => {
+  const { shopDetails } = useShop();
+  
   const { register, handleSubmit, control, setValue, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
-    defaultValues: {
+  });
+
+  useEffect(() => {
+    reset({
       name: productData?.name || "",
       description: productData?.description || post?.caption || "",
       category: productData?.category || "generic",
       price: productData?.price || 0,
-      currency: productData?.currency || 'USD',
+      currency: productData?.currency || shopDetails?.currency || 'USD',
       inventory: 10,
       tags: productData?.tags || [],
       pricing_type: 'one_time',
       details: productData?.details || { type: 'generic' },
-    },
-  });
+    });
+  }, [productData, post, shopDetails, reset]);
 
   const pricingType = useWatch({ control, name: "pricing_type" });
   const categoryValue = useWatch({ control, name: "category" });
@@ -130,6 +136,7 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
                     <Input {...register("currency")} className="w-20" placeholder="USD" />
                   </div>
                   {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
+                  {errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}
                 </div>
                 <AnimatePresence>
                   {pricingType === 'one_time' && (

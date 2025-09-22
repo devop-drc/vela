@@ -128,6 +128,7 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                                 <Input {...register("currency")} className="w-20 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" placeholder="USD" />
                             </div>
                             {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
+                            {errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}
                         </div>
                         <AnimatePresence>
                             {pricingType === 'one_time' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label htmlFor="inventory" className="text-xs">Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</motion.div>)}

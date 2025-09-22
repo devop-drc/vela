@@ -7,6 +7,7 @@ import { showError, showSuccess } from "@/utils/toast";
 import { Loader2, Package, User, Mail, Calendar, DollarSign } from "lucide-react";
 import { Separator } from "./ui/separator";
 import { ScrollArea } from "./ui/scroll-area";
+import { useShop } from "@/contexts/ShopContext";
 
 type Order = {
   id: string;
@@ -25,6 +26,7 @@ interface OrderDetailModalProps {
 }
 
 export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDetailModalProps) => {
+  const { shopDetails } = useShop();
   const [items, setItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -40,7 +42,8 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
             price_at_purchase,
             products (
               name,
-              media_url
+              media_url,
+              currency
             )
           `)
           .eq('order_id', order.id);
@@ -73,6 +76,15 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
     setIsUpdating(false);
   };
 
+  const formatCurrency = (amount: number, currencyCode?: string) => {
+    const code = currencyCode || shopDetails?.currency || 'USD';
+    try {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: code }).format(amount);
+    } catch (e) {
+      return `${code} ${amount.toFixed(2)}`;
+    }
+  };
+
   if (!order) return null;
 
   const getStatusColor = (status: string) => {
@@ -100,7 +112,7 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
               <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><User className="h-4 w-4" /> Customer</div><p>{order.customer_name}</p></div>
               <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4" /> Email</div><p>{order.customer_email}</p></div>
               <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" /> Date</div><p>{new Date(order.created_at).toLocaleString()}</p></div>
-              <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><DollarSign className="h-4 w-4" /> Total</div><p className="font-semibold">${order.total_amount.toFixed(2)}</p></div>
+              <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><DollarSign className="h-4 w-4" /> Total</div><p className="font-semibold">{formatCurrency(order.total_amount)}</p></div>
             </div>
             <Separator />
             <div>
@@ -114,7 +126,7 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                         <p className="font-medium">{item.products.name}</p>
                         <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                       </div>
-                      <p className="font-medium">${(item.price_at_purchase * item.quantity).toFixed(2)}</p>
+                      <p className="font-medium">{formatCurrency(item.price_at_purchase * item.quantity, item.products.currency)}</p>
                     </div>
                   ))}
                 </div>

@@ -23,7 +23,7 @@ const getTriagePrompt = (caption: string) => `
 `;
 
 const getExtractionPrompt = (caption: string) => `
-  You are an expert e-commerce analyst. Your task is to meticulously analyze an Instagram post caption and generate a complete, structured JSON object for the product or service being sold.
+  You are an expert e-commerce analyst. Your task is to meticulously analyze an Instagram post caption and generate a complete, structured JSON object for the product or service being sold. Think like a potential customer and extract every detail they would want to know.
 
   Analyze the following caption:
   ---
@@ -32,9 +32,10 @@ const getExtractionPrompt = (caption: string) => `
 
   **Instructions:**
   1.  **Categorize:** Classify the product into ONE of the following categories: "clothing", "electronics", "art", "service", "generic".
-  2.  **Extract All Details:** Scrutinize the caption for every possible product attribute.
-  3.  **Justify Extractions:** For each key-value pair, provide a "justification" field containing the exact quote from the caption that supports your extraction. If you infer a value (like a default currency), state that.
-  4.  **Format Output:** Respond ONLY with a single, valid JSON object. Do not include markdown backticks or any other text.
+  2.  **Extract All Details:** Scrutinize the caption for every possible product attribute. This includes sizes, colors, materials, dimensions, technical specs, etc.
+  3.  **Currency Detection:** Pay close attention to currency symbols ($, €, £, ¥) or ISO codes (USD, EUR, GBP). If a symbol is found, use the corresponding ISO code. If no currency is mentioned, default to "USD".
+  4.  **Justify Extractions:** For each key-value pair, provide a "justification" field containing the exact quote from the caption that supports your extraction. If you infer a value (like a default currency or category), state that clearly.
+  5.  **Format Output:** Respond ONLY with a single, valid JSON object. Do not include markdown backticks or any other text.
 
   **JSON Structure:**
   {
@@ -42,7 +43,7 @@ const getExtractionPrompt = (caption: string) => `
     "category": { "value": "The category you identified.", "justification": "Inferred from '...'" },
     "description": { "value": "A compelling product description.", "justification": "Based on the overall caption." },
     "price": { "value": 25.99, "justification": "Extracted from '...'" },
-    "currency": { "value": "USD", "justification": "Extracted from '$' symbol or inferred." },
+    "currency": { "value": "USD", "justification": "Extracted from '$' symbol." },
     "tags": { "value": ["tag1", "tag2"], "justification": "Based on keywords '...'" },
     "details": {
       "type": { "value": "A specific type within the category.", "justification": "Inferred from '...'" }
@@ -98,7 +99,7 @@ const safeJsonParse = (jsonString: string) => {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { status: 200, headers: corsHeaders });
   }
 
   try {

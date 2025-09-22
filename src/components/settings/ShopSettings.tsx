@@ -1,150 +1,160 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useForm } from 'react-hook-form';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Instagram, Users, Image as ImageIcon, ExternalLink, RefreshCw } from 'lucide-react';
+import { Instagram, Users, Image as ImageIcon, ExternalLink, RefreshCw, Save, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
+import { useShop } from '@/contexts/ShopContext';
+import { Label } from '../ui/label';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { showSuccess } from '@/utils/toast';
 
-const CACHE_KEY = 'shop_details_cache';
-
-interface ShopData {
-  shop_name: string;
-  username: string;
-  description: string;
-  logo_url: string;
-  followers_count: number;
-  media_count: number;
-}
+const currencies = ["USD", "EUR", "GBP", "JPY", "CAD", "AUD"];
 
 export const ShopSettings = () => {
-  const [shopData, setShopData] = useState<ShopData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { shopDetails, updateShopDetails, isLoading: isContextLoading } = useShop();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [syncedData, setSyncedData] = useState<any>(null);
 
-  const fetchShopDetails = useCallback(async () => {
-    setError(null);
-    try {
-      const { data, error: invokeError } = await supabase.functions.invoke('instagram-profile');
-      if (invokeError) throw invokeError;
-      if (data.error) throw new Error(data.error);
-      setShopData(data);
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
-    } catch (err: any) {
-      setError(err.message);
+  const { register, handleSubmit, reset, control, formState: { isSubmitting, isDirty } } = useForm();
+
+  useEffect(() => {
+    if (shopDetails) {
+      reset({
+        shop_name: shopDetails.shop_name,
+        headline: shopDetails.headline,
+        about: shopDetails.about,
+        contact_email: shopDetails.contact_email,
+        currency: shopDetails.currency,
+      });
     }
+  }, [shopDetails, reset]);
+
+  const fetchSyncedDetails = useCallback(async () => {
+    setIsRefreshing(true);
+    const { data, error } = await supabase.functions.invoke('instagram-profile');
+    if (error || data.error) {
+      console.error("Failed to refresh IG data", error || data.error);
+    } else {
+      setSyncedData(data);
+    }
+    setIsRefreshing(false);
   }, []);
 
   useEffect(() => {
-    const initialFetch = async () => {
-      setIsLoading(true);
-      const cachedData = sessionStorage.getItem(CACHE_KEY);
-      if (cachedData) {
-        setShopData(JSON.parse(cachedData));
-      } else {
-        await fetchShopDetails();
-      }
-      setIsLoading(false);
-    };
-    initialFetch();
-  }, [fetchShopDetails]);
+    fetchSyncedDetails();
+  }, [fetchSyncedDetails]);
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    sessionStorage.removeItem(CACHE_KEY);
-    await fetchShopDetails();
-    setIsRefreshing(false);
+  const onSubmit = async (data: any) => {
+    const success = await updateShopDetails(data);
+    if (success) {
+      showSuccess("Shop details updated!");
+      reset(data); // Resets the form's dirty state
+    }
   };
 
-  if (isLoading) {
+  if (isContextLoading || !syncedData) {
     return <Skeleton className="h-96 w-full" />;
   }
 
-  if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Shop Details</CardTitle>
-          <CardDescription>Your shop's public information, synced from Instagram.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert variant="destructive">
-            <AlertTitle>Could not load shop details</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between">
-        <div>
-          <CardTitle>Shop Details</CardTitle>
-          <CardDescription>This information is synced directly from your Instagram Business profile.</CardDescription>
-        </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex flex-col sm:flex-row items-start gap-6 p-4 border rounded-lg">
-          <Avatar className="h-24 w-24">
-            <AvatarImage src={shopData?.logo_url} alt="Shop Logo" />
-            <AvatarFallback>{shopData?.shop_name?.[0]}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold">{shopData?.shop_name}</h2>
-                <p className="text-muted-foreground">@{shopData?.username}</p>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2">
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Card>
+            <CardHeader>
+              <CardTitle>Editable Shop Details</CardTitle>
+              <CardDescription>This information is saved in your database and can be edited freely.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="shop_name">Shop Name</Label>
+                <Input id="shop_name" {...register('shop_name')} />
               </div>
-              {shopData?.username && (
-                <Button asChild variant="secondary">
-                  <a href={`https://instagram.com/${shopData.username}`} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    View on Instagram
-                  </a>
-                </Button>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="headline">Headline</Label>
+                <Input id="headline" {...register('headline')} placeholder="e.g., Handcrafted Leather Goods" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="about">About Section</Label>
+                <Textarea id="about" {...register('about')} rows={4} />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="contact_email">Public Contact Email</Label>
+                  <Input id="contact_email" type="email" {...register('contact_email')} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="currency">Default Currency</Label>
+                  <Controller
+                    name="currency"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger><SelectValue placeholder="Select currency..." /></SelectTrigger>
+                        <SelectContent>
+                          {currencies.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+              </div>
+            </CardContent>
+            <CardContent className="flex justify-end border-t pt-6">
+              <Button type="submit" disabled={isSubmitting || !isDirty}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Save Changes
+              </Button>
+            </CardContent>
+          </Card>
+        </form>
+      </div>
+      <div className="lg:col-span-1">
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between">
+            <div>
+              <CardTitle>Synced from Instagram</CardTitle>
+              <CardDescription>This data is read-only.</CardDescription>
             </div>
-            <p className="mt-4 text-sm text-muted-foreground">{shopData?.description || "No bio provided."}</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader className="flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Followers</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{shopData?.followers_count?.toLocaleString() || 'N/A'}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Posts</CardTitle>
-              <ImageIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{shopData?.media_count?.toLocaleString() || 'N/A'}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Alert>
-          <Instagram className="h-4 w-4" />
-          <AlertTitle>Synced from Instagram</AlertTitle>
-          <AlertDescription>
-            To update your shop details, please make the changes directly in your Instagram app profile settings, then click the refresh button above.
-          </AlertDescription>
-        </Alert>
-      </CardContent>
-    </Card>
+            <Button variant="outline" size="icon" onClick={fetchSyncedDetails} disabled={isRefreshing}>
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={syncedData?.logo_url} alt="Shop Logo" />
+                <AvatarFallback>{syncedData?.shop_name?.[0]}</AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="font-semibold">{syncedData?.shop_name}</h3>
+                <p className="text-sm text-muted-foreground">@{syncedData?.username}</p>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Followers</Label>
+              <p>{syncedData?.followers_count?.toLocaleString() || 'N/A'}</p>
+            </div>
+            <div className="space-y-1">
+              <Label>Posts</Label>
+              <p>{syncedData?.media_count?.toLocaleString() || 'N/A'}</p>
+            </div>
+            <Alert>
+              <Instagram className="h-4 w-4" />
+              <AlertTitle>Read-Only</AlertTitle>
+              <AlertDescription>
+                To update this info, make changes in your Instagram app, then click refresh.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
