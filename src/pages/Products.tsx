@@ -23,6 +23,7 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIntegration } from "@/contexts/IntegrationContext";
 import { toast } from "sonner";
+import { RealtimeChannel } from "@supabase/supabase-js";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 type GridSizeType = 'sm' | 'md' | 'lg';
@@ -118,28 +119,48 @@ const Products = () => {
   }, [fetchProducts, searchParams, setSearchParams]);
 
   useEffect(() => {
-    const channel = supabase.channel('sync_jobs')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sync_jobs' }, (payload) => {
-        const job = payload.new as any;
-        if (job.status === 'in_progress') {
-          const percentage = job.total > 0 ? (job.progress / job.total) * 100 : 0;
-          toast.loading(job.message, {
-            id: job.id,
-            description: `Progress: ${Math.round(percentage)}%`,
-          });
-        } else if (job.status === 'completed') {
-          toast.success(job.message, { id: job.id, duration: 5000 });
-          setIsSyncing(false);
-          fetchProducts();
-        } else if (job.status === 'failed') {
-          toast.error(job.message, { id: job.id, duration: 5000 });
-          setIsSyncing(false);
-        }
-      })
-      .subscribe();
+    let channel: RealtimeChannel | undefined;
+
+    const setupChannel = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        channel = supabase.channel('sync_jobs_user_' + user.id)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'sync_jobs',
+              filter: `user_id=eq.${user.id}`
+            },
+            (payload) => {
+              const job = payload.new as any;
+              if (job.status === 'in_progress' || job.status === 'starting') {
+                const percentage = job.total > 0 ? (job.progress / job.total) * 100 : 0;
+                toast.loading(job.message, {
+                  id: job.id,
+                  description: `Analyzing ${job.progress} of ${job.total} posts. (${Math.round(percentage)}%)`,
+                });
+              } else if (job.status === 'completed') {
+                toast.success(job.message, { id: job.id, duration: 5000 });
+                setIsSyncing(false);
+                fetchProducts();
+              } else if (job.status === 'failed') {
+                toast.error(job.message, { id: job.id, duration: 5000 });
+                setIsSyncing(false);
+              }
+            }
+          )
+          .subscribe();
+      }
+    };
+
+    setupChannel();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [fetchProducts]);
 
