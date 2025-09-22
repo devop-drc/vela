@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChannel, Session } from '@supabase/supabase-js';
 
@@ -23,6 +23,7 @@ const SyncContext = createContext<SyncContextType | undefined>(undefined);
 export const SyncProvider = ({ children }: { children: ReactNode }) => {
   const [activeJob, setActiveJob] = useState<SyncJob | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -41,7 +42,6 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let channel: RealtimeChannel | undefined;
-    let timeoutId: NodeJS.Timeout;
     const userId = session?.user?.id;
 
     const setupChannel = async () => {
@@ -64,12 +64,19 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
             (payload) => {
               const job = payload.new as SyncJob;
               if (job.status === 'in_progress' || job.status === 'starting') {
+                if (timeoutRef.current) {
+                  clearTimeout(timeoutRef.current);
+                  timeoutRef.current = null;
+                }
                 setActiveJob(job);
               } else {
                 setActiveJob(job);
-                if (timeoutId) clearTimeout(timeoutId);
-                timeoutId = setTimeout(() => {
+                if (timeoutRef.current) {
+                  clearTimeout(timeoutRef.current);
+                }
+                timeoutRef.current = setTimeout(() => {
                   setActiveJob(null);
+                  timeoutRef.current = null;
                 }, 8000);
               }
             }
@@ -84,8 +91,8 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       if (channel) {
         supabase.removeChannel(channel);
       }
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
     };
   }, [session?.user?.id]);
