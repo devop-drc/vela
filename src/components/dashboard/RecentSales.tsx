@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useShop } from "@/contexts/ShopContext";
 import { motion } from "framer-motion";
+import { formatCurrency } from "@/lib/formatters";
 
 interface Order {
   id: string;
@@ -30,16 +30,6 @@ const itemVariants = {
 };
 
 export const RecentSales = ({ orders }: RecentSalesProps) => {
-  const { shopDetails } = useShop();
-
-  const formatCurrency = (amount: number) => {
-    try {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: shopDetails?.currency || 'USD' }).format(amount);
-    } catch (e) {
-      return `${shopDetails?.currency || '$'}${amount.toFixed(2)}`;
-    }
-  };
-
   return (
     <Card className="col-span-4 md:col-span-3">
       <CardHeader>
@@ -63,7 +53,7 @@ export const RecentSales = ({ orders }: RecentSalesProps) => {
                   <p className="text-sm font-medium leading-none">{order.customer_name}</p>
                   <p className="text-sm text-muted-foreground">{order.customer_email}</p>
                 </div>
-                <div className="ml-auto font-medium">+{formatCurrency(order.total_amount)}</div>
+                <div className="ml-auto font-medium">+{formatCurrency(order.total_amount, null)}</div>
               </motion.div>
             ))}
           </motion.div>

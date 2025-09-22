@@ -37,7 +37,6 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPost, setSelectedPost] = useState<AnalyzedPost | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
   const [dismissedPostIds, setDismissedPostIds] = useState<string[]>([]);
 
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
@@ -85,22 +84,15 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
     fetchAndAnalyzePosts();
   }, [fetchAndAnalyzePosts]);
 
-  const handleCreateProduct = async (post: AnalyzedPost) => {
-    setIsCreating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('force-product-analysis', {
-        body: { caption: post.caption },
-      });
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
-      
-      setProductToCreate(data);
-      setIsCreateModalOpen(true);
-    } catch (err: any) {
-      showError(err.message || "Failed to generate product details.");
-    } finally {
-      setIsCreating(false);
-    }
+  const handleCreateProduct = (post: AnalyzedPost) => {
+    const productData = post.analysis?.isProductPost ? post.analysis.product : {
+      name: "New Product",
+      description: post.caption || "",
+      category: "generic",
+      details: { type: "generic" }
+    };
+    setProductToCreate(productData);
+    setIsCreateModalOpen(true);
   };
 
   const handleSaveProduct = () => {
@@ -209,8 +201,8 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                       <CardHeader><CardTitle>Original Caption</CardTitle></CardHeader>
                       <CardContent><p className="text-sm whitespace-pre-wrap text-muted-foreground">{selectedPost.caption || "No caption."}</p></CardContent>
                     </Card>
-                    <Button onClick={() => handleCreateProduct(selectedPost)} disabled={selectedPost.isImported || isCreating} className="w-full">
-                      {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    <Button onClick={() => handleCreateProduct(selectedPost)} disabled={selectedPost.isImported} className="w-full">
+                      <Sparkles className="mr-2 h-4 w-4" />
                       {selectedPost.isImported ? "Already Imported" : "Create Product from this Post"}
                     </Button>
                   </div>

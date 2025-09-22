@@ -7,6 +7,7 @@ import { AlertTriangle, Palette, Ruler, Tag, Frame, ScanText, Cog } from "lucide
 import { ProductStatusDropdown } from "./ProductStatusDropdown";
 import { Badge } from "./ui/badge";
 import { productCategories } from "@/lib/productTypes";
+import { formatCurrency } from "@/lib/formatters";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 type GridSizeType = 'sm' | 'md' | 'lg';
@@ -140,7 +141,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
           <div className="flex items-end justify-between pt-2">
             {product.price != null ? (
               <p className="font-semibold text-lg">
-                {`${product.currency || '$'}${product.price.toFixed(2)}`}
+                {formatCurrency(product.price, product.currency)}
                 {product.pricing_type === 'subscription' && <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>}
               </p>
             ) : (

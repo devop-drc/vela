@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Edit, Trash2 } from "lucide-react";
 import { getCategoryAndType } from "@/lib/productTypes";
 import { DialogFooter } from "../ui/dialog";
+import { formatCurrency } from "@/lib/formatters";
 
 const DetailDisplayRow = ({ label, children }: { label: string, children: React.ReactNode }) => (
     <div className="flex flex-col">
@@ -17,14 +18,6 @@ const DetailDisplayRow = ({ label, children }: { label: string, children: React.
         </div>
     </div>
 );
-
-const formatCurrency = (amount: number, currency: string) => {
-    try {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency }).format(amount);
-    } catch (e) {
-        return `${currency} ${amount.toFixed(2)}`;
-    }
-}
 
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
     const { category, type } = getCategoryAndType(product.category, product.details?.type);
@@ -78,7 +71,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div><Label className="text-sm">Price</Label><p className="font-semibold text-2xl">{product.pricing_type === 'subscription' ? `${formatCurrency(product.price || 0, product.currency || 'USD')} / ${product.billing_interval}` : formatCurrency(product.price || 0, product.currency || 'USD')}</p></div>
+                  <div><Label className="text-sm">Price</Label><p className="font-semibold text-2xl">{product.pricing_type === 'subscription' ? `${formatCurrency(product.price, product.currency)} / ${product.billing_interval}` : formatCurrency(product.price, product.currency)}</p></div>
                   {product.pricing_type !== 'subscription' && (<div><Label className="text-sm">Inventory</Label><p className="font-semibold text-2xl">{product.inventory || 0}</p></div>)}
                 </div>
               </div>

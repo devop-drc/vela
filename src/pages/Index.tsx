@@ -7,6 +7,7 @@ import { OverviewChart } from "@/components/dashboard/OverviewChart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { useShop } from "@/contexts/ShopContext";
+import { formatCurrency } from "@/lib/formatters";
 
 interface DashboardData {
   totalRevenue: number;
@@ -110,14 +111,6 @@ const Index = () => {
     fetchData();
   }, []);
 
-  const formatCurrency = (amount: number) => {
-    try {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: shopDetails?.currency || 'USD' }).format(amount);
-    } catch (e) {
-      return `${shopDetails?.currency || '$'}${amount.toFixed(2)}`;
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -142,7 +135,7 @@ const Index = () => {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Revenue" value={formatCurrency(data.totalRevenue)} icon={DollarSign} description="All-time revenue" />
+        <StatCard title="Total Revenue" value={formatCurrency(data.totalRevenue, shopDetails?.currency)} icon={DollarSign} description="All-time revenue" />
         <StatCard title="Sales" value={`+${data.salesCount}`} icon={CreditCard} description="All-time sales count" />
         <StatCard title="Active Products" value={data.activeProducts.toString()} icon={Package} description="Products available for sale" />
         <StatCard title="Unique Customers" value={`+${data.customers}`} icon={Users} description="Total unique customers" />

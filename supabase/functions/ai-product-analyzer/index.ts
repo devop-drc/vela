@@ -33,9 +33,10 @@ const getExtractionPrompt = (caption: string) => `
   **Instructions:**
   1.  **Categorize:** Classify the product into ONE of the following categories: "clothing", "electronics", "art", "service", "generic".
   2.  **Extract All Details:** Scrutinize the caption for every possible product attribute. This includes sizes, colors, materials, dimensions, technical specs, etc.
-  3.  **Currency Detection:** Pay close attention to currency symbols ($, €, £, ¥) or ISO codes (USD, EUR, GBP). If a symbol is found, use the corresponding ISO code. If no currency is mentioned, default to "USD".
-  4.  **Justify Extractions:** For each key-value pair, provide a "justification" field containing the exact quote from the caption that supports your extraction. If you infer a value (like a default currency or category), state that clearly.
-  5.  **Format Output:** Respond ONLY with a single, valid JSON object. Do not include markdown backticks or any other text.
+  3.  **Find Specifications:** Based on the identified product name and type, use your internal knowledge base to find and include relevant technical specifications or common attributes in the "details" object. For a "T-Shirt", this might be "material" or "fit". For an "iPhone 15", this would be "processor", "display_size", etc. Only include specs you are confident about.
+  4.  **Currency Detection:** Pay close attention to currency symbols ($, €, £, ¥) or ISO codes (USD, EUR, GBP). If a symbol is found, use the corresponding ISO code. If no currency is mentioned, default to "USD".
+  5.  **Justify Extractions:** For each key-value pair, provide a "justification" field containing the exact quote from the caption that supports your extraction. If you infer a value (like a default currency or category), state that clearly.
+  6.  **Format Output:** Respond ONLY with a single, valid JSON object. Do not include markdown backticks or any other text.
 
   **JSON Structure:**
   {

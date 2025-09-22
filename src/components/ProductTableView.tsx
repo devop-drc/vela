@@ -2,6 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, AlertTriangle } from "lucide-react";
 import { Checkbox } from "./ui/checkbox";
+import { formatCurrency } from "@/lib/formatters";
 
 interface Product {
   id: string;
@@ -73,8 +74,8 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
               {product.price != null ? (
                 <span>
                   {product.pricing_type === 'subscription'
-                    ? `${product.currency || '$'}${product.price.toFixed(2)} / ${product.billing_interval}`
-                    : `${product.currency || '$'}${product.price.toFixed(2)}`}
+                    ? `${formatCurrency(product.price, product.currency)} / ${product.billing_interval}`
+                    : formatCurrency(product.price, product.currency)}
                 </span>
               ) : (
                 <span className="flex items-center gap-1.5 text-xs text-amber-600">
