@@ -6,6 +6,7 @@ import { usePageTitle } from "@/contexts/PageTitleContext";
 import { AnimatePresence, motion } from "framer-motion";
 import { useShop } from "@/contexts/ShopContext";
 import { useEffect } from "react";
+import { SyncStatusWidget } from "./SyncStatusWidget";
 
 const DashboardLayout = () => {
   const { title } = usePageTitle();
@@ -58,9 +59,7 @@ const DashboardLayout = () => {
           </main>
         </div>
         <BottomNav />
+        <SyncStatusWidget />
       </div>
     </>
   );
-};
-
-export default DashboardLayout;

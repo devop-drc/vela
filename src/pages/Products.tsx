@@ -23,7 +23,7 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIntegration } from "@/contexts/IntegrationContext";
 import { toast } from "sonner";
-import { RealtimeChannel } from "@supabase/supabase-js";
+import { useSync } from "@/contexts/SyncContext";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 type GridSizeType = 'sm' | 'md' | 'lg';
@@ -71,9 +71,9 @@ const itemVariants = {
 const Products = () => {
   const { setTitle } = usePageTitle();
   const { runWithIntegrationCheck } = useIntegration();
+  const { isSyncing } = useSync();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [isImporterOpen, setIsImporterOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
@@ -118,55 +118,8 @@ const Products = () => {
     fetchProducts();
   }, [fetchProducts, searchParams, setSearchParams]);
 
-  useEffect(() => {
-    let channel: RealtimeChannel | undefined;
-
-    const setupChannel = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        channel = supabase.channel('sync_jobs_user_' + user.id)
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'sync_jobs',
-              filter: `user_id=eq.${user.id}`
-            },
-            (payload) => {
-              const job = payload.new as any;
-              if (job.status === 'in_progress' || job.status === 'starting') {
-                const percentage = job.total > 0 ? (job.progress / job.total) * 100 : 0;
-                toast.loading(job.message, {
-                  id: job.id,
-                  description: `Analyzing ${job.progress} of ${job.total} posts. (${Math.round(percentage)}%)`,
-                });
-              } else if (job.status === 'completed') {
-                toast.success(job.message, { id: job.id, duration: 5000 });
-                setIsSyncing(false);
-                fetchProducts();
-              } else if (job.status === 'failed') {
-                toast.error(job.message, { id: job.id, duration: 5000 });
-                setIsSyncing(false);
-              }
-            }
-          )
-          .subscribe();
-      }
-    };
-
-    setupChannel();
-
-    return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
-    };
-  }, [fetchProducts]);
-
   const handleSync = async (syncType: 'quick' | 'full') => {
     runWithIntegrationCheck(async () => {
-      setIsSyncing(true);
       toast.loading("Initiating sync job...", { id: 'sync-initiating' });
       try {
         const { data, error } = await supabase.functions.invoke('background-sync', {
@@ -175,11 +128,9 @@ const Products = () => {
         toast.dismiss('sync-initiating');
         if (error) throw error;
         if (data.error) throw new Error(data.error);
-        toast.info("Sync job started! You'll see progress updates here.", { id: data.jobId });
       } catch (err: any) {
         toast.dismiss('sync-initiating');
         showError(err.message || `Failed to start ${syncType} sync.`);
-        setIsSyncing(false);
       }
     });
   };

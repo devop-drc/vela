@@ -12,8 +12,8 @@ const getSupabaseAdmin = () => createClient(
   { auth: { persistSession: false } }
 );
 
-const updateJobProgress = async (supabase: SupabaseClient, jobId: string, progress: number, total: number, message: string) => {
-  await supabase.from('sync_jobs').update({ progress, total, message, status: 'in_progress', updated_at: new Date().toISOString() }).eq('id', jobId);
+const updateJobProgress = async (supabase: SupabaseClient, jobId: string, progress: number, total: number, message: string, thumbnailUrl: string | null = null) => {
+  await supabase.from('sync_jobs').update({ progress, total, message, thumbnail_url: thumbnailUrl, status: 'in_progress', updated_at: new Date().toISOString() }).eq('id', jobId);
 };
 
 const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: string, syncType: 'quick' | 'full') => {
@@ -63,7 +63,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
     for (const post of newPosts) {
       processedCount++;
       const captionSnippet = post.caption ? `"${post.caption.substring(0, 40)}..."` : `post without caption`;
-      await updateJobProgress(supabaseAdmin, jobId, processedCount, total, `Analyzing: ${captionSnippet}`);
+      await updateJobProgress(supabaseAdmin, jobId, processedCount, total, `Analyzing: ${captionSnippet}`, post.thumbnail_url || post.media_url);
 
       if (!post.caption) continue;
 
