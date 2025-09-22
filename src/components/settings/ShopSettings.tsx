@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Instagram, Users, Image as ImageIcon, ExternalLink, RefreshCw, Save, Loader2 } from 'lucide-react';
+import { Instagram, RefreshCw, Save, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useShop } from '@/contexts/ShopContext';
 import { Label } from '../ui/label';
