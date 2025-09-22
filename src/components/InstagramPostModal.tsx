@@ -120,6 +120,13 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
 
   const visiblePosts = posts.filter(p => !dismissedPostIds.includes(p.id));
 
+  const DetailRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
+    <div className="grid grid-cols-3 gap-2 text-sm items-start">
+        <dt className="font-medium text-muted-foreground capitalize">{label}</dt>
+        <dd className="col-span-2">{value}</dd>
+    </div>
+  );
+
   return (
     <>
       <Dialog open={true} onOpenChange={onClose}>
@@ -176,13 +183,23 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                               {selectedPost.analysis.isProductPost ? <Badge className="mt-1">Product</Badge> : <Badge variant="secondary" className="mt-1">General</Badge>}
                               <p className="text-sm text-muted-foreground flex-1">{selectedPost.analysis.reasoning || "AI analysis determined this is a product post."}</p>
                             </div>
-                            {selectedPost.analysis.product?.details?.features?.length > 0 && (
-                               <div className="border-t pt-4 mt-4">
-                                <h4 className="font-semibold text-sm mb-2">Extracted Features:</h4>
-                                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                                    {selectedPost.analysis.product.details.features.map((feature: string, index: number) => (<li key={index}>{feature}</li>))}
-                                </ul>
-                               </div>
+                            
+                            {selectedPost.analysis.isProductPost && selectedPost.analysis.product && (
+                              <div className="border-t pt-4 mt-4">
+                                <h4 className="font-semibold text-sm mb-3">Extracted Details:</h4>
+                                <dl className="space-y-2">
+                                  {selectedPost.analysis.product.name && <DetailRow label="Name" value={selectedPost.analysis.product.name} />}
+                                  {selectedPost.analysis.product.category && <DetailRow label="Category" value={<Badge variant="outline">{selectedPost.analysis.product.category}</Badge>} />}
+                                  {selectedPost.analysis.product.price !== undefined && <DetailRow label="Price" value={`${selectedPost.analysis.product.price} ${selectedPost.analysis.product.currency || ''}`} />}
+                                  {selectedPost.analysis.product.tags?.length > 0 && <DetailRow label="Tags" value={<div className="flex flex-wrap gap-1">{selectedPost.analysis.product.tags.map((tag: string) => <Badge key={tag} variant="secondary">{tag}</Badge>)}</div>} />}
+                                  
+                                  {Object.entries(selectedPost.analysis.product.details || {}).map(([key, value]) => {
+                                    if (!value || (Array.isArray(value) && value.length === 0)) return null;
+                                    const displayValue = Array.isArray(value) ? value.join(', ') : String(value);
+                                    return <DetailRow key={key} label={key.replace(/_/g, ' ')} value={displayValue} />;
+                                  })}
+                                </dl>
+                              </div>
                             )}
                           </div>
                         ) : (<p className="text-sm text-muted-foreground">No caption to analyze.</p>)}
