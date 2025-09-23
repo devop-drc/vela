@@ -113,44 +113,51 @@ const Products = () => {
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
-    let channel: RealtimeChannel | null = null;
+    if (!session?.user) {
+      setIsLoading(false);
+      setProducts([]);
+      return;
+    }
 
-    const fetchAndSubscribe = async () => {
-      if (!session?.user) {
-        setIsLoading(false);
-        setProducts([]);
-        return;
-      }
+    let channel: RealtimeChannel | null = null;
+    let isMounted = true;
+
+    const setupPage = async () => {
       setIsLoading(true);
 
       const { data: business, error: businessError } = await supabase
         .from('businesses').select('id, last_full_sync_at').eq('user_id', session.user.id).single();
+
+      if (!isMounted) return;
 
       if (businessError || !business) {
         showError("Could not find your business profile.");
         setIsLoading(false);
         return;
       }
+      
       setHasDoneFullSync(!!business.last_full_sync_at);
 
       const { data, error } = await supabase
         .from("products").select("*").eq('business_id', business.id).order('created_at', { ascending: false });
+      
+      if (!isMounted) return;
 
       if (error) {
         showError("Could not fetch your product catalog.");
-      } else {
+      } else if (data) {
         setProducts(data as Product[]);
       }
       setIsLoading(false);
 
       channel = supabase
-        .channel(`products:${business.id}`)
+        .channel(`products:${business.id}:${Date.now()}`)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` },
           (payload) => {
             if (payload.eventType === 'INSERT') {
-              setProducts((current) => [payload.new as Product, ...current]);
+              setProducts((current) => [payload.new as Product, ...current.filter(p => p.id !== payload.new.id)]);
             } else if (payload.eventType === 'UPDATE') {
               setProducts((current) => current.map((p) => (p.id === payload.new.id ? (payload.new as Product) : p)));
             } else if (payload.eventType === 'DELETE') {
@@ -161,9 +168,10 @@ const Products = () => {
         .subscribe();
     };
 
-    fetchAndSubscribe();
+    setupPage();
 
     return () => {
+      isMounted = false;
       if (channel) {
         supabase.removeChannel(channel);
       }

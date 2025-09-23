@@ -38,28 +38,33 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    if (!session?.user?.id) {
+      setActiveJob(null);
+      return;
+    }
+
     let channel: RealtimeChannel | null = null;
-    const userId = session?.user?.id;
+    let isMounted = true;
+    const userId = session.user.id;
 
-    if (userId) {
-      const fetchInitialJob = async () => {
-        const { data: initialJob } = await supabase
-          .from('sync_jobs')
-          .select('*')
-          .eq('user_id', userId)
-          .in('status', ['starting', 'in_progress', 'completed', 'failed'])
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-        
-        const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
-        if (initialJob && initialJob.id !== dismissedJobId) {
-          setActiveJob(initialJob as SyncJob);
-        }
-      };
-      fetchInitialJob();
+    const setupSync = async () => {
+      const { data: initialJob } = await supabase
+        .from('sync_jobs')
+        .select('*')
+        .eq('user_id', userId)
+        .in('status', ['starting', 'in_progress', 'completed', 'failed'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (!isMounted) return;
 
-      channel = supabase.channel(`sync_jobs:${userId}`)
+      const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
+      if (initialJob && initialJob.id !== dismissedJobId) {
+        setActiveJob(initialJob as SyncJob);
+      }
+
+      channel = supabase.channel(`sync_jobs:${userId}:${Date.now()}`)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'sync_jobs', filter: `user_id=eq.${userId}` },
@@ -70,11 +75,12 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
           }
         )
         .subscribe();
-    } else {
-      setActiveJob(null);
-    }
+    };
+
+    setupSync();
 
     return () => {
+      isMounted = false;
       if (channel) {
         supabase.removeChannel(channel);
       }
