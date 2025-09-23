@@ -94,31 +94,6 @@ const Products = () => {
 
   useEffect(() => { setTitle("Products"); }, [setTitle]);
 
-  const fetchProducts = useCallback(async (showLoading = true) => {
-    if (showLoading) setIsLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      if (showLoading) setIsLoading(false);
-      return;
-    }
-
-    const { data: business, error: businessError } = await supabase.from('businesses').select('id, last_full_sync_at').eq('user_id', user.id).single();
-    if (businessError || !business) {
-      showError("Could not find your business profile.");
-      if (showLoading) setIsLoading(false);
-      return;
-    }
-    setHasDoneFullSync(!!business.last_full_sync_at);
-
-    const { data, error } = await supabase.from("products").select("*").eq('business_id', business.id).order('created_at', { ascending: false });
-    if (error) {
-      showError("Could not fetch your product catalog.");
-    } else {
-      setProducts(data as Product[]);
-    }
-    if (showLoading) setIsLoading(false);
-  }, []);
-
   useEffect(() => {
     if (searchParams.get("instagram_connected") === "true") {
       showSuccess("Successfully connected! Opening importer...");
@@ -126,36 +101,60 @@ const Products = () => {
       searchParams.delete("instagram_connected");
       setSearchParams(searchParams, { replace: true });
     }
-    fetchProducts();
-  }, [fetchProducts, searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
-    let channel: RealtimeChannel | undefined;
-    const setupSubscription = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
-      const { data: business } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
-      if (!business) return;
+    let channel: RealtimeChannel | null = null;
 
-      const channelName = `products-business-${business.id}`;
-      channel = supabase.channel(channelName)
+    const fetchAndSubscribe = async () => {
+      setIsLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      const { data: business, error: businessError } = await supabase.from('businesses').select('id, last_full_sync_at').eq('user_id', user.id).single();
+      if (businessError || !business) {
+        showError("Could not find your business profile.");
+        setIsLoading(false);
+        return;
+      }
+      setHasDoneFullSync(!!business.last_full_sync_at);
+
+      const { data, error } = await supabase.from("products").select("*").eq('business_id', business.id).order('created_at', { ascending: false });
+      if (error) {
+        showError("Could not fetch your product catalog.");
+      } else {
+        setProducts(data as Product[]);
+      }
+      setIsLoading(false);
+
+      channel = supabase.channel(`products_business_${business.id}`)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` },
-          () => {
-            fetchProducts(false); // Fetch without showing full page loader
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setProducts(currentProducts => [payload.new as Product, ...currentProducts]);
+            } else if (payload.eventType === 'UPDATE') {
+              setProducts(currentProducts => currentProducts.map(p => p.id === payload.new.id ? payload.new as Product : p));
+            } else if (payload.eventType === 'DELETE') {
+              setProducts(currentProducts => currentProducts.filter(p => p.id !== payload.old.id));
+            }
           }
         )
         .subscribe();
-    }
-    setupSubscription();
+    };
+
+    fetchAndSubscribe();
+
     return () => {
       if (channel) {
         supabase.removeChannel(channel);
       }
     };
-  }, [fetchProducts]);
+  }, []);
 
   const handleSync = async (syncType: 'quick' | 'full') => {
     runWithIntegrationCheck(async () => {
@@ -177,7 +176,6 @@ const Products = () => {
     });
   };
 
-  const handleProductUpdate = useCallback(() => { fetchProducts(); }, [fetchProducts]);
   const handleStatusChange = async (productId: string, newStatus: ProductStatus) => {
     const { error } = await supabase.from('products').update({ status: newStatus }).eq('id', productId);
     if (error) { showError(`Failed to update status: ${error.message}`); } 
@@ -244,8 +242,8 @@ const Products = () => {
 
   return (
     <>
-      {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={fetchProducts} />}
-      <ProductDetailModal isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={handleProductUpdate} />
+      {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={() => {}} />}
+      <ProductDetailModal isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={() => {}} />
       {isSaleModalOpen && <SaleModal isOpen={isSaleModalOpen} onClose={() => setIsSaleModalOpen(false)} onApply={handleApplySale} productCount={selectedProducts.length} />}
       <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {selectedProducts.length} products?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       

@@ -25,14 +25,26 @@ const getTriagePrompt = (caption: string) => `
 const getExtractionPrompt = (caption: string) => `
   You are an expert e-commerce analyst. Your task is to meticulously analyze an Instagram post caption and generate a complete, structured JSON object for the product or service being sold.
 
+  **VALID CATEGORIES & TYPES:**
+  - "clothing":
+    - "t-shirt"
+  - "electronics":
+    - "generic-device"
+  - "art":
+    - "print"
+  - "service":
+    - "consulting"
+  - "generic":
+    - "generic"
+
   Analyze the following caption:
   ---
   ${caption}
   ---
 
   **Instructions:**
-  1.  **CRITICAL - Categorize:** You MUST classify the product into ONE of the following primary categories: "clothing", "electronics", "art", "service", "generic". This field is mandatory.
-  2.  **CRITICAL - Sub-Categorize (Type):** Based on the primary category, you MUST choose the most fitting "type" and place it inside the "details" object. For "clothing", a valid type is "t-shirt". For "art", a valid type is "print". This field is mandatory.
+  1.  **MANDATORY - Categorize:** You MUST classify the product into ONE of the valid primary categories listed above. This field is non-negotiable.
+  2.  **MANDATORY - Sub-Categorize (Type):** Based on your chosen category, you MUST select the most fitting "type" from the valid types listed for that category above and place it inside the "details" object. This field is non-negotiable.
   3.  **Extract All Details:** Scrutinize the caption for every possible product attribute (sizes, colors, materials, dimensions, specs).
   4.  **Find Specifications:** Use your internal knowledge to find relevant specs for the identified product and include them in the "details" object.
   5.  **Currency Detection:** Identify currency symbols ($, €, £) or codes (USD, EUR) and use the ISO code. Default to "USD" if none are found.
