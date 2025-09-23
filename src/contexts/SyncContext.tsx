@@ -26,68 +26,57 @@ const SyncContext = createContext<SyncContextType | undefined>(undefined);
 export const SyncProvider = ({ children }: { children: ReactNode }) => {
   const [activeJob, setActiveJob] = useState<SyncJob | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [channel, setChannel] = useState<RealtimeChannel | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (!session) {
-        setActiveJob(null);
-      }
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
     const userId = session?.user?.id;
-
-    if (channel) {
-      channel.unsubscribe();
-      setChannel(null);
+    if (!userId) {
+      setActiveJob(null);
+      return;
     }
 
-    if (userId) {
-      const newChannel = supabase.channel(`sync_jobs:${userId}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'sync_jobs', filter: `user_id=eq.${userId}` },
-          (payload) => {
-            const newJob = payload.new as SyncJob;
-            sessionStorage.removeItem('dismissed_sync_job_id');
-            setActiveJob(newJob);
-          }
-        )
-        .subscribe();
-      setChannel(newChannel);
-
-      // Fetch the latest job on initial setup
-      supabase
+    const fetchInitialJob = async () => {
+      const { data: initialJob } = await supabase
         .from('sync_jobs')
         .select('*')
         .eq('user_id', userId)
         .in('status', ['starting', 'in_progress', 'completed', 'failed'])
         .order('created_at', { ascending: false })
         .limit(1)
-        .single()
-        .then(({ data: initialJob }) => {
-          const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
-          if (initialJob && initialJob.id !== dismissedJobId) {
-            setActiveJob(initialJob as SyncJob);
-          }
-        });
-    }
-
-    return () => {
-      if (channel) {
-        channel.unsubscribe();
+        .single();
+      
+      const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
+      if (initialJob && initialJob.id !== dismissedJobId) {
+        setActiveJob(initialJob as SyncJob);
       }
     };
-  }, [session?.user?.id]);
+    fetchInitialJob();
+
+    const channel = supabase.channel(`sync_jobs:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'sync_jobs', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const newJob = payload.new as SyncJob;
+          sessionStorage.removeItem('dismissed_sync_job_id');
+          setActiveJob(newJob);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session]);
 
   const startNewSync = async (jobId: string) => {
     const { data: newJob, error } = await supabase

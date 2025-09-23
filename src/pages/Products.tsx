@@ -113,28 +113,10 @@ const Products = () => {
   useEffect(() => {
     let channel: RealtimeChannel | null = null;
   
-    const setupRealtime = (businessId: string) => {
-      channel = supabase
-        .channel(`products:${businessId}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${businessId}` },
-          (payload) => {
-            if (payload.eventType === 'INSERT') {
-              setProducts((current) => [payload.new as Product, ...current.filter(p => p.id !== payload.new.id)]);
-            } else if (payload.eventType === 'UPDATE') {
-              setProducts((current) => current.map((p) => p.id === payload.new.id ? (payload.new as Product) : p));
-            } else if (payload.eventType === 'DELETE') {
-              setProducts((current) => current.filter((p) => p.id !== payload.old.id));
-            }
-          }
-        )
-        .subscribe();
-    };
-
-    const fetchDataAndSubscribe = async () => {
+    const fetchAndSubscribe = async () => {
       if (!session?.user) {
         setIsLoading(false);
+        setProducts([]);
         return;
       }
       setIsLoading(true);
@@ -152,14 +134,32 @@ const Products = () => {
       const { data, error } = await supabase
         .from("products").select("*").eq('business_id', business.id).order('created_at', { ascending: false });
   
-      if (error) showError("Could not fetch your product catalog.");
-      else setProducts(data as Product[]);
-      
+      if (error) {
+        showError("Could not fetch your product catalog.");
+      } else {
+        setProducts(data as Product[]);
+      }
       setIsLoading(false);
-      setupRealtime(business.id);
+  
+      channel = supabase
+        .channel(`products:${business.id}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setProducts((current) => [payload.new as Product, ...current.filter(p => p.id !== payload.new.id)]);
+            } else if (payload.eventType === 'UPDATE') {
+              setProducts((current) => current.map((p) => p.id === payload.new.id ? (payload.new as Product) : p));
+            } else if (payload.eventType === 'DELETE') {
+              setProducts((current) => current.filter((p) => p.id !== payload.old.id));
+            }
+          }
+        )
+        .subscribe();
     };
   
-    fetchDataAndSubscribe();
+    fetchAndSubscribe();
   
     return () => {
       if (channel) {
