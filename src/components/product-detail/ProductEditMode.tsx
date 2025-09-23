@@ -1,5 +1,4 @@
 import { useRef, useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { Controller } from "react-hook-form";
 import { DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -75,7 +74,7 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
     };
 
     return (
-      <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
+      <div key="edit" className="flex-1 flex flex-col min-h-0">
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Update Product</DialogTitle>
@@ -153,10 +152,31 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                             {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
                             {errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}
                         </div>
-                        <AnimatePresence>
-                            {pricingType === 'one_time' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label htmlFor="inventory" className="text-xs">Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</motion.div>)}
-                            {pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}
-                        </AnimatePresence>
+                        
+                        {pricingType === 'one_time' && (
+                          <div className="space-y-1">
+                            <Label htmlFor="inventory" className="text-xs">Stock</Label>
+                            <Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
+                            {errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}
+                          </div>
+                        )}
+                        {pricingType === 'subscription' && (
+                          <div className="space-y-1">
+                            <Label className="text-xs">Interval</Label>
+                            <Controller name="billing_interval" control={control} render={({ field }) => (
+                              <Select onValueChange={field.onChange} value={field.value || undefined}>
+                                <SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50">
+                                  <SelectValue placeholder="Interval" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="month">/ month</SelectItem>
+                                  <SelectItem value="year">/ year</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )} />
+                            {errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}
+                          </div>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -180,6 +200,6 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
             <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button>
           </DialogFooter>
         </form>
-      </motion.div>
+      </div>
     )
 };
