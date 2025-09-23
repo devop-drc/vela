@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchParams } from "react-router-dom";
 import { showError, showSuccess } from "@/utils/toast";
 import { InstagramPostModal } from "@/components/InstagramPostModal";
-import { ProductDetailModal } from "@/components/ProductDetailModal";
+import { ProductEditor } from "@/components/ProductEditor";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductTableView } from "@/components/ProductTableView";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -39,12 +39,11 @@ interface Product {
   inventory: number;
   media_url: string;
   caption: string;
-  category: string;
-  tags: string[];
+  category_id: string | null;
+  categories: { name: string } | null;
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
   created_at: string;
-  details: any;
 }
 
 const gridSizeClasses: { [key: string]: string } = {
@@ -90,9 +89,28 @@ const Products = () => {
   const [isSelectionModeActive, setIsSelectionModeActive] = useState(false);
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
   const [gridSize, setGridSize] = useState<GridSizeType>('md');
-  const [grouping, setGrouping] = useState<GroupingType>('none');
+  const [grouping, setGrouping] = useState<GroupingType>('category');
 
   useEffect(() => { setTitle("Products"); }, [setTitle]);
+
+  const fetchProducts = useCallback(async () => {
+    setIsLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setIsLoading(false); return; }
+
+    const { data: business, error: businessError } = await supabase.from('businesses').select('id, last_full_sync_at').eq('user_id', user.id).single();
+    if (businessError || !business) { showError("Could not find your business profile."); setIsLoading(false); return; }
+    setHasDoneFullSync(!!business.last_full_sync_at);
+
+    const { data, error } = await supabase.from("products").select("*, categories(name)").eq('business_id', business.id).order('created_at', { ascending: false });
+    if (error) { showError("Could not fetch your product catalog."); } 
+    else { setProducts(data as any[] as Product[]); }
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   useEffect(() => {
     if (searchParams.get("instagram_connected") === "true") {
@@ -103,72 +121,15 @@ const Products = () => {
     }
   }, [searchParams, setSearchParams]);
 
-  useEffect(() => {
-    let channel: RealtimeChannel | null = null;
-
-    const fetchAndSubscribe = async () => {
-      setIsLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
-
-      const { data: business, error: businessError } = await supabase.from('businesses').select('id, last_full_sync_at').eq('user_id', user.id).single();
-      if (businessError || !business) {
-        showError("Could not find your business profile.");
-        setIsLoading(false);
-        return;
-      }
-      setHasDoneFullSync(!!business.last_full_sync_at);
-
-      const { data, error } = await supabase.from("products").select("*").eq('business_id', business.id).order('created_at', { ascending: false });
-      if (error) {
-        showError("Could not fetch your product catalog.");
-      } else {
-        setProducts(data as Product[]);
-      }
-      setIsLoading(false);
-
-      channel = supabase.channel(`products_business_${business.id}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` },
-          (payload) => {
-            if (payload.eventType === 'INSERT') {
-              setProducts(currentProducts => [payload.new as Product, ...currentProducts]);
-            } else if (payload.eventType === 'UPDATE') {
-              setProducts(currentProducts => currentProducts.map(p => p.id === payload.new.id ? payload.new as Product : p));
-            } else if (payload.eventType === 'DELETE') {
-              setProducts(currentProducts => currentProducts.filter(p => p.id !== payload.old.id));
-            }
-          }
-        )
-        .subscribe();
-    };
-
-    fetchAndSubscribe();
-
-    return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
-    };
-  }, []);
-
   const handleSync = async (syncType: 'quick' | 'full') => {
     runWithIntegrationCheck(async () => {
       toast.loading("Initiating sync job...", { id: 'sync-initiating' });
       try {
-        const { data, error } = await supabase.functions.invoke('background-sync', {
-          body: { syncType },
-        });
+        const { data, error } = await supabase.functions.invoke('background-sync', { body: { syncType } });
         toast.dismiss('sync-initiating');
         if (error) throw error;
         if (data.error) throw new Error(data.error);
-        if (data.jobId) {
-          await startNewSync(data.jobId);
-        }
+        if (data.jobId) { await startNewSync(data.jobId); }
       } catch (err: any) {
         toast.dismiss('sync-initiating');
         showError(err.message || `Failed to start ${syncType} sync.`);
@@ -179,7 +140,7 @@ const Products = () => {
   const handleStatusChange = async (productId: string, newStatus: ProductStatus) => {
     const { error } = await supabase.from('products').update({ status: newStatus }).eq('id', productId);
     if (error) { showError(`Failed to update status: ${error.message}`); } 
-    else { showSuccess(`Product is now ${newStatus.toLowerCase()}.`); }
+    else { showSuccess(`Product is now ${newStatus.toLowerCase()}.`); fetchProducts(); }
   };
 
   const filteredAndSortedProducts = useMemo(() => {
@@ -202,7 +163,7 @@ const Products = () => {
       return { 'All Products': filteredAndSortedProducts };
     }
     return filteredAndSortedProducts.reduce((acc, product) => {
-      const key = product.category || 'Uncategorized';
+      const key = product.categories?.name || 'Uncategorized';
       if (!acc[key]) acc[key] = [];
       acc[key].push(product);
       return acc;
@@ -213,12 +174,12 @@ const Products = () => {
   const handleBulkStatusChange = async (status: ProductStatus) => {
     const { error } = await supabase.from('products').update({ status }).in('id', selectedProducts);
     if (error) { showError(`Failed to update products: ${error.message}`); } 
-    else { showSuccess(`Successfully updated ${selectedProducts.length} products.`); setSelectedProducts([]); }
+    else { showSuccess(`Successfully updated ${selectedProducts.length} products.`); setSelectedProducts([]); fetchProducts(); }
   };
   const handleBulkDelete = async () => {
     const { error } = await supabase.from('products').delete().in('id', selectedProducts);
     if (error) { showError(`Failed to delete products: ${error.message}`); } 
-    else { showSuccess(`Successfully deleted ${selectedProducts.length} products.`); setSelectedProducts([]); }
+    else { showSuccess(`Successfully deleted ${selectedProducts.length} products.`); setSelectedProducts([]); fetchProducts(); }
     setBulkDeleteConfirm(false);
   };
   const handleApplySale = async (saleData: SaleFormData) => {
@@ -226,7 +187,7 @@ const Products = () => {
     if (updates.length > 0) {
       const { error } = await supabase.from('products').upsert(updates);
       if (error) { showError(`Failed to apply sale: ${error.message}`); } 
-      else { showSuccess(`Sale applied to ${updates.length} products.`); }
+      else { showSuccess(`Sale applied to ${updates.length} products.`); fetchProducts(); }
     }
     setSelectedProducts([]);
     setIsSaleModalOpen(false);
@@ -242,8 +203,8 @@ const Products = () => {
 
   return (
     <>
-      {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={() => {}} />}
-      <ProductDetailModal isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={() => {}} />
+      {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={fetchProducts} />}
+      <ProductEditor isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct as any} onUpdate={fetchProducts} />
       {isSaleModalOpen && <SaleModal isOpen={isSaleModalOpen} onClose={() => setIsSaleModalOpen(false)} onApply={handleApplySale} productCount={selectedProducts.length} />}
       <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {selectedProducts.length} products?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       
