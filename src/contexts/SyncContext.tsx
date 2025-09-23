@@ -62,7 +62,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
             setActiveJob(initialJob as SyncJob);
         }
 
-        channel = supabase.channel('sync_jobs_user_' + userId)
+        channel = supabase.channel('sync-jobs-channel-' + userId)
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'sync_jobs', filter: `user_id=eq.${userId}` },

@@ -141,7 +141,7 @@ const Products = () => {
       setIsLoading(false);
   
       channel = supabase
-        .channel(`public:products:business_id=eq.${business.id}`)
+        .channel(`products-channel-${business.id}`)
         .on(
           'postgres_changes',
           {
