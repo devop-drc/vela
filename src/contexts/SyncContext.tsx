@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChannel, Session } from '@supabase/supabase-js';
 
@@ -11,11 +11,13 @@ interface SyncJob {
   thumbnail_url?: string;
   created_at: string;
   updated_at: string;
+  summary?: any;
 }
 
 interface SyncContextType {
   activeJob: SyncJob | null;
   isSyncing: boolean;
+  dismissJob: () => void;
 }
 
 const SyncContext = createContext<SyncContextType | undefined>(undefined);
@@ -23,7 +25,6 @@ const SyncContext = createContext<SyncContextType | undefined>(undefined);
 export const SyncProvider = ({ children }: { children: ReactNode }) => {
   const [activeJob, setActiveJob] = useState<SyncJob | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -50,12 +51,20 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
           .from('sync_jobs')
           .select('*')
           .eq('user_id', userId)
-          .in('status', ['starting', 'in_progress'])
+          .in('status', ['starting', 'in_progress', 'completed', 'failed'])
           .order('created_at', { ascending: false })
           .limit(1)
           .single();
         
-        setActiveJob(initialJob as SyncJob | null);
+        if (initialJob) {
+            const jobAge = Date.now() - new Date(initialJob.updated_at).getTime();
+            // Don't show completed/failed jobs that are older than 1 minute on initial load
+            if ((initialJob.status === 'completed' || initialJob.status === 'failed') && jobAge > 60000) {
+                setActiveJob(null);
+            } else {
+                setActiveJob(initialJob as SyncJob);
+            }
+        }
 
         channel = supabase.channel('sync_jobs_user_' + userId)
           .on(
@@ -63,21 +72,9 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
             { event: '*', schema: 'public', table: 'sync_jobs', filter: `user_id=eq.${userId}` },
             (payload) => {
               const job = payload.new as SyncJob;
-              if (job.status === 'in_progress' || job.status === 'starting') {
-                if (timeoutRef.current) {
-                  clearTimeout(timeoutRef.current);
-                  timeoutRef.current = null;
-                }
+              // Only update if it's a newer job than the one we're showing
+              if (!activeJob || new Date(job.created_at) >= new Date(activeJob.created_at)) {
                 setActiveJob(job);
-              } else {
-                setActiveJob(job);
-                if (timeoutRef.current) {
-                  clearTimeout(timeoutRef.current);
-                }
-                timeoutRef.current = setTimeout(() => {
-                  setActiveJob(null);
-                  timeoutRef.current = null;
-                }, 8000);
               }
             }
           )
@@ -91,14 +88,15 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       if (channel) {
         supabase.removeChannel(channel);
       }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
     };
   }, [session?.user?.id]);
 
+  const dismissJob = () => {
+    setActiveJob(null);
+  };
+
   return (
-    <SyncContext.Provider value={{ activeJob, isSyncing: !!activeJob && ['starting', 'in_progress'].includes(activeJob.status) }}>
+    <SyncContext.Provider value={{ activeJob, isSyncing: !!activeJob && ['starting', 'in_progress'].includes(activeJob.status), dismissJob }}>
       {children}
     </SyncContext.Provider>
   );

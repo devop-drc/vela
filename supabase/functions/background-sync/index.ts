@@ -13,14 +13,20 @@ const getSupabaseAdmin = () => createClient(
 );
 
 const updateJobProgress = async (supabase: SupabaseClient, jobId: string, progress: number, total: number, message: string, thumbnailUrl: string | null = null) => {
-  await supabase.from('sync_jobs').update({ progress, total, message, thumbnail_url: thumbnailUrl, status: 'in_progress', updated_at: new Date().toISOString() }).eq('id', jobId);
+  const payload: any = { progress, total, message, status: 'in_progress', updated_at: new Date().toISOString() };
+  if (thumbnailUrl) {
+    payload.thumbnail_url = thumbnailUrl;
+  }
+  await supabase.from('sync_jobs').update(payload).eq('id', jobId);
 };
 
 const analyzeAndEnrichPost = async (supabaseAdmin: SupabaseClient, post: any) => {
-    if (!post.caption) return null;
+    if (!post.caption) return { product: null, skipped: true };
     try {
         const { data: analysis, error: analysisError } = await supabaseAdmin.functions.invoke('ai-product-analyzer', { body: { caption: post.caption } });
-        if (analysisError || !analysis || !analysis.isProductPost) return null;
+        if (analysisError) throw analysisError;
+        if (!analysis || analysis.error) throw new Error(analysis?.error || "AI analysis failed");
+        if (!analysis.isProductPost) return { product: null, skipped: true };
 
         const p = analysis.product;
         let enrichedDetails = p.details || {};
@@ -29,24 +35,30 @@ const analyzeAndEnrichPost = async (supabaseAdmin: SupabaseClient, post: any) =>
             const { data: specData, error: specError } = await supabaseAdmin.functions.invoke('ai-spec-finder', {
                 body: { productName: p.name, categoryName: p.category, typeName: p.details.type }
             });
-            if (!specError && specData && !specData.error) {
+            if (specError) throw specError;
+            if (specData && !specData.error) {
                 enrichedDetails = { ...enrichedDetails, ...specData };
             }
         }
         
         return {
-            name: p.name, caption: p.description, category: p.category,
-            price: p.price, currency: p.currency, tags: p.tags, details: enrichedDetails,
-            status: 'Draft', instagram_post_id: post.id, media_url: post.media_url,
-            thumbnail_url: post.thumbnail_url, media_type: post.media_type,
+            product: {
+                name: p.name, caption: p.description, category: p.category,
+                price: p.price, currency: p.currency, tags: p.tags, details: enrichedDetails,
+                status: 'Draft', instagram_post_id: post.id, media_url: post.media_url,
+                thumbnail_url: post.thumbnail_url, media_type: post.media_type,
+            },
+            skipped: false
         };
     } catch (e) {
         console.error(`Error analyzing post ${post.id}:`, e.message);
-        return null;
+        // Treat analysis failure as a skip, but log the error
+        return { product: null, skipped: true };
     }
 };
 
 const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: string, syncType: 'quick' | 'full') => {
+  const summary = { created: 0, updated: 0, skipped: 0 };
   try {
     const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses').select('id').eq('user_id', user.id).single();
@@ -62,7 +74,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
 
     const allPosts = postsData.posts || [];
     if (allPosts.length === 0) {
-      await supabaseAdmin.from('sync_jobs').update({ status: 'completed', message: 'No posts found to sync.' }).eq('id', jobId);
+      await supabaseAdmin.from('sync_jobs').update({ status: 'completed', message: 'No posts found to sync.', summary }).eq('id', jobId);
       return;
     }
 
@@ -79,7 +91,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
     await updateJobProgress(supabaseAdmin, jobId, 0, total, `Found ${total} posts to process.`);
 
     if (total === 0) {
-      await supabaseAdmin.from('sync_jobs').update({ status: 'completed', message: 'No new posts to sync.' }).eq('id', jobId);
+      await supabaseAdmin.from('sync_jobs').update({ status: 'completed', message: 'No new posts to sync.', summary }).eq('id', jobId);
       return;
     }
 
@@ -88,16 +100,21 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
 
     for (const post of postsToProcess) {
       processedCount++;
-      const captionSnippet = post.caption ? `"${post.caption.substring(0, 40)}..."` : `post without caption`;
+      const captionSnippet = post.caption ? `"${post.caption.substring(0, 30)}..."` : `post without caption`;
       await updateJobProgress(supabaseAdmin, jobId, processedCount, total, `Analyzing: ${captionSnippet}`, post.thumbnail_url || post.media_url);
 
-      const productPayload = await analyzeAndEnrichPost(supabaseAdmin, post);
-      if (productPayload) {
-        const payloadWithId = {
-            ...productPayload,
-            business_id: business.id,
-            id: existingProductMap.get(post.id)
-        };
+      const { product: productPayload, skipped } = await analyzeAndEnrichPost(supabaseAdmin, post);
+      
+      if (skipped) {
+        summary.skipped++;
+      } else if (productPayload) {
+        const existingId = existingProductMap.get(post.id);
+        if (existingId) {
+          summary.updated++;
+        } else {
+          summary.created++;
+        }
+        const payloadWithId = { ...productPayload, business_id: business.id, id: existingId };
         productsToUpsert.push(payloadWithId);
       }
     }
@@ -121,12 +138,12 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
         await supabaseAdmin.from('businesses').update({ last_full_sync_at: new Date().toISOString() }).eq('id', business.id);
     }
 
-    const finalMessage = `Sync complete. Processed ${productsToUpsert.length} products.`;
-    await supabaseAdmin.from('sync_jobs').update({ status: 'completed', progress: total, total, message: finalMessage }).eq('id', jobId);
+    const finalMessage = `Sync complete. Created ${summary.created}, updated ${summary.updated}, skipped ${summary.skipped}.`;
+    await supabaseAdmin.from('sync_jobs').update({ status: 'completed', progress: total, total, message: finalMessage, summary }).eq('id', jobId);
 
   } catch (error) {
     console.error('Background Sync Error:', error.message);
-    await supabaseAdmin.from('sync_jobs').update({ status: 'failed', message: error.message }).eq('id', jobId);
+    await supabaseAdmin.from('sync_jobs').update({ status: 'failed', message: error.message, summary }).eq('id', jobId);
   }
 };
 
@@ -146,12 +163,13 @@ serve(async (req) => {
 
     const { data: job, error: jobError } = await supabaseAdmin
       .from('sync_jobs')
-      .insert({ user_id: user.id, status: 'starting' })
+      .insert({ user_id: user.id, status: 'starting', message: 'Initiating sync...' })
       .select('id')
       .single();
 
     if (jobError) throw jobError;
 
+    // Do not await this, let it run in the background
     syncProcess(supabaseAdmin, { ...user, token }, job.id, syncType);
 
     return new Response(JSON.stringify({ jobId: job.id }), {

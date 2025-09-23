@@ -80,8 +80,11 @@ serve(async (req) => {
     const fields = 'id,media_type,media_url,permalink,thumbnail_url,timestamp,caption';
     let allMedia: any[] = [];
     let mediaUrl: string | null = `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=${fields}&access_token=${userAccessToken}&limit=100`;
+    let pageCount = 0;
+    const MAX_PAGES = 10; // Safety break to prevent infinite loops
 
-    while (mediaUrl) {
+    while (mediaUrl && pageCount < MAX_PAGES) {
+        pageCount++;
         const mediaResponse = await fetch(mediaUrl);
         if (!mediaResponse.ok) {
             const errorData = await mediaResponse.json();
