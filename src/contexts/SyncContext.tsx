@@ -62,12 +62,13 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
             setActiveJob(initialJob as SyncJob);
         }
 
-        channel = supabase.channel('sync-jobs-channel-' + userId)
+        channel = supabase.channel(`sync_jobs:${userId}`)
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'sync_jobs', filter: `user_id=eq.${userId}` },
             (payload) => {
               const newJob = payload.new as SyncJob;
+              sessionStorage.removeItem('dismissed_sync_job_id');
               setActiveJob(newJob);
             }
           )
@@ -97,6 +98,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (newJob) {
+      sessionStorage.removeItem('dismissed_sync_job_id');
       setActiveJob(newJob as SyncJob);
     }
   };

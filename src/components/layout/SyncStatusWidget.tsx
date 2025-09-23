@@ -25,7 +25,6 @@ export const SyncStatusWidget = () => {
     if (activeJob && (activeJob.status === 'in_progress' || activeJob.status === 'starting')) {
       const startTime = new Date(activeJob.created_at).getTime();
       
-      // Set initial time immediately to avoid 1s delay
       setElapsedTime(formatTime(Date.now() - startTime));
       
       interval = setInterval(() => {
@@ -33,13 +32,12 @@ export const SyncStatusWidget = () => {
       }, 1000);
     }
     
-    // Cleanup function
     return () => {
       if (interval) {
         clearInterval(interval);
       }
     };
-  }, [activeJob?.id, activeJob?.status, activeJob?.created_at]); // More stable dependencies
+  }, [activeJob]);
 
   const isVisible = activeJob !== null;
   const isFinished = activeJob?.status === 'completed' || activeJob?.status === 'failed';
@@ -83,20 +81,13 @@ export const SyncStatusWidget = () => {
                 <CardContent className="p-3">
                   <div className="flex items-start gap-3">
                     {activeJob?.thumbnail_url && (
-                      <motion.div
-                        className="h-16 w-16 rounded-lg bg-muted flex-shrink-0"
-                        variants={{
-                          collapsed: { scale: 1, x: '0%', y: '0%' },
-                          expanded: { scale: 1.4, x: '20%', y: '15%' }
-                        }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                      >
+                      <div className="h-16 w-16 rounded-md bg-muted flex-shrink-0">
                         <img 
                           src={activeJob.thumbnail_url} 
                           alt="Post thumbnail" 
                           className="h-full w-full object-cover rounded-md"
                         />
-                      </motion.div>
+                      </div>
                     )}
                     <div className="flex-1 space-y-1 overflow-hidden">
                       <div className="flex items-center justify-between">
