@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionComponent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleComponent } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import { ProductViewMode } from "./product-detail/ProductViewMode";
 import { ProductEditMode } from "./product-detail/ProductEditMode";
 
@@ -50,16 +49,17 @@ interface Product {
   billing_interval: 'month' | 'year' | null;
   details: any;
   currency: string | null;
+  category: string;
 }
 
-interface ProductEditorProps {
+interface ProductDetailModalProps {
   product: Product | null;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: () => void;
 }
 
-export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEditorProps) => {
+export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: ProductDetailModalProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,20 +91,6 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       setMediaItems([]);
     }
   }, [product, form.reset]);
-  
-  useEffect(() => {
-    if (isEditing) {
-      const subscription = form.watch((value, { name }) => {
-        if (name === 'category') {
-          const newCategory = productCategories.find(c => c.value === value.category);
-          if (newCategory && newCategory.types.length > 0) {
-            form.setValue("details.type", newCategory.types[0].value);
-          }
-        }
-      });
-      return () => subscription.unsubscribe();
-    }
-  }, [isEditing, form]);
 
   if (!product) return null;
 
@@ -170,7 +156,6 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       }
     }
     
-    // Compare details object
     const originalDetails = originalProduct.details || {};
     const correctedDetails = newData.details || {};
     for (const key in correctedDetails) {
@@ -194,27 +179,14 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
 
   const handleSave = async (data: ProductFormData) => {
     setIsSubmitting(true);
-
-    // Log feedback before updating
     await logFeedback(product, data);
-
-    const { type: currentTypeDefinition } = getCategoryAndType(data.category, data.details.type);
-    const cleanedDetails: { [key: string]: any } = { type: data.details.type };
-
-    if (currentTypeDefinition) {
-        currentTypeDefinition.fields.forEach(field => {
-            if (data.details[field.name] !== undefined) {
-                cleanedDetails[field.name] = data.details[field.name];
-            }
-        });
-    }
 
     const { error } = await supabase.from('products').update({
         name: data.name, status: data.status, caption: data.caption, category: data.category,
         price: data.price, currency: data.currency, inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
         tags: data.tags, pricing_type: data.pricing_type,
         billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
-        details: cleanedDetails,
+        details: data.details || {},
         media_gallery: mediaItems,
         media_url: mediaItems[0] || null,
         thumbnail_url: mediaItems[0] || null,
