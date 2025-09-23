@@ -25,26 +25,14 @@ const getTriagePrompt = (caption: string) => `
 const getExtractionPrompt = (caption: string) => `
   You are an expert e-commerce analyst. Your task is to meticulously analyze an Instagram post caption and generate a complete, structured JSON object for the product or service being sold.
 
-  **VALID CATEGORIES & TYPES:**
-  - "clothing":
-    - "t-shirt"
-  - "electronics":
-    - "generic-device"
-  - "art":
-    - "print"
-  - "service":
-    - "consulting"
-  - "generic":
-    - "generic"
-
   Analyze the following caption:
   ---
   ${caption}
   ---
 
   **Instructions:**
-  1.  **MANDATORY - Categorize:** You MUST classify the product into ONE of the valid primary categories listed above. This field is non-negotiable.
-  2.  **MANDATORY - Sub-Categorize (Type):** Based on your chosen category, you MUST select the most fitting "type" from the valid types listed for that category above and place it inside the "details" object. This field is non-negotiable.
+  1.  **CRITICAL - Categorize:** You MUST classify the product into a logical, common-sense category (e.g., "Clothing", "Art", "Electronics", "Home Goods"). This field is mandatory.
+  2.  **CRITICAL - Sub-Categorize (Type):** Based on the primary category, you MUST create a fitting "type" and place it inside the "details" object (e.g., for "Clothing", a valid type is "T-Shirt"; for "Art", a valid type is "Print"). This field is mandatory.
   3.  **Extract All Details:** Scrutinize the caption for every possible product attribute (sizes, colors, materials, dimensions, specs).
   4.  **Find Specifications:** Use your internal knowledge to find relevant specs for the identified product and include them in the "details" object.
   5.  **Currency Detection:** Identify currency symbols ($, €, £) or codes (USD, EUR) and use the ISO code. Default to "USD" if none are found.
@@ -54,13 +42,13 @@ const getExtractionPrompt = (caption: string) => `
   **JSON Structure:**
   {
     "name": { "value": "A creative and concise name.", "justification": "Extracted from '...'" },
-    "category": { "value": "clothing", "justification": "Inferred from '...'" },
+    "category": { "value": "Clothing", "justification": "Inferred from '...'" },
     "description": { "value": "A compelling product description.", "justification": "Based on the overall caption." },
     "price": { "value": 25.99, "justification": "Extracted from '...'" },
     "currency": { "value": "USD", "justification": "Extracted from '$' symbol." },
     "tags": { "value": ["tag1", "tag2"], "justification": "Based on keywords '...'" },
     "details": {
-      "type": { "value": "t-shirt", "justification": "Inferred from '...'" }
+      "type": { "value": "T-Shirt", "justification": "Inferred from '...'" }
     }
   }
 `;
