@@ -23,7 +23,7 @@ const getTriagePrompt = (caption: string) => `
 `;
 
 const getExtractionPrompt = (caption: string) => `
-  You are an expert e-commerce analyst. Your task is to meticulously analyze an Instagram post caption and generate a complete, structured JSON object for the product or service being sold. Think like a potential customer and extract every detail they would want to know.
+  You are an expert e-commerce analyst. Your task is to meticulously analyze an Instagram post caption and generate a complete, structured JSON object for the product or service being sold.
 
   Analyze the following caption:
   ---
@@ -31,23 +31,24 @@ const getExtractionPrompt = (caption: string) => `
   ---
 
   **Instructions:**
-  1.  **Categorize:** Classify the product into ONE of the following categories: "clothing", "electronics", "art", "service", "generic".
-  2.  **Extract All Details:** Scrutinize the caption for every possible product attribute. This includes sizes, colors, materials, dimensions, technical specs, etc.
-  3.  **Find Specifications:** Based on the identified product name and type, use your internal knowledge base to find and include relevant technical specifications or common attributes in the "details" object. For a "T-Shirt", this might be "material" or "fit". For an "iPhone 15", this would be "processor", "display_size", etc. Only include specs you are confident about.
-  4.  **Currency Detection:** Pay close attention to currency symbols ($, €, £, ¥) or ISO codes (USD, EUR, GBP). If a symbol is found, use the corresponding ISO code. If no currency is mentioned, default to "USD".
-  5.  **Justify Extractions:** For each key-value pair, provide a "justification" field containing the exact quote from the caption that supports your extraction. If you infer a value (like a default currency or category), state that clearly.
-  6.  **Format Output:** Respond ONLY with a single, valid JSON object. Do not include markdown backticks or any other text.
+  1.  **Categorize:** Classify the product into ONE of the following primary categories: "clothing", "electronics", "art", "service", "generic".
+  2.  **Sub-Categorize (Type):** Based on the primary category, choose the most fitting "type". For "clothing", it could be "t-shirt". For "art", it could be "print".
+  3.  **Extract All Details:** Scrutinize the caption for every possible product attribute (sizes, colors, materials, dimensions, specs).
+  4.  **Find Specifications:** Use your internal knowledge to find relevant specs for the identified product and include them in the "details" object.
+  5.  **Currency Detection:** Identify currency symbols ($, €, £) or codes (USD, EUR) and use the ISO code. Default to "USD" if none are found.
+  6.  **Justify Extractions:** For each key-value pair, provide a "justification" field with the exact quote from the caption that supports your extraction.
+  7.  **Format Output:** Respond ONLY with a single, valid JSON object.
 
   **JSON Structure:**
   {
     "name": { "value": "A creative and concise name.", "justification": "Extracted from '...'" },
-    "category": { "value": "The category you identified.", "justification": "Inferred from '...'" },
+    "category": { "value": "The primary category you identified (e.g., 'clothing').", "justification": "Inferred from '...'" },
     "description": { "value": "A compelling product description.", "justification": "Based on the overall caption." },
     "price": { "value": 25.99, "justification": "Extracted from '...'" },
     "currency": { "value": "USD", "justification": "Extracted from '$' symbol." },
     "tags": { "value": ["tag1", "tag2"], "justification": "Based on keywords '...'" },
     "details": {
-      "type": { "value": "A specific type within the category.", "justification": "Inferred from '...'" }
+      "type": { "value": "The specific type within the category (e.g., 't-shirt').", "justification": "Inferred from '...'" }
     }
   }
 `;

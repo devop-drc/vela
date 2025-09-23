@@ -95,6 +95,7 @@ const Products = () => {
   useEffect(() => { setTitle("Products"); }, [setTitle]);
 
   const fetchProducts = useCallback(async () => {
+    // This function is now called by the real-time listener below
     setIsLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setIsLoading(false); return; }
@@ -120,8 +121,9 @@ const Products = () => {
   }, [fetchProducts, searchParams, setSearchParams]);
 
   useEffect(() => {
+    // This sets up the real-time subscription to your products table.
+    // Any change (insert, update, delete) will trigger a re-fetch.
     let channel: RealtimeChannel | undefined;
-
     const setupSubscription = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -139,9 +141,7 @@ const Products = () => {
         )
         .subscribe();
     }
-
     setupSubscription();
-
     return () => {
       if (channel) {
         supabase.removeChannel(channel);
@@ -173,7 +173,7 @@ const Products = () => {
   const handleStatusChange = async (productId: string, newStatus: ProductStatus) => {
     const { error } = await supabase.from('products').update({ status: newStatus }).eq('id', productId);
     if (error) { showError(`Failed to update status: ${error.message}`); } 
-    else { showSuccess(`Product is now ${newStatus.toLowerCase()}.`); fetchProducts(); }
+    else { showSuccess(`Product is now ${newStatus.toLowerCase()}.`); }
   };
 
   const filteredAndSortedProducts = useMemo(() => {
@@ -207,12 +207,12 @@ const Products = () => {
   const handleBulkStatusChange = async (status: ProductStatus) => {
     const { error } = await supabase.from('products').update({ status }).in('id', selectedProducts);
     if (error) { showError(`Failed to update products: ${error.message}`); } 
-    else { showSuccess(`Successfully updated ${selectedProducts.length} products.`); setSelectedProducts([]); fetchProducts(); }
+    else { showSuccess(`Successfully updated ${selectedProducts.length} products.`); setSelectedProducts([]); }
   };
   const handleBulkDelete = async () => {
     const { error } = await supabase.from('products').delete().in('id', selectedProducts);
     if (error) { showError(`Failed to delete products: ${error.message}`); } 
-    else { showSuccess(`Successfully deleted ${selectedProducts.length} products.`); setSelectedProducts([]); fetchProducts(); }
+    else { showSuccess(`Successfully deleted ${selectedProducts.length} products.`); setSelectedProducts([]); }
     setBulkDeleteConfirm(false);
   };
   const handleApplySale = async (saleData: SaleFormData) => {
@@ -220,7 +220,7 @@ const Products = () => {
     if (updates.length > 0) {
       const { error } = await supabase.from('products').upsert(updates);
       if (error) { showError(`Failed to apply sale: ${error.message}`); } 
-      else { showSuccess(`Sale applied to ${updates.length} products.`); fetchProducts(); }
+      else { showSuccess(`Sale applied to ${updates.length} products.`); }
     }
     setSelectedProducts([]);
     setIsSaleModalOpen(false);

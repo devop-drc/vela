@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, Loader2, X } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, X, Info } from 'lucide-react';
 import { SyncSummaryModal } from './SyncSummaryModal';
 
 const formatTime = (ms: number) => {
@@ -17,22 +17,18 @@ const formatTime = (ms: number) => {
 
 export const SyncStatusWidget = () => {
   const { activeJob, dismissJob } = useSync();
-  const [eta, setEta] = useState('...');
+  const [elapsedTime, setElapsedTime] = useState('0m 00s');
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
 
   useEffect(() => {
+    let interval: number | undefined;
     if (activeJob && (activeJob.status === 'in_progress' || activeJob.status === 'starting')) {
-      if (activeJob.progress > 0) {
-        const startTime = new Date(activeJob.created_at).getTime();
-        const elapsed = Date.now() - startTime;
-        const timePerItem = elapsed / activeJob.progress;
-        const remainingItems = activeJob.total - activeJob.progress;
-        const etaMs = timePerItem * remainingItems;
-        setEta(formatTime(etaMs));
-      } else {
-        setEta('...');
-      }
+      const startTime = new Date(activeJob.created_at).getTime();
+      interval = setInterval(() => {
+        setElapsedTime(formatTime(Date.now() - startTime));
+      }, 1000);
     }
+    return () => clearInterval(interval);
   }, [activeJob]);
 
   const isVisible = activeJob !== null;
@@ -40,14 +36,17 @@ export const SyncStatusWidget = () => {
   const percentage = activeJob && activeJob.total > 0 ? (activeJob.progress / activeJob.total) * 100 : (activeJob?.status === 'completed' ? 100 : 0);
 
   const statusInfo = {
-    starting: { icon: Loader2, color: 'text-muted-foreground', text: 'Starting...' },
-    in_progress: { icon: Loader2, color: 'text-muted-foreground', text: 'Syncing...' },
-    completed: { icon: CheckCircle, color: 'text-emerald-500', text: 'Sync Complete' },
-    failed: { icon: XCircle, color: 'text-destructive', text: 'Sync Failed' },
+    starting: { icon: Loader2, color: 'text-muted-foreground' },
+    in_progress: { icon: Loader2, color: 'text-muted-foreground' },
+    completed: { icon: CheckCircle, color: 'text-emerald-500' },
+    failed: { icon: XCircle, color: 'text-destructive' },
   };
 
   const currentStatus = statusInfo[activeJob?.status || 'starting'];
   const Icon = currentStatus.icon;
+
+  const totalTime = isFinished ? formatTime(new Date(activeJob.updated_at).getTime() - new Date(activeJob.created_at).getTime()) : '...';
+  const summary = activeJob?.summary || {};
 
   return (
     <>
@@ -66,7 +65,7 @@ export const SyncStatusWidget = () => {
               animate="collapsed"
               variants={{
                 collapsed: { width: 280 },
-                expanded: { width: 360 }
+                expanded: { width: 400 }
               }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             >
@@ -78,10 +77,7 @@ export const SyncStatusWidget = () => {
                         src={activeJob.thumbnail_url} 
                         alt="Post thumbnail" 
                         className="h-12 w-12 rounded-md object-cover bg-muted flex-shrink-0"
-                        variants={{
-                          collapsed: { scale: 1 },
-                          expanded: { scale: 1.15 }
-                        }}
+                        variants={{ collapsed: { scale: 1 }, expanded: { scale: 1.5, x: '5%', y: '5%' } }}
                         transition={{ type: 'spring', stiffness: 400, damping: 20 }}
                       />
                     )}
@@ -93,24 +89,36 @@ export const SyncStatusWidget = () => {
                       <Progress value={percentage} className="h-1.5" />
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>{activeJob?.progress || 0} / {activeJob?.total || 0}</span>
-                        {!isFinished && <span>ETA: {eta}</span>}
+                        <span>{isFinished ? `Finished in ${totalTime}` : elapsedTime}</span>
                       </div>
                       <motion.div
+                        className="overflow-hidden"
                         variants={{
                           collapsed: { opacity: 0, height: 0, marginTop: 0 },
-                          expanded: { opacity: 1, height: 'auto', marginTop: '4px' }
+                          expanded: { opacity: 1, height: 'auto', marginTop: '8px' }
                         }}
                         transition={{ duration: 0.2 }}
                       >
-                        <p className="text-xs text-muted-foreground pt-1 border-t border-dashed">
-                          {activeJob?.message || 'Initializing...'}
-                        </p>
+                        {isFinished ? (
+                          <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t">
+                            <div><p className="font-bold">{summary.created || 0}</p><p className="text-xs">Created</p></div>
+                            <div><p className="font-bold">{summary.updated || 0}</p><p className="text-xs">Updated</p></div>
+                            <div><p className="font-bold">{summary.skipped || 0}</p><p className="text-xs">Skipped</p></div>
+                          </div>
+                        ) : (
+                          <div className="space-y-1 pt-2 border-t border-dashed">
+                            <p className="text-xs font-semibold">AI Status:</p>
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              {activeJob?.message || 'Initializing...'}
+                            </p>
+                          </div>
+                        )}
                       </motion.div>
                     </div>
                   </div>
                   {isFinished && (
                     <div className="flex gap-2 mt-2">
-                      <Button size="sm" className="flex-1" onClick={() => setIsSummaryOpen(true)}>Details</Button>
+                      <Button size="sm" className="flex-1" onClick={() => setIsSummaryOpen(true)}><Info className="mr-2 h-4 w-4" />Details</Button>
                       <Button size="icon" variant="ghost" onClick={dismissJob} className="h-8 w-8 flex-shrink-0">
                           <X className="h-4 w-4" />
                       </Button>
