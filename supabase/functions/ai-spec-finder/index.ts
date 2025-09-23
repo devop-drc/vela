@@ -54,6 +54,9 @@ serve(async (req) => {
 
     const prompt = getSpecFinderPrompt(productName, categoryName, typeName);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+
     const response = await fetch(GEMINI_PRO_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -63,7 +66,10 @@ serve(async (req) => {
           responseMimeType: "application/json",
         },
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -83,6 +89,9 @@ serve(async (req) => {
     });
 
   } catch (error) {
+    if (error.name === 'AbortError') {
+      error.message = 'AI spec finder timed out after 20 seconds.';
+    }
     console.error('Function Error:', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 200, // Return 200 so client can parse the error

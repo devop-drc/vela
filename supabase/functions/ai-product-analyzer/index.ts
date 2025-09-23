@@ -73,20 +73,34 @@ const getCorrectionPrompt = (caption: string, generatedJson: string) => `
 `;
 
 const callGemini = async (url: string, prompt: string) => {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API error: ${errorText}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini API error: ${errorText}`);
+    }
+    const data = await response.json();
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error("AI failed to generate a response.");
+    }
+    return data.candidates[0].content.parts[0].text.trim();
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('AI analysis timed out after 20 seconds.');
+    }
+    throw error;
   }
-  const data = await response.json();
-  if (!data.candidates || data.candidates.length === 0) {
-    throw new Error("AI failed to generate a response.");
-  }
-  return data.candidates[0].content.parts[0].text.trim();
 };
 
 const safeJsonParse = (jsonString: string) => {

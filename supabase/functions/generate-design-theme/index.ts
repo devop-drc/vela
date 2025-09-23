@@ -106,6 +106,23 @@ const getTextOnlyDesignPrompt = (profile: any) => {
   `;
 };
 
+const fetchWithTimeout = async (url: string, options: any, timeout = 20000) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  options.signal = controller.signal;
+
+  try {
+    const response = await fetch(url, options);
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error(`Request timed out after ${timeout / 1000} seconds.`);
+    }
+    throw error;
+  }
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') { return new Response('ok', { headers: corsHeaders }); }
 
@@ -145,7 +162,7 @@ serve(async (req) => {
 
       const imagePrompt = getDesignPrompt(profileData);
       
-      const geminiResponse = await fetch(GEMINI_API_URL, {
+      const geminiResponse = await fetchWithTimeout(GEMINI_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: imagePrompt }, { inline_data: { mime_type: imageMimeType, data: imageBase64 } }] }] }),
@@ -164,7 +181,7 @@ serve(async (req) => {
       console.log("Attempting fallback to text-only design generation...");
 
       const textPrompt = getTextOnlyDesignPrompt(profileData);
-      const geminiResponse = await fetch(GEMINI_API_URL, {
+      const geminiResponse = await fetchWithTimeout(GEMINI_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: textPrompt }] }] }),
