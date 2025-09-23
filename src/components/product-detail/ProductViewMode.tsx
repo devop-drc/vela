@@ -29,7 +29,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     const specifications = allDetails.filter(f => !optionFieldNames.includes(f.name));
 
     return (
-      <div key="view" className="flex-1 flex flex-col min-h-0">
+      <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
         <ScrollArea className="flex-1 overflow-y-auto">
           <div className="p-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
@@ -121,6 +121,6 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
           <Button variant="outline" onClick={onEdit} disabled={isSubmitting}><Edit className="mr-2 h-4 w-4" />Edit</Button>
           <Button variant="destructive" onClick={onDelete} disabled={isSubmitting}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>
         </DialogFooter>
-      </div>
+      </motion.div>
     );
 };
