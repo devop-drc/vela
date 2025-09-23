@@ -32,7 +32,6 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
     const [isFindingSpecs, setIsFindingSpecs] = useState(false);
 
     const pricingType = watch("pricing_type");
-    const categoryValue = watch("category");
     const typeValue = watch("details.type");
     const statusValue = watch("status");
     const captionValue = watch("caption");
@@ -133,5 +132,5 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
           </DialogFooter>
         </form>
       </motion.div>
-    )
+    );
 };
