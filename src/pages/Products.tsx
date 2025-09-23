@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useIntegration } from "@/contexts/IntegrationContext";
 import { toast } from "sonner";
 import { useSync } from "@/contexts/SyncContext";
+import { RealtimeChannel } from "@supabase/supabase-js";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 type GridSizeType = 'sm' | 'md' | 'lg';
@@ -117,6 +118,36 @@ const Products = () => {
     }
     fetchProducts();
   }, [fetchProducts, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    let channel: RealtimeChannel | undefined;
+
+    const setupSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { data: business } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
+      if (!business) return;
+
+      channel = supabase.channel(`products_business_${business.id}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` },
+          () => {
+            fetchProducts();
+          }
+        )
+        .subscribe();
+    }
+
+    setupSubscription();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [fetchProducts]);
 
   const handleSync = async (syncType: 'quick' | 'full') => {
     runWithIntegrationCheck(async () => {
