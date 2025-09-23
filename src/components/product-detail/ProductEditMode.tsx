@@ -1,4 +1,5 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Controller } from "react-hook-form";
 import { DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,12 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
+import { TagInput } from "@/components/TagInput";
 import { Loader2, XCircle, PlusCircle, CheckCircle, Archive, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { DynamicAttributeForm } from "../attributes/DynamicAttributeForm";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -24,47 +26,38 @@ const statusConfig = {
 };
 
 export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting }: any) => {
-    const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
+    const { register, handleSubmit, control, watch, setValue, getValues } = form;
     const [isFindingSpecs, setIsFindingSpecs] = useState(false);
-    const [categories, setCategories] = useState<any[]>([]);
 
     const pricingType = watch("pricing_type");
-    const categoryId = watch("category_id");
+    const categoryValue = watch("category");
+    const typeValue = watch("details.type");
     const statusValue = watch("status");
     const captionValue = watch("caption");
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const { ref: rhfRef, ...captionProps } = register("caption");
     useAutosizeTextArea(textAreaRef.current, captionValue || "");
 
-    useEffect(() => {
-      const fetchCategories = async () => {
-        const { data } = await supabase.from('categories').select('id, name');
-        if (data) setCategories(data);
-      };
-      fetchCategories();
-    }, []);
+    const { category, type } = getCategoryAndType(categoryValue, typeValue);
+    const DetailsComponent = type?.component;
 
     const handleFindSpecs = async () => {
       setIsFindingSpecs(true);
-      const { name, category_id } = getValues();
-      const category = categories.find(c => c.id === category_id);
-
-      if (!name || !category) {
-        showError("Please provide a product name and category first.");
-        setIsFindingSpecs(false);
-        return;
-      }
+      const { name, category, details } = getValues();
+      const { category: catInfo, type: typeInfo } = getCategoryAndType(category, details.type);
 
       try {
         const { data, error } = await supabase.functions.invoke('ai-spec-finder', {
-          body: { productName: name, categoryName: category.name, typeName: category.name }, // Using category name for both for now
+          body: { productName: name, categoryName: catInfo?.label, typeName: typeInfo?.label },
         });
         if (error) throw error;
         if (data.error) throw new Error(data.error);
 
-        // This part is tricky because the AI returns keys that don't match attribute IDs.
-        // This is a limitation for now. A more advanced version would map AI keys to attribute names.
-        showSuccess("AI functionality is under development.");
+        // Merge new specs with existing details
+        const currentDetails = getValues('details');
+        const newDetails = { ...currentDetails, ...data };
+        setValue('details', newDetails, { shouldDirty: true });
+        showSuccess("AI has populated product specifications!");
 
       } catch (err: any) {
         showError(err.message || "Failed to find specifications.");
@@ -74,7 +67,7 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
     };
 
     return (
-      <div key="edit" className="flex-1 flex flex-col min-h-0">
+      <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Update Product</DialogTitle>
@@ -113,14 +106,24 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                 </div>
                 <div className="md:col-span-6 flex flex-col space-y-4">
                   <div>
-                    <Controller name="category_id" control={control} render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value || undefined}>
-                        <SelectTrigger className="w-auto border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9 px-2">
-                          <SelectValue placeholder="Select a category..." />
-                        </SelectTrigger>
-                        <SelectContent>{categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}</SelectContent>
-                      </Select>
-                    )} />
+                    <div className="flex items-center gap-4 text-sm font-medium">
+                      <Controller name="category" control={control} render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger className="w-auto border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9 px-2">
+                            <SelectValue placeholder="Category..." />
+                          </SelectTrigger>
+                          <SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent>
+                        </Select>
+                      )} />
+                      <Controller name="details.type" control={control} render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}>
+                          <SelectTrigger className="w-auto border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9 px-2">
+                            <SelectValue placeholder="Type..." />
+                          </SelectTrigger>
+                          <SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                        </Select>
+                      )} />
+                    </div>
                     <div className="flex items-center gap-2 mt-4">
                       <Input id="name" {...register("name")} placeholder="Product Name" className="w-auto border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors" />
                       <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn("w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50", statusConfig[statusValue as keyof typeof statusConfig]?.color)}>{statusValue && statusConfig[statusValue as keyof typeof statusConfig] ? (<div className="flex items-center gap-2"><statusConfig[statusValue as keyof typeof statusConfig].icon className="h-4 w-4" /><span>{statusConfig[statusValue as keyof typeof statusConfig].label}</span></div>) : <SelectValue placeholder="Set status..." />}</SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
@@ -137,6 +140,10 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                     placeholder="No description provided."
                     className="border-0 border-b-2 rounded-none bg-transparent p-0 text-base text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors resize-none"
                   />
+                  <div>
+                    <Label>Tags</Label>
+                    <Controller control={control} name="tags" render={({ field }) => <TagInput {...field} />} />
+                  </div>
                   <div className="space-y-2 pt-2">
                     <Label>Pricing & Inventory</Label>
                     <div className="flex items-center gap-4">
@@ -152,31 +159,10 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                             {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
                             {errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}
                         </div>
-                        
-                        {pricingType === 'one_time' && (
-                          <div className="space-y-1">
-                            <Label htmlFor="inventory" className="text-xs">Stock</Label>
-                            <Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
-                            {errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}
-                          </div>
-                        )}
-                        {pricingType === 'subscription' && (
-                          <div className="space-y-1">
-                            <Label className="text-xs">Interval</Label>
-                            <Controller name="billing_interval" control={control} render={({ field }) => (
-                              <Select onValueChange={field.onChange} value={field.value || undefined}>
-                                <SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50">
-                                  <SelectValue placeholder="Interval" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="month">/ month</SelectItem>
-                                  <SelectItem value="year">/ year</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            )} />
-                            {errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}
-                          </div>
-                        )}
+                        <AnimatePresence>
+                            {pricingType === 'one_time' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label htmlFor="inventory" className="text-xs">Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</motion.div>)}
+                            {pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}
+                        </AnimatePresence>
                     </div>
                   </div>
                 </div>
@@ -190,7 +176,7 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <DynamicAttributeForm categoryId={categoryId} control={control} />
+                  {DetailsComponent ? <DetailsComponent control={control} /> : <p className="text-sm text-muted-foreground text-center">Select a category and type to see specific details.</p>}
                 </CardContent>
               </Card>
             </div>
@@ -200,6 +186,6 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
             <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button>
           </DialogFooter>
         </form>
-      </div>
+      </motion.div>
     )
 };
