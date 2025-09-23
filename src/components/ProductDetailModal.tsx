@@ -22,6 +22,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { cn } from "@/lib/utils";
 import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
+import { formatCurrency } from "@/lib/formatters";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -29,6 +30,7 @@ const productSchema = z.object({
   caption: z.string().optional(),
   category: z.string().min(1, "Category is required"),
   price: z.coerce.number().min(0, "Price must be a positive number"),
+  currency: z.string().min(3, "Currency code is required").max(3).optional().nullable(),
   inventory: z.coerce.number().int().min(0, "Inventory must be a positive integer").optional(),
   tags: z.array(z.string()).optional(),
   pricing_type: z.enum(['one_time', 'subscription']),
@@ -51,6 +53,7 @@ interface Product {
   name: string;
   status: 'Active' | 'Draft' | 'Out of Stock';
   price: number;
+  currency: string | null;
   inventory: number;
   media_url: string;
   media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM';
@@ -108,6 +111,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
         caption: product.caption || "",
         category: product.category || "generic",
         price: product.price || 0,
+        currency: product.currency || 'USD',
         inventory: product.inventory || 0,
         tags: product.tags || [],
         pricing_type: product.pricing_type || 'one_time',
@@ -141,7 +145,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
 
     const { error } = await supabase.from('products').update({
         name: data.name, status: data.status, caption: data.caption, category: data.category,
-        price: data.price, inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
+        price: data.price, currency: data.currency, inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
         tags: data.tags, pricing_type: data.pricing_type,
         billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
         details: cleanedDetails,
@@ -217,7 +221,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div><Label className="text-sm">Price</Label><p className="font-semibold text-2xl">{product.pricing_type === 'subscription' ? `$${product.price?.toFixed(2)} / ${product.billing_interval}` : `$${product.price?.toFixed(2)}`}</p></div>
+                  <div><Label className="text-sm">Price</Label><p className="font-semibold text-2xl">{product.pricing_type === 'subscription' ? `${formatCurrency(product.price, product.currency)} / ${product.billing_interval}` : formatCurrency(product.price, product.currency)}</p></div>
                   {product.pricing_type !== 'subscription' && (<div><Label className="text-sm">Inventory</Label><p className="font-semibold text-2xl">{product.inventory || 0}</p></div>)}
                 </div>
               </div>
@@ -336,17 +340,22 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
                   <Label>Pricing & Inventory</Label>
                   <div className="flex items-center gap-4">
                     <Controller control={control} name="pricing_type" render={({ field }) => (<ToggleGroup type="single" onValueChange={field.onChange} value={field.value} variant="outline" size="sm"><ToggleGroupItem value="one_time">One-time</ToggleGroupItem><ToggleGroupItem value="subscription">Subscription</ToggleGroupItem></ToggleGroup>)} />
-                    <div className="flex-1 flex items-center gap-2">
-                      <Input id="price" type="number" step="0.01" {...register("price")} className="w-24 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
-                      <AnimatePresence>
-                        {pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="flex items-center gap-2 overflow-hidden"><Label htmlFor="inventory" className="text-sm text-muted-foreground">Stock:</Label><Input id="inventory" type="number" {...register("inventory")} className="w-20 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" /></motion.div>)}
-                        {pricingType === 'subscription' && (<motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="flex items-center gap-2 overflow-hidden"><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} /></motion.div>)}
-                      </AnimatePresence>
-                    </div>
                   </div>
-                  {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
-                  {errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}
-                  {errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}
+                  <div className="grid grid-cols-3 gap-4 pt-2">
+                    <div className="space-y-1 col-span-2">
+                      <Label htmlFor="price" className="text-xs">Price</Label>
+                      <div className="flex items-center gap-2">
+                        <Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
+                        <Input {...register("currency")} className="w-20 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" placeholder="USD" />
+                      </div>
+                      {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
+                      {errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}
+                    </div>
+                    <AnimatePresence>
+                      {pricingType === 'one_time' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label htmlFor="inventory" className="text-xs">Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</motion.div>)}
+                      {pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}
+                    </AnimatePresence>
+                  </div>
                 </div>
               </div>
             </div>

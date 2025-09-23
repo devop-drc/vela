@@ -35,11 +35,11 @@ interface Product {
   name: string;
   status: ProductStatus;
   price: number | null;
+  currency: string | null;
   inventory: number;
   media_url: string;
   caption: string;
   category: string;
-  features: string[];
   tags: string[];
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;

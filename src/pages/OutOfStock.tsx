@@ -22,6 +22,7 @@ interface Product {
   name: string;
   status: ProductStatus;
   price: number | null;
+  currency: string | null;
   inventory: number;
   media_url: string;
   caption: string;
