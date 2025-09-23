@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, Loader2, X } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { SyncSummaryModal } from './SyncSummaryModal';
 
 const formatTime = (ms: number) => {
@@ -57,28 +57,56 @@ export const SyncStatusWidget = () => {
       <AnimatePresence>
         {isVisible && (
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
             className="fixed bottom-4 left-4 z-50"
           >
-            <motion.div whileHover="expanded" initial="collapsed" variants={{ collapsed: { width: 240 }, expanded: { width: 340 } }} transition={{ type: 'spring', stiffness: 400, damping: 30 }}>
+            <motion.div 
+              whileHover="expanded" 
+              initial="collapsed"
+              animate="collapsed"
+              variants={{
+                collapsed: { width: 280 },
+                expanded: { width: 360 }
+              }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            >
               <Card className="shadow-lg overflow-hidden">
                 <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-start gap-3">
                     {activeJob?.thumbnail_url && (
-                      <img src={activeJob.thumbnail_url} alt="Post thumbnail" className="h-12 w-12 rounded-md object-cover bg-muted" />
+                      <motion.img 
+                        src={activeJob.thumbnail_url} 
+                        alt="Post thumbnail" 
+                        className="h-12 w-12 rounded-md object-cover bg-muted flex-shrink-0"
+                        variants={{
+                          collapsed: { scale: 1 },
+                          expanded: { scale: 1.15 }
+                        }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                      />
                     )}
                     <div className="flex-1 space-y-1 overflow-hidden">
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-semibold truncate">Product Syncing</h3>
-                        <Icon className={`h-4 w-4 flex-shrink-0 ${currentStatus.color} ${activeJob?.status !== 'completed' && activeJob?.status !== 'failed' ? 'animate-spin' : ''}`} />
+                        <Icon className={`h-4 w-4 flex-shrink-0 ${currentStatus.color} ${!isFinished ? 'animate-spin' : ''}`} />
                       </div>
-                      <p className="text-xs text-muted-foreground truncate">{isFinished ? currentStatus.text : activeJob?.message || 'Initializing...'}</p>
                       <Progress value={percentage} className="h-1.5" />
-                      <motion.div className="flex justify-between text-xs text-muted-foreground" variants={{ collapsed: { opacity: 0, height: 0 }, expanded: { opacity: 1, height: 'auto' } }} transition={{ duration: 0.2 }}>
+                      <div className="flex justify-between text-xs text-muted-foreground">
                         <span>{activeJob?.progress || 0} / {activeJob?.total || 0}</span>
                         {!isFinished && <span>ETA: {eta}</span>}
+                      </div>
+                      <motion.div
+                        variants={{
+                          collapsed: { opacity: 0, height: 0, marginTop: 0 },
+                          expanded: { opacity: 1, height: 'auto', marginTop: '4px' }
+                        }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <p className="text-xs text-muted-foreground pt-1 border-t border-dashed">
+                          {activeJob?.message || 'Initializing...'}
+                        </p>
                       </motion.div>
                     </div>
                   </div>

@@ -71,7 +71,7 @@ const itemVariants = {
 const Products = () => {
   const { setTitle } = usePageTitle();
   const { runWithIntegrationCheck } = useIntegration();
-  const { isSyncing } = useSync();
+  const { isSyncing, startNewSync } = useSync();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isImporterOpen, setIsImporterOpen] = useState(false);
@@ -128,6 +128,9 @@ const Products = () => {
         toast.dismiss('sync-initiating');
         if (error) throw error;
         if (data.error) throw new Error(data.error);
+        if (data.jobId) {
+          await startNewSync(data.jobId);
+        }
       } catch (err: any) {
         toast.dismiss('sync-initiating');
         showError(err.message || `Failed to start ${syncType} sync.`);

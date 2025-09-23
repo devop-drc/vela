@@ -18,6 +18,7 @@ interface SyncContextType {
   activeJob: SyncJob | null;
   isSyncing: boolean;
   dismissJob: () => void;
+  startNewSync: (jobId: string) => Promise<void>;
 }
 
 const SyncContext = createContext<SyncContextType | undefined>(undefined);
@@ -58,7 +59,6 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
         
         if (initialJob) {
             const jobAge = Date.now() - new Date(initialJob.updated_at).getTime();
-            // Don't show completed/failed jobs that are older than 1 minute on initial load
             if ((initialJob.status === 'completed' || initialJob.status === 'failed') && jobAge > 60000) {
                 setActiveJob(null);
             } else {
@@ -72,7 +72,6 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
             { event: '*', schema: 'public', table: 'sync_jobs', filter: `user_id=eq.${userId}` },
             (payload) => {
               const job = payload.new as SyncJob;
-              // Only update if it's a newer job than the one we're showing
               if (!activeJob || new Date(job.created_at) >= new Date(activeJob.created_at)) {
                 setActiveJob(job);
               }
@@ -89,14 +88,31 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
         supabase.removeChannel(channel);
       }
     };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, activeJob]);
+
+  const startNewSync = async (jobId: string) => {
+    const { data: newJob, error } = await supabase
+      .from('sync_jobs')
+      .select('*')
+      .eq('id', jobId)
+      .single();
+    
+    if (error) {
+      console.error("Failed to fetch newly created sync job:", error);
+      return;
+    }
+
+    if (newJob) {
+      setActiveJob(newJob as SyncJob);
+    }
+  };
 
   const dismissJob = () => {
     setActiveJob(null);
   };
 
   return (
-    <SyncContext.Provider value={{ activeJob, isSyncing: !!activeJob && ['starting', 'in_progress'].includes(activeJob.status), dismissJob }}>
+    <SyncContext.Provider value={{ activeJob, isSyncing: !!activeJob && ['starting', 'in_progress'].includes(activeJob.status), dismissJob, startNewSync }}>
       {children}
     </SyncContext.Provider>
   );
