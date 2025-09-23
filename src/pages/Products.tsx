@@ -82,6 +82,7 @@ const Products = () => {
   const isMobile = useIsMobile();
   const [hasDoneFullSync, setHasDoneFullSync] = useState<boolean | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [productsChannel, setProductsChannel] = useState<RealtimeChannel | null>(null);
 
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -96,9 +97,16 @@ const Products = () => {
   useEffect(() => { setTitle("Products"); }, [setTitle]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
-    return () => subscription.unsubscribe();
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -111,44 +119,46 @@ const Products = () => {
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
-    let channel: RealtimeChannel | null = null;
-  
-    const fetchAndSubscribe = async () => {
+    const setup = async () => {
+      if (productsChannel) {
+        await productsChannel.unsubscribe();
+      }
+
       if (!session?.user) {
         setIsLoading(false);
         setProducts([]);
         return;
       }
+
       setIsLoading(true);
-      
       const { data: business, error: businessError } = await supabase
         .from('businesses').select('id, last_full_sync_at').eq('user_id', session.user.id).single();
-  
+
       if (businessError || !business) {
-        showError("Could not find your business profile.");
+        showError("Could not find your business profile to sync products.");
         setIsLoading(false);
         return;
       }
       setHasDoneFullSync(!!business.last_full_sync_at);
-  
+
       const { data, error } = await supabase
         .from("products").select("*").eq('business_id', business.id).order('created_at', { ascending: false });
-  
+
       if (error) {
         showError("Could not fetch your product catalog.");
       } else {
         setProducts(data as Product[]);
       }
       setIsLoading(false);
-  
-      channel = supabase
+
+      const newChannel = supabase
         .channel(`products:${business.id}`)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` },
           (payload) => {
             if (payload.eventType === 'INSERT') {
-              setProducts((current) => [payload.new as Product, ...current.filter(p => p.id !== payload.new.id)]);
+              setProducts((current) => [payload.new as Product, ...current]);
             } else if (payload.eventType === 'UPDATE') {
               setProducts((current) => current.map((p) => p.id === payload.new.id ? (payload.new as Product) : p));
             } else if (payload.eventType === 'DELETE') {
@@ -157,13 +167,15 @@ const Products = () => {
           }
         )
         .subscribe();
+      
+      setProductsChannel(newChannel);
     };
-  
-    fetchAndSubscribe();
-  
+
+    setup();
+
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
+      if (productsChannel) {
+        productsChannel.unsubscribe();
       }
     };
   }, [session]);
