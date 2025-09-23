@@ -152,7 +152,7 @@ export const SyncStatusWidget = () => {
                     </div>
                   ) : (
                     <div className="mt-2">
-                      <Button size="sm" variant="destructive" className="w-full" onClick={handleAbort} disabled={isAborting}>
+                      <Button size="sm" variant="ghost" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleAbort} disabled={isAborting}>
                         {isAborting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
                         Abort Sync
                       </Button>

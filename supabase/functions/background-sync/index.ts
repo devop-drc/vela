@@ -109,7 +109,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
         summary.skipped++;
       } else if (productPayload) {
         const existingId = existingProductMap.get(post.id);
-        const payload: any = { ...productPayload, business_id: business.id };
+        const payload: any = { ...productPayload, business_id: business.id, user_id: user.id };
         
         if (existingId) {
           payload.id = existingId;
