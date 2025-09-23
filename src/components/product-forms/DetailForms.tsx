@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SizeSelector } from "./SizeSelector";
 import { ColorInput } from "./ColorInput";
-import { clothingMaterials } from "@/lib/productData";
+import { clothingMaterials } from "@/lib/productFormConfig";
 
 interface DetailFormProps {
   control: Control<any>;
@@ -67,5 +67,3 @@ export const ServiceDetailsForm = ({ control }: DetailFormProps) => (
         <DetailField name="format" control={control} label="Format" className="flex-1 min-w-[150px]" />
     </div>
 );
-
-export const GenericDetailsForm = () => <p className="text-sm text-muted-foreground text-center py-4">No specific details for this category.</p>;

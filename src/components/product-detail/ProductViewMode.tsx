@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Edit, Trash2 } from "lucide-react";
-import { getCategoryAndType } from "@/lib/productTypes";
 import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 
@@ -20,13 +19,11 @@ const DetailDisplayRow = ({ label, children }: { label: string, children: React.
 );
 
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
-    const { category, type } = getCategoryAndType(product.category, product.details?.type);
     const optionFieldNames = ['sizes', 'colors', 'framed'];
     
-    const allDetails = type?.fields.filter(field => {
-        const value = product.details?.[field.name];
-        return value && (!Array.isArray(value) || value.length > 0);
-    }) || [];
+    const allDetails = Object.keys(product.details || {})
+      .filter(key => key !== 'type')
+      .map(key => ({ name: key, label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) }));
 
     const options = allDetails.filter(f => optionFieldNames.includes(f.name));
     const specifications = allDetails.filter(f => !optionFieldNames.includes(f.name));
@@ -55,9 +52,9 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </div>
               <div className="md:col-span-6 flex flex-col space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    <span>{category?.label || 'Uncategorized'}</span>
-                    {type && <span> &middot; {type.label}</span>}
+                  <p className="text-sm font-medium text-muted-foreground capitalize">
+                    <span>{product.category || 'Uncategorized'}</span>
+                    {product.details?.type && <span> &middot; {product.details.type}</span>}
                   </p>
                   <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2 mt-1">
                     {product.name}
