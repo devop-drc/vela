@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchParams } from "react-router-dom";
 import { showError, showSuccess } from "@/utils/toast";
 import { InstagramPostModal } from "@/components/InstagramPostModal";
-import { ProductDetailModal } from "@/components/ProductDetailModal";
+import { ProductEditor } from "@/components/ProductEditor";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductTableView } from "@/components/ProductTableView";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -38,13 +38,14 @@ interface Product {
   currency: string | null;
   inventory: number;
   media_url: string;
+  media_gallery: string[] | null;
+  media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM';
   caption: string;
-  category: string;
-  tags: string[];
+  category_id: string | null;
+  categories: { name: string } | null;
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
   created_at: string;
-  details: any;
 }
 
 const gridSizeClasses: { [key: string]: string } = {
@@ -103,58 +104,51 @@ const Products = () => {
     }
   }, [searchParams, setSearchParams]);
 
+  const fetchProducts = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: business } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
+    if (!business) return;
+
+    const { data, error } = await supabase
+      .from("products")
+      .select("*, categories (name)")
+      .eq('business_id', business.id)
+      .order('created_at', { ascending: false });
+    
+    if (error) showError("Could not fetch your product catalog.");
+    else setProducts(data as any[] as Product[]);
+  }, []);
+
   useEffect(() => {
     let channel: RealtimeChannel | null = null;
 
-    const fetchAndSubscribe = async () => {
+    const setup = async () => {
       setIsLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
+      if (!user) { setIsLoading(false); return; }
 
       const { data: business, error: businessError } = await supabase.from('businesses').select('id, last_full_sync_at').eq('user_id', user.id).single();
-      if (businessError || !business) {
-        showError("Could not find your business profile.");
-        setIsLoading(false);
-        return;
-      }
+      if (businessError || !business) { showError("Could not find your business profile."); setIsLoading(false); return; }
+      
       setHasDoneFullSync(!!business.last_full_sync_at);
-
-      const { data, error } = await supabase.from("products").select("*").eq('business_id', business.id).order('created_at', { ascending: false });
-      if (error) {
-        showError("Could not fetch your product catalog.");
-      } else {
-        setProducts(data as Product[]);
-      }
+      await fetchProducts();
       setIsLoading(false);
 
       channel = supabase.channel(`products_business_${business.id}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` },
-          (payload) => {
-            if (payload.eventType === 'INSERT') {
-              setProducts(currentProducts => [payload.new as Product, ...currentProducts]);
-            } else if (payload.eventType === 'UPDATE') {
-              setProducts(currentProducts => currentProducts.map(p => p.id === payload.new.id ? payload.new as Product : p));
-            } else if (payload.eventType === 'DELETE') {
-              setProducts(currentProducts => currentProducts.filter(p => p.id !== payload.old.id));
-            }
-          }
-        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` }, 
+        () => fetchProducts())
         .subscribe();
     };
 
-    fetchAndSubscribe();
+    setup();
 
     return () => {
       if (channel) {
         supabase.removeChannel(channel);
       }
     };
-  }, []);
+  }, [fetchProducts]);
 
   const handleSync = async (syncType: 'quick' | 'full') => {
     runWithIntegrationCheck(async () => {
@@ -202,7 +196,7 @@ const Products = () => {
       return { 'All Products': filteredAndSortedProducts };
     }
     return filteredAndSortedProducts.reduce((acc, product) => {
-      const key = product.category || 'Uncategorized';
+      const key = product.categories?.name || 'Uncategorized';
       if (!acc[key]) acc[key] = [];
       acc[key].push(product);
       return acc;
@@ -242,8 +236,8 @@ const Products = () => {
 
   return (
     <>
-      {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={() => {}} />}
-      <ProductDetailModal isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={() => {}} />
+      {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={fetchProducts} />}
+      <ProductEditor isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={fetchProducts} />
       {isSaleModalOpen && <SaleModal isOpen={isSaleModalOpen} onClose={() => setIsSaleModalOpen(false)} onApply={handleApplySale} productCount={selectedProducts.length} />}
       <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {selectedProducts.length} products?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       
@@ -273,7 +267,7 @@ const Products = () => {
           </div>
         </div>
 
-        {isLoading ? <div className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-[340px] w-full rounded-lg" />)}</div> : Object.keys(groupedProducts).length > 0 ? (currentView === 'grid' ? <div className="space-y-8">{Object.entries(groupedProducts).map(([groupName, products]) => (<div key={groupName}><h2 className="text-xl font-bold mb-4 capitalize">{groupName} ({products.length})</h2><motion.div variants={containerVariants} initial="hidden" animate="visible" className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>{products.map((product) => <motion.div key={product.id} variants={itemVariants}><ProductCard product={product} gridSize={gridSize} isSelected={selectedProducts.includes(product.id)} isSelectionModeActive={isSelectionModeActive || selectedProducts.length > 0} onSelect={handleSelectProduct} onEdit={setSelectedProduct} onStatusChange={handleStatusChange} /></motion.div>)}</motion.div></div>))}</div> : <Card><CardContent className="p-0"><ProductTableView products={filteredAndSortedProducts} selectedProducts={selectedProducts} onSelectAll={(checked) => setSelectedProducts(checked ? filteredAndSortedProducts.map(p => p.id) : [])} onSelectOne={handleSelectProduct} onEdit={setSelectedProduct} onDelete={(id) => {}} onStatusChange={handleStatusChange} /></CardContent></Card>) : <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg"><h3 className="text-lg font-semibold">No Products Found</h3><p className="text-sm mt-1">Try adjusting your search or filters, or import from Instagram.</p></div>}
+        {isLoading ? <div className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-[340px] w-full rounded-lg" />)}</div> : Object.keys(groupedProducts).length > 0 ? (currentView === 'grid' ? <div className="space-y-8">{Object.entries(groupedProducts).map(([groupName, products]) => (<div key={groupName}><h2 className="text-xl font-bold mb-4 capitalize">{groupName} ({products.length})</h2><motion.div variants={containerVariants} initial="hidden" animate="visible" className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>{products.map((product) => <motion.div key={product.id} variants={itemVariants}><ProductCard product={product} gridSize={gridSize} isSelected={selectedProducts.includes(product.id)} isSelectionModeActive={isSelectionModeActive || selectedProducts.length > 0} onSelect={handleSelectProduct} onEdit={(p) => setSelectedProduct(p as Product)} onStatusChange={handleStatusChange} /></motion.div>)}</motion.div></div>))}</div> : <Card><CardContent className="p-0"><ProductTableView products={filteredAndSortedProducts as any[]} selectedProducts={selectedProducts} onSelectAll={(checked) => setSelectedProducts(checked ? filteredAndSortedProducts.map(p => p.id) : [])} onSelectOne={handleSelectProduct} onEdit={(p) => setSelectedProduct(p as Product)} onDelete={(id) => {}} onStatusChange={handleStatusChange} /></CardContent></Card>) : <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg"><h3 className="text-lg font-semibold">No Products Found</h3><p className="text-sm mt-1">Try adjusting your search or filters, or import from Instagram.</p></div>}
       </div>
       <AnimatePresence>{selectedProducts.length > 0 && <BulkActionsToolbar selectedCount={selectedProducts.length} onClear={() => { setSelectedProducts([]); setIsSelectionModeActive(false); }} onSetStatus={handleBulkStatusChange} onDelete={() => setBulkDeleteConfirm(true)} onAddSale={() => setIsSaleModalOpen(true)} />}</AnimatePresence>
     </>
