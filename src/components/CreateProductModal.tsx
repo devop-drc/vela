@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useForm, Controller, useWatch } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -11,23 +11,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
-import { TagInput } from "./TagInput";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AnimatePresence, motion } from "framer-motion";
-import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import { useShop } from "@/contexts/ShopContext";
+import { DynamicAttributeForm } from "./attributes/DynamicAttributeForm";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
-  description: z.string().optional(),
-  category: z.string().min(1, "Category is required"),
+  caption: z.string().optional(),
+  category_id: z.string().nullable(),
   price: z.coerce.number().min(0, "Price must be a positive number"),
   currency: z.string().min(3, "Currency code is required").max(3),
   inventory: z.coerce.number().int().min(0, "Inventory must be a positive integer").optional(),
-  tags: z.array(z.string()).optional(),
   pricing_type: z.enum(['one_time', 'subscription']),
-  details: z.any(),
+  attributes: z.record(z.any()).optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -42,67 +40,69 @@ interface CreateProductModalProps {
 
 export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post }: CreateProductModalProps) => {
   const { shopDetails } = useShop();
+  const [categories, setCategories] = useState<any[]>([]);
   
-  const { register, handleSubmit, control, setValue, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
+  const { register, handleSubmit, control, watch, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
-  });
-
-  useEffect(() => {
-    reset({
+    defaultValues: {
       name: productData?.name || "",
-      description: productData?.description || post?.caption || "",
-      category: productData?.category || "generic",
+      caption: productData?.description || post?.caption || "",
       price: productData?.price || 0,
       currency: productData?.currency || shopDetails?.currency || 'USD',
       inventory: 10,
-      tags: productData?.tags || [],
       pricing_type: 'one_time',
-      details: productData?.details || { type: 'generic' },
-    });
-  }, [productData, post, shopDetails, reset]);
+      attributes: {},
+    }
+  });
 
-  const pricingType = useWatch({ control, name: "pricing_type" });
-  const categoryValue = useWatch({ control, name: "category" });
-  const typeValue = useWatch({ control, name: "details.type" });
-
-  const { category, type } = getCategoryAndType(categoryValue, typeValue);
-  const DetailsComponent = type?.component;
+  const categoryId = watch("category_id");
 
   useEffect(() => {
-    // When category changes, reset the type to the first available one
-    const newCategory = productCategories.find(c => c.value === categoryValue);
-    if (newCategory && newCategory.types.length > 0) {
-      setValue("details.type", newCategory.types[0].value);
-    }
-  }, [categoryValue, setValue]);
+    const fetchCategories = async () => {
+      const { data } = await supabase.from('categories').select('id, name');
+      if (data) setCategories(data);
+    };
+    fetchCategories();
+  }, []);
 
   const onSubmit = async (data: ProductFormData) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { showError("You must be logged in to create a product."); return; }
+    if (!user) { showError("You must be logged in."); return; }
 
-    const { data: business, error: businessError } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
-    if (businessError || !business) { showError("Could not find your business profile."); return; }
+    const { data: business } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
+    if (!business) { showError("Could not find your business profile."); return; }
 
-    const { error } = await supabase.from('products').insert({
+    const { attributes, ...productFields } = data;
+    
+    const { data: newProduct, error: productError } = await supabase.from('products').insert({
       business_id: business.id,
-      name: data.name,
-      caption: data.description,
-      category: data.category,
-      price: data.price,
-      currency: data.currency,
+      ...productFields,
       inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
-      tags: data.tags,
-      details: data.details,
-      pricing_type: data.pricing_type,
       status: 'Draft',
       instagram_post_id: post.id,
       media_url: post.media_url,
       thumbnail_url: post.thumbnail_url,
       media_type: post.media_type,
-    });
+    }).select().single();
 
-    if (error) { showError(`Failed to create product: ${error.message}`); } 
-    else { showSuccess("Product created successfully!"); onSave(); onClose(); }
+    if (productError) { showError(`Failed to create product: ${productError.message}`); return; }
+
+    if (attributes && Object.keys(attributes).length > 0) {
+      const attributeValues = Object.entries(attributes).map(([attribute_id, value]) => ({
+        product_id: newProduct.id,
+        attribute_id,
+        value_text: typeof value === 'string' ? value : null,
+        value_number: typeof value === 'number' ? value : null,
+        value_jsonb: Array.isArray(value) ? value : null,
+      }));
+      
+      const { error: attrError } = await supabase.from('product_attribute_values').upsert(attributeValues);
+      if (attrError) { showError(`Product created, but failed to save attributes: ${attrError.message}`); }
+    }
+    
+    showSuccess("Product created successfully!"); 
+    onSave(); 
+    onClose();
   };
 
   return (
@@ -118,15 +118,11 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
             <div className="space-y-4">
               <Card className="overflow-hidden h-fit"><CardContent className="p-0"><img src={post.media_url} alt="Instagram Post" className="w-full h-auto object-cover aspect-square" /></CardContent></Card>
               <div className="space-y-2"><Label htmlFor="name">Product Name</Label><Input id="name" {...register("name")} />{errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}</div>
-              <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" {...register("description")} rows={4} /></div>
-              <div className="space-y-2"><Label>Tags</Label><Controller name="tags" control={control} render={({ field }) => <TagInput {...field} placeholder="Add tag..." />} /></div>
+              <div className="space-y-2"><Label htmlFor="caption">Description</Label><Textarea id="caption" {...register("caption")} rows={4} /></div>
             </div>
             {/* Right Column */}
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Category</Label><Controller name="category" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent></Select>)} /></div>
-                <div className="space-y-2"><Label>Type</Label><Controller name="details.type" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}><SelectTrigger><SelectValue placeholder="Select type..." /></SelectTrigger><SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select>)} /></div>
-              </div>
+              <div className="space-y-2"><Label>Category</Label><Controller name="category_id" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent>{categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}</SelectContent></Select>)} /></div>
               <div className="space-y-2"><Label>Pricing Model</Label><Controller name="pricing_type" control={control} render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="one_time" id="one_time" /><Label htmlFor="one_time">One-time</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="subscription" id="subscription" /><Label htmlFor="subscription">Subscription</Label></div></RadioGroup>)} /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -139,14 +135,14 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
                   {errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}
                 </div>
                 <AnimatePresence>
-                  {pricingType === 'one_time' && (
+                  {watch("pricing_type") === 'one_time' && (
                     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden">
                       <div className="space-y-2"><Label htmlFor="inventory">Inventory</Label><Input id="inventory" type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
-              <div className="space-y-2"><Label>Specific Details</Label><Card><CardContent className="p-4">{DetailsComponent ? <DetailsComponent control={control} /> : <p>Select a category and type.</p>}</CardContent></Card></div>
+              <div className="space-y-2"><Label>Specific Details</Label><Card><CardContent className="p-4"><DynamicAttributeForm categoryId={categoryId} control={control} /></CardContent></Card></div>
             </div>
           </div>
           <DialogFooter><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save Product</Button></DialogFooter>
