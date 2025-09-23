@@ -60,7 +60,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
         if (initialJob) {
             const jobAge = Date.now() - new Date(initialJob.updated_at).getTime();
             if ((initialJob.status === 'completed' || initialJob.status === 'failed') && jobAge > 60000) {
-                setActiveJob(null);
+                // Ignore old, finished jobs
             } else {
                 setActiveJob(initialJob as SyncJob);
             }
@@ -71,10 +71,9 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
             'postgres_changes',
             { event: '*', schema: 'public', table: 'sync_jobs', filter: `user_id=eq.${userId}` },
             (payload) => {
-              const job = payload.new as SyncJob;
-              if (!activeJob || new Date(job.created_at) >= new Date(activeJob.created_at)) {
-                setActiveJob(job);
-              }
+              const newJob = payload.new as SyncJob;
+              // Always update with the latest job from the channel
+              setActiveJob(newJob);
             }
           )
           .subscribe();
@@ -88,7 +87,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
         supabase.removeChannel(channel);
       }
     };
-  }, [session?.user?.id, activeJob]);
+  }, [session?.user?.id]);
 
   const startNewSync = async (jobId: string) => {
     const { data: newJob, error } = await supabase

@@ -31,8 +31,8 @@ const getExtractionPrompt = (caption: string) => `
   ---
 
   **Instructions:**
-  1.  **Categorize:** Classify the product into ONE of the following primary categories: "clothing", "electronics", "art", "service", "generic".
-  2.  **Sub-Categorize (Type):** Based on the primary category, choose the most fitting "type". For "clothing", it could be "t-shirt". For "art", it could be "print".
+  1.  **CRITICAL - Categorize:** You MUST classify the product into ONE of the following primary categories: "clothing", "electronics", "art", "service", "generic". This field is mandatory.
+  2.  **CRITICAL - Sub-Categorize (Type):** Based on the primary category, you MUST choose the most fitting "type" and place it inside the "details" object. For "clothing", a valid type is "t-shirt". For "art", a valid type is "print". This field is mandatory.
   3.  **Extract All Details:** Scrutinize the caption for every possible product attribute (sizes, colors, materials, dimensions, specs).
   4.  **Find Specifications:** Use your internal knowledge to find relevant specs for the identified product and include them in the "details" object.
   5.  **Currency Detection:** Identify currency symbols ($, €, £) or codes (USD, EUR) and use the ISO code. Default to "USD" if none are found.
@@ -42,13 +42,13 @@ const getExtractionPrompt = (caption: string) => `
   **JSON Structure:**
   {
     "name": { "value": "A creative and concise name.", "justification": "Extracted from '...'" },
-    "category": { "value": "The primary category you identified (e.g., 'clothing').", "justification": "Inferred from '...'" },
+    "category": { "value": "clothing", "justification": "Inferred from '...'" },
     "description": { "value": "A compelling product description.", "justification": "Based on the overall caption." },
     "price": { "value": 25.99, "justification": "Extracted from '...'" },
     "currency": { "value": "USD", "justification": "Extracted from '$' symbol." },
     "tags": { "value": ["tag1", "tag2"], "justification": "Based on keywords '...'" },
     "details": {
-      "type": { "value": "The specific type within the category (e.g., 't-shirt').", "justification": "Inferred from '...'" }
+      "type": { "value": "t-shirt", "justification": "Inferred from '...'" }
     }
   }
 `;

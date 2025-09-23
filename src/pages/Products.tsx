@@ -94,20 +94,29 @@ const Products = () => {
 
   useEffect(() => { setTitle("Products"); }, [setTitle]);
 
-  const fetchProducts = useCallback(async () => {
-    // This function is now called by the real-time listener below
-    setIsLoading(true);
+  const fetchProducts = useCallback(async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setIsLoading(false); return; }
+    if (!user) {
+      if (showLoading) setIsLoading(false);
+      return;
+    }
 
     const { data: business, error: businessError } = await supabase.from('businesses').select('id, last_full_sync_at').eq('user_id', user.id).single();
-    if (businessError || !business) { showError("Could not find your business profile."); setIsLoading(false); return; }
+    if (businessError || !business) {
+      showError("Could not find your business profile.");
+      if (showLoading) setIsLoading(false);
+      return;
+    }
     setHasDoneFullSync(!!business.last_full_sync_at);
 
     const { data, error } = await supabase.from("products").select("*").eq('business_id', business.id).order('created_at', { ascending: false });
-    if (error) { showError("Could not fetch your product catalog."); } 
-    else { setProducts(data as Product[]); }
-    setIsLoading(false);
+    if (error) {
+      showError("Could not fetch your product catalog.");
+    } else {
+      setProducts(data as Product[]);
+    }
+    if (showLoading) setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -121,8 +130,6 @@ const Products = () => {
   }, [fetchProducts, searchParams, setSearchParams]);
 
   useEffect(() => {
-    // This sets up the real-time subscription to your products table.
-    // Any change (insert, update, delete) will trigger a re-fetch.
     let channel: RealtimeChannel | undefined;
     const setupSubscription = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -131,12 +138,13 @@ const Products = () => {
       const { data: business } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
       if (!business) return;
 
-      channel = supabase.channel(`products_business_${business.id}`)
+      const channelName = `products-business-${business.id}`;
+      channel = supabase.channel(channelName)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` },
           () => {
-            fetchProducts();
+            fetchProducts(false); // Fetch without showing full page loader
           }
         )
         .subscribe();
