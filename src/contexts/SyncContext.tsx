@@ -26,6 +26,7 @@ const SyncContext = createContext<SyncContextType | undefined>(undefined);
 export const SyncProvider = ({ children }: { children: ReactNode }) => {
   const [activeJob, setActiveJob] = useState<SyncJob | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const userId = session?.user?.id;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -38,13 +39,10 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (!session?.user?.id) {
+    if (!userId) {
       setActiveJob(null);
       return;
     }
-
-    let channel: RealtimeChannel | null = null;
-    const userId = session.user.id;
 
     const setupSync = async () => {
       const { data: initialJob } = await supabase
@@ -60,29 +58,25 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       if (initialJob && initialJob.id !== dismissedJobId) {
         setActiveJob(initialJob as SyncJob);
       }
-
-      // Use a stable channel name
-      channel = supabase.channel(`sync_jobs:${userId}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'sync_jobs', filter: `user_id=eq.${userId}` },
-          (payload) => {
-            const newJob = payload.new as SyncJob;
-            sessionStorage.removeItem('dismissed_sync_job_id');
-            setActiveJob(newJob);
-          }
-        )
-        .subscribe();
     };
-
     setupSync();
 
+    const channel = supabase.channel(`sync_jobs:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'sync_jobs', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const newJob = payload.new as SyncJob;
+          sessionStorage.removeItem('dismissed_sync_job_id');
+          setActiveJob(newJob);
+        }
+      )
+      .subscribe();
+
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      supabase.removeChannel(channel);
     };
-  }, [session]);
+  }, [userId]);
 
   const startNewSync = async (jobId: string) => {
     const { data: newJob, error } = await supabase

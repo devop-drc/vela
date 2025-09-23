@@ -82,6 +82,7 @@ const Products = () => {
   const isMobile = useIsMobile();
   const [hasDoneFullSync, setHasDoneFullSync] = useState<boolean | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [businessId, setBusinessId] = useState<string | null>(null);
 
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -112,71 +113,65 @@ const Products = () => {
     }
   }, [searchParams, setSearchParams]);
 
+  // Effect 1: Get businessId from session
   useEffect(() => {
-    if (!session?.user) {
+    if (session?.user) {
+      setIsLoading(true);
+      supabase.from('businesses').select('id, last_full_sync_at').eq('user_id', session.user.id).single()
+        .then(({ data, error }) => {
+          if (error || !data) {
+            showError("Could not find your business profile.");
+            setBusinessId(null);
+          } else {
+            setBusinessId(data.id);
+            setHasDoneFullSync(!!data.last_full_sync_at);
+          }
+        });
+    } else {
+      setBusinessId(null);
+    }
+  }, [session]);
+
+  // Effect 2: Fetch data and manage real-time subscription based on businessId
+  useEffect(() => {
+    if (!businessId) {
       setIsLoading(false);
       setProducts([]);
       return;
     }
 
-    let channel: RealtimeChannel | null = null;
-    let isMounted = true;
-
-    const setupPage = async () => {
-      setIsLoading(true);
-
-      const { data: business, error: businessError } = await supabase
-        .from('businesses').select('id, last_full_sync_at').eq('user_id', session.user.id).single();
-
-      if (!isMounted) return;
-
-      if (businessError || !business) {
-        showError("Could not find your business profile.");
+    setIsLoading(true);
+    supabase.from("products").select("*").eq('business_id', businessId).order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) {
+          showError("Could not fetch your product catalog.");
+        } else if (data) {
+          setProducts(data as Product[]);
+        }
         setIsLoading(false);
-        return;
-      }
-      
-      setHasDoneFullSync(!!business.last_full_sync_at);
+      });
 
-      const { data, error } = await supabase
-        .from("products").select("*").eq('business_id', business.id).order('created_at', { ascending: false });
-      
-      if (!isMounted) return;
-
-      if (error) {
-        showError("Could not fetch your product catalog.");
-      } else if (data) {
-        setProducts(data as Product[]);
-      }
-      setIsLoading(false);
-
-      channel = supabase
-        .channel(`products:${business.id}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` },
-          (payload) => {
-            if (payload.eventType === 'INSERT') {
-              setProducts((current) => [payload.new as Product, ...current.filter(p => p.id !== payload.new.id)]);
-            } else if (payload.eventType === 'UPDATE') {
-              setProducts((current) => current.map((p) => (p.id === payload.new.id ? (payload.new as Product) : p)));
-            } else if (payload.eventType === 'DELETE') {
-              setProducts((current) => current.filter((p) => p.id !== payload.old.id));
-            }
+    const channel = supabase
+      .channel(`products:${businessId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${businessId}` },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setProducts((current) => [payload.new as Product, ...current.filter(p => p.id !== payload.new.id)]);
+          } else if (payload.eventType === 'UPDATE') {
+            setProducts((current) => current.map((p) => (p.id === payload.new.id ? (payload.new as Product) : p)));
+          } else if (payload.eventType === 'DELETE') {
+            setProducts((current) => current.filter((p) => p.id !== payload.old.id));
           }
-        )
-        .subscribe();
-    };
-
-    setupPage();
+        }
+      )
+      .subscribe();
 
     return () => {
-      isMounted = false;
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      supabase.removeChannel(channel);
     };
-  }, [session]);
+  }, [businessId]);
 
   const handleSync = async (syncType: 'quick' | 'full') => {
     runWithIntegrationCheck(async () => {
