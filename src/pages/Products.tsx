@@ -82,7 +82,6 @@ const Products = () => {
   const isMobile = useIsMobile();
   const [hasDoneFullSync, setHasDoneFullSync] = useState<boolean | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [productsChannel, setProductsChannel] = useState<RealtimeChannel | null>(null);
 
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -97,16 +96,11 @@ const Products = () => {
   useEffect(() => { setTitle("Products"); }, [setTitle]);
 
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -119,23 +113,21 @@ const Products = () => {
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
-    const setup = async () => {
-      if (productsChannel) {
-        await productsChannel.unsubscribe();
-      }
+    let channel: RealtimeChannel | null = null;
 
+    const fetchAndSubscribe = async () => {
       if (!session?.user) {
         setIsLoading(false);
         setProducts([]);
         return;
       }
-
       setIsLoading(true);
+
       const { data: business, error: businessError } = await supabase
         .from('businesses').select('id, last_full_sync_at').eq('user_id', session.user.id).single();
 
       if (businessError || !business) {
-        showError("Could not find your business profile to sync products.");
+        showError("Could not find your business profile.");
         setIsLoading(false);
         return;
       }
@@ -151,7 +143,7 @@ const Products = () => {
       }
       setIsLoading(false);
 
-      const newChannel = supabase
+      channel = supabase
         .channel(`products:${business.id}`)
         .on(
           'postgres_changes',
@@ -160,22 +152,20 @@ const Products = () => {
             if (payload.eventType === 'INSERT') {
               setProducts((current) => [payload.new as Product, ...current]);
             } else if (payload.eventType === 'UPDATE') {
-              setProducts((current) => current.map((p) => p.id === payload.new.id ? (payload.new as Product) : p));
+              setProducts((current) => current.map((p) => (p.id === payload.new.id ? (payload.new as Product) : p)));
             } else if (payload.eventType === 'DELETE') {
               setProducts((current) => current.filter((p) => p.id !== payload.old.id));
             }
           }
         )
         .subscribe();
-      
-      setProductsChannel(newChannel);
     };
 
-    setup();
+    fetchAndSubscribe();
 
     return () => {
-      if (productsChannel) {
-        productsChannel.unsubscribe();
+      if (channel) {
+        supabase.removeChannel(channel);
       }
     };
   }, [session]);
