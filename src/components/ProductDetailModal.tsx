@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionComponent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleComponent } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -213,7 +212,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
             <DialogTitle>Product Details: {product.name}</DialogTitle>
             <DialogDescription>View or edit product details for {product.name}.</DialogDescription>
           </DialogHeader>
-          <AnimatePresence mode="wait">
+          <>
             {isEditing ? (
               <ProductEditMode
                 product={product}
@@ -234,7 +233,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: Produ
                 isSubmitting={isSubmitting}
               />
             )}
-          </AnimatePresence>
+          </>
         </DialogContent>
       </Dialog>
       <AlertDialog open={isDeleting} onOpenChange={setIsDeleting}><AlertDialogContent><AlertDialogHeader><AlertDialogTitleComponent>Are you absolutely sure?</AlertDialogTitleComponent><AlertDialogDescriptionComponent>This action cannot be undone. This will permanently delete the product.</AlertDialogDescriptionComponent></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete product</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
