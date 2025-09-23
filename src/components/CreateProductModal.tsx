@@ -13,9 +13,10 @@ import { Loader2 } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
 import { TagInput } from "./TagInput";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AnimatePresence, motion } from "framer-motion";
+import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import { useShop } from "@/contexts/ShopContext";
-import { DynamicDetailForm } from "./product-forms/DynamicDetailForm";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -42,7 +43,7 @@ interface CreateProductModalProps {
 export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post }: CreateProductModalProps) => {
   const { shopDetails } = useShop();
   
-  const { register, handleSubmit, control, reset, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
+  const { register, handleSubmit, control, setValue, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
   });
 
@@ -50,7 +51,7 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
     reset({
       name: productData?.name || "",
       description: productData?.description || post?.caption || "",
-      category: productData?.category || "Uncategorized",
+      category: productData?.category || "generic",
       price: productData?.price || 0,
       currency: productData?.currency || shopDetails?.currency || 'USD',
       inventory: 10,
@@ -61,7 +62,19 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
   }, [productData, post, shopDetails, reset]);
 
   const pricingType = useWatch({ control, name: "pricing_type" });
+  const categoryValue = useWatch({ control, name: "category" });
   const typeValue = useWatch({ control, name: "details.type" });
+
+  const { category, type } = getCategoryAndType(categoryValue, typeValue);
+  const DetailsComponent = type?.component;
+
+  useEffect(() => {
+    // When category changes, reset the type to the first available one
+    const newCategory = productCategories.find(c => c.value === categoryValue);
+    if (newCategory && newCategory.types.length > 0) {
+      setValue("details.type", newCategory.types[0].value);
+    }
+  }, [categoryValue, setValue]);
 
   const onSubmit = async (data: ProductFormData) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -111,8 +124,8 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
             {/* Right Column */}
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Category</Label><Input {...register("category")} placeholder="e.g., Clothing" /></div>
-                <div className="space-y-2"><Label>Type</Label><Input {...register("details.type")} placeholder="e.g., T-Shirt" /></div>
+                <div className="space-y-2"><Label>Category</Label><Controller name="category" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent></Select>)} /></div>
+                <div className="space-y-2"><Label>Type</Label><Controller name="details.type" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}><SelectTrigger><SelectValue placeholder="Select type..." /></SelectTrigger><SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select>)} /></div>
               </div>
               <div className="space-y-2"><Label>Pricing Model</Label><Controller name="pricing_type" control={control} render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="one_time" id="one_time" /><Label htmlFor="one_time">One-time</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="subscription" id="subscription" /><Label htmlFor="subscription">Subscription</Label></div></RadioGroup>)} /></div>
               <div className="grid grid-cols-2 gap-4">
@@ -133,7 +146,7 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
                   )}
                 </AnimatePresence>
               </div>
-              <div className="space-y-2"><Label>Specific Details</Label><Card><CardContent className="p-4"><DynamicDetailForm control={control} type={typeValue} /></CardContent></Card></div>
+              <div className="space-y-2"><Label>Specific Details</Label><Card><CardContent className="p-4">{DetailsComponent ? <DetailsComponent control={control} /> : <p>Select a category and type.</p>}</CardContent></Card></div>
             </div>
           </div>
           <DialogFooter><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save Product</Button></DialogFooter>

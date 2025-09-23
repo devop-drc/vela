@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Badge } from "@/components/ui/badge";
@@ -5,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Edit, Trash2 } from "lucide-react";
+import { getCategoryAndType } from "@/lib/productTypes";
 import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 
@@ -18,17 +20,19 @@ const DetailDisplayRow = ({ label, children }: { label: string, children: React.
 );
 
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
+    const { category, type } = getCategoryAndType(product.category, product.details?.type);
     const optionFieldNames = ['sizes', 'colors', 'framed'];
     
-    const allDetails = Object.keys(product.details || {})
-      .filter(key => key !== 'type')
-      .map(key => ({ name: key, label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) }));
+    const allDetails = type?.fields.filter(field => {
+        const value = product.details?.[field.name];
+        return value && (!Array.isArray(value) || value.length > 0);
+    }) || [];
 
     const options = allDetails.filter(f => optionFieldNames.includes(f.name));
     const specifications = allDetails.filter(f => !optionFieldNames.includes(f.name));
 
     return (
-      <div key="view" className="flex-1 flex flex-col min-h-0">
+      <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
         <ScrollArea className="flex-1 overflow-y-auto">
           <div className="p-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
@@ -51,9 +55,9 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </div>
               <div className="md:col-span-6 flex flex-col space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground capitalize">
-                    <span>{product.category || 'Uncategorized'}</span>
-                    {product.details?.type && <span> &middot; {product.details.type}</span>}
+                  <p className="text-sm font-medium text-muted-foreground">
+                    <span>{category?.label || 'Uncategorized'}</span>
+                    {type && <span> &middot; {type.label}</span>}
                   </p>
                   <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2 mt-1">
                     {product.name}
@@ -120,6 +124,6 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
           <Button variant="outline" onClick={onEdit} disabled={isSubmitting}><Edit className="mr-2 h-4 w-4" />Edit</Button>
           <Button variant="destructive" onClick={onDelete} disabled={isSubmitting}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>
         </DialogFooter>
-      </div>
+      </motion.div>
     );
 };
