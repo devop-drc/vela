@@ -120,15 +120,12 @@ const Products = () => {
     }
 
     let channel: RealtimeChannel | null = null;
-    let isMounted = true;
 
     const setupPage = async () => {
       setIsLoading(true);
 
       const { data: business, error: businessError } = await supabase
         .from('businesses').select('id, last_full_sync_at').eq('user_id', session.user.id).single();
-
-      if (!isMounted) return;
 
       if (businessError || !business) {
         showError("Could not find your business profile.");
@@ -141,8 +138,6 @@ const Products = () => {
       const { data, error } = await supabase
         .from("products").select("*").eq('business_id', business.id).order('created_at', { ascending: false });
       
-      if (!isMounted) return;
-
       if (error) {
         showError("Could not fetch your product catalog.");
       } else if (data) {
@@ -150,8 +145,9 @@ const Products = () => {
       }
       setIsLoading(false);
 
+      // Use a stable channel name
       channel = supabase
-        .channel(`products:${business.id}:${Date.now()}`)
+        .channel(`products:${business.id}`)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` },
@@ -171,7 +167,6 @@ const Products = () => {
     setupPage();
 
     return () => {
-      isMounted = false;
       if (channel) {
         supabase.removeChannel(channel);
       }

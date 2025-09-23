@@ -44,7 +44,6 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     }
 
     let channel: RealtimeChannel | null = null;
-    let isMounted = true;
     const userId = session.user.id;
 
     const setupSync = async () => {
@@ -57,14 +56,13 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
         .limit(1)
         .single();
       
-      if (!isMounted) return;
-
       const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
       if (initialJob && initialJob.id !== dismissedJobId) {
         setActiveJob(initialJob as SyncJob);
       }
 
-      channel = supabase.channel(`sync_jobs:${userId}:${Date.now()}`)
+      // Use a stable channel name
+      channel = supabase.channel(`sync_jobs:${userId}`)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'sync_jobs', filter: `user_id=eq.${userId}` },
@@ -80,7 +78,6 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     setupSync();
 
     return () => {
-      isMounted = false;
       if (channel) {
         supabase.removeChannel(channel);
       }
