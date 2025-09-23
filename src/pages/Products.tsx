@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useIntegration } from "@/contexts/IntegrationContext";
 import { toast } from "sonner";
 import { useSync } from "@/contexts/SyncContext";
-import { RealtimeChannel } from "@supabase/supabase-js";
+import { RealtimeChannel, Session } from "@supabase/supabase-js";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 type GridSizeType = 'sm' | 'md' | 'lg';
@@ -81,6 +81,7 @@ const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const [hasDoneFullSync, setHasDoneFullSync] = useState<boolean | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
 
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -95,6 +96,12 @@ const Products = () => {
   useEffect(() => { setTitle("Products"); }, [setTitle]);
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
     if (searchParams.get("instagram_connected") === "true") {
       showSuccess("Successfully connected! Opening importer...");
       setIsImporterOpen(true);
@@ -106,19 +113,34 @@ const Products = () => {
   useEffect(() => {
     let channel: RealtimeChannel | null = null;
   
-    const fetchAndSubscribe = async () => {
-      setIsLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+    const setupRealtime = (businessId: string) => {
+      channel = supabase
+        .channel(`products:${businessId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${businessId}` },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setProducts((current) => [payload.new as Product, ...current.filter(p => p.id !== payload.new.id)]);
+            } else if (payload.eventType === 'UPDATE') {
+              setProducts((current) => current.map((p) => p.id === payload.new.id ? (payload.new as Product) : p));
+            } else if (payload.eventType === 'DELETE') {
+              setProducts((current) => current.filter((p) => p.id !== payload.old.id));
+            }
+          }
+        )
+        .subscribe();
+    };
+
+    const fetchDataAndSubscribe = async () => {
+      if (!session?.user) {
         setIsLoading(false);
         return;
       }
-  
+      setIsLoading(true);
+      
       const { data: business, error: businessError } = await supabase
-        .from('businesses')
-        .select('id, last_full_sync_at')
-        .eq('user_id', user.id)
-        .single();
+        .from('businesses').select('id, last_full_sync_at').eq('user_id', session.user.id).single();
   
       if (businessError || !business) {
         showError("Could not find your business profile.");
@@ -128,58 +150,23 @@ const Products = () => {
       setHasDoneFullSync(!!business.last_full_sync_at);
   
       const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq('business_id', business.id)
-        .order('created_at', { ascending: false });
+        .from("products").select("*").eq('business_id', business.id).order('created_at', { ascending: false });
   
-      if (error) {
-        showError("Could not fetch your product catalog.");
-      } else {
-        setProducts(data as Product[]);
-      }
+      if (error) showError("Could not fetch your product catalog.");
+      else setProducts(data as Product[]);
+      
       setIsLoading(false);
-  
-      channel = supabase
-        .channel(`products-channel-${business.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'products',
-            filter: `business_id=eq.${business.id}`,
-          },
-          (payload) => {
-            if (payload.eventType === 'INSERT') {
-              setProducts((currentProducts) => [
-                payload.new as Product,
-                ...currentProducts,
-              ]);
-            } else if (payload.eventType === 'UPDATE') {
-              setProducts((currentProducts) =>
-                currentProducts.map((p) =>
-                  p.id === payload.new.id ? (payload.new as Product) : p
-                )
-              );
-            } else if (payload.eventType === 'DELETE') {
-              setProducts((currentProducts) =>
-                currentProducts.filter((p) => p.id !== payload.old.id)
-              );
-            }
-          }
-        )
-        .subscribe();
+      setupRealtime(business.id);
     };
   
-    fetchAndSubscribe();
+    fetchDataAndSubscribe();
   
     return () => {
       if (channel) {
         supabase.removeChannel(channel);
       }
     };
-  }, []);
+  }, [session]);
 
   const handleSync = async (syncType: 'quick' | 'full') => {
     runWithIntegrationCheck(async () => {
