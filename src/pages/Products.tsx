@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Import, ChevronDown, LayoutGrid, List, CheckSquare, Group } from "lucide-react";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchParams } from "react-router-dom";
@@ -105,7 +105,7 @@ const Products = () => {
 
   useEffect(() => {
     let channel: RealtimeChannel | null = null;
-
+  
     const fetchAndSubscribe = async () => {
       setIsLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -113,42 +113,67 @@ const Products = () => {
         setIsLoading(false);
         return;
       }
-
-      const { data: business, error: businessError } = await supabase.from('businesses').select('id, last_full_sync_at').eq('user_id', user.id).single();
+  
+      const { data: business, error: businessError } = await supabase
+        .from('businesses')
+        .select('id, last_full_sync_at')
+        .eq('user_id', user.id)
+        .single();
+  
       if (businessError || !business) {
         showError("Could not find your business profile.");
         setIsLoading(false);
         return;
       }
       setHasDoneFullSync(!!business.last_full_sync_at);
-
-      const { data, error } = await supabase.from("products").select("*").eq('business_id', business.id).order('created_at', { ascending: false });
+  
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq('business_id', business.id)
+        .order('created_at', { ascending: false });
+  
       if (error) {
         showError("Could not fetch your product catalog.");
       } else {
         setProducts(data as Product[]);
       }
       setIsLoading(false);
-
-      channel = supabase.channel(`products_business_${business.id}`)
+  
+      channel = supabase
+        .channel(`public:products:business_id=eq.${business.id}`)
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` },
+          {
+            event: '*',
+            schema: 'public',
+            table: 'products',
+            filter: `business_id=eq.${business.id}`,
+          },
           (payload) => {
             if (payload.eventType === 'INSERT') {
-              setProducts(currentProducts => [payload.new as Product, ...currentProducts]);
+              setProducts((currentProducts) => [
+                payload.new as Product,
+                ...currentProducts,
+              ]);
             } else if (payload.eventType === 'UPDATE') {
-              setProducts(currentProducts => currentProducts.map(p => p.id === payload.new.id ? payload.new as Product : p));
+              setProducts((currentProducts) =>
+                currentProducts.map((p) =>
+                  p.id === payload.new.id ? (payload.new as Product) : p
+                )
+              );
             } else if (payload.eventType === 'DELETE') {
-              setProducts(currentProducts => currentProducts.filter(p => p.id !== payload.old.id));
+              setProducts((currentProducts) =>
+                currentProducts.filter((p) => p.id !== payload.old.id)
+              );
             }
           }
         )
         .subscribe();
     };
-
+  
     fetchAndSubscribe();
-
+  
     return () => {
       if (channel) {
         supabase.removeChannel(channel);

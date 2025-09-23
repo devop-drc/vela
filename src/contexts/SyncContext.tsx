@@ -57,13 +57,9 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
           .limit(1)
           .single();
         
-        if (initialJob) {
-            const jobAge = Date.now() - new Date(initialJob.updated_at).getTime();
-            if ((initialJob.status === 'completed' || initialJob.status === 'failed') && jobAge > 60000) {
-                // Ignore old, finished jobs
-            } else {
-                setActiveJob(initialJob as SyncJob);
-            }
+        const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
+        if (initialJob && initialJob.id !== dismissedJobId) {
+            setActiveJob(initialJob as SyncJob);
         }
 
         channel = supabase.channel('sync_jobs_user_' + userId)
@@ -72,7 +68,6 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
             { event: '*', schema: 'public', table: 'sync_jobs', filter: `user_id=eq.${userId}` },
             (payload) => {
               const newJob = payload.new as SyncJob;
-              // Always update with the latest job from the channel
               setActiveJob(newJob);
             }
           )
@@ -107,6 +102,9 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const dismissJob = () => {
+    if (activeJob) {
+        sessionStorage.setItem('dismissed_sync_job_id', activeJob.id);
+    }
     setActiveJob(null);
   };
 
