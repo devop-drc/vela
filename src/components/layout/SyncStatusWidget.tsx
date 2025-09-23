@@ -6,6 +6,8 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, Loader2, X, Info } from 'lucide-react';
 import { SyncSummaryModal } from './SyncSummaryModal';
+import { supabase } from '@/integrations/supabase/client';
+import { showError, showSuccess } from '@/utils/toast';
 
 const formatTime = (ms: number) => {
   if (ms < 0 || !isFinite(ms) || isNaN(ms)) return '...';
@@ -19,6 +21,7 @@ export const SyncStatusWidget = () => {
   const { activeJob, dismissJob } = useSync();
   const [elapsedTime, setElapsedTime] = useState('0m 00s');
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [isAborting, setIsAborting] = useState(false);
 
   useEffect(() => {
     let interval: number | undefined;
@@ -38,6 +41,22 @@ export const SyncStatusWidget = () => {
       }
     };
   }, [activeJob]);
+
+  const handleAbort = async () => {
+    if (!activeJob) return;
+    setIsAborting(true);
+    const { error } = await supabase
+      .from('sync_jobs')
+      .update({ status: 'failed', message: 'Sync aborted by user.' })
+      .eq('id', activeJob.id);
+    
+    if (error) {
+      showError(`Failed to abort sync: ${error.message}`);
+    } else {
+      showSuccess("Sync aborted.");
+    }
+    setIsAborting(false);
+  };
 
   const isVisible = activeJob !== null;
   const isFinished = activeJob?.status === 'completed' || activeJob?.status === 'failed';
@@ -124,11 +143,18 @@ export const SyncStatusWidget = () => {
                       </motion.div>
                     </div>
                   </div>
-                  {isFinished && (
+                  {isFinished ? (
                     <div className="flex gap-2 mt-2">
                       <Button size="sm" className="flex-1" onClick={() => setIsSummaryOpen(true)}><Info className="mr-2 h-4 w-4" />Details</Button>
                       <Button size="icon" variant="ghost" onClick={dismissJob} className="h-8 w-8 flex-shrink-0">
                           <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="mt-2">
+                      <Button size="sm" variant="destructive" className="w-full" onClick={handleAbort} disabled={isAborting}>
+                        {isAborting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
+                        Abort Sync
                       </Button>
                     </div>
                   )}
