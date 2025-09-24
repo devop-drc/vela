@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useIntegration } from "@/contexts/IntegrationContext";
 import { toast } from "sonner";
 import { useSync } from "@/contexts/SyncContext";
-import { RealtimeChannel, Session } from "@supabase/supabase-js";
+import { Session } from "@supabase/supabase-js";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 type GridSizeType = 'sm' | 'md' | 'lg';
@@ -82,7 +82,6 @@ const Products = () => {
   const isMobile = useIsMobile();
   const [hasDoneFullSync, setHasDoneFullSync] = useState<boolean | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [businessId, setBusinessId] = useState<string | null>(null);
 
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -113,35 +112,26 @@ const Products = () => {
     }
   }, [searchParams, setSearchParams]);
 
-  // Effect 1: Get businessId from session
   useEffect(() => {
-    if (session?.user) {
-      setIsLoading(true);
-      supabase.from('businesses').select('id, last_full_sync_at').eq('user_id', session.user.id).single()
-        .then(({ data, error }) => {
-          if (error || !data) {
-            showError("Could not find your business profile.");
-            setBusinessId(null);
-          } else {
-            setBusinessId(data.id);
-            setHasDoneFullSync(!!data.last_full_sync_at);
-          }
-        });
-    } else {
-      setBusinessId(null);
-    }
-  }, [session]);
+    const userId = session?.user?.id;
 
-  // Effect 2: Fetch data and manage real-time subscription based on businessId
-  useEffect(() => {
-    if (!businessId) {
+    if (!userId) {
       setIsLoading(false);
       setProducts([]);
+      setHasDoneFullSync(null);
       return;
     }
 
     setIsLoading(true);
-    supabase.from("products").select("*").eq('business_id', businessId).order('created_at', { ascending: false })
+
+    // Fetch business info for sync status
+    supabase.from('businesses').select('last_full_sync_at').eq('user_id', userId).single()
+      .then(({ data }) => {
+        setHasDoneFullSync(!!data?.last_full_sync_at);
+      });
+
+    // Initial data fetch
+    supabase.from("products").select("*").eq('user_id', userId).order('created_at', { ascending: false })
       .then(({ data, error }) => {
         if (error) {
           showError("Could not fetch your product catalog.");
@@ -151,18 +141,20 @@ const Products = () => {
         setIsLoading(false);
       });
 
+    // Real-time subscription
     const channel = supabase
-      .channel(`products:${businessId}`)
+      .channel(`products:${userId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'products', filter: `business_id=eq.${businessId}` },
+        { event: '*', schema: 'public', table: 'products', filter: `user_id=eq.${userId}` },
         (payload) => {
           if (payload.eventType === 'INSERT') {
             setProducts((current) => [payload.new as Product, ...current.filter(p => p.id !== payload.new.id)]);
           } else if (payload.eventType === 'UPDATE') {
             setProducts((current) => current.map((p) => (p.id === payload.new.id ? (payload.new as Product) : p)));
           } else if (payload.eventType === 'DELETE') {
-            setProducts((current) => current.filter((p) => p.id !== payload.old.id));
+            const deletedId = (payload.old as { id: string }).id;
+            setProducts((current) => current.filter((p) => p.id !== deletedId));
           }
         }
       )
@@ -171,7 +163,7 @@ const Products = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [businessId]);
+  }, [session?.user?.id]);
 
   const handleSync = async (syncType: 'quick' | 'full') => {
     runWithIntegrationCheck(async () => {
