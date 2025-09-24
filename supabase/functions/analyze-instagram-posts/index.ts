@@ -48,20 +48,25 @@ serve(async (req) => {
       existingPostIds = new Set(existingProducts.map(p => p.instagram_post_id));
     }
 
-    // Step 3: Analyze each post using the new chain-of-thought function
+    // Step 3: Analyze each post using the new classifier
     const analysisPromises = postsData.posts.map(async (post: any) => {
       let analysis = null;
-      if (post.caption) {
-        try {
-          const { data: analysisData, error: analysisError } = await supabase.functions.invoke('ai-product-analyzer', {
-            body: { caption: post.caption },
-          });
-          if (analysisError) throw analysisError;
-          if (analysisData.error) console.error(`Analysis error for post ${post.id}:`, analysisData.error);
-          else analysis = analysisData;
-        } catch (e) {
-          console.error(`Failed to analyze post ${post.id}:`, e.message);
+      try {
+        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('ai-product-classifier', {
+          body: { caption: post.caption, imageUrl: post.media_url },
+        });
+        if (analysisError) throw analysisError;
+        if (analysisData.error) {
+            console.error(`Analysis error for post ${post.id}:`, analysisData.error);
+        } else {
+            analysis = {
+                isProductPost: !analysisData.skipped,
+                product: analysisData.product,
+                reasoning: analysisData.reason
+            };
         }
+      } catch (e) {
+        console.error(`Failed to analyze post ${post.id}:`, e.message);
       }
       return {
         ...post,

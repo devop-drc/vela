@@ -91,7 +91,8 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
       } else if (productPayload) {
         const existingId = existingProductMap.get(post.id);
         const payload: any = { 
-            ...productPayload, 
+            ...productPayload,
+            name: productPayload.name || post.caption?.substring(0, 80) || `Product from post ${post.id}`,
             business_id: business.id, 
             user_id: user.id,
             status: 'Draft',

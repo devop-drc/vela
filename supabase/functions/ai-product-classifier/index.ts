@@ -20,15 +20,16 @@ const getClassifierPrompt = (caption: string) => `
   Analyze the provided image and caption. Extract the product's category, type, and all discernible attributes.
 
   **Rules:**
-  1.  **Be Exhaustive:** Extract every possible detail. Infer from context where necessary.
-  2.  **Categorization:** Assign a broad 'categoryName' (e.g., "Clothing") and a specific 'typeName' (e.g., "T-Shirt").
-  3.  **Attributes:** For each attribute found (e.g., color, material, size, dimensions, technical specs), create an object with the following keys:
+  1.  **Product Name is Mandatory:** You MUST provide a "productName". If a clear name isn't given, create a concise, descriptive name from the caption (e.g., "Hand-painted Ceramic Mug", "Blue Floral Summer Dress").
+  2.  **Be Exhaustive:** Extract every possible detail. Infer from context where necessary.
+  3.  **Categorization:** Assign a broad 'categoryName' (e.g., "Clothing") and a specific 'typeName' (e.g., "T-Shirt").
+  4.  **Attributes:** For each attribute found (e.g., color, material, size, dimensions, technical specs), create an object with the following keys:
       - "name": The lowercase, snake_case name of the attribute (e.g., "material").
       - "value": The extracted value (e.g., "100% Cotton").
       - "inputType": The best UI input type for this attribute. Choose from: "text", "number", "color", "tags", "dropdown", "textarea".
       - "possibleValues": If the inputType is 'dropdown', provide an array of potential options.
-  4.  **Normalization:** Capitalize the first letter of category and type names.
-  5.  **Confidence:** If you are not confident this is a product post, return '{"isProductPost": false}'.
+  5.  **Normalization:** Capitalize the first letter of category and type names.
+  6.  **Confidence:** If you are not confident this is a product post, return '{"isProductPost": false}'.
 
   **Output Format:**
   Respond ONLY with a single, valid JSON object. Do not include markdown.
