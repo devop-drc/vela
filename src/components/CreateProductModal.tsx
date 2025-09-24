@@ -10,13 +10,13 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Loader2 } from "lucide-react";
-import { Card, CardContent } from "./ui/card";
-import { TagInput } from "./TagInput";
-import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { Card, CardContent } from "@/components/ui/card";
+import { TagInput } from "@/components/TagInput";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AnimatePresence, motion } from "framer-motion";
 import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import { useShop } from "@/contexts/ShopContext";
-import { CreatableCombobox } from "./CreatableCombobox";
+import { CreatableCombobox } from "@/components/CreatableCombobox";
 import { DynamicDetailFields } from "@/components/product-forms/DynamicDetailFields";
 
 const productSchema = z.object({
