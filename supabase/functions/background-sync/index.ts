@@ -21,50 +21,15 @@ const updateJobProgress = async (supabase: SupabaseClient, jobId: string, progre
 };
 
 const analyzeAndEnrichPost = async (supabaseAdmin: SupabaseClient, post: any) => {
-    if (!post.caption) return { product: null, skipped: true, reason: "No caption provided." };
     try {
-        const { data: analysis, error: analysisError } = await supabaseAdmin.functions.invoke('ai-product-analyzer', { body: { caption: post.caption } });
+        const { data: analysis, error: analysisError } = await supabaseAdmin.functions.invoke('ai-product-classifier', { 
+            body: { caption: post.caption, imageUrl: post.media_url } 
+        });
         if (analysisError) throw analysisError;
-        if (!analysis || analysis.error) throw new Error(analysis?.error || "AI analysis failed");
-        if (!analysis.isProductPost) return { product: null, skipped: true, reason: analysis.reasoning };
-
-        const p = analysis.product;
-        
-        const productData: any = {
-            name: p.name?.value,
-            caption: p.description?.value,
-            category: p.category?.value,
-            price: p.price?.value,
-            currency: p.currency?.value,
-            tags: p.tags?.value,
-            details: {},
-            status: 'Draft',
-            instagram_post_id: post.id,
-            media_url: post.media_url,
-            thumbnail_url: post.thumbnail_url,
-            media_type: post.media_type,
-        };
-
-        if (p.details) {
-            for (const [key, detailVal] of Object.entries(p.details as any)) {
-                productData.details[key] = detailVal.value;
-            }
-        }
-
-        if (productData.name && productData.category && productData.details?.type) {
-            const { data: specData, error: specError } = await supabaseAdmin.functions.invoke('ai-spec-finder', {
-                body: { productName: productData.name, categoryName: productData.category, typeName: productData.details.type }
-            });
-            if (specError) throw specError;
-            if (specData && !specData.error) {
-                productData.details = { ...productData.details, ...specData };
-            }
-        }
-        
-        return { product: productData, skipped: false, reason: null };
+        return analysis;
     } catch (e) {
         console.error(`Error analyzing post ${post.id}:`, e.message);
-        return { product: null, skipped: true, reason: e.message };
+        return { skipped: true, reason: e.message };
     }
 };
 
@@ -125,7 +90,16 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
         });
       } else if (productPayload) {
         const existingId = existingProductMap.get(post.id);
-        const payload: any = { ...productPayload, business_id: business.id, user_id: user.id };
+        const payload: any = { 
+            ...productPayload, 
+            business_id: business.id, 
+            user_id: user.id,
+            status: 'Draft',
+            instagram_post_id: post.id,
+            media_url: post.media_url,
+            thumbnail_url: post.thumbnail_url,
+            media_type: post.media_type,
+        };
         
         if (existingId) {
           payload.id = existingId;
