@@ -20,6 +20,7 @@ import OutOfStock from "./pages/OutOfStock";
 import { IntegrationProvider } from "./contexts/IntegrationContext";
 import { IntegrationPrompt } from "./components/layout/IntegrationPrompt";
 import { ShopProvider } from "./contexts/ShopContext";
+import Attributes from "./pages/Attributes";
 import { SyncProvider } from "./contexts/SyncContext";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
                           <Route path="/orders" element={<Orders />} />
                           <Route path="/analytics" element={<Analytics />} />
                           <Route path="/settings" element={<Settings />} />
+                          <Route path="/attributes" element={<Attributes />} />
                           <Route path="/out-of-stock" element={<OutOfStock />} />
                         </Route>
                       </Route>

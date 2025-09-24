@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Home, ShoppingBag, BarChart2, Settings, Package, Archive } from "lucide-react";
+import { Home, ShoppingBag, BarChart2, Settings, Package, Archive, ListTree } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { motion } from "framer-motion";
@@ -13,6 +13,7 @@ const Sidebar = () => {
     { to: "/out-of-stock", icon: Archive, label: "Out of Stock" },
     { to: "/orders", icon: ShoppingBag, label: "Orders" },
     { to: "/analytics", icon: BarChart2, label: "Analytics" },
+    { to: "/attributes", icon: ListTree, label: "Categories & Attributes" },
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
 
