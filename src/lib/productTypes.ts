@@ -100,8 +100,20 @@ export const productCategories: ProductCategory[] = [
   }
 ];
 
-export const getCategoryAndType = (categoryValue?: string, typeValue?: string) => {
-    const category = productCategories.find(c => c.value === categoryValue);
-    const type = category?.types.find(t => t.value === typeValue);
+export const getCategoryAndType = (categoryIdentifier?: string, typeIdentifier?: string) => {
+    if (!categoryIdentifier) return { category: undefined, type: undefined };
+    
+    const category = productCategories.find(c => 
+        c.value.toLowerCase() === categoryIdentifier.toLowerCase() || 
+        c.label.toLowerCase() === categoryIdentifier.toLowerCase()
+    );
+
+    if (!category || !typeIdentifier) return { category, type: undefined };
+
+    const type = category.types.find(t => 
+        t.value.toLowerCase() === typeIdentifier.toLowerCase() ||
+        t.label.toLowerCase() === typeIdentifier.toLowerCase()
+    );
+
     return { category, type };
 }

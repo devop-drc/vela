@@ -6,7 +6,7 @@ import { Checkbox } from "./ui/checkbox";
 import { AlertTriangle, Palette, Ruler, Tag, Frame, ScanText, Cog } from "lucide-react";
 import { ProductStatusDropdown } from "./ProductStatusDropdown";
 import { Badge } from "./ui/badge";
-import { productCategories } from "@/lib/productTypes";
+import { getCategoryAndType } from "@/lib/productTypes";
 import { formatCurrency } from "@/lib/formatters";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
@@ -58,8 +58,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
   };
 
   const { details, caption, category: categoryValue } = product;
-  const categoryInfo = productCategories.find(c => c.value === categoryValue);
-  const typeInfo = categoryInfo?.types.find(t => t.value === details?.type);
+  const { category: categoryInfo, type: typeInfo } = getCategoryAndType(categoryValue, details?.type);
 
   return (
     <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative">
@@ -90,7 +89,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
         <div className="bg-card p-3 flex-1 flex flex-col justify-between space-y-3">
           <div className="space-y-2">
             <div className="text-xs text-muted-foreground font-medium">
-              <span>{categoryInfo?.label || 'Uncategorized'}</span>
+              <span>{categoryInfo?.label || product.category || 'Uncategorized'}</span>
               {typeInfo && <span> &middot; {typeInfo.label}</span>}
             </div>
 
