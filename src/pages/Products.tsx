@@ -190,8 +190,12 @@ const Products = () => {
 
   const handleStatusChange = async (productId: string, newStatus: ProductStatus) => {
     const { error } = await supabase.from('products').update({ status: newStatus }).eq('id', productId);
-    if (error) { showError(`Failed to update status: ${error.message}`); } 
-    else { showSuccess(`Product is now ${newStatus.toLowerCase()}.`); }
+    if (error) { 
+      showError(`Failed to update status: ${error.message}`); 
+    } else { 
+      showSuccess(`Product is now ${newStatus.toLowerCase()}.`);
+      fetchProducts();
+    }
   };
 
   const filteredAndSortedProducts = useMemo(() => {
@@ -222,11 +226,18 @@ const Products = () => {
   }, [grouping, filteredAndSortedProducts]);
 
   const handleSelectProduct = (productId: string) => setSelectedProducts(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
+  
   const handleBulkStatusChange = async (status: ProductStatus) => {
     const { error } = await supabase.from('products').update({ status }).in('id', selectedProducts);
-    if (error) { showError(`Failed to update products: ${error.message}`); } 
-    else { showSuccess(`Successfully updated ${selectedProducts.length} products.`); setSelectedProducts([]); }
+    if (error) { 
+      showError(`Failed to update products: ${error.message}`); 
+    } else { 
+      showSuccess(`Successfully updated ${selectedProducts.length} products.`); 
+      setSelectedProducts([]); 
+      fetchProducts();
+    }
   };
+
   const handleBulkDelete = async () => {
     const { error } = await supabase.from('products').delete().in('id', selectedProducts);
     if (error) { showError(`Failed to delete products: ${error.message}`); } 
