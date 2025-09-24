@@ -32,7 +32,6 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
     const pricingType = watch("pricing_type");
     const categoryValue = watch("category");
     const typeValue = watch("details.type");
-    const statusValue = watch("status");
     const captionValue = watch("caption");
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const { ref: rhfRef, ...captionProps } = register("caption");
@@ -53,7 +52,6 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
         if (error) throw error;
         if (data.error) throw new Error(data.error);
 
-        // Merge new specs with existing details
         const currentDetails = getValues('details');
         const newDetails = { ...currentDetails, ...data };
         setValue('details', newDetails, { shouldDirty: true });
@@ -126,7 +124,23 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                     </div>
                     <div className="flex items-center gap-2 mt-4">
                       <Input id="name" {...register("name")} placeholder="Product Name" className="w-auto border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors" />
-                      <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn("w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50", statusConfig[statusValue as keyof typeof statusConfig]?.color)}>{statusValue && statusConfig[statusValue as keyof typeof statusConfig] ? (<div className="flex items-center gap-2"><statusConfig[statusValue as keyof typeof statusConfig].icon className="h-4 w-4" /><span>{statusConfig[statusValue as keyof typeof statusConfig].label}</span></div>) : <SelectValue placeholder="Set status..." />}</SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
+                      <Controller control={control} name="status" render={({ field }) => {
+                        const currentStatusConfig = statusConfig[field.value as keyof typeof statusConfig];
+                        const Icon = currentStatusConfig?.icon;
+                        return (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger className={cn("w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50", currentStatusConfig?.color)}>
+                              {Icon ? (
+                                <div className="flex items-center gap-2">
+                                  <Icon className="h-4 w-4" />
+                                  <span>{currentStatusConfig.label}</span>
+                                </div>
+                              ) : <SelectValue placeholder="Set status..." />}
+                            </SelectTrigger>
+                            <SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent>
+                          </Select>
+                        );
+                      }} />
                     </div>
                     {form.formState.errors.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
                   </div>
