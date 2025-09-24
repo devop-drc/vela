@@ -88,7 +88,13 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
       const captionSnippet = post.caption ? `"${post.caption.substring(0, 30)}..."` : `post without caption`;
       await updateJobProgress(supabaseAdmin, jobId, index + 1, total, `Analyzing: ${captionSnippet}`, post.thumbnail_url || post.media_url);
 
-      const { data: analysis, error: analysisError } = await supabaseAdmin.functions.invoke('ai-product-classifier', { body: { caption: post.caption, imageUrl: post.media_url } });
+      if (!post.caption) {
+        summary.skipped++;
+        summary.skipped_items.push({ name: captionSnippet, reason: "Post has no caption to analyze.", thumbnail_url: post.thumbnail_url || post.media_url });
+        continue;
+      }
+
+      const { data: analysis, error: analysisError } = await supabaseAdmin.functions.invoke('ai-product-classifier', { body: { caption: post.caption } });
       if (analysisError || analysis.error) {
         summary.skipped++;
         summary.skipped_items.push({ name: captionSnippet, reason: analysisError?.message || analysis?.error || "Analysis function failed.", thumbnail_url: post.thumbnail_url || post.media_url });

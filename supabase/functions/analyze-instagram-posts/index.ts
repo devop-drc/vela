@@ -9,60 +9,43 @@ const corsHeaders = {
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 const GEMINI_PRO_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${GEMINI_API_KEY}`;
 
-// --- AI Analysis & DB Enrichment Logic (Consolidated for performance) ---
+const getClassifierPrompt = () => `
+  You are an AI that analyzes an Instagram post's caption to determine if it's a product and extracts its details.
 
-const getClassifierPrompt = () => `...`; // Abridged for brevity
+  **Rules:**
+  1.  **Categorization:** Assign a broad 'categoryName' and a specific 'typeName'.
+  2.  **Attributes:** For each attribute (e.g., color, material), create an object with "name", "value", "inputType", and optional "possibleValues".
+  3.  **Normalization:** Capitalize the first letter of category and type names.
+  4.  **Confidence:** If not a product, return '{"isProductPost": false}'.
+
+  **Output Format:**
+  Respond ONLY with a single, valid JSON object.
+
+  **Example:**
+  {
+    "isProductPost": true,
+    "categoryName": "Clothing",
+    "typeName": "T-Shirt",
+    "productName": "Vintage Sunset Tee",
+    "description": "A soft, vintage-style t-shirt.",
+    "price": 35.00,
+    "currency": "USD",
+    "tags": ["vintage", "sunset", "graphic tee"],
+    "attributes": [
+      { "name": "material", "value": "Cotton", "inputType": "dropdown", "possibleValues": ["Cotton", "Polyester", "Blend"] }
+    ]
+  }
+`;
 
 const toTitleCase = (str: string) => str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
-const upsertCategory = async (supabase: SupabaseClient, userId: string, name: string) => {
-  const normalizedName = toTitleCase(name);
-  let { data, error } = await supabase.from('categories').select('id').eq('name', normalizedName).eq('user_id', userId).single();
-  if (error && error.code !== 'PGRST116') throw error;
-  if (data) return data.id;
-  
-  ({ data, error } = await supabase.from('categories').insert({ name: normalizedName, user_id: userId }).select('id').single());
-  if (error) throw error;
-  return data.id;
-};
-
-const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, userId: string, categoryId: string, typeName: string, newAttributes: any[]) => {
-  const normalizedTypeName = toTitleCase(typeName);
-  let { data: existingType, error } = await supabase.from('types').select('id, attributes').eq('category_id', categoryId).eq('name', normalizedTypeName).single();
-  if (error && error.code !== 'PGRST116') throw error;
-
-  const newAttributesMap = new Map((newAttributes || []).map(attr => [attr.name, { name: attr.name, inputType: attr.inputType, possibleValues: attr.possibleValues }]));
-
-  if (existingType) {
-    const existingAttributesMap = new Map((existingType.attributes || []).map((attr: any) => [attr.name, attr]));
-    for (const [name, newAttr] of newAttributesMap.entries()) {
-      existingAttributesMap.set(name, newAttr);
-    }
-    const mergedAttributes = Array.from(existingAttributesMap.values());
-    const { error: updateError } = await supabase.from('types').update({ attributes: mergedAttributes }).eq('id', existingType.id);
-    if (updateError) throw updateError;
-  } else {
-    const attributesToInsert = Array.from(newAttributesMap.values());
-    const { error: insertError } = await supabase.from('types').insert({ category_id: categoryId, name: normalizedTypeName, attributes: attributesToInsert, user_id: userId });
-    if (insertError) throw insertError;
-  }
-};
-
-const analyzeAndEnrichPost = async (supabase: SupabaseClient, userId: string, post: any) => {
+const analyzeAndEnrichPost = async (post: any) => {
     try {
         if (!GEMINI_API_KEY) throw new Error("Gemini API key is not configured.");
-        if (!post.caption && !post.media_url) return { skipped: true, reason: "Post has no content to analyze." };
+        if (!post.caption) return { skipped: true, reason: "Post has no caption to analyze." };
 
         const prompt = getClassifierPrompt();
-        const requestParts = [{ text: prompt }];
-
-        if (post.media_url) {
-            const imageResponse = await fetch(post.media_url);
-            if (!imageResponse.ok) throw new Error("Failed to fetch image for analysis.");
-            const imageBuffer = await imageResponse.arrayBuffer();
-            const imageBase64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
-            requestParts.push({ inline_data: { mime_type: imageResponse.headers.get('content-type') || 'image/jpeg', data: imageBase64 } });
-        }
+        const requestParts = [{ text: prompt }, { text: `Caption to analyze: ${post.caption}` }];
 
         const geminiResponse = await fetch(GEMINI_PRO_API_URL, {
             method: 'POST',
@@ -80,21 +63,20 @@ const analyzeAndEnrichPost = async (supabase: SupabaseClient, userId: string, po
 
         const { categoryName, typeName, attributes, ...productInfo } = analysis;
         
-        if (categoryName && typeName) {
-            const categoryId = await upsertCategory(supabase, userId, categoryName);
-            await upsertTypeAndMergeAttributes(supabase, userId, categoryId, typeName, attributes || []);
-        }
-
         const details: { [key: string]: any } = {};
         if (attributes) {
-            for (const attr of attributes) { details[attr.name] = attr.value; }
+            for (const attr of attributes) { details[attr.name] = { value: attr.value }; }
         }
 
         return {
             product: {
-                name: productInfo.productName, caption: productInfo.description, price: productInfo.price,
-                currency: productInfo.currency, tags: productInfo.tags, category: toTitleCase(categoryName),
-                details: { type: toTitleCase(typeName), ...details },
+                name: { value: productInfo.productName },
+                description: { value: productInfo.description },
+                price: { value: productInfo.price },
+                currency: { value: productInfo.currency },
+                tags: { value: productInfo.tags },
+                category: { value: toTitleCase(categoryName) },
+                details: { type: { value: toTitleCase(typeName) }, ...details },
             },
             skipped: false
         };
@@ -126,7 +108,7 @@ serve(async (req) => {
     const existingPostIds = new Set((existingProducts || []).map(p => p.instagram_post_id));
 
     const analysisPromises = postsData.posts.map(async (post: any) => {
-      const analysisResult = await analyzeAndEnrichPost(supabase, user.id, post);
+      const analysisResult = await analyzeAndEnrichPost(post);
       return {
         ...post,
         isImported: existingPostIds.has(post.id),

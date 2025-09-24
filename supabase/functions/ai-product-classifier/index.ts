@@ -9,13 +9,13 @@ const corsHeaders = {
 };
 
 const getClassifierPrompt = () => `
-  You are an AI database enrichment service. Your goal is to analyze a product from an Instagram post (image and caption) and structure the data.
+  You are an AI database enrichment service. Your goal is to analyze product information from an Instagram post's caption and structure the data.
 
   **Analysis Task:**
-  Analyze the provided image and caption. Extract the product's category, type, and all discernible attributes.
+  Analyze the provided caption text. Extract the product's category, type, and all discernible attributes.
 
   **Rules:**
-  1.  **Be Exhaustive:** Extract every possible detail.
+  1.  **Be Exhaustive:** Extract every possible detail from the text.
   2.  **Categorization:** Assign a broad 'categoryName' (e.g., "Clothing") and a specific 'typeName' (e.g., "T-Shirt").
   3.  **Attributes:** For each attribute found (e.g., color, material, size), create an object with:
       - "name": The lowercase, snake_case name (e.g., "material").
@@ -50,19 +50,11 @@ serve(async (req) => {
 
   try {
     if (!GEMINI_API_KEY) throw new Error("Gemini API key is not configured.");
-    const { caption, imageUrl } = await req.json();
-    if (!caption && !imageUrl) throw new Error("Caption or Image URL is required.");
+    const { caption } = await req.json();
+    if (!caption) throw new Error("Caption is required for analysis.");
 
     const prompt = getClassifierPrompt();
-    const requestParts = [{ text: prompt }];
-
-    if (imageUrl) {
-      const imageResponse = await fetch(imageUrl);
-      if (!imageResponse.ok) throw new Error("Failed to fetch image for analysis.");
-      const imageBuffer = await imageResponse.arrayBuffer();
-      const imageBase64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
-      requestParts.push({ inline_data: { mime_type: imageResponse.headers.get('content-type') || 'image/jpeg', data: imageBase64 } });
-    }
+    const requestParts = [{ text: prompt }, { text: `Caption to analyze: ${caption}` }];
 
     const geminiResponse = await fetch(GEMINI_PRO_API_URL, {
       method: 'POST',
@@ -79,7 +71,6 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Classifier Function Error:', error.message);
-    // Return a structured error that the calling function can understand
     return new Response(JSON.stringify({ error: error.message }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
