@@ -119,11 +119,20 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
       }
 
       const productPayload = {
-        ...productInfo,
-        name: productInfo.productName, caption: productInfo.description, category: toTitleCase(categoryName),
+        name: productInfo.productName,
+        caption: productInfo.description, // Explicitly map description to caption
+        price: productInfo.price,
+        currency: productInfo.currency,
+        tags: productInfo.tags,
+        category: toTitleCase(categoryName),
         details: { type: toTitleCase(typeName), ...details },
-        business_id: business.id, user_id: user.id, status: 'Draft',
-        instagram_post_id: post.id, media_url: post.media_url, thumbnail_url: post.thumbnail_url, media_type: post.media_type,
+        business_id: business.id, 
+        user_id: user.id, 
+        status: 'Draft',
+        instagram_post_id: post.id, 
+        media_url: post.media_url, 
+        thumbnail_url: post.thumbnail_url, 
+        media_type: post.media_type,
       };
 
       const existingId = existingProductMap.get(post.id);
