@@ -6,9 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-const GEMINI_PRO_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${GEMINI_API_KEY}`;
-
 const getSupabaseAdmin = () => createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -17,116 +14,37 @@ const getSupabaseAdmin = () => createClient(
 
 const updateJobProgress = async (supabase: SupabaseClient, jobId: string, progress: number, total: number, message: string, thumbnailUrl: string | null = null) => {
   const payload: any = { progress, total, message, status: 'in_progress', updated_at: new Date().toISOString() };
-  if (thumbnailUrl) payload.thumbnail_url = thumbnailUrl;
+  if (thumbnailUrl) {
+    payload.thumbnail_url = thumbnailUrl;
+  }
   await supabase.from('sync_jobs').update(payload).eq('id', jobId);
 };
 
-// --- AI Analysis & DB Enrichment Logic (Consolidated for performance) ---
-
-const getClassifierPrompt = () => `...`; // Abridged for brevity
-
-const toTitleCase = (str: string) => str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
-
-const upsertCategory = async (supabase: SupabaseClient, userId: string, name: string) => {
-  const normalizedName = toTitleCase(name);
-  let { data, error } = await supabase.from('categories').select('id').eq('name', normalizedName).eq('user_id', userId).single();
-  if (error && error.code !== 'PGRST116') throw error;
-  if (data) return data.id;
-  
-  ({ data, error } = await supabase.from('categories').insert({ name: normalizedName, user_id: userId }).select('id').single());
-  if (error) throw error;
-  return data.id;
-};
-
-const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, userId: string, categoryId: string, typeName: string, newAttributes: any[]) => {
-  const normalizedTypeName = toTitleCase(typeName);
-  let { data: existingType, error } = await supabase.from('types').select('id, attributes').eq('category_id', categoryId).eq('name', normalizedTypeName).single();
-  if (error && error.code !== 'PGRST116') throw error;
-
-  const newAttributesMap = new Map((newAttributes || []).map(attr => [attr.name, { name: attr.name, inputType: attr.inputType, possibleValues: attr.possibleValues }]));
-
-  if (existingType) {
-    const existingAttributesMap = new Map((existingType.attributes || []).map((attr: any) => [attr.name, attr]));
-    for (const [name, newAttr] of newAttributesMap.entries()) {
-      existingAttributesMap.set(name, newAttr);
-    }
-    const mergedAttributes = Array.from(existingAttributesMap.values());
-    const { error: updateError } = await supabase.from('types').update({ attributes: mergedAttributes }).eq('id', existingType.id);
-    if (updateError) throw updateError;
-  } else {
-    const attributesToInsert = Array.from(newAttributesMap.values());
-    const { error: insertError } = await supabase.from('types').insert({ category_id: categoryId, name: normalizedTypeName, attributes: attributesToInsert, user_id: userId });
-    if (insertError) throw insertError;
-  }
-};
-
-const analyzeAndEnrichPost = async (supabaseAdmin: SupabaseClient, userId: string, post: any) => {
+const analyzeAndEnrichPost = async (supabaseAdmin: SupabaseClient, post: any, userId: string) => {
     try {
-        if (!GEMINI_API_KEY) throw new Error("Gemini API key is not configured.");
-        if (!post.caption && !post.media_url) return { skipped: true, reason: "Post has no content to analyze." };
-
-        const prompt = getClassifierPrompt();
-        const requestParts = [{ text: prompt }];
-
-        if (post.media_url) {
-            const imageResponse = await fetch(post.media_url);
-            if (!imageResponse.ok) throw new Error("Failed to fetch image for analysis.");
-            const imageBuffer = await imageResponse.arrayBuffer();
-            const imageBase64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
-            requestParts.push({ inline_data: { mime_type: imageResponse.headers.get('content-type') || 'image/jpeg', data: imageBase64 } });
-        }
-
-        const geminiResponse = await fetch(GEMINI_PRO_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: requestParts }], generationConfig: { responseMimeType: "application/json" } }),
+        const { data: analysis, error: analysisError } = await supabaseAdmin.functions.invoke('ai-product-classifier', { 
+            body: { caption: post.caption, imageUrl: post.media_url, userId: userId } 
         });
-
-        if (!geminiResponse.ok) throw new Error(`Gemini API error: ${await geminiResponse.text()}`);
-        const geminiData = await geminiResponse.json();
-        const analysis = JSON.parse(geminiData.candidates[0].content.parts[0].text);
-
-        if (!analysis.isProductPost) {
-            return { skipped: true, reason: "AI determined this is not a product post." };
-        }
-
-        const { categoryName, typeName, attributes, ...productInfo } = analysis;
-        
-        if (categoryName && typeName) {
-            const categoryId = await upsertCategory(supabaseAdmin, userId, categoryName);
-            await upsertTypeAndMergeAttributes(supabaseAdmin, userId, categoryId, typeName, attributes || []);
-        }
-
-        const details: { [key: string]: any } = {};
-        if (attributes) {
-            for (const attr of attributes) { details[attr.name] = attr.value; }
-        }
-
-        return {
-            product: {
-                name: productInfo.productName, caption: productInfo.description, price: productInfo.price,
-                currency: productInfo.currency, tags: productInfo.tags, category: toTitleCase(categoryName),
-                details: { type: toTitleCase(typeName), ...details },
-            },
-            skipped: false
-        };
+        if (analysisError) throw analysisError;
+        return analysis;
     } catch (e) {
         console.error(`Error analyzing post ${post.id}:`, e.message);
         return { skipped: true, reason: e.message };
     }
 };
 
-// --- Main Sync Process ---
-
 const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: string, syncType: 'quick' | 'full') => {
   const summary = { created: 0, updated: 0, skipped: 0, skipped_items: [] as any[] };
   try {
-    const { data: business, error: businessError } = await supabaseAdmin.from('businesses').select('id').eq('user_id', user.id).single();
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses').select('id').eq('user_id', user.id).single();
     if (businessError || !business) throw new Error("Could not find business profile.");
 
     await updateJobProgress(supabaseAdmin, jobId, 0, 100, "Fetching Instagram posts...");
     
-    const { data: postsData, error: postsError } = await supabaseAdmin.functions.invoke('instagram-posts', { headers: { Authorization: `Bearer ${user.token}` } });
+    const { data: postsData, error: postsError } = await supabaseAdmin.functions.invoke('instagram-posts', {
+      headers: { Authorization: `Bearer ${user.token}` },
+    });
     if (postsError) throw postsError;
     if (postsData.error) throw new Error(postsData.error);
 
@@ -136,40 +54,60 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
       return;
     }
 
-    const { data: existingProducts, error: productsError } = await supabaseAdmin.from('products').select('id, instagram_post_id').eq('business_id', business.id);
+    const { data: existingProducts, error: productsError } = await supabaseAdmin
+      .from('products').select('id, instagram_post_id').eq('business_id', business.id);
     if (productsError) throw productsError;
     const existingProductMap = new Map(existingProducts.map(p => [p.instagram_post_id, p.id]));
 
-    const postsToProcess = syncType === 'quick' ? allPosts.filter((p: any) => !existingProductMap.has(p.id)) : allPosts;
+    const postsToProcess = syncType === 'quick'
+      ? allPosts.filter((p: any) => !existingProductMap.has(p.id))
+      : allPosts;
+    
     const total = postsToProcess.length;
+    await updateJobProgress(supabaseAdmin, jobId, 0, total, `Found ${total} posts to process.`);
+
     if (total === 0) {
       await supabaseAdmin.from('sync_jobs').update({ status: 'completed', message: 'No new posts to sync.', summary }).eq('id', jobId);
       return;
     }
-    await updateJobProgress(supabaseAdmin, jobId, 0, total, `Found ${total} posts to process.`);
 
     const productsToUpsert = [];
-    for (const [index, post] of postsToProcess.entries()) {
-      const captionSnippet = post.caption ? `"${post.caption.substring(0, 30)}..."` : `post without caption`;
-      await updateJobProgress(supabaseAdmin, jobId, index + 1, total, `Analyzing: ${captionSnippet}`, post.thumbnail_url || post.media_url);
+    let processedCount = 0;
 
-      const { product: productPayload, skipped, reason } = await analyzeAndEnrichPost(supabaseAdmin, user.id, post);
+    for (const post of postsToProcess) {
+      processedCount++;
+      const captionSnippet = post.caption ? `"${post.caption.substring(0, 30)}..."` : `post without caption`;
+      await updateJobProgress(supabaseAdmin, jobId, processedCount, total, `Analyzing: ${captionSnippet}`, post.thumbnail_url || post.media_url);
+
+      const { product: productPayload, skipped, reason } = await analyzeAndEnrichPost(supabaseAdmin, post, user.id);
       
       if (skipped) {
         summary.skipped++;
-        summary.skipped_items.push({ name: captionSnippet, reason: reason || "Not a product.", thumbnail_url: post.thumbnail_url || post.media_url });
+        summary.skipped_items.push({
+            name: post.caption ? post.caption.substring(0, 50) + '...' : `Post ID ${post.id}`,
+            reason: reason || "Not a product.",
+            thumbnail_url: post.thumbnail_url || post.media_url
+        });
       } else if (productPayload) {
         const existingId = existingProductMap.get(post.id);
-        const payload = { 
-            ...productPayload,
-            name: productPayload.name || post.caption?.substring(0, 80) || `Product from post ${post.id}`,
-            business_id: business.id, user_id: user.id, status: 'Draft',
-            instagram_post_id: post.id, media_url: post.media_url,
-            thumbnail_url: post.thumbnail_url, media_type: post.media_type,
-            id: existingId,
+        const payload: any = { 
+            ...productPayload, 
+            business_id: business.id, 
+            user_id: user.id,
+            status: 'Draft',
+            instagram_post_id: post.id,
+            media_url: post.media_url,
+            thumbnail_url: post.thumbnail_url,
+            media_type: post.media_type,
         };
+        
+        if (existingId) {
+          payload.id = existingId;
+          summary.updated++;
+        } else {
+          summary.created++;
+        }
         productsToUpsert.push(payload);
-        if (existingId) summary.updated++; else summary.created++;
       }
     }
 
@@ -180,6 +118,15 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
     }
 
     if (syncType === 'full') {
+        const allInstagramPostIds = new Set(allPosts.map((p: any) => p.id));
+        const productsToArchive = existingProducts.filter(p => p.instagram_post_id && !allInstagramPostIds.has(p.instagram_post_id));
+        
+        if (productsToArchive.length > 0) {
+            await updateJobProgress(supabaseAdmin, jobId, total, total, `Archiving ${productsToArchive.length} old products...`);
+            const idsToUpdate = productsToArchive.map(p => p.id);
+            const { error: updateError } = await supabaseAdmin.from('products').update({ status: 'Draft' }).in('id', idsToUpdate);
+            if (updateError) console.error(`Failed to archive products for user ${user.id}:`, updateError);
+        }
         await supabaseAdmin.from('businesses').update({ last_full_sync_at: new Date().toISOString() }).eq('id', business.id);
     }
 
@@ -193,22 +140,38 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
 };
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const { syncType } = await req.json();
+
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
     const { data: { user } } = await supabaseAdmin.auth.getUser(token);
     if (!user) throw new Error('User not found');
 
-    const { data: job, error: jobError } = await supabaseAdmin.from('sync_jobs').insert({ user_id: user.id, status: 'starting', message: 'Initiating sync...' }).select('id').single();
+    const { data: job, error: jobError } = await supabaseAdmin
+      .from('sync_jobs')
+      .insert({ user_id: user.id, status: 'starting', message: 'Initiating sync...' })
+      .select('id')
+      .single();
+
     if (jobError) throw jobError;
 
+    // Do not await this, let it run in the background
     syncProcess(supabaseAdmin, { ...user, token }, job.id, syncType);
 
-    return new Response(JSON.stringify({ jobId: job.id }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ jobId: job.id }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
