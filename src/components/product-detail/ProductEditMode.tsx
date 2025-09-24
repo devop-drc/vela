@@ -26,7 +26,7 @@ const statusConfig = {
 };
 
 export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting }: any) => {
-    const { register, handleSubmit, control, watch, setValue, getValues } = form;
+    const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
     const [isFindingSpecs, setIsFindingSpecs] = useState(false);
 
     const pricingType = watch("pricing_type");
