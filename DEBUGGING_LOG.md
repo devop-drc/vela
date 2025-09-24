@@ -11,7 +11,7 @@ This file is a log of repeated or critical issues encountered during development
 - **Mistake Pattern:**
     1.  The AI (Dyad) incorrectly diagnosed the problem as a caching issue.
     2.  The AI then fixated on *missing* imports, failing to identify that the imports were present but *incorrectly pathed*.
-    3.  This led to repeated failed attempts and user frustration.
+    3.  **CRITICAL FAILURE:** Even after correctly identifying the root cause (incorrect paths), the AI generated a "fix" that still contained the same incorrect relative paths, leading to a repeated error and user frustration.
 - **Solution:** **ALWAYS verify all import paths.** Ensure they conform to the project's conventions, using path aliases (`@/`) instead of relative paths (`../` or `./`) for modules within the `src` directory.
     - **Example Fix:** Change `import { Card } from "./ui/card";` to `import { Card } from "@/components/ui/card";`.
-- **Learning:** A misleading syntax error from the build tool can often point to a problem with module resolution. Do not trust the line number blindly. Scrutinize all imports for correctness, including pathing, not just existence.
+- **Learning:** A misleading syntax error from the build tool can often point to a problem with module resolution. Do not trust the line number blindly. Scrutinize all imports for correctness, including pathing, not just existence. **The most critical learning is to meticulously verify the generated code against the identified solution before sending it to the user.**
