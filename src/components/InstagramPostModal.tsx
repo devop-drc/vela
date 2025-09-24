@@ -8,7 +8,7 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { CheckCircle, Image as ImageIcon, Loader2, RefreshCw, Sparkles, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
-import { ProductDetailModal } from "./ProductDetailModal";
+import { CreateProductModal } from "./CreateProductModal";
 
 interface AnalyzedPost {
   id: string;
@@ -227,13 +227,7 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
       )}
 
       {isCreateModalOpen && productToCreate && selectedPost && (
-        <ProductDetailModal 
-          isOpen={isCreateModalOpen} 
-          onClose={() => setIsCreateModalOpen(false)} 
-          onUpdate={handleSaveProduct} 
-          productData={productToCreate} 
-          post={selectedPost} 
-        />
+        <CreateProductModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onSave={handleSaveProduct} productData={productToCreate} post={selectedPost} />
       )}
     </>
   );

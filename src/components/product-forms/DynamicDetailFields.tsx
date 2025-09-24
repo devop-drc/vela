@@ -56,7 +56,7 @@ export const DynamicDetailFields = ({ control, details }: DynamicDetailFieldsPro
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Object.entries(details || {}).map(([key, fieldData]) => {
+        {Object.entries(details).map(([key, fieldData]) => {
             if (key === 'type') return null;
             return (
                 <div key={key} className="space-y-2">

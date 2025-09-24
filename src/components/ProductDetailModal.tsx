@@ -2,35 +2,35 @@ import { useState, useEffect, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionComponent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleComponent } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
-import { TagInput } from "@/components/TagInput";
-import { Loader2, XCircle, PlusCircle, CheckCircle, Archive, Sparkles, Save } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { productCategories, getCategoryAndType } from "@/lib/productTypes";
-import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
+import { Loader2, Edit, Trash2, CheckCircle, XCircle, Archive, PlayCircle } from "lucide-react";
+import { TagInput } from "./TagInput";
+import { productCategories, getCategoryAndType } from "@/lib/productTypes";
+import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "./ui/carousel";
-import { CreatableCombobox } from "./CreatableCombobox";
-import { useShop } from "@/contexts/ShopContext";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { cn } from "@/lib/utils";
+import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
+import { formatCurrency } from "@/lib/formatters";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   status: z.enum(['Active', 'Draft', 'Out of Stock']),
   caption: z.string().optional(),
   category: z.string().min(1, "Category is required"),
-  price: z.coerce.number().min(0, "Price must be a positive number").optional().nullable(),
-  currency: z.string().optional().nullable(),
+  price: z.coerce.number().min(0, "Price must be a positive number"),
+  currency: z.string().min(3, "Currency code is required").max(3).optional().nullable(),
   inventory: z.coerce.number().int().min(0, "Inventory must be a positive integer").optional(),
   tags: z.array(z.string()).optional(),
   pricing_type: z.enum(['one_time', 'subscription']),
@@ -52,87 +52,65 @@ interface Product {
   id: string;
   name: string;
   status: 'Active' | 'Draft' | 'Out of Stock';
-  price: number | null;
+  price: number;
+  currency: string | null;
   inventory: number;
   media_url: string;
   media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM';
-  media_gallery: string[] | null;
   caption: string;
   tags: string[];
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
   details: any;
-  currency: string | null;
 }
 
 interface ProductDetailModalProps {
+  product: Product | null;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: () => void;
-  product?: Product;
-  post?: any;
-  productData?: any;
 }
 
 const statusConfig = {
-  'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
-  'Draft': { icon: XCircle, color: "text-amber-600", label: "Draft" },
-  'Out of Stock': { icon: Archive, color: "text-slate-600", label: "Out of Stock" },
+  'Active': { icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200" },
+  'Draft': { icon: XCircle, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200" },
+  'Out of Stock': { icon: Archive, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" },
 };
 
-export const ProductDetailModal = ({ isOpen, onClose, onUpdate, product, post, productData }: ProductDetailModalProps) => {
-  const { shopDetails } = useShop();
+const DetailDisplayRow = ({ label, children }: { label: string, children: React.ReactNode }) => (
+    <div className="flex flex-col">
+        <Label className="text-sm text-muted-foreground">{label}</Label>
+        <div className="font-medium flex flex-wrap items-center gap-1.5 text-base">
+            {children}
+        </div>
+    </div>
+);
+
+export const ProductDetailModal = ({ product, isOpen, onClose, onUpdate }: ProductDetailModalProps) => {
+  const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [mediaItems, setMediaItems] = useState<string[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isFindingSpecs, setIsFindingSpecs] = useState(false);
-  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
-  const [typeOptions, setTypeOptions] = useState<string[]>([]);
 
-  const isCreateMode = !product;
-
-  const form = useForm<ProductFormData>({
+  const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
   });
-  const { register, handleSubmit, control, watch, setValue, getValues, reset } = form;
+
+  const pricingType = watch("pricing_type");
+  const categoryValue = watch("category");
+  const typeValue = watch("details.type");
+  const statusValue = watch("status");
+
+  const { category, type } = getCategoryAndType(categoryValue, typeValue);
+  const DetailsComponent = type?.component;
 
   useEffect(() => {
-    const fetchOptions = async () => {
-      const { data } = await supabase.from('categories').select('name');
-      const dbCategories = data?.map(c => c.name) || [];
-      const staticCategories = productCategories.map(c => c.label);
-      setCategoryOptions([...new Set([...staticCategories, ...dbCategories])]);
-    };
-    fetchOptions();
-  }, []);
-
-  useEffect(() => {
-    if (isCreateMode && productData) {
-      const details = productData.details || { type: 'generic' };
-      if (details.type && typeof details.type === 'object' && details.type.value) {
-        details.type = details.type.value;
-      }
-      reset({
-        name: productData.name || "",
-        status: 'Draft',
-        caption: productData.description || post?.caption || "",
-        category: productData.category || "generic",
-        price: productData.price || 0,
-        currency: productData.currency || shopDetails?.currency || 'USD',
-        inventory: 10,
-        tags: productData.tags || [],
-        pricing_type: 'one_time',
-        details: details,
-      });
-      setMediaItems(post?.media_url ? [post.media_url] : []);
-    } else if (product) {
+    if (product) {
       reset({
         name: product.name || "",
         status: product.status || "Draft",
         caption: product.caption || "",
-        category: product.category || "",
-        price: product.price,
+        category: product.category || "generic",
+        price: product.price || 0,
         currency: product.currency || 'USD',
         inventory: product.inventory || 0,
         tags: product.tags || [],
@@ -140,70 +118,45 @@ export const ProductDetailModal = ({ isOpen, onClose, onUpdate, product, post, p
         billing_interval: product.billing_interval,
         details: product.details || { type: 'generic' },
       });
-      const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
-      setMediaItems(gallery);
     }
-  }, [product, post, productData, isCreateMode, reset, shopDetails]);
-
-  const pricingType = watch("pricing_type");
-  const categoryValue = watch("category");
-  const typeValue = watch("details.type");
-  const statusValue = watch("status");
-  const captionValue = watch("caption");
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const { ref: rhfRef, ...captionProps } = register("caption");
-  useAutosizeTextArea(textAreaRef.current, captionValue || "");
-
-  const { category, type } = getCategoryAndType(categoryValue, typeValue);
-  const DetailsComponent = type?.component;
-
+  }, [product, reset]);
+  
   useEffect(() => {
-    const staticCategory = productCategories.find(c => c.label === categoryValue || c.value === categoryValue);
-    const staticTypes = staticCategory ? staticCategory.types.map(t => t.label) : [];
-    setTypeOptions(staticTypes);
-    if (staticCategory && staticCategory.types.length > 0 && !staticTypes.includes(typeValue)) {
-      setValue("details.type", staticCategory.types[0].value);
+    const newCategory = productCategories.find(c => c.value === categoryValue);
+    if (newCategory && newCategory.types.length > 0 && typeValue !== newCategory.types[0].value) {
+      setValue("details.type", newCategory.types[0].value);
     }
-  }, [categoryValue, typeValue, setValue]);
+  }, [categoryValue, setValue, typeValue]);
+
+  if (!product) return null;
 
   const handleSave = async (data: ProductFormData) => {
     setIsSubmitting(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { showError("You must be logged in."); setIsSubmitting(false); return; }
-
     const { type: currentTypeDefinition } = getCategoryAndType(data.category, data.details.type);
     const cleanedDetails: { [key: string]: any } = { type: data.details.type };
+
     if (currentTypeDefinition) {
-      currentTypeDefinition.fields.forEach(field => {
-        if (data.details[field.name] !== undefined) cleanedDetails[field.name] = data.details[field.name];
-      });
+        currentTypeDefinition.fields.forEach(field => {
+            if (data.details[field.name] !== undefined) {
+                cleanedDetails[field.name] = data.details[field.name];
+            }
+        });
     }
 
-    const payload = {
-      name: data.name, status: data.status, caption: data.caption, category: data.category,
-      price: data.price, currency: data.currency, inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
-      tags: data.tags, pricing_type: data.pricing_type,
-      billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
-      details: cleanedDetails,
-      media_gallery: mediaItems, media_url: mediaItems[0] || null, thumbnail_url: mediaItems[0] || null,
-    };
+    const { error } = await supabase.from('products').update({
+        name: data.name, status: data.status, caption: data.caption, category: data.category,
+        price: data.price, currency: data.currency, inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
+        tags: data.tags, pricing_type: data.pricing_type,
+        billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
+        details: cleanedDetails,
+      }).eq('id', product.id);
 
-    if (isCreateMode) {
-      const { data: business } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
-      if (!business) { showError("Could not find business profile."); setIsSubmitting(false); return; }
-      const { error } = await supabase.from('products').insert({ ...payload, business_id: business.id, instagram_post_id: post.id, media_type: post.media_type });
-      if (error) { showError(`Failed to create product: ${error.message}`); } 
-      else { showSuccess("Product created!"); onUpdate(); onClose(); }
-    } else {
-      const { error } = await supabase.from('products').update(payload).eq('id', product.id);
-      if (error) { showError(`Failed to update product: ${error.message}`); } 
-      else { showSuccess("Product updated!"); onUpdate(); onClose(); }
-    }
+    if (error) { showError(`Failed to update product: ${error.message}`); } 
+    else { showSuccess("Product updated successfully!"); onUpdate(); setIsEditing(false); }
     setIsSubmitting(false);
   };
 
   const handleDelete = async () => {
-    if (isCreateMode) return;
     setIsSubmitting(true);
     const { error } = await supabase.from('products').delete().eq('id', product.id);
     if (error) { showError(`Failed to delete product: ${error.message}`); } 
@@ -211,113 +164,226 @@ export const ProductDetailModal = ({ isOpen, onClose, onUpdate, product, post, p
     setIsSubmitting(false); setIsDeleting(false);
   };
 
-  // Other handlers like handleImageUpload, handleImageDelete, handleFindSpecs would go here...
+  const ViewMode = () => {
+    const { category, type } = getCategoryAndType(product.category, product.details?.type);
+    const optionFieldNames = ['sizes', 'colors', 'framed'];
+    
+    const allDetails = type?.fields.filter(field => {
+        const value = product.details?.[field.name];
+        return value && (!Array.isArray(value) || value.length > 0);
+    }) || [];
+
+    const options = allDetails.filter(f => optionFieldNames.includes(f.name));
+    const specifications = allDetails.filter(f => !optionFieldNames.includes(f.name));
+
+    return (
+      <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
+        <ScrollArea className="flex-1 overflow-y-auto">
+          <div className="p-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
+              <div className="md:col-span-4">
+                <Carousel className="w-full rounded-lg overflow-hidden group">
+                  <CarouselContent>
+                    <CarouselItem>
+                      <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
+                        {product.media_type === 'VIDEO' ? (
+                          <>
+                            <video src={product.media_url} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <PlayCircle className="h-16 w-16 text-white/80" />
+                            </div>
+                          </>
+                        ) : (
+                          <img src={product.media_url} alt={product.name} className="object-cover w-full h-full" />
+                        )}
+                      </div>
+                    </CarouselItem>
+                  </CarouselContent>
+                  <CarouselPrevious className="left-2" />
+                  <CarouselNext className="right-2" />
+                </Carousel>
+              </div>
+              <div className="md:col-span-6 flex flex-col space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    <span>{category?.label || 'Uncategorized'}</span>
+                    {type && <span> &middot; {type.label}</span>}
+                  </p>
+                  <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2 mt-1">
+                    {product.name}
+                    <Badge variant={product.status === 'Active' ? 'default' : 'secondary'}>{product.status}</Badge>
+                  </h1>
+                </div>
+                <p className="text-base text-muted-foreground flex-1">{product.caption || 'No description provided.'}</p>
+                {product.tags?.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {product.tags.map((t, i) => <Badge key={i} variant="secondary">{t}</Badge>)}
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div><Label className="text-sm">Price</Label><p className="font-semibold text-2xl">{product.pricing_type === 'subscription' ? `${formatCurrency(product.price, product.currency)} / ${product.billing_interval}` : formatCurrency(product.price, product.currency)}</p></div>
+                  {product.pricing_type !== 'subscription' && (<div><Label className="text-sm">Inventory</Label><p className="font-semibold text-2xl">{product.inventory || 0}</p></div>)}
+                </div>
+              </div>
+            </div>
+
+            {(options.length > 0 || specifications.length > 0) && (
+              <Card>
+                <CardHeader><CardTitleComponent className="text-base">Options & Specifications</CardTitleComponent></CardHeader>
+                <CardContent className="p-4 space-y-4">
+                  {options.length > 0 && (
+                    <div>
+                      <h3 className="text-base font-semibold mb-3">Options & Variants</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                        {options.map(field => {
+                          const value = product.details?.[field.name];
+                          return (
+                            <DetailDisplayRow key={field.name} label={field.label}>
+                              {field.name === 'colors' && Array.isArray(value) ? (
+                                value.map(color => <div key={color} title={color} className="h-5 w-5 rounded-full border border-black/10" style={{ backgroundColor: color }} />)
+                              ) : field.name === 'sizes' && Array.isArray(value) ? (
+                                value.map(size => <Badge key={size} variant="outline" className="px-1.5 py-0.5 text-sm font-mono">{size}</Badge>)
+                              ) : (
+                                <p className="text-base">{Array.isArray(value) ? value.join(', ') : value}</p>
+                              )}
+                            </DetailDisplayRow>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {options.length > 0 && specifications.length > 0 && <hr />}
+                  {specifications.length > 0 && (
+                    <div>
+                      <h3 className="text-base font-semibold mb-3">Specifications</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                        {specifications.map(field => (
+                          <DetailDisplayRow key={field.name} label={field.label}>
+                            <p className="text-base">{product.details?.[field.name]}</p>
+                          </DetailDisplayRow>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </ScrollArea>
+        <DialogFooter className="p-4 border-t">
+          <Button variant="outline" onClick={() => setIsEditing(true)} disabled={isSubmitting}><Edit className="mr-2 h-4 w-4" />Edit</Button>
+          <Button variant="destructive" onClick={() => setIsDeleting(true)} disabled={isSubmitting}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>
+        </DialogFooter>
+      </motion.div>
+    );
+  };
+
+  const EditMode = () => {
+    const captionValue = watch("caption");
+    const textAreaRef = useRef<HTMLTextAreaElement>(null);
+    const { ref: rhfRef, ...captionProps } = register("caption");
+
+    useAutosizeTextArea(textAreaRef.current, captionValue || "");
+
+    return (
+      <motion.form key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Update Product</DialogTitle>
+        </DialogHeader>
+        <ScrollArea className="flex-1 overflow-y-auto">
+          <div className="p-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
+              <div className="md:col-span-4">
+                <img src={product.media_url} alt={product.name} className="rounded-lg object-cover w-full aspect-square bg-muted" />
+              </div>
+              <div className="md:col-span-6 flex flex-col space-y-4">
+                <div>
+                  <div className="flex items-center gap-4 text-sm font-medium">
+                    <Controller name="category" control={control} render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="w-auto border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9 px-2">
+                          <SelectValue placeholder="Category..." />
+                        </SelectTrigger>
+                        <SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent>
+                      </Select>
+                    )} />
+                    <Controller name="details.type" control={control} render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}>
+                        <SelectTrigger className="w-auto border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9 px-2">
+                          <SelectValue placeholder="Type..." />
+                        </SelectTrigger>
+                        <SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                      </Select>
+                    )} />
+                  </div>
+                  <div className="flex items-center gap-2 mt-4">
+                    <Input id="name" {...register("name")} placeholder="Product Name" className="border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors flex-1" />
+                    <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn("w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50", statusConfig[statusValue as keyof typeof statusConfig]?.color)}><SelectValue placeholder="Set status..." /></SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
+                  </div>
+                  {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
+                </div>
+                <Textarea
+                  id="caption"
+                  {...captionProps}
+                  ref={(e) => {
+                    rhfRef(e);
+                    textAreaRef.current = e as HTMLTextAreaElement;
+                  }}
+                  placeholder="No description provided."
+                  className="border-0 border-b-2 rounded-none bg-transparent p-0 text-base text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors resize-none"
+                />
+                <div>
+                  <Label>Tags</Label>
+                  <Controller control={control} name="tags" render={({ field }) => <TagInput {...field} />} />
+                </div>
+                <div className="space-y-2 pt-2">
+                  <Label>Pricing & Inventory</Label>
+                  <div className="flex items-center gap-4">
+                    <Controller control={control} name="pricing_type" render={({ field }) => (<ToggleGroup type="single" onValueChange={field.onChange} value={field.value} variant="outline" size="sm"><ToggleGroupItem value="one_time">One-time</ToggleGroupItem><ToggleGroupItem value="subscription">Subscription</ToggleGroupItem></ToggleGroup>)} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 pt-2">
+                    <div className="space-y-1 col-span-2">
+                      <Label htmlFor="price" className="text-xs">Price</Label>
+                      <div className="flex items-center gap-2">
+                        <Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
+                        <Input {...register("currency")} className="w-20 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" placeholder="USD" />
+                      </div>
+                      {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
+                      {errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}
+                    </div>
+                    <AnimatePresence>
+                      {pricingType === 'one_time' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label htmlFor="inventory" className="text-xs">Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</motion.div>)}
+                      {pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <Card>
+              <CardHeader><CardTitleComponent className="text-base">Options & Specifications</CardTitleComponent></CardHeader>
+              <CardContent>
+                {DetailsComponent ? <DetailsComponent control={control} /> : <p className="text-sm text-muted-foreground text-center">Select a category and type to see specific details.</p>}
+              </CardContent>
+            </Card>
+          </div>
+        </ScrollArea>
+        <DialogFooter className="p-4 border-t">
+          <Button type="button" variant="ghost" onClick={() => setIsEditing(false)} disabled={isSubmitting}>Cancel</Button>
+          <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button>
+        </DialogFooter>
+      </motion.form>
+    )
+  };
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setIsEditing(false); } }}>
         <DialogContent className="sm:max-w-6xl max-h-[90vh] flex flex-col p-0">
-          <motion.form key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
-            <DialogHeader className="p-4 border-b">
-              <DialogTitle>{isCreateMode ? "Create New Product" : `Edit: ${product?.name}`}</DialogTitle>
-              <DialogDescription>{isCreateMode ? "Create a new product from an Instagram post." : "Update the details for this product."}</DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="flex-1 overflow-y-auto">
-              <div className="p-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
-                  <div className="md:col-span-4">
-                    <Carousel className="w-full rounded-lg overflow-hidden group">
-                      <CarouselContent>
-                        {mediaItems.map((url: string, index: number) => (
-                          <CarouselItem key={index}><img src={url} alt={`Product image ${index + 1}`} className="object-cover w-full aspect-square bg-muted" /></CarouselItem>
-                        ))}
-                      </CarouselContent>
-                      {mediaItems.length > 1 && <><CarouselPrevious className="left-2" /><CarouselNext className="right-2" /></>}
-                    </Carousel>
-                  </div>
-                  <div className="md:col-span-6 flex flex-col space-y-4">
-                    <div>
-                      <div className="flex items-center gap-4 text-sm font-medium">
-                        <Controller name="category" control={control} render={({ field }) => (<CreatableCombobox options={categoryOptions} placeholder="Category..." {...field} />)} />
-                        <Controller name="details.type" control={control} render={({ field }) => (<CreatableCombobox options={typeOptions} placeholder="Type..." {...field} disabled={!categoryValue} />)} />
-                      </div>
-                      <div className="flex items-center gap-2 mt-4">
-                        <Input id="name" {...register("name")} placeholder="Product Name" className="w-auto border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors" />
-                        <Controller
-                          control={control}
-                          name="status"
-                          render={({ field }) => (
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <SelectTrigger
-                                className={cn(
-                                  "w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50",
-                                  statusConfig[statusValue as keyof typeof statusConfig]?.color
-                                )}
-                              >
-                                {(() => {
-                                  const currentStatusInfo = statusConfig[statusValue as keyof typeof statusConfig];
-                                  if (currentStatusInfo) {
-                                    const Icon = currentStatusInfo.icon;
-                                    return (
-                                      <div className="flex items-center gap-2">
-                                        <Icon className="h-4 w-4" />
-                                        <span>{currentStatusInfo.label}</span>
-                                      </div>
-                                    );
-                                  }
-                                  return <SelectValue placeholder="Set status..." />;
-                                })()}
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Object.entries(statusConfig).map(
-                                  ([status, { icon: Icon, color, label }]) => (
-                                    <SelectItem key={status} value={status} className={color}>
-                                      <div className="flex items-center gap-2">
-                                        <Icon className="h-4 w-4" />
-                                        <span>{label}</span>
-                                      </div>
-                                    </SelectItem>
-                                  )
-                                )}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                      </div>
-                      {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
-                    </div>
-                    <Textarea id="caption" {...captionProps} ref={(e) => { rhfRef(e); textAreaRef.current = e as HTMLTextAreaElement; }} placeholder="No description provided." className="border-0 border-b-2 rounded-none bg-transparent p-0 text-base text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors resize-none" />
-                    <div><Label>Tags</Label><Controller control={control} name="tags" render={({ field }) => <TagInput {...field} />} /></div>
-                    <div className="space-y-2 pt-2">
-                      <Label>Pricing & Inventory</Label>
-                      <div className="flex items-center gap-4"><Controller control={control} name="pricing_type" render={({ field }) => (<ToggleGroup type="single" onValueChange={field.onChange} value={field.value} variant="outline" size="sm"><ToggleGroupItem value="one_time">One-time</ToggleGroupItem><ToggleGroupItem value="subscription">Subscription</ToggleGroupItem></ToggleGroup>)} /></div>
-                      <div className="grid grid-cols-3 gap-4 pt-2">
-                        <div className="space-y-1 col-span-2">
-                          <Label htmlFor="price" className="text-xs">Price</Label>
-                          <div className="flex items-center gap-2"><Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" /><Input {...register("currency")} className="w-20 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" placeholder="USD" /></div>
-                          {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}
-                        </div>
-                        <AnimatePresence>
-                          {pricingType === 'one_time' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label htmlFor="inventory" className="text-xs">Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</motion.div>)}
-                          {pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}
-                        </AnimatePresence>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <Card>
-                  <CardHeader><CardTitleComponent className="text-base">Options & Specifications</CardTitleComponent></CardHeader>
-                  <CardContent>{DetailsComponent ? <DetailsComponent control={control} /> : <p className="text-sm text-muted-foreground text-center">Select a category and type to see specific details.</p>}</CardContent>
-                </Card>
-              </div>
-            </ScrollArea>
-            <DialogFooter className="p-4 border-t">
-              {!isCreateMode && <Button type="button" variant="destructive" onClick={() => setIsDeleting(true)} disabled={isSubmitting}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>}
-              <div className="flex-1" />
-              <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-              <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}<Save className="mr-2 h-4 w-4" />{isCreateMode ? "Create Product" : "Save Changes"}</Button>
-            </DialogFooter>
-          </motion.form>
+          <DialogHeader className="sr-only">
+            <DialogTitle>Product Details: {product.name}</DialogTitle>
+            <DialogDescription>View or edit product details for {product.name}.</DialogDescription>
+          </DialogHeader>
+          <AnimatePresence mode="wait">{isEditing ? <EditMode /> : <ViewMode />}</AnimatePresence>
         </DialogContent>
       </Dialog>
       <AlertDialog open={isDeleting} onOpenChange={setIsDeleting}><AlertDialogContent><AlertDialogHeader><AlertDialogTitleComponent>Are you absolutely sure?</AlertDialogTitleComponent><AlertDialogDescriptionComponent>This action cannot be undone. This will permanently delete the product.</AlertDialogDescriptionComponent></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete product</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
