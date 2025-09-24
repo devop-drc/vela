@@ -58,7 +58,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
   };
 
   const { details, caption, category: categoryValue } = product;
-  const { category: categoryInfo, type: typeInfo } = getCategoryAndType(categoryValue, details?.type);
+  const { type: typeInfo } = getCategoryAndType(categoryValue, details?.type);
 
   return (
     <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative">
@@ -89,8 +89,8 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
         <div className="bg-card p-3 flex-1 flex flex-col justify-between space-y-3">
           <div className="space-y-2">
             <div className="text-xs text-muted-foreground font-medium">
-              <span>{categoryInfo?.label || product.category || 'Uncategorized'}</span>
-              {typeInfo && <span> &middot; {typeInfo.label}</span>}
+              <span>{product.category || 'Uncategorized'}</span>
+              {product.details?.type && <span> &middot; {product.details.type}</span>}
             </div>
 
             <h3 className="font-semibold tracking-tight leading-snug">

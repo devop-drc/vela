@@ -20,7 +20,7 @@ const DetailDisplayRow = ({ label, children }: { label: string, children: React.
 );
 
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
-    const { category, type } = getCategoryAndType(product.category, product.details?.type);
+    const { type } = getCategoryAndType(product.category, product.details?.type);
     const optionFieldNames = ['sizes', 'colors', 'framed'];
     
     const allDetails = type?.fields.filter(field => {
@@ -56,8 +56,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               <div className="md:col-span-6 flex flex-col space-y-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
-                    <span>{category?.label || 'Uncategorized'}</span>
-                    {type && <span> &middot; {type.label}</span>}
+                    <span>{product.category || 'Uncategorized'}</span>
+                    {product.details?.type && <span> &middot; {product.details.type}</span>}
                   </p>
                   <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2 mt-1">
                     {product.name}
