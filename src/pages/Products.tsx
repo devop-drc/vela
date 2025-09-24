@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Import, ChevronDown, LayoutGrid, List, CheckSquare, Group } from "lucide-react";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchParams } from "react-router-dom";
 import { showError, showSuccess } from "@/utils/toast";
 import { InstagramPostModal } from "@/components/InstagramPostModal";
-import { ProductEditor } from "@/components/ProductEditor";
+import { ProductDetailModal } from "@/components/ProductDetailModal";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductTableView } from "@/components/ProductTableView";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -95,28 +95,6 @@ const Products = () => {
 
   useEffect(() => { setTitle("Products"); }, [setTitle]);
 
-  const fetchProducts = useCallback(async () => {
-    const userId = session?.user?.id;
-    if (!userId) {
-      setProducts([]);
-      setIsLoading(false);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      showError("Could not fetch your product catalog.");
-    } else if (data) {
-      setProducts(data as Product[]);
-    }
-    setIsLoading(false);
-  }, [session]);
-
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -145,20 +123,39 @@ const Products = () => {
     }
 
     setIsLoading(true);
-    fetchProducts();
 
+    // Fetch business info for sync status
     supabase.from('businesses').select('last_full_sync_at').eq('user_id', userId).single()
       .then(({ data }) => {
         setHasDoneFullSync(!!data?.last_full_sync_at);
       });
 
+    // Initial data fetch
+    supabase.from("products").select("*").eq('user_id', userId).order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) {
+          showError("Could not fetch your product catalog.");
+        } else if (data) {
+          setProducts(data as Product[]);
+        }
+        setIsLoading(false);
+      });
+
+    // Real-time subscription
     const channel = supabase
       .channel(`products:${userId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'products', filter: `user_id=eq.${userId}` },
-        () => {
-          fetchProducts();
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setProducts((current) => [payload.new as Product, ...current.filter(p => p.id !== payload.new.id)]);
+          } else if (payload.eventType === 'UPDATE') {
+            setProducts((current) => current.map((p) => (p.id === payload.new.id ? (payload.new as Product) : p)));
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as { id: string }).id;
+            setProducts((current) => current.filter((p) => p.id !== deletedId));
+          }
         }
       )
       .subscribe();
@@ -166,7 +163,7 @@ const Products = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [session?.user?.id, fetchProducts]);
+  }, [session?.user?.id]);
 
   const handleSync = async (syncType: 'quick' | 'full') => {
     runWithIntegrationCheck(async () => {
@@ -190,12 +187,8 @@ const Products = () => {
 
   const handleStatusChange = async (productId: string, newStatus: ProductStatus) => {
     const { error } = await supabase.from('products').update({ status: newStatus }).eq('id', productId);
-    if (error) { 
-      showError(`Failed to update status: ${error.message}`); 
-    } else { 
-      showSuccess(`Product is now ${newStatus.toLowerCase()}.`);
-      fetchProducts();
-    }
+    if (error) { showError(`Failed to update status: ${error.message}`); } 
+    else { showSuccess(`Product is now ${newStatus.toLowerCase()}.`); }
   };
 
   const filteredAndSortedProducts = useMemo(() => {
@@ -226,22 +219,15 @@ const Products = () => {
   }, [grouping, filteredAndSortedProducts]);
 
   const handleSelectProduct = (productId: string) => setSelectedProducts(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
-  
   const handleBulkStatusChange = async (status: ProductStatus) => {
     const { error } = await supabase.from('products').update({ status }).in('id', selectedProducts);
-    if (error) { 
-      showError(`Failed to update products: ${error.message}`); 
-    } else { 
-      showSuccess(`Successfully updated ${selectedProducts.length} products.`); 
-      setSelectedProducts([]); 
-      fetchProducts();
-    }
+    if (error) { showError(`Failed to update products: ${error.message}`); } 
+    else { showSuccess(`Successfully updated ${selectedProducts.length} products.`); setSelectedProducts([]); }
   };
-
   const handleBulkDelete = async () => {
     const { error } = await supabase.from('products').delete().in('id', selectedProducts);
     if (error) { showError(`Failed to delete products: ${error.message}`); } 
-    else { showSuccess(`Successfully deleted ${selectedProducts.length} products.`); setSelectedProducts([]); fetchProducts(); }
+    else { showSuccess(`Successfully deleted ${selectedProducts.length} products.`); setSelectedProducts([]); }
     setBulkDeleteConfirm(false);
   };
   const handleApplySale = async (saleData: SaleFormData) => {
@@ -249,7 +235,7 @@ const Products = () => {
     if (updates.length > 0) {
       const { error } = await supabase.from('products').upsert(updates);
       if (error) { showError(`Failed to apply sale: ${error.message}`); } 
-      else { showSuccess(`Sale applied to ${updates.length} products.`); fetchProducts(); }
+      else { showSuccess(`Sale applied to ${updates.length} products.`); }
     }
     setSelectedProducts([]);
     setIsSaleModalOpen(false);
@@ -265,8 +251,8 @@ const Products = () => {
 
   return (
     <>
-      {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={fetchProducts} />}
-      <ProductEditor isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={fetchProducts} />
+      {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={() => {}} />}
+      <ProductDetailModal isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={() => {}} />
       {isSaleModalOpen && <SaleModal isOpen={isSaleModalOpen} onClose={() => setIsSaleModalOpen(false)} onApply={handleApplySale} productCount={selectedProducts.length} />}
       <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {selectedProducts.length} products?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       

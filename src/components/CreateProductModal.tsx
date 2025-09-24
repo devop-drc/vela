@@ -10,13 +10,13 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Loader2 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { TagInput } from "@/components/TagInput";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Card, CardContent } from "./ui/card";
+import { TagInput } from "./TagInput";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { AnimatePresence, motion } from "framer-motion";
 import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import { useShop } from "@/contexts/ShopContext";
-import { CreatableCombobox } from "@/components/CreatableCombobox";
+import { CreatableCombobox } from "./CreatableCombobox";
 import { DynamicDetailFields } from "@/components/product-forms/DynamicDetailFields";
 
 const productSchema = z.object({
@@ -126,22 +126,10 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
     // --- End attribute saving logic ---
 
     const { error } = await supabase.from('products').insert({
-      business_id: business.id,
-      user_id: user.id,
-      name: data.name,
-      caption: data.description,
-      category: data.category,
-      price: data.price,
-      currency: data.currency,
-      inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
-      tags: data.tags,
-      details: finalDetails,
-      pricing_type: data.pricing_type,
-      status: 'Draft',
-      instagram_post_id: post.id,
-      media_url: post.media_url,
-      thumbnail_url: post.thumbnail_url,
-      media_type: post.media_type,
+      business_id: business.id, name: data.name, caption: data.description, category: data.category,
+      price: data.price, currency: data.currency, inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
+      tags: data.tags, details: finalDetails, pricing_type: data.pricing_type, status: 'Draft',
+      instagram_post_id: post.id, media_url: post.media_url, thumbnail_url: post.thumbnail_url, media_type: post.media_type,
     });
 
     if (error) { showError(`Failed to create product: ${error.message}`); } 
@@ -173,7 +161,7 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
                 <div className="space-y-2"><Label>Price</Label><div className="flex items-center gap-2"><Input type="number" step="0.01" {...register("price")} className="flex-1" /><Input {...register("currency")} className="w-20" placeholder="USD" /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
                 <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-2"><Label>Inventory</Label><Input type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}</AnimatePresence>
               </div>
-              <div className="space-y-2"><Label>Specific Details</Label><Card><CardContent className="p-4"><DetailsComponent control={control} details={detailsValue} /></CardContent></Card>
+              <div className="space-y-2"><Label>Specific Details</Label><Card><CardContent className="p-4"><DetailsComponent control={control} details={detailsValue} /></CardContent></Card></div>
             </div>
           </div>
           <DialogFooter><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save Product</Button></DialogFooter>
