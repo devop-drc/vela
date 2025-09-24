@@ -219,7 +219,7 @@ export const ProductDetailModal = ({ isOpen, onClose, onUpdate, product, post, p
         <DialogContent className="sm:max-w-6xl max-h-[90vh] flex flex-col p-0">
           <motion.form key="edit" onSubmit={handleSubmit(handleSave)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
             <DialogHeader className="p-4 border-b">
-              <DialogTitle>{isCreateMode ? "Create New Product" : `Edit: ${product.name}`}</DialogTitle>
+              <DialogTitle>{isCreateMode ? "Create New Product" : `Edit: ${product?.name}`}</DialogTitle>
               <DialogDescription>{isCreateMode ? "Create a new product from an Instagram post." : "Update the details for this product."}</DialogDescription>
             </DialogHeader>
             <ScrollArea className="flex-1 overflow-y-auto">
@@ -243,7 +243,46 @@ export const ProductDetailModal = ({ isOpen, onClose, onUpdate, product, post, p
                       </div>
                       <div className="flex items-center gap-2 mt-4">
                         <Input id="name" {...register("name")} placeholder="Product Name" className="w-auto border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors" />
-                        <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn("w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50", statusConfig[statusValue as keyof typeof statusConfig]?.color)}>{statusValue && statusConfig[statusValue as keyof typeof statusConfig] ? (<div className="flex items-center gap-2"><statusConfig[statusValue as keyof typeof statusConfig].icon className="h-4 w-4" /><span>{statusConfig[statusValue as keyof typeof statusConfig].label}</span></div>) : <SelectValue placeholder="Set status..." />}</SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
+                        <Controller
+                          control={control}
+                          name="status"
+                          render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger
+                                className={cn(
+                                  "w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50",
+                                  statusConfig[statusValue as keyof typeof statusConfig]?.color
+                                )}
+                              >
+                                {(() => {
+                                  const currentStatusInfo = statusConfig[statusValue as keyof typeof statusConfig];
+                                  if (currentStatusInfo) {
+                                    const Icon = currentStatusInfo.icon;
+                                    return (
+                                      <div className="flex items-center gap-2">
+                                        <Icon className="h-4 w-4" />
+                                        <span>{currentStatusInfo.label}</span>
+                                      </div>
+                                    );
+                                  }
+                                  return <SelectValue placeholder="Set status..." />;
+                                })()}
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(statusConfig).map(
+                                  ([status, { icon: Icon, color, label }]) => (
+                                    <SelectItem key={status} value={status} className={color}>
+                                      <div className="flex items-center gap-2">
+                                        <Icon className="h-4 w-4" />
+                                        <span>{label}</span>
+                                      </div>
+                                    </SelectItem>
+                                  )
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
                       </div>
                       {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
                     </div>
