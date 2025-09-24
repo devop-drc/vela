@@ -43,7 +43,7 @@ interface CreateProductModalProps {
 export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post }: CreateProductModalProps) => {
   const { shopDetails } = useShop();
   
-  const { register, handleSubmit, control, setValue, reset, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
+  const { register, handleSubmit, control, setValue, reset, getValues, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
   });
 
@@ -69,12 +69,17 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
   const DetailsComponent = type?.component;
 
   useEffect(() => {
-    // When category changes, reset the type to the first available one
+    // When category changes, check if the current type is valid. If not, reset to the first available one.
     const newCategory = productCategories.find(c => c.value === categoryValue);
+    const currentType = getValues('details.type');
+    
     if (newCategory && newCategory.types.length > 0) {
-      setValue("details.type", newCategory.types[0].value);
+      const isTypeValidForCategory = newCategory.types.some(t => t.value === currentType);
+      if (!isTypeValidForCategory) {
+        setValue("details.type", newCategory.types[0].value);
+      }
     }
-  }, [categoryValue, setValue]);
+  }, [categoryValue, setValue, getValues]);
 
   const onSubmit = async (data: ProductFormData) => {
     const { data: { user } } = await supabase.auth.getUser();
