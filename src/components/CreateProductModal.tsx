@@ -16,7 +16,7 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { AnimatePresence, motion } from "framer-motion";
 import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import { useShop } from "@/contexts/ShopContext";
-import { CreatableCombobox } from "./CreatableCombobox";
+import { CreatableCombobox } from "@/components/CreatableCombobox";
 import { DynamicDetailFields } from "@/components/product-forms/DynamicDetailFields";
 
 const productSchema = z.object({
