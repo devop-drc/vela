@@ -1,17 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-// Using Gemini 1.5 Flash for speed and cost-effectiveness in the first step
 const GEMINI_FLASH_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
-// Using Gemini 1.5 Pro for power and reasoning in the main steps
 const GEMINI_PRO_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${GEMINI_API_KEY}`;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-// --- PROMPT DEFINITIONS ---
 
 const getTriagePrompt = (caption: string) => `
   Analyze the following Instagram post caption. Your task is to determine if a specific product or service is being advertised for sale.
@@ -26,16 +22,14 @@ const getExtractionPrompt = (caption: string) => `
   You are an expert e-commerce analyst. Your task is to meticulously analyze an Instagram post caption and generate a complete, structured JSON object for the product or service being sold.
 
   **VALID CATEGORIES & TYPES:**
-  - "clothing":
-    - "t-shirt"
-  - "electronics":
-    - "generic-device"
-  - "art":
-    - "print"
-  - "service":
-    - "consulting"
-  - "generic":
-    - "generic"
+  - "clothing": ["t-shirt"]
+  - "electronics": ["generic-device"]
+  - "art": ["print"]
+  - "service": ["consulting"]
+  - "generic": ["generic"]
+
+  **VALID INPUT TYPES:**
+  - "text", "textarea", "number", "dropdown", "tags", "color"
 
   Analyze the following caption:
   ---
@@ -43,24 +37,24 @@ const getExtractionPrompt = (caption: string) => `
   ---
 
   **Instructions:**
-  1.  **MANDATORY - Categorize:** You MUST classify the product into ONE of the valid primary categories listed above. This field is non-negotiable.
-  2.  **MANDATORY - Sub-Categorize (Type):** Based on your chosen category, you MUST select the most fitting "type" from the valid types listed for that category above and place it inside the "details" object. This field is non-negotiable.
-  3.  **Extract All Details:** Scrutinize the caption for every possible product attribute (sizes, colors, materials, dimensions, specs).
-  4.  **Find Specifications:** Use your internal knowledge to find relevant specs for the identified product and include them in the "details" object.
-  5.  **Currency Detection:** Identify currency symbols ($, €, £) or codes (USD, EUR) and use the ISO code. Default to "USD" if none are found.
-  6.  **Justify Extractions:** For each key-value pair, provide a "justification" field with the exact quote from the caption that supports your extraction.
-  7.  **Format Output:** Respond ONLY with a single, valid JSON object.
+  1.  **Categorize & Sub-Categorize:** You MUST classify the product into ONE of the valid primary categories and ONE of its valid types.
+  2.  **Extract All Details:** Scrutinize the caption for every possible product attribute (sizes, colors, materials, dimensions, specs).
+  3.  **Define Field Metadata:** For each extracted detail, you MUST determine the most appropriate 'inputType' from the valid list. If the inputType is 'dropdown', you MUST provide a list of potential 'options' based on the context.
+  4.  **Justify Extractions:** For each key-value pair, provide a "justification" field with the exact quote from the caption that supports your extraction.
+  5.  **Format Output:** Respond ONLY with a single, valid JSON object.
 
-  **JSON Structure:**
+  **JSON Structure Example:**
   {
-    "name": { "value": "A creative and concise name.", "justification": "Extracted from '...'" },
-    "category": { "value": "clothing", "justification": "Inferred from '...'" },
-    "description": { "value": "A compelling product description.", "justification": "Based on the overall caption." },
-    "price": { "value": 25.99, "justification": "Extracted from '...'" },
-    "currency": { "value": "USD", "justification": "Extracted from '$' symbol." },
-    "tags": { "value": ["tag1", "tag2"], "justification": "Based on keywords '...'" },
+    "name": { "value": "Vintage Sunset Tee", "justification": "From '...'" },
+    "category": { "value": "clothing", "justification": "Inferred from 'tee'" },
+    "description": { "value": "A soft, vintage-style t-shirt.", "justification": "Based on the overall caption." },
+    "price": { "value": 35.00, "justification": "From 'Just $35'" },
+    "currency": { "value": "USD", "justification": "From '$' symbol" },
+    "tags": { "value": ["vintage", "sunset", "graphic tee"], "justification": "Keywords from caption" },
     "details": {
-      "type": { "value": "t-shirt", "justification": "Inferred from '...'" }
+      "type": { "value": "t-shirt", "justification": "Inferred from 'tee'" },
+      "material": { "value": "Cotton", "inputType": "dropdown", "options": ["Cotton", "Polyester", "Blend"], "justification": "From '100% cotton'" },
+      "sizes": { "value": ["M", "L"], "inputType": "tags", "justification": "From 'Available in M and L'" }
     }
   }
 `;
@@ -80,14 +74,14 @@ const getCorrectionPrompt = (caption: string, generatedJson: string) => `
 
   **YOUR TASK:**
   1.  **Verify Every Field:** Compare each "value" in the JSON against the original caption.
-  2.  **Check Justifications:** Does the "justification" accurately point to the source of the information in the caption?
+  2.  **Check Metadata:** Ensure 'inputType' and 'options' are logical and correct.
   3.  **Correct Errors:** If you find any inaccuracies, misinterpretations, or hallucinations, correct them.
   4.  **Output:** Provide a revised, 100% accurate JSON object in the same format. If no errors are found, return the original JSON unchanged. Respond ONLY with the JSON object.
 `;
 
 const callGemini = async (url: string, prompt: string) => {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
 
   try {
     const response = await fetch(url, {
@@ -96,22 +90,13 @@ const callGemini = async (url: string, prompt: string) => {
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
       signal: controller.signal,
     });
-
     clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini API error: ${errorText}`);
-    }
+    if (!response.ok) throw new Error(`Gemini API error: ${await response.text()}`);
     const data = await response.json();
-    if (!data.candidates || data.candidates.length === 0) {
-      throw new Error("AI failed to generate a response.");
-    }
+    if (!data.candidates || data.candidates.length === 0) throw new Error("AI failed to generate a response.");
     return data.candidates[0].content.parts[0].text.trim();
   } catch (error) {
-    if (error.name === 'AbortError') {
-      throw new Error('AI analysis timed out after 20 seconds.');
-    }
+    if (error.name === 'AbortError') throw new Error('AI analysis timed out after 20 seconds.');
     throw error;
   }
 };
@@ -126,62 +111,44 @@ const safeJsonParse = (jsonString: string) => {
 };
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { status: 200, headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { status: 200, headers: corsHeaders });
 
   try {
     if (!GEMINI_API_KEY) throw new Error("Gemini API key is not configured.");
-
     const { caption } = await req.json();
-    if (!caption) {
-      return new Response(JSON.stringify({ isProductPost: false, reasoning: "No caption provided." }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    if (!caption) return new Response(JSON.stringify({ isProductPost: false, reasoning: "No caption provided." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-    // --- STAGE A: Triage ---
-    const triagePrompt = getTriagePrompt(caption);
-    const triageResult = await callGemini(GEMINI_FLASH_API_URL, triagePrompt);
-
+    const triageResult = await callGemini(GEMINI_FLASH_API_URL, getTriagePrompt(caption));
     if (triageResult.toUpperCase() !== 'YES') {
-      return new Response(JSON.stringify({ isProductPost: false, reasoning: "AI triage determined this is not a product post." }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(JSON.stringify({ isProductPost: false, reasoning: "AI triage determined this is not a product post." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // --- STAGE B: Detailed Extraction ---
-    const extractionPrompt = getExtractionPrompt(caption);
-    const extractedJsonString = await callGemini(GEMINI_PRO_API_URL, extractionPrompt);
+    const extractedJsonString = await callGemini(GEMINI_PRO_API_URL, getExtractionPrompt(caption));
     const extractedJson = safeJsonParse(extractedJsonString);
 
-    // --- STAGE C: Self-Correction ---
-    const correctionPrompt = getCorrectionPrompt(caption, JSON.stringify(extractedJson, null, 2));
-    const correctedJsonString = await callGemini(GEMINI_PRO_API_URL, correctionPrompt);
+    const correctedJsonString = await callGemini(GEMINI_PRO_API_URL, getCorrectionPrompt(caption, JSON.stringify(extractedJson, null, 2)));
     const correctedJson = safeJsonParse(correctedJsonString);
 
-    // --- Final Processing: Flatten the { value, justification } structure ---
     const finalProduct = Object.entries(correctedJson).reduce((acc, [key, val]) => {
-        if (key === 'details') {
-            acc[key] = Object.entries(val as object).reduce((detailsAcc, [detailKey, detailVal]) => {
-                detailsAcc[detailKey] = (detailVal as any).value;
-                return detailsAcc;
-            }, {} as any);
-        } else {
-            acc[key] = (val as any).value;
-        }
-        return acc;
+      if (key === 'details') {
+        acc[key] = Object.entries(val as object).reduce((detailsAcc, [detailKey, detailVal]) => {
+          detailsAcc[detailKey] = detailVal; // Keep the full structure { value, inputType, ... }
+          return detailsAcc;
+        }, {} as any);
+      } else {
+        acc[key] = (val as any).value;
+      }
+      return acc;
     }, {} as any);
 
-    return new Response(JSON.stringify({ isProductPost: true, product: finalProduct }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    // The 'type' value needs to be flattened for direct use in the form
+    if (finalProduct.details && finalProduct.details.type) {
+        finalProduct.details.type = finalProduct.details.type.value;
+    }
 
+    return new Response(JSON.stringify({ isProductPost: true, product: finalProduct }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error('Function Error:', error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ error: error.message }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
