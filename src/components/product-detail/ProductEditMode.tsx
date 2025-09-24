@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Controller } from "react-hook-form";
 import { DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -18,6 +18,7 @@ import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
+import { CreatableCombobox } from "../CreatableCombobox";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -28,6 +29,8 @@ const statusConfig = {
 export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting }: any) => {
     const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
     const [isFindingSpecs, setIsFindingSpecs] = useState(false);
+    const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+    const [typeOptions, setTypeOptions] = useState<string[]>([]);
 
     const pricingType = watch("pricing_type");
     const categoryValue = watch("category");
@@ -40,6 +43,38 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
 
     const { category, type } = getCategoryAndType(categoryValue, typeValue);
     const DetailsComponent = type?.component;
+
+    useEffect(() => {
+      const fetchCategories = async () => {
+          const { data } = await supabase.from('categories').select('name');
+          const dbCategories = data?.map(c => c.name) || [];
+          const staticCategories = productCategories.map(c => c.label);
+          setCategoryOptions([...new Set([...staticCategories, ...dbCategories])]);
+      };
+      fetchCategories();
+    }, []);
+
+    useEffect(() => {
+      const fetchTypes = async () => {
+          if (!categoryValue) {
+              setTypeOptions([]);
+              return;
+          }
+          const { data: categoryData } = await supabase.from('categories').select('id').eq('name', categoryValue).single();
+          
+          const staticCategory = productCategories.find(c => c.label.toLowerCase() === categoryValue.toLowerCase() || c.value.toLowerCase() === categoryValue.toLowerCase());
+          const staticTypes = staticCategory ? staticCategory.types.map(t => t.label) : [];
+
+          if (categoryData) {
+              const { data: dbTypes } = await supabase.from('types').select('name').eq('category_id', categoryData.id);
+              const typeNames = dbTypes?.map(t => t.name) || [];
+              setTypeOptions([...new Set([...staticTypes, ...typeNames])]);
+          } else {
+              setTypeOptions(staticTypes);
+          }
+      };
+      fetchTypes();
+    }, [categoryValue]);
 
     const handleFindSpecs = async () => {
       setIsFindingSpecs(true);
@@ -111,20 +146,10 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                   <div>
                     <div className="flex items-center gap-4 text-sm font-medium">
                       <Controller name="category" control={control} render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className="w-auto border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9 px-2">
-                            <SelectValue placeholder="Category..." />
-                          </SelectTrigger>
-                          <SelectContent>{productCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent>
-                        </Select>
+                        <CreatableCombobox options={categoryOptions} placeholder="Category..." {...field} />
                       )} />
                       <Controller name="details.type" control={control} render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value} disabled={!category?.types}>
-                          <SelectTrigger className="w-auto border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50 h-9 px-2">
-                            <SelectValue placeholder="Type..." />
-                          </SelectTrigger>
-                          <SelectContent>{category?.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-                        </Select>
+                        <CreatableCombobox options={typeOptions} placeholder="Type..." {...field} disabled={!category?.types} />
                       )} />
                     </div>
                     <div className="flex items-center gap-2 mt-4">

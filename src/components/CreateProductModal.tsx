@@ -63,7 +63,7 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
     reset({
       name: productData?.name?.value || "",
       description: productData?.description?.value || post?.caption || "",
-      category: productData?.category?.value || "generic",
+      category: productData?.category?.value || "Generic Product",
       price: productData?.price?.value || 0,
       currency: productData?.currency?.value || shopDetails?.currency || 'USD',
       inventory: 10,
@@ -97,9 +97,19 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
   useEffect(() => {
     const fetchTypeOptions = async () => {
       if (!categoryValue) { setTypeOptions([]); return; }
-      const staticCategory = productCategories.find(c => c.label === categoryValue);
+      
+      const { data: categoryData } = await supabase.from('categories').select('id').eq('name', categoryValue).single();
+      
+      const staticCategory = productCategories.find(c => c.label === categoryValue || c.value === categoryValue);
       const staticTypes = staticCategory ? staticCategory.types.map(t => t.label) : [];
-      setTypeOptions(staticTypes);
+
+      if (categoryData) {
+        const { data: dbTypes } = await supabase.from('types').select('name').eq('category_id', categoryData.id);
+        const typeNames = dbTypes?.map(t => t.name) || [];
+        setTypeOptions([...new Set([...staticTypes, ...typeNames])]);
+      } else {
+        setTypeOptions(staticTypes);
+      }
     };
     fetchTypeOptions();
   }, [categoryValue]);
