@@ -67,8 +67,17 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
         { event: '*', schema: 'public', table: 'sync_jobs', filter: `user_id=eq.${userId}` },
         (payload) => {
           const newJob = payload.new as SyncJob;
-          sessionStorage.removeItem('dismissed_sync_job_id');
-          setActiveJob(newJob);
+          setActiveJob(currentJob => {
+            if (!currentJob || newJob.id === currentJob.id || new Date(newJob.created_at) > new Date(currentJob.created_at)) {
+              const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
+              if (newJob.id === dismissedJobId && newJob.status !== 'in_progress' && newJob.status !== 'starting') {
+                return currentJob;
+              }
+              sessionStorage.removeItem('dismissed_sync_job_id');
+              return newJob;
+            }
+            return currentJob;
+          });
         }
       )
       .subscribe();

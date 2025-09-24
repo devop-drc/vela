@@ -21,44 +21,55 @@ const updateJobProgress = async (supabase: SupabaseClient, jobId: string, progre
 };
 
 const analyzeAndEnrichPost = async (supabaseAdmin: SupabaseClient, post: any) => {
-    if (!post.caption) return { product: null, skipped: true };
+    if (!post.caption) return { product: null, skipped: true, reason: "No caption provided." };
     try {
         const { data: analysis, error: analysisError } = await supabaseAdmin.functions.invoke('ai-product-analyzer', { body: { caption: post.caption } });
         if (analysisError) throw analysisError;
         if (!analysis || analysis.error) throw new Error(analysis?.error || "AI analysis failed");
-        if (!analysis.isProductPost) return { product: null, skipped: true };
+        if (!analysis.isProductPost) return { product: null, skipped: true, reason: analysis.reasoning };
 
         const p = analysis.product;
-        let enrichedDetails = p.details || {};
+        
+        const productData: any = {
+            name: p.name?.value,
+            caption: p.description?.value,
+            category: p.category?.value,
+            price: p.price?.value,
+            currency: p.currency?.value,
+            tags: p.tags?.value,
+            details: {},
+            status: 'Draft',
+            instagram_post_id: post.id,
+            media_url: post.media_url,
+            thumbnail_url: post.thumbnail_url,
+            media_type: post.media_type,
+        };
 
-        if (p.name && p.category && p.details?.type) {
+        if (p.details) {
+            for (const [key, detailVal] of Object.entries(p.details as any)) {
+                productData.details[key] = detailVal.value;
+            }
+        }
+
+        if (productData.name && productData.category && productData.details?.type) {
             const { data: specData, error: specError } = await supabaseAdmin.functions.invoke('ai-spec-finder', {
-                body: { productName: p.name, categoryName: p.category, typeName: p.details.type }
+                body: { productName: productData.name, categoryName: productData.category, typeName: productData.details.type }
             });
             if (specError) throw specError;
             if (specData && !specData.error) {
-                enrichedDetails = { ...enrichedDetails, ...specData };
+                productData.details = { ...productData.details, ...specData };
             }
         }
         
-        return {
-            product: {
-                name: p.name, caption: p.description, category: p.category,
-                price: p.price, currency: p.currency, tags: p.tags, details: enrichedDetails,
-                status: 'Draft', instagram_post_id: post.id, media_url: post.media_url,
-                thumbnail_url: post.thumbnail_url, media_type: post.media_type,
-            },
-            skipped: false
-        };
+        return { product: productData, skipped: false, reason: null };
     } catch (e) {
         console.error(`Error analyzing post ${post.id}:`, e.message);
-        // Treat analysis failure as a skip, but log the error
-        return { product: null, skipped: true };
+        return { product: null, skipped: true, reason: e.message };
     }
 };
 
 const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: string, syncType: 'quick' | 'full') => {
-  const summary = { created: 0, updated: 0, skipped: 0 };
+  const summary = { created: 0, updated: 0, skipped: 0, skipped_items: [] as any[] };
   try {
     const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses').select('id').eq('user_id', user.id).single();
@@ -103,10 +114,15 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
       const captionSnippet = post.caption ? `"${post.caption.substring(0, 30)}..."` : `post without caption`;
       await updateJobProgress(supabaseAdmin, jobId, processedCount, total, `Analyzing: ${captionSnippet}`, post.thumbnail_url || post.media_url);
 
-      const { product: productPayload, skipped } = await analyzeAndEnrichPost(supabaseAdmin, post);
+      const { product: productPayload, skipped, reason } = await analyzeAndEnrichPost(supabaseAdmin, post);
       
       if (skipped) {
         summary.skipped++;
+        summary.skipped_items.push({
+            name: post.caption ? post.caption.substring(0, 50) + '...' : `Post ID ${post.id}`,
+            reason: reason || "Not a product.",
+            thumbnail_url: post.thumbnail_url || post.media_url
+        });
       } else if (productPayload) {
         const existingId = existingProductMap.get(post.id);
         const payload: any = { ...productPayload, business_id: business.id, user_id: user.id };

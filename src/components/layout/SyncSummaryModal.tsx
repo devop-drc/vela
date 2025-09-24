@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CheckCircle, SkipForward, RefreshCw, AlertTriangle } from "lucide-react";
+import { ScrollArea } from "../ui/scroll-area";
 
 const StatCard = ({ icon: Icon, title, value, color }: any) => (
   <div className="flex items-center gap-4 p-4 border rounded-lg">
@@ -18,10 +19,11 @@ export const SyncSummaryModal = ({ job, isOpen, onClose }: { job: any; isOpen: b
 
   const summary = job.summary || {};
   const isSuccess = job.status === 'completed';
+  const skippedItems = summary.skipped_items || [];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isSuccess ? <CheckCircle className="h-6 w-6 text-emerald-500" /> : <AlertTriangle className="h-6 w-6 text-destructive" />}
@@ -31,13 +33,33 @@ export const SyncSummaryModal = ({ job, isOpen, onClose }: { job: any; isOpen: b
             {isSuccess ? 'Here is a summary of the sync process.' : 'The sync process failed. See the error message below.'}
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-4">
+        <div className="py-4 space-y-6">
           {isSuccess ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <StatCard icon={CheckCircle} title="Products Created" value={summary.created || 0} color={{ bg: 'bg-emerald-100', text: 'text-emerald-700' }} />
-              <StatCard icon={RefreshCw} title="Products Updated" value={summary.updated || 0} color={{ bg: 'bg-blue-100', text: 'text-blue-700' }} />
-              <StatCard icon={SkipForward} title="Posts Skipped" value={summary.skipped || 0} color={{ bg: 'bg-slate-100', text: 'text-slate-700' }} />
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <StatCard icon={CheckCircle} title="Created" value={summary.created || 0} color={{ bg: 'bg-emerald-100', text: 'text-emerald-700' }} />
+                <StatCard icon={RefreshCw} title="Updated" value={summary.updated || 0} color={{ bg: 'bg-blue-100', text: 'text-blue-700' }} />
+                <StatCard icon={SkipForward} title="Skipped" value={summary.skipped || 0} color={{ bg: 'bg-slate-100', text: 'text-slate-700' }} />
+              </div>
+              {skippedItems.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">Skipped Posts</h4>
+                  <ScrollArea className="h-48 border rounded-lg p-2">
+                    <div className="space-y-2">
+                      {skippedItems.map((item: any, index: number) => (
+                        <div key={index} className="flex items-start gap-3 p-2 text-sm">
+                          <img src={item.thumbnail_url} alt="Skipped post" className="h-12 w-12 rounded-md object-cover bg-muted" />
+                          <div className="flex-1">
+                            <p className="font-medium truncate">{item.name}</p>
+                            <p className="text-xs text-muted-foreground">{item.reason}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+            </>
           ) : (
             <div className="p-4 border rounded-lg bg-destructive/10 text-destructive">
               <p className="font-semibold">Error Message:</p>

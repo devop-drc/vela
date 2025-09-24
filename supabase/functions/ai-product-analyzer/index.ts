@@ -120,7 +120,7 @@ serve(async (req) => {
 
     const triageResult = await callGemini(GEMINI_FLASH_API_URL, getTriagePrompt(caption));
     if (triageResult.toUpperCase() !== 'YES') {
-      return new Response(JSON.stringify({ isProductPost: false, reasoning: "AI triage determined this is not a product post." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ isProductPost: false, reasoning: "AI determined this is not a product post." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const extractedJsonString = await callGemini(GEMINI_PRO_API_URL, getExtractionPrompt(caption));
@@ -129,24 +129,7 @@ serve(async (req) => {
     const correctedJsonString = await callGemini(GEMINI_PRO_API_URL, getCorrectionPrompt(caption, JSON.stringify(extractedJson, null, 2)));
     const correctedJson = safeJsonParse(correctedJsonString);
 
-    const finalProduct = Object.entries(correctedJson).reduce((acc, [key, val]) => {
-      if (key === 'details') {
-        acc[key] = Object.entries(val as object).reduce((detailsAcc, [detailKey, detailVal]) => {
-          detailsAcc[detailKey] = detailVal; // Keep the full structure { value, inputType, ... }
-          return detailsAcc;
-        }, {} as any);
-      } else {
-        acc[key] = (val as any).value;
-      }
-      return acc;
-    }, {} as any);
-
-    // The 'type' value needs to be flattened for direct use in the form
-    if (finalProduct.details && finalProduct.details.type) {
-        finalProduct.details.type = finalProduct.details.type.value;
-    }
-
-    return new Response(JSON.stringify({ isProductPost: true, product: finalProduct }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ isProductPost: true, product: correctedJson }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error('Function Error:', error.message);
     return new Response(JSON.stringify({ error: error.message }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });

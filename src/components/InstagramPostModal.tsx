@@ -86,10 +86,10 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
 
   const handleCreateProduct = (post: AnalyzedPost) => {
     const productData = post.analysis?.isProductPost ? post.analysis.product : {
-      name: "New Product",
-      description: post.caption || "",
-      category: "generic",
-      details: { type: "generic" }
+      name: { value: "New Product" },
+      description: { value: post.caption || "" },
+      category: { value: "generic" },
+      details: { type: { value: "generic" } }
     };
     setProductToCreate(productData);
     setIsCreateModalOpen(true);
@@ -180,12 +180,13 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                               <div className="border-t pt-4 mt-4">
                                 <h4 className="font-semibold text-sm mb-3">Extracted Details:</h4>
                                 <dl className="space-y-2">
-                                  {selectedPost.analysis.product.name && <DetailRow label="Name" value={selectedPost.analysis.product.name} />}
-                                  {selectedPost.analysis.product.category && <DetailRow label="Category" value={<Badge variant="outline">{selectedPost.analysis.product.category}</Badge>} />}
-                                  {selectedPost.analysis.product.price !== undefined && <DetailRow label="Price" value={`${selectedPost.analysis.product.price} ${selectedPost.analysis.product.currency || ''}`} />}
-                                  {selectedPost.analysis.product.tags?.length > 0 && <DetailRow label="Tags" value={<div className="flex flex-wrap gap-1">{selectedPost.analysis.product.tags.map((tag: string) => <Badge key={tag} variant="secondary">{tag}</Badge>)}</div>} />}
+                                  {selectedPost.analysis.product.name?.value && <DetailRow label="Name" value={selectedPost.analysis.product.name.value} />}
+                                  {selectedPost.analysis.product.category?.value && <DetailRow label="Category" value={<Badge variant="outline">{selectedPost.analysis.product.category.value}</Badge>} />}
+                                  {selectedPost.analysis.product.price?.value !== undefined && <DetailRow label="Price" value={`${selectedPost.analysis.product.price.value} ${selectedPost.analysis.product.currency?.value || ''}`} />}
+                                  {selectedPost.analysis.product.tags?.value?.length > 0 && <DetailRow label="Tags" value={<div className="flex flex-wrap gap-1">{selectedPost.analysis.product.tags.value.map((tag: string) => <Badge key={tag} variant="secondary">{tag}</Badge>)}</div>} />}
                                   
-                                  {Object.entries(selectedPost.analysis.product.details || {}).map(([key, value]) => {
+                                  {Object.entries(selectedPost.analysis.product.details || {}).map(([key, valueObj]: [string, any]) => {
+                                    const value = valueObj.value;
                                     if (!value || (Array.isArray(value) && value.length === 0)) return null;
                                     const displayValue = Array.isArray(value) ? value.join(', ') : String(value);
                                     return <DetailRow key={key} label={key.replace(/_/g, ' ')} value={displayValue} />;
