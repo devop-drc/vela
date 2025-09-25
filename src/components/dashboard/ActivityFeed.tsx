@@ -12,6 +12,7 @@ import { OrderDetailModal } from "../OrderDetailModal";
 import { showError } from "@/utils/toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { AnimatePresence, motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 type Activity = {
   id: string;
@@ -126,7 +127,10 @@ export const ActivityFeed = () => {
                       exit={{ opacity: 0 }}
                       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                       onClick={() => handleActivityClick(activity)}
-                      className="w-full text-left p-3 flex items-center gap-3 rounded-lg hover:bg-accent transition-colors"
+                      className={cn(
+                        "w-full text-left p-3 flex items-center gap-3 rounded-lg hover:bg-accent transition-colors border-l-4",
+                        activity.type === 'sale' ? 'border-emerald-500' : 'border-blue-500'
+                      )}
                     >
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={activity.image} />

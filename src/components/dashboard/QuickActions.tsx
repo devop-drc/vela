@@ -39,19 +39,19 @@ export const QuickActions = () => {
         <CardTitle>Quick Actions</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Button variant="outline" onClick={handleQuickSync} disabled={isSyncing}>
+        <Button variant="outline" onClick={handleQuickSync} disabled={isSyncing} className="hover:border-blue-400 hover:bg-blue-50">
           <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
           Quick Sync
         </Button>
-        <Button variant="outline" onClick={() => navigate('/out-of-stock')}>
+        <Button variant="outline" onClick={() => navigate('/out-of-stock')} className="hover:border-amber-400 hover:bg-amber-50">
           <Archive className="mr-2 h-4 w-4" />
           Restock
         </Button>
-        <Button variant="outline" onClick={() => navigate('/orders')}>
+        <Button variant="outline" onClick={() => navigate('/orders')} className="hover:border-emerald-400 hover:bg-emerald-50">
           <ShoppingBag className="mr-2 h-4 w-4" />
           Check Orders
         </Button>
-        <Button variant="outline" onClick={() => navigate('/settings')}>
+        <Button variant="outline" onClick={() => navigate('/settings')} className="hover:border-purple-400 hover:bg-purple-50">
           <Palette className="mr-2 h-4 w-4" />
           Customize
         </Button>

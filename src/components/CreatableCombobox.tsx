@@ -64,8 +64,9 @@ export const CreatableCombobox = React.forwardRef<HTMLButtonElement, CreatableCo
               onValueChange={setInputValue}
             />
             <CommandList>
-              <CommandEmpty>
-                {showCreateOption ? (
+              <CommandEmpty>No results found.</CommandEmpty>
+              <CommandGroup>
+                {showCreateOption && (
                   <CommandItem
                     onSelect={() => handleSelect(inputValue)}
                     className="flex items-center gap-2"
@@ -73,11 +74,7 @@ export const CreatableCombobox = React.forwardRef<HTMLButtonElement, CreatableCo
                     <PlusCircle className="h-4 w-4" />
                     Create "{inputValue}"
                   </CommandItem>
-                ) : (
-                  "No results found."
                 )}
-              </CommandEmpty>
-              <CommandGroup>
                 {filteredOptions.map((option) => (
                   <CommandItem
                     key={option}
@@ -93,15 +90,6 @@ export const CreatableCombobox = React.forwardRef<HTMLButtonElement, CreatableCo
                     {option}
                   </CommandItem>
                 ))}
-                {showCreateOption && filteredOptions.length > 0 && (
-                  <CommandItem
-                      onSelect={() => handleSelect(inputValue)}
-                      className="flex items-center gap-2"
-                    >
-                      <PlusCircle className="h-4 w-4" />
-                      Create "{inputValue}"
-                    </CommandItem>
-                )}
               </CommandGroup>
             </CommandList>
           </Command>

@@ -18,6 +18,8 @@ import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import { useShop } from "@/contexts/ShopContext";
 import { CreatableCombobox } from "./CreatableCombobox";
 import { DynamicDetailFields } from "@/components/product-forms/DynamicDetailFields";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { currencies } from "@/lib/currencies";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -167,7 +169,7 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
               </div>
               <div className="space-y-2"><Label>Pricing Model</Label><Controller name="pricing_type" control={control} render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="one_time" id="one_time" /><Label htmlFor="one_time">One-time</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="subscription" id="subscription" /><Label htmlFor="subscription">Subscription</Label></div></RadioGroup>)} /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Price</Label><div className="flex items-center gap-2"><Input type="number" step="0.01" {...register("price")} className="flex-1" /><Input {...register("currency")} className="w-20" placeholder="USD" /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
+                <div className="space-y-2"><Label>Price</Label><div className="flex items-center gap-2"><Input type="number" step="0.01" {...register("price")} className="flex-1" /><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
                 <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-2"><Label>Inventory</Label><Input type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}</AnimatePresence>
               </div>
               <div className="space-y-2"><Label>Specific Details</Label><Card><CardContent className="p-4"><DetailsComponent /></CardContent></Card></div>

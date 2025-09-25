@@ -121,12 +121,12 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     }
 
     const filePath = `${user.id}/${product.id}/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from('design-assets').upload(filePath, file);
+    const { error } = await supabase.storage.from('product-media').upload(filePath, file);
 
     if (error) {
       showError(`Upload failed: ${error.message}`);
     } else {
-      const { data: { publicUrl } } = supabase.storage.from('design-assets').getPublicUrl(filePath);
+      const { data: { publicUrl } } = supabase.storage.from('product-media').getPublicUrl(filePath);
       setMediaItems(prev => [...prev, publicUrl]);
     }
     setIsUploading(false);
@@ -140,7 +140,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     if (!user) return;
 
     const filePath = `${user.id}/${product.id}/${fileName}`;
-    const { error } = await supabase.storage.from('design-assets').remove([filePath]);
+    const { error } = await supabase.storage.from('product-media').remove([filePath]);
 
     if (error) {
       showError(`Failed to delete image: ${error.message}`);

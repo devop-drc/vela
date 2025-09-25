@@ -21,6 +21,7 @@ import { showError, showSuccess } from "@/utils/toast";
 import { CreatableCombobox } from "../CreatableCombobox";
 import { GenericDetailsForm } from "@/components/product-forms/DetailForms";
 import { DynamicSpecEditor } from "@/components/product-forms/DynamicSpecEditor";
+import { currencies } from "@/lib/currencies";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -33,14 +34,12 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
     const [isFindingSpecs, setIsFindingSpecs] = useState(false);
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
     const [typeOptions, setTypeOptions] = useState<string[]>([]);
-    const [formattedPrice, setFormattedPrice] = useState("");
-
+    
     const pricingType = watch("pricing_type");
     const categoryValue = watch("category");
     const typeValue = watch("details.type");
     const statusValue = watch("status");
     const captionValue = watch("caption");
-    const priceValue = watch("price");
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const { ref: rhfRef, ...captionProps } = register("caption");
     useAutosizeTextArea(textAreaRef.current, captionValue || "");
@@ -86,37 +85,6 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
         }
       }
     }, [isEditing, product?.id]); // Reruns only when editing starts for a new product
-
-    useEffect(() => {
-      if (typeof priceValue === 'number') {
-        const formatted = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(priceValue);
-        if (formatted !== formattedPrice.replace(/,/g, '')) {
-          setFormattedPrice(formatted);
-        }
-      } else if (priceValue === null || priceValue === undefined) {
-        setFormattedPrice('');
-      }
-    }, [priceValue]);
-
-    const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const rawValue = e.target.value;
-      setFormattedPrice(rawValue);
-      const numericValue = parseFloat(rawValue.replace(/[^0-9.]/g, ''));
-      if (!isNaN(numericValue)) {
-        setValue('price', numericValue, { shouldDirty: true });
-      } else {
-        setValue('price', null, { shouldDirty: true });
-      }
-    };
-
-    const handlePriceBlur = () => {
-      const currentPrice = getValues('price');
-      if (typeof currentPrice === 'number') {
-        setFormattedPrice(new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(currentPrice));
-      } else {
-        setFormattedPrice('');
-      }
-    };
 
     useEffect(() => {
       const fetchCategories = async () => {
@@ -195,7 +163,7 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                   <div>
                     <div className="flex shrink gap-4 text-sm font-medium">
                       <div className="w-fit min-w-[165px]"><Controller name="category" control={control} render={({ field }) => (<CreatableCombobox options={categoryOptions} placeholder="Category..." {...field} />)} /></div>
-                      <div className="w-fit min-w-[165px]"><Controller name="details.type" control={control} render={({ field }) => (<CreatableCombobox options={typeOptions} placeholder="Type..." {...field} disabled={!category?.types} />)} /></div>
+                      <div className="w-fit min-w-[165px]"><Controller name="details.type" control={control} render={({ field }) => (<CreatableCombobox options={typeOptions} placeholder="Type..." {...field} disabled={!categoryValue} />)} /></div>
                     </div>
                     <div className="flex items-center gap-2 mt-4">
                       <Input id="name" {...register("name")} placeholder="Product Name" className="w-auto border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors" />
@@ -226,8 +194,13 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                         <div className="space-y-1 col-span-2">
                             <Label htmlFor="price" className="text-xs">Price</Label>
                             <div className="flex items-center gap-2">
-                                <Input id="price" type="text" value={formattedPrice} onChange={handlePriceChange} onBlur={handlePriceBlur} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
-                                <Input {...register("currency")} className="w-20 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" placeholder="USD" />
+                                <Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
+                                <Controller name="currency" control={control} render={({ field }) => (
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="USD" /></SelectTrigger>
+                                    <SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent>
+                                  </Select>
+                                )} />
                             </div>
                             {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
                             {errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}
