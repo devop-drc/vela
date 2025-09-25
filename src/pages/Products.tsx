@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useIntegration } from "@/contexts/IntegrationContext";
 import { toast } from "sonner";
 import { useSync } from "@/contexts/SyncContext";
-import { Session } from "@supabase/supabase-js";
+import { RealtimeChannel } from "@supabase/supabase-js";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 type GridSizeType = 'sm' | 'md' | 'lg';
@@ -53,7 +53,6 @@ const gridSizeClasses: { [key: string]: string } = {
   lg: "lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4",
 };
 
-const sizeCycle: GridSizeType[] = ['sm', 'md', 'lg'];
 const sizeLabels: { [key in GridSizeType]: string } = { sm: 'Small', md: 'Medium', lg: 'Large' };
 
 const containerVariants = {
@@ -81,7 +80,6 @@ const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const [hasDoneFullSync, setHasDoneFullSync] = useState<boolean | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
 
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -96,14 +94,6 @@ const Products = () => {
   useEffect(() => { setTitle("Products"); }, [setTitle]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
     if (searchParams.get("instagram_connected") === "true") {
       showSuccess("Successfully connected! Opening importer...");
       setIsImporterOpen(true);
@@ -113,59 +103,49 @@ const Products = () => {
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
-    const userId = session?.user?.id;
+    let channel: RealtimeChannel | null = null;
 
-    if (!userId) {
-      setIsLoading(false);
-      setProducts([]);
-      setHasDoneFullSync(null);
-      return;
-    }
+    const setup = async () => {
+      setIsLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
 
-    setIsLoading(true);
-
-    // Fetch business info for sync status
-    supabase.from('businesses').select('last_full_sync_at').eq('user_id', userId).single()
-      .then(({ data }) => {
-        setHasDoneFullSync(!!data?.last_full_sync_at);
-      });
-
-    // Initial data fetch
-    supabase.from("products").select("*").eq('user_id', userId).order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) {
-          showError("Could not fetch your product catalog.");
-        } else if (data) {
-          setProducts(data as Product[]);
-        }
+      if (!user) {
         setIsLoading(false);
-      });
+        setProducts([]);
+        setHasDoneFullSync(null);
+        return;
+      }
 
-    // Real-time subscription
-    const channel = supabase
-      .channel(`products:${userId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'products', filter: `user_id=eq.${userId}` },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setProducts((current) => [payload.new as Product, ...current.filter(p => p.id !== payload.new.id)]);
-          } else if (payload.eventType === 'UPDATE') {
-            setProducts((current) => current.map((p) => (p.id === payload.new.id ? (payload.new as Product) : p)));
-          } else if (payload.eventType === 'DELETE') {
-            const deletedId = (payload.old as { id: string }).id;
-            setProducts((current) => current.filter((p) => p.id !== deletedId));
+      supabase.from('businesses').select('last_full_sync_at').eq('user_id', user.id).single()
+        .then(({ data }) => setHasDoneFullSync(!!data?.last_full_sync_at));
+
+      const { data, error } = await supabase.from("products").select("*").eq('user_id', user.id).order('created_at', { ascending: false });
+      
+      if (error) {
+        showError("Could not fetch your product catalog.");
+      } else if (data) {
+        setProducts(data as Product[]);
+      }
+      setIsLoading(false);
+
+      channel = supabase
+        .channel(`products:${user.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products', filter: `user_id=eq.${user.id}` },
+          (payload) => {
+            if (payload.eventType === 'INSERT') setProducts((current) => [payload.new as Product, ...current.filter(p => p.id !== payload.new.id)]);
+            else if (payload.eventType === 'UPDATE') setProducts((current) => current.map((p) => (p.id === payload.new.id ? (payload.new as Product) : p)));
+            else if (payload.eventType === 'DELETE') setProducts((current) => current.filter((p) => p.id !== (payload.old as { id: string }).id));
           }
-        }
-      )
-      .subscribe();
+        ).subscribe();
+    };
+
+    setup();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
-  }, [session?.user?.id]);
+  }, []);
 
-  // When the main products list updates, check if the selected product needs updating too.
   useEffect(() => {
     if (selectedProduct) {
       const updatedProductInList = products.find(p => p.id === selectedProduct.id);
@@ -179,15 +159,11 @@ const Products = () => {
     runWithIntegrationCheck(async () => {
       toast.loading("Initiating sync job...", { id: 'sync-initiating' });
       try {
-        const { data, error } = await supabase.functions.invoke('background-sync', {
-          body: { syncType },
-        });
+        const { data, error } = await supabase.functions.invoke('background-sync', { body: { syncType } });
         toast.dismiss('sync-initiating');
         if (error) throw error;
         if (data.error) throw new Error(data.error);
-        if (data.jobId) {
-          await startNewSync(data.jobId);
-        }
+        if (data.jobId) await startNewSync(data.jobId);
       } catch (err: any) {
         toast.dismiss('sync-initiating');
         showError(err.message || `Failed to start ${syncType} sync.`);
@@ -197,8 +173,8 @@ const Products = () => {
 
   const handleStatusChange = async (productId: string, newStatus: ProductStatus) => {
     const { error } = await supabase.from('products').update({ status: newStatus }).eq('id', productId);
-    if (error) { showError(`Failed to update status: ${error.message}`); } 
-    else { showSuccess(`Product is now ${newStatus.toLowerCase()}.`); }
+    if (error) showError(`Failed to update status: ${error.message}`);
+    else showSuccess(`Product is now ${newStatus.toLowerCase()}.`);
   };
 
   const filteredAndSortedProducts = useMemo(() => {
@@ -217,9 +193,7 @@ const Products = () => {
   }, [products, searchTerm, statusFilter, sortOption]);
 
   const groupedProducts = useMemo(() => {
-    if (grouping === 'none') {
-      return { 'All Products': filteredAndSortedProducts };
-    }
+    if (grouping === 'none') return { 'All Products': filteredAndSortedProducts };
     return filteredAndSortedProducts.reduce((acc, product) => {
       const key = product.category || 'Uncategorized';
       if (!acc[key]) acc[key] = [];
@@ -231,12 +205,12 @@ const Products = () => {
   const handleSelectProduct = (productId: string) => setSelectedProducts(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
   const handleBulkStatusChange = async (status: ProductStatus) => {
     const { error } = await supabase.from('products').update({ status }).in('id', selectedProducts);
-    if (error) { showError(`Failed to update products: ${error.message}`); } 
+    if (error) showError(`Failed to update products: ${error.message}`);
     else { showSuccess(`Successfully updated ${selectedProducts.length} products.`); setSelectedProducts([]); }
   };
   const handleBulkDelete = async () => {
     const { error } = await supabase.from('products').delete().in('id', selectedProducts);
-    if (error) { showError(`Failed to delete products: ${error.message}`); } 
+    if (error) showError(`Failed to delete products: ${error.message}`);
     else { showSuccess(`Successfully deleted ${selectedProducts.length} products.`); setSelectedProducts([]); }
     setBulkDeleteConfirm(false);
   };
@@ -244,16 +218,13 @@ const Products = () => {
     const updates = products.filter(p => selectedProducts.includes(p.id) && p.price != null).map(p => ({ id: p.id, price: Math.max(0, saleData.type === 'percentage' ? p.price! * (1 - saleData.value / 100) : p.price! - saleData.value) }));
     if (updates.length > 0) {
       const { error } = await supabase.from('products').upsert(updates);
-      if (error) { showError(`Failed to apply sale: ${error.message}`); } 
-      else { showSuccess(`Sale applied to ${updates.length} products.`); }
+      if (error) showError(`Failed to apply sale: ${error.message}`);
+      else showSuccess(`Sale applied to ${updates.length} products.`);
     }
     setSelectedProducts([]);
     setIsSaleModalOpen(false);
   };
-  const toggleSelectionMode = () => {
-    setIsSelectionModeActive(prev => !prev);
-    if (isSelectionModeActive) setSelectedProducts([]);
-  };
+  const toggleSelectionMode = () => { setIsSelectionModeActive(prev => !prev); if (isSelectionModeActive) setSelectedProducts([]); };
   const cycleGridSize = () => setGridSize(prev => sizeCycle[(sizeCycle.indexOf(prev) + 1) % sizeCycle.length]);
   const handleStatusFilterChange = (status: string) => setStatusFilter(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]);
 
@@ -269,22 +240,10 @@ const Products = () => {
       <div className="space-y-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
-            <div className="relative w-full sm:w-auto sm:flex-1 md:max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search products..." className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            </div>
+            <div className="relative w-full sm:w-auto sm:flex-1 md:max-w-xs"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="Search products..." className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" className="justify-start"><ListFilter className="mr-2 h-4 w-4" />Filter</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuLabel>Filter by Status</DropdownMenuLabel><DropdownMenuSeparator /><DropdownMenuCheckboxItem checked={statusFilter.includes('Active')} onCheckedChange={() => handleStatusFilterChange('Active')}>Active</DropdownMenuCheckboxItem><DropdownMenuCheckboxItem checked={statusFilter.includes('Draft')} onCheckedChange={() => handleStatusFilterChange('Draft')}>Draft</DropdownMenuCheckboxItem><DropdownMenuCheckboxItem checked={statusFilter.includes('Out of Stock')} onCheckedChange={() => handleStatusFilterChange('Out of Stock')}>Out of Stock</DropdownMenuCheckboxItem></DropdownMenuContent></DropdownMenu>
             <Select value={sortOption} onValueChange={setSortOption}><SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Sort by" /></SelectTrigger><SelectContent><SelectItem value="newest">Newest</SelectItem><SelectItem value="oldest">Oldest</SelectItem><SelectItem value="price-asc">Price: Low to High</SelectItem><SelectItem value="price-desc">Price: High to Low</SelectItem><SelectItem value="name-asc">Name: A-Z</SelectItem><SelectItem value="name-desc">Name: Z-A</SelectItem></SelectContent></Select>
-            <AnimatePresence>
-            {!isMobile && (
-              <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 'auto', opacity: 1 }} exit={{ width: 0, opacity: 0 }} className="flex items-center gap-2 overflow-hidden">
-                <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline"><Group className="mr-2 h-4 w-4" />Group</Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuRadioGroup value={grouping} onValueChange={(v) => setGrouping(v as GroupingType)}><DropdownMenuRadioItem value="none">None</DropdownMenuRadioItem><DropdownMenuRadioItem value="category">By Category</DropdownMenuRadioItem></DropdownMenuRadioGroup></DropdownMenuContent></DropdownMenu>
-                <Button variant="outline" size="icon" onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}>{viewMode === 'grid' ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}</Button>
-                {viewMode === 'grid' && <Button variant="outline" onClick={cycleGridSize} className="w-28 justify-start"><LayoutGrid className="mr-2 h-4 w-4" />{sizeLabels[gridSize]}</Button>}
-                {viewMode === 'grid' && <Button variant={isSelectionModeActive ? "secondary" : "outline"} onClick={toggleSelectionMode}><CheckSquare className="mr-2 h-4 w-4" />{isSelectionModeActive ? 'Cancel' : 'Select'}</Button>}
-              </motion.div>
-            )}
-            </AnimatePresence>
+            <AnimatePresence>{!isMobile && (<motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 'auto', opacity: 1 }} exit={{ width: 0, opacity: 0 }} className="flex items-center gap-2 overflow-hidden"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline"><Group className="mr-2 h-4 w-4" />Group</Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuRadioGroup value={grouping} onValueChange={(v) => setGrouping(v as GroupingType)}><DropdownMenuRadioItem value="none">None</DropdownMenuRadioItem><DropdownMenuRadioItem value="category">By Category</DropdownMenuRadioItem></DropdownMenuRadioGroup></DropdownMenuContent></DropdownMenu><Button variant="outline" size="icon" onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}>{viewMode === 'grid' ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}</Button>{viewMode === 'grid' && <Button variant="outline" onClick={cycleGridSize} className="w-28 justify-start"><LayoutGrid className="mr-2 h-4 w-4" />{sizeLabels[gridSize]}</Button>}{viewMode === 'grid' && <Button variant={isSelectionModeActive ? "secondary" : "outline"} onClick={toggleSelectionMode}><CheckSquare className="mr-2 h-4 w-4" />{isSelectionModeActive ? 'Cancel' : 'Select'}</Button>}</motion.div>)}</AnimatePresence>
           </div>
           <div className="flex items-center gap-2 w-full md:w-auto">
             <Button variant="outline" onClick={() => runWithIntegrationCheck(() => setIsImporterOpen(true))} className="flex-1 md:flex-none"><Import className="mr-2 h-4 w-4" />Import</Button>
@@ -292,7 +251,7 @@ const Products = () => {
           </div>
         </div>
 
-        {isLoading ? <div className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-[340px] w-full rounded-lg" />)}</div> : Object.keys(groupedProducts).length > 0 ? (currentView === 'grid' ? <div className="space-y-8">{Object.entries(groupedProducts).map(([groupName, products]) => (<div key={groupName}><h2 className="text-xl font-bold mb-4 capitalize">{groupName} ({products.length})</h2><motion.div variants={containerVariants} initial="hidden" animate="visible" className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>{products.map((product) => <motion.div key={product.id} variants={itemVariants}><ProductCard product={product} gridSize={gridSize} isSelected={selectedProducts.includes(product.id)} isSelectionModeActive={isSelectionModeActive || selectedProducts.length > 0} onSelect={handleSelectProduct} onEdit={setSelectedProduct} onStatusChange={handleStatusChange} /></motion.div>)}</motion.div></div>))}</div> : <Card><CardContent className="p-0"><ProductTableView products={filteredAndSortedProducts} selectedProducts={selectedProducts} onSelectAll={(checked) => setSelectedProducts(checked ? filteredAndSortedProducts.map(p => p.id) : [])} onSelectOne={handleSelectProduct} onEdit={setSelectedProduct} onDelete={(id) => {}} onStatusChange={handleStatusChange} /></CardContent></Card>) : <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg"><h3 className="text-lg font-semibold">No Products Found</h3><p className="text-sm mt-1">Try adjusting your search or filters, or import from Instagram.</p></div>}
+        {isLoading ? (currentView === 'grid' ? <div className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>{Array.from({ length: 12 }).map((_, i) => <div key={i} className="space-y-2"><Skeleton className="aspect-square w-full rounded-lg" /><Skeleton className="h-4 w-2/3" /><Skeleton className="h-4 w-1/2" /></div>)}</div> : <div className="p-6 space-y-2"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>) : Object.keys(groupedProducts).length > 0 ? (currentView === 'grid' ? <div className="space-y-8">{Object.entries(groupedProducts).map(([groupName, products]) => (<div key={groupName}><h2 className="text-xl font-bold mb-4 capitalize">{groupName} ({products.length})</h2><motion.div variants={containerVariants} initial="hidden" animate="visible" className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>{products.map((product) => <motion.div key={product.id} variants={itemVariants}><ProductCard product={product} gridSize={gridSize} isSelected={selectedProducts.includes(product.id)} isSelectionModeActive={isSelectionModeActive || selectedProducts.length > 0} onSelect={handleSelectProduct} onEdit={setSelectedProduct} onStatusChange={handleStatusChange} /></motion.div>)}</motion.div></div>))}</div> : <Card><CardContent className="p-0"><ProductTableView products={filteredAndSortedProducts} selectedProducts={selectedProducts} onSelectAll={(checked) => setSelectedProducts(checked ? filteredAndSortedProducts.map(p => p.id) : [])} onSelectOne={handleSelectProduct} onEdit={setSelectedProduct} onDelete={(id) => {}} onStatusChange={handleStatusChange} /></CardContent></Card>) : <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg"><h3 className="text-lg font-semibold">No Products Found</h3><p className="text-sm mt-1">Try adjusting your search or filters, or import from Instagram.</p></div>}
       </div>
       <AnimatePresence>{selectedProducts.length > 0 && <BulkActionsToolbar selectedCount={selectedProducts.length} onClear={() => { setSelectedProducts([]); setIsSelectionModeActive(false); }} onSetStatus={handleBulkStatusChange} onDelete={() => setBulkDeleteConfirm(true)} onAddSale={() => setIsSaleModalOpen(true)} />}</AnimatePresence>
     </>

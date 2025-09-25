@@ -71,55 +71,51 @@ export const SyncStatusWidget = () => {
         {isVisible && (
           <motion.div
             layout
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
             className="fixed bottom-4 left-4 z-50 w-80"
             onHoverStart={() => setIsHovered(true)}
             onHoverEnd={() => setIsHovered(false)}
           >
             <Card className="shadow-lg overflow-hidden">
-              <AnimatePresence>
-                {isHovered && isRunning && activeJob?.thumbnail_url && (
-                  <motion.div layout="position" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                    <img src={activeJob.thumbnail_url} alt="Post thumbnail" className="h-40 w-full object-cover" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
               <CardContent className="p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold truncate">Product Syncing</h3>
-                  <Icon className={`h-4 w-4 flex-shrink-0 ${currentStatus.color} ${isRunning ? 'animate-spin' : ''}`} />
-                </div>
-                <AnimatePresence>
-                  {isHovered && isRunning && activeJob?.current_post_caption && (
-                    <motion.div layout="position" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                      <ScrollArea className="h-20 my-2"><p className="text-xs text-muted-foreground whitespace-pre-wrap">{activeJob.current_post_caption}</p></ScrollArea>
+                <div className="flex items-start gap-3">
+                  {isRunning && activeJob?.thumbnail_url && (
+                    <motion.div layout="position">
+                      <img src={activeJob.thumbnail_url} alt="Post thumbnail" className="h-10 w-10 rounded-md object-cover" />
                     </motion.div>
                   )}
-                </AnimatePresence>
-                <Progress value={percentage} className="h-1.5" />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{activeJob?.progress || 0} / {activeJob?.total || 0}</span>
-                  <span>{isFinished ? `Finished in ${totalTime}` : elapsedTime}</span>
-                </div>
-                <AnimatePresence>
-                  {isHovered && isRunning && activeJob?.ai_analysis_message && (
-                    <motion.div layout="position" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pt-2 border-t border-dashed flex items-center gap-2 text-xs text-muted-foreground">
-                      <Sparkles className="h-3 w-3 text-amber-400" />
-                      <p>{activeJob.ai_analysis_message}</p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                {isFinished && (
-                  <div className="pt-2 border-t border-dashed">
-                    <div className="space-y-1 text-xs">
-                      <div className="flex justify-between"><span>Created:</span> <span className="font-medium">{summary.created || 0}</span></div>
-                      <div className="flex justify-between"><span>Updated:</span> <span className="font-medium">{summary.updated || 0}</span></div>
-                      <div className="flex justify-between"><span>Skipped:</span> <span className="font-medium">{summary.skipped || 0}</span></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold truncate">Product Syncing</h3>
+                      <Icon className={`h-4 w-4 flex-shrink-0 ${currentStatus.color} ${isRunning ? 'animate-spin' : ''}`} />
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{activeJob?.progress || 0} / {activeJob?.total || 0}</span>
+                      <span>{isFinished ? `Finished in ${totalTime}` : elapsedTime}</span>
                     </div>
                   </div>
-                )}
+                </div>
+                
+                <Progress value={percentage} className="h-1.5" />
+
+                <AnimatePresence>
+                  {isHovered && isRunning && (
+                    <motion.div layout="position" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-2 space-y-2">
+                      {activeJob?.current_post_caption && (
+                        <ScrollArea className="h-20"><p className="text-xs text-muted-foreground whitespace-pre-wrap">{activeJob.current_post_caption}</p></ScrollArea>
+                      )}
+                      {activeJob?.ai_analysis_message && (
+                        <div className="pt-2 border-t border-dashed flex items-center gap-2 text-xs text-muted-foreground">
+                          <Sparkles className="h-3 w-3 text-amber-400" />
+                          <p>{activeJob.ai_analysis_message}</p>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {isFinished ? (
                   <div className="flex gap-2 pt-1">
                     <Button size="sm" className="flex-1" onClick={() => setIsSummaryOpen(true)}><Info className="mr-2 h-4 w-4" />Details</Button>
