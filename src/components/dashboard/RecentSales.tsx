@@ -33,7 +33,7 @@ const itemVariants = {
 export const RecentSales = ({ orders }: RecentSalesProps) => {
   const { shopDetails } = useShop();
   return (
-    <Card>
+    <Card className="col-span-4 md:col-span-3 lg:col-span-1">
       <CardHeader>
         <CardTitle>Recent Sales</CardTitle>
         <CardDescription>You made {orders.length} sales recently.</CardDescription>

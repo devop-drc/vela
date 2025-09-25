@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { DollarSign, Package, Users, CreditCard } from "lucide-react";
+import { DollarSign, Package, Users, CreditCard, Activity } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { RecentSales } from "@/components/dashboard/RecentSales";
 import { OverviewChart } from "@/components/dashboard/OverviewChart";
@@ -12,7 +12,6 @@ import { ProfileStats } from "@/components/dashboard/ProfileStats";
 import { LatestProducts } from "@/components/dashboard/LatestProducts";
 import { TopProducts } from "@/components/dashboard/TopProducts";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
-import { QuickActions } from "@/components/dashboard/QuickActions";
 
 interface DashboardData {
   totalRevenue: number;
@@ -102,7 +101,6 @@ const Index = () => {
     return (
       <div className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /></div>
-        <Skeleton className="h-24 w-full" />
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-3"><Skeleton className="lg:col-span-2 h-96" /><Skeleton className="h-96" /></div>
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-3"><Skeleton className="h-80" /><Skeleton className="h-80" /><Skeleton className="h-80" /></div>
       </div>
@@ -119,11 +117,8 @@ const Index = () => {
         <StatCard title="Total Revenue" value={formatCurrency(convertCurrency(data.totalRevenue), shopDetails?.currency)} icon={DollarSign} description="All-time revenue" />
         <StatCard title="Sales" value={`+${data.salesCount}`} icon={CreditCard} description="All-time sales count" />
         <StatCard title="Active Products" value={data.activeProducts.toString()} icon={Package} description="Products available for sale" />
-        <StatCard title="Unique Customers" value={data.customers.toString()} icon={Users} description="Total unique customers" />
+        <StatCard title="Conversion Rate" value="3.45%" icon={Activity} description="+1.2% from last month" />
       </div>
-
-      <ActivityFeed />
-
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <OverviewChart data={data.chartData} />
@@ -133,15 +128,12 @@ const Index = () => {
           <LatestProducts />
         </div>
       </div>
-      
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <RecentSales orders={data.recentOrders} />
-        </div>
-        <div className="space-y-4">
-          <TopProducts />
-          <QuickActions />
-        </div>
+      <div className="grid gap-4 grid-cols-1">
+        <ActivityFeed />
+      </div>
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <RecentSales orders={data.recentOrders} />
+        <TopProducts />
       </div>
     </div>
   );

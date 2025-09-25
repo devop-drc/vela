@@ -29,7 +29,7 @@ export const OverviewChart = ({ data }: OverviewChartProps) => {
   };
 
   return (
-    <Card>
+    <Card className="col-span-4">
       <CardHeader>
         <CardTitle>Overview</CardTitle>
       </CardHeader>
