@@ -42,7 +42,7 @@ const DashboardLayout = () => {
       <div id="background-overlay" className="fixed inset-0 z-[-1] bg-background transition-colors" />
       <div className="flex h-screen bg-transparent">
         <Sidebar />
-        <div className="flex flex-col flex-1">
+        <div className="flex flex-col flex-1 min-w-0">
           <Header title={title} />
           <main className="flex-1 p-4 md:p-6 overflow-y-auto pb-24 md:pb-6">
             <AnimatePresence mode="wait">

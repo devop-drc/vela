@@ -19,6 +19,8 @@ import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { CreatableCombobox } from "../CreatableCombobox";
+import { GenericDetailsForm } from "@/components/product-forms/DetailForms";
+import { DynamicSpecEditor } from "@/components/product-forms/DynamicSpecEditor";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -46,6 +48,7 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
     const { category, type } = getCategoryAndType(categoryValue, typeValue);
     const DetailsComponent = type?.component;
     const showSpecFinder = category?.value === 'electronics';
+    const detailKeys = Object.keys(watch('details') || {}).filter(key => key !== 'type');
 
     const handleFindSpecs = async () => {
       setIsFindingSpecs(true);
@@ -248,7 +251,11 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                   )}
                 </CardHeader>
                 <CardContent>
-                  {DetailsComponent ? <DetailsComponent control={control} /> : <p className="text-sm text-muted-foreground text-center">Select a category and type to see specific details.</p>}
+                  {DetailsComponent && DetailsComponent !== GenericDetailsForm ? (
+                    <DetailsComponent control={control} />
+                  ) : (
+                    <DynamicSpecEditor control={control} fields={detailKeys} />
+                  )}
                 </CardContent>
               </Card>
             </div>
