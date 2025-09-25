@@ -108,7 +108,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
             {(gridSize === 'md' || gridSize === 'lg') && product.tags && product.tags.length > 0 && (
               <div className="pt-1">
                 <DetailRow icon={Tag}>
-                  {product.tags.slice(0, gridSize === 'md' ? 2 : 4).map(tag => <Badge key={tag} variant="secondary" className="px-1.5 py-0 text-xs">{tag}</Badge>)}
+                  {(gridSize === 'lg' ? product.tags : product.tags.slice(0, 4)).map(tag => <Badge key={tag} variant="secondary" className="px-1.5 py-0 text-xs">{tag}</Badge>)}
                 </DetailRow>
               </div>
             )}
