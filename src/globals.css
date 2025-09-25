@@ -119,7 +119,7 @@
 
 @layer components {
   .card {
-    @apply shadow-card;
+    @apply shadow-card bg-card/80 backdrop-blur-lg;
   }
 }
 

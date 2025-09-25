@@ -42,7 +42,7 @@ const DashboardLayout = () => {
       <div id="background-overlay" className="fixed inset-0 z-[-1] bg-background transition-colors" />
       <Sidebar />
       <Header title={title} />
-      <main className="absolute inset-0 overflow-y-auto p-4 md:p-6 pt-24 md:pl-[18rem] pb-24 md:pb-6">
+      <main className="absolute inset-0 overflow-y-auto pt-28 px-4 pb-24 md:pb-4 md:pl-[18rem]">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
