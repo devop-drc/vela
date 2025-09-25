@@ -12,6 +12,7 @@ export interface ProductType {
   label: string;
   fields: ProductField[];
   component: React.FC<{ control: Control<any> }>;
+  hasSpecifications?: boolean;
 }
 
 export interface ProductCategory {
@@ -35,6 +36,7 @@ export const productCategories: ProductCategory[] = [
           { name: "reference_code", label: "SKU / Reference", type: "text" },
         ],
         component: ClothingDetailsForm,
+        hasSpecifications: false,
       },
     ],
   },
@@ -52,6 +54,7 @@ export const productCategories: ProductCategory[] = [
                 { name: "storage", label: "Storage", type: "text" },
             ],
             component: ElectronicsDetailsForm,
+            hasSpecifications: true,
         }
     ]
   },
@@ -68,6 +71,7 @@ export const productCategories: ProductCategory[] = [
                 { name: "framed", label: "Framing Options", type: "text" },
             ],
             component: ArtDetailsForm,
+            hasSpecifications: true,
         }
     ]
   },
@@ -83,6 +87,7 @@ export const productCategories: ProductCategory[] = [
                 { name: "format", label: "Format (e.g., Online, In-person)", type: "text" },
             ],
             component: ServiceDetailsForm,
+            hasSpecifications: true,
         }
     ]
   },
@@ -95,6 +100,7 @@ export const productCategories: ProductCategory[] = [
             label: "Generic",
             fields: [],
             component: GenericDetailsForm,
+            hasSpecifications: false,
         }
     ]
   }

@@ -101,18 +101,25 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
               <p className="text-xs text-muted-foreground line-clamp-2">{caption}</p>
             )}
             
+            {(gridSize === 'md' || gridSize === 'lg') && product.tags && product.tags.length > 0 && (
+              <div className="pt-1">
+                <DetailRow icon={Tag}>
+                  {product.tags.slice(0, gridSize === 'md' ? 2 : 4).map(tag => <Badge key={tag} variant="secondary" className="px-1.5 py-0 text-xs">{tag}</Badge>)}
+                </DetailRow>
+              </div>
+            )}
+
             {gridSize === 'lg' && typeInfo?.fields && (
               <div className="space-y-1.5 pt-1">
                 {typeInfo.fields.map(field => {
                   const value = details?.[field.name];
                   if (!value || (Array.isArray(value) && value.length === 0)) return null;
 
-                  let icon = Tag;
+                  let icon = Cog;
                   if (field.name.includes('size') || field.name.includes('dimension')) icon = Ruler;
                   if (field.name.includes('color')) icon = Palette;
                   if (field.name.includes('framing')) icon = Frame;
                   if (field.name.includes('medium')) icon = ScanText;
-                  if (field.name.includes('spec')) icon = Cog;
 
                   return (
                     <DetailRow key={field.name} icon={icon}>

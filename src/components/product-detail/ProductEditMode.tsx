@@ -31,18 +31,52 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
     const [isFindingSpecs, setIsFindingSpecs] = useState(false);
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
     const [typeOptions, setTypeOptions] = useState<string[]>([]);
+    const [formattedPrice, setFormattedPrice] = useState("");
 
     const pricingType = watch("pricing_type");
     const categoryValue = watch("category");
     const typeValue = watch("details.type");
     const statusValue = watch("status");
     const captionValue = watch("caption");
+    const priceValue = watch("price");
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const { ref: rhfRef, ...captionProps } = register("caption");
     useAutosizeTextArea(textAreaRef.current, captionValue || "");
 
     const { category, type } = getCategoryAndType(categoryValue, typeValue);
     const DetailsComponent = type?.component;
+    const showSpecFinder = type?.hasSpecifications;
+
+    useEffect(() => {
+      if (typeof priceValue === 'number') {
+        const formatted = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(priceValue);
+        if (formatted !== formattedPrice.replace(/,/g, '')) {
+          setFormattedPrice(formatted);
+        }
+      } else if (priceValue === null || priceValue === undefined) {
+        setFormattedPrice('');
+      }
+    }, [priceValue]);
+
+    const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const rawValue = e.target.value;
+      setFormattedPrice(rawValue);
+      const numericValue = parseFloat(rawValue.replace(/[^0-9.]/g, ''));
+      if (!isNaN(numericValue)) {
+        setValue('price', numericValue, { shouldDirty: true });
+      } else {
+        setValue('price', null, { shouldDirty: true });
+      }
+    };
+
+    const handlePriceBlur = () => {
+      const currentPrice = getValues('price');
+      if (typeof currentPrice === 'number') {
+        setFormattedPrice(new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(currentPrice));
+      } else {
+        setFormattedPrice('');
+      }
+    };
 
     useEffect(() => {
       const fetchCategories = async () => {
@@ -88,7 +122,6 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
         if (error) throw error;
         if (data.error) throw new Error(data.error);
 
-        // Merge new specs with existing details
         const currentDetails = getValues('details');
         const newDetails = { ...currentDetails, ...data };
         setValue('details', newDetails, { shouldDirty: true });
@@ -144,13 +177,9 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                 </div>
                 <div className="md:col-span-6 flex flex-col space-y-4">
                   <div>
-                    <div className="flex items-center gap-4 text-sm font-medium">
-                      <Controller name="category" control={control} render={({ field }) => (
-                        <CreatableCombobox options={categoryOptions} placeholder="Category..." {...field} />
-                      )} />
-                      <Controller name="details.type" control={control} render={({ field }) => (
-                        <CreatableCombobox options={typeOptions} placeholder="Type..." {...field} disabled={!category?.types} />
-                      )} />
+                    <div className="flex flex-wrap items-center gap-4 text-sm font-medium">
+                      <div className="flex-1 min-w-[180px]"><Controller name="category" control={control} render={({ field }) => (<CreatableCombobox options={categoryOptions} placeholder="Category..." {...field} />)} /></div>
+                      <div className="flex-1 min-w-[180px]"><Controller name="details.type" control={control} render={({ field }) => (<CreatableCombobox options={typeOptions} placeholder="Type..." {...field} disabled={!category?.types} />)} /></div>
                     </div>
                     <div className="flex items-center gap-2 mt-4">
                       <Input id="name" {...register("name")} placeholder="Product Name" className="w-auto border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors" />
@@ -181,7 +210,7 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                         <div className="space-y-1 col-span-2">
                             <Label htmlFor="price" className="text-xs">Price</Label>
                             <div className="flex items-center gap-2">
-                                <Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
+                                <Input id="price" type="text" value={formattedPrice} onChange={handlePriceChange} onBlur={handlePriceBlur} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
                                 <Input {...register("currency")} className="w-20 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" placeholder="USD" />
                             </div>
                             {errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}
@@ -198,10 +227,12 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitleComponent className="text-base">Options & Specifications</CardTitleComponent>
-                  <Button type="button" variant="outline" size="sm" onClick={handleFindSpecs} disabled={isFindingSpecs}>
-                    {isFindingSpecs ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                    Find Specs with AI
-                  </Button>
+                  {showSpecFinder && (
+                    <Button type="button" variant="outline" size="sm" onClick={handleFindSpecs} disabled={isFindingSpecs}>
+                      {isFindingSpecs ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                      Find Specs with AI
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent>
                   {DetailsComponent ? <DetailsComponent control={control} /> : <p className="text-sm text-muted-foreground text-center">Select a category and type to see specific details.</p>}
