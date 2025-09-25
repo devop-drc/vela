@@ -165,6 +165,16 @@ const Products = () => {
     };
   }, [session?.user?.id]);
 
+  // When the main products list updates, check if the selected product needs updating too.
+  useEffect(() => {
+    if (selectedProduct) {
+      const updatedProductInList = products.find(p => p.id === selectedProduct.id);
+      if (updatedProductInList && JSON.stringify(updatedProductInList) !== JSON.stringify(selectedProduct)) {
+        setSelectedProduct(updatedProductInList);
+      }
+    }
+  }, [products, selectedProduct]);
+
   const handleSync = async (syncType: 'quick' | 'full') => {
     runWithIntegrationCheck(async () => {
       toast.loading("Initiating sync job...", { id: 'sync-initiating' });

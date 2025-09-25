@@ -68,14 +68,23 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
         (payload) => {
           const newJob = payload.new as SyncJob;
           setActiveJob(currentJob => {
-            if (!currentJob || newJob.id === currentJob.id || new Date(newJob.created_at) > new Date(currentJob.created_at)) {
+            // If we have a current job and the new payload is for the same job, it's an update.
+            if (currentJob && newJob.id === currentJob.id) {
+              return newJob;
+            }
+
+            // If the new payload is for a different job, it's a new sync.
+            if (!currentJob || newJob.id !== currentJob.id) {
+              // Check if this new job has been previously dismissed and is finished.
               const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
-              if (newJob.id === dismissedJobId && newJob.status !== 'in_progress' && newJob.status !== 'starting') {
-                return currentJob;
+              if (newJob.id === dismissedJobId && (newJob.status === 'completed' || newJob.status === 'failed')) {
+                return currentJob; // Keep the old job, don't show the new (dismissed) one.
               }
+              // Otherwise, it's a new active job, so show it and clear any old dismissal flags.
               sessionStorage.removeItem('dismissed_sync_job_id');
               return newJob;
             }
+            
             return currentJob;
           });
         }

@@ -84,83 +84,66 @@ export const SyncStatusWidget = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-4 left-4 z-50"
+            className="fixed bottom-4 left-4 z-50 w-80"
           >
-            <motion.div 
-              whileHover="expanded" 
-              initial="collapsed"
-              animate="collapsed"
-              variants={{
-                collapsed: { width: 280 },
-                expanded: { width: 400 }
-              }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            >
-              <Card className="shadow-lg overflow-hidden">
-                <CardContent className="p-3">
-                  <div className="flex items-start gap-3">
-                    {activeJob?.thumbnail_url && (
-                      <div className="h-16 w-16 rounded-md bg-muted flex-shrink-0">
-                        <img 
-                          src={activeJob.thumbnail_url} 
-                          alt="Post thumbnail" 
-                          className="h-full w-full object-cover rounded-md"
-                        />
-                      </div>
-                    )}
-                    <div className="flex-1 space-y-1 overflow-hidden">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold truncate">Product Syncing</h3>
-                        <Icon className={`h-4 w-4 flex-shrink-0 ${currentStatus.color} ${!isFinished ? 'animate-spin' : ''}`} />
-                      </div>
-                      <Progress value={percentage} className="h-1.5" />
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{activeJob?.progress || 0} / {activeJob?.total || 0}</span>
-                        <span>{isFinished ? `Finished in ${totalTime}` : elapsedTime}</span>
-                      </div>
-                      <motion.div
-                        className="overflow-hidden"
-                        variants={{
-                          collapsed: { opacity: 0, height: 0, marginTop: 0 },
-                          expanded: { opacity: 1, height: 'auto', marginTop: '8px' }
-                        }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        {isFinished ? (
-                          <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t">
-                            <div><p className="font-bold">{summary.created || 0}</p><p className="text-xs">Created</p></div>
-                            <div><p className="font-bold">{summary.updated || 0}</p><p className="text-xs">Updated</p></div>
-                            <div><p className="font-bold">{summary.skipped || 0}</p><p className="text-xs">Skipped</p></div>
-                          </div>
-                        ) : (
-                          <div className="space-y-1 pt-2 border-t border-dashed">
-                            <p className="text-xs font-semibold">AI Status:</p>
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              {activeJob?.message || 'Initializing...'}
-                            </p>
-                          </div>
-                        )}
-                      </motion.div>
-                    </div>
-                  </div>
-                  {isFinished ? (
-                    <div className="flex gap-2 mt-2">
-                      <Button size="sm" className="flex-1" onClick={() => setIsSummaryOpen(true)}><Info className="mr-2 h-4 w-4" />Details</Button>
-                      <Button size="icon" variant="ghost" onClick={dismissJob} className="h-8 w-8 flex-shrink-0">
-                          <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="mt-2">
-                      <Button size="sm" variant="ghost" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleAbort} disabled={isAborting}>
-                        {isAborting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
-                        Abort Sync
-                      </Button>
+            <Card className="shadow-lg overflow-hidden">
+              <CardContent className="p-3 space-y-2">
+                <div className="flex items-start gap-3">
+                  {activeJob?.thumbnail_url && (
+                    <div className="h-12 w-12 rounded-md bg-muted flex-shrink-0">
+                      <img 
+                        src={activeJob.thumbnail_url} 
+                        alt="Post thumbnail" 
+                        className="h-full w-full object-cover rounded-md"
+                      />
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </motion.div>
+                  <div className="flex-1 space-y-1.5 overflow-hidden">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold truncate">Product Syncing</h3>
+                      <Icon className={`h-4 w-4 flex-shrink-0 ${currentStatus.color} ${!isFinished ? 'animate-spin' : ''}`} />
+                    </div>
+                    <Progress value={percentage} className="h-1.5" />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{activeJob?.progress || 0} / {activeJob?.total || 0}</span>
+                      <span>{isFinished ? `Finished in ${totalTime}` : elapsedTime}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {(isFinished || (activeJob?.message && activeJob.status !== 'starting')) && (
+                  <div className="pt-2 border-t border-dashed">
+                    {isFinished ? (
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between"><span>Created:</span> <span className="font-medium">{summary.created || 0}</span></div>
+                        <div className="flex justify-between"><span>Updated:</span> <span className="font-medium">{summary.updated || 0}</span></div>
+                        <div className="flex justify-between"><span>Skipped:</span> <span className="font-medium">{summary.skipped || 0}</span></div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {activeJob?.message}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {isFinished ? (
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" className="flex-1" onClick={() => setIsSummaryOpen(true)}><Info className="mr-2 h-4 w-4" />Details</Button>
+                    <Button size="icon" variant="ghost" onClick={dismissJob} className="h-8 w-8 flex-shrink-0">
+                        <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="pt-1">
+                    <Button size="sm" variant="ghost" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleAbort} disabled={isAborting}>
+                      {isAborting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
+                      Abort Sync
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </motion.div>
         )}
       </AnimatePresence>
