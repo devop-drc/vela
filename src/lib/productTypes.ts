@@ -19,12 +19,14 @@ export interface ProductCategory {
   value: string;
   label: string;
   types: ProductType[];
+  hasSpecifications?: boolean;
 }
 
 export const productCategories: ProductCategory[] = [
   {
     value: "clothing",
     label: "Clothing & Apparel",
+    hasSpecifications: false,
     types: [
       {
         value: "t-shirt",
@@ -43,7 +45,47 @@ export const productCategories: ProductCategory[] = [
   {
     value: "electronics",
     label: "Electronics",
+    hasSpecifications: true,
     types: [
+        {
+            value: "smartphone",
+            label: "Smartphone",
+            fields: [
+                { name: "model_number", label: "Model Number", type: "text" },
+                { name: "processor", label: "Processor", type: "text" },
+                { name: "ram", label: "RAM", type: "text" },
+                { name: "storage", label: "Storage", type: "text" },
+                { name: "screen_size", label: "Screen Size", type: "text" },
+                { name: "camera", label: "Camera", type: "text" },
+            ],
+            component: ElectronicsDetailsForm,
+            hasSpecifications: true,
+        },
+        {
+            value: "laptop",
+            label: "Laptop",
+            fields: [
+                { name: "model_number", label: "Model Number", type: "text" },
+                { name: "processor", label: "Processor", type: "text" },
+                { name: "ram", label: "RAM", type: "text" },
+                { name: "storage", label: "Storage", type: "text" },
+                { name: "screen_size", label: "Screen Size", type: "text" },
+                { name: "graphics_card", label: "Graphics Card", type: "text" },
+            ],
+            component: ElectronicsDetailsForm,
+            hasSpecifications: true,
+        },
+        {
+            value: "headphones",
+            label: "Headphones",
+            fields: [
+                { name: "model_number", label: "Model Number", type: "text" },
+                { name: "connectivity", label: "Connectivity", type: "text" },
+                { name: "battery_life", label: "Battery Life", type: "text" },
+            ],
+            component: ElectronicsDetailsForm,
+            hasSpecifications: true,
+        },
         {
             value: "generic-device",
             label: "Generic Device",
@@ -61,6 +103,7 @@ export const productCategories: ProductCategory[] = [
   {
     value: "art",
     label: "Art & Collectibles",
+    hasSpecifications: true,
     types: [
         {
             value: "print",
@@ -78,6 +121,7 @@ export const productCategories: ProductCategory[] = [
   {
     value: "service",
     label: "Services",
+    hasSpecifications: true,
     types: [
         {
             value: "consulting",
@@ -94,6 +138,7 @@ export const productCategories: ProductCategory[] = [
   {
     value: "generic",
     label: "Generic Product",
+    hasSpecifications: false,
     types: [
         {
             value: "generic",

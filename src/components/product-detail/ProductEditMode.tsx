@@ -45,7 +45,7 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
 
     const { category, type } = getCategoryAndType(categoryValue, typeValue);
     const DetailsComponent = type?.component;
-    const showSpecFinder = type?.hasSpecifications;
+    const showSpecFinder = type?.hasSpecifications || (!type && category?.hasSpecifications);
 
     useEffect(() => {
       if (typeof priceValue === 'number') {
@@ -177,9 +177,9 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                 </div>
                 <div className="md:col-span-6 flex flex-col space-y-4">
                   <div>
-                    <div className="flex flex-wrap items-center gap-4 text-sm font-medium">
-                      <div className="flex-1 min-w-[180px]"><Controller name="category" control={control} render={({ field }) => (<CreatableCombobox options={categoryOptions} placeholder="Category..." {...field} />)} /></div>
-                      <div className="flex-1 min-w-[180px]"><Controller name="details.type" control={control} render={({ field }) => (<CreatableCombobox options={typeOptions} placeholder="Type..." {...field} disabled={!category?.types} />)} /></div>
+                    <div className="grid grid-cols-2 gap-4 text-sm font-medium">
+                      <div><Controller name="category" control={control} render={({ field }) => (<CreatableCombobox options={categoryOptions} placeholder="Category..." {...field} />)} /></div>
+                      <div><Controller name="details.type" control={control} render={({ field }) => (<CreatableCombobox options={typeOptions} placeholder="Type..." {...field} disabled={!category?.types} />)} /></div>
                     </div>
                     <div className="flex items-center gap-2 mt-4">
                       <Input id="name" {...register("name")} placeholder="Product Name" className="w-auto border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors" />

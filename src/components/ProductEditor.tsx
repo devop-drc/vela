@@ -96,10 +96,8 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     if (isEditing) {
       const subscription = form.watch((value, { name }) => {
         if (name === 'category') {
-          const newCategory = productCategories.find(c => c.value === value.category);
-          if (newCategory && newCategory.types.length > 0) {
-            form.setValue("details.type", newCategory.types[0].value);
-          }
+          // When category changes, reset the type to force a new selection
+          form.setValue("details.type", "", { shouldDirty: true });
         }
       });
       return () => subscription.unsubscribe();
