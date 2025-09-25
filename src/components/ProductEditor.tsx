@@ -195,8 +195,14 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     setIsSubmitting(true);
     await logFeedback(product, data);
 
-    const rate = exchangeRates && shopDetails ? exchangeRates[shopDetails.currency] : 1;
-    const priceInUSD = data.price / (rate || 1);
+    const selectedCurrency = data.currency || shopDetails?.currency || 'USD';
+    const rate = exchangeRates ? exchangeRates[selectedCurrency] : 1;
+    if (!rate) {
+        showError(`Could not find exchange rate for ${selectedCurrency}. Price not saved correctly.`);
+        setIsSubmitting(false);
+        return;
+    }
+    const priceInUSD = data.price / rate;
 
     const { type: currentTypeDefinition } = getCategoryAndType(data.category, data.details.type);
     const cleanedDetails: { [key: string]: any } = { type: data.details.type };

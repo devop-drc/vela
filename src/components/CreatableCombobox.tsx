@@ -65,32 +65,34 @@ export const CreatableCombobox = React.forwardRef<HTMLButtonElement, CreatableCo
             />
             <CommandList>
               <CommandEmpty>No results found.</CommandEmpty>
-              <CommandGroup>
-                {showCreateOption && (
-                  <CommandItem
-                    onSelect={() => handleSelect(inputValue)}
-                    className="flex items-center gap-2"
-                  >
-                    <PlusCircle className="h-4 w-4" />
-                    Create "{inputValue}"
-                  </CommandItem>
-                )}
-                {filteredOptions.map((option) => (
-                  <CommandItem
-                    key={option}
-                    value={option}
-                    onSelect={() => handleSelect(option)}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value === option ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {option}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+              {(filteredOptions.length > 0 || showCreateOption) && (
+                <CommandGroup>
+                  {showCreateOption && (
+                    <CommandItem
+                      onSelect={() => handleSelect(inputValue)}
+                      className="flex items-center gap-2"
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                      Create "{inputValue}"
+                    </CommandItem>
+                  )}
+                  {filteredOptions.map((option) => (
+                    <CommandItem
+                      key={option}
+                      value={option}
+                      onSelect={() => handleSelect(option)}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          value === option ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {option}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
             </CommandList>
           </Command>
         </PopoverContent>

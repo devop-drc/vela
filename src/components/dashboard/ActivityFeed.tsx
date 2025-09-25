@@ -129,12 +129,12 @@ export const ActivityFeed = () => {
                       onClick={() => handleActivityClick(activity)}
                       className={cn(
                         "w-full text-left p-3 flex items-center gap-3 rounded-lg hover:bg-accent transition-colors border-l-4",
-                        activity.type === 'sale' ? 'border-emerald-500' : 'border-blue-500'
+                        activity.type === 'sale' ? 'border-emerald-500' : 'border-primary/20'
                       )}
                     >
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={activity.image} />
-                        <AvatarFallback className={activity.type === 'sale' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}>
+                        <AvatarFallback className={activity.type === 'sale' ? 'bg-emerald-100 text-emerald-600' : 'bg-secondary text-secondary-foreground'}>
                           {activity.type === 'sale' ? <DollarSign className="h-5 w-5" /> : <Package className="h-5 w-5" />}
                         </AvatarFallback>
                       </Avatar>

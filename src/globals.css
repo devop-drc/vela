@@ -119,7 +119,7 @@
 
 @layer components {
   .card {
-    @apply shadow-md;
+    @apply shadow-lg;
   }
 }
 
