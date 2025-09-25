@@ -25,7 +25,7 @@ const Header = ({ title }: HeaderProps) => {
   };
 
   return (
-    <header className="flex items-center justify-between h-16 px-4 md:px-6 bg-card border-b border-border">
+    <header className="fixed top-4 right-4 left-4 md:left-[calc(16rem+2rem)] z-30 flex items-center justify-between h-16 px-6 rounded-2xl border bg-card/80 backdrop-blur-lg">
       <div className="flex items-center gap-4">
         <h1 className="text-xl font-bold hidden md:block">{title}</h1>
         <div className="relative flex-1 max-w-md">

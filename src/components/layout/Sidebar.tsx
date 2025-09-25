@@ -17,14 +17,14 @@ const Sidebar = () => {
 
   return (
     <aside className={cn(
-      "hidden md:flex md:flex-col md:w-64 transition-colors",
+      "fixed top-4 left-4 bottom-4 z-30 hidden md:flex flex-col w-64 rounded-2xl border backdrop-blur-lg transition-colors",
       settings.sidebarStyle === 'primary'
-        ? "bg-primary text-primary-foreground"
-        : "bg-card border-r"
+        ? "bg-primary/80 border-primary-foreground/20 text-primary-foreground"
+        : "bg-card/80 border-border"
     )}>
       <div className={cn(
         "p-4 border-b flex items-center",
-        settings.sidebarStyle === 'primary' ? 'border-primary-foreground/10' : 'border-border'
+        settings.sidebarStyle === 'primary' ? 'border-primary-foreground/20' : 'border-border'
       )}>
         <ShoppingBag className="h-6 w-6 mr-2" />
         <h1 className="text-xl font-bold">InstaShopify</h1>
