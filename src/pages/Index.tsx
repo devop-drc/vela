@@ -8,8 +8,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency } from "@/lib/formatters";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Funnel, FunnelChart, LabelList, ResponsiveContainer, Tooltip } from "recharts";
 import { ProfileStats } from "@/components/dashboard/ProfileStats";
 import { LatestProducts } from "@/components/dashboard/LatestProducts";
 import { TopProducts } from "@/components/dashboard/TopProducts";
@@ -23,14 +21,6 @@ interface DashboardData {
   recentOrders: any[];
   chartData: { name: string; total: number }[];
 }
-
-const funnelData = [
-  { value: 100, name: "Visitors", fill: "#8884d8" },
-  { value: 80, name: "Viewed Product", fill: "#83a6ed" },
-  { value: 50, name: "Added to Cart", fill: "#8dd1e1" },
-  { value: 40, name: "Started Checkout", fill: "#82ca9d" },
-  { value: 25, name: "Purchased", fill: "#a4de6c" },
-];
 
 const Index = () => {
   const { setTitle } = usePageTitle();
@@ -138,23 +128,12 @@ const Index = () => {
           <LatestProducts />
         </div>
       </div>
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1">
         <ActivityFeed />
       </div>
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         <RecentSales orders={data.recentOrders} />
         <TopProducts />
-        <Card>
-          <CardHeader><CardTitle>Sales Funnel</CardTitle></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <FunnelChart>
-                <Tooltip />
-                <Funnel dataKey="value" data={funnelData} isAnimationActive><LabelList position="right" fill="hsl(var(--foreground))" stroke="none" dataKey="name" /></Funnel>
-              </FunnelChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
