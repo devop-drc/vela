@@ -36,8 +36,9 @@ serve(async (req) => {
     });
 
   } catch (error) {
+    console.error("Exchange Rate Function Error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
+      status: 200, // Return 200 so the client can parse the error message
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

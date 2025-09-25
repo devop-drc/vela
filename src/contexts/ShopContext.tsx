@@ -37,10 +37,11 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const fetchRates = async () => {
       const { data, error } = await supabase.functions.invoke('exchange-rates');
-      if (error || data.error) {
-        console.error("Failed to fetch exchange rates", error || data.error);
-        showError("Could not load currency conversion rates.");
-      } else {
+      if (error || (data && data.error)) {
+        const errorMessage = error?.message || (data && data.error) || "An unknown error occurred.";
+        console.error("Failed to fetch exchange rates:", errorMessage);
+        showError(`Could not load currency rates: ${errorMessage}`);
+      } else if (data) {
         setExchangeRates(data.rates);
       }
     };
