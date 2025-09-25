@@ -134,10 +134,14 @@ const Index = () => {
         </div>
       </div>
       
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        <RecentSales orders={data.recentOrders} />
-        <TopProducts />
-        <QuickActions />
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <RecentSales orders={data.recentOrders} />
+        </div>
+        <div className="space-y-4">
+          <TopProducts />
+          <QuickActions />
+        </div>
       </div>
     </div>
   );
