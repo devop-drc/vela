@@ -66,22 +66,26 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mediaItems, setMediaItems] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const { shopDetails, exchangeRates, convertCurrency } = useShop();
+  const { shopDetails, exchangeRates } = useShop();
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
   });
 
   useEffect(() => {
-    if (product) {
-      const displayPrice = convertCurrency(product.price);
+    if (product && exchangeRates && shopDetails) {
+      const displayCurrency = product.currency || shopDetails.currency || 'USD';
+      const rate = exchangeRates[displayCurrency] || 1;
+      const priceInUSD = product.price || 0;
+      const displayPrice = parseFloat((priceInUSD * rate).toFixed(2));
+
       form.reset({
         name: product.name || "",
         status: product.status || "Draft",
         caption: product.caption || "",
         category: product.category || "",
         price: displayPrice,
-        currency: shopDetails?.currency || 'USD',
+        currency: displayCurrency,
         inventory: product.inventory || 0,
         tags: product.tags || [],
         pricing_type: product.pricing_type || 'one_time',
@@ -90,10 +94,24 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       });
       const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
       setMediaItems(gallery);
+    } else if (product) {
+      form.reset({
+        name: product.name || "",
+        status: product.status || "Draft",
+        caption: product.caption || "",
+        category: product.category || "",
+        price: product.price || 0,
+        currency: product.currency || 'USD',
+        inventory: product.inventory || 0,
+        tags: product.tags || [],
+        pricing_type: product.pricing_type || 'one_time',
+        billing_interval: product.billing_interval,
+        details: product.details || { type: 'generic' },
+      });
     } else {
       setMediaItems([]);
     }
-  }, [product, form.reset, shopDetails, convertCurrency]);
+  }, [product, form.reset, shopDetails, exchangeRates]);
   
   useEffect(() => {
     if (isEditing) {
@@ -217,7 +235,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
 
     const { error } = await supabase.from('products').update({
         name: data.name, status: data.status, caption: data.caption, category: data.category,
-        price: priceInUSD, currency: 'USD', inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
+        price: priceInUSD, currency: selectedCurrency, inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
         tags: data.tags, pricing_type: data.pricing_type,
         billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
         details: cleanedDetails,

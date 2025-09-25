@@ -138,7 +138,7 @@ const Index = () => {
         </div>
         <OverviewChart data={data.chartData} />
       </div>
-      <div className="lg:col-span-1 lg:sticky lg:top-6 space-y-6">
+      <div className="lg:col-span-1 lg:sticky lg:top-0 space-y-6">
         <ActivityFeed />
       </div>
     </div>
