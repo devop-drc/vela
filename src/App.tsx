@@ -20,6 +20,7 @@ import { IntegrationProvider } from "./contexts/IntegrationContext";
 import { IntegrationPrompt } from "./components/layout/IntegrationPrompt";
 import { ShopProvider } from "./contexts/ShopContext";
 import { SyncProvider } from "./contexts/SyncContext";
+import Demo from "./pages/Demo";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
                 <SyncProvider>
                   <Routes>
                     <Route path="/login" element={<Login />} />
+                    <Route path="/demo" element={<Demo />} />
                     <Route element={<ProtectedRoute />}>
                       <Route path="/onboarding" element={<Onboarding />} />
                       <Route element={<OnboardingGuard />}>

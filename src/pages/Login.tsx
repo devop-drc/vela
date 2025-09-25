@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingBag, Facebook } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
+import { Link } from "react-router-dom";
 
 const Login = () => {
   const handleFacebookLogin = async () => {
@@ -27,10 +28,15 @@ const Login = () => {
         <p className="text-muted-foreground">
           Create your account and start selling by connecting your Instagram Business profile.
         </p>
-        <Button onClick={handleFacebookLogin} size="lg" className="w-full">
-          <Facebook className="mr-2 h-5 w-5" />
-          Connect with Facebook
-        </Button>
+        <div className="space-y-2">
+          <Button onClick={handleFacebookLogin} size="lg" className="w-full">
+            <Facebook className="mr-2 h-5 w-5" />
+            Connect with Facebook
+          </Button>
+          <Button asChild variant="link" className="text-muted-foreground">
+            <Link to="/demo">See what the app is like</Link>
+          </Button>
+        </div>
       </div>
     </div>
   );
