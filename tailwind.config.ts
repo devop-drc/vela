@@ -72,6 +72,7 @@ export default {
         heading: ["var(--font-heading)", ...defaultTheme.fontFamily.sans],
       },
       boxShadow: {
+        'card': '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05)',
         premium: '0 25px 50px -12px rgba(0, 0, 0, 0.1), 0 10px 20px -10px rgba(0, 0, 0, 0.08)',
       },
       keyframes: {

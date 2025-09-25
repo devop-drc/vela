@@ -65,7 +65,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
   const displayPrice = convertCurrency(product.price);
 
   return (
-    <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative">
+    <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative h-full">
       <div className={cn("absolute top-3 right-3 z-10 transition-opacity", isSelectionModeActive ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <Checkbox
           checked={isSelected}
@@ -77,7 +77,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
       <Card 
         onClick={handleCardClick}
         className={cn(
-          "group w-full overflow-hidden rounded-lg shadow-sm transition-all duration-300 flex flex-col cursor-pointer",
+          "group w-full overflow-hidden rounded-lg transition-all duration-300 flex flex-col cursor-pointer h-full",
           isSelectionModeActive && "shadow-md",
           isSelected && "ring-2 ring-primary ring-offset-2"
         )}
