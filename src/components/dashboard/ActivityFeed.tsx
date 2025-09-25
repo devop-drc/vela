@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "../ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { DollarSign, Package } from "lucide-react";
+import { Banknote, Package } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { formatDistanceToNow } from 'date-fns';
@@ -43,13 +43,13 @@ export const ActivityFeed = () => {
       if (!business) { setIsLoading(false); return; }
 
       const [ordersRes, productsRes] = await Promise.all([
-        supabase.from('orders').select('id, customer_name, total_amount, created_at').eq('business_id', business.id).order('created_at', { ascending: false }).limit(10),
+        supabase.from('orders').select('id, customer_name, total_amount, created_at, currency').eq('business_id', business.id).order('created_at', { ascending: false }).limit(10),
         supabase.from('products').select('id, name, media_url, created_at').eq('business_id', business.id).order('created_at', { ascending: false }).limit(10)
       ]);
 
       const salesActivities: Activity[] = (ordersRes.data || []).map(order => ({
         id: order.id, type: 'sale', title: `New Sale`, description: `to ${order.customer_name}`,
-        value: formatCurrency(order.total_amount, shopDetails?.currency), date: order.created_at,
+        value: formatCurrency(order.total_amount, order.currency), date: order.created_at,
       }));
 
       const productActivities: Activity[] = (productsRes.data || []).map(product => ({
@@ -73,8 +73,8 @@ export const ActivityFeed = () => {
           if (isMounted) setActivities(prev => [newActivity, ...prev].slice(0, 20));
         })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` }, (payload) => {
-          const o = payload.new;
-          const newActivity: Activity = { id: o.id, type: 'sale', title: 'New Sale', description: `to ${o.customer_name}`, value: formatCurrency(o.total_amount, shopDetails?.currency), date: o.created_at };
+          const o = payload.new as any;
+          const newActivity: Activity = { id: o.id, type: 'sale', title: 'New Sale', description: `to ${o.customer_name}`, value: formatCurrency(o.total_amount, o.currency), date: o.created_at };
           if (isMounted) setActivities(prev => [newActivity, ...prev].slice(0, 20));
         })
         .subscribe();
@@ -135,7 +135,7 @@ export const ActivityFeed = () => {
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={activity.image} />
                         <AvatarFallback className={activity.type === 'sale' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}>
-                          {activity.type === 'sale' ? <DollarSign className="h-5 w-5" /> : <Package className="h-5 w-5" />}
+                          {activity.type === 'sale' ? <Banknote className="h-5 w-5" /> : <Package className="h-5 w-5" />}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 overflow-hidden">
