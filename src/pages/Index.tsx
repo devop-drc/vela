@@ -13,6 +13,7 @@ import { Funnel, FunnelChart, LabelList, ResponsiveContainer, Tooltip } from "re
 import { ProfileStats } from "@/components/dashboard/ProfileStats";
 import { LatestProducts } from "@/components/dashboard/LatestProducts";
 import { TopProducts } from "@/components/dashboard/TopProducts";
+import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 
 interface DashboardData {
   totalRevenue: number;
@@ -136,6 +137,9 @@ const Index = () => {
           <ProfileStats />
           <LatestProducts />
         </div>
+      </div>
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+        <ActivityFeed />
       </div>
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         <RecentSales orders={data.recentOrders} />
