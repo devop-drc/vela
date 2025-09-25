@@ -107,9 +107,9 @@ const Index = () => {
   if (isLoading) {
     return (
       <div className="space-y-6">
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-3"><Skeleton className="h-56" /><Skeleton className="h-56" /><Skeleton className="h-56" /></div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /></div>
         <Skeleton className="h-24 w-full" />
-        <div className="grid gap-4 grid-cols-1 lg:grid-cols-3"><Skeleton className="h-56" /><Skeleton className="h-56" /><Skeleton className="h-56" /></div>
         <Skeleton className="h-96 w-full" />
       </div>
     );
@@ -121,6 +121,12 @@ const Index = () => {
 
   return (
     <div className="space-y-6">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <ProfileStats />
+        <QuickActions />
+        <TopProducts />
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Total Revenue" value={formatCurrency(convertCurrency(data.totalRevenue), shopDetails?.currency)} icon={DollarSign} description="All-time revenue" />
         <StatCard title="Sales" value={`+${data.salesCount}`} icon={CreditCard} description="All-time sales count" />
@@ -130,12 +136,6 @@ const Index = () => {
 
       <div className="-mx-4 md:-mx-6">
         <ActivityFeed />
-      </div>
-
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        <ProfileStats />
-        <QuickActions />
-        <TopProducts />
       </div>
 
       <OverviewChart data={data.chartData} />
