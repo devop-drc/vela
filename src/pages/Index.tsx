@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { DollarSign, Package, Users, CreditCard, Activity } from "lucide-react";
+import { DollarSign, Package, CreditCard, Activity } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { RecentSales } from "@/components/dashboard/RecentSales";
-import { OverviewChart } from "@/components/dashboard/OverviewChart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { useShop } from "@/contexts/ShopContext";
@@ -101,8 +100,8 @@ const Index = () => {
     return (
       <div className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /></div>
-        <div className="grid gap-4 grid-cols-1 lg:grid-cols-3"><Skeleton className="lg:col-span-2 h-96" /><Skeleton className="h-96" /></div>
-        <div className="grid gap-4 grid-cols-1 lg:grid-cols-3"><Skeleton className="h-80" /><Skeleton className="h-80" /><Skeleton className="h-80" /></div>
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-3"><Skeleton className="lg:col-span-2 h-48" /><div className="space-y-4"><Skeleton className="h-48" /><Skeleton className="h-48" /></div></div>
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-3"><Skeleton className="h-80" /><Skeleton className="h-80" /></div>
       </div>
     );
   }
@@ -120,16 +119,11 @@ const Index = () => {
         <StatCard title="Conversion Rate" value="3.45%" icon={Activity} description="+1.2% from last month" />
       </div>
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <OverviewChart data={data.chartData} />
-        </div>
+        <ActivityFeed />
         <div className="space-y-4">
           <ProfileStats />
           <LatestProducts />
         </div>
-      </div>
-      <div className="grid gap-4 grid-cols-1">
-        <ActivityFeed />
       </div>
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         <RecentSales orders={data.recentOrders} />
