@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { DollarSign, Package, Users, CreditCard } from "lucide-react";
+import { Banknote, Package, Users, CreditCard } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { OverviewChart } from "@/components/dashboard/OverviewChart";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -131,7 +131,7 @@ const Index = () => {
           <TopProducts />
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard title="Total Revenue" value={formatCurrency(convertCurrency(data.totalRevenue), shopDetails?.currency)} icon={DollarSign} description="All-time revenue" />
+          <StatCard title="Total Revenue" value={formatCurrency(convertCurrency(data.totalRevenue), shopDetails?.currency)} icon={Banknote} description="All-time revenue" />
           <StatCard title="Sales" value={`+${data.salesCount}`} icon={CreditCard} description="All-time sales count" />
           <StatCard title="Active Products" value={data.activeProducts.toString()} icon={Package} description="Products available for sale" />
           <StatCard title="Total Customers" value={data.customers.toString()} icon={Users} description="Unique customers all-time" />

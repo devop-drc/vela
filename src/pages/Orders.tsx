@@ -1,15 +1,22 @@
 import { useEffect, useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OrderDetailModal } from "@/components/OrderDetailModal";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/contexts/PageTitleContext";
+import { useShop } from "@/contexts/ShopContext";
+import { formatCurrency } from "@/lib/formatters";
+import { DateRangePicker } from "@/components/ui/DateRangePicker";
+import { DateRange } from "react-day-picker";
+import { Input } from "@/components/ui/input";
+import { Search, Banknote, ShoppingBag, FileBarChart } from "lucide-react";
+import { StatCard } from "@/components/dashboard/StatCard";
 
 type Order = {
   id: string;
@@ -18,62 +25,11 @@ type Order = {
   status: string;
   total_amount: number;
   created_at: string;
+  currency: string;
 };
 
-const Orders = () => {
-  const { setTitle } = usePageTitle();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-
-  useEffect(() => {
-    setTitle("Orders");
-  }, [setTitle]);
-
-  const fetchOrders = async () => {
-    setIsLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
-
-    const { data: business, error: businessError } = await supabase
-      .from('businesses')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (businessError || !business) {
-      showError("Could not find your business profile.");
-      setIsLoading(false);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('business_id', business.id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      showError("Failed to fetch orders.");
-    } else {
-      setOrders(data as Order[]);
-    }
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
-  const filteredOrders = useMemo(() => ({
-    'All': orders,
-    'Pending': orders.filter(o => o.status === 'Pending'),
-    'In Progress': orders.filter(o => o.status === 'In Progress'),
-    'Fulfilled': orders.filter(o => o.status === 'Fulfilled'),
-  }), [orders]);
+const OrderTable = ({ orders, onSelectOrder }: { orders: Order[], onSelectOrder: (order: Order) => void }) => {
+  const { shopDetails, convertCurrency } = useShop();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -85,7 +41,7 @@ const Orders = () => {
     }
   };
 
-  const OrderTable = ({ status }: { status: 'All' | 'Pending' | 'In Progress' | 'Fulfilled' }) => (
+  return (
     <Table>
       <TableHeader>
         <TableRow>
@@ -98,7 +54,7 @@ const Orders = () => {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {filteredOrders[status].length > 0 ? filteredOrders[status].map((order) => (
+        {orders.length > 0 ? orders.map((order) => (
           <TableRow key={order.id}>
             <TableCell className="font-medium">#{order.id.substring(0, 8)}</TableCell>
             <TableCell>{order.customer_name}</TableCell>
@@ -108,9 +64,16 @@ const Orders = () => {
                 {order.status}
               </Badge>
             </TableCell>
-            <TableCell className="text-right">${order.total_amount.toFixed(2)}</TableCell>
+            <TableCell className="text-right font-medium">
+              {formatCurrency(order.total_amount, order.currency)}
+              {shopDetails?.currency && order.currency !== shopDetails.currency && (
+                <div className="text-xs font-normal text-muted-foreground">
+                  (~{formatCurrency(convertCurrency(order.total_amount), shopDetails.currency)})
+                </div>
+              )}
+            </TableCell>
             <TableCell>
-              <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)}>
+              <Button variant="outline" size="sm" onClick={() => onSelectOrder(order)}>
                 View Details
               </Button>
             </TableCell>
@@ -118,13 +81,74 @@ const Orders = () => {
         )) : (
           <TableRow>
             <TableCell colSpan={6} className="h-24 text-center">
-              No orders in this category.
+              No orders match your criteria.
             </TableCell>
           </TableRow>
         )}
       </TableBody>
     </Table>
   );
+};
+
+const Orders = () => {
+  const { setTitle } = usePageTitle();
+  const { shopDetails, convertCurrency } = useShop();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [activeTab, setActiveTab] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  useEffect(() => { setTitle("Orders"); }, [setTitle]);
+
+  const fetchOrders = async () => {
+    setIsLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setIsLoading(false); return; }
+
+    const { data: business, error: businessError } = await supabase
+      .from('businesses').select('id').eq('user_id', user.id).single();
+
+    if (businessError || !business) {
+      showError("Could not find your business profile.");
+      setIsLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('orders').select('*').eq('business_id', business.id).order('created_at', { ascending: false });
+
+    if (error) { showError("Failed to fetch orders."); } 
+    else { setOrders(data as Order[]); }
+    setIsLoading(false);
+  };
+
+  useEffect(() => { fetchOrders(); }, []);
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      if (activeTab !== 'All' && order.status !== activeTab) return false;
+      
+      const lowerSearch = searchTerm.toLowerCase();
+      if (lowerSearch && !(order.customer_name.toLowerCase().includes(lowerSearch) || order.customer_email.toLowerCase().includes(lowerSearch))) return false;
+
+      if (dateRange?.from) {
+        const orderDate = new Date(order.created_at);
+        if (orderDate < dateRange.from) return false;
+        if (dateRange.to && orderDate > new Date(dateRange.to).setHours(23, 59, 59, 999)) return false;
+      }
+      
+      return true;
+    });
+  }, [orders, activeTab, searchTerm, dateRange]);
+
+  const stats = useMemo(() => {
+    const totalRevenue = filteredOrders.reduce((sum, order) => sum + order.total_amount, 0);
+    const orderCount = filteredOrders.length;
+    const aov = orderCount > 0 ? totalRevenue / orderCount : 0;
+    return { totalRevenue, orderCount, aov };
+  }, [filteredOrders]);
 
   return (
     <>
@@ -132,13 +156,24 @@ const Orders = () => {
         isOpen={!!selectedOrder}
         onClose={() => setSelectedOrder(null)}
         order={selectedOrder}
-        onUpdate={() => {
-          fetchOrders();
-          setSelectedOrder(null);
-        }}
+        onUpdate={() => { fetchOrders(); setSelectedOrder(null); }}
       />
-      <div className="space-y-4">
-        <Tabs defaultValue="All">
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <div className="relative w-full sm:w-auto">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search by customer..." className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </div>
+            <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatCard title="Total Revenue" value={formatCurrency(convertCurrency(stats.totalRevenue), shopDetails?.currency)} icon={Banknote} />
+          <StatCard title="Orders" value={stats.orderCount.toLocaleString()} icon={ShoppingBag} />
+          <StatCard title="Avg. Order Value" value={formatCurrency(convertCurrency(stats.aov), shopDetails?.currency)} icon={FileBarChart} />
+        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="All">All</TabsTrigger>
             <TabsTrigger value="Pending">Pending</TabsTrigger>
@@ -149,17 +184,10 @@ const Orders = () => {
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="space-y-4 p-6">
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" />
                 </div>
               ) : (
-                <>
-                  <TabsContent value="All"><OrderTable status="All" /></TabsContent>
-                  <TabsContent value="Pending"><OrderTable status="Pending" /></TabsContent>
-                  <TabsContent value="In Progress"><OrderTable status="In Progress" /></TabsContent>
-                  <TabsContent value="Fulfilled"><OrderTable status="Fulfilled" /></TabsContent>
-                </>
+                <OrderTable orders={filteredOrders} onSelectOrder={setSelectedOrder} />
               )}
             </CardContent>
           </Card>
