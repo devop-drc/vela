@@ -47,6 +47,43 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
     const DetailsComponent = type?.component;
     const showSpecFinder = category?.value === 'electronics';
 
+    const handleFindSpecs = async () => {
+      setIsFindingSpecs(true);
+      const { name } = getValues();
+
+      try {
+        const { data, error } = await supabase.functions.invoke('google-search-specs', {
+          body: { productName: name },
+        });
+        if (error) throw error;
+        if (data.error) throw new Error(data.error);
+
+        const currentDetails = getValues('details');
+        const newDetails = { ...currentDetails, ...data };
+        setValue('details', newDetails, { shouldDirty: true });
+        showSuccess("AI has populated product specifications!");
+
+      } catch (err: any) {
+        showError(err.message || "Failed to find specifications.");
+      } finally {
+        setIsFindingSpecs(false);
+      }
+    };
+
+    useEffect(() => {
+      // Automatically find specs for electronics when entering edit mode
+      if (isEditing && product) {
+        const categoryValue = getValues('category');
+        const details = getValues('details');
+        const { category } = getCategoryAndType(categoryValue);
+
+        // Check if it's an electronics category and if key specs are missing to avoid overwriting data
+        if (category?.value === 'electronics' && (!details?.processor && !details?.ram && !details?.storage)) {
+          handleFindSpecs();
+        }
+      }
+    }, [isEditing, product?.id]); // Reruns only when editing starts for a new product
+
     useEffect(() => {
       if (typeof priceValue === 'number') {
         const formatted = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(priceValue);
@@ -109,29 +146,6 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
       };
       fetchTypes();
     }, [categoryValue]);
-
-    const handleFindSpecs = async () => {
-      setIsFindingSpecs(true);
-      const { name } = getValues();
-
-      try {
-        const { data, error } = await supabase.functions.invoke('google-search-specs', {
-          body: { productName: name },
-        });
-        if (error) throw error;
-        if (data.error) throw new Error(data.error);
-
-        const currentDetails = getValues('details');
-        const newDetails = { ...currentDetails, ...data };
-        setValue('details', newDetails, { shouldDirty: true });
-        showSuccess("AI has populated product specifications!");
-
-      } catch (err: any) {
-        showError(err.message || "Failed to find specifications.");
-      } finally {
-        setIsFindingSpecs(false);
-      }
-    };
 
     const currentStatusConfig = statusConfig[statusValue as keyof typeof statusConfig];
     const StatusIcon = currentStatusConfig?.icon;

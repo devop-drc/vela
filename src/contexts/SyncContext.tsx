@@ -12,6 +12,8 @@ interface SyncJob {
   created_at: string;
   updated_at: string;
   summary?: any;
+  current_post_caption?: string;
+  ai_analysis_message?: string;
 }
 
 interface SyncContextType {
