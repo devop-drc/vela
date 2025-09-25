@@ -9,6 +9,7 @@ import { Edit, Trash2 } from "lucide-react";
 import { getCategoryAndType } from "@/lib/productTypes";
 import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
+import SpecParser from "./SpecParser";
 
 const DetailDisplayRow = ({ label, children }: { label: string, children: React.ReactNode }) => (
     <div className="flex flex-col">
@@ -109,7 +110,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
                         {specifications.map(field => (
                           <DetailDisplayRow key={field.name} label={field.label}>
-                            <p className="text-base">{product.details?.[field.name]}</p>
+                            <SpecParser label={field.label} value={product.details?.[field.name]} />
                           </DetailDisplayRow>
                         ))}
                       </div>
