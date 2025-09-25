@@ -45,7 +45,7 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
 
     const { category, type } = getCategoryAndType(categoryValue, typeValue);
     const DetailsComponent = type?.component;
-    const showSpecFinder = type?.hasSpecifications || (!type && category?.hasSpecifications);
+    const showSpecFinder = category?.value === 'electronics';
 
     useEffect(() => {
       if (typeof priceValue === 'number') {
@@ -112,12 +112,11 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
 
     const handleFindSpecs = async () => {
       setIsFindingSpecs(true);
-      const { name, category, details } = getValues();
-      const { category: catInfo, type: typeInfo } = getCategoryAndType(category, details.type);
+      const { name } = getValues();
 
       try {
-        const { data, error } = await supabase.functions.invoke('ai-spec-finder', {
-          body: { productName: name, categoryName: catInfo?.label, typeName: typeInfo?.label },
+        const { data, error } = await supabase.functions.invoke('google-search-specs', {
+          body: { productName: name },
         });
         if (error) throw error;
         if (data.error) throw new Error(data.error);

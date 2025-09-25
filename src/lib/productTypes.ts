@@ -103,7 +103,7 @@ export const productCategories: ProductCategory[] = [
   {
     value: "art",
     label: "Art & Collectibles",
-    hasSpecifications: true,
+    hasSpecifications: false,
     types: [
         {
             value: "print",
@@ -114,14 +114,14 @@ export const productCategories: ProductCategory[] = [
                 { name: "framed", label: "Framing Options", type: "text" },
             ],
             component: ArtDetailsForm,
-            hasSpecifications: true,
+            hasSpecifications: false,
         }
     ]
   },
   {
     value: "service",
     label: "Services",
-    hasSpecifications: true,
+    hasSpecifications: false,
     types: [
         {
             value: "consulting",
@@ -131,7 +131,7 @@ export const productCategories: ProductCategory[] = [
                 { name: "format", label: "Format (e.g., Online, In-person)", type: "text" },
             ],
             component: ServiceDetailsForm,
-            hasSpecifications: true,
+            hasSpecifications: false,
         }
     ]
   },

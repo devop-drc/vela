@@ -8,33 +8,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const getPrompt = (productName: string, categoryName: string, typeName: string) => `
-  You are an AI assistant that finds technical specifications for products. Your goal is to return structured data.
+const getPrompt = (productName: string) => `
+  You are an AI assistant that emulates a powerful web search engine to find product specifications. Your goal is to return structured, accurate data for a given product name.
 
   **INPUT:**
   - Product Name: "${productName}"
-  - Category: "${categoryName}"
-  - Type: "${typeName}"
 
   **TASK:**
-  Find the key technical specifications or relevant attributes for this product.
-  - Be concise and accurate.
-  - Prioritize objective specs (e.g., dimensions, material, model number) over subjective descriptions.
-  - Format the keys in snake_case.
+  1.  Perform a simulated web search for the exact product name provided.
+  2.  Identify the key technical specifications from reliable sources (like manufacturer websites, tech review sites).
+  3.  Extract the most important and common specifications. For a laptop, this would be processor, RAM, storage, display. For headphones, it would be connectivity, battery life, driver size.
+  4.  Format the specification keys in snake_case.
+  5.  Return the data as a JSON object.
 
   **OUTPUT FORMAT:**
   Respond ONLY with a single, valid JSON object containing the specifications. Do not include any other text, markdown, or explanations.
 
-  **Example for a "MacBook Pro" in "Electronics" -> "Laptop":**
+  **Example for "Sony WH-1000XM5 Headphones":**
   {
-    "processor": "Apple M3 Pro",
-    "ram": "18GB Unified Memory",
-    "storage": "512GB SSD",
-    "display_size": "14.2-inch",
-    "resolution": "3024x1964"
+    "connectivity": "Bluetooth 5.2",
+    "battery_life": "Up to 30 hours (NC on)",
+    "driver_unit": "30mm",
+    "noise_cancelling": "Integrated Processor V1"
   }
 
-  **If no relevant specifications can be found, return an empty JSON object: {}**
+  **If you cannot find any specifications, return an empty JSON object: {}**
 `;
 
 serve(async (req) => {
@@ -47,12 +45,12 @@ serve(async (req) => {
       throw new Error("Gemini API key is not configured.");
     }
 
-    const { productName, categoryName, typeName } = await req.json();
+    const { productName } = await req.json();
     if (!productName) {
       throw new Error("Product name is required.");
     }
 
-    const prompt = getPrompt(productName, categoryName, typeName);
+    const prompt = getPrompt(productName);
 
     const geminiResponse = await fetch(GEMINI_API_URL, {
       method: 'POST',
@@ -77,7 +75,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('AI Spec Finder Error:', error.message);
+    console.error('Google Search Specs Error:', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 200, // Return 200 so client can parse the error message
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
