@@ -7,10 +7,11 @@ import { DollarSign, Package } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { formatDistanceToNow } from 'date-fns';
-import Marquee from "../ui/marquee";
 import { ProductEditor } from "../ProductEditor";
 import { OrderDetailModal } from "../OrderDetailModal";
 import { showError } from "@/utils/toast";
+import { ScrollArea } from "../ui/scroll-area";
+import { AnimatePresence, motion } from "framer-motion";
 
 type Activity = {
   id: string;
@@ -30,7 +31,9 @@ export const ActivityFeed = () => {
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
   useEffect(() => {
-    const fetchActivities = async () => {
+    let isMounted = true;
+
+    const fetchAndSubscribe = async () => {
       setIsLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setIsLoading(false); return; }
@@ -57,11 +60,35 @@ export const ActivityFeed = () => {
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 15);
 
-      setActivities(combined);
-      setIsLoading(false);
+      if (isMounted) {
+        setActivities(combined);
+        setIsLoading(false);
+      }
+
+      const channel = supabase.channel('dashboard-activity-feed')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` }, (payload) => {
+          const p = payload.new;
+          const newActivity: Activity = { id: p.id, type: 'product', title: 'New Product', description: p.name, value: 'In Draft', image: p.media_url, date: p.created_at };
+          if (isMounted) setActivities(prev => [newActivity, ...prev].slice(0, 20));
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` }, (payload) => {
+          const o = payload.new;
+          const newActivity: Activity = { id: o.id, type: 'sale', title: 'New Sale', description: `to ${o.customer_name}`, value: formatCurrency(o.total_amount, shopDetails?.currency), date: o.created_at };
+          if (isMounted) setActivities(prev => [newActivity, ...prev].slice(0, 20));
+        })
+        .subscribe();
+
+      return () => {
+        isMounted = false;
+        supabase.removeChannel(channel);
+      };
     };
 
-    if (shopDetails) { fetchActivities(); }
+    if (shopDetails) {
+      fetchAndSubscribe();
+    } else {
+      setIsLoading(false);
+    }
   }, [shopDetails]);
 
   const handleActivityClick = async (activity: Activity) => {
@@ -79,19 +106,28 @@ export const ActivityFeed = () => {
     <>
       {selectedProduct && <ProductEditor isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={() => {}} />}
       {selectedOrder && <OrderDetailModal isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} order={selectedOrder} onUpdate={() => {}} />}
-      <Card className="rounded-none border-x-0">
-        <CardHeader className="px-4 md:px-6">
+      <Card className="h-full">
+        <CardHeader>
           <CardTitle>Live Activity</CardTitle>
         </CardHeader>
-        <CardContent className="p-0 overflow-hidden">
-          {isLoading ? (
-            <div className="p-4 container mx-auto"><Skeleton className="h-24 w-full" /></div>
-          ) : activities.length > 0 ? (
-            <Marquee pauseOnHover>
-              {activities.map(activity => (
-                <button key={`${activity.type}-${activity.id}`} onClick={() => handleActivityClick(activity)} className="text-left mx-2">
-                  <Card className="w-64 shrink-0 hover:bg-accent transition-colors">
-                    <CardContent className="p-3 flex items-center gap-3">
+        <CardContent>
+          <ScrollArea className="h-[650px]">
+            <div className="space-y-4 pr-4">
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)
+              ) : activities.length > 0 ? (
+                <AnimatePresence initial={false}>
+                  {activities.map(activity => (
+                    <motion.button
+                      key={`${activity.type}-${activity.id}`}
+                      layout
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                      onClick={() => handleActivityClick(activity)}
+                      className="w-full text-left p-3 flex items-center gap-3 rounded-lg hover:bg-accent transition-colors"
+                    >
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={activity.image} />
                         <AvatarFallback className={activity.type === 'sale' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}>
@@ -104,14 +140,14 @@ export const ActivityFeed = () => {
                         <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(activity.date), { addSuffix: true })}</p>
                       </div>
                       <p className="font-semibold text-sm">{activity.value}</p>
-                    </CardContent>
-                  </Card>
-                </button>
-              ))}
-            </Marquee>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">No recent activity.</p>
-          )}
+                    </motion.button>
+                  ))}
+                </AnimatePresence>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">No recent activity.</p>
+              )}
+            </div>
+          </ScrollArea>
         </CardContent>
       </Card>
     </>

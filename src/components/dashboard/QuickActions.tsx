@@ -38,7 +38,7 @@ export const QuickActions = () => {
       <CardHeader>
         <CardTitle>Quick Actions</CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-2 gap-4">
+      <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Button variant="outline" onClick={handleQuickSync} disabled={isSyncing}>
           <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
           Quick Sync

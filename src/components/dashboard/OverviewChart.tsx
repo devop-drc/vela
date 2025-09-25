@@ -80,12 +80,8 @@ export const OverviewChart = ({ data }: OverviewChartProps) => {
             <Legend wrapperStyle={{ fontSize: '0.875rem' }} />
             
             {visibleData.includes('revenue') && <Bar yAxisId="left" dataKey="revenue" name="Revenue" fill="url(#colorRevenue)" radius={[4, 4, 0, 0]} />}
-            
-            {visibleData.includes('clients') && <Area yAxisId="right" type="monotone" dataKey="clients" fill="url(#colorClients)" stroke="none" />}
-            {visibleData.includes('clients') && <Line yAxisId="right" type="monotone" dataKey="clients" name="New Clients" stroke="hsl(var(--info))" strokeWidth={2} dot={false} />}
-            
-            {visibleData.includes('orders') && <Area yAxisId="right" type="monotone" dataKey="orders" fill="url(#colorOrders)" stroke="none" />}
-            {visibleData.includes('orders') && <Line yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="hsl(var(--warning))" strokeWidth={2} dot={false} />}
+            {visibleData.includes('clients') && <Area yAxisId="right" type="monotone" dataKey="clients" name="New Clients" fill="url(#colorClients)" stroke="hsl(var(--info))" strokeWidth={2} />}
+            {visibleData.includes('orders') && <Area yAxisId="right" type="monotone" dataKey="orders" name="Orders" fill="url(#colorOrders)" stroke="hsl(var(--warning))" strokeWidth={2} />}
           </ComposedChart>
         </ResponsiveContainer>
       </CardContent>
