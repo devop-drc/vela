@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "../ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Banknote, Package } from "lucide-react";
+import { Banknote, Package, CheckCircle, XCircle, Archive } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { formatDistanceToNow } from 'date-fns';
@@ -13,6 +13,7 @@ import { showError } from "@/utils/toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { Badge } from "../ui/badge";
 
 type Activity = {
   id: string;
@@ -22,6 +23,41 @@ type Activity = {
   value: string | number;
   image?: string;
   date: string;
+};
+
+const ActivityIcon = ({ activity }: { activity: Activity }) => {
+  if (activity.type === 'sale') {
+    return <Banknote className="h-5 w-5" />;
+  }
+  if (activity.type === 'product') {
+    if (activity.title === 'Status Updated') {
+      const status = activity.value as string;
+      if (status === 'Active') return <CheckCircle className="h-5 w-5" />;
+      if (status === 'Draft') return <XCircle className="h-5 w-5" />;
+      if (status === 'Out of Stock') return <Archive className="h-5 w-5" />;
+    }
+    return <Package className="h-5 w-5" />;
+  }
+  return <Package className="h-5 w-5" />;
+};
+
+const ActivityValue = ({ activity }: { activity: Activity }) => {
+  if (activity.type === 'sale') {
+    return <p className="font-semibold text-sm">{activity.value}</p>;
+  }
+  
+  const status = activity.value as string;
+  const statusConfig: { [key: string]: string } = {
+    'Active': 'bg-emerald-100 text-emerald-800',
+    'Draft': 'bg-amber-100 text-amber-800',
+    'Out of Stock': 'bg-slate-100 text-slate-800',
+  };
+
+  if (statusConfig[status]) {
+    return <Badge variant="outline" className={cn("font-normal", statusConfig[status])}>{status}</Badge>;
+  }
+
+  return <p className="font-semibold text-sm">{activity.value}</p>;
 };
 
 export const ActivityFeed = () => {
@@ -44,7 +80,7 @@ export const ActivityFeed = () => {
 
       const [ordersRes, productsRes] = await Promise.all([
         supabase.from('orders').select('id, customer_name, total_amount, created_at, currency').eq('business_id', business.id).order('created_at', { ascending: false }).limit(10),
-        supabase.from('products').select('id, name, media_url, created_at').eq('business_id', business.id).order('created_at', { ascending: false }).limit(10)
+        supabase.from('products').select('id, name, media_url, created_at, status').eq('business_id', business.id).order('created_at', { ascending: false }).limit(10)
       ]);
 
       const salesActivities: Activity[] = (ordersRes.data || []).map(order => ({
@@ -54,7 +90,7 @@ export const ActivityFeed = () => {
 
       const productActivities: Activity[] = (productsRes.data || []).map(product => ({
         id: product.id, type: 'product', title: `New Product`, description: product.name,
-        value: 'In Draft', image: product.media_url, date: product.created_at,
+        value: product.status, image: product.media_url, date: product.created_at,
       }));
 
       const combined = [...salesActivities, ...productActivities]
@@ -69,13 +105,29 @@ export const ActivityFeed = () => {
       const channel = supabase.channel('dashboard-activity-feed')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` }, (payload) => {
           const p = payload.new;
-          const newActivity: Activity = { id: p.id, type: 'product', title: 'New Product', description: p.name, value: 'In Draft', image: p.media_url, date: p.created_at };
-          if (isMounted) setActivities(prev => [newActivity, ...prev].slice(0, 20));
+          const newActivity: Activity = { id: p.id, type: 'product', title: 'New Product', description: p.name, value: p.status, image: p.media_url, date: p.created_at };
+          if (isMounted) setActivities(prev => [newActivity, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20));
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` }, (payload) => {
+            const oldP = payload.old as any;
+            const newP = payload.new as any;
+            if (oldP.status !== newP.status) {
+                const newActivity: Activity = {
+                    id: `${newP.id}-${payload.commit_timestamp}`,
+                    type: 'product',
+                    title: `Status Updated`,
+                    description: newP.name,
+                    value: newP.status,
+                    image: newP.media_url,
+                    date: payload.commit_timestamp,
+                };
+                if (isMounted) setActivities(prev => [newActivity, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20));
+            }
         })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` }, (payload) => {
           const o = payload.new as any;
           const newActivity: Activity = { id: o.id, type: 'sale', title: 'New Sale', description: `to ${o.customer_name}`, value: formatCurrency(o.total_amount, o.currency), date: o.created_at };
-          if (isMounted) setActivities(prev => [newActivity, ...prev].slice(0, 20));
+          if (isMounted) setActivities(prev => [newActivity, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20));
         })
         .subscribe();
 
@@ -94,7 +146,7 @@ export const ActivityFeed = () => {
 
   const handleActivityClick = async (activity: Activity) => {
     if (activity.type === 'product') {
-      const { data, error } = await supabase.from('products').select('*').eq('id', activity.id).single();
+      const { data, error } = await supabase.from('products').select('*').eq('id', activity.id.split('-')[0]).single();
       if (error) { showError("Failed to load product details."); } else { setSelectedProduct(data); }
     }
     if (activity.type === 'sale') {
@@ -120,7 +172,7 @@ export const ActivityFeed = () => {
                 <AnimatePresence initial={false}>
                   {activities.map(activity => (
                     <motion.button
-                      key={`${activity.type}-${activity.id}`}
+                      key={activity.id}
                       layout
                       initial={{ opacity: 0, y: -20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -135,7 +187,7 @@ export const ActivityFeed = () => {
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={activity.image} />
                         <AvatarFallback className={activity.type === 'sale' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}>
-                          {activity.type === 'sale' ? <Banknote className="h-5 w-5" /> : <Package className="h-5 w-5" />}
+                          <ActivityIcon activity={activity} />
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 overflow-hidden">
@@ -143,7 +195,7 @@ export const ActivityFeed = () => {
                         <p className="text-xs text-muted-foreground truncate">{activity.description}</p>
                         <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(activity.date), { addSuffix: true })}</p>
                       </div>
-                      <p className="font-semibold text-sm">{activity.value}</p>
+                      <ActivityValue activity={activity} />
                     </motion.button>
                   ))}
                 </AnimatePresence>
