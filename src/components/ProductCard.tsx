@@ -8,6 +8,7 @@ import { ProductStatusDropdown } from "./ProductStatusDropdown";
 import { Badge } from "./ui/badge";
 import { getCategoryAndType } from "@/lib/productTypes";
 import { formatCurrency } from "@/lib/formatters";
+import { useShop } from "@/contexts/ShopContext";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 type GridSizeType = 'sm' | 'md' | 'lg';
@@ -49,6 +50,8 @@ const DetailRow = ({ icon: Icon, children }: { icon: React.ElementType, children
 );
 
 export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSize, onSelect, onEdit, onStatusChange }: ProductCardProps) => {
+  const { convertCurrency, shopDetails } = useShop();
+
   const handleCardClick = () => {
     if (isSelectionModeActive) {
       onSelect(product.id);
@@ -59,6 +62,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
 
   const { details, caption, category: categoryValue } = product;
   const { type: typeInfo } = getCategoryAndType(categoryValue, details?.type);
+  const displayPrice = convertCurrency(product.price);
 
   return (
     <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative">
@@ -147,7 +151,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
           <div className="flex items-end justify-between pt-2">
             {product.price != null ? (
               <p className="font-semibold text-lg">
-                {formatCurrency(product.price, product.currency)}
+                {formatCurrency(displayPrice, shopDetails?.currency)}
                 {product.pricing_type === 'subscription' && <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>}
               </p>
             ) : (

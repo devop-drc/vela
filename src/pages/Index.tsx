@@ -33,7 +33,7 @@ const funnelData = [
 
 const Index = () => {
   const { setTitle } = usePageTitle();
-  const { shopDetails } = useShop();
+  const { shopDetails, convertCurrency } = useShop();
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -123,7 +123,7 @@ const Index = () => {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Revenue" value={formatCurrency(data.totalRevenue, shopDetails?.currency)} icon={DollarSign} description="All-time revenue" />
+        <StatCard title="Total Revenue" value={formatCurrency(convertCurrency(data.totalRevenue), shopDetails?.currency)} icon={DollarSign} description="All-time revenue" />
         <StatCard title="Sales" value={`+${data.salesCount}`} icon={CreditCard} description="All-time sales count" />
         <StatCard title="Active Products" value={data.activeProducts.toString()} icon={Package} description="Products available for sale" />
         <StatCard title="Conversion Rate" value="3.45%" icon={Activity} description="+1.2% from last month" />

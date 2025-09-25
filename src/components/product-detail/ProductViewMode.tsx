@@ -10,6 +10,7 @@ import { getCategoryAndType } from "@/lib/productTypes";
 import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 import SpecParser from "./SpecParser";
+import { useShop } from "@/contexts/ShopContext";
 
 const DetailDisplayRow = ({ label, children }: { label: string, children: React.ReactNode }) => (
     <div className="flex flex-col">
@@ -21,6 +22,7 @@ const DetailDisplayRow = ({ label, children }: { label: string, children: React.
 );
 
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
+    const { shopDetails, convertCurrency } = useShop();
     const { type } = getCategoryAndType(product.category, product.details?.type);
     const optionFieldNames = ['sizes', 'colors', 'framed'];
     
@@ -31,6 +33,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
 
     const options = allDetails.filter(f => optionFieldNames.includes(f.name));
     const specifications = allDetails.filter(f => !optionFieldNames.includes(f.name));
+    const displayPrice = convertCurrency(product.price);
 
     return (
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -72,7 +75,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div><Label className="text-sm">Price</Label><p className="font-semibold text-2xl">{product.pricing_type === 'subscription' ? `${formatCurrency(product.price, product.currency)} / ${product.billing_interval}` : formatCurrency(product.price, product.currency)}</p></div>
+                  <div><Label className="text-sm">Price</Label><p className="font-semibold text-2xl">{product.pricing_type === 'subscription' ? `${formatCurrency(displayPrice, shopDetails?.currency)} / ${product.billing_interval}` : formatCurrency(displayPrice, shopDetails?.currency)}</p></div>
                   {product.pricing_type !== 'subscription' && (<div><Label className="text-sm">Inventory</Label><p className="font-semibold text-2xl">{product.inventory || 0}</p></div>)}
                 </div>
               </div>

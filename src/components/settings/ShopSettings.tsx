@@ -13,11 +13,10 @@ import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { showSuccess } from '@/utils/toast';
-
-const currencies = ["USD", "EUR", "GBP", "JPY", "CAD", "AUD"];
+import { currencies } from '@/lib/currencies';
 
 export const ShopSettings = () => {
-  const { shopDetails, updateShopDetails, isLoading: isContextLoading } = useShop();
+  const { shopDetails, updateShopDetails, isLoading: isContextLoading, exchangeRates } = useShop();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [syncedData, setSyncedData] = useState<any>(null);
 
@@ -98,7 +97,18 @@ export const ShopSettings = () => {
                       <Select onValueChange={field.onChange} value={field.value}>
                         <SelectTrigger><SelectValue placeholder="Select currency..." /></SelectTrigger>
                         <SelectContent>
-                          {currencies.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                          {currencies.map(c => (
+                            <SelectItem key={c.code} value={c.code}>
+                              <div className="flex items-center justify-between w-full">
+                                <span>{c.code} ({c.symbol})</span>
+                                {exchangeRates && exchangeRates[c.code] && c.code !== 'USD' && (
+                                  <span className="text-xs text-muted-foreground">
+                                    1 USD ≈ {exchangeRates[c.code].toFixed(2)} {c.code}
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     )}

@@ -10,6 +10,7 @@ import { showError, showSuccess } from "@/utils/toast";
 import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import { ProductViewMode } from "./product-detail/ProductViewMode";
 import { ProductEditMode } from "./product-detail/ProductEditMode";
+import { useShop } from "@/contexts/ShopContext";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -65,6 +66,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mediaItems, setMediaItems] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const { shopDetails, exchangeRates, convertCurrency } = useShop();
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -72,13 +74,14 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
 
   useEffect(() => {
     if (product) {
+      const displayPrice = convertCurrency(product.price);
       form.reset({
         name: product.name || "",
         status: product.status || "Draft",
         caption: product.caption || "",
         category: product.category || "",
-        price: product.price || 0,
-        currency: product.currency || 'USD',
+        price: displayPrice,
+        currency: shopDetails?.currency || 'USD',
         inventory: product.inventory || 0,
         tags: product.tags || [],
         pricing_type: product.pricing_type || 'one_time',
@@ -90,13 +93,12 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     } else {
       setMediaItems([]);
     }
-  }, [product, form.reset]);
+  }, [product, form.reset, shopDetails, convertCurrency]);
   
   useEffect(() => {
     if (isEditing) {
       const subscription = form.watch((value, { name }) => {
         if (name === 'category') {
-          // When category changes, reset the type to force a new selection
           form.setValue("details.type", "", { shouldDirty: true });
         }
       });
@@ -168,7 +170,6 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       }
     }
     
-    // Compare details object
     const originalDetails = originalProduct.details || {};
     const correctedDetails = newData.details || {};
     for (const key in correctedDetails) {
@@ -192,9 +193,10 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
 
   const handleSave = async (data: ProductFormData) => {
     setIsSubmitting(true);
-
-    // Log feedback before updating
     await logFeedback(product, data);
+
+    const rate = exchangeRates && shopDetails ? exchangeRates[shopDetails.currency] : 1;
+    const priceInUSD = data.price / (rate || 1);
 
     const { type: currentTypeDefinition } = getCategoryAndType(data.category, data.details.type);
     const cleanedDetails: { [key: string]: any } = { type: data.details.type };
@@ -209,7 +211,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
 
     const { error } = await supabase.from('products').update({
         name: data.name, status: data.status, caption: data.caption, category: data.category,
-        price: data.price, currency: data.currency, inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
+        price: priceInUSD, currency: 'USD', inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
         tags: data.tags, pricing_type: data.pricing_type,
         billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
         details: cleanedDetails,
@@ -250,6 +252,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
                 form={{...form, handleSubmit: form.handleSubmit(handleSave)}}
                 onCancel={() => setIsEditing(false)}
                 isSubmitting={isSubmitting}
+                isEditing={isEditing}
               />
             ) : (
               <ProductViewMode

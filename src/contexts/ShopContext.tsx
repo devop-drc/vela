@@ -14,11 +14,17 @@ interface ShopDetails {
   media_count?: number;
 }
 
+interface ExchangeRates {
+  [key: string]: number;
+}
+
 interface ShopContextType {
   shopDetails: ShopDetails | null;
   isLoading: boolean;
   updateShopDetails: (details: Partial<ShopDetails>) => Promise<boolean>;
   fetchShopDetails: () => Promise<void>;
+  exchangeRates: ExchangeRates | null;
+  convertCurrency: (amount: number | null | undefined) => number;
 }
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
@@ -26,6 +32,20 @@ const ShopContext = createContext<ShopContextType | undefined>(undefined);
 export const ShopProvider = ({ children }: { children: ReactNode }) => {
   const [shopDetails, setShopDetails] = useState<ShopDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(null);
+
+  useEffect(() => {
+    const fetchRates = async () => {
+      const { data, error } = await supabase.functions.invoke('exchange-rates');
+      if (error || data.error) {
+        console.error("Failed to fetch exchange rates", error || data.error);
+        showError("Could not load currency conversion rates.");
+      } else {
+        setExchangeRates(data.rates);
+      }
+    };
+    fetchRates();
+  }, []);
 
   const fetchShopDetails = useCallback(async () => {
     setIsLoading(true);
@@ -41,16 +61,12 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // Fetch editable details from our DB
     const { data: dbDetails } = await supabase.from('shop_details').select('*').eq('business_id', business.id).single();
-    
-    // Fetch synced details from Instagram
     const { data: igDetails, error: igError } = await supabase.functions.invoke('instagram-profile');
     if (igError || igDetails.error) {
       console.error("Failed to fetch Instagram details:", igError || igDetails.error);
     }
 
-    // Merge details, with DB details taking precedence
     const finalDetails: ShopDetails = {
       shop_name: dbDetails?.shop_name || igDetails?.shop_name || 'Your Shop',
       logo_url: igDetails?.logo_url || '',
@@ -84,13 +100,25 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
       showError(`Failed to update settings: ${error.message}`);
       return false;
     } else {
-      await fetchShopDetails(); // Re-fetch to update state
+      await fetchShopDetails();
       return true;
     }
   };
 
+  const convertCurrency = (amount: number | null | undefined) => {
+    const numericAmount = amount ?? 0;
+    if (!shopDetails || !exchangeRates || !shopDetails.currency) {
+      return numericAmount;
+    }
+    const rate = exchangeRates[shopDetails.currency];
+    if (!rate) {
+      return numericAmount;
+    }
+    return numericAmount * rate;
+  };
+
   return (
-    <ShopContext.Provider value={{ shopDetails, isLoading, updateShopDetails, fetchShopDetails }}>
+    <ShopContext.Provider value={{ shopDetails, isLoading, updateShopDetails, fetchShopDetails, exchangeRates, convertCurrency }}>
       {children}
     </ShopContext.Provider>
   );
