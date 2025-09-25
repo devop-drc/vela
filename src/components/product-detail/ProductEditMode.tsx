@@ -26,7 +26,7 @@ const statusConfig = {
   'Out of Stock': { icon: Archive, color: "text-slate-600", label: "Out of Stock" },
 };
 
-export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting }: any) => {
+export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting, isEditing }: any) => {
     const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
     const [isFindingSpecs, setIsFindingSpecs] = useState(false);
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);

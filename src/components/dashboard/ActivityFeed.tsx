@@ -80,7 +80,7 @@ export const ActivityFeed = () => {
       {selectedProduct && <ProductEditor isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={() => {}} />}
       {selectedOrder && <OrderDetailModal isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} order={selectedOrder} onUpdate={() => {}} />}
       <Card className="rounded-none border-x-0">
-        <CardHeader className="container mx-auto">
+        <CardHeader className="px-4 md:px-6">
           <CardTitle>Live Activity</CardTitle>
         </CardHeader>
         <CardContent className="p-0 overflow-hidden">
