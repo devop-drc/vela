@@ -79,13 +79,13 @@ export const ActivityFeed = () => {
     <>
       {selectedProduct && <ProductEditor isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={() => {}} />}
       {selectedOrder && <OrderDetailModal isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} order={selectedOrder} onUpdate={() => {}} />}
-      <Card className="lg:col-span-3">
-        <CardHeader>
+      <Card className="rounded-none border-x-0">
+        <CardHeader className="container mx-auto">
           <CardTitle>Live Activity</CardTitle>
         </CardHeader>
         <CardContent className="p-0 overflow-hidden">
           {isLoading ? (
-            <div className="p-4"><Skeleton className="h-24 w-full" /></div>
+            <div className="p-4 container mx-auto"><Skeleton className="h-24 w-full" /></div>
           ) : activities.length > 0 ? (
             <Marquee pauseOnHover>
               {activities.map(activity => (
