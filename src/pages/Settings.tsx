@@ -13,6 +13,7 @@ import { CreditCard } from "lucide-react";
 const Settings = () => {
   const { setTitle } = usePageTitle();
   const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = searchParams.get('tab') || 'account';
 
   useEffect(() => {
     setTitle("Settings");
@@ -33,9 +34,15 @@ const Settings = () => {
     }
   }, [searchParams, setSearchParams]);
 
+  const handleTabChange = (value: string) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set('tab', value);
+    setSearchParams(newSearchParams);
+  };
+
   return (
     <div className="space-y-4">
-      <Tabs defaultValue="account" className="w-full">
+      <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="shop">Shop</TabsTrigger>
