@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "../ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { DollarSign, Package } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { formatDistanceToNow } from 'date-fns';
-import { ScrollArea } from "../ui/scroll-area";
+import Marquee from "../ui/marquee";
 import { ProductEditor } from "../ProductEditor";
 import { OrderDetailModal } from "../OrderDetailModal";
 import { showError } from "@/utils/toast";
@@ -86,45 +86,38 @@ export const ActivityFeed = () => {
     <>
       {selectedProduct && <ProductEditor isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={() => {}} />}
       {selectedOrder && <OrderDetailModal isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} order={selectedOrder} onUpdate={() => {}} />}
-      <Card>
-        <CardHeader>
-          <CardTitle>Live Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Skeleton className="h-48 w-full" />
-          ) : activities.length > 0 ? (
-            <ScrollArea className="h-48">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-4">
-                {activities.map(activity => (
-                  <button key={`${activity.type}-${activity.id}`} onClick={() => handleActivityClick(activity)} className="text-left" disabled={activity.id.startsWith('mock')}>
-                    <Card className="w-full shrink-0 hover:bg-accent transition-colors">
-                      <CardContent className="p-3 flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={activity.image} />
-                          <AvatarFallback className={activity.type === 'sale' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}>
-                            {activity.type === 'sale' ? <DollarSign className="h-5 w-5" /> : <Package className="h-5 w-5" />}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 overflow-hidden">
-                          <p className="font-semibold text-sm truncate">{activity.title}</p>
-                          <p className="text-xs text-muted-foreground truncate">{activity.description}</p>
-                          <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(activity.date), { addSuffix: true })}</p>
-                        </div>
-                        <p className="font-semibold text-sm">{activity.value}</p>
-                      </CardContent>
-                    </Card>
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-          ) : (
-            <div className="flex h-48 w-full items-center justify-center">
-              <p className="text-sm text-muted-foreground">No recent activity to display.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="relative flex h-[88px] w-full items-center justify-center overflow-hidden rounded-lg border bg-card">
+        {isLoading ? (
+          <Skeleton className="h-16 w-full mx-4" />
+        ) : activities.length > 0 ? (
+          <Marquee pauseOnHover>
+            {activities.map(activity => (
+              <button key={`${activity.type}-${activity.id}`} onClick={() => handleActivityClick(activity)} className="text-left mx-2" disabled={activity.id.startsWith('mock')}>
+                <Card className="w-72 shrink-0 hover:bg-accent transition-colors">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={activity.image} />
+                      <AvatarFallback className={activity.type === 'sale' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}>
+                        {activity.type === 'sale' ? <DollarSign className="h-5 w-5" /> : <Package className="h-5 w-5" />}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 overflow-hidden">
+                      <p className="font-semibold text-sm truncate">{activity.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">{activity.description}</p>
+                      <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(activity.date), { addSuffix: true })}</p>
+                    </div>
+                    <p className="font-semibold text-sm">{activity.value}</p>
+                  </CardContent>
+                </Card>
+              </button>
+            ))}
+          </Marquee>
+        ) : (
+          <div className="flex w-full items-center justify-center">
+            <p className="text-sm text-muted-foreground">No recent activity to display.</p>
+          </div>
+        )}
+      </div>
     </>
   );
 };
