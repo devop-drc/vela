@@ -17,9 +17,21 @@ const getPrompt = (productName: string) => `
   **TASK:**
   1.  Perform a simulated web search for the exact product name provided.
   2.  Identify the key technical specifications from reliable sources (like manufacturer websites, tech review sites).
-  3.  Extract the most important and common specifications. For a laptop, this would be processor, RAM, storage, display. For headphones, it would be connectivity, battery life, driver size.
-  4.  Format the specification keys in snake_case.
-  5.  Return the data as a JSON object.
+  3.  Extract the most important and common specifications.
+  4.  **Use the specific JSON keys outlined in the "Key Mapping" section below.**
+
+  **Key Mapping (Use these exact keys in your JSON output):**
+  - For the CPU or Processor: \`"processor"\`
+  - For the Memory or RAM: \`"ram"\`
+  - For the Hard Drive, SSD, or Storage capacity: \`"storage"\`
+  - For the Model Number or SKU: \`"model_number"\`
+  - For screen or display size: \`"screen_size"\`
+  - For the main camera specifications: \`"camera"\`
+  - For the graphics card or GPU: \`"graphics_card"\`
+  - For connectivity options (e.g., Bluetooth, Wi-Fi): \`"connectivity"\`
+  - For battery life: \`"battery_life"\`
+  - For headphone driver size: \`"driver_unit"\`
+  - For noise cancelling features: \`"noise_cancelling"\`
 
   **OUTPUT FORMAT:**
   Respond ONLY with a single, valid JSON object containing the specifications. Do not include any other text, markdown, or explanations.
