@@ -10,12 +10,15 @@ interface ShopDetails {
   headline?: string;
   about?: string;
   contact_email?: string;
+  followers_count?: number;
+  media_count?: number;
 }
 
 interface ShopContextType {
   shopDetails: ShopDetails | null;
   isLoading: boolean;
   updateShopDetails: (details: Partial<ShopDetails>) => Promise<boolean>;
+  fetchShopDetails: () => Promise<void>;
 }
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
@@ -56,6 +59,8 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
       headline: dbDetails?.headline || '',
       about: dbDetails?.about || igDetails?.description || '',
       contact_email: dbDetails?.contact_email || user.email || '',
+      followers_count: igDetails?.followers_count,
+      media_count: igDetails?.media_count,
     };
 
     setShopDetails(finalDetails);
@@ -85,7 +90,7 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <ShopContext.Provider value={{ shopDetails, isLoading, updateShopDetails }}>
+    <ShopContext.Provider value={{ shopDetails, isLoading, updateShopDetails, fetchShopDetails }}>
       {children}
     </ShopContext.Provider>
   );

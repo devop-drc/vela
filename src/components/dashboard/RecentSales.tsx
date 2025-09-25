@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { formatCurrency } from "@/lib/formatters";
+import { useShop } from "@/contexts/ShopContext";
 
 interface Order {
   id: string;
@@ -30,8 +31,9 @@ const itemVariants = {
 };
 
 export const RecentSales = ({ orders }: RecentSalesProps) => {
+  const { shopDetails } = useShop();
   return (
-    <Card className="col-span-4 md:col-span-3">
+    <Card className="col-span-4 md:col-span-3 lg:col-span-1">
       <CardHeader>
         <CardTitle>Recent Sales</CardTitle>
         <CardDescription>You made {orders.length} sales recently.</CardDescription>
@@ -53,7 +55,7 @@ export const RecentSales = ({ orders }: RecentSalesProps) => {
                   <p className="text-sm font-medium leading-none">{order.customer_name}</p>
                   <p className="text-sm text-muted-foreground">{order.customer_email}</p>
                 </div>
-                <div className="ml-auto font-medium">+{formatCurrency(order.total_amount, null)}</div>
+                <div className="ml-auto font-medium">+{formatCurrency(order.total_amount, shopDetails?.currency)}</div>
               </motion.div>
             ))}
           </motion.div>

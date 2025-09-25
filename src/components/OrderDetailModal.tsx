@@ -119,7 +119,7 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                         <p className="font-medium">{item.products.name}</p>
                         <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                       </div>
-                      <p className="font-medium">{formatCurrency(item.price_at_purchase * item.quantity, item.products.currency)}</p>
+                      <p className="font-medium">{formatCurrency(item.price_at_purchase * item.quantity, shopDetails?.currency)}</p>
                     </div>
                   ))}
                 </div>
