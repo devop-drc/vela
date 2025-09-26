@@ -18,7 +18,6 @@ import { useShop } from "@/contexts/ShopContext";
 import { CreatableCombobox } from "./CreatableCombobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { currencies } from "@/lib/currencies";
-import { DynamicDetailFields } from "./product-detail/DynamicDetailFields";
 import { MediaItem } from "./MediaItem";
 
 const productSchema = z.object({
@@ -42,6 +41,20 @@ interface CreateProductModalProps {
   productData: any;
   post: any;
 }
+
+const AttributeInput = ({ control, fieldName, inputType }: any) => {
+  const name = `details.${fieldName}`;
+  switch (inputType) {
+    case 'number':
+      return <Controller name={name} control={control} render={({ field }) => <Input type="number" {...field} value={field.value || ''} />} />;
+    case 'tags':
+      return <Controller name={name} control={control} render={({ field }) => <TagInput {...field} />} />;
+    case 'color':
+        return <Controller name={name} control={control} render={({ field }) => <Input type="color" {...field} value={field.value || '#000000'} className="h-10 w-16" />} />;
+    default:
+      return <Controller name={name} control={control} render={({ field }) => <Input {...field} value={field.value || ''} />} />;
+  }
+};
 
 export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post }: CreateProductModalProps) => {
   const { shopDetails } = useShop();
@@ -168,11 +181,25 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
               </div>
               <Card>
                 <CardHeader><CardTitle className="text-base">Options (for Variants)</CardTitle></CardHeader>
-                <CardContent><DynamicDetailFields control={control} attributes={options} isOptions={true} /></CardContent>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {options.map((attr: any) => (
+                    <div key={attr.name} className="space-y-2">
+                      <Label className="capitalize">{attr.name.replace(/_/g, ' ')}</Label>
+                      <AttributeInput control={control} fieldName={attr.name} inputType={attr.inputType} />
+                    </div>
+                  ))}
+                </CardContent>
               </Card>
               <Card>
                 <CardHeader><CardTitle className="text-base">Specifications (Fixed Details)</CardTitle></CardHeader>
-                <CardContent><DynamicDetailFields control={control} attributes={specifications} isOptions={false} /></CardContent>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {specifications.map((attr: any) => (
+                    <div key={attr.name} className="space-y-2">
+                      <Label className="capitalize">{attr.name.replace(/_/g, ' ')}</Label>
+                      <AttributeInput control={control} fieldName={attr.name} inputType={attr.inputType} />
+                    </div>
+                  ))}
+                </CardContent>
               </Card>
             </div>
           </div>
