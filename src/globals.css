@@ -124,6 +124,46 @@
   .blur-enabled .card {
     @apply bg-card/80 backdrop-blur-lg;
   }
+
+  /* Apply glassmorphism to other floating/overlay components */
+  .blur-enabled .popover-content,
+  .blur-enabled .dialog-content,
+  .blur-enabled .dropdown-menu-content,
+  .blur-enabled .alert {
+    @apply bg-card/80 backdrop-blur-lg;
+  }
+
+  /* Inputs and interactive surfaces */
+  .blur-enabled .input,
+  .blur-enabled .textarea,
+  .blur-enabled .select-trigger,
+  .blur-enabled .toggle-group-item {
+    @apply bg-transparent;
+  }
+  .blur-enabled .input:focus-visible,
+  .blur-enabled .textarea:focus-visible,
+  .blur-enabled .select-trigger[data-state=open] {
+    @apply bg-accent/50;
+  }
+
+  /* Table rows */
+  .blur-enabled .table-row {
+    @apply border-b-border/50;
+  }
+  .blur-enabled .table-row:hover {
+    @apply bg-accent/50;
+  }
+  .blur-enabled [data-state=selected] {
+    @apply bg-accent/60;
+  }
+
+  /* Other components */
+  .blur-enabled .tabs-list {
+    @apply bg-muted/50;
+  }
+  .blur-enabled .badge[class*="bg-secondary"] {
+    @apply bg-secondary/70 text-secondary-foreground;
+  }
 }
 
 @layer utilities {

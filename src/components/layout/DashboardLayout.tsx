@@ -54,7 +54,8 @@ const DashboardLayout = () => {
 
   if (settings.layoutStyle === 'docked') {
     return (
-      <div className="flex h-screen bg-background">
+      <div className="relative flex h-screen bg-transparent">
+        <div id="background-overlay" className="fixed inset-0 z-[-1] bg-background transition-colors" />
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Header title={title} />
