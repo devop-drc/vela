@@ -28,7 +28,7 @@ const statusConfig = {
 };
 
 export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting }: any) => {
-    const { register, handleSubmit, control, watch, setValue } = form;
+    const { register, handleSubmit, control, watch, setValue, formState: { errors } } = form;
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
     const [typeOptions, setTypeOptions] = useState<string[]>([]);
     const [typeAttributes, setTypeAttributes] = useState<any[]>([]);
