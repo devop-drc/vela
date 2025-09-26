@@ -67,14 +67,14 @@ const createTheme = (name: string, p: string, s: string, a: string, bg: string, 
 };
 
 export const presetThemes: Theme[] = [
-  createTheme('Midnight Blush', '255 50% 40%', '330 80% 95%', '330 80% 88%', '255 30% 98%', '255 50% 15%'),
-  createTheme('Emerald Sands', '150 60% 30%', '45 50% 95%', '45 50% 88%', '45 30% 99%', '150 50% 10%'),
-  createTheme('Solar Flare', '35 95% 55%', '20 20% 25%', '20 20% 35%', '20 15% 12%', '35 100% 95%'),
-  createTheme('Retro Groove', '180 70% 40%', '30 90% 95%', '30 90% 88%', '30 20% 99%', '180 60% 15%'),
-  createTheme('Graphite & Gold', '220 15% 25%', '40 90% 95%', '40 90% 85%', '40 10% 98%', '40 90% 50%'),
-  createTheme('Oceanic', '200 80% 50%', '200 90% 94%', '200 90% 92%', '200 100% 98%', '200 60% 20%'),
-  createTheme('Crimson', '0 70% 50%', '0 80% 96%', '0 80% 94%', '0 100% 99%', '0 50% 20%'),
-  createTheme('Onyx', '240 6% 10%', '0 0% 96%', '0 0% 94%', '0 0% 100%', '240 10% 4%'),
+  createTheme('Crimson Night', '346.8 77.2% 49.8%', '346.8 77.2% 96.3%', '346.8 77.2% 93.3%', '0 0% 100%', '240 10% 3.9%'),
+  createTheme('Forest Whisper', '142.1 70.8% 25.5%', '142.1 70.8% 95.5%', '142.1 70.8% 92.5%', '120 20% 98.6%', '142.1 70.8% 10.5%'),
+  createTheme('Ocean Drive', '194.3 83.3% 45.1%', '194.3 83.3% 95.1%', '194.3 83.3% 92.1%', '180 20% 98.6%', '194.3 83.3% 20.1%'),
+  createTheme('Golden Hour', '38.1 91.6% 50.2%', '38.1 91.6% 96.2%', '38.1 91.6% 93.2%', '30 30% 99%', '38.1 91.6% 20.2%'),
+  createTheme('Cyberpunk', '262.1 83.3% 57.8%', '262.1 83.3% 96.8%', '262.1 83.3% 93.8%', '240 10% 11.2%', '240 5% 95.9%'),
+  createTheme('Latte', '24.6 42.9% 38.2%', '24.6 42.9% 95.2%', '24.6 42.9% 92.2%', '30 50% 98.8%', '24.6 42.9% 15.2%'),
+  createTheme('Amethyst', '271.2 76.3% 53.3%', '271.2 76.3% 96.3%', '271.2 76.3% 93.3%', '270 40% 99%', '271.2 76.3% 25.3%'),
+  createTheme('Minimalist', '240 10% 3.9%', '240 5.9% 90%', '240 5.9% 95%', '0 0% 100%', '240 10% 3.9%'),
 ];
 // --- END THEME DEFINITIONS ---
 
@@ -105,6 +105,7 @@ interface DesignSettings extends ColorScheme {
   fontSans: string;
   fontHeading: string;
   backgroundImageUrl?: string;
+  customBackgroundImageUrl?: string;
   backgroundSize?: 'cover' | 'contain' | 'auto';
   backgroundRepeat?: 'no-repeat' | 'repeat';
   backgroundBrightness?: number;
@@ -114,11 +115,11 @@ interface DesignSettings extends ColorScheme {
 }
 
 const defaultSettings: DesignSettings = {
-  themeName: 'Onyx',
+  themeName: 'Minimalist',
   isAdvanced: false,
   sidebarStyle: 'primary',
   ...presetThemes[7].light,
-  '--radius': '1.5rem',
+  '--radius': '1.0rem',
   fontSans: 'Inter',
   fontHeading: 'Inter',
   backgroundBrightness: 100,
@@ -130,7 +131,7 @@ const defaultSettings: DesignSettings = {
 interface AppearanceContextType {
   settings: DesignSettings;
   setTheme: (themeName: string) => void;
-  updateSetting: (key: keyof DesignSettings, value: string | boolean | number) => void;
+  updateSetting: (key: keyof DesignSettings, value: string | boolean | number | undefined) => void;
   resetSettings: () => void;
   randomizeTheme: () => void;
   generateAIDesign: () => Promise<void>;
@@ -216,7 +217,8 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
 
       if (data?.settings) {
         const savedSettings = data.settings as Partial<DesignSettings>;
-        const theme = presetThemes.find(t => t.name === savedSettings.themeName) || presetThemes[0];
+        const allThemes = [...presetThemes, ...(savedSettings.customThemes || [])];
+        const theme = allThemes.find(t => t.name === savedSettings.themeName) || presetThemes[7];
         
         const themeColors = theme.light;
         const finalSettings = {
@@ -257,7 +259,7 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const updateSetting = (key: keyof DesignSettings, value: string | boolean | number) => {
+  const updateSetting = (key: keyof DesignSettings, value: string | boolean | number | undefined) => {
     setSettings(prev => {
       const newSettings = { ...prev, [key]: value };
       if (key.startsWith('--')) {
@@ -265,6 +267,10 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
       }
       if (key === '--border') {
         newSettings['--input'] = value as string;
+      }
+      // Logic for persistent custom background
+      if (key === 'backgroundImageUrl' && typeof value === 'string' && value.includes('supabase.co')) {
+        newSettings.customBackgroundImageUrl = value;
       }
       debouncedSave(newSettings);
       return newSettings;
