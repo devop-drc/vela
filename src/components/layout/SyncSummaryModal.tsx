@@ -1,15 +1,32 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { CheckCircle, SkipForward, RefreshCw, AlertTriangle } from "lucide-react";
+import { CheckCircle, AlertTriangle, RefreshCw, SkipForward, PlusCircle } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "../ui/badge";
 
-const StatCard = ({ icon: Icon, title, value, color }: any) => (
-  <div className="flex items-center gap-4 p-4 border rounded-lg">
-    <div className={`p-2 rounded-full ${color.bg}`}>
-      <Icon className={`h-6 w-6 ${color.text}`} />
-    </div>
-    <div>
-      <p className="text-sm text-muted-foreground">{title}</p>
-      <p className="text-2xl font-bold">{value}</p>
+const DetailRow = ({ label, value }: { label: string, value: React.ReactNode }) => (
+  <div className="grid grid-cols-3 gap-2 text-sm">
+    <dt className="font-medium text-muted-foreground capitalize">{label}</dt>
+    <dd className="col-span-2">{value}</dd>
+  </div>
+);
+
+const ProductSummaryCard = ({ item, type }: { item: any, type: 'created' | 'updated' }) => (
+  <div className="flex items-start gap-4 p-3 border rounded-lg">
+    <img src={item.thumbnail_url} alt={item.name} className="h-16 w-16 rounded-md object-cover bg-muted" />
+    <div className="flex-1">
+      <div className="flex items-center justify-between">
+        <p className="font-semibold">{item.name}</p>
+        <Badge variant="outline" className={type === 'created' ? "border-emerald-300 text-emerald-700" : "border-blue-300 text-blue-700"}>
+          {type === 'created' ? <PlusCircle className="mr-1.5 h-3 w-3" /> : <RefreshCw className="mr-1.5 h-3 w-3" />}
+          {type === 'created' ? 'Created' : 'Updated'}
+        </Badge>
+      </div>
+      <dl className="mt-2 space-y-1.5">
+        <DetailRow label="Category" value={<>{item.category} &middot; {item.details?.type}</>} />
+        {item.price && <DetailRow label="Price" value={`${item.price} ${item.currency || ''}`} />}
+        {item.tags?.length > 0 && <DetailRow label="Tags" value={<div className="flex flex-wrap gap-1">{item.tags.map((tag: string) => <Badge key={tag} variant="secondary">{tag}</Badge>)}</div>} />}
+      </dl>
     </div>
   </div>
 );
@@ -19,6 +36,8 @@ export const SyncSummaryModal = ({ job, isOpen, onClose }: { job: any; isOpen: b
 
   const summary = job.summary || {};
   const isSuccess = job.status === 'completed';
+  const createdItems = summary.created_items || [];
+  const updatedItems = summary.updated_items || [];
   const skippedItems = summary.skipped_items || [];
 
   return (
@@ -33,33 +52,22 @@ export const SyncSummaryModal = ({ job, isOpen, onClose }: { job: any; isOpen: b
             {isSuccess ? 'Here is a summary of the sync process.' : 'The sync process failed. See the error message below.'}
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-6">
+        <div className="py-4">
           {isSuccess ? (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard icon={CheckCircle} title="Created" value={summary.created || 0} color={{ bg: 'bg-emerald-100', text: 'text-emerald-700' }} />
-                <StatCard icon={RefreshCw} title="Updated" value={summary.updated || 0} color={{ bg: 'bg-blue-100', text: 'text-blue-700' }} />
-                <StatCard icon={SkipForward} title="Skipped" value={summary.skipped || 0} color={{ bg: 'bg-slate-100', text: 'text-slate-700' }} />
-              </div>
-              {skippedItems.length > 0 && (
-                <div>
-                  <h4 className="font-semibold mb-2">Skipped Posts</h4>
-                  <ScrollArea className="h-48 border rounded-lg p-2">
-                    <div className="space-y-2">
-                      {skippedItems.map((item: any, index: number) => (
-                        <div key={index} className="flex items-start gap-3 p-2 text-sm">
-                          <img src={item.thumbnail_url} alt="Skipped post" className="h-12 w-12 rounded-md object-cover bg-muted" />
-                          <div className="flex-1">
-                            <p className="font-medium truncate">{item.name}</p>
-                            <p className="text-xs text-muted-foreground">{item.reason}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
-            </>
+            <Accordion type="multiple" className="w-full" defaultValue={['created', 'updated', 'skipped']}>
+              <AccordionItem value="created">
+                <AccordionTrigger><div className="flex items-center gap-2"><PlusCircle className="h-4 w-4 text-emerald-600" /> Created ({createdItems.length})</div></AccordionTrigger>
+                <AccordionContent><ScrollArea className="h-64 pr-3"><div className="space-y-2">{createdItems.map((item: any, i: number) => <ProductSummaryCard key={i} item={item} type="created" />)}</div></ScrollArea></AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="updated">
+                <AccordionTrigger><div className="flex items-center gap-2"><RefreshCw className="h-4 w-4 text-blue-600" /> Updated ({updatedItems.length})</div></AccordionTrigger>
+                <AccordionContent><ScrollArea className="h-64 pr-3"><div className="space-y-2">{updatedItems.map((item: any, i: number) => <ProductSummaryCard key={i} item={item} type="updated" />)}</div></ScrollArea></AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="skipped">
+                <AccordionTrigger><div className="flex items-center gap-2"><SkipForward className="h-4 w-4 text-slate-600" /> Skipped ({skippedItems.length})</div></AccordionTrigger>
+                <AccordionContent><ScrollArea className="h-64 pr-3"><div className="space-y-2">{skippedItems.map((item: any, i: number) => (<div key={i} className="flex items-start gap-3 p-2 text-sm border rounded-lg"><img src={item.thumbnail_url} alt="Skipped post" className="h-12 w-12 rounded-md object-cover bg-muted" /><div className="flex-1"><p className="font-medium truncate">{item.name}</p><p className="text-xs text-muted-foreground">{item.reason}</p></div></div>))}</div></ScrollArea></AccordionContent>
+              </AccordionItem>
+            </Accordion>
           ) : (
             <div className="p-4 border rounded-lg bg-destructive/10 text-destructive">
               <p className="font-semibold">Error Message:</p>

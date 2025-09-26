@@ -48,7 +48,7 @@ const AnalysisDetails = ({ analysisResult }: { analysisResult: any }) => {
     return (
         <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-1">
             {details.map(detail => (
-                <motion.div key={detail.label} variants={itemVariants} className="flex justify-between items-center text-xs">
+                <motion.div key={detail.label} variants={itemVariants} className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">{detail.label}</span>
                     <span className="font-medium text-right">{detail.value}</span>
                 </motion.div>
@@ -133,40 +133,58 @@ export const SyncStatusWidget = () => {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-4 left-4 z-50 w-80"
+            className="fixed bottom-4 left-4 z-50 w-[420px]"
             onHoverStart={() => setIsHovered(true)}
             onHoverEnd={() => setIsHovered(false)}
           >
-            <Card className="shadow-lg overflow-hidden relative">
-              <AnimatePresence>
-                {isHovered && isRunning && activeJob?.thumbnail_url && (
-                  <motion.div layoutId="sync-thumbnail" className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 p-1 bg-background/80 backdrop-blur-lg rounded-lg shadow-lg">
+            <Card className="shadow-lg overflow-visible">
+              <CardContent className="p-4 space-y-3 relative">
+                {isRunning && activeJob?.thumbnail_url && (
+                  <motion.div 
+                    layoutId="sync-thumbnail"
+                    className="absolute -top-4 right-4 z-10 p-1 bg-background rounded-lg shadow-lg"
+                  >
                     <img src={activeJob.thumbnail_url} alt="Post thumbnail" className="h-20 w-20 rounded-md object-cover" />
                   </motion.div>
                 )}
-              </AnimatePresence>
-              <CardContent className="p-3 space-y-2">
-                <div className="flex items-start gap-3">
-                  {isRunning && activeJob?.thumbnail_url && !isHovered && (
-                    <motion.div layoutId="sync-thumbnail">
-                      <img src={activeJob.thumbnail_url} alt="Post thumbnail" className="h-10 w-10 rounded-md object-cover" />
-                    </motion.div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between"><h3 className="text-sm font-semibold truncate">Product Syncing</h3><Icon className={`h-4 w-4 flex-shrink-0 ${currentStatus.color} ${isRunning ? 'animate-spin' : ''}`} /></div>
-                    <div className="flex justify-between text-xs text-muted-foreground"><span>{activeJob?.progress || 0} / {activeJob?.total || 0}</span><span>{isFinished ? `Finished in ${totalTime}` : elapsedTime}</span></div>
-                  </div>
+                <div className="flex items-start justify-between">
+                    <div>
+                        <h3 className="text-lg font-semibold">Product Syncing</h3>
+                        <p className="text-sm text-muted-foreground">{activeJob?.progress || 0} / {activeJob?.total || 0}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">{isFinished ? `Finished in ${totalTime}` : elapsedTime}</span>
+                        <Icon className={`h-5 w-5 flex-shrink-0 ${currentStatus.color} ${isRunning ? 'animate-spin' : ''}`} />
+                    </div>
                 </div>
+                
                 <AnimatePresence>
                   {isHovered && isRunning && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-2 space-y-2">
-                      {activeJob?.current_post_caption && (<div className="space-y-1"><Label className="text-xs">Current Post</Label><ScrollArea className="h-16 p-2 border rounded-md"><p className="text-xs text-muted-foreground whitespace-pre-wrap">{activeJob.current_post_caption}</p></ScrollArea></div>)}
-                      <div className="space-y-1"><Label className="text-xs">AI Analysis</Label><Progress value={subProgress} className="h-1" />{activeJob?.analysis_result && subProgress > 50 && (<div className="pt-1"><AnalysisDetails analysisResult={activeJob.analysis_result} /></div>)}</div>
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-2 space-y-4">
+                      {activeJob?.current_post_caption && (<div className="space-y-2"><Label>Current Post</Label><ScrollArea className="h-24 p-2 border rounded-md"><p className="text-sm text-muted-foreground whitespace-pre-wrap">{activeJob.current_post_caption}</p></ScrollArea></div>)}
+                      <div className="space-y-2"><Label>AI Analysis</Label><Progress value={subProgress} className="h-1.5 bg-primary/10" indicatorClassName="bg-primary" /><div className="pt-2 border-t mt-2"><AnalysisDetails analysisResult={activeJob.analysis_result} /></div></div>
                     </motion.div>
                   )}
                 </AnimatePresence>
-                <div className="pt-1 space-y-1"><Label className="text-xs">Overall Progress</Label><Progress value={percentage} className="h-1.5" /></div>
-                {isFinished ? (<div className="flex gap-2 pt-1"><Button size="sm" className="flex-1" onClick={() => setIsSummaryOpen(true)}><Info className="mr-2 h-4 w-4" />Details</Button><Button size="icon" variant="ghost" onClick={dismissJob} className="h-8 w-8 flex-shrink-0"><X className="h-4 w-4" /></Button></div>) : (<div className="pt-1"><Button size="sm" variant="ghost" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleAbort} disabled={isAborting}>{isAborting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}Abort Sync</Button></div>)}
+
+                <div className="pt-1 space-y-2">
+                    <Label>Overall Progress</Label>
+                    <Progress value={percentage} />
+                </div>
+
+                {isFinished ? (
+                  <div className="flex gap-2 pt-2">
+                    <Button className="flex-1" onClick={() => setIsSummaryOpen(true)}><Info className="mr-2 h-4 w-4" />View Summary</Button>
+                    <Button size="icon" variant="ghost" onClick={dismissJob} className="h-9 w-9 flex-shrink-0"><X className="h-4 w-4" /></Button>
+                  </div>
+                ) : (
+                  <div className="pt-2">
+                    <Button variant="destructive" className="w-full" onClick={handleAbort} disabled={isAborting}>
+                      {isAborting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
+                      Abort Sync
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>

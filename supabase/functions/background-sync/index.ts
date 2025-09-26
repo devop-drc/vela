@@ -59,7 +59,7 @@ const updateJobProgress = async (supabase: SupabaseClient, jobId: string, progre
 };
 
 const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: string, syncType: 'quick' | 'full') => {
-  const summary = { created: 0, updated: 0, skipped: 0, skipped_items: [] as any[] };
+  const summary = { created: 0, updated: 0, skipped: 0, skipped_items: [] as any[], created_items: [] as any[], updated_items: [] as any[] };
   try {
     const { data: business, error: businessError } = await supabaseAdmin.from('businesses').select('id').eq('user_id', user.id).single();
     if (businessError || !business) throw new Error("Could not find business profile.");
@@ -147,8 +147,10 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
       if (existingId) {
         (productPayload as any).id = existingId;
         summary.updated++;
+        summary.updated_items.push(productPayload);
       } else {
         summary.created++;
+        summary.created_items.push(productPayload);
       }
       productsToUpsert.push(productPayload);
     }
