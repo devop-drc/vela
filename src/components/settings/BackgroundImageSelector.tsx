@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Upload, Trash2, ImageUp } from "lucide-react";
+import { Loader2, Upload, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -60,16 +60,22 @@ export const BackgroundImageSelector = () => {
   };
 
   const removeImage = () => {
-    updateSetting('backgroundImageUrl', undefined);
+    updateSetting('backgroundImageUrl', '');
   };
 
   const handleSolidColorChange = (color: string) => {
-    updateSetting('backgroundImageUrl', undefined);
+    updateSetting('backgroundImageUrl', '');
     updateSetting('--background', hexToHsl(color));
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-8 border-t">
+      <div>
+        <h3 className="font-semibold mb-3">Application Background</h3>
+        <p className="text-sm text-muted-foreground">
+          Choose a solid color, upload a custom image, or select one from our gallery.
+        </p>
+      </div>
       <Tabs defaultValue="color" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="color">Solid Color</TabsTrigger>
@@ -87,7 +93,7 @@ export const BackgroundImageSelector = () => {
             />
           </div>
         </TabsContent>
-        <TabsContent value="upload" className="pt-4 space-y-4">
+        <TabsContent value="upload" className="pt-4">
           <div className="flex items-center gap-4">
             <Button asChild variant="outline">
               <label htmlFor="bg-upload">
@@ -103,12 +109,6 @@ export const BackgroundImageSelector = () => {
               </Button>
             )}
           </div>
-          {settings.customBackgroundImageUrl && settings.customBackgroundImageUrl !== settings.backgroundImageUrl && (
-            <Button variant="secondary" onClick={() => updateSetting('backgroundImageUrl', settings.customBackgroundImageUrl)}>
-              <ImageUp className="mr-2 h-4 w-4" />
-              Apply Last Uploaded Image
-            </Button>
-          )}
         </TabsContent>
         <TabsContent value="gallery" className="pt-4">
           <ScrollArea className="h-48 w-full">

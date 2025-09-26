@@ -33,40 +33,37 @@ export const FontSelector = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-8 border-t">
       <div>
-        <h4 className="font-medium mb-2">Generate a Pairing</h4>
-        <p className="text-sm text-muted-foreground mb-4">
-          Select a style to generate a harmonious font pairing.
+        <h3 className="font-semibold mb-3">Typography</h3>
+        <p className="text-sm text-muted-foreground">
+          Generate a pairing or select individual fonts below.
         </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {Object.keys(fontCategories).map(category => (
-            <Button key={category} variant="outline" size="sm" onClick={() => generateFontPairing(category as keyof typeof fontCategories)}>
-              <Sparkles className="mr-2 h-4 w-4 text-amber-400" />
-              {category}
-            </Button>
-          ))}
-        </div>
       </div>
-      <div>
-        <h4 className="font-medium mb-2">Select Manually</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="font-heading">Headings</Label>
-            <FontCombobox
-              fonts={googleFonts}
-              value={settings.fontHeading}
-              onChange={(value) => updateSetting('fontHeading', value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="font-sans">Body & Paragraphs</Label>
-            <FontCombobox
-              fonts={googleFonts}
-              value={settings.fontSans}
-              onChange={(value) => updateSetting('fontSans', value)}
-            />
-          </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {Object.keys(fontCategories).map(category => (
+          <Button key={category} variant="outline" onClick={() => generateFontPairing(category as keyof typeof fontCategories)}>
+            <Sparkles className="mr-2 h-4 w-4 text-amber-400" />
+            {category}
+          </Button>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label htmlFor="font-heading">Headings</Label>
+          <FontCombobox
+            fonts={googleFonts}
+            value={settings.fontHeading}
+            onChange={(value) => updateSetting('fontHeading', value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="font-sans">Body & Paragraphs</Label>
+          <FontCombobox
+            fonts={googleFonts}
+            value={settings.fontSans}
+            onChange={(value) => updateSetting('fontSans', value)}
+          />
         </div>
       </div>
     </div>
