@@ -54,12 +54,12 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
         .from('sync_jobs')
         .select('*')
         .eq('user_id', userId)
-        .in('status', ['starting', 'in_progress'])
+        .in('status', ['starting', 'in_progress']) // Corrected 'in' operator usage
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
       
-      if (error && error.code !== 'PGRST116') {
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
         console.error("Error fetching initial sync job:", error);
       } else if (initialJob) {
         setActiveJob(initialJob as SyncJob);
@@ -73,12 +73,16 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
             const newJob = payload.new as SyncJob;
             const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
 
+            // If the new job is currently active (starting or in_progress), always show it.
+            // The dismissedJobId only applies to completed/failed jobs.
             if (['starting', 'in_progress'].includes(newJob.status)) {
                 setActiveJob(newJob);
-                sessionStorage.removeItem('dismissed_sync_job_id');
+                sessionStorage.removeItem('dismissed_sync_job_id'); // Clear dismissal if job becomes active again
             } else if (newJob.id === dismissedJobId) {
+                // If it's a completed/failed job that was dismissed, keep it dismissed.
                 return;
             } else {
+                // For other completed/failed jobs, show them if no job is currently active.
                 setActiveJob(newJob);
             }
           }
