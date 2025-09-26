@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Instagram, RefreshCw, Save, Loader2 } from 'lucide-react';
+import { Instagram, RefreshCw, Save, Loader2, Users, Image as ImageIcon, Store, Type, Info, Mail, DollarSign } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useShop } from '@/contexts/ShopContext';
 import { Label } from '../ui/label';
@@ -14,6 +14,16 @@ import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { showSuccess } from '@/utils/toast';
 import { currencies } from '@/lib/currencies';
+
+const InfoRow = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
+  <div className="flex items-start gap-3">
+    <Icon className="h-5 w-5 text-muted-foreground mt-1 flex-shrink-0" />
+    <div className="flex-1">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="font-medium">{value || 'N/A'}</p>
+    </div>
+  </div>
+);
 
 export const ShopSettings = () => {
   const { shopDetails, updateShopDetails, isLoading: isContextLoading, exchangeRates } = useShop();
@@ -62,34 +72,36 @@ export const ShopSettings = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
       <div className="lg:col-span-2">
         <form onSubmit={handleSubmit(onSubmit)}>
           <Card>
             <CardHeader>
-              <CardTitle>Editable Shop Details</CardTitle>
-              <CardDescription>This information is saved in your database and can be edited freely.</CardDescription>
+              <CardTitle>Shop Details</CardTitle>
+              <CardDescription>This information will be displayed on your storefront and in communications.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="shop_name">Shop Name</Label>
-                <Input id="shop_name" {...register('shop_name')} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="shop_name" className="flex items-center gap-2"><Store className="h-4 w-4" /> Shop Name</Label>
+                  <Input id="shop_name" {...register('shop_name')} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="headline" className="flex items-center gap-2"><Type className="h-4 w-4" /> Headline</Label>
+                  <Input id="headline" {...register('headline')} placeholder="e.g., Handcrafted Leather Goods" />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="headline">Headline</Label>
-                <Input id="headline" {...register('headline')} placeholder="e.g., Handcrafted Leather Goods" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="about">About Section</Label>
+                <Label htmlFor="about" className="flex items-center gap-2"><Info className="h-4 w-4" /> About Section</Label>
                 <Textarea id="about" {...register('about')} rows={4} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="contact_email">Public Contact Email</Label>
+                  <Label htmlFor="contact_email" className="flex items-center gap-2"><Mail className="h-4 w-4" /> Public Contact Email</Label>
                   <Input id="contact_email" type="email" {...register('contact_email')} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="currency">Default Currency</Label>
+                  <Label htmlFor="currency" className="flex items-center gap-2"><DollarSign className="h-4 w-4" /> Default Currency</Label>
                   <Controller
                     name="currency"
                     control={control}
@@ -116,16 +128,16 @@ export const ShopSettings = () => {
                 </div>
               </div>
             </CardContent>
-            <CardContent className="flex justify-end border-t pt-6">
+            <CardFooter className="flex justify-end border-t pt-6">
               <Button type="submit" disabled={isSubmitting || !isDirty}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Save Changes
               </Button>
-            </CardContent>
+            </CardFooter>
           </Card>
         </form>
       </div>
-      <div className="lg:col-span-1">
+      <div className="lg:col-span-1 space-y-6">
         <Card>
           <CardHeader className="flex flex-row items-start justify-between">
             <div>
@@ -147,14 +159,8 @@ export const ShopSettings = () => {
                 <p className="text-sm text-muted-foreground">@{syncedData?.username}</p>
               </div>
             </div>
-            <div className="space-y-1">
-              <Label>Followers</Label>
-              <p>{syncedData?.followers_count?.toLocaleString() || 'N/A'}</p>
-            </div>
-            <div className="space-y-1">
-              <Label>Posts</Label>
-              <p>{syncedData?.media_count?.toLocaleString() || 'N/A'}</p>
-            </div>
+            <InfoRow icon={Users} label="Followers" value={syncedData?.followers_count?.toLocaleString()} />
+            <InfoRow icon={ImageIcon} label="Posts" value={syncedData?.media_count?.toLocaleString()} />
             <Alert>
               <Instagram className="h-4 w-4" />
               <AlertTitle>Read-Only</AlertTitle>

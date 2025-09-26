@@ -10,18 +10,22 @@ import { Loader2, Upload, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { Slider } from "../ui/slider";
+import { hexToHsl, hslToHex } from "@/utils/colors";
 
 const curatedImages = [
-  { src: 'https://images.unsplash.com/photo-1553095066-5014bc7b7f2d?q=80&w=2400', author: 'Daniel Leone' },
+  { src: 'https://images.unsplash.com/photo-1619204715997-1c8a4834f52d?q=80&w=2400', author: 'Prima Vista' },
+  { src: 'https://images.unsplash.com/photo-1620121692029-d088224ddc74?q=80&w=2400', author: 'Prima Vista' },
   { src: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2400', author: 'Gradienta' },
-  { src: 'https://images.unsplash.com/photo-1500964757637-c85e8a162699?q=80&w=2400', author: 'John Fowler' },
-  { src: 'https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?q=80&w=2400', author: 'Alin Rusu' },
-  { src: 'https://images.unsplash.com/photo-1536566482680-fca31930a0bd?q=80&w=2400', author: 'Dawid Zawiła' },
   { src: 'https://images.unsplash.com/photo-1554034483-043a35442025?q=80&w=2400', author: 'Javier Miranda' },
+  { src: 'https://images.unsplash.com/photo-1604079628040-94301bb21b91?q=80&w=2400', author: 'Gradienta' },
   { src: 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?q=80&w=2400', author: 'Scott Webb' },
   { src: 'https://images.unsplash.com/photo-1507525428034-b723a996f329?q=80&w=2400', author: 'Sean O.' },
   { src: 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=2400', author: 'John Towner' },
-  { src: 'https://images.unsplash.com/photo-1604079628040-94301bb21b91?q=80&w=2400', author: 'Gradienta' },
+  { src: 'https://images.unsplash.com/photo-1500964757637-c85e8a162699?q=80&w=2400', author: 'John Fowler' },
+  { src: 'https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?q=80&w=2400', author: 'Alin Rusu' },
+  { src: 'https://images.unsplash.com/photo-1536566482680-fca31930a0bd?q=80&w=2400', author: 'Dawid Zawiła' },
+  { src: 'https://images.unsplash.com/photo-1614850523011-8f49ffc73908?q=80&w=2400', author: 'Scott Webb' },
 ];
 
 export const BackgroundImageSelector = () => {
@@ -59,19 +63,36 @@ export const BackgroundImageSelector = () => {
     updateSetting('backgroundImageUrl', '');
   };
 
+  const handleSolidColorChange = (color: string) => {
+    updateSetting('backgroundImageUrl', '');
+    updateSetting('--background', hexToHsl(color));
+  }
+
   return (
     <div className="space-y-6 pt-8 border-t">
       <div>
-        <h3 className="font-semibold mb-3">Background Image</h3>
+        <h3 className="font-semibold mb-3">Application Background</h3>
         <p className="text-sm text-muted-foreground">
-          Upload a custom image or select one from our curated gallery.
+          Choose a solid color, upload a custom image, or select one from our gallery.
         </p>
       </div>
-      <Tabs defaultValue="upload" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs defaultValue="color" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="color">Solid Color</TabsTrigger>
           <TabsTrigger value="upload">Upload Custom</TabsTrigger>
           <TabsTrigger value="gallery">Browse Gallery</TabsTrigger>
         </TabsList>
+        <TabsContent value="color" className="pt-4">
+          <div className="flex items-center gap-4">
+            <Label>Select a color:</Label>
+            <Input
+              type="color"
+              value={hslToHex(settings['--background'])}
+              onChange={(e) => handleSolidColorChange(e.target.value)}
+              className="w-16 h-10 p-1"
+            />
+          </div>
+        </TabsContent>
         <TabsContent value="upload" className="pt-4">
           <div className="flex items-center gap-4">
             <Button asChild variant="outline">
@@ -113,13 +134,12 @@ export const BackgroundImageSelector = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label>Brightness</Label>
-            <Input
-              type="range"
-              min="25"
-              max="125"
-              step="1"
-              value={settings.backgroundBrightness}
-              onChange={(e) => updateSetting('backgroundBrightness', parseInt(e.target.value, 10))}
+            <Slider
+              min={25}
+              max={125}
+              step={1}
+              value={[settings.backgroundBrightness || 100]}
+              onValueChange={(value) => updateSetting('backgroundBrightness', value[0])}
             />
           </div>
           <div className="space-y-2">

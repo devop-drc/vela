@@ -12,8 +12,41 @@ import { FontSelector } from "./FontSelector";
 import { AdvancedPanel } from "./AdvancedPanel";
 import { BackgroundImageSelector } from "./BackgroundImageSelector";
 import { AnimatePresence } from "framer-motion";
-import { Sparkles, Bot } from "lucide-react";
+import { Sparkles, Bot, Save } from "lucide-react";
 import { Switch } from "../ui/switch";
+import { Slider } from "../ui/slider";
+
+const CustomThemeManager = () => {
+  const { settings, saveCustomTheme } = useAppearance();
+  const [themeName, setThemeName] = useState("");
+  const isCustom = settings.themeName === 'Custom' || settings.themeName === 'AI Generated';
+
+  const handleSave = () => {
+    if (themeName.trim()) {
+      saveCustomTheme(themeName.trim());
+      setThemeName("");
+    }
+  };
+
+  if (!isCustom) return null;
+
+  return (
+    <div className="p-4 border rounded-lg bg-accent/50 space-y-3">
+      <p className="text-sm font-medium">You're using custom settings. Save them as a new theme!</p>
+      <div className="flex items-center gap-2">
+        <Input 
+          placeholder="Enter theme name..." 
+          value={themeName}
+          onChange={(e) => setThemeName(e.target.value)}
+        />
+        <Button onClick={handleSave} disabled={!themeName.trim()}>
+          <Save className="mr-2 h-4 w-4" />
+          Save Theme
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 export const AppearancePanel = () => {
   const { settings, updateSetting, resetSettings, isLoading, isAdvanced, setAdvanced, randomizeTheme, generateAIDesign } = useAppearance();
@@ -45,12 +78,12 @@ export const AppearancePanel = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-4">
-          <div className="lg:col-span-3">
-            <ThemeSelector />
-          </div>
-          <div className="lg:col-span-2 space-y-4 border-t lg:border-t-0 lg:border-r lg:pr-8 pt-8 lg:pt-0">
-             <h3 className="font-semibold">Sidebar Style</h3>
+        <ThemeSelector />
+        <CustomThemeManager />
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-8 border-t">
+          <div className="space-y-4">
+             <h3 className="font-semibold">Sidebar & Header Style</h3>
             <RadioGroup 
                 value={settings.sidebarStyle} 
                 onValueChange={(value) => updateSetting('sidebarStyle', value as 'primary' | 'card')}
@@ -72,17 +105,16 @@ export const AppearancePanel = () => {
                 </Label>
             </RadioGroup>
           </div>
-          <div className="space-y-4 border-t lg:border-t-0 pt-8 lg:pt-0">
+          <div className="space-y-4">
             <h3 className="font-semibold">Corner Radius</h3>
             <div className="space-y-2">
                 <Label>Radius: {radiusValue.toFixed(0)}px</Label>
-                <Input
-                    type="range"
-                    min="0"
-                    max="32"
-                    step="1"
-                    value={radiusValue}
-                    onChange={(e) => updateSetting('--radius', `${parseFloat(e.target.value) / 16}rem`)}
+                <Slider
+                    min={0}
+                    max={32}
+                    step={1}
+                    value={[radiusValue]}
+                    onValueChange={(value) => updateSetting('--radius', `${value[0] / 16}rem`)}
                 />
             </div>
           </div>

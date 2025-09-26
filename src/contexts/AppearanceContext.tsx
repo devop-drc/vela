@@ -8,14 +8,10 @@ import { hexToHsl } from '@/utils/colors';
 interface ColorScheme {
   '--background': string;
   '--foreground': string;
-  '--muted': string;
-  '--muted-foreground': string;
-  '--popover': string;
-  '--popover-foreground': string;
   '--card': string;
   '--card-foreground': string;
-  '--border': string;
-  '--input': string;
+  '--popover': string;
+  '--popover-foreground': string;
   '--primary': string;
   '--primary-foreground': string;
   '--secondary': string;
@@ -28,7 +24,15 @@ interface ColorScheme {
   '--warning-foreground': string;
   '--info': string;
   '--info-foreground': string;
+  '--border': string;
+  '--input': string;
   '--ring': string;
+  '--muted'?: string;
+  '--muted-foreground'?: string;
+}
+
+export interface CustomTheme extends Theme {
+  id: string;
 }
 
 interface Theme {
@@ -49,11 +53,12 @@ const createTheme = (name: string, p: string, s: string, a: string, bg: string, 
   const pFg = `${p.split(' ')[0]} 20% 98%`;
   const sFg = fg;
   const aFg = fg;
+  const card = `${bg.split(' ')[0]} ${Math.max(0, parseFloat(bg.split(' ')[1]) - 2)}% ${Math.min(100, parseFloat(bg.split(' ')[2]) + 2)}%`;
   return {
     name,
     light: {
       '--background': bg, '--foreground': fg, '--muted': `${bg.split(' ')[0]} 10% 96%`, '--muted-foreground': `${fg.split(' ')[0]} 5% 45%`,
-      '--popover': bg, '--popover-foreground': fg, '--card': `${bg.split(' ')[0]} 10% 99%`, '--card-foreground': fg,
+      '--popover': bg, '--popover-foreground': fg, '--card': card, '--card-foreground': fg,
       '--border': `${bg.split(' ')[0]} 10% 90%`, '--input': `${bg.split(' ')[0]} 10% 90%`, '--primary': p, '--primary-foreground': pFg,
       '--secondary': s, '--secondary-foreground': sFg, '--accent': a, '--accent-foreground': aFg, '--ring': p,
       ...sharedColors,
@@ -62,18 +67,14 @@ const createTheme = (name: string, p: string, s: string, a: string, bg: string, 
 };
 
 export const presetThemes: Theme[] = [
-  createTheme('Onyx', '240 5.9% 10%', '0 0% 96.1%', '0 0% 94.1%', '0 0% 100%', '240 10% 3.9%'),
-  createTheme('Nautical', '210 79% 46%', '204 100% 92%', '204 100% 90%', '204 100% 96%', '215 60% 22%'),
-  createTheme('Sakura', '343 85% 65%', '345 100% 93%', '345 100% 91%', '345 100% 97%', '343 35% 30%'),
-  createTheme('Evergreen', '140 60% 30%', '140 70% 93%', '140 70% 91%', '140 70% 97%', '140 40% 18%'),
-  createTheme('Sunset', '25 95% 53%', '20 90% 94%', '20 90% 92%', '20 100% 97%', '20 50% 25%'),
-  createTheme('Minty', '160 70% 40%', '160 80% 94%', '160 80% 92%', '160 100% 98%', '160 50% 20%'),
-  createTheme('Industrial', '220 15% 40%', '220 10% 95%', '220 10% 93%', '220 10% 98%', '220 20% 15%'),
-  createTheme('Rose Gold', '350 80% 60%', '350 100% 94%', '350 100% 92%', '350 100% 98%', '350 40% 25%'),
-  createTheme('Cyberpunk', '260 90% 60%', '320 90% 15%', '320 90% 20%', '260 50% 5%', '260 20% 95%'),
-  createTheme('Latte', '30 40% 40%', '30 30% 95%', '30 30% 93%', '30 20% 98%', '30 60% 15%'),
+  createTheme('Midnight Blush', '255 50% 40%', '330 80% 95%', '330 80% 88%', '255 30% 98%', '255 50% 15%'),
+  createTheme('Emerald Sands', '150 60% 30%', '45 50% 95%', '45 50% 88%', '45 30% 99%', '150 50% 10%'),
+  createTheme('Solar Flare', '35 95% 55%', '20 20% 25%', '20 20% 35%', '20 15% 12%', '35 100% 95%'),
+  createTheme('Retro Groove', '180 70% 40%', '30 90% 95%', '30 90% 88%', '30 20% 99%', '180 60% 15%'),
+  createTheme('Graphite & Gold', '220 15% 25%', '40 90% 95%', '40 90% 85%', '40 10% 98%', '40 90% 50%'),
   createTheme('Oceanic', '200 80% 50%', '200 90% 94%', '200 90% 92%', '200 100% 98%', '200 60% 20%'),
   createTheme('Crimson', '0 70% 50%', '0 80% 96%', '0 80% 94%', '0 100% 99%', '0 50% 20%'),
+  createTheme('Onyx', '240 6% 10%', '0 0% 96%', '0 0% 94%', '0 0% 100%', '240 10% 4%'),
 ];
 // --- END THEME DEFINITIONS ---
 
@@ -109,19 +110,21 @@ interface DesignSettings extends ColorScheme {
   backgroundBrightness?: number;
   layoutStyle: 'floating' | 'docked';
   blurEnabled: boolean;
+  customThemes?: CustomTheme[];
 }
 
 const defaultSettings: DesignSettings = {
   themeName: 'Onyx',
   isAdvanced: false,
   sidebarStyle: 'primary',
-  ...presetThemes[0].light,
+  ...presetThemes[7].light,
   '--radius': '1.5rem',
   fontSans: 'Inter',
   fontHeading: 'Inter',
   backgroundBrightness: 100,
   layoutStyle: 'floating',
   blurEnabled: true,
+  customThemes: [],
 };
 
 interface AppearanceContextType {
@@ -134,6 +137,8 @@ interface AppearanceContextType {
   isLoading: boolean;
   isAdvanced: boolean;
   setAdvanced: (isAdvanced: boolean) => void;
+  saveCustomTheme: (themeName: string) => void;
+  deleteCustomTheme: (themeId: string) => void;
 }
 
 const AppearanceContext = createContext<AppearanceContextType | undefined>(undefined);
@@ -243,7 +248,8 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const setTheme = (themeName: string) => {
-    const theme = presetThemes.find(t => t.name === themeName) || presetThemes[0];
+    const allThemes = [...presetThemes, ...(settings.customThemes || [])];
+    const theme = allThemes.find(t => t.name === themeName) || presetThemes[0];
     setSettings(prev => {
       const newSettings = { ...prev, ...theme.light, themeName, isAdvanced: false };
       debouncedSave(newSettings);
@@ -270,53 +276,13 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetSettings = () => {
-    setSettings(defaultSettings);
-    debouncedSave(defaultSettings);
+    setSettings(prev => ({...prev, ...defaultSettings, customThemes: prev.customThemes}));
+    debouncedSave({...defaultSettings, customThemes: settings.customThemes});
   };
 
   const randomizeTheme = () => {
-    const randomHue = Math.floor(Math.random() * 360);
-    const complementaryHue = (randomHue + 180) % 360;
-
-    const randomColors = {
-      '--primary': `${randomHue} ${Math.floor(Math.random() * 30 + 70)}% ${Math.floor(Math.random() * 20 + 40)}%`,
-      '--primary-foreground': `${randomHue} 20% 95%`,
-      '--background': `${randomHue} 20% 98%`,
-      '--foreground': `${randomHue} 10% 10%`,
-      '--card': `${randomHue} 20% 99%`,
-      '--card-foreground': `${randomHue} 10% 10%`,
-      '--secondary': `${randomHue} 20% 94%`,
-      '--secondary-foreground': `${randomHue} 10% 10%`,
-      '--accent': `${complementaryHue} 80% 95%`,
-      '--accent-foreground': `${complementaryHue} 10% 10%`,
-      '--border': `${randomHue} 20% 90%`,
-      '--input': `${randomHue} 20% 90%`,
-      '--ring': `${randomHue} ${Math.floor(Math.random() * 30 + 70)}% ${Math.floor(Math.random() * 20 + 40)}%`,
-    };
-
-    const randomCategoryName = Object.keys(fontCategories)[Math.floor(Math.random() * Object.keys(fontCategories).length)] as keyof typeof fontCategories;
-    const randomCategory = fontCategories[randomCategoryName];
-    let headingFont = randomCategory.headings[Math.floor(Math.random() * randomCategory.headings.length)];
-    let bodyFont = randomCategory.body[Math.floor(Math.random() * randomCategory.body.length)];
-    if (randomCategoryName !== 'Minimalist') {
-      while (headingFont === bodyFont) { bodyFont = randomCategory.body[Math.floor(Math.random() * randomCategory.body.length)]; }
-    }
-    const randomSidebarStyle = (Math.random() > 0.5 ? 'primary' : 'card') as 'primary' | 'card';
-    const randomRadius = `${(Math.random() * 1.5 + 0.25).toFixed(2)}rem`;
-
-    const newSettings: DesignSettings = {
-      ...defaultSettings,
-      ...randomColors,
-      themeName: 'Random',
-      fontHeading: headingFont,
-      fontSans: bodyFont,
-      sidebarStyle: randomSidebarStyle,
-      '--radius': randomRadius,
-      isAdvanced: false,
-    };
-
-    setSettings(newSettings);
-    debouncedSave(newSettings);
+    const randomTheme = presetThemes[Math.floor(Math.random() * presetThemes.length)];
+    setTheme(randomTheme.name);
   };
 
   const generateAIDesign = async () => {
@@ -367,8 +333,43 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const saveCustomTheme = (themeName: string) => {
+    setSettings(prev => {
+      const newTheme: CustomTheme = {
+        id: crypto.randomUUID(),
+        name: themeName,
+        light: {
+          '--background': prev['--background'], '--foreground': prev['--foreground'], '--card': prev['--card'], '--card-foreground': prev['--card-foreground'],
+          '--popover': prev['--popover'], '--popover-foreground': prev['--popover-foreground'], '--primary': prev['--primary'], '--primary-foreground': prev['--primary-foreground'],
+          '--secondary': prev['--secondary'], '--secondary-foreground': prev['--secondary-foreground'], '--accent': prev['--accent'], '--accent-foreground': prev['--accent-foreground'],
+          '--destructive': prev['--destructive'], '--destructive-foreground': prev['--destructive-foreground'], '--warning': prev['--warning'], '--warning-foreground': prev['--warning-foreground'],
+          '--info': prev['--info'], '--info-foreground': prev['--info-foreground'], '--border': prev['--border'], '--input': prev['--input'], '--ring': prev['--ring'],
+        }
+      };
+      const updatedThemes = [...(prev.customThemes || []), newTheme];
+      const newSettings = { ...prev, customThemes: updatedThemes, themeName: newTheme.name };
+      debouncedSave(newSettings);
+      showSuccess(`Theme "${themeName}" saved!`);
+      return newSettings;
+    });
+  };
+
+  const deleteCustomTheme = (themeId: string) => {
+    setSettings(prev => {
+      const updatedThemes = (prev.customThemes || []).filter(t => t.id !== themeId);
+      const newSettings = { ...prev, customThemes: updatedThemes };
+      if (prev.themeName === prev.customThemes?.find(t => t.id === themeId)?.name) {
+        newSettings.themeName = defaultSettings.themeName;
+        Object.assign(newSettings, defaultSettings);
+      }
+      debouncedSave(newSettings);
+      showSuccess("Custom theme deleted.");
+      return newSettings;
+    });
+  };
+
   return (
-    <AppearanceContext.Provider value={{ settings, setTheme, updateSetting, resetSettings, isLoading, isAdvanced: settings.isAdvanced, setAdvanced, randomizeTheme, generateAIDesign }}>
+    <AppearanceContext.Provider value={{ settings, setTheme, updateSetting, resetSettings, isLoading, isAdvanced: settings.isAdvanced, setAdvanced, randomizeTheme, generateAIDesign, saveCustomTheme, deleteCustomTheme }}>
       {children}
     </AppearanceContext.Provider>
   );

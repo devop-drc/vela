@@ -22,7 +22,7 @@ const Sidebar = () => {
     <aside className={cn(
       "z-30 hidden md:flex flex-col w-64 transition-colors",
       isFloating 
-        ? "fixed top-4 left-4 bottom-4 rounded-2xl border" 
+        ? "fixed top-4 left-4 bottom-4 border rounded-lg" 
         : "h-full border-r",
       isPrimary
         ? cn(
@@ -48,7 +48,7 @@ const Sidebar = () => {
               to={item.to}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
                   isPrimary
                     ? "text-primary-foreground/70 hover:bg-primary-foreground/10"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",

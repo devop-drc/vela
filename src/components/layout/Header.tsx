@@ -33,7 +33,7 @@ const Header = ({ title }: HeaderProps) => {
     <header className={cn(
       "z-30 flex items-center justify-between h-16 px-6",
       isFloating
-        ? "fixed top-4 right-4 left-4 md:left-[calc(16rem+2rem)] rounded-2xl border"
+        ? "fixed top-4 right-4 left-4 md:left-[calc(16rem+2rem)] border rounded-lg"
         : "border-b",
       blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
     )}>
