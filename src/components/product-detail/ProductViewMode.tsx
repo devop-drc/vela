@@ -8,16 +8,19 @@ import { Label } from "@/components/ui/label";
 import { Edit, Trash2 } from "lucide-react";
 import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
-import SpecParser from "./SpecParser";
 import { useShop } from "@/contexts/ShopContext";
 import { MediaItem } from "../MediaItem";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getAttributeIcon } from "@/lib/attributeIcons";
 
-const DetailDisplayRow = ({ label, children }: { label: string, children: React.ReactNode }) => (
+const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
-        <Label className="text-sm text-muted-foreground">{label}</Label>
-        <div className="font-medium flex flex-wrap items-center gap-1.5 text-base">
+        <Label className="text-sm text-muted-foreground flex items-center gap-1.5">
+          <Icon className="h-3.5 w-3.5" />
+          {label}
+        </Label>
+        <div className="font-medium flex flex-wrap items-center gap-1.5 text-base pt-1">
             {children}
         </div>
     </div>
@@ -26,7 +29,6 @@ const DetailDisplayRow = ({ label, children }: { label: string, children: React.
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
     const { shopDetails, convertCurrency } = useShop();
     const [attributes, setAttributes] = useState<any[]>([]);
-    const optionFieldNames = ['sizes', 'colors', 'framed'];
     const displayPrice = convertCurrency(product.price);
 
     useEffect(() => {
@@ -51,8 +53,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
         return value && (!Array.isArray(value) || value.length > 0);
     });
 
-    const options = allDetails.filter(f => optionFieldNames.includes(f.name));
-    const specifications = allDetails.filter(f => !optionFieldNames.includes(f.name));
+    const options = allDetails.filter(f => f.isOption);
+    const specifications = allDetails.filter(f => !f.isOption);
 
     return (
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -110,14 +112,13 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
                         {options.map(field => {
                           const value = product.details?.[field.name];
+                          const Icon = getAttributeIcon(field.name);
                           return (
-                            <DetailDisplayRow key={field.name} label={field.label || field.name.replace(/_/g, ' ')}>
-                              {field.name === 'colors' && Array.isArray(value) ? (
-                                value.map(color => <div key={color} title={color} className="h-5 w-5 rounded-full border border-black/10" style={{ backgroundColor: color }} />)
-                              ) : field.name === 'sizes' && Array.isArray(value) ? (
-                                value.map(size => <Badge key={size} variant="outline" className="px-1.5 py-0.5 text-sm font-mono">{size}</Badge>)
+                            <DetailDisplayRow key={field.name} label={field.label || field.name.replace(/_/g, ' ')} icon={Icon}>
+                              {Array.isArray(value) ? (
+                                value.map(item => <Badge key={item} variant="outline">{item}</Badge>)
                               ) : (
-                                <p className="text-base">{Array.isArray(value) ? value.join(', ') : value}</p>
+                                <p className="text-base">{value}</p>
                               )}
                             </DetailDisplayRow>
                           );
@@ -130,11 +131,14 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                     <div>
                       <h3 className="text-base font-semibold mb-3">Specifications</h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                        {specifications.map(field => (
-                          <DetailDisplayRow key={field.name} label={field.label || field.name.replace(/_/g, ' ')}>
-                            <SpecParser label={field.label || field.name} value={product.details?.[field.name]} />
-                          </DetailDisplayRow>
-                        ))}
+                        {specifications.map(field => {
+                           const Icon = getAttributeIcon(field.name);
+                           return (
+                            <DetailDisplayRow key={field.name} label={field.label || field.name.replace(/_/g, ' ')} icon={Icon}>
+                                <p className="text-base">{Array.isArray(product.details?.[field.name]) ? product.details?.[field.name].join(', ') : product.details?.[field.name]}</p>
+                            </DetailDisplayRow>
+                           )
+                        })}
                       </div>
                     </div>
                   )}

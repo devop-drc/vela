@@ -62,7 +62,6 @@ export const SyncStatusWidget = () => {
   const currentStatus = statusInfo[activeJob?.status || 'starting'];
   const Icon = currentStatus.icon;
   const totalTime = isFinished ? formatTime(new Date(activeJob.updated_at).getTime() - new Date(activeJob.created_at).getTime()) : '...';
-  const summary = activeJob?.summary || {};
 
   return (
     <>
@@ -78,11 +77,25 @@ export const SyncStatusWidget = () => {
             onHoverStart={() => setIsHovered(true)}
             onHoverEnd={() => setIsHovered(false)}
           >
+            <AnimatePresence>
+              {isHovered && isRunning && activeJob?.thumbnail_url && (
+                <motion.div
+                  layoutId="sync-thumbnail-hover"
+                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute -top-24 left-1/2 -translate-x-1/2 z-10 p-1 bg-background/80 backdrop-blur-lg rounded-lg shadow-lg"
+                >
+                  <img src={activeJob.thumbnail_url} alt="Post thumbnail" className="h-20 w-20 rounded-md object-cover" />
+                </motion.div>
+              )}
+            </AnimatePresence>
             <Card className="shadow-lg overflow-hidden">
               <CardContent className="p-3 space-y-2">
                 <div className="flex items-start gap-3">
                   {isRunning && activeJob?.thumbnail_url && (
-                    <motion.div layout="position">
+                    <motion.div layoutId="sync-thumbnail-widget">
                       <img src={activeJob.thumbnail_url} alt="Post thumbnail" className="h-10 w-10 rounded-md object-cover" />
                     </motion.div>
                   )}

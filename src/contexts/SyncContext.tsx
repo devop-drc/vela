@@ -46,55 +46,53 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    let channel: RealtimeChannel | null = null;
+
     const setupSync = async () => {
       const { data: initialJob } = await supabase
         .from('sync_jobs')
         .select('*')
         .eq('user_id', userId)
-        .in('status', ['starting', 'in_progress', 'completed', 'failed'])
+        .in('status', ['starting', 'in_progress'])
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
       
-      const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
-      if (initialJob && initialJob.id !== dismissedJobId) {
+      if (initialJob) {
         setActiveJob(initialJob as SyncJob);
       }
-    };
-    setupSync();
 
-    const channel = supabase.channel(`sync_jobs:${userId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'sync_jobs', filter: `user_id=eq.${userId}` },
-        (payload) => {
-          const newJob = payload.new as SyncJob;
-          setActiveJob(currentJob => {
-            // If we have a current job and the new payload is for the same job, it's an update.
-            if (currentJob && newJob.id === currentJob.id) {
-              return newJob;
-            }
+      channel = supabase.channel(`sync_jobs:${userId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'sync_jobs', filter: `user_id=eq.${userId}` },
+          (payload) => {
+            const newJob = payload.new as SyncJob;
+            const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
 
-            // If the new payload is for a different job, it's a new sync.
-            if (!currentJob || newJob.id !== currentJob.id) {
-              // Check if this new job has been previously dismissed and is finished.
-              const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
-              if (newJob.id === dismissedJobId && (newJob.status === 'completed' || newJob.status === 'failed')) {
-                return currentJob; // Keep the old job, don't show the new (dismissed) one.
-              }
-              // Otherwise, it's a new active job, so show it and clear any old dismissal flags.
-              sessionStorage.removeItem('dismissed_sync_job_id');
-              return newJob;
+            if (newJob.id === dismissedJobId && (newJob.status === 'completed' || newJob.status === 'failed')) {
+              // This job was dismissed and is now finished, so we can safely ignore it.
+              return;
             }
             
-            return currentJob;
-          });
-        }
-      )
-      .subscribe();
+            // Update the state if it's a new job, or an update to the job we are currently tracking.
+            setActiveJob(currentJob => {
+              if (!currentJob || newJob.id === currentJob.id || ['starting', 'in_progress'].includes(newJob.status)) {
+                return newJob;
+              }
+              return currentJob;
+            });
+          }
+        )
+        .subscribe();
+    };
+    
+    setupSync();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [userId]);
 
