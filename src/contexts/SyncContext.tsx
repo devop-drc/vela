@@ -71,16 +71,13 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
             const newJob = payload.new as SyncJob;
             const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
 
+            // If the new job is the one that was dismissed, and it's now completed/failed, ignore it.
             if (newJob.id === dismissedJobId && (newJob.status === 'completed' || newJob.status === 'failed')) {
-              return;
+              return; // Keep the current state (likely null or another job)
             }
             
-            setActiveJob(currentJob => {
-              if (!currentJob || newJob.id === currentJob.id || ['starting', 'in_progress'].includes(newJob.status)) {
-                return newJob;
-              }
-              return currentJob;
-            });
+            // Otherwise, always set the new job. This ensures real-time updates for any relevant job.
+            setActiveJob(newJob);
           }
         )
         .subscribe();
