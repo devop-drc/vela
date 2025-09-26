@@ -55,15 +55,15 @@ export const SyncSummaryModal = ({ job, isOpen, onClose }: { job: any; isOpen: b
         <div className="py-4">
           {isSuccess ? (
             <Accordion type="single" collapsible className="w-full" defaultValue="created">
-              <AccordionItem value="created">
+              <AccordionItem value="created" disabled={createdItems.length === 0}>
                 <AccordionTrigger><div className="flex items-center gap-2"><PlusCircle className="h-4 w-4 text-emerald-600" /> Created ({createdItems.length})</div></AccordionTrigger>
                 <AccordionContent><ScrollArea className="h-64 pr-3"><div className="space-y-2">{createdItems.map((item: any, i: number) => <ProductSummaryCard key={i} item={item} type="created" />)}</div></ScrollArea></AccordionContent>
               </AccordionItem>
-              <AccordionItem value="updated">
+              <AccordionItem value="updated" disabled={updatedItems.length === 0}>
                 <AccordionTrigger><div className="flex items-center gap-2"><RefreshCw className="h-4 w-4 text-blue-600" /> Updated ({updatedItems.length})</div></AccordionTrigger>
                 <AccordionContent><ScrollArea className="h-64 pr-3"><div className="space-y-2">{updatedItems.map((item: any, i: number) => <ProductSummaryCard key={i} item={item} type="updated" />)}</div></ScrollArea></AccordionContent>
               </AccordionItem>
-              <AccordionItem value="skipped">
+              <AccordionItem value="skipped" disabled={skippedItems.length === 0}>
                 <AccordionTrigger><div className="flex items-center gap-2"><SkipForward className="h-4 w-4 text-slate-600" /> Skipped ({skippedItems.length})</div></AccordionTrigger>
                 <AccordionContent><ScrollArea className="h-64 pr-3"><div className="space-y-2">{skippedItems.map((item: any, i: number) => (<div key={i} className="flex items-start gap-3 p-2 text-sm border rounded-lg"><img src={item.thumbnail_url} alt="Skipped post" className="h-12 w-12 rounded-md object-cover bg-muted" /><div className="flex-1"><p className="font-medium truncate">{item.name}</p><p className="text-xs text-muted-foreground">{item.reason}</p></div></div>))}</div></ScrollArea></AccordionContent>
               </AccordionItem>

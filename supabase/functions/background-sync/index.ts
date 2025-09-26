@@ -59,7 +59,7 @@ const updateJobProgress = async (supabase: SupabaseClient, jobId: string, progre
 };
 
 const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: string, syncType: 'quick' | 'full') => {
-  const summary = { created: 0, updated: 0, skipped: 0, skipped_items: [] as any[], created_items: [] as any[], updated_items: [] as any[] };
+  const summary = { created: 0, updated: 0, skipped: 0, skipped_items: [] as any[], created_items: [] as any[], updated_items: [] as any[], total_ai_tokens_used: { prompt: 0, candidates: 0 } };
   try {
     const { data: business, error: businessError } = await supabaseAdmin.from('businesses').select('id').eq('user_id', user.id).single();
     if (businessError || !business) throw new Error("Could not find business profile.");
@@ -107,6 +107,11 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
         continue;
       }
       
+      if (analysis.tokenUsage) {
+          summary.total_ai_tokens_used.prompt += analysis.tokenUsage.promptTokenCount || 0;
+          summary.total_ai_tokens_used.candidates += analysis.tokenUsage.candidatesTokenCount || 0;
+      }
+
       await updateJobProgress(supabaseAdmin, jobId, index + 1, total, `Analyzing: ${captionSnippet}`, post.thumbnail_url || post.media_url, post.caption, "AI: Analysis complete.", analysis);
 
       if (!analysis.isProductPost) {
@@ -163,6 +168,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
 
     const finalMessage = `Sync complete. Created ${summary.created}, updated ${summary.updated}, skipped ${summary.skipped}.`;
     await supabaseAdmin.from('sync_jobs').update({ status: 'completed', progress: total, total, message: finalMessage, summary }).eq('id', jobId);
+    console.log(`Full Sync AI Token Summary for Job ${jobId}: Prompt Tokens: ${summary.total_ai_tokens_used.prompt}, Candidate Tokens: ${summary.total_ai_tokens_used.candidates}`);
 
   } catch (error) {
     console.error('Background Sync Error:', error.message);

@@ -124,7 +124,12 @@ serve(async (req) => {
     const analysisText = geminiData.candidates[0].content.parts[0].text;
     const analysis = JSON.parse(analysisText);
 
-    return new Response(JSON.stringify(analysis), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const tokenUsage = geminiData.usageMetadata;
+    if (tokenUsage) {
+        console.log(`AI Product Classifier Token Usage: Prompt: ${tokenUsage.promptTokenCount}, Candidates: ${tokenUsage.candidatesTokenCount}`);
+    }
+
+    return new Response(JSON.stringify({ ...analysis, tokenUsage }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {
     console.error('Classifier Function Error:', error.message);
