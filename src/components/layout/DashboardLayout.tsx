@@ -55,7 +55,7 @@ const DashboardLayout = () => {
   if (settings.layoutStyle === 'docked') {
     return (
       <div className="relative flex h-screen bg-transparent">
-        <div id="background-overlay" className="fixed inset-0 z-[-1] bg-background transition-colors" />
+        <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Header title={title} />
@@ -68,7 +68,7 @@ const DashboardLayout = () => {
 
   return (
     <div className="relative h-screen bg-transparent">
-      <div id="background-overlay" className="fixed inset-0 z-[-1] bg-background transition-colors" />
+      <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
       <Sidebar />
       <Header title={title} />
       <main className="absolute inset-0 overflow-y-auto pt-28 px-4 pb-24 md:pb-4 md:pl-[18rem]">

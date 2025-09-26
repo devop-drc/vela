@@ -65,7 +65,7 @@ export const BackgroundImageSelector = () => {
 
   const handleSolidColorChange = (color: string) => {
     updateSetting('backgroundImageUrl', '');
-    updateSetting('--background', hexToHsl(color));
+    updateSetting('solidBackgroundColor', hexToHsl(color));
   }
 
   return (
@@ -87,7 +87,7 @@ export const BackgroundImageSelector = () => {
             <Label>Select a color:</Label>
             <Input
               type="color"
-              value={hslToHex(settings['--background'])}
+              value={hslToHex(settings.solidBackgroundColor || settings['--background'])}
               onChange={(e) => handleSolidColorChange(e.target.value)}
               className="w-16 h-10 p-1"
             />

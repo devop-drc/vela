@@ -105,6 +105,7 @@ interface DesignSettings extends ColorScheme {
   fontSans: string;
   fontHeading: string;
   backgroundImageUrl?: string;
+  solidBackgroundColor?: string;
   backgroundSize?: 'cover' | 'contain' | 'auto';
   backgroundRepeat?: 'no-repeat' | 'repeat';
   backgroundBrightness?: number;
@@ -184,11 +185,16 @@ const applySettingsToDOM = (settings: Partial<DesignSettings>) => {
 
   if (settings.backgroundImageUrl) {
     bgOverlay.style.backgroundImage = `url(${settings.backgroundImageUrl})`;
+    bgOverlay.style.backgroundColor = 'transparent';
     bgOverlay.style.backgroundSize = settings.backgroundSize || 'cover';
     bgOverlay.style.backgroundRepeat = settings.backgroundRepeat || 'no-repeat';
     bgOverlay.style.backgroundPosition = 'center';
+  } else if (settings.solidBackgroundColor) {
+    bgOverlay.style.backgroundImage = 'none';
+    bgOverlay.style.backgroundColor = `hsl(${settings.solidBackgroundColor})`;
   } else {
     bgOverlay.style.backgroundImage = 'none';
+    bgOverlay.style.backgroundColor = `hsl(${settings['--background']})`;
   }
   bgOverlay.style.filter = `brightness(${settings.backgroundBrightness || 100}%)`;
 };
@@ -251,7 +257,7 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
     const allThemes = [...presetThemes, ...(settings.customThemes || [])];
     const theme = allThemes.find(t => t.name === themeName) || presetThemes[0];
     setSettings(prev => {
-      const newSettings = { ...prev, ...theme.light, themeName, isAdvanced: false };
+      const newSettings = { ...prev, ...theme.light, themeName, isAdvanced: false, solidBackgroundColor: undefined };
       debouncedSave(newSettings);
       return newSettings;
     });
@@ -276,8 +282,10 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetSettings = () => {
-    setSettings(prev => ({...prev, ...defaultSettings, customThemes: prev.customThemes}));
-    debouncedSave({...defaultSettings, customThemes: settings.customThemes});
+    const customThemes = settings.customThemes;
+    const newSettings = { ...defaultSettings, customThemes };
+    setSettings(newSettings);
+    debouncedSave(newSettings);
   };
 
   const randomizeTheme = () => {
