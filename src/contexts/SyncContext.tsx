@@ -35,7 +35,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } = {} } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
     return () => subscription.unsubscribe();
@@ -129,4 +129,12 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       {children}
     </SyncContext.Provider>
   );
+};
+
+export const useSync = () => {
+  const context = useContext(SyncContext);
+  if (context === undefined) {
+    throw new Error('useSync must be used within a SyncProvider');
+  }
+  return context;
 };
