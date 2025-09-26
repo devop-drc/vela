@@ -175,7 +175,7 @@ export const SyncStatusWidget = () => {
 
                 <div className="pt-1 space-y-2">
                     <Label>Overall Progress</Label>
-                    <Progress value={percentage} />
+                    <Progress value={percentage} indicatorClassName="bg-primary" />
                 </div>
 
                 {isFinished ? (

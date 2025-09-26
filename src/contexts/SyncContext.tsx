@@ -50,16 +50,18 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     let channel: RealtimeChannel | null = null;
 
     const setupSync = async () => {
-      const { data: initialJob } = await supabase
+      const { data: initialJob, error } = await supabase
         .from('sync_jobs')
         .select('*')
         .eq('user_id', userId)
-        .in('status', ['starting', 'in_progress'])
+        .in('status', ['starting', 'in_progress']) // Corrected 'in' operator usage
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
       
-      if (initialJob) {
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+        console.error("Error fetching initial sync job:", error);
+      } else if (initialJob) {
         setActiveJob(initialJob as SyncJob);
       }
 
