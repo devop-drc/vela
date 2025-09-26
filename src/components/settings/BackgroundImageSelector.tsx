@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Upload, Trash2 } from "lucide-react";
+import { Loader2, Upload, Trash2, Sun, Contrast, Droplets, Palette } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -126,19 +126,19 @@ export const BackgroundImageSelector = () => {
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
         <div className="space-y-2">
-          <Label>Brightness: {settings.backgroundBrightness || 100}%</Label>
+          <Label className="flex items-center gap-2"><Sun className="h-4 w-4" /> Brightness: {settings.backgroundBrightness || 100}%</Label>
           <Slider min={0} max={200} step={1} value={[settings.backgroundBrightness || 100]} onValueChange={(v) => updateSetting('backgroundBrightness', v[0])} />
         </div>
         <div className="space-y-2">
-          <Label>Contrast: {settings.backgroundContrast || 100}%</Label>
+          <Label className="flex items-center gap-2"><Contrast className="h-4 w-4" /> Contrast: {(settings.backgroundContrast || 100) - 100}%</Label>
           <Slider min={0} max={200} step={1} value={[settings.backgroundContrast || 100]} onValueChange={(v) => updateSetting('backgroundContrast', v[0])} />
         </div>
         <div className="space-y-2">
-          <Label>Saturation: {settings.backgroundSaturation || 100}%</Label>
+          <Label className="flex items-center gap-2"><Droplets className="h-4 w-4" /> Saturation: {(settings.backgroundSaturation || 100) - 100}%</Label>
           <Slider min={0} max={200} step={1} value={[settings.backgroundSaturation || 100]} onValueChange={(v) => updateSetting('backgroundSaturation', v[0])} />
         </div>
         <div className="space-y-2">
-          <Label>Hue: {settings.backgroundHue || 0}°</Label>
+          <Label className="flex items-center gap-2"><Palette className="h-4 w-4" /> Hue: {settings.backgroundHue || 0}°</Label>
           <Slider min={0} max={360} step={1} value={[settings.backgroundHue || 0]} onValueChange={(v) => updateSetting('backgroundHue', v[0])} />
         </div>
         {settings.backgroundImageUrl && (
