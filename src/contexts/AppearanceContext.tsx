@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
-import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
+import { showError, showSuccess } from '@/utils/toast';
 import { hexToHsl } from '@/utils/colors';
 
 // --- THEME DEFINITIONS ---
@@ -101,6 +101,21 @@ export const fontCategories = {
   },
 };
 
+export const curatedImages = [
+  { src: 'https://images.unsplash.com/photo-1619204715997-1c8a4834f52d?q=80&w=2400', author: 'Prima Vista' },
+  { src: 'https://images.unsplash.com/photo-1620121692029-d088224ddc74?q=80&w=2400', author: 'Prima Vista' },
+  { src: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2400', author: 'Gradienta' },
+  { src: 'https://images.unsplash.com/photo-1554034483-043a35442025?q=80&w=2400', author: 'Javier Miranda' },
+  { src: 'https://images.unsplash.com/photo-1604079628040-94301bb21b91?q=80&w=2400', author: 'Gradienta' },
+  { src: 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?q=80&w=2400', author: 'Scott Webb' },
+  { src: 'https://images.unsplash.com/photo-1507525428034-b723a996f329?q=80&w=2400', author: 'Sean O.' },
+  { src: 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=2400', author: 'John Towner' },
+  { src: 'https://images.unsplash.com/photo-1500964757637-c85e8a162699?q=80&w=2400', author: 'John Fowler' },
+  { src: 'https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?q=80&w=2400', author: 'Alin Rusu' },
+  { src: 'https://images.unsplash.com/photo-1536566482680-fca31930a0bd?q=80&w=2400', author: 'Dawid Zawiła' },
+  { src: 'https://images.unsplash.com/photo-1614850523011-8f49ffc73908?q=80&w=2400', author: 'Scott Webb' },
+];
+
 interface DesignSettings extends ColorScheme {
   themeName: string;
   isAdvanced: boolean;
@@ -146,7 +161,6 @@ interface AppearanceContextType {
   updateSetting: (key: keyof DesignSettings, value: any) => void;
   resetSettings: () => void;
   randomizeTheme: () => void;
-  generateAIDesign: () => Promise<void>;
   isLoading: boolean;
   isAdvanced: boolean;
   setAdvanced: (isAdvanced: boolean) => void;
@@ -216,6 +230,8 @@ const applySettingsToDOM = (settings: Partial<DesignSettings>) => {
     hue-rotate(${settings.backgroundHue || 0}deg)
   `;
 };
+
+const getRandomItem = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
 export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
   const [settings, setSettings] = useState<DesignSettings>(defaultSettings);
@@ -307,56 +323,65 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const randomizeTheme = () => {
-    const randomTheme = presetThemes[Math.floor(Math.random() * presetThemes.length)];
-    setTheme(randomTheme.name);
-  };
+    // 1. Random Theme/Colors
+    const randomTheme = getRandomItem(presetThemes);
 
-  const generateAIDesign = async () => {
-    const toastId = showLoading("Analyzing your brand with AI...");
-    try {
-        const { data, error } = await supabase.functions.invoke('generate-design-theme');
-        if (error) throw error;
-        if (data.error) throw new Error(data.error);
-
-        const { themeName, colors, fonts, radius, sidebarStyle } = data;
-
-        const newSettings: Partial<DesignSettings> = {
-            themeName: themeName || 'AI Generated',
-            '--primary': hexToHsl(colors.primary),
-            '--primary-foreground': hexToHsl(colors.primaryForeground),
-            '--secondary': hexToHsl(colors.secondary),
-            '--secondary-foreground': hexToHsl(colors.secondaryForeground),
-            '--background': hexToHsl(colors.background),
-            '--foreground': hexToHsl(colors.foreground),
-            '--card': hexToHsl(colors.card),
-            '--card-foreground': hexToHsl(colors.cardForeground),
-            '--accent': hexToHsl(colors.accent),
-            '--accent-foreground': hexToHsl(colors.foreground),
-            '--border': hexToHsl(colors.card).replace(/(\d+)%$/, (match, p1) => `${Math.max(0, parseInt(p1) - 5)}%`),
-            '--ring': hexToHsl(colors.primary),
-            fontHeading: fonts.heading,
-            fontSans: fonts.body,
-            '--radius': radius,
-            sidebarStyle: sidebarStyle,
-            isAdvanced: false,
-        };
-        
-        newSettings['--input'] = newSettings['--border'];
-        newSettings['--muted'] = newSettings['--secondary'];
-        newSettings['--muted-foreground'] = newSettings['--secondary-foreground']?.replace(/(\d+)%$/, (match, p1) => `${Math.max(0, parseInt(p1) - 20)}%`);
-        newSettings['--popover'] = newSettings['--background'];
-        newSettings['--popover-foreground'] = newSettings['--foreground'];
-
-        const finalSettings = { ...settings, ...newSettings };
-        setSettings(finalSettings as DesignSettings);
-        debouncedSave(finalSettings as DesignSettings);
-        dismissToast(toastId);
-        showSuccess("AI theme applied! ✨");
-
-    } catch (err: any) {
-        dismissToast(toastId);
-        showError(err.message || "Failed to generate AI theme.");
+    // 2. Random Fonts
+    const fontCategoryName = getRandomItem(Object.keys(fontCategories)) as keyof typeof fontCategories;
+    const { headings, body } = fontCategories[fontCategoryName];
+    let headingFont = getRandomItem(headings);
+    let bodyFont = getRandomItem(body);
+    if (fontCategoryName !== 'Minimalist') {
+      while (headingFont === bodyFont) {
+        bodyFont = getRandomItem(body);
+      }
     }
+
+    // 3. Random Layout
+    const sidebarStyle = getRandomItem<'primary' | 'card'>(['primary', 'card']);
+    const layoutStyle = getRandomItem<'floating' | 'docked'>(['floating', 'docked']);
+    const sidebarWidth = getRandomItem<'compact' | 'default' | 'spacious'>(['compact', 'default', 'spacious']);
+    const radius = getRandomItem(['0.5rem', '0.75rem', '1.0rem', '1.5rem']);
+
+    // 4. Random Background
+    const backgroundType = getRandomItem(['default', 'image', 'solid']);
+    let backgroundImageUrl: string | undefined = undefined;
+    let solidBackgroundColor: string | undefined = undefined;
+
+    if (backgroundType === 'image') {
+      backgroundImageUrl = getRandomItem(curatedImages).src;
+    } else if (backgroundType === 'solid') {
+      const [h, s, l] = randomTheme.light['--background'].split(' ').map(parseFloat);
+      solidBackgroundColor = `${h} ${s}% ${l - 2}%`;
+    }
+    
+    // 5. Random Effects
+    const blurEnabled = Math.random() > 0.5;
+    const backgroundBrightness = 80 + Math.floor(Math.random() * 41); // 80-120
+    const backgroundContrast = 90 + Math.floor(Math.random() * 41); // 90-130
+
+    const newSettings: Partial<DesignSettings> = {
+      ...randomTheme.light,
+      themeName: randomTheme.name,
+      isAdvanced: false,
+      fontHeading: headingFont,
+      fontSans: bodyFont,
+      sidebarStyle,
+      layoutStyle,
+      sidebarWidth,
+      '--radius': radius,
+      backgroundImageUrl,
+      solidBackgroundColor,
+      blurEnabled,
+      backgroundBrightness,
+      backgroundContrast,
+    };
+
+    setSettings(prev => {
+      const updatedSettings = { ...prev, ...newSettings };
+      debouncedSave(updatedSettings);
+      return updatedSettings;
+    });
   };
 
   const saveCustomTheme = (themeName: string) => {
@@ -395,7 +420,7 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AppearanceContext.Provider value={{ settings, setTheme, updateSetting, resetSettings, isLoading, isAdvanced: settings.isAdvanced, setAdvanced, randomizeTheme, generateAIDesign, saveCustomTheme, deleteCustomTheme }}>
+    <AppearanceContext.Provider value={{ settings, setTheme, updateSetting, resetSettings, isLoading, isAdvanced: settings.isAdvanced, setAdvanced, randomizeTheme, saveCustomTheme, deleteCustomTheme }}>
       {children}
     </AppearanceContext.Provider>
   );

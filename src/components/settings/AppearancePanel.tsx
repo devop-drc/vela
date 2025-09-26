@@ -12,7 +12,7 @@ import { FontSelector } from "./FontSelector";
 import { AdvancedPanel } from "./AdvancedPanel";
 import { BackgroundImageSelector } from "./BackgroundImageSelector";
 import { AnimatePresence } from "framer-motion";
-import { Sparkles, Bot, Save } from "lucide-react";
+import { Sparkles, Save } from "lucide-react";
 import { Switch } from "../ui/switch";
 import { Slider } from "../ui/slider";
 
@@ -49,7 +49,7 @@ const CustomThemeManager = () => {
 };
 
 export const AppearancePanel = () => {
-  const { settings, updateSetting, resetSettings, isLoading, isAdvanced, setAdvanced, randomizeTheme, generateAIDesign } = useAppearance();
+  const { settings, updateSetting, resetSettings, isLoading, isAdvanced, setAdvanced, randomizeTheme } = useAppearance();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const radiusValue = parseFloat(settings['--radius'] || '0') * 16;
 
@@ -64,14 +64,10 @@ export const AppearancePanel = () => {
           <div>
             <CardTitle>Branding & Palettes</CardTitle>
             <CardDescription>
-              Generate a theme with AI, get inspired with a random one, or choose from presets.
+              Get inspired with a random theme or choose from presets.
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={generateAIDesign} variant="outline">
-              <Bot className="mr-2 h-4 w-4" />
-              Generate with AI
-            </Button>
             <Button onClick={randomizeTheme} variant="outline">
               <Sparkles className="mr-2 h-4 w-4 text-amber-400" />
               Inspire Me
