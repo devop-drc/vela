@@ -119,7 +119,10 @@
 
 @layer components {
   .card {
-    @apply shadow-card bg-card/80 backdrop-blur-lg;
+    @apply shadow-card bg-card;
+  }
+  .blur-enabled .card {
+    @apply bg-card/80 backdrop-blur-lg;
   }
 }
 

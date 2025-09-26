@@ -13,6 +13,7 @@ import { AdvancedPanel } from "./AdvancedPanel";
 import { BackgroundImageSelector } from "./BackgroundImageSelector";
 import { AnimatePresence } from "framer-motion";
 import { Sparkles, Bot } from "lucide-react";
+import { Switch } from "../ui/switch";
 
 export const AppearancePanel = () => {
   const { settings, updateSetting, resetSettings, isLoading, isAdvanced, setAdvanced, randomizeTheme, generateAIDesign } = useAppearance();
@@ -87,8 +88,36 @@ export const AppearancePanel = () => {
           </div>
         </div>
 
-        <FontSelector />
+        <div className="space-y-6 pt-8 border-t">
+          <div>
+            <h3 className="font-semibold mb-3">Layout & Effects</h3>
+            <p className="text-sm text-muted-foreground">
+              Control the overall structure and visual effects of the dashboard.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label>Layout Style</Label>
+              <RadioGroup 
+                value={settings.layoutStyle} 
+                onValueChange={(value) => updateSetting('layoutStyle', value as 'floating' | 'docked')}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2"><RadioGroupItem value="floating" id="floating" /><Label htmlFor="floating">Floating</Label></div>
+                <div className="flex items-center space-x-2"><RadioGroupItem value="docked" id="docked" /><Label htmlFor="docked">Docked</Label></div>
+              </RadioGroup>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label className="text-base">Enable Glassmorphism</Label>
+                <p className="text-sm text-muted-foreground">Apply a frosted glass effect to UI elements.</p>
+              </div>
+              <Switch checked={settings.blurEnabled} onCheckedChange={(checked) => updateSetting('blurEnabled', checked)} />
+            </div>
+          </div>
+        </div>
 
+        <FontSelector />
         <BackgroundImageSelector />
 
         <div className="flex items-center gap-4 pt-8 border-t">

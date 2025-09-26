@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useAppearance } from "@/contexts/AppearanceContext";
+import { cn } from "@/lib/utils";
 
 interface HeaderProps {
   title: string;
@@ -18,6 +20,9 @@ interface HeaderProps {
 
 const Header = ({ title }: HeaderProps) => {
   const navigate = useNavigate();
+  const { settings } = useAppearance();
+  const isFloating = settings.layoutStyle === 'floating';
+  const blurEnabled = settings.blurEnabled;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -25,7 +30,13 @@ const Header = ({ title }: HeaderProps) => {
   };
 
   return (
-    <header className="fixed top-4 right-4 left-4 md:left-[calc(16rem+2rem)] z-30 flex items-center justify-between h-16 px-6 rounded-2xl border bg-card/80 backdrop-blur-lg">
+    <header className={cn(
+      "z-30 flex items-center justify-between h-16 px-6",
+      isFloating
+        ? "fixed top-4 right-4 left-4 md:left-[calc(16rem+2rem)] rounded-2xl border"
+        : "border-b",
+      blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
+    )}>
       <div className="flex items-center gap-4">
         <h1 className="text-xl font-bold hidden md:block">{title}</h1>
         <div className="relative flex-1 max-w-md">

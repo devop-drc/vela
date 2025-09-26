@@ -107,6 +107,8 @@ interface DesignSettings extends ColorScheme {
   backgroundSize?: 'cover' | 'contain' | 'auto';
   backgroundRepeat?: 'no-repeat' | 'repeat';
   backgroundBrightness?: number;
+  layoutStyle: 'floating' | 'docked';
+  blurEnabled: boolean;
 }
 
 const defaultSettings: DesignSettings = {
@@ -118,6 +120,8 @@ const defaultSettings: DesignSettings = {
   fontSans: 'Inter',
   fontHeading: 'Inter',
   backgroundBrightness: 100,
+  layoutStyle: 'floating',
+  blurEnabled: true,
 };
 
 interface AppearanceContextType {
@@ -162,6 +166,12 @@ const applySettingsToDOM = (settings: Partial<DesignSettings>) => {
   if (settings.fontHeading) {
     root.style.setProperty('--font-heading', `'${settings.fontHeading}', sans-serif`);
     loadGoogleFont(settings.fontHeading);
+  }
+
+  if (settings.blurEnabled) {
+    root.classList.add('blur-enabled');
+  } else {
+    root.classList.remove('blur-enabled');
   }
 
   const bgOverlay = document.getElementById('background-overlay');

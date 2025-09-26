@@ -6,6 +6,9 @@ import { motion } from "framer-motion";
 
 const Sidebar = () => {
   const { settings } = useAppearance();
+  const isFloating = settings.layoutStyle === 'floating';
+  const isPrimary = settings.sidebarStyle === 'primary';
+  const blurEnabled = settings.blurEnabled;
 
   const navItems = [
     { to: "/", icon: Home, label: "Dashboard" },
@@ -17,14 +20,23 @@ const Sidebar = () => {
 
   return (
     <aside className={cn(
-      "fixed top-4 left-4 bottom-4 z-30 hidden md:flex flex-col w-64 rounded-2xl border backdrop-blur-lg transition-colors",
-      settings.sidebarStyle === 'primary'
-        ? "bg-primary/80 border-primary-foreground/20 text-primary-foreground"
-        : "bg-card/80 border-border"
+      "z-30 hidden md:flex flex-col w-64 transition-colors",
+      isFloating 
+        ? "fixed top-4 left-4 bottom-4 rounded-2xl border" 
+        : "h-full border-r",
+      isPrimary
+        ? cn(
+            "text-primary-foreground border-primary-foreground/20",
+            blurEnabled ? "bg-primary/80 backdrop-blur-lg" : "bg-primary"
+          )
+        : cn(
+            "border-border",
+            blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
+          )
     )}>
       <div className={cn(
         "p-4 border-b flex items-center",
-        settings.sidebarStyle === 'primary' ? 'border-primary-foreground/20' : 'border-border'
+        isPrimary ? 'border-primary-foreground/20' : 'border-border'
       )}>
         <ShoppingBag className="h-6 w-6 mr-2" />
         <h1 className="text-xl font-bold">InstaShopify</h1>
@@ -37,10 +49,10 @@ const Sidebar = () => {
               className={({ isActive }) =>
                 cn(
                   "flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  settings.sidebarStyle === 'primary'
+                  isPrimary
                     ? "text-primary-foreground/70 hover:bg-primary-foreground/10"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                  isActive && (settings.sidebarStyle === 'primary'
+                  isActive && (isPrimary
                     ? "bg-primary-foreground/10 text-primary-foreground"
                     : "bg-accent text-accent-foreground")
                 )
