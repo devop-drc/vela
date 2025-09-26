@@ -54,7 +54,7 @@ export const SyncSummaryModal = ({ job, isOpen, onClose }: { job: any; isOpen: b
         </DialogHeader>
         <div className="py-4">
           {isSuccess ? (
-            <Accordion type="multiple" className="w-full" defaultValue={['created', 'updated', 'skipped']}>
+            <Accordion type="single" collapsible className="w-full" defaultValue="created">
               <AccordionItem value="created">
                 <AccordionTrigger><div className="flex items-center gap-2"><PlusCircle className="h-4 w-4 text-emerald-600" /> Created ({createdItems.length})</div></AccordionTrigger>
                 <AccordionContent><ScrollArea className="h-64 pr-3"><div className="space-y-2">{createdItems.map((item: any, i: number) => <ProductSummaryCard key={i} item={item} type="created" />)}</div></ScrollArea></AccordionContent>

@@ -28,16 +28,20 @@ const AnalysisDetails = ({ analysisResult }: { analysisResult: any }) => {
         );
     }
 
-    const details = [
+    const mainDetails = [
         { label: "Name", value: analysisResult.productName },
         { label: "Category", value: analysisResult.categoryName },
         { label: "Type", value: analysisResult.typeName },
         { label: "Price", value: analysisResult.price ? `${analysisResult.price} ${analysisResult.currency || ''}`.trim() : null },
     ].filter(d => d.value);
 
+    const attributes = analysisResult.attributes || [];
+    const options = attributes.filter((attr: any) => attr.isOption);
+    const specifications = attributes.filter((attr: any) => !attr.isOption);
+
     const containerVariants = {
         hidden: { opacity: 0 },
-        visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+        visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
     };
 
     const itemVariants = {
@@ -46,13 +50,15 @@ const AnalysisDetails = ({ analysisResult }: { analysisResult: any }) => {
     };
 
     return (
-        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-1">
-            {details.map(detail => (
-                <motion.div key={detail.label} variants={itemVariants} className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">{detail.label}</span>
-                    <span className="font-medium text-right">{detail.value}</span>
-                </motion.div>
-            ))}
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-2">
+            <div>{mainDetails.map(detail => (<motion.div key={detail.label} variants={itemVariants} className="flex justify-between items-center text-sm"><span className="text-muted-foreground">{detail.label}</span><span className="font-medium text-right">{detail.value}</span></motion.div>))}</div>
+            
+            {options.length > 0 && (
+                <div className="pt-1"><Label className="text-xs">Options</Label><div className="space-y-1 mt-1">{options.map((opt: any) => (<motion.div key={opt.name} variants={itemVariants} className="flex justify-between items-center text-sm"><span className="text-muted-foreground capitalize">{opt.name.replace(/_/g, ' ')}</span><span className="font-medium text-right">{Array.isArray(opt.value) ? opt.value.join(', ') : opt.value}</span></motion.div>))}</div></div>
+            )}
+            {specifications.length > 0 && (
+                <div className="pt-1"><Label className="text-xs">Specifications</Label><div className="space-y-1 mt-1">{specifications.map((spec: any) => (<motion.div key={spec.name} variants={itemVariants} className="flex justify-between items-center text-sm"><span className="text-muted-foreground capitalize">{spec.name.replace(/_/g, ' ')}</span><span className="font-medium text-right">{Array.isArray(spec.value) ? spec.value.join(', ') : spec.value}</span></motion.div>))}</div></div>
+            )}
         </motion.div>
     );
 };
