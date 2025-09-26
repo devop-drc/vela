@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Loader2 } from "lucide-react";
-import { Card, CardContent } from "./ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { TagInput } from "./TagInput";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { AnimatePresence, motion } from "framer-motion";
@@ -18,7 +18,7 @@ import { useShop } from "@/contexts/ShopContext";
 import { CreatableCombobox } from "./CreatableCombobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { currencies } from "@/lib/currencies";
-import { DynamicProductAttributes } from "./product-detail/DynamicProductAttributes";
+import { DynamicDetailFields } from "./product-detail/DynamicDetailFields";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -131,6 +131,9 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
     else { showSuccess("Product created successfully!"); onSave(); onClose(); }
   };
 
+  const options = typeAttributes.filter(attr => attr.isOption);
+  const specifications = typeAttributes.filter(attr => !attr.isOption);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl">
@@ -156,7 +159,14 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
                 <div className="space-y-2"><Label>Price</Label><div className="flex items-center gap-2"><Input type="number" step="0.01" {...register("price")} className="flex-1" /><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
                 <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-2"><Label>Inventory</Label><Input type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}</AnimatePresence>
               </div>
-              <div className="space-y-2"><Label>Specific Details</Label><Card><CardContent className="p-4"><DynamicProductAttributes control={control} attributes={typeAttributes} /></CardContent></Card></div>
+              <Card>
+                <CardHeader><CardTitle className="text-base">Options (for Variants)</CardTitle></CardHeader>
+                <CardContent><DynamicDetailFields control={control} attributes={options} isOptions={true} /></CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle className="text-base">Specifications (Fixed Details)</CardTitle></CardHeader>
+                <CardContent><DynamicDetailFields control={control} attributes={specifications} isOptions={false} /></CardContent>
+              </Card>
             </div>
           </div>
           <DialogFooter><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save Product</Button></DialogFooter>
