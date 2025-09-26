@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Home, ShoppingBag, Settings, Package, Archive } from "lucide-react";
+import { Home, ShoppingBag, Settings, Package, Archive, MessageSquareQuote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { motion } from "framer-motion";
@@ -15,6 +15,7 @@ const Sidebar = () => {
     { to: "/products", icon: Package, label: "Products" },
     { to: "/out-of-stock", icon: Archive, label: "Out of Stock" },
     { to: "/orders", icon: ShoppingBag, label: "Orders" },
+    { to: "/keywords", icon: MessageSquareQuote, label: "AI Keywords" },
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
 

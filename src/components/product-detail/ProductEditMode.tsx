@@ -12,17 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { TagInput } from "@/components/TagInput";
-import { Loader2, XCircle, PlusCircle, CheckCircle, Archive, Sparkles } from "lucide-react";
+import { Loader2, XCircle, PlusCircle, CheckCircle, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { showError, showSuccess } from "@/utils/toast";
 import { CreatableCombobox } from "../CreatableCombobox";
-import { GenericDetailsForm } from "@/components/product-forms/DetailForms";
-import { DynamicSpecEditor } from "@/components/product-forms/DynamicSpecEditor";
 import { currencies } from "@/lib/currencies";
 import { MediaItem } from "../MediaItem";
+import { DynamicProductAttributes } from "./DynamicProductAttributes";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -30,11 +27,11 @@ const statusConfig = {
   'Out of Stock': { icon: Archive, color: "text-slate-600", label: "Out of Stock" },
 };
 
-export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting, isEditing }: any) => {
-    const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
-    const [isFindingSpecs, setIsFindingSpecs] = useState(false);
+export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting }: any) => {
+    const { register, handleSubmit, control, watch, setValue } = form;
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
     const [typeOptions, setTypeOptions] = useState<string[]>([]);
+    const [typeAttributes, setTypeAttributes] = useState<any[]>([]);
     
     const pricingType = watch("pricing_type");
     const categoryValue = watch("category");
@@ -45,79 +42,35 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
     const { ref: rhfRef, ...captionProps } = register("caption");
     useAutosizeTextArea(textAreaRef.current, captionValue || "");
 
-    const { category, type } = getCategoryAndType(categoryValue, typeValue);
-    const DetailsComponent = type?.component;
-    const showSpecFinder = category?.value === 'electronics';
-    const detailKeys = Object.keys(watch('details') || {}).filter(key => key !== 'type');
-
-    const handleFindSpecs = async () => {
-      setIsFindingSpecs(true);
-      const { name } = getValues();
-
-      try {
-        const { data, error } = await supabase.functions.invoke('google-search-specs', {
-          body: { productName: name },
-        });
-        if (error) throw error;
-        if (data.error) throw new Error(data.error);
-
-        const currentDetails = getValues('details');
-        const newDetails = { ...currentDetails, ...data };
-        setValue('details', newDetails, { shouldDirty: true });
-        showSuccess("AI has populated product specifications!");
-
-      } catch (err: any) {
-        showError(err.message || "Failed to find specifications.");
-      } finally {
-        setIsFindingSpecs(false);
-      }
-    };
-
-    useEffect(() => {
-      // Automatically find specs for electronics when entering edit mode
-      if (isEditing && product) {
-        const categoryValue = getValues('category');
-        const details = getValues('details');
-        const { category } = getCategoryAndType(categoryValue);
-
-        // Check if it's an electronics category and if key specs are missing to avoid overwriting data
-        if (category?.value === 'electronics' && (!details?.processor && !details?.ram && !details?.storage)) {
-          handleFindSpecs();
-        }
-      }
-    }, [isEditing, product?.id]); // Reruns only when editing starts for a new product
-
     useEffect(() => {
       const fetchCategories = async () => {
           const { data } = await supabase.from('categories').select('name');
-          const dbCategories = data?.map(c => c.name) || [];
-          const staticCategories = productCategories.map(c => c.label);
-          setCategoryOptions([...new Set([...staticCategories, ...dbCategories])]);
+          setCategoryOptions(data?.map(c => c.name) || []);
       };
       fetchCategories();
     }, []);
 
     useEffect(() => {
-      const fetchTypes = async () => {
+      const fetchTypesAndAttributes = async () => {
           if (!categoryValue) {
               setTypeOptions([]);
+              setTypeAttributes([]);
               return;
           }
           const { data: categoryData } = await supabase.from('categories').select('id').eq('name', categoryValue).single();
-          
-          const staticCategory = productCategories.find(c => c.label.toLowerCase() === categoryValue.toLowerCase() || c.value.toLowerCase() === categoryValue.toLowerCase());
-          const staticTypes = staticCategory ? staticCategory.types.map(t => t.label) : [];
-
           if (categoryData) {
-              const { data: dbTypes } = await supabase.from('types').select('name').eq('category_id', categoryData.id);
-              const typeNames = dbTypes?.map(t => t.name) || [];
-              setTypeOptions([...new Set([...staticTypes, ...typeNames])]);
+              const { data: dbTypes } = await supabase.from('types').select('name, attributes').eq('category_id', categoryData.id);
+              setTypeOptions(dbTypes?.map(t => t.name) || []);
+              
+              const selectedType = dbTypes?.find(t => t.name === typeValue);
+              setTypeAttributes(selectedType?.attributes || []);
           } else {
-              setTypeOptions(staticTypes);
+              setTypeOptions([]);
+              setTypeAttributes([]);
           }
       };
-      fetchTypes();
-    }, [categoryValue]);
+      fetchTypesAndAttributes();
+    }, [categoryValue, typeValue]);
 
     const currentStatusConfig = statusConfig[statusValue as keyof typeof statusConfig];
     const StatusIcon = currentStatusConfig?.icon;
@@ -215,21 +168,11 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                 </div>
               </div>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader>
                   <CardTitleComponent className="text-base">Options & Specifications</CardTitleComponent>
-                  {showSpecFinder && (
-                    <Button type="button" variant="outline" size="sm" onClick={handleFindSpecs} disabled={isFindingSpecs}>
-                      {isFindingSpecs ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                      Find Specs with AI
-                    </Button>
-                  )}
                 </CardHeader>
                 <CardContent>
-                  {DetailsComponent && DetailsComponent !== GenericDetailsForm ? (
-                    <DetailsComponent control={control} />
-                  ) : (
-                    <DynamicSpecEditor control={control} fields={detailKeys} />
-                  )}
+                  <DynamicProductAttributes control={control} attributes={typeAttributes} />
                 </CardContent>
               </Card>
             </div>

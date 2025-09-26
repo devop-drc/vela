@@ -21,6 +21,7 @@ import { IntegrationPrompt } from "./components/layout/IntegrationPrompt";
 import { ShopProvider } from "./contexts/ShopContext";
 import { SyncProvider } from "./contexts/SyncContext";
 import Demo from "./pages/Demo";
+import Keywords from "./pages/Keywords";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
                           <Route path="/products" element={<Products />} />
                           <Route path="/orders" element={<Orders />} />
                           <Route path="/settings" element={<Settings />} />
+                          <Route path="/keywords" element={<Keywords />} />
                           <Route path="/out-of-stock" element={<OutOfStock />} />
                         </Route>
                       </Route>

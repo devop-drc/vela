@@ -35,7 +35,9 @@ const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, categoryId
   if (existingType) {
     const existingAttributesMap = new Map((existingType.attributes || []).map((attr: any) => [attr.name, attr]));
     for (const [name, newAttr] of newAttributesMap.entries()) {
-      existingAttributesMap.set(name, newAttr);
+      if (!existingAttributesMap.has(name)) {
+        existingAttributesMap.set(name, newAttr);
+      }
     }
     const mergedAttributes = Array.from(existingAttributesMap.values());
     const { error: updateError } = await supabase.from('types').update({ attributes: mergedAttributes }).eq('id', existingType.id);
@@ -96,7 +98,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
         continue;
       }
 
-      const { data: analysis, error: analysisError } = await supabaseAdmin.functions.invoke('ai-product-classifier', { body: { caption: post.caption } });
+      const { data: analysis, error: analysisError } = await supabaseAdmin.functions.invoke('ai-product-classifier', { body: { caption: post.caption, user_id: user.id } });
       if (analysisError || analysis.error) {
         summary.skipped++;
         summary.skipped_items.push({ name: captionSnippet, reason: analysisError?.message || analysis?.error || "Analysis function failed.", thumbnail_url: post.thumbnail_url || post.media_url });
@@ -115,19 +117,19 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
         await upsertTypeAndMergeAttributes(supabaseAdmin, categoryId, typeName, attributes || [], user.id);
       }
 
-      const details: { [key: string]: any } = {};
+      const details: { [key: string]: any } = { type: toTitleCase(typeName) };
       if (attributes) {
         for (const attr of attributes) { details[attr.name] = attr.value; }
       }
 
       const productPayload = {
         name: productInfo.productName,
-        caption: productInfo.description, // Explicitly map description to caption
+        caption: productInfo.description,
         price: productInfo.price,
         currency: productInfo.currency,
         tags: productInfo.tags,
         category: toTitleCase(categoryName),
-        details: { type: toTitleCase(typeName), ...details },
+        details: details,
         business_id: business.id, 
         user_id: user.id, 
         status: 'Draft',
