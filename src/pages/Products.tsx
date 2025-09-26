@@ -205,7 +205,14 @@ const Products = () => {
     }, {} as { [key: string]: Product[] });
   }, [grouping, filteredAndSortedProducts]);
 
-  const handleSelectProduct = (productId: string) => setSelectedProducts(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, id]);
+  const handleSelectProduct = (productId: string) => {
+    setSelectedProducts(prev => 
+      prev.includes(productId) 
+        ? prev.filter(pId => pId !== productId) 
+        : [...prev, productId]
+    );
+  };
+
   const handleBulkStatusChange = async (status: ProductStatus) => {
     const { error } = await supabase.from('products').update({ status }).in('id', selectedProducts);
     if (error) showError(`Failed to update products: ${error.message}`);
