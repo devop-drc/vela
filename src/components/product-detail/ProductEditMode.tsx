@@ -22,6 +22,7 @@ import { CreatableCombobox } from "../CreatableCombobox";
 import { GenericDetailsForm } from "@/components/product-forms/DetailForms";
 import { DynamicSpecEditor } from "@/components/product-forms/DynamicSpecEditor";
 import { currencies } from "@/lib/currencies";
+import { MediaItem } from "../MediaItem";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -135,7 +136,7 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                     <CarouselContent>
                       {mediaItems.map((url: string, index: number) => (
                         <CarouselItem key={index}>
-                          <img src={url} alt={`${product.name} - image ${index + 1}`} className="object-cover w-full aspect-square bg-muted" />
+                          <MediaItem src={url} alt={`${product.name} - image ${index + 1}`} className="object-cover w-full aspect-square bg-muted" />
                         </CarouselItem>
                       ))}
                     </CarouselContent>
@@ -147,7 +148,7 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                   <div className="flex flex-wrap gap-2 mt-2">
                     {mediaItems.map((url: string) => (
                       <div key={url} className="relative group">
-                        <img src={url} className="h-16 w-16 rounded-md object-cover border" />
+                        <MediaItem src={url} alt="Thumbnail" className="h-16 w-16 rounded-md object-cover border" />
                         <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100" onClick={() => handleImageDelete(url)}><XCircle className="h-4 w-4" /></Button>
                       </div>
                     ))}
@@ -156,7 +157,7 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                         {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <PlusCircle className="h-6 w-6 text-muted-foreground" />}
                       </label>
                     </Button>
-                    <Input id="image-upload" type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={isUploading} />
+                    <Input id="image-upload" type="file" className="hidden" accept="image/*,video/*" onChange={handleImageUpload} disabled={isUploading} />
                   </div>
                 </div>
                 <div className="md:col-span-6 flex flex-col space-y-4">

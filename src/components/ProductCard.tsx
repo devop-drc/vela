@@ -1,5 +1,4 @@
 import { Card } from "@/components/ui/card";
-import { AspectRatio } from "./ui/aspect-ratio";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Checkbox } from "./ui/checkbox";
@@ -9,6 +8,8 @@ import { Badge } from "./ui/badge";
 import { getCategoryAndType } from "@/lib/productTypes";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "./ui/carousel";
+import { MediaItem } from "./MediaItem";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 type GridSizeType = 'sm' | 'md' | 'lg';
@@ -21,6 +22,8 @@ interface Product {
   currency: string | null;
   inventory: number;
   media_url: string;
+  media_gallery: string[] | null;
+  media_type: string | null;
   thumbnail_url?: string;
   caption: string;
   category: string;
@@ -64,9 +67,11 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
   const { type: typeInfo } = getCategoryAndType(categoryValue, details?.type);
   const displayPrice = convertCurrency(product.price);
 
+  const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
+
   return (
     <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative h-full">
-      <div className={cn("absolute top-3 right-3 z-10 transition-opacity", isSelectionModeActive ? "opacity-100" : "opacity-0 pointer-events-none")}>
+      <div className={cn("absolute top-3 right-3 z-20 transition-opacity", isSelectionModeActive ? "opacity-100" : "opacity-0 pointer-events-none")}>
         <Checkbox
           checked={isSelected}
           onCheckedChange={() => onSelect(product.id)}
@@ -75,22 +80,38 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
         />
       </div>
       <Card 
-        onClick={handleCardClick}
         className={cn(
           "group w-full overflow-hidden rounded-lg transition-all duration-300 flex flex-col cursor-pointer h-full",
           isSelectionModeActive && "shadow-md",
           isSelected && "ring-2 ring-primary ring-offset-2"
         )}
       >
-        <AspectRatio ratio={1} className="overflow-hidden bg-muted">
-          <img
-            src={product.thumbnail_url || product.media_url}
-            alt={product.name}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        </AspectRatio>
+        <Carousel 
+          className="w-full group/carousel"
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+        >
+          <CarouselContent onClick={handleCardClick}>
+            {mediaItems.map((url, index) => (
+              <CarouselItem key={index}>
+                <div className="aspect-square overflow-hidden bg-muted">
+                  <MediaItem 
+                    src={url} 
+                    alt={`${product.name} media ${index + 1}`} 
+                    type={index === 0 ? product.media_type : null}
+                    className="transition-transform duration-300 group-hover:scale-105"
+                  />
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          {mediaItems.length > 1 && <>
+            <CarouselPrevious onClick={(e) => e.stopPropagation()} className="left-2 opacity-0 group-hover/carousel:opacity-100" />
+            <CarouselNext onClick={(e) => e.stopPropagation()} className="right-2 opacity-0 group-hover/carousel:opacity-100" />
+          </>}
+        </Carousel>
 
-        <div className="bg-card p-3 flex-1 flex flex-col justify-between space-y-3">
+        <div className="bg-card p-3 flex-1 flex flex-col justify-between space-y-3" onClick={handleCardClick}>
           <div className="space-y-2">
             <div className="text-xs text-muted-foreground font-medium">
               <span>{product.category || 'Uncategorized'}</span>

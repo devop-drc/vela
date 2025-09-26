@@ -11,6 +11,7 @@ import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 import SpecParser from "./SpecParser";
 import { useShop } from "@/contexts/ShopContext";
+import { MediaItem } from "../MediaItem";
 
 const DetailDisplayRow = ({ label, children }: { label: string, children: React.ReactNode }) => (
     <div className="flex flex-col">
@@ -46,7 +47,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                     {mediaItems.map((url: string, index: number) => (
                       <CarouselItem key={index}>
                         <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
-                          <img src={url} alt={`${product.name} - image ${index + 1}`} className="object-cover w-full h-full" />
+                          <MediaItem src={url} alt={`${product.name} - image ${index + 1}`} />
                         </div>
                       </CarouselItem>
                     ))}

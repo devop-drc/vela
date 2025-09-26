@@ -126,6 +126,18 @@ export const AppearancePanel = () => {
               </RadioGroup>
             </div>
             <div className="space-y-3">
+              <Label>Sidebar Width</Label>
+              <RadioGroup 
+                value={settings.sidebarWidth} 
+                onValueChange={(value) => updateSetting('sidebarWidth', value as 'compact' | 'default' | 'spacious')}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2"><RadioGroupItem value="compact" id="compact" /><Label htmlFor="compact">Compact</Label></div>
+                <div className="flex items-center space-x-2"><RadioGroupItem value="default" id="default" /><Label htmlFor="default">Default</Label></div>
+                <div className="flex items-center space-x-2"><RadioGroupItem value="spacious" id="spacious" /><Label htmlFor="spacious">Spacious</Label></div>
+              </RadioGroup>
+            </div>
+            <div className="space-y-3">
                 <Label>Corner Radius: {radiusValue.toFixed(0)}px</Label>
                 <Slider
                     min={0}

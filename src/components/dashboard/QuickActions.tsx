@@ -69,7 +69,7 @@ export const QuickActions = () => {
           <ShoppingBag className="mr-2 h-4 w-4" />
           Check Orders
         </Button>
-        <Button variant="outline" onClick={() => navigate('/settings')} className="hover:border-purple-400 hover:bg-purple-50">
+        <Button variant="outline" onClick={() => navigate('/settings?tab=appearance')} className="hover:border-purple-400 hover:bg-purple-50">
           <Palette className="mr-2 h-4 w-4" />
           Customize
         </Button>

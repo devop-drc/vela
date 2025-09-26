@@ -9,6 +9,7 @@ import { Badge } from "./ui/badge";
 import { CheckCircle, Image as ImageIcon, Loader2, RefreshCw, Sparkles, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { CreateProductModal } from "./CreateProductModal";
+import { MediaItem } from "./MediaItem";
 
 interface AnalyzedPost {
   id: string;
@@ -146,7 +147,7 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                     visiblePosts.map(post => (
                       <div key={post.id} className="relative group">
                         <button onClick={() => setSelectedPost(post)} className={`w-full relative aspect-square rounded-md overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${selectedPost?.id === post.id ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
-                          <img src={post.thumbnail_url || post.media_url} alt="Instagram post" className="w-full h-full object-cover" />
+                          <MediaItem src={post.thumbnail_url || post.media_url} alt="Instagram post" type={post.media_type} />
                           {post.isImported && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><CheckCircle className="text-white h-8 w-8" /></div>}
                         </button>
                         <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDismissPost(post.id)}>
@@ -164,7 +165,7 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                 {selectedPost ? (
                   <div className="space-y-4">
                     <button onClick={() => setIsImageViewerOpen(true)} className="w-full h-64 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                      <img src={selectedPost.media_url} alt="Selected post" className="max-w-full max-h-full object-contain" />
+                      <MediaItem src={selectedPost.media_url} alt="Selected post" type={selectedPost.media_type} className="max-w-full max-h-full object-contain" />
                     </button>
                     <Card>
                       <CardHeader><CardTitle>AI Analysis</CardTitle><CardDescription>Initial analysis of the post caption.</CardDescription></CardHeader>
@@ -222,7 +223,7 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
       {isImageViewerOpen && selectedPost && (
         <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
           <DialogContent className="max-w-4xl h-[90vh] p-2 flex items-center justify-center">
-            <img src={selectedPost.media_url} alt="Full size post" className="max-w-full max-h-full object-contain" />
+            <MediaItem src={selectedPost.media_url} alt="Full size post" type={selectedPost.media_type} className="max-w-full max-h-full object-contain" />
           </DialogContent>
         </Dialog>
       )}

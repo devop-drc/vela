@@ -124,25 +124,27 @@ export const BackgroundImageSelector = () => {
         </TabsContent>
       </Tabs>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
         <div className="space-y-2">
-          <Label>Brightness</Label>
-          <Slider
-            min={25}
-            max={125}
-            step={1}
-            value={[settings.backgroundBrightness || 100]}
-            onValueChange={(value) => updateSetting('backgroundBrightness', value[0])}
-          />
+          <Label>Brightness: {settings.backgroundBrightness || 100}%</Label>
+          <Slider min={0} max={200} step={1} value={[settings.backgroundBrightness || 100]} onValueChange={(v) => updateSetting('backgroundBrightness', v[0])} />
+        </div>
+        <div className="space-y-2">
+          <Label>Contrast: {settings.backgroundContrast || 100}%</Label>
+          <Slider min={0} max={200} step={1} value={[settings.backgroundContrast || 100]} onValueChange={(v) => updateSetting('backgroundContrast', v[0])} />
+        </div>
+        <div className="space-y-2">
+          <Label>Saturation: {settings.backgroundSaturation || 100}%</Label>
+          <Slider min={0} max={200} step={1} value={[settings.backgroundSaturation || 100]} onValueChange={(v) => updateSetting('backgroundSaturation', v[0])} />
+        </div>
+        <div className="space-y-2">
+          <Label>Hue: {settings.backgroundHue || 0}°</Label>
+          <Slider min={0} max={360} step={1} value={[settings.backgroundHue || 0]} onValueChange={(v) => updateSetting('backgroundHue', v[0])} />
         </div>
         {settings.backgroundImageUrl && (
-          <div className="space-y-2">
+          <div className="space-y-2 md:col-span-2">
             <Label>Image Fit</Label>
-            <RadioGroup
-              value={settings.backgroundSize}
-              onValueChange={(v) => updateSetting('backgroundSize', v as 'cover' | 'contain')}
-              className="flex gap-4"
-            >
+            <RadioGroup value={settings.backgroundSize} onValueChange={(v) => updateSetting('backgroundSize', v as 'cover' | 'contain')} className="flex gap-4">
               <div className="flex items-center space-x-2"><RadioGroupItem value="cover" id="cover" /><Label htmlFor="cover">Cover</Label></div>
               <div className="flex items-center space-x-2"><RadioGroupItem value="contain" id="contain" /><Label htmlFor="contain">Contain</Label></div>
             </RadioGroup>

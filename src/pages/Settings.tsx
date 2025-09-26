@@ -10,6 +10,7 @@ import { usePageTitle } from "@/contexts/PageTitleContext";
 const Settings = () => {
   const { setTitle } = usePageTitle();
   const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'account';
 
   useEffect(() => {
     setTitle("Settings");
@@ -30,9 +31,13 @@ const Settings = () => {
     }
   }, [searchParams, setSearchParams]);
 
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value }, { replace: true });
+  };
+
   return (
     <div className="space-y-4">
-      <Tabs defaultValue="account" className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="shop">Shop</TabsTrigger>
