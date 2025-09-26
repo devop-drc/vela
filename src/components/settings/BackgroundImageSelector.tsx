@@ -69,13 +69,7 @@ export const BackgroundImageSelector = () => {
   }
 
   return (
-    <div className="space-y-6 pt-8 border-t">
-      <div>
-        <h3 className="font-semibold mb-3">Application Background</h3>
-        <p className="text-sm text-muted-foreground">
-          Choose a solid color, upload a custom image, or select one from our gallery.
-        </p>
-      </div>
+    <div className="space-y-6">
       <Tabs defaultValue="color" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="color">Solid Color</TabsTrigger>
@@ -130,18 +124,18 @@ export const BackgroundImageSelector = () => {
         </TabsContent>
       </Tabs>
       
-      {settings.backgroundImageUrl && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label>Brightness</Label>
-            <Slider
-              min={25}
-              max={125}
-              step={1}
-              value={[settings.backgroundBrightness || 100]}
-              onValueChange={(value) => updateSetting('backgroundBrightness', value[0])}
-            />
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label>Brightness</Label>
+          <Slider
+            min={25}
+            max={125}
+            step={1}
+            value={[settings.backgroundBrightness || 100]}
+            onValueChange={(value) => updateSetting('backgroundBrightness', value[0])}
+          />
+        </div>
+        {settings.backgroundImageUrl && (
           <div className="space-y-2">
             <Label>Image Fit</Label>
             <RadioGroup
@@ -153,8 +147,8 @@ export const BackgroundImageSelector = () => {
               <div className="flex items-center space-x-2"><RadioGroupItem value="contain" id="contain" /><Label htmlFor="contain">Contain</Label></div>
             </RadioGroup>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

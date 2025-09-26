@@ -33,13 +33,7 @@ export const FontSelector = () => {
   };
 
   return (
-    <div className="space-y-6 pt-8 border-t">
-      <div>
-        <h3 className="font-semibold mb-3">Typography</h3>
-        <p className="text-sm text-muted-foreground">
-          Generate a pairing or select individual fonts below.
-        </p>
-      </div>
+    <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {Object.keys(fontCategories).map(category => (
           <Button key={category} variant="outline" onClick={() => generateFontPairing(category as keyof typeof fontCategories)}>
