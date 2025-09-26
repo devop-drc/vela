@@ -8,6 +8,7 @@ import { useShop } from "@/contexts/ShopContext";
 import { useEffect } from "react";
 import { SyncStatusWidget } from "./SyncStatusWidget";
 import { useAppearance } from "@/contexts/AppearanceContext";
+import { cn } from "@/lib/utils";
 
 const DashboardLayout = () => {
   const { title } = usePageTitle();
@@ -52,6 +53,12 @@ const DashboardLayout = () => {
     </AnimatePresence>
   );
 
+  const mainPaddingClasses = {
+    compact: 'md:pl-[16rem]', // 224px + 32px padding
+    default: 'md:pl-[18rem]', // 256px + 32px padding
+    spacious: 'md:pl-[20rem]', // 288px + 32px padding
+  };
+
   if (settings.layoutStyle === 'docked') {
     return (
       <div className="relative flex h-screen bg-transparent">
@@ -71,7 +78,10 @@ const DashboardLayout = () => {
       <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
       <Sidebar />
       <Header title={title} />
-      <main className="absolute inset-0 overflow-y-auto pt-28 px-4 pb-24 md:pb-4 md:pl-[18rem]">
+      <main className={cn(
+        "absolute inset-0 overflow-y-auto pt-28 px-4 pb-24 md:pb-4 transition-all",
+        mainPaddingClasses[settings.sidebarWidth || 'default']
+      )}>
         {content}
       </main>
       <BottomNav />

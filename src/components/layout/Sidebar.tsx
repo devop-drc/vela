@@ -18,9 +18,16 @@ const Sidebar = () => {
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
 
+  const sidebarWidthClasses = {
+    compact: 'w-56', // 224px
+    default: 'w-64', // 256px
+    spacious: 'w-72', // 288px
+  };
+
   return (
     <aside className={cn(
-      "z-30 hidden md:flex flex-col w-64 transition-colors",
+      "z-30 hidden md:flex flex-col transition-all",
+      sidebarWidthClasses[settings.sidebarWidth || 'default'],
       isFloating 
         ? "fixed top-4 left-4 bottom-4 border rounded-lg" 
         : "h-full border-r",

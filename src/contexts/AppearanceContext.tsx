@@ -109,7 +109,11 @@ interface DesignSettings extends ColorScheme {
   backgroundSize?: 'cover' | 'contain' | 'auto';
   backgroundRepeat?: 'no-repeat' | 'repeat';
   backgroundBrightness?: number;
+  backgroundContrast?: number;
+  backgroundSaturation?: number;
+  backgroundHue?: number;
   layoutStyle: 'floating' | 'docked';
+  sidebarWidth: 'compact' | 'default' | 'spacious';
   blurEnabled: boolean;
   customThemes?: CustomTheme[];
 }
@@ -123,7 +127,11 @@ const defaultSettings: DesignSettings = {
   fontSans: 'Inter',
   fontHeading: 'Inter',
   backgroundBrightness: 100,
+  backgroundContrast: 100,
+  backgroundSaturation: 100,
+  backgroundHue: 0,
   layoutStyle: 'floating',
+  sidebarWidth: 'default',
   blurEnabled: true,
   customThemes: [],
 };
@@ -131,7 +139,7 @@ const defaultSettings: DesignSettings = {
 interface AppearanceContextType {
   settings: DesignSettings;
   setTheme: (themeName: string) => void;
-  updateSetting: (key: keyof DesignSettings, value: string | boolean | number) => void;
+  updateSetting: (key: keyof DesignSettings, value: any) => void;
   resetSettings: () => void;
   randomizeTheme: () => void;
   generateAIDesign: () => Promise<void>;
@@ -196,7 +204,13 @@ const applySettingsToDOM = (settings: Partial<DesignSettings>) => {
     bgOverlay.style.backgroundImage = 'none';
     bgOverlay.style.backgroundColor = `hsl(${settings['--background']})`;
   }
-  bgOverlay.style.filter = `brightness(${settings.backgroundBrightness || 100}%)`;
+  
+  bgOverlay.style.filter = `
+    brightness(${settings.backgroundBrightness || 100}%)
+    contrast(${settings.backgroundContrast || 100}%)
+    saturate(${settings.backgroundSaturation || 100}%)
+    hue-rotate(${settings.backgroundHue || 0}deg)
+  `;
 };
 
 export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
@@ -263,7 +277,7 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const updateSetting = (key: keyof DesignSettings, value: string | boolean | number) => {
+  const updateSetting = (key: keyof DesignSettings, value: any) => {
     setSettings(prev => {
       const newSettings = { ...prev, [key]: value };
       if (key.startsWith('--')) {

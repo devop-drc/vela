@@ -29,12 +29,19 @@ const Header = ({ title }: HeaderProps) => {
     navigate("/login");
   };
 
+  const headerLeftMarginClasses = {
+    compact: 'md:left-[calc(14rem+2rem)]', // 224px + 32px
+    default: 'md:left-[calc(16rem+2rem)]', // 256px + 32px
+    spacious: 'md:left-[calc(18rem+2rem)]', // 288px + 32px
+  };
+
   return (
     <header className={cn(
-      "z-30 flex items-center justify-between h-16 px-6",
+      "z-30 flex items-center justify-between h-16 px-6 transition-all",
       isFloating
-        ? "fixed top-4 right-4 left-4 md:left-[calc(16rem+2rem)] border rounded-lg"
+        ? "fixed top-4 right-4 left-4 border rounded-lg"
         : "border-b",
+      isFloating && (headerLeftMarginClasses[settings.sidebarWidth || 'default']),
       blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
     )}>
       <div className="flex items-center gap-4">
