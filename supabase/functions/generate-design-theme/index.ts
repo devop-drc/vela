@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { encode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
@@ -10,21 +9,45 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const hexToHsl = (hex: string): string => {
+  if (!hex || !hex.startsWith('#')) return '0 0% 0%';
+  let r = parseInt(hex.substring(1, 3), 16) / 255;
+  let g = parseInt(hex.substring(3, 5), 16) / 255;
+  let b = parseInt(hex.substring(5, 7), 16) / 255;
+
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+};
+
 const getDesignPrompt = (profile: any) => {
   return `
-    You are a world-class brand identity and UI designer. Your mission is to create a stunning, unique, and functional web application theme based on a user's Instagram brand. You must be creative but also adhere to strict design principles.
+    You are a world-class brand identity and UI designer. Your mission is to create a stunning, unique, and functional web application theme based on a user's brand information. You must be creative but also adhere to strict design principles.
 
     **INPUT:**
     1.  **Brand Logo:** (Attached as an image)
     2.  **Brand Info:**
         - Name: "${profile.shop_name}"
-        - Bio: "${profile.description}"
+        - Instagram Bio: "${profile.description}"
+        - About Section: "${profile.about}"
 
     **YOUR TASK (Step-by-Step):**
 
     **Step 1: Deep Brand Analysis**
     - **Visuals:** Scrutinize the logo. What is the dominant color? What are the secondary colors? What is the overall style (e.g., geometric, hand-drawn, minimalist)?
-    - **Text:** Analyze the name and bio. What is the brand's personality? Is it playful, luxurious, modern, rustic, techy? What are they selling?
+    - **Text:** Analyze the name, bio, and about section. What is the brand's personality? Is it playful, luxurious, modern, rustic, techy? What are they selling?
     - **Synthesize:** Combine your visual and textual analysis to form a cohesive "brand essence."
 
     **Step 2: Create a Harmonious Color Palette**
@@ -63,16 +86,17 @@ const getDesignPrompt = (profile: any) => {
 
 const getTextOnlyDesignPrompt = (profile: any) => {
   return `
-    You are a world-class brand identity and UI designer. Your mission is to create a stunning, unique, and functional web application theme based *only* on the "vibe" of a user's brand name and bio, as their logo could not be analyzed.
+    You are a world-class brand identity and UI designer. Your mission is to create a stunning, unique, and functional web application theme based *only* on the "vibe" of a user's brand information, as their logo could not be analyzed.
 
     **INPUT:**
     - Name: "${profile.shop_name}"
-    - Bio: "${profile.description}"
+    - Instagram Bio: "${profile.description}"
+    - About Section: "${profile.about}"
 
     **YOUR TASK (Step-by-Step):**
 
     **Step 1: Vibe Check**
-    - Analyze the name and bio. What is the brand's personality? Is it playful, luxurious, modern, rustic, techy? What are they selling? Create a "mood board" in your mind.
+    - Analyze the name, bio, and about section. What is the brand's personality? Is it playful, luxurious, modern, rustic, techy? What are they selling? Create a "mood board" in your mind.
 
     **Step 2: Invent a Harmonious Color Palette**
     - Based on the vibe, invent a harmonious and creative color palette.
@@ -138,29 +162,27 @@ serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not found');
 
-    const { data: profileData, error: profileError } = await supabase.functions.invoke('instagram-profile');
+    // 1. Fetch all available brand data
+    const { data: business } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
+    const { data: shopDetails } = await supabase.from('shop_details').select('about').eq('business_id', business?.id).single();
+    const { data: igProfile, error: profileError } = await supabase.functions.invoke('instagram-profile');
     if (profileError) throw profileError;
-    if (profileData.error) throw new Error(profileData.error);
+    if (igProfile.error) throw new Error(igProfile.error);
+
+    const combinedProfile = { ...igProfile, about: shopDetails?.about || '' };
 
     let analysis;
-
     try {
-      if (!profileData.logo_url) throw new Error("No profile icon found, falling back to text analysis.");
+      if (!combinedProfile.logo_url) throw new Error("No profile icon found, falling back to text analysis.");
       
-      const imageResponse = await fetch(profileData.logo_url);
+      const imageResponse = await fetch(combinedProfile.logo_url);
       if (!imageResponse.ok) throw new Error(`Failed to fetch profile image. Status: ${imageResponse.status}`);
       
       const imageMimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
       const imageBuffer = await imageResponse.arrayBuffer();
-      
-      const uint8 = new Uint8Array(imageBuffer);
-      let binary = '';
-      for (let i = 0; i < uint8.byteLength; i++) {
-          binary += String.fromCharCode(uint8[i]);
-      }
-      const imageBase64 = btoa(binary);
+      const imageBase64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
 
-      const imagePrompt = getDesignPrompt(profileData);
+      const imagePrompt = getDesignPrompt(combinedProfile);
       
       const geminiResponse = await fetchWithTimeout(GEMINI_API_URL, {
         method: 'POST',
@@ -180,7 +202,7 @@ serve(async (req) => {
       console.warn("Image-based design generation failed:", imageAnalysisError.message);
       console.log("Attempting fallback to text-only design generation...");
 
-      const textPrompt = getTextOnlyDesignPrompt(profileData);
+      const textPrompt = getTextOnlyDesignPrompt(combinedProfile);
       const geminiResponse = await fetchWithTimeout(GEMINI_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -196,6 +218,43 @@ serve(async (req) => {
       analysis = JSON.parse(jsonString);
     }
 
+    // 2. Save the generated theme as a new custom theme
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { auth: { persistSession: false } }
+    );
+
+    const { data: currentSettingsData } = await supabaseAdmin.from('design_settings').select('settings').eq('user_id', user.id).single();
+    const currentSettings = currentSettingsData?.settings || {};
+    const customThemes = currentSettings.customThemes || [];
+
+    const lightScheme: { [key: string]: string } = {};
+    for (const [key, value] of Object.entries(analysis.colors)) {
+      const cssVar = `--${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`;
+      lightScheme[cssVar] = hexToHsl(value as string);
+    }
+    // Add required system colors
+    lightScheme['--destructive'] = '0 84.2% 60.2%';
+    lightScheme['--destructive-foreground'] = '0 0% 98%';
+    lightScheme['--warning'] = '47.9 95.8% 53.1%';
+    lightScheme['--warning-foreground'] = '48 96% 10%';
+    lightScheme['--info'] = '217.2 91.2% 59.8%';
+    lightScheme['--info-foreground'] = '0 0% 98%';
+
+    const newCustomTheme = {
+      id: crypto.randomUUID(),
+      name: analysis.themeName,
+      light: lightScheme,
+    };
+
+    customThemes.push(newCustomTheme);
+    const updatedSettings = { ...currentSettings, customThemes };
+
+    const { error: upsertError } = await supabaseAdmin.from('design_settings').upsert({ user_id: user.id, settings: updatedSettings }, { onConflict: 'user_id' });
+    if (upsertError) throw upsertError;
+
+    // 3. Return the generated theme for immediate application on the frontend
     return new Response(JSON.stringify(analysis), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {
