@@ -5,7 +5,6 @@ import { Checkbox } from "./ui/checkbox";
 import { AlertTriangle, Palette, Ruler, Tag, Frame, ScanText, Cog } from "lucide-react";
 import { ProductStatusDropdown } from "./ProductStatusDropdown";
 import { Badge } from "./ui/badge";
-import { getCategoryAndType } from "@/lib/productTypes";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "./ui/carousel";
@@ -63,11 +62,12 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
     }
   };
 
-  const { details, caption, category: categoryValue } = product;
-  const { type: typeInfo } = getCategoryAndType(categoryValue, details?.type);
+  const { details, caption } = product;
   const displayPrice = convertCurrency(product.price);
 
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
+  
+  const detailsToDisplay = Object.entries(details || {}).filter(([key, value]) => key !== 'type' && value && (!Array.isArray(value) || value.length > 0));
 
   return (
     <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative h-full">
@@ -134,37 +134,14 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
               </div>
             )}
 
-            {gridSize === 'lg' && typeInfo?.fields && (
+            {gridSize === 'lg' && detailsToDisplay.length > 0 && (
               <div className="space-y-1.5 pt-1">
-                {typeInfo.fields.map(field => {
-                  const value = details?.[field.name];
-                  if (!value || (Array.isArray(value) && value.length === 0)) return null;
-
-                  let icon = Cog;
-                  if (field.name.includes('size') || field.name.includes('dimension')) icon = Ruler;
-                  if (field.name.includes('color')) icon = Palette;
-                  if (field.name.includes('framing')) icon = Frame;
-                  if (field.name.includes('medium')) icon = ScanText;
-
-                  return (
-                    <DetailRow key={field.name} icon={icon}>
-                      {field.name === 'colors' && Array.isArray(value) ? (
-                        value.map(color => (
-                          <div 
-                            key={color} 
-                            title={color}
-                            className="h-4 w-4 rounded-full border border-black/10"
-                            style={{ backgroundColor: color }}
-                          />
-                        ))
-                      ) : field.name === 'sizes' && Array.isArray(value) ? (
-                        value.map(size => <Badge key={size} variant="outline" className="px-1.5 py-0 text-xs font-mono">{size}</Badge>)
-                      ) : (
-                        <span className="font-medium">{Array.isArray(value) ? value.join(', ') : value}</span>
-                      )}
-                    </DetailRow>
-                  );
-                })}
+                {detailsToDisplay.slice(0, 2).map(([key, value]) => (
+                  <DetailRow key={key} icon={Cog}>
+                    <span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span>
+                    <span className="truncate">{Array.isArray(value) ? value.join(', ') : String(value)}</span>
+                  </DetailRow>
+                ))}
               </div>
             )}
           </div>

@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionComponent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleComponent } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { productCategories, getCategoryAndType } from "@/lib/productTypes";
 import { ProductViewMode } from "./product-detail/ProductViewMode";
 import { ProductEditMode } from "./product-detail/ProductEditMode";
 import { useShop } from "@/contexts/ShopContext";
@@ -67,6 +66,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   const [mediaItems, setMediaItems] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const { shopDetails, exchangeRates } = useShop();
+  const [typeAttributes, setTypeAttributes] = useState<any[]>([]);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -114,15 +114,31 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   }, [product, form.reset, shopDetails, exchangeRates]);
   
   useEffect(() => {
-    if (isEditing) {
-      const subscription = form.watch((value, { name }) => {
-        if (name === 'category') {
-          form.setValue("details.type", "", { shouldDirty: true });
-        }
-      });
-      return () => subscription.unsubscribe();
-    }
-  }, [isEditing, form]);
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'category') {
+        form.setValue("details.type", "", { shouldDirty: true });
+      }
+      if (name === 'category' || name === 'details.type') {
+        const fetchAttributes = async () => {
+          const categoryValue = form.getValues('category');
+          const typeValue = form.getValues('details.type');
+          if (!categoryValue || !typeValue) {
+            setTypeAttributes([]);
+            return;
+          }
+          const { data: categoryData } = await supabase.from('categories').select('id').eq('name', categoryValue).single();
+          if (categoryData) {
+            const { data: typeData } = await supabase.from('types').select('attributes').eq('category_id', categoryData.id).eq('name', typeValue).single();
+            setTypeAttributes(typeData?.attributes || []);
+          } else {
+            setTypeAttributes([]);
+          }
+        };
+        fetchAttributes();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   if (!product) return null;
 
@@ -222,11 +238,9 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     }
     const priceInUSD = data.price / rate;
 
-    const { type: currentTypeDefinition } = getCategoryAndType(data.category, data.details.type);
     const cleanedDetails: { [key: string]: any } = { type: data.details.type };
-
-    if (currentTypeDefinition) {
-        currentTypeDefinition.fields.forEach(field => {
+    if (typeAttributes) {
+        typeAttributes.forEach(field => {
             if (data.details[field.name] !== undefined) {
                 cleanedDetails[field.name] = data.details[field.name];
             }

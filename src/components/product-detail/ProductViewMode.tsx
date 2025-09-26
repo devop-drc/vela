@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Edit, Trash2 } from "lucide-react";
-import { getCategoryAndType } from "@/lib/productTypes";
 import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 import SpecParser from "./SpecParser";
 import { useShop } from "@/contexts/ShopContext";
 import { MediaItem } from "../MediaItem";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const DetailDisplayRow = ({ label, children }: { label: string, children: React.ReactNode }) => (
     <div className="flex flex-col">
@@ -24,17 +25,34 @@ const DetailDisplayRow = ({ label, children }: { label: string, children: React.
 
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
     const { shopDetails, convertCurrency } = useShop();
-    const { type } = getCategoryAndType(product.category, product.details?.type);
+    const [attributes, setAttributes] = useState<any[]>([]);
     const optionFieldNames = ['sizes', 'colors', 'framed'];
+    const displayPrice = convertCurrency(product.price);
+
+    useEffect(() => {
+      const fetchAttributes = async () => {
+        if (!product.category || !product.details?.type) {
+          setAttributes([]);
+          return;
+        }
+        const { data: categoryData } = await supabase.from('categories').select('id').eq('name', product.category).single();
+        if (categoryData) {
+          const { data: typeData } = await supabase.from('types').select('attributes').eq('category_id', categoryData.id).eq('name', product.details.type).single();
+          setAttributes(typeData?.attributes || []);
+        } else {
+          setAttributes([]);
+        }
+      };
+      fetchAttributes();
+    }, [product.category, product.details?.type]);
     
-    const allDetails = type?.fields.filter(field => {
-        const value = product.details?.[field.name];
+    const allDetails = attributes.filter(attr => {
+        const value = product.details?.[attr.name];
         return value && (!Array.isArray(value) || value.length > 0);
-    }) || [];
+    });
 
     const options = allDetails.filter(f => optionFieldNames.includes(f.name));
     const specifications = allDetails.filter(f => !optionFieldNames.includes(f.name));
-    const displayPrice = convertCurrency(product.price);
 
     return (
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -93,7 +111,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                         {options.map(field => {
                           const value = product.details?.[field.name];
                           return (
-                            <DetailDisplayRow key={field.name} label={field.label}>
+                            <DetailDisplayRow key={field.name} label={field.label || field.name.replace(/_/g, ' ')}>
                               {field.name === 'colors' && Array.isArray(value) ? (
                                 value.map(color => <div key={color} title={color} className="h-5 w-5 rounded-full border border-black/10" style={{ backgroundColor: color }} />)
                               ) : field.name === 'sizes' && Array.isArray(value) ? (
@@ -113,8 +131,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                       <h3 className="text-base font-semibold mb-3">Specifications</h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
                         {specifications.map(field => (
-                          <DetailDisplayRow key={field.name} label={field.label}>
-                            <SpecParser label={field.label} value={product.details?.[field.name]} />
+                          <DetailDisplayRow key={field.name} label={field.label || field.name.replace(/_/g, ' ')}>
+                            <SpecParser label={field.label || field.name} value={product.details?.[field.name]} />
                           </DetailDisplayRow>
                         ))}
                       </div>
