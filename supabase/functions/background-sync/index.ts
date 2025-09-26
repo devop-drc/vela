@@ -49,11 +49,12 @@ const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, categoryId
   }
 };
 
-const updateJobProgress = async (supabase: SupabaseClient, jobId: string, progress: number, total: number, message: string, thumbnailUrl: string | null = null, caption: string | null = null, aiMessage: string | null = null) => {
+const updateJobProgress = async (supabase: SupabaseClient, jobId: string, progress: number, total: number, message: string, thumbnailUrl: string | null = null, caption: string | null = null, aiMessage: string | null = null, analysis_result: any | null = null) => {
   const payload: any = { progress, total, message, status: 'in_progress', updated_at: new Date().toISOString() };
   if (thumbnailUrl) payload.thumbnail_url = thumbnailUrl;
   if (caption) payload.current_post_caption = caption;
   if (aiMessage) payload.ai_analysis_message = aiMessage;
+  if (analysis_result) payload.analysis_result = analysis_result;
   await supabase.from('sync_jobs').update(payload).eq('id', jobId);
 };
 
@@ -99,11 +100,14 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
       }
 
       const { data: analysis, error: analysisError } = await supabaseAdmin.functions.invoke('ai-product-classifier', { body: { caption: post.caption, user_id: user.id } });
+      
       if (analysisError || analysis.error) {
         summary.skipped++;
         summary.skipped_items.push({ name: captionSnippet, reason: analysisError?.message || analysis?.error || "Analysis function failed.", thumbnail_url: post.thumbnail_url || post.media_url });
         continue;
       }
+      
+      await updateJobProgress(supabaseAdmin, jobId, index + 1, total, `Analyzing: ${captionSnippet}`, post.thumbnail_url || post.media_url, post.caption, "AI: Analysis complete.", analysis);
 
       if (!analysis.isProductPost) {
         summary.skipped++;

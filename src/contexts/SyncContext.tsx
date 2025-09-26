@@ -14,6 +14,7 @@ interface SyncJob {
   summary?: any;
   current_post_caption?: string;
   ai_analysis_message?: string;
+  analysis_result?: any;
 }
 
 interface SyncContextType {
@@ -71,11 +72,9 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
             const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
 
             if (newJob.id === dismissedJobId && (newJob.status === 'completed' || newJob.status === 'failed')) {
-              // This job was dismissed and is now finished, so we can safely ignore it.
               return;
             }
             
-            // Update the state if it's a new job, or an update to the job we are currently tracking.
             setActiveJob(currentJob => {
               if (!currentJob || newJob.id === currentJob.id || ['starting', 'in_progress'].includes(newJob.status)) {
                 return newJob;
