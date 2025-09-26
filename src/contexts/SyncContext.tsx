@@ -54,7 +54,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
         .from('sync_jobs')
         .select('*')
         .eq('user_id', userId)
-        .in('status', ['starting', 'in_progress']) // Corrected 'in' operator usage
+        .or('status.eq.starting,status.eq.in_progress')
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -129,12 +129,4 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       {children}
     </SyncContext.Provider>
   );
-};
-
-export const useSync = () => {
-  const context = useContext(SyncContext);
-  if (context === undefined) {
-    throw new Error('useSync must be used within a SyncProvider');
-  }
-  return context;
 };
