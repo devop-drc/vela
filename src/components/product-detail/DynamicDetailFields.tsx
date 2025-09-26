@@ -1,4 +1,4 @@
-import { Control, Controller, useFieldArray } from "react-hook-form";
+import { Control, Controller, useFieldArray, UseFieldArrayAppend, UseFieldArrayRemove, FieldValues } from "react-hook-form";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -6,12 +6,14 @@ import { TagInput } from "@/components/TagInput";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Switch } from "../ui/switch";
 
 interface DynamicDetailFieldsProps {
   control: Control<any>;
   attributes: any[];
   isOptions: boolean;
+  fields: FieldValues[];
+  append: UseFieldArrayAppend<any, any>;
+  remove: UseFieldArrayRemove;
 }
 
 const renderField = (control: Control<any>, fieldName: string, inputType: string) => {
@@ -28,12 +30,10 @@ const renderField = (control: Control<any>, fieldName: string, inputType: string
   }
 };
 
-export const DynamicDetailFields = ({ control, attributes, isOptions }: DynamicDetailFieldsProps) => {
+export const DynamicDetailFields = ({ control, attributes, isOptions, fields, append, remove }: DynamicDetailFieldsProps) => {
     const [isAdding, setIsAdding] = useState(false);
     const [newFieldName, setNewFieldName] = useState('');
     const [newFieldType, setNewFieldType] = useState('text');
-
-    const { fields, append, remove } = useFieldArray({ control, name: isOptions ? "dynamicOptions" : "dynamicSpecs" });
 
     const handleAddField = () => {
         if (!newFieldName) return;

@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Controller } from "react-hook-form";
+import { Controller, useFieldArray } from "react-hook-form";
 import { DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { TagInput } from "@/components/TagInput";
-import { Loader2, XCircle, PlusCircle, CheckCircle, Archive } from "lucide-react";
+import { Loader2, XCircle, PlusCircle, CheckCircle, Archive, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +20,7 @@ import { CreatableCombobox } from "../CreatableCombobox";
 import { currencies } from "@/lib/currencies";
 import { MediaItem } from "../MediaItem";
 import { DynamicDetailFields } from "./DynamicDetailFields";
+import { toast } from "sonner";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -28,11 +29,15 @@ const statusConfig = {
 };
 
 export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting }: any) => {
-    const { register, handleSubmit, control, watch, setValue, formState: { errors } } = form;
+    const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
     const [typeOptions, setTypeOptions] = useState<string[]>([]);
     const [typeAttributes, setTypeAttributes] = useState<any[]>([]);
+    const [isReanalyzing, setIsReanalyzing] = useState(false);
     
+    const { fields: dynamicOptionFields, append: appendOption, remove: removeOption } = useFieldArray({ control, name: "dynamicOptions" });
+    const { fields: dynamicSpecFields, append: appendSpec, remove: removeSpec } = useFieldArray({ control, name: "dynamicSpecs" });
+
     const pricingType = watch("pricing_type");
     const categoryValue = watch("category");
     const typeValue = watch("details.type");
@@ -71,6 +76,65 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
       };
       fetchTypesAndAttributes();
     }, [categoryValue, typeValue]);
+
+    const handleReanalyze = async () => {
+        setIsReanalyzing(true);
+        const toastId = toast.loading("AI is analyzing your description...");
+        try {
+            const caption = getValues('caption');
+            if (!caption) {
+                throw new Error("Please provide a description for the AI to analyze.");
+            }
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("You must be logged in.");
+
+            const { data: analysis, error } = await supabase.functions.invoke('ai-product-classifier', {
+                body: { caption, user_id: user.id }
+            });
+
+            if (error) throw error;
+            if (analysis.error) throw new Error(analysis.error);
+            if (!analysis.isProductPost) {
+                throw new Error("The AI couldn't identify this as a product. Try adding more detail to the description.");
+            }
+
+            if (analysis.categoryName) setValue('category', analysis.categoryName, { shouldDirty: true });
+            if (analysis.typeName) setValue('details.type', analysis.typeName, { shouldDirty: true });
+
+            if (analysis.attributes) {
+                const existingAttributeNames = new Set(typeAttributes.map(attr => attr.name));
+                const currentDynamicOptions = getValues("dynamicOptions") || [];
+                const currentDynamicSpecs = getValues("dynamicSpecs") || [];
+                const existingDynamicKeys = new Set([...currentDynamicOptions.map((f: any) => f.key), ...currentDynamicSpecs.map((f: any) => f.key)]);
+
+                for (const attr of analysis.attributes) {
+                    if (existingAttributeNames.has(attr.name)) {
+                        setValue(`details.${attr.name}`, attr.value, { shouldDirty: true });
+                    } else if (!existingDynamicKeys.has(attr.name)) {
+                        const newField = {
+                            key: attr.name,
+                            label: attr.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                            inputType: attr.inputType || 'text',
+                            value: attr.value,
+                        };
+                        if (attr.isOption) {
+                            appendOption(newField);
+                        } else {
+                            appendSpec(newField);
+                        }
+                    }
+                }
+            }
+
+            toast.success("AI analysis complete! Product details have been updated.", { id: toastId });
+
+        } catch (err: any) {
+            toast.error(err.message, { id: toastId });
+        } finally {
+            setIsReanalyzing(false);
+        }
+    };
 
     const currentStatusConfig = statusConfig[statusValue as keyof typeof statusConfig];
     const StatusIcon = currentStatusConfig?.icon;
@@ -170,13 +234,19 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                   </div>
                 </div>
               </div>
+              <div className="flex items-center justify-end pt-4">
+                <Button type="button" variant="outline" onClick={handleReanalyze} disabled={isReanalyzing}>
+                    {isReanalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-amber-400" />}
+                    Find Specs with AI
+                </Button>
+              </div>
               <Card>
                 <CardHeader><CardTitleComponent className="text-base">Options (for Variants)</CardTitleComponent></CardHeader>
-                <CardContent><DynamicDetailFields control={control} attributes={options} isOptions={true} /></CardContent>
+                <CardContent><DynamicDetailFields control={control} attributes={options} isOptions={true} fields={dynamicOptionFields} append={appendOption} remove={removeOption} /></CardContent>
               </Card>
               <Card>
                 <CardHeader><CardTitleComponent className="text-base">Specifications (Fixed Details)</CardTitleComponent></CardHeader>
-                <CardContent><DynamicDetailFields control={control} attributes={specifications} isOptions={false} /></CardContent>
+                <CardContent><DynamicDetailFields control={control} attributes={specifications} isOptions={false} fields={dynamicSpecFields} append={appendSpec} remove={removeSpec} /></CardContent>
               </Card>
             </div>
           </ScrollArea>
