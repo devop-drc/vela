@@ -9,13 +9,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const getClassifierPrompt = (caption: string, keywords: { keyword: string, description: string }[]) => `
+const getClassifierPrompt = (caption: string, keywords: { keyword: string, description: string }[], similarProducts: any[]) => {
+  const similarProductsContext = similarProducts.length > 0 ? `
+**Similar Product Examples from User's Catalog (Use as a Style Guide):**
+${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.details?.type}, Description: ${p.caption?.substring(0, 100)}..., Attributes: ${JSON.stringify(p.details)}`).join('\n')}
+` : '';
+
+  return `
   You are an expert AI for e-commerce, specializing in analyzing Instagram captions to create compelling and structured product listings.
 
   **Primary Objectives:**
-  1.  **Identify & Extract:** Determine if the caption is for a product. If so, extract all relevant details.
-  2.  **Generate Sales Copy:** Write a persuasive and engaging product description.
-  3.  **Structure Data:** Format all extracted information into a specific JSON structure.
+  1.  **Consult Knowledge:** First, check your internal knowledge base for well-known products (e.g., "iPhone 13 Pro Max").
+  2.  **Learn from Examples:** Use the provided "Similar Product Examples" as a style guide for how this user structures their data (e.g., what attributes they use, their tone).
+  3.  **Analyze & Extract:** Analyze the new caption to identify the product and extract its details.
 
   **User-Defined Keywords:**
   The user has provided these keywords to help you. Use them as a primary guide for extraction. When you find a keyword, extract the data that follows it based on its description.
@@ -37,6 +43,8 @@ const getClassifierPrompt = (caption: string, keywords: { keyword: string, descr
           - \`"possibleValues"\`: If 'dropdown', provide potential options based on the context.
   6.  **Pricing:** Extract price and currency code (e.g., USD, EUR). If not found, default to null.
   7.  **Tags:** Generate an array of 3-5 relevant tags.
+
+  ${similarProductsContext}
 
   **Output Format:**
   Respond ONLY with a single, valid JSON object. Do not include any explanation or markdown.
@@ -63,6 +71,7 @@ const getClassifierPrompt = (caption: string, keywords: { keyword: string, descr
     ]
   }
 `;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -86,7 +95,22 @@ serve(async (req) => {
     
     if (keywordsError) throw keywordsError;
 
-    const prompt = getClassifierPrompt(caption, keywords || []);
+    // Fetch recent products to use as context
+    let similarProducts = [];
+    const { data: recentProducts, error: recentProductsError } = await supabaseAdmin
+        .from('products')
+        .select('name, category, details, caption')
+        .eq('user_id', user_id)
+        .limit(5)
+        .order('created_at', { ascending: false });
+
+    if (recentProductsError) {
+        console.error("Could not fetch recent products for context:", recentProductsError);
+    } else {
+        similarProducts = recentProducts;
+    }
+
+    const prompt = getClassifierPrompt(caption, keywords || [], similarProducts);
     const requestParts = [{ text: prompt }];
 
     const geminiResponse = await fetch(GEMINI_PRO_API_URL, {

@@ -19,6 +19,7 @@ import { CreatableCombobox } from "./CreatableCombobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { currencies } from "@/lib/currencies";
 import { DynamicDetailFields } from "./product-detail/DynamicDetailFields";
+import { MediaItem } from "./MediaItem";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -144,7 +145,13 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
             <div className="space-y-4">
-              <Card className="overflow-hidden h-fit"><CardContent className="p-0"><img src={post.media_url} alt="Instagram Post" className="w-full h-auto object-cover aspect-square" /></CardContent></Card>
+              <Card className="overflow-hidden h-fit">
+                <CardContent className="p-0">
+                  <div className="w-full aspect-square bg-muted">
+                    <MediaItem src={post.media_url} alt="Instagram Post" type={post.media_type} />
+                  </div>
+                </CardContent>
+              </Card>
               <div className="space-y-2"><Label>Product Name</Label><Input {...register("name")} />{errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}</div>
               <div className="space-y-2"><Label>Description</Label><Textarea {...register("description")} rows={4} /></div>
               <div className="space-y-2"><Label>Tags</Label><Controller name="tags" control={control} render={({ field }) => <TagInput {...field} placeholder="Add tag..." />} /></div>

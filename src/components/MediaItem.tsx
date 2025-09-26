@@ -18,7 +18,7 @@ export const MediaItem = ({ src, alt, type, className }: MediaItemProps) => {
         loop
         playsInline
         autoPlay
-        className={cn("h-full w-full object-cover", className)}
+        className={cn("h-full w-full object-contain", className)}
         aria-label={alt}
       />
     );
@@ -28,7 +28,7 @@ export const MediaItem = ({ src, alt, type, className }: MediaItemProps) => {
     <img
       src={src}
       alt={alt}
-      className={cn("h-full w-full object-cover", className)}
+      className={cn("h-full w-full object-contain", className)}
     />
   );
 };
