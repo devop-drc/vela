@@ -33,6 +33,7 @@ const getClassifierPrompt = (caption: string, keywords: { keyword: string, descr
           - \`"name"\`: A lowercase, snake_case key (e.g., "material", "available_sizes").
           - \`"value"\`: The extracted value(s). If there are multiple values (like sizes or colors), return them as an array of strings.
           - \`"inputType"\`: The best UI input type. Choose from: "text", "number", "color", "tags", "dropdown", "textarea".
+          - \`"isOption"\`: A boolean. \`true\` if it's a customer-selectable option (like color, size, storage). \`false\` if it's a fixed specification (like material, dimensions, screen type).
           - \`"possibleValues"\`: If 'dropdown', provide potential options based on the context.
   6.  **Pricing:** Extract price and currency code (e.g., USD, EUR). If not found, default to null.
   7.  **Tags:** Generate an array of 3-5 relevant tags.
@@ -56,9 +57,9 @@ const getClassifierPrompt = (caption: string, keywords: { keyword: string, descr
     "currency": "USD",
     "tags": ["vintage", "sunset", "graphic tee"],
     "attributes": [
-      { "name": "material", "value": "100% Ring-Spun Cotton", "inputType": "text" },
-      { "name": "available_sizes", "value": ["M", "L", "XL"], "inputType": "tags" },
-      { "name": "colors", "value": ["Off-white", "Heather Grey"], "inputType": "tags" }
+      { "name": "material", "value": "100% Ring-Spun Cotton", "inputType": "text", "isOption": false },
+      { "name": "available_sizes", "value": ["M", "L", "XL"], "inputType": "tags", "isOption": true },
+      { "name": "colors", "value": ["Off-white", "Heather Grey"], "inputType": "tags", "isOption": true }
     ]
   }
 `;

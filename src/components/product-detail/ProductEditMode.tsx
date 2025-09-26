@@ -19,7 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CreatableCombobox } from "../CreatableCombobox";
 import { currencies } from "@/lib/currencies";
 import { MediaItem } from "../MediaItem";
-import { DynamicProductAttributes } from "./DynamicProductAttributes";
+import { DynamicDetailFields } from "./DynamicDetailFields";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -74,6 +74,9 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
 
     const currentStatusConfig = statusConfig[statusValue as keyof typeof statusConfig];
     const StatusIcon = currentStatusConfig?.icon;
+
+    const options = typeAttributes.filter(attr => attr.isOption);
+    const specifications = typeAttributes.filter(attr => !attr.isOption);
 
     return (
       <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -168,12 +171,12 @@ export const ProductEditMode = ({ product, mediaItems, handleImageUpload, handle
                 </div>
               </div>
               <Card>
-                <CardHeader>
-                  <CardTitleComponent className="text-base">Options & Specifications</CardTitleComponent>
-                </CardHeader>
-                <CardContent>
-                  <DynamicProductAttributes control={control} attributes={typeAttributes} />
-                </CardContent>
+                <CardHeader><CardTitleComponent className="text-base">Options (for Variants)</CardTitleComponent></CardHeader>
+                <CardContent><DynamicDetailFields control={control} attributes={options} isOptions={true} /></CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitleComponent className="text-base">Specifications (Fixed Details)</CardTitleComponent></CardHeader>
+                <CardContent><DynamicDetailFields control={control} attributes={specifications} isOptions={false} /></CardContent>
               </Card>
             </div>
           </ScrollArea>
