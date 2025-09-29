@@ -44,9 +44,9 @@ export const StorefrontProductCard = ({ product, shopSlug }: StorefrontProductCa
 
   return (
     <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
-      <Link to={`/shop/${shopSlug}/product/${product.id}`}>
+      <Link to={`/shop/${shopDetails?.slug}/product/${product.id}`}> {/* Ensure shopDetails.slug is used */}
         <Card className={cn(
-          "h-full flex flex-col overflow-hidden transition-shadow hover:shadow-xl",
+          "group h-full flex flex-col overflow-hidden transition-shadow hover:shadow-xl", // Added group class and hover shadow
           blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
         )}>
           <CardContent className="p-0">
@@ -55,7 +55,7 @@ export const StorefrontProductCard = ({ product, shopSlug }: StorefrontProductCa
                 src={product.media_url} 
                 alt={product.name} 
                 type={product.media_type} 
-                className="object-cover transition-transform duration-300 group-hover:scale-105" 
+                className="object-cover transition-transform duration-300 group-hover:scale-105" // Added hover scale
               />
             </div>
           </CardContent>

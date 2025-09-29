@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter } from "lucide-react";
+import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter, ArrowRight } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { getCategoryColor } from "@/lib/colorUtils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -198,6 +198,8 @@ const StorefrontIndex = () => {
     return <div className="container py-8 text-center text-muted-foreground">Shop details not found.</div>;
   }
 
+  const firstProductCategory = products.length > 0 ? products[0].category : '';
+
   return (
     <div className="flex">
       <StorefrontFilterSidebar
@@ -218,30 +220,35 @@ const StorefrontIndex = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className={cn(
-              "mb-12 p-8 md:p-12 rounded-xl text-center",
+              "mb-16 p-8 md:p-16 rounded-xl text-center", // Increased padding and margin-bottom
               blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
               "shadow-lg"
             )}
           >
             {shopDetails.logo_url && (
-              <Avatar className="h-24 w-24 mx-auto mb-4 border-4 border-primary shadow-md">
+              <Avatar className="h-28 w-28 mx-auto mb-6 border-4 border-primary shadow-md"> {/* Larger avatar */}
                 <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
-                <AvatarFallback className="text-3xl font-bold">{shopDetails.shop_name?.[0]}</AvatarFallback>
+                <AvatarFallback className="text-4xl font-bold">{shopDetails.shop_name?.[0]}</AvatarFallback>
               </Avatar>
             )}
-            <h1 className="text-4xl md:text-5xl font-bold font-heading mb-4 leading-tight">
+            <h1 className="text-5xl md:text-6xl font-bold font-heading mb-4 leading-tight"> {/* Larger headline */}
               {shopDetails.headline || `Welcome to ${shopDetails.shop_name}!`}
             </h1>
             {shopDetails.about && (
-              <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+              <p className="text-lg text-muted-foreground max-w-4xl mx-auto mb-8"> {/* Wider paragraph, added margin-bottom */}
                 {shopDetails.about}
               </p>
             )}
+            <Button asChild size="lg"> {/* Larger button */}
+              <Link to={`/shop/${shopDetails.slug}#products`}> {/* Link to products section */}
+                Shop Now <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
           </motion.div>
 
           {/* Search, Filter, Sort Controls */}
-          <div className={cn(
-            "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t",
+          <div id="products" className={cn( // Added ID for scrolling
+            "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t shadow-sm", // Added shadow-sm
             blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
           )}>
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -325,6 +332,15 @@ const StorefrontIndex = () => {
                   </motion.div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Load More Button Placeholder */}
+          {filteredAndSortedProducts.length > 0 && (
+            <div className="text-center mt-12">
+              <Button variant="outline" size="lg">
+                Load More Products
+              </Button>
             </div>
           )}
         </div>
