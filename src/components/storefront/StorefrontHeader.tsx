@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ShoppingBag, Filter } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button"; // Import buttonVariants
 import { cn } from "@/lib/utils";
 import { useCart } from "@/contexts/CartContext";
 import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
@@ -41,18 +41,19 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
               <span className="sr-only">Open Filters</span>
             </Button>
           )}
-          <Button variant="ghost" size="icon" asChild>
-            <Link to={`/shop/${shopDetails.slug}/cart`} className="relative">
-              <span className="relative">
-                <ShoppingBag className="h-5 w-5" />
-                {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-                    {totalItems}
-                  </span>
-                )}
-              </span>
-            </Link>
-          </Button>
+          <Link
+            to={`/shop/${shopDetails.slug}/cart`}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative")} // Apply button styles directly
+          >
+            <span className="relative">
+              <ShoppingBag className="h-5 w-5" />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                  {totalItems}
+                </span>
+              )}
+            </span>
+          </Link>
         </nav>
       </div>
     </header>

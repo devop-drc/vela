@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button"; // Import buttonVariants
 import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter, ArrowRight } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { getCategoryColor } from "@/lib/colorUtils";
@@ -237,14 +237,13 @@ const StorefrontIndex = () => {
                 {shopDetails.about}
               </p>
             )}
-            <Button asChild size="lg"> {/* Larger button */}
-              <Link to={`/shop/${shopDetails.slug}#products`}>
-                <span className="flex items-center">
-                  Shop Now
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </span>
-              </Link>
-            </Button>
+            <Link
+              to={`/shop/${shopDetails.slug}#products`}
+              className={cn(buttonVariants({ size: "lg" }), "flex items-center")} // Apply button styles directly
+            >
+              Shop Now
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
           </motion.div>
 
           {/* Search, Filter, Sort Controls */}
