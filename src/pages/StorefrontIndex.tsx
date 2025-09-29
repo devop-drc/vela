@@ -241,9 +241,7 @@ const StorefrontIndex = () => {
             )}
             <Button asChild size="lg"> {/* Larger button */}
               <Link to={`/shop/${shopDetails.slug}#products`}>
-                <span>
-                  Shop Now <ArrowRight className="ml-2 h-5 w-5" />
-                </span>
+                Shop Now
               </Link>
             </Button>
           </motion.div>
