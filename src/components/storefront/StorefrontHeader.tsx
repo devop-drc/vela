@@ -1,14 +1,20 @@
 import { Link } from "react-router-dom";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, Filter } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils"; // Import cn for conditional class names
-import { useCart } from "@/contexts/CartContext"; // Import useCart
+import { cn } from "@/lib/utils";
+import { useCart } from "@/contexts/CartContext";
+import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
 
-export const StorefrontHeader = () => {
+interface StorefrontHeaderProps {
+  onToggleFilterSidebar?: () => void; // Add prop for toggling sidebar
+}
+
+export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProps) => {
   const { shopDetails, appearanceSettings } = useStorefront();
-  const { totalItems } = useCart(); // Get total items from cart
+  const { totalItems } = useCart();
+  const isMobile = useIsMobile(); // Use the hook
 
   if (!shopDetails) return null;
 
@@ -18,7 +24,7 @@ export const StorefrontHeader = () => {
     <header className={cn(
       "sticky top-0 z-40 w-full border-b",
       blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background",
-      "shadow-sm" // Add a subtle shadow
+      "shadow-sm"
     )}>
       <div className="container flex h-16 items-center justify-between">
         <Link to={`/shop/${shopDetails.slug}`} className="flex items-center space-x-2">
@@ -28,7 +34,13 @@ export const StorefrontHeader = () => {
           </Avatar>
           <span className="font-bold text-lg">{shopDetails.shop_name}</span>
         </Link>
-        <nav className="flex items-center space-x-4">
+        <nav className="flex items-center space-x-2"> {/* Adjusted gap for filter button */}
+          {isMobile && onToggleFilterSidebar && (
+            <Button variant="ghost" size="icon" onClick={onToggleFilterSidebar}>
+              <Filter className="h-5 w-5" />
+              <span className="sr-only">Open Filters</span>
+            </Button>
+          )}
           <Button variant="ghost" size="icon" asChild>
             <Link to={`/shop/${shopDetails.slug}/cart`} className="relative">
               <ShoppingBag className="h-5 w-5" />

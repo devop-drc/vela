@@ -10,11 +10,39 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle } from "lucide-react";
+import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { getCategoryColor } from "@/lib/colorUtils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard"; // Import the new component
+import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard";
+import { StorefrontFilterSidebar } from "@/components/storefront/StorefrontFilterSidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+interface Product {
+  id: string;
+  name: string;
+  category: string;
+  tags: string[];
+  price: number | null;
+  currency: string | null;
+  inventory: number;
+  media_url: string;
+  media_gallery: string[] | null;
+  media_type: string | null;
+  thumbnail_url?: string;
+  caption: string;
+  pricing_type: 'one_time' | 'subscription';
+  billing_interval: 'month' | 'year' | null;
+  details: { [key: string]: any };
+  created_at: string;
+}
+
+interface FilterState {
+  categories: string[];
+  tags: string[];
+  priceRange: string;
+  [key: string]: string[] | string; // For dynamic attributes
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -26,20 +54,32 @@ const containerVariants = {
 
 const StorefrontIndex = () => {
   const { shopDetails, products, isLoading, error, appearanceSettings } = useStorefront();
+  const isMobile = useIsMobile();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState("newest");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [priceFilter, setPriceFilter] = useState<string>("all");
+  const [filters, setFilters] = useState<FilterState>({
+    categories: [],
+    tags: [],
+    priceRange: "all",
+  });
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
-  const availableCategories = useMemo(() => {
-    const categories = new Set<string>();
-    products.forEach(p => {
-      if (p.category) categories.add(p.category);
+  const handleFilterChange = (newFilters: FilterState) => {
+    setFilters(newFilters);
+  };
+
+  const handleResetFilters = () => {
+    setSearchTerm("");
+    setSortOption("newest");
+    setFilters({
+      categories: [],
+      tags: [],
+      priceRange: "all",
     });
-    return Array.from(categories).sort();
-  }, [products]);
+  };
 
   const filteredAndSortedProducts = useMemo(() => {
     let filtered = products;
@@ -54,15 +94,20 @@ const StorefrontIndex = () => {
     }
 
     // Category filter
-    if (selectedCategories.length > 0) {
-      filtered = filtered.filter(p => p.category && selectedCategories.includes(p.category));
+    if (filters.categories.length > 0) {
+      filtered = filtered.filter(p => p.category && filters.categories.includes(p.category));
+    }
+
+    // Tags filter
+    if (filters.tags.length > 0) {
+      filtered = filtered.filter(p => p.tags?.some(tag => filters.tags.includes(tag)));
     }
 
     // Price filter
-    if (priceFilter !== 'all') {
+    if (filters.priceRange !== 'all') {
       filtered = filtered.filter(p => {
         const price = p.price || 0;
-        switch (priceFilter) {
+        switch (filters.priceRange) {
           case 'under-50': return price < 50;
           case '50-100': return price >= 50 && price <= 100;
           case '100-200': return price > 100 && price <= 200;
@@ -70,6 +115,21 @@ const StorefrontIndex = () => {
           default: return true;
         }
       });
+    }
+
+    // Dynamic attributes filter
+    for (const key in filters) {
+      if (key !== 'categories' && key !== 'tags' && key !== 'priceRange' && Array.isArray(filters[key]) && (filters[key] as string[]).length > 0) {
+        const selectedValues = filters[key] as string[];
+        filtered = filtered.filter(p => {
+          const productDetailValue = p.details?.[key];
+          if (!productDetailValue) return false;
+          if (Array.isArray(productDetailValue)) {
+            return productDetailValue.some(val => selectedValues.includes(String(val)));
+          }
+          return selectedValues.includes(String(productDetailValue));
+        });
+      }
     }
 
     // Sort
@@ -84,7 +144,7 @@ const StorefrontIndex = () => {
         default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
-  }, [products, searchTerm, sortOption, selectedCategories, priceFilter]);
+  }, [products, searchTerm, sortOption, filters]);
 
   const groupedProducts = useMemo(() => {
     return filteredAndSortedProducts.reduce((acc, product) => {
@@ -97,14 +157,7 @@ const StorefrontIndex = () => {
     }, {} as { [key: string]: typeof products });
   }, [filteredAndSortedProducts]);
 
-  const hasActiveFilters = searchTerm || selectedCategories.length > 0 || priceFilter !== 'all' || sortOption !== 'newest';
-
-  const handleResetFilters = () => {
-    setSearchTerm("");
-    setSortOption("newest");
-    setSelectedCategories([]);
-    setPriceFilter("all");
-  };
+  const hasActiveFilters = searchTerm || sortOption !== 'newest' || Object.values(filters).some(f => (Array.isArray(f) && f.length > 0) || (typeof f === 'string' && f !== 'all'));
 
   if (isLoading) {
     return (
@@ -146,160 +199,136 @@ const StorefrontIndex = () => {
   }
 
   return (
-    <div className="container py-8">
-      {/* Hero Section */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className={cn(
-          "mb-12 p-8 md:p-12 rounded-xl text-center",
-          blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
-          "shadow-lg"
-        )}
-      >
-        {shopDetails.logo_url && (
-          <Avatar className="h-24 w-24 mx-auto mb-4 border-4 border-primary shadow-md">
-            <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
-            <AvatarFallback className="text-3xl font-bold">{shopDetails.shop_name?.[0]}</AvatarFallback>
-          </Avatar>
-        )}
-        <h1 className="text-4xl md:text-5xl font-bold font-heading mb-4 leading-tight">
-          {shopDetails.headline || `Welcome to ${shopDetails.shop_name}!`}
-        </h1>
-        {shopDetails.about && (
-          <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            {shopDetails.about}
-          </p>
-        )}
-      </motion.div>
+    <div className="flex">
+      <StorefrontFilterSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        products={products}
+        currentFilters={filters}
+        onFilterChange={handleFilterChange}
+        onResetFilters={handleResetFilters}
+        isMobile={isMobile}
+      />
 
-      {/* Search, Filter, Sort Controls */}
-      <div className={cn(
-        "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t",
-        blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
-      )}>
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="relative w-full md:w-1/3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search products..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+      <div className="flex-1">
+        <div className="container py-8">
+          {/* Hero Section */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className={cn(
+              "mb-12 p-8 md:p-12 rounded-xl text-center",
+              blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
+              "shadow-lg"
+            )}
+          >
+            {shopDetails.logo_url && (
+              <Avatar className="h-24 w-24 mx-auto mb-4 border-4 border-primary shadow-md">
+                <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
+                <AvatarFallback className="text-3xl font-bold">{shopDetails.shop_name?.[0]}</AvatarFallback>
+              </Avatar>
+            )}
+            <h1 className="text-4xl md:text-5xl font-bold font-heading mb-4 leading-tight">
+              {shopDetails.headline || `Welcome to ${shopDetails.shop_name}!`}
+            </h1>
+            {shopDetails.about && (
+              <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+                {shopDetails.about}
+              </p>
+            )}
+          </motion.div>
 
-          <div className="flex flex-wrap gap-2 w-full md:w-2/3 justify-end">
-            {/* Sort Dropdown */}
-            <Select value={sortOption} onValueChange={setSortOption}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <ArrowUpNarrowWide className="mr-2 h-4 w-4 text-muted-foreground" />
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="oldest">Oldest</SelectItem>
-                <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                <SelectItem value="name-asc">Name: A-Z</SelectItem>
-                <SelectItem value="name-desc">Name: Z-A</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Search, Filter, Sort Controls */}
+          <div className={cn(
+            "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t",
+            blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
+          )}>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="relative w-full md:w-1/3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search products..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
 
-            {/* Category Filter */}
-            {availableCategories.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full md:w-[180px] justify-start">
-                    <ListFilter className="mr-2 h-4 w-4" />
-                    Category ({selectedCategories.length})
+              <div className="flex flex-wrap gap-2 w-full md:w-2/3 justify-end">
+                {isMobile && (
+                  <Button variant="outline" onClick={() => setIsSidebarOpen(true)} className="w-full md:w-auto justify-start">
+                    <Filter className="mr-2 h-4 w-4" />
+                    Filters ({Object.values(filters).filter(f => (Array.isArray(f) && f.length > 0) || (typeof f === 'string' && f !== 'all')).length})
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {availableCategories.map(category => (
-                    <DropdownMenuCheckboxItem
-                      key={category}
-                      checked={selectedCategories.includes(category)}
-                      onCheckedChange={(checked) => {
-                        setSelectedCategories(prev =>
-                          checked ? [...prev, category] : prev.filter(c => c !== category)
-                        );
-                      }}
-                    >
-                      {category}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                )}
+                {/* Sort Dropdown */}
+                <Select value={sortOption} onValueChange={setSortOption}>
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <ArrowUpNarrowWide className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest</SelectItem>
+                    <SelectItem value="oldest">Oldest</SelectItem>
+                    <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                    <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                    <SelectItem value="name-asc">Name: A-Z</SelectItem>
+                    <SelectItem value="name-desc">Name: Z-A</SelectItem>
+                  </SelectContent>
+                </Select>
 
-            {/* Price Filter */}
-            <Select value={priceFilter} onValueChange={setPriceFilter}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <Tag className="mr-2 h-4 w-4 text-muted-foreground" />
-                <SelectValue placeholder="Price Range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Prices</SelectItem>
-                <SelectItem value="under-50">Under {formatCurrency(50, shopDetails.currency)}</SelectItem>
-                <SelectItem value="50-100">{formatCurrency(50, shopDetails.currency)} - {formatCurrency(100, shopDetails.currency)}</SelectItem>
-                <SelectItem value="100-200">{formatCurrency(100, shopDetails.currency)} - {formatCurrency(200, shopDetails.currency)}</SelectItem>
-                <SelectItem value="over-200">Over {formatCurrency(200, shopDetails.currency)}</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {hasActiveFilters && (
-              <Button variant="ghost" onClick={handleResetFilters} className="w-full md:w-auto">
-                <XCircle className="mr-2 h-4 w-4" />
-                Reset Filters
-              </Button>
-            )}
+                {hasActiveFilters && (
+                  <Button variant="ghost" onClick={handleResetFilters} className="w-full md:w-auto">
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Reset Filters
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
+
+          <h2 className="text-3xl font-bold font-heading mb-8 text-center">Our Products</h2>
+          
+          {filteredAndSortedProducts.length === 0 ? (
+            <div className={cn(
+              "text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg",
+              blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
+            )}>
+              <h3 className="text-xl font-semibold">No Products Found</h3>
+              <p className="text-base mt-2">
+                It looks like you don't have any active products yet.
+                <br />
+                Please go to your <Link to="/" className="text-primary hover:underline">dashboard</Link>, then the "Products" section, and set some products to "Active" status to display them here.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-12">
+              {Object.entries(groupedProducts).map(([category, productsInCategory]) => (
+                <div key={category}>
+                  <h3 className={cn(
+                    "text-2xl font-bold font-heading mb-6 inline-block px-4 py-2 rounded-lg",
+                    blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
+                    getCategoryColor(category).bg, getCategoryColor(category).text
+                  )}>
+                    {category}
+                  </h3>
+                  <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+                  >
+                    {productsInCategory.map((product) => (
+                      <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} />
+                    ))}
+                  </motion.div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-
-      <h2 className="text-3xl font-bold font-heading mb-8 text-center">Our Products</h2>
-      
-      {Object.keys(groupedProducts).length === 0 ? (
-        <div className={cn(
-          "text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg",
-          blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
-        )}>
-          <h3 className="text-xl font-semibold">No Products Found</h3>
-          <p className="text-base mt-2">
-            It looks like you don't have any active products yet.
-            <br />
-            Please go to your <Link to="/" className="text-primary hover:underline">dashboard</Link>, then the "Products" section, and set some products to "Active" status to display them here.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-12">
-          {Object.entries(groupedProducts).map(([category, productsInCategory]) => (
-            <div key={category}>
-              <h3 className={cn(
-                "text-2xl font-bold font-heading mb-6 inline-block px-4 py-2 rounded-lg",
-                blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
-                getCategoryColor(category).bg, getCategoryColor(category).text
-              )}>
-                {category}
-              </h3>
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
-              >
-                {productsInCategory.map((product) => (
-                  <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} />
-                ))}
-              </motion.div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import { StorefrontHeader } from './StorefrontHeader';
@@ -7,6 +7,8 @@ import { defaultSettings } from '@/contexts/AppearanceContext'; // Import defaul
 import { Skeleton } from '@/components/ui/skeleton';
 import { Toaster as Sonner } from "@/components/ui/sonner"; // Import Sonner
 import { CartProvider } from '@/contexts/CartContext'; // Import CartProvider
+import { StorefrontFilterSidebar } from './StorefrontFilterSidebar'; // Import the sidebar
+import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile
 
 // Function to apply settings to the DOM, similar to AppearanceContext
 const applyStorefrontSettingsToDOM = (settings: any) => {
@@ -58,6 +60,8 @@ const applyStorefrontSettingsToDOM = (settings: any) => {
 
 const StorefrontLayoutContent = () => {
   const { shopDetails, appearanceSettings, isLoading, error } = useStorefront();
+  const isMobile = useIsMobile();
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (appearanceSettings) {
@@ -107,19 +111,30 @@ const StorefrontLayoutContent = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
-      <StorefrontHeader />
-      <main className="flex-1">
+      <StorefrontHeader onToggleFilterSidebar={() => setIsFilterSidebarOpen(true)} />
+      <main className="flex-1 flex">
+        {!isMobile && (
+          <StorefrontFilterSidebar
+            isOpen={true} // Always open on desktop
+            onClose={() => {}}
+            products={[]} // Products will be fetched by StorefrontIndex
+            currentFilters={{ categories: [], tags: [], priceRange: "all" }} // Initial state, actual state managed by StorefrontIndex
+            onFilterChange={() => {}}
+            onResetFilters={() => {}}
+            isMobile={false}
+          />
+        )}
         <Outlet />
       </main>
       <StorefrontFooter />
-      <Sonner /> {/* Add Sonner for notifications */}
+      <Sonner />
     </div>
   );
 };
 
 const StorefrontLayout = () => (
   <StorefrontProvider>
-    <CartProvider> {/* Wrap with CartProvider */}
+    <CartProvider>
       <StorefrontLayoutContent />
     </CartProvider>
   </StorefrontProvider>
