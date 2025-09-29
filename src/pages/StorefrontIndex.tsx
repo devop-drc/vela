@@ -37,6 +37,15 @@ const StorefrontIndex = () => {
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
+  // --- DEBUGGING LOGS ---
+  useEffect(() => {
+    console.log("StorefrontIndex: shopDetails", shopDetails);
+    console.log("StorefrontIndex: products", products);
+    console.log("StorefrontIndex: isLoading", isLoading);
+    console.log("StorefrontIndex: error", error);
+  }, [shopDetails, products, isLoading, error]);
+  // --- END DEBUGGING LOGS ---
+
   const availableCategories = useMemo(() => {
     const categories = new Set<string>();
     products.forEach(p => {
@@ -246,7 +255,7 @@ const StorefrontIndex = () => {
 
       <h2 className="text-3xl font-bold font-heading mb-8 text-center">Our Products</h2>
       
-      {Object.keys(groupedProducts).length === 0 ? (
+      {filteredAndSortedProducts.length === 0 ? (
         <div className={cn(
           "text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg",
           blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
