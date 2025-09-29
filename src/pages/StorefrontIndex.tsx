@@ -1,5 +1,5 @@
 import { useStorefront } from "@/contexts/StorefrontContext";
-import { Link } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom"; // Import useOutletContext
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
-import { Button, buttonVariants } from "@/components/ui/button"; // Import buttonVariants
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter, ArrowRight } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { getCategoryColor } from "@/lib/colorUtils";
@@ -55,6 +55,7 @@ const containerVariants = {
 const StorefrontIndex = () => {
   const { shopDetails, products, isLoading, error, appearanceSettings } = useStorefront();
   const isMobile = useIsMobile();
+  const { onToggleFilterSidebar } = useOutletContext<{ onToggleFilterSidebar: () => void }>(); // Get from context
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState("newest");
@@ -63,7 +64,7 @@ const StorefrontIndex = () => {
     tags: [],
     priceRange: "all",
   });
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Local state for mobile sidebar
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
@@ -200,15 +201,17 @@ const StorefrontIndex = () => {
 
   return (
     <div className="flex">
-      <StorefrontFilterSidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        products={products}
-        currentFilters={filters}
-        onFilterChange={handleFilterChange}
-        onResetFilters={handleResetFilters}
-        isMobile={isMobile}
-      />
+      {isMobile && (
+        <StorefrontFilterSidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          products={products}
+          currentFilters={filters}
+          onFilterChange={handleFilterChange}
+          onResetFilters={handleResetFilters}
+          isMobile={isMobile}
+        />
+      )}
 
       <div className="flex-1">
         <div className="container py-8">
@@ -218,80 +221,92 @@ const StorefrontIndex = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className={cn(
-              "mb-16 p-8 md:p-16 rounded-xl text-center", // Increased padding and margin-bottom
+              "mb-16 p-8 md:p-16 rounded-xl text-center relative overflow-hidden", // Added relative and overflow-hidden
               blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
               "shadow-lg"
             )}
+            style={{
+              backgroundImage: appearanceSettings?.backgroundImageUrl 
+                ? `url(${appearanceSettings.backgroundImageUrl})` 
+                : 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%)',
+              backgroundSize: appearanceSettings?.backgroundImageUrl ? (appearanceSettings.backgroundSize || 'cover') : 'cover',
+              backgroundPosition: 'center',
+              color: 'hsl(var(--primary-foreground))', // Ensure text is readable on primary background
+            }}
           >
-            {shopDetails.logo_url && (
-              <Avatar className="h-28 w-28 mx-auto mb-6 border-4 border-primary shadow-md"> {/* Larger avatar */}
-                <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
-                <AvatarFallback className="text-4xl font-bold">{shopDetails.shop_name?.[0]}</AvatarFallback>
-              </Avatar>
+            {/* Overlay for better text readability on images */}
+            {appearanceSettings?.backgroundImageUrl && (
+              <div className="absolute inset-0 bg-black/40 z-10" />
             )}
-            <h1 className="text-5xl md:text-6xl font-bold font-heading mb-4 leading-tight"> {/* Larger headline */}
-              {shopDetails.headline || `Welcome to ${shopDetails.shop_name}!`}
-            </h1>
-            {shopDetails.about && (
-              <p className="text-lg text-muted-foreground max-w-4xl mx-auto mb-8"> {/* Wider paragraph, added margin-bottom */}
-                {shopDetails.about}
-              </p>
-            )}
-            <Link
-              to={`/shop/${shopDetails.slug}#products`}
-              className={cn(buttonVariants({ size: "lg" }), "flex items-center")} // Apply button styles directly
-            >
-              Shop Now
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
+            <div className="relative z-20"> {/* Content needs to be above the overlay */}
+              {shopDetails.logo_url && (
+                <Avatar className="h-28 w-28 mx-auto mb-6 border-4 border-primary-foreground shadow-md"> {/* Larger avatar, border color changed */}
+                  <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
+                  <AvatarFallback className="text-4xl font-bold bg-primary-foreground text-primary">{shopDetails.shop_name?.[0]}</AvatarFallback> {/* Fallback colors adjusted */}
+                </Avatar>
+              )}
+              <h1 className="text-5xl md:text-6xl font-bold font-heading mb-4 leading-tight"> {/* Larger headline */}
+                {shopDetails.headline || `Welcome to ${shopDetails.shop_name}!`}
+              </h1>
+              {shopDetails.about && (
+                <p className="text-lg max-w-4xl mx-auto mb-8 text-primary-foreground/90"> {/* Wider paragraph, added margin-bottom */}
+                  {shopDetails.about}
+                </p>
+              )}
+              <Link
+                to={`/shop/${shopDetails.slug}#products`}
+                className={cn(buttonVariants({ size: "lg", variant: "secondary" }), "flex items-center mx-auto")} // Secondary variant for contrast
+              >
+                Shop Now
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </div>
           </motion.div>
 
           {/* Search, Filter, Sort Controls */}
           <div id="products" className={cn( // Added ID for scrolling
-            "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t shadow-sm", // Added shadow-sm
+            "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t shadow-sm flex flex-col md:flex-row items-center justify-between gap-4", // Added flex-col/row and gap
             blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
           )}>
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="relative w-full md:w-1/3">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search products..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+            <div className="relative w-full md:w-1/3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search products..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
 
-              <div className="flex flex-wrap gap-2 w-full md:w-2/3 justify-end">
-                {isMobile && (
-                  <Button variant="outline" onClick={() => setIsSidebarOpen(true)} className="w-full md:w-auto justify-start">
-                    <Filter className="mr-2 h-4 w-4" />
-                    Filters ({Object.values(filters).filter(f => (Array.isArray(f) && f.length > 0) || (typeof f === 'string' && f !== 'all')).length})
-                  </Button>
-                )}
-                {/* Sort Dropdown */}
-                <Select value={sortOption} onValueChange={setSortOption}>
-                  <SelectTrigger className="w-full md:w-[180px]">
-                    <ArrowUpNarrowWide className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="newest">Newest</SelectItem>
-                    <SelectItem value="oldest">Oldest</SelectItem>
-                    <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                    <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                    <SelectItem value="name-asc">Name: A-Z</SelectItem>
-                    <SelectItem value="name-desc">Name: Z-A</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="flex flex-wrap gap-2 w-full md:w-2/3 justify-end">
+              {isMobile && (
+                <Button variant="outline" onClick={onToggleFilterSidebar} className="w-full md:w-auto justify-start">
+                  <Filter className="mr-2 h-4 w-4" />
+                  Filters ({Object.values(filters).filter(f => (Array.isArray(f) && f.length > 0) || (typeof f === 'string' && f !== 'all')).length})
+                </Button>
+              )}
+              {/* Sort Dropdown */}
+              <Select value={sortOption} onValueChange={setSortOption}>
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <ArrowUpNarrowWide className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest</SelectItem>
+                  <SelectItem value="oldest">Oldest</SelectItem>
+                  <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                  <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                  <SelectItem value="name-asc">Name: A-Z</SelectItem>
+                  <SelectItem value="name-desc">Name: Z-A</SelectItem>
+                </SelectContent>
+              </Select>
 
-                {hasActiveFilters && (
-                  <Button variant="ghost" onClick={handleResetFilters} className="w-full md:w-auto">
-                    <XCircle className="mr-2 h-4 w-4" />
-                    Reset Filters
-                  </Button>
-                )}
-              </div>
+              {hasActiveFilters && (
+                <Button variant="ghost" onClick={handleResetFilters} className="w-full md:w-auto">
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Reset Filters
+                </Button>
+              )}
             </div>
           </div>
 

@@ -126,7 +126,7 @@ const StorefrontLayoutContent = () => {
         )}
         {/* Wrap Outlet in a div with container class for consistent padding */}
         <div className="flex-1">
-          <Outlet />
+          <Outlet context={{ onToggleFilterSidebar: () => setIsFilterSidebarOpen(true) }} />
         </div>
       </main>
       <StorefrontFooter />
