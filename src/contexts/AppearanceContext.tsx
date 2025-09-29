@@ -1,11 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Session } from '@supabase/supabase<think>**Refining the Solution**
-
-I've got the root cause of the `SyntaxError` nailed down - the missing named export. My plan is straightforward: I'll export `defaultSettings` directly from `AppearanceContext.tsx`. Then, I'll update the import statement in `StorefrontLayout.tsx` to reflect the change, now using a named import rather than the attempted default. I'm confident this will resolve the error.
-
-
-</think>-js';
+import { Session } from '@supabase/supabase-js'; // Rewriting this line
 import { showError, showSuccess } from '@/utils/toast';
 import { hexToHsl } from '@/utils/colors';
 
