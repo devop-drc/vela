@@ -231,19 +231,24 @@ export const StorefrontFilterSidebar = ({
     </div>
   );
 
+  if (isMobile) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="left" className={cn("w-full sm:max-w-xs p-0 flex flex-col", blurEnabled && "bg-card/80 backdrop-blur-lg")}>
+          {content}
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop view: render as a fixed aside, no Sheet wrapper
   return (
-    <Sheet open={isMobile ? isOpen : true} onOpenChange={onClose}>
-      <SheetContent 
-        side="left" 
-        className={cn(
-          "w-full sm:max-w-xs p-0 flex flex-col", 
-          blurEnabled && "bg-card/80 backdrop-blur-lg",
-          // Desktop styles for fixed sidebar
-          "lg:flex lg:relative lg:w-64 lg:flex-shrink-0 lg:border-r lg:shadow-none lg:transform-none lg:translate-x-0 lg:data-[state=closed]:slide-out-to-left-0 lg:data-[state=open]:slide-in-from-left-0"
-        )}
-      >
-        {content}
-      </SheetContent>
-    </Sheet>
+    <aside className={cn(
+      "hidden lg:flex flex-col border-r h-full",
+      blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
+      "w-64 flex-shrink-0"
+    )}>
+      {content}
+    </aside>
   );
 };
