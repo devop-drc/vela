@@ -124,7 +124,10 @@ const StorefrontLayoutContent = () => {
             isMobile={false}
           />
         )}
-        <Outlet />
+        {/* Wrap Outlet in a div with container class for consistent padding */}
+        <div className="flex-1">
+          <Outlet />
+        </div>
       </main>
       <StorefrontFooter />
       <Sonner />
