@@ -6,6 +6,7 @@ import { StorefrontFooter } from './StorefrontFooter';
 import { defaultSettings } from '@/contexts/AppearanceContext'; // Import default settings
 import { Skeleton } from '@/components/ui/skeleton';
 import { Toaster as Sonner } from "@/components/ui/sonner"; // Import Sonner
+import { CartProvider } from '@/contexts/CartContext'; // Import CartProvider
 
 // Function to apply settings to the DOM, similar to AppearanceContext
 const applyStorefrontSettingsToDOM = (settings: any) => {
@@ -118,7 +119,9 @@ const StorefrontLayoutContent = () => {
 
 const StorefrontLayout = () => (
   <StorefrontProvider>
-    <StorefrontLayoutContent />
+    <CartProvider> {/* Wrap with CartProvider */}
+      <StorefrontLayoutContent />
+    </CartProvider>
   </StorefrontProvider>
 );
 

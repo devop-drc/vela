@@ -90,6 +90,17 @@ const StorefrontIndex = () => {
     });
   }, [products, searchTerm, sortOption, selectedCategories, priceFilter]);
 
+  const groupedProducts = useMemo(() => {
+    return filteredAndSortedProducts.reduce((acc, product) => {
+      const category = product.category || 'Uncategorized';
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(product);
+      return acc;
+    }, {} as { [key: string]: typeof products });
+  }, [filteredAndSortedProducts]);
+
   if (isLoading) {
     return (
       <div className="container py-8">
@@ -235,7 +246,7 @@ const StorefrontIndex = () => {
 
       <h2 className="text-3xl font-bold font-heading mb-8 text-center">Our Products</h2>
       
-      {filteredAndSortedProducts.length === 0 ? (
+      {Object.keys(groupedProducts).length === 0 ? (
         <div className={cn(
           "text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg",
           blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
@@ -248,54 +259,67 @@ const StorefrontIndex = () => {
           </p>
         </div>
       ) : (
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
-        >
-          {filteredAndSortedProducts.map((product) => {
-            const categoryColor = getCategoryColor(product.category);
-            return (
-              <motion.div key={product.id} variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
-                <Link to={`/shop/${shopDetails.slug}/product/${product.id}`}>
-                  <Card className={cn(
-                    "h-full flex flex-col overflow-hidden transition-shadow hover:shadow-xl",
-                    blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
-                  )}>
-                    <CardContent className="p-0">
-                      <div className="aspect-square w-full overflow-hidden bg-muted">
-                        <MediaItem src={product.media_url} alt={product.name} type={product.media_type} className="object-cover transition-transform duration-300 group-hover:scale-105" />
-                      </div>
-                    </CardContent>
-                    <div className="p-4 flex-1 flex flex-col justify-between">
-                      <div>
-                        <h3 className="font-semibold text-lg leading-tight mb-1">{product.name}</h3>
-                        {product.category && (
-                          <Badge 
-                            variant="outline" 
-                            className={cn("mb-2", categoryColor.bg, categoryColor.text, categoryColor.border)}
-                          >
-                            {product.category}
-                          </Badge>
-                        )}
-                        <p className="text-sm text-muted-foreground line-clamp-2">{product.caption}</p>
-                      </div>
-                      <div className="mt-4">
-                        <p className="text-xl font-bold text-primary">
-                          {formatCurrency(product.price, product.currency || shopDetails.currency)}
-                          {product.pricing_type === 'subscription' && (
-                            <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </Link>
+        <div className="space-y-12">
+          {Object.entries(groupedProducts).map(([category, productsInCategory]) => (
+            <div key={category}>
+              <h3 className={cn(
+                "text-2xl font-bold font-heading mb-6 inline-block px-4 py-2 rounded-lg",
+                blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
+                getCategoryColor(category).bg, getCategoryColor(category).text
+              )}>
+                {category}
+              </h3>
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+              >
+                {productsInCategory.map((product) => {
+                  const categoryColor = getCategoryColor(product.category);
+                  return (
+                    <motion.div key={product.id} variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
+                      <Link to={`/shop/${shopDetails.slug}/product/${product.id}`}>
+                        <Card className={cn(
+                          "h-full flex flex-col overflow-hidden transition-shadow hover:shadow-xl",
+                          blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
+                        )}>
+                          <CardContent className="p-0">
+                            <div className="aspect-square w-full overflow-hidden bg-muted">
+                              <MediaItem src={product.media_url} alt={product.name} type={product.media_type} className="object-cover transition-transform duration-300 group-hover:scale-105" />
+                            </div>
+                          </CardContent>
+                          <div className="p-4 flex-1 flex flex-col justify-between">
+                            <div>
+                              <h3 className="font-semibold text-lg leading-tight mb-1">{product.name}</h3>
+                              {product.category && (
+                                <Badge 
+                                  variant="outline" 
+                                  className={cn("mb-2", categoryColor.bg, categoryColor.text, categoryColor.border)}
+                                >
+                                  {product.category}
+                                </Badge>
+                              )}
+                              <p className="text-sm text-muted-foreground line-clamp-2">{product.caption}</p>
+                            </div>
+                            <div className="mt-4">
+                              <p className="text-xl font-bold text-primary">
+                                {formatCurrency(product.price, product.currency || shopDetails.currency)}
+                                {product.pricing_type === 'subscription' && (
+                                  <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </Card>
+                      </Link>
+                    </motion.div>
+                  );
+                })}
               </motion.div>
-            );
-          })}
-        </motion.div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

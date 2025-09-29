@@ -9,44 +9,19 @@ import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useCart } from "@/contexts/CartContext"; // Import useCart
 
 const StorefrontCheckout = () => {
   const { shopSlug, shopDetails, appearanceSettings } = useStorefront();
+  const { cartItems, subtotal, shipping, total, clearCart } = useCart(); // Use cart context
   const blurEnabled = appearanceSettings?.blurEnabled;
-
-  // Placeholder for cart items (matching the mock in StorefrontCart)
-  const cartItems = [
-    {
-      id: "cart-item-1",
-      productId: "product-1",
-      name: "Vintage Sunset Tee",
-      price: 35.00,
-      currency: "USD",
-      quantity: 1,
-      media_url: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400",
-      media_type: "IMAGE",
-    },
-    {
-      id: "cart-item-2",
-      productId: "product-2",
-      name: "Handcrafted Leather Wallet",
-      price: 50.00,
-      currency: "USD",
-      quantity: 2,
-      media_url: "https://images.unsplash.com/photo-1615393329869-68279e0a239b?w=400",
-      media_type: "IMAGE",
-    },
-  ];
-
-  const subtotal = cartItems.reduce((sum, item) => item.price * item.quantity, 0);
-  const shipping = cartItems.length > 0 ? 5.00 : 0; // Mock shipping
-  const total = subtotal + shipping;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Placeholder for actual checkout logic
     toast.success("Order placed successfully! (Demo)");
     console.log("Order placed!");
+    clearCart(); // Clear the cart after successful order
     // In a real app, you'd redirect to an order confirmation page
   };
 
@@ -121,7 +96,7 @@ const StorefrontCheckout = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 {cartItems.map(item => (
-                  <div key={item.id} className="flex justify-between text-sm">
+                  <div key={item.productId} className="flex justify-between text-sm">
                     <span>{item.name} (x{item.quantity})</span>
                     <span>{formatCurrency(item.price * item.quantity, shopDetails?.currency)}</span>
                   </div>
@@ -139,7 +114,7 @@ const StorefrontCheckout = () => {
                 <span>Total:</span>
                 <span>{formatCurrency(total, shopDetails?.currency)}</span>
               </div>
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" disabled={cartItems.length === 0}>
                 <CheckCircle className="mr-2 h-4 w-4" />
                 Place Order
               </Button>

@@ -4,9 +4,11 @@ import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils"; // Import cn for conditional class names
+import { useCart } from "@/contexts/CartContext"; // Import useCart
 
 export const StorefrontHeader = () => {
   const { shopDetails, appearanceSettings } = useStorefront();
+  const { totalItems } = useCart(); // Get total items from cart
 
   if (!shopDetails) return null;
 
@@ -28,8 +30,13 @@ export const StorefrontHeader = () => {
         </Link>
         <nav className="flex items-center space-x-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link to={`/shop/${shopDetails.slug}/cart`}>
+            <Link to={`/shop/${shopDetails.slug}/cart`} className="relative">
               <ShoppingBag className="h-5 w-5" />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                  {totalItems}
+                </span>
+              )}
               <span className="sr-only">Cart</span>
             </Link>
           </Button>

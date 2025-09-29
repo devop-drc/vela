@@ -28,6 +28,7 @@ import StorefrontProductDetail from "./pages/StorefrontProductDetail";
 import StorefrontCart from "./pages/StorefrontCart";
 import StorefrontCheckout from "./pages/StorefrontCheckout";
 import StorefrontOrderTracking from "./pages/StorefrontOrderTracking";
+import { CartProvider } from "./contexts/CartContext"; // Import CartProvider
 
 const queryClient = new QueryClient();
 
@@ -44,7 +45,7 @@ const App = () => (
                 <SyncProvider>
                   <Routes>
                     {/* Public Storefront Routes */}
-                    <Route path="/shop/:shopSlug" element={<StorefrontLayout />}> {/* Changed to :shopSlug */}
+                    <Route path="/shop/:shopSlug" element={<StorefrontLayout />}>
                       <Route index element={<StorefrontIndex />} />
                       <Route path="product/:productId" element={<StorefrontProductDetail />} />
                       <Route path="cart" element={<StorefrontCart />} />

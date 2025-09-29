@@ -8,62 +8,12 @@ import { MediaItem } from "@/components/MediaItem";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-
-// Mock Cart Item Type (for demonstration)
-interface CartItem {
-  id: string;
-  productId: string;
-  name: string;
-  price: number;
-  currency: string;
-  quantity: number;
-  media_url: string;
-  media_type: string;
-}
+import { useCart } from "@/contexts/CartContext"; // Import useCart
 
 const StorefrontCart = () => {
   const { shopSlug, shopDetails, appearanceSettings } = useStorefront();
+  const { cartItems, updateQuantity, removeFromCart, subtotal, shipping, total } = useCart(); // Use cart context
   const blurEnabled = appearanceSettings?.blurEnabled;
-
-  // Placeholder for cart items (using useState for interactivity in demo)
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      id: "cart-item-1",
-      productId: "product-1",
-      name: "Vintage Sunset Tee",
-      price: 35.00,
-      currency: "USD",
-      quantity: 1,
-      media_url: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400",
-      media_type: "IMAGE",
-    },
-    {
-      id: "cart-item-2",
-      productId: "product-2",
-      name: "Handcrafted Leather Wallet",
-      price: 50.00,
-      currency: "USD",
-      quantity: 2,
-      media_url: "https://images.unsplash.com/photo-1615393329869-68279e0a239b?w=400",
-      media_type: "IMAGE",
-    },
-  ]);
-
-  const updateQuantity = (itemId: string, newQuantity: number) => {
-    setCartItems(prevItems =>
-      prevItems.map(item =>
-        item.id === itemId ? { ...item, quantity: Math.max(1, newQuantity) } : item
-      )
-    );
-  };
-
-  const removeItem = (itemId: string) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
-  };
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = cartItems.length > 0 ? 5.00 : 0; // Mock shipping
-  const total = subtotal + shipping;
 
   return (
     <div className="container py-8">
@@ -89,7 +39,7 @@ const StorefrontCart = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
             {cartItems.map(item => (
-              <Card key={item.id} className={cn(
+              <Card key={item.productId} className={cn(
                 "flex items-center p-4 gap-4",
                 blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
               )}>
@@ -108,7 +58,7 @@ const StorefrontCart = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                         disabled={item.quantity <= 1}
                       >
                         <Minus className="h-4 w-4" />
@@ -116,14 +66,14 @@ const StorefrontCart = () => {
                       <Input
                         type="number"
                         value={item.quantity}
-                        onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 1)}
+                        onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
                         className="w-16 text-center border-y-0 border-x rounded-none focus-visible:ring-0"
                         min={1}
                       />
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -131,7 +81,7 @@ const StorefrontCart = () => {
                     <p className="font-semibold text-lg">
                       {formatCurrency(item.price * item.quantity, item.currency || shopDetails?.currency)}
                     </p>
-                    <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="text-destructive hover:text-destructive">
+                    <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.productId)} className="text-destructive hover:text-destructive">
                       <Trash2 className="h-4 w-4" />
                       <span className="sr-only">Remove {item.name}</span>
                     </Button>

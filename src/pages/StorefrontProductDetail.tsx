@@ -12,10 +12,12 @@ import { cn } from "@/lib/utils"; // Import cn for conditional class names
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner"; // Import sonner for notifications
+import { useCart } from "@/contexts/CartContext"; // Import useCart
 
 const StorefrontProductDetail = () => {
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
   const { shopDetails, products, isLoading, error, appearanceSettings } = useStorefront();
+  const { addToCart } = useCart(); // Use addToCart from context
   const [quantity, setQuantity] = useState(1);
 
   if (isLoading) {
@@ -44,9 +46,19 @@ const StorefrontProductDetail = () => {
   const blurEnabled = appearanceSettings?.blurEnabled;
 
   const handleAddToCart = () => {
-    // Placeholder for actual add to cart logic
-    toast.success(`${quantity} x "${product.name}" added to cart!`);
-    console.log(`Added ${quantity} of ${product.name} to cart.`);
+    if (!shopDetails?.slug) {
+      toast.error("Shop details not available.");
+      return;
+    }
+    addToCart({
+      productId: product.id,
+      name: product.name,
+      price: product.price || 0,
+      currency: product.currency || shopDetails.currency || 'USD',
+      media_url: product.media_url,
+      media_type: product.media_type,
+      slug: shopDetails.slug,
+    }, quantity);
   };
 
   return (
