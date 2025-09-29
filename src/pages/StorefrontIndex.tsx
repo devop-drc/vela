@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Search, ListFilter, ArrowUpNarrowWide, Tag } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { getCategoryColor } from "@/lib/colorUtils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Import Avatar
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -141,6 +142,12 @@ const StorefrontIndex = () => {
           "shadow-lg"
         )}
       >
+        {shopDetails.logo_url && (
+          <Avatar className="h-24 w-24 mx-auto mb-4 border-4 border-primary shadow-md">
+            <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
+            <AvatarFallback className="text-3xl font-bold">{shopDetails.shop_name?.[0]}</AvatarFallback>
+          </Avatar>
+        )}
         <h1 className="text-4xl md:text-5xl font-bold font-heading mb-4 leading-tight">
           {shopDetails.headline || `Welcome to ${shopDetails.shop_name}!`}
         </h1>
@@ -234,7 +241,11 @@ const StorefrontIndex = () => {
           blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
         )}>
           <h3 className="text-xl font-semibold">No Products Found</h3>
-          <p className="text-base mt-2">Try adjusting your search or filters.</p>
+          <p className="text-base mt-2">
+            It looks like you don't have any active products yet.
+            <br />
+            Please go to your <Link to="/" className="text-primary hover:underline">dashboard</Link>, then the "Products" section, and set some products to "Active" status to display them here.
+          </p>
         </div>
       ) : (
         <motion.div
