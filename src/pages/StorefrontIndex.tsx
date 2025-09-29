@@ -258,11 +258,11 @@ const StorefrontIndex = () => {
                   <AvatarFallback className="text-5xl font-bold bg-primary-foreground text-primary">{shopDetails.shop_name?.[0]}</AvatarFallback> {/* Fallback colors adjusted */}
                 </Avatar>
               )}
-              <h1 className="text-5xl md:text-7xl font-bold font-heading mb-4 leading-tight text-shadow-lg"> {/* Larger headline, added text-shadow */}
+              <h1 className="text-5xl md:text-7xl font-bold font-heading mb-4 leading-tight"> {/* Larger headline, removed text-shadow-lg */}
                 {shopDetails.headline || `Welcome to ${shopDetails.shop_name}!`}
               </h1>
               {shopDetails.about && (
-                <p className="text-xl max-w-4xl mx-auto mb-8 text-primary-foreground/90 text-shadow-md"> {/* Wider paragraph, added margin-bottom, text-shadow */}
+                <p className="text-xl max-w-4xl mx-auto mb-8 text-primary-foreground/90"> {/* Wider paragraph, added margin-bottom, removed text-shadow-md */}
                   {shopDetails.about}
                 </p>
               )}
