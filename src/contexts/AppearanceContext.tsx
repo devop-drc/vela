@@ -1,6 +1,11 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Session } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase<think>**Refining the Solution**
+
+I've got the root cause of the `SyntaxError` nailed down - the missing named export. My plan is straightforward: I'll export `defaultSettings` directly from `AppearanceContext.tsx`. Then, I'll update the import statement in `StorefrontLayout.tsx` to reflect the change, now using a named import rather than the attempted default. I'm confident this will resolve the error.
+
+
+</think>-js';
 import { showError, showSuccess } from '@/utils/toast';
 import { hexToHsl } from '@/utils/colors';
 
@@ -116,7 +121,7 @@ export const curatedImages = [
   { src: 'https://images.unsplash.com/photo-1614850523011-8f49ffc73908?q=80&w=2400', author: 'Scott Webb' },
 ];
 
-interface DesignSettings extends ColorScheme {
+export interface DesignSettings extends ColorScheme {
   themeName: string;
   isAdvanced: boolean;
   sidebarStyle: 'primary' | 'card';
@@ -137,7 +142,7 @@ interface DesignSettings extends ColorScheme {
   customThemes?: CustomTheme[];
 }
 
-const defaultSettings: DesignSettings = {
+export const defaultSettings: DesignSettings = {
   themeName: 'Onyx',
   isAdvanced: false,
   sidebarStyle: 'primary',
