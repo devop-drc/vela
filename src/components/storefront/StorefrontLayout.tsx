@@ -7,7 +7,7 @@ import { defaultSettings } from '@/contexts/AppearanceContext'; // Import defaul
 import { Skeleton } from '@/components/ui/skeleton';
 import { Toaster as Sonner } from "@/components/ui/sonner"; // Import Sonner
 import { CartProvider } from '@/contexts/CartContext'; // Import CartProvider
-import { StorefrontFilterSidebar } from './StorefrontFilterSidebar'; // Import the sidebar
+// Removed StorefrontFilterSidebar import from here
 import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile
 
 // Function to apply settings to the DOM, similar to AppearanceContext
@@ -60,8 +60,7 @@ const applyStorefrontSettingsToDOM = (settings: any) => {
 
 const StorefrontLayoutContent = () => {
   const { shopDetails, appearanceSettings, isLoading, error } = useStorefront();
-  const isMobile = useIsMobile();
-  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
+  // Removed isFilterSidebarOpen state from here
 
   useEffect(() => {
     if (appearanceSettings) {
@@ -111,22 +110,11 @@ const StorefrontLayoutContent = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
-      <StorefrontHeader onToggleFilterSidebar={() => setIsFilterSidebarOpen(true)} />
+      {/* onToggleFilterSidebar will be passed from StorefrontIndex via Outlet context */}
+      <StorefrontHeader /> 
       <main className="flex-1 flex">
-        {!isMobile && (
-          <StorefrontFilterSidebar
-            isOpen={true} // Always open on desktop
-            onClose={() => {}}
-            products={[]} // Products will be fetched by StorefrontIndex
-            currentFilters={{ categories: [], tags: [], priceRange: "all" }} // Initial state, actual state managed by StorefrontIndex
-            onFilterChange={() => {}}
-            onResetFilters={() => {}}
-            isMobile={false}
-          />
-        )}
-        {/* Wrap Outlet in a div with container class for consistent padding */}
         <div className="flex-1">
-          <Outlet context={{ onToggleFilterSidebar: () => setIsFilterSidebarOpen(true) }} />
+          <Outlet /> {/* Outlet will now render StorefrontIndex which manages its own sidebar */}
         </div>
       </main>
       <StorefrontFooter />

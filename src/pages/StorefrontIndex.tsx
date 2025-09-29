@@ -1,5 +1,5 @@
 import { useStorefront } from "@/contexts/StorefrontContext";
-import { Link, useOutletContext } from "react-router-dom"; // Import useOutletContext
+import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
@@ -55,7 +55,6 @@ const containerVariants = {
 const StorefrontIndex = () => {
   const { shopDetails, products, isLoading, error, appearanceSettings } = useStorefront();
   const isMobile = useIsMobile();
-  const { onToggleFilterSidebar } = useOutletContext<{ onToggleFilterSidebar: () => void }>(); // Get from context
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState("newest");
@@ -64,7 +63,7 @@ const StorefrontIndex = () => {
     tags: [],
     priceRange: "all",
   });
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Local state for mobile sidebar
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false); // State for mobile sidebar
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
@@ -201,15 +200,29 @@ const StorefrontIndex = () => {
 
   return (
     <div className="flex">
+      {/* Mobile Filter Sidebar */}
       {isMobile && (
         <StorefrontFilterSidebar
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
+          isOpen={isFilterSidebarOpen}
+          onClose={() => setIsFilterSidebarOpen(false)}
           products={products}
           currentFilters={filters}
           onFilterChange={handleFilterChange}
           onResetFilters={handleResetFilters}
           isMobile={isMobile}
+        />
+      )}
+
+      {/* Desktop Filter Sidebar */}
+      {!isMobile && (
+        <StorefrontFilterSidebar
+          isOpen={true} // Always open on desktop
+          onClose={() => {}} // No-op for desktop
+          products={products}
+          currentFilters={filters}
+          onFilterChange={handleFilterChange}
+          onResetFilters={handleResetFilters}
+          isMobile={false}
         />
       )}
 
@@ -221,7 +234,7 @@ const StorefrontIndex = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className={cn(
-              "mb-16 p-8 md:p-16 rounded-xl text-center relative overflow-hidden", // Added relative and overflow-hidden
+              "mb-16 p-8 md:p-16 rounded-xl text-center relative overflow-hidden min-h-[60vh] flex flex-col items-center justify-center", // Increased min-height, added flex for centering
               blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
               "shadow-lg"
             )}
@@ -240,32 +253,32 @@ const StorefrontIndex = () => {
             )}
             <div className="relative z-20"> {/* Content needs to be above the overlay */}
               {shopDetails.logo_url && (
-                <Avatar className="h-28 w-28 mx-auto mb-6 border-4 border-primary-foreground shadow-md"> {/* Larger avatar, border color changed */}
+                <Avatar className="h-32 w-32 mx-auto mb-6 border-4 border-primary-foreground shadow-md"> {/* Larger avatar, border color changed */}
                   <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
-                  <AvatarFallback className="text-4xl font-bold bg-primary-foreground text-primary">{shopDetails.shop_name?.[0]}</AvatarFallback> {/* Fallback colors adjusted */}
+                  <AvatarFallback className="text-5xl font-bold bg-primary-foreground text-primary">{shopDetails.shop_name?.[0]}</AvatarFallback> {/* Fallback colors adjusted */}
                 </Avatar>
               )}
-              <h1 className="text-5xl md:text-6xl font-bold font-heading mb-4 leading-tight"> {/* Larger headline */}
+              <h1 className="text-5xl md:text-7xl font-bold font-heading mb-4 leading-tight text-shadow-lg"> {/* Larger headline, added text-shadow */}
                 {shopDetails.headline || `Welcome to ${shopDetails.shop_name}!`}
               </h1>
               {shopDetails.about && (
-                <p className="text-lg max-w-4xl mx-auto mb-8 text-primary-foreground/90"> {/* Wider paragraph, added margin-bottom */}
+                <p className="text-xl max-w-4xl mx-auto mb-8 text-primary-foreground/90 text-shadow-md"> {/* Wider paragraph, added margin-bottom, text-shadow */}
                   {shopDetails.about}
                 </p>
               )}
               <Link
                 to={`/shop/${shopDetails.slug}#products`}
-                className={cn(buttonVariants({ size: "lg", variant: "secondary" }), "flex items-center mx-auto")} // Secondary variant for contrast
+                className={cn(buttonVariants({ size: "xl", variant: "secondary" }), "flex items-center mx-auto")} // Secondary variant for contrast, larger size
               >
                 Shop Now
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </div>
           </motion.div>
 
           {/* Search, Filter, Sort Controls */}
           <div id="products" className={cn( // Added ID for scrolling
-            "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t shadow-sm flex flex-col md:flex-row items-center justify-between gap-4", // Added flex-col/row and gap
+            "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-4", // Added flex-col/row and gap, stronger shadow
             blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
           )}>
             <div className="relative w-full md:w-1/3">
@@ -280,7 +293,7 @@ const StorefrontIndex = () => {
 
             <div className="flex flex-wrap gap-2 w-full md:w-2/3 justify-end">
               {isMobile && (
-                <Button variant="outline" onClick={onToggleFilterSidebar} className="w-full md:w-auto justify-start">
+                <Button variant="outline" onClick={() => setIsFilterSidebarOpen(true)} className="w-full md:w-auto justify-start">
                   <Filter className="mr-2 h-4 w-4" />
                   Filters ({Object.values(filters).filter(f => (Array.isArray(f) && f.length > 0) || (typeof f === 'string' && f !== 'all')).length})
                 </Button>
@@ -310,7 +323,7 @@ const StorefrontIndex = () => {
             </div>
           </div>
 
-          <h2 className="text-3xl font-bold font-heading mb-8 text-center">Our Products</h2>
+          <h2 className="text-4xl font-bold font-heading mb-10 text-center">Our Products</h2>
           
           {filteredAndSortedProducts.length === 0 ? (
             <div className={cn(
@@ -325,13 +338,13 @@ const StorefrontIndex = () => {
               </p>
             </div>
           ) : (
-            <div className="space-y-12">
+            <div className="space-y-16"> {/* Increased vertical spacing between categories */}
               {Object.entries(groupedProducts).map(([category, productsInCategory]) => (
                 <div key={category}>
                   <h3 className={cn(
-                    "text-2xl font-bold font-heading mb-6 inline-block px-4 py-2 rounded-lg",
+                    "text-3xl font-bold font-heading mb-8 inline-block px-6 py-3 rounded-full", // Larger, rounded category badge
                     blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
-                    getCategoryColor(category).bg, getCategoryColor(category).text
+                    getCategoryColor(category).bg, getCategoryColor(category).text, "shadow-md" // Added shadow
                   )}>
                     {category}
                   </h3>
@@ -339,7 +352,7 @@ const StorefrontIndex = () => {
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8" // Increased gap
                   >
                     {productsInCategory.map((product) => (
                       <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} />
@@ -352,8 +365,8 @@ const StorefrontIndex = () => {
 
           {/* Load More Button Placeholder */}
           {filteredAndSortedProducts.length > 0 && (
-            <div className="text-center mt-12">
-              <Button variant="outline" size="lg">
+            <div className="text-center mt-16"> {/* Increased margin-top */}
+              <Button variant="outline" size="lg" className="px-8 py-4 text-lg"> {/* Larger button */}
                 Load More Products
               </Button>
             </div>
