@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShoppingCart, ArrowRight, Trash2, Minus, Plus } from "lucide-react";
+import { ShoppingCart, ArrowRight, Trash2, Minus, Plus, Home } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";

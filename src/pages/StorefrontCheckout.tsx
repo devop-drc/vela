@@ -1,28 +1,42 @@
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, Home } from "lucide-react";
+import { CheckCircle, Home, ArrowLeft, CreditCard, MapPin, User } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
+import { useState } from "react";
 
 const StorefrontCheckout = () => {
   const { shopSlug, shopDetails, appearanceSettings } = useStorefront();
   const { cartItems, subtotal, shipping, total, clearCart } = useCart();
   const blurEnabled = appearanceSettings?.blurEnabled;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Placeholder for actual checkout logic
-    toast.success("Order placed successfully! (Demo)");
-    console.log("Order placed!");
+    setIsSubmitting(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500)); 
+    
+    // In a real app, this would involve sending order data to Supabase
+    // and handling payment processing.
+    // For this demo, we'll just show a success toast.
+
+    toast.success("Order placed successfully! Thank you for your purchase.", {
+      description: `Your order total was ${formatCurrency(total, shopDetails?.currency)}.`,
+      icon: <CheckCircle className="h-5 w-5 text-emerald-500" />,
+    });
+    
     clearCart(); // Clear the cart after successful order
-    // In a real app, you'd redirect to an order confirmation page
+    setIsSubmitting(false);
+    // Redirect to order tracking or confirmation page
+    window.location.href = `/shop/${shopSlug}/order-tracking?orderId=DEMO-${Date.now()}`;
   };
 
   if (cartItems.length === 0) {
@@ -42,14 +56,20 @@ const StorefrontCheckout = () => {
 
   return (
     <div className="container py-8">
+      <Button variant="ghost" asChild className="mb-6">
+        <Link to={`/shop/${shopSlug}/cart`}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Cart
+        </Link>
+      </Button>
       <h1 className="text-3xl font-bold font-heading mb-6">Checkout</h1>
 
       <form id="checkout-form" onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
             <CardHeader>
-              <CardTitle>Shipping Information</CardTitle>
-              <CardDescription>Enter your details for shipping.</CardDescription>
+              <CardTitle className="flex items-center gap-2"><User className="h-5 w-5" /> Contact Information</CardTitle>
+              <CardDescription>We'll use this to send you updates about your order.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -66,6 +86,15 @@ const StorefrontCheckout = () => {
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" type="email" placeholder="john.doe@example.com" required />
                 </div>
+            </CardContent>
+          </Card>
+
+          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5" /> Shipping Information</CardTitle>
+              <CardDescription>Where should we send your awesome products?</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="address">Shipping Address</Label>
                   <Input id="address" placeholder="123 Main St" required />
@@ -93,7 +122,7 @@ const StorefrontCheckout = () => {
 
           <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
             <CardHeader>
-              <CardTitle>Payment Information</CardTitle>
+              <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" /> Payment Information</CardTitle>
               <CardDescription>Securely enter your payment details.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -129,9 +158,18 @@ const StorefrontCheckout = () => {
                 <span>Total:</span>
                 <span>{formatCurrency(total, shopDetails?.currency)}</span>
               </div>
-              <Button type="submit" className="w-full" disabled={cartItems.length === 0}>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Place Order
+              <Button type="submit" className="w-full" disabled={cartItems.length === 0 || isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Placing Order...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Place Order
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>

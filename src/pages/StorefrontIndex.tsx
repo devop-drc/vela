@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -198,8 +198,6 @@ const StorefrontIndex = () => {
     return <div className="container py-8 text-center text-muted-foreground">Shop details not found.</div>;
   }
 
-  const firstProductCategory = products.length > 0 ? products[0].category : '';
-
   return (
     <div className="flex">
       <StorefrontFilterSidebar
@@ -241,7 +239,10 @@ const StorefrontIndex = () => {
             )}
             <Button asChild size="lg"> {/* Larger button */}
               <Link to={`/shop/${shopDetails.slug}#products`}>
-                Shop Now
+                <span>
+                  Shop Now
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </span>
               </Link>
             </Button>
           </motion.div>

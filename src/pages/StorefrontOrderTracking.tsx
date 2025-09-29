@@ -1,41 +1,70 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, Package, CheckCircle, Truck, Home, XCircle } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Search, Package, CheckCircle, Truck, Home, XCircle, Loader2, ArrowLeft } from "lucide-react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useStorefront } from "@/contexts/StorefrontContext";
+import { supabase } from "@/integrations/supabase/client";
+import { showError } from "@/utils/toast";
+
+type OrderStatusType = 'Pending' | 'In Progress' | 'Fulfilled' | 'Not Found' | null;
 
 const StorefrontOrderTracking = () => {
   const { shopSlug, appearanceSettings } = useStorefront();
-  const [orderId, setOrderId] = useState("");
+  const [searchParams] = useSearchParams();
+  const [orderId, setOrderId] = useState(searchParams.get('orderId') || "");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [orderStatus, setOrderStatus] = useState<string | null>(null); // Placeholder for fetched status
+  const [orderStatus, setOrderStatus] = useState<OrderStatusType>(null);
   const [isLoading, setIsLoading] = useState(false);
   const blurEnabled = appearanceSettings?.blurEnabled;
 
-  const handleTrackOrder = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setOrderStatus(null); // Reset status
+  useEffect(() => {
+    if (orderId && customerEmail) {
+      handleTrackOrder();
+    }
+  }, []); // Run once if orderId and email are pre-filled
 
-    // Placeholder for actual order tracking logic
-    // In a real app, this would call a Supabase Edge Function
-    setTimeout(() => {
-      if (orderId === "12345" && customerEmail === "test@example.com") {
-        setOrderStatus("Fulfilled");
-      } else if (orderId === "67890" && customerEmail === "test@example.com") {
-        setOrderStatus("In Progress");
+  const handleTrackOrder = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setIsLoading(true);
+    setOrderStatus(null);
+
+    if (!orderId || !customerEmail) {
+      showError("Please enter both Order ID and Email Address.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // In a real app, this would call a Supabase Edge Function to securely check order status
+      // For this demo, we'll simulate a lookup
+      const { data, error } = await supabase
+        .from('orders')
+        .select('status, customer_email')
+        .eq('id', orderId)
+        .eq('customer_email', customerEmail)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching order:", error);
+        setOrderStatus("Not Found");
+      } else if (data) {
+        setOrderStatus(data.status as OrderStatusType);
       } else {
         setOrderStatus("Not Found");
       }
+    } catch (err) {
+      console.error("Order tracking failed:", err);
+      setOrderStatus("Not Found");
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: OrderStatusType) => {
     switch (status) {
       case "Fulfilled": return <CheckCircle className="h-16 w-16 text-emerald-500 mx-auto" />;
       case "In Progress": return <Truck className="h-16 w-16 text-blue-500 mx-auto" />;
@@ -45,7 +74,7 @@ const StorefrontOrderTracking = () => {
     }
   };
 
-  const getStatusColorClass = (status: string) => {
+  const getStatusColorClass = (status: OrderStatusType) => {
     switch (status) {
       case "Fulfilled": return "text-emerald-500";
       case "In Progress": return "text-blue-500";
@@ -57,6 +86,12 @@ const StorefrontOrderTracking = () => {
 
   return (
     <div className="container py-8">
+      <Button variant="ghost" asChild className="mb-6">
+        <Link to={`/shop/${shopSlug}`}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Shop
+        </Link>
+      </Button>
       <h1 className="text-3xl font-bold font-heading mb-6 text-center">Track Your Order</h1>
 
       <Card className={cn(
@@ -91,7 +126,12 @@ const StorefrontOrderTracking = () => {
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Tracking..." : "Track Order"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Tracking...
+                </>
+              ) : "Track Order"}
             </Button>
           </form>
 
@@ -116,14 +156,6 @@ const StorefrontOrderTracking = () => {
           )}
         </CardContent>
       </Card>
-      <div className="text-center mt-8">
-        <Button variant="link" asChild>
-          <Link to={`/shop/${shopSlug}`}>
-            <Home className="mr-2 h-4 w-4" />
-            Back to Shop
-          </Link>
-        </Button>
-      </div>
     </div>
   );
 };

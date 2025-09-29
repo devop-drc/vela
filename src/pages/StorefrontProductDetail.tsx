@@ -6,7 +6,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Loader2, ShoppingCart, Minus, Plus, Home } from "lucide-react";
+import { Loader2, ShoppingCart, Minus, Plus, Home, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -83,6 +83,12 @@ const StorefrontProductDetail = () => {
 
   return (
     <div className="container py-8">
+      <Button variant="ghost" asChild className="mb-6">
+        <Link to={`/shop/${shopSlug}`}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Products
+        </Link>
+      </Button>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Product Media */}
         <div>
