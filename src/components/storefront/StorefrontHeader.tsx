@@ -43,7 +43,14 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
           )}
           <Button variant="ghost" size="icon" asChild>
             <Link to={`/shop/${shopDetails.slug}/cart`} className="relative">
-              <ShoppingBag className="h-5 w-5" />
+              <span className="relative">
+                <ShoppingBag className="h-5 w-5" />
+                {totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                    {totalItems}
+                  </span>
+                )}
+              </span>
             </Link>
           </Button>
         </nav>
