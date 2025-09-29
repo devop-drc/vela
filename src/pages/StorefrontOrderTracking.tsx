@@ -7,7 +7,7 @@ import { Search, Package, CheckCircle, Truck, Home } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
 const StorefrontOrderTracking = () => {
-  const { businessId } = useParams<{ businessId: string }>();
+  const { shopSlug } = useParams<{ shopSlug: string }>(); // Changed to shopSlug
   const [orderId, setOrderId] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [orderStatus, setOrderStatus] = useState<string | null>(null); // Placeholder for fetched status
@@ -105,7 +105,7 @@ const StorefrontOrderTracking = () => {
       </Card>
       <div className="text-center mt-8">
         <Button variant="link" asChild>
-          <Link to={`/shop/${businessId}`}>
+          <Link to={`/shop/${shopSlug}`}>
             <Home className="mr-2 h-4 w-4" />
             Back to Shop
           </Link>

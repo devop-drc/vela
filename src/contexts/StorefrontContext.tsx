@@ -8,6 +8,7 @@ interface ShopDetails {
   id: string;
   name: string;
   shop_name: string;
+  slug: string; // Include slug in ShopDetails
   logo_url: string;
   favicon_url: string;
   currency: string;
@@ -48,7 +49,7 @@ interface StorefrontContextType {
 const StorefrontContext = createContext<StorefrontContextType | undefined>(undefined);
 
 export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
-  const { businessId } = useParams<{ businessId: string }>();
+  const { shopSlug } = useParams<{ shopSlug: string }>(); // Change to shopSlug
   const [shopDetails, setShopDetails] = useState<ShopDetails | null>(null);
   const [appearanceSettings, setAppearanceSettings] = useState<DesignSettings | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -56,8 +57,8 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchStorefrontData = useCallback(async () => {
-    if (!businessId) {
-      setError("Business ID is missing from the URL.");
+    if (!shopSlug) { // Use shopSlug here
+      setError("Shop slug is missing from the URL.");
       setIsLoading(false);
       return;
     }
@@ -67,7 +68,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('get-public-shop-data', {
-        body: { businessId },
+        body: { shopSlug }, // Pass shopSlug to the edge function
       });
 
       if (invokeError) throw invokeError;
@@ -84,7 +85,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [businessId]);
+  }, [shopSlug]); // Depend on shopSlug
 
   useEffect(() => {
     fetchStorefrontData();

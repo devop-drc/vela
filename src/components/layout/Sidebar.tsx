@@ -1,11 +1,15 @@
 import { NavLink } from "react-router-dom";
-import { Home, ShoppingBag, Settings, Package, Archive, MessageSquareQuote } from "lucide-react";
+import { Home, ShoppingBag, Settings, Package, Archive, MessageSquareQuote, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { motion } from "framer-motion";
+import { Button } from "../ui/button";
+import { useShop } from "@/contexts/ShopContext";
+import { showSuccess, showError } from "@/utils/toast";
 
 const Sidebar = () => {
   const { settings } = useAppearance();
+  const { shopDetails } = useShop();
   const isFloating = settings.layoutStyle === 'floating';
   const isPrimary = settings.sidebarStyle === 'primary';
   const blurEnabled = settings.blurEnabled;
@@ -23,6 +27,21 @@ const Sidebar = () => {
     compact: 'w-56', // 224px
     default: 'w-64', // 256px
     spacious: 'w-72', // 288px
+  };
+
+  const handleCopyStorefrontUrl = async () => {
+    if (shopDetails?.slug) {
+      const storefrontUrl = `${window.location.origin}/shop/${shopDetails.slug}`;
+      try {
+        await navigator.clipboard.writeText(storefrontUrl);
+        showSuccess("Storefront URL copied to clipboard!");
+      } catch (err) {
+        showError("Failed to copy URL. Please try again manually.");
+        console.error("Failed to copy storefront URL:", err);
+      }
+    } else {
+      showError("Your shop URL is not available yet. Please set your shop name in settings.");
+    }
   };
 
   return (
@@ -72,6 +91,17 @@ const Sidebar = () => {
           </motion.div>
         ))}
       </nav>
+      <div className="p-4 border-t">
+        <Button 
+          variant="outline" 
+          className="w-full" 
+          onClick={handleCopyStorefrontUrl}
+          disabled={!shopDetails?.slug}
+        >
+          <LinkIcon className="mr-2 h-4 w-4" />
+          Get Storefront URL
+        </Button>
+      </div>
     </aside>
   );
 };

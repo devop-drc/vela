@@ -18,9 +18,9 @@ serve(async (req) => {
   }
 
   try {
-    const { businessId } = await req.json();
-    if (!businessId) {
-      return new Response(JSON.stringify({ error: "Missing businessId" }), {
+    const { shopSlug } = await req.json();
+    if (!shopSlug) {
+      return new Response(JSON.stringify({ error: "Missing shopSlug" }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -28,33 +28,25 @@ serve(async (req) => {
 
     const supabaseAdmin = getSupabaseAdmin();
 
-    // Fetch business details to get user_id for design settings
-    const { data: business, error: businessError } = await supabaseAdmin
-      .from('businesses')
-      .select('id, user_id, name')
-      .eq('id', businessId)
-      .single();
-
-    if (businessError || !business) {
-      throw new Error("Business not found or inaccessible.");
-    }
-
-    // Fetch shop details
+    // Fetch shop details first to get the business_id and user_id
     const { data: shopDetails, error: shopDetailsError } = await supabaseAdmin
       .from('shop_details')
-      .select('*')
-      .eq('business_id', businessId)
+      .select('*, businesses(id, user_id, name)') // Also fetch related business info
+      .eq('slug', shopSlug)
       .single();
 
-    if (shopDetailsError && shopDetailsError.code !== 'PGRST116') { // PGRST116 = no rows found
-      throw shopDetailsError;
+    if (shopDetailsError || !shopDetails || !shopDetails.businesses) {
+      throw new Error("Shop not found or inaccessible.");
     }
+
+    const businessId = shopDetails.businesses.id;
+    const userId = shopDetails.businesses.user_id;
 
     // Fetch design settings for the business owner
     const { data: designSettings, error: designSettingsError } = await supabaseAdmin
       .from('design_settings')
       .select('settings')
-      .eq('user_id', business.user_id)
+      .eq('user_id', userId)
       .single();
 
     if (designSettingsError && designSettingsError.code !== 'PGRST116') {
@@ -74,9 +66,18 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       shopDetails: {
-        id: business.id,
-        name: business.name,
-        ...shopDetails,
+        id: businessId,
+        name: shopDetails.businesses.name, // Business name from the join
+        shop_name: shopDetails.shop_name,
+        slug: shopDetails.slug,
+        logo_url: shopDetails.logo_url,
+        favicon_url: shopDetails.favicon_url,
+        currency: shopDetails.currency,
+        headline: shopDetails.headline,
+        about: shopDetails.about,
+        contact_email: shopDetails.contact_email,
+        followers_count: shopDetails.followers_count,
+        media_count: shopDetails.media_count,
       },
       appearanceSettings: designSettings?.settings || null,
       products: products || [],

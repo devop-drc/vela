@@ -63,13 +63,13 @@ export const ShopSettings = () => {
     const success = await updateShopDetails(data);
     if (success) {
       showSuccess("Shop details updated!");
-      reset(data); // Resets the form's dirty state
+      // No need to reset here, as fetchShopDetails in context will trigger re-render and reset
     }
   };
 
   const handleCopyShopUrl = async () => {
-    if (shopDetails?.id) {
-      const shopUrl = `${window.location.origin}/shop/${shopDetails.id}`;
+    if (shopDetails?.slug) {
+      const shopUrl = `${window.location.origin}/shop/${shopDetails.slug}`;
       try {
         await navigator.clipboard.writeText(shopUrl);
         showSuccess("Shop URL copied to clipboard!");

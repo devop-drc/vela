@@ -5,6 +5,7 @@ import { showError } from '@/utils/toast';
 interface ShopDetails {
   id: string; // Add business ID here
   shop_name: string;
+  slug: string; // Add slug here
   logo_url: string;
   favicon_url: string;
   currency: string;
@@ -29,6 +30,15 @@ interface ShopContextType {
 }
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
+
+// Helper to generate a URL-friendly slug
+const generateSlug = (name: string): string => {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove non-alphanumeric characters except spaces and hyphens
+    .trim()
+    .replace(/\s+/g, '-'); // Replace spaces with single hyphens
+};
 
 export const ShopProvider = ({ children }: { children: ReactNode }) => {
   const [shopDetails, setShopDetails] = useState<ShopDetails | null>(null);
@@ -74,6 +84,7 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     const finalDetails: ShopDetails = {
       id: business.id, // Set the business ID here
       shop_name: dbDetails?.shop_name || igDetails?.shop_name || 'Your Shop',
+      slug: dbDetails?.slug || generateSlug(dbDetails?.shop_name || igDetails?.shop_name || 'your-shop'), // Use existing slug or generate
       logo_url: igDetails?.logo_url || '',
       favicon_url: igDetails?.favicon_url || '/favicon.ico',
       currency: dbDetails?.currency || 'USD',
@@ -99,7 +110,30 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     const { data: business } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
     if (!business) { showError("Could not find your business."); return false; }
 
-    const { error } = await supabase.from('shop_details').upsert({ ...details, business_id: business.id }, { onConflict: 'business_id' });
+    let newSlug = details.shop_name ? generateSlug(details.shop_name) : shopDetails?.slug;
+
+    // Check if the new slug is already taken by another business
+    if (newSlug && newSlug !== shopDetails?.slug) { // Only check if slug is new or changed
+      const { data: existingShop, error: slugCheckError } = await supabase
+        .from('shop_details')
+        .select('business_id')
+        .eq('slug', newSlug)
+        .not('business_id', 'eq', business.id) // Exclude current business
+        .maybeSingle();
+
+      if (slugCheckError) {
+        showError(`Failed to check shop name availability: ${slugCheckError.message}`);
+        return false;
+      }
+      if (existingShop) {
+        showError(`The shop name "${details.shop_name}" is already taken. Please choose a different name.`);
+        return false;
+      }
+    }
+
+    const payload = { ...details, slug: newSlug, business_id: business.id };
+
+    const { error } = await supabase.from('shop_details').upsert(payload, { onConflict: 'business_id' });
     
     if (error) {
       showError(`Failed to update settings: ${error.message}`);

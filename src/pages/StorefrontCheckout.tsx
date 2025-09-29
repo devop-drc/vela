@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle } from "lucide-react";
 
 const StorefrontCheckout = () => {
-  const { businessId } = useParams<{ businessId: string }>();
+  const { shopSlug } = useParams<{ shopSlug: string }>(); // Changed to shopSlug
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

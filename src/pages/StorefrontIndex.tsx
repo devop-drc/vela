@@ -35,7 +35,7 @@ const StorefrontIndex = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {products.map((product) => (
-            <Link to={`/shop/${shopDetails.id}/product/${product.id}`} key={product.id}>
+            <Link to={`/shop/${shopDetails.slug}/product/${product.id}`} key={product.id}> {/* Use shopDetails.slug */}
               <Card className="h-full flex flex-col overflow-hidden hover:shadow-lg transition-shadow">
                 <CardContent className="p-0">
                   <div className="aspect-square w-full overflow-hidden bg-muted">

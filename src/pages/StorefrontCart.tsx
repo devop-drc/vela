@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShoppingCart, ArrowRight } from "lucide-react";
 
 const StorefrontCart = () => {
-  const { businessId } = useParams<{ businessId: string }>();
+  const { shopSlug } = useParams<{ shopSlug: string }>(); // Changed to shopSlug
 
   // Placeholder for cart items
   const cartItems = []; // In a real app, this would come from a CartContext or local storage
@@ -22,7 +22,7 @@ const StorefrontCart = () => {
           <CardContent>
             <p className="text-muted-foreground mb-6">Looks like you haven't added anything to your cart yet.</p>
             <Button asChild>
-              <Link to={`/shop/${businessId}`}>Start Shopping</Link>
+              <Link to={`/shop/${shopSlug}`}>Start Shopping</Link> {/* Use shopSlug */}
             </Button>
           </CardContent>
         </Card>
@@ -53,7 +53,7 @@ const StorefrontCart = () => {
                   <span>$0.00</span>
                 </div>
                 <Button className="w-full" asChild>
-                  <Link to={`/shop/${businessId}/checkout`}>
+                  <Link to={`/shop/${shopSlug}/checkout`}> {/* Use shopSlug */}
                     Proceed to Checkout
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>

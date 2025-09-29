@@ -9,7 +9,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Loader2, ShoppingCart } from "lucide-react";
 
 const StorefrontProductDetail = () => {
-  const { businessId, productId } = useParams<{ businessId: string; productId: string }>();
+  const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>(); // Changed to shopSlug
   const { shopDetails, products, isLoading, error } = useStorefront();
 
   if (isLoading) {
@@ -28,7 +28,7 @@ const StorefrontProductDetail = () => {
         <h1 className="text-2xl font-bold">Product Not Found</h1>
         <p className="mt-2">The product you are looking for does not exist or is no longer available.</p>
         <Button asChild className="mt-4">
-          <Link to={`/shop/${businessId}`}>Back to Shop</Link>
+          <Link to={`/shop/${shopSlug}`}>Back to Shop</Link> {/* Use shopSlug */}
         </Button>
       </div>
     );

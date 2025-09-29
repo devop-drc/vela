@@ -44,7 +44,7 @@ const App = () => (
                 <SyncProvider>
                   <Routes>
                     {/* Public Storefront Routes */}
-                    <Route path="/shop/:businessId" element={<StorefrontLayout />}>
+                    <Route path="/shop/:shopSlug" element={<StorefrontLayout />}> {/* Changed to :shopSlug */}
                       <Route index element={<StorefrontIndex />} />
                       <Route path="product/:productId" element={<StorefrontProductDetail />} />
                       <Route path="cart" element={<StorefrontCart />} />
