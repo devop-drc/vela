@@ -5,6 +5,7 @@ import { StorefrontHeader } from './StorefrontHeader';
 import { StorefrontFooter } from './StorefrontFooter';
 import { defaultSettings } from '@/contexts/AppearanceContext'; // Import default settings
 import { Skeleton } from '@/components/ui/skeleton';
+import { Toaster as Sonner } from "@/components/ui/sonner"; // Import Sonner
 
 // Function to apply settings to the DOM, similar to AppearanceContext
 const applyStorefrontSettingsToDOM = (settings: any) => {
@@ -110,6 +111,7 @@ const StorefrontLayoutContent = () => {
         <Outlet />
       </main>
       <StorefrontFooter />
+      <Sonner /> {/* Add Sonner for notifications */}
     </div>
   );
 };

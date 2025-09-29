@@ -3,15 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, Package, CheckCircle, Truck, Home } from "lucide-react";
+import { Search, Package, CheckCircle, Truck, Home, XCircle } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { useStorefront } from "@/contexts/StorefrontContext";
 
 const StorefrontOrderTracking = () => {
-  const { shopSlug } = useParams<{ shopSlug: string }>(); // Changed to shopSlug
+  const { shopSlug, appearanceSettings } = useStorefront();
   const [orderId, setOrderId] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [orderStatus, setOrderStatus] = useState<string | null>(null); // Placeholder for fetched status
   const [isLoading, setIsLoading] = useState(false);
+  const blurEnabled = appearanceSettings?.blurEnabled;
 
   const handleTrackOrder = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,18 +37,32 @@ const StorefrontOrderTracking = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "Fulfilled": return <CheckCircle className="h-6 w-6 text-emerald-500" />;
-      case "In Progress": return <Truck className="h-6 w-6 text-blue-500" />;
-      case "Pending": return <Package className="h-6 w-6 text-amber-500" />;
-      default: return <Search className="h-6 w-6 text-muted-foreground" />;
+      case "Fulfilled": return <CheckCircle className="h-16 w-16 text-emerald-500 mx-auto" />;
+      case "In Progress": return <Truck className="h-16 w-16 text-blue-500 mx-auto" />;
+      case "Pending": return <Package className="h-16 w-16 text-amber-500 mx-auto" />;
+      case "Not Found": return <XCircle className="h-16 w-16 text-destructive mx-auto" />;
+      default: return <Search className="h-16 w-16 text-muted-foreground mx-auto" />;
+    }
+  };
+
+  const getStatusColorClass = (status: string) => {
+    switch (status) {
+      case "Fulfilled": return "text-emerald-500";
+      case "In Progress": return "text-blue-500";
+      case "Pending": return "text-amber-500";
+      case "Not Found": return "text-destructive";
+      default: return "text-muted-foreground";
     }
   };
 
   return (
     <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-6">Track Your Order</h1>
+      <h1 className="text-3xl font-bold font-heading mb-6 text-center">Track Your Order</h1>
 
-      <Card className="max-w-lg mx-auto">
+      <Card className={cn(
+        "max-w-lg mx-auto",
+        blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
+      )}>
         <CardHeader>
           <CardTitle>Find Your Order</CardTitle>
           <CardDescription>Enter your order ID and email to check its status.</CardDescription>
@@ -80,24 +97,20 @@ const StorefrontOrderTracking = () => {
 
           {orderStatus && (
             <div className="mt-8 p-6 border rounded-lg bg-muted/50 text-center space-y-4">
-              {orderStatus === "Not Found" ? (
-                <>
-                  <Search className="h-16 w-16 text-destructive mx-auto" />
-                  <h3 className="text-xl font-semibold text-destructive">Order Not Found</h3>
-                  <p className="text-muted-foreground">Please double-check your Order ID and email address.</p>
-                </>
+              {getStatusIcon(orderStatus)}
+              <h3 className={cn("text-xl font-semibold", getStatusColorClass(orderStatus))}>
+                Order Status: {orderStatus === "Not Found" ? "Not Found" : orderStatus}
+              </h3>
+              {orderStatus !== "Not Found" ? (
+                <p className="text-muted-foreground">
+                  Your order <span className="font-medium">#{orderId}</span> is currently{" "}
+                  <span className="font-medium lowercase">{orderStatus}</span>.
+                </p>
               ) : (
-                <>
-                  {getStatusIcon(orderStatus)}
-                  <h3 className="text-xl font-semibold">Order Status: {orderStatus}</h3>
-                  <p className="text-muted-foreground">
-                    Your order <span className="font-medium">#{orderId}</span> is currently{" "}
-                    <span className="font-medium lowercase">{orderStatus}</span>.
-                  </p>
-                  {orderStatus === "Fulfilled" && (
-                    <p className="text-sm text-muted-foreground">Thank you for your purchase!</p>
-                  )}
-                </>
+                <p className="text-muted-foreground">Please double-check your Order ID and email address.</p>
+              )}
+              {orderStatus === "Fulfilled" && (
+                <p className="text-sm text-muted-foreground">Thank you for your purchase!</p>
               )}
             </div>
           )}
