@@ -132,15 +132,25 @@ export const StorefrontFilterSidebar = ({
     </AccordionItem>
   );
 
-  const content = (
+  const filterContent = (
     <div className="flex flex-col h-full">
-      <SheetHeader className="p-4 border-b">
-        <SheetTitle className="flex items-center gap-2">
-          <Filter className="h-6 w-6" />
-          Advanced Filters
-        </SheetTitle>
-        <SheetDescription>Refine your product search.</SheetDescription>
-      </SheetHeader>
+      {isMobile ? (
+        <SheetHeader className="p-4 border-b">
+          <SheetTitle className="flex items-center gap-2">
+            <Filter className="h-6 w-6" />
+            Advanced Filters
+          </SheetTitle>
+          <SheetDescription>Refine your product search.</SheetDescription>
+        </SheetHeader>
+      ) : (
+        <div className="p-4 border-b">
+          <h2 className="flex items-center gap-2 text-xl font-bold">
+            <Filter className="h-6 w-6" />
+            Advanced Filters
+          </h2>
+          <p className="text-sm text-muted-foreground">Refine your product search.</p>
+        </div>
+      )}
       <ScrollArea className="flex-1 px-4 py-6">
         <Accordion type="multiple" defaultValue={["Categories", "Price Range"]} className="w-full">
           {uniqueCategories.length > 0 && (
@@ -235,7 +245,7 @@ export const StorefrontFilterSidebar = ({
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent side="left" className={cn("w-full sm:max-w-xs p-0 flex flex-col", blurEnabled && "bg-card/80 backdrop-blur-lg")}>
-          {content}
+          {filterContent}
         </SheetContent>
       </Sheet>
     );
@@ -248,7 +258,7 @@ export const StorefrontFilterSidebar = ({
       blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
       "w-64 flex-shrink-0"
     )}>
-      {content}
+      {filterContent}
     </aside>
   );
 };
