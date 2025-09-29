@@ -4,16 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Home } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useCart } from "@/contexts/CartContext"; // Import useCart
+import { useCart } from "@/contexts/CartContext";
 
 const StorefrontCheckout = () => {
   const { shopSlug, shopDetails, appearanceSettings } = useStorefront();
-  const { cartItems, subtotal, shipping, total, clearCart } = useCart(); // Use cart context
+  const { cartItems, subtotal, shipping, total, clearCart } = useCart();
   const blurEnabled = appearanceSettings?.blurEnabled;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -24,6 +24,21 @@ const StorefrontCheckout = () => {
     clearCart(); // Clear the cart after successful order
     // In a real app, you'd redirect to an order confirmation page
   };
+
+  if (cartItems.length === 0) {
+    return (
+      <div className="container py-8 text-center text-muted-foreground">
+        <h1 className="text-2xl font-bold">Your Cart is Empty</h1>
+        <p className="mt-2">You need to add items to your cart before checking out.</p>
+        <Button asChild className="mt-4">
+          <Link to={`/shop/${shopSlug}`}>
+            <Home className="mr-2 h-4 w-4" />
+            Back to Shop
+          </Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8">

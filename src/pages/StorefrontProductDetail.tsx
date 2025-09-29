@@ -6,18 +6,31 @@ import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Loader2, ShoppingCart, Minus, Plus } from "lucide-react";
+import { Loader2, ShoppingCart, Minus, Plus, Home } from "lucide-react";
 import { useState } from "react";
-import { cn } from "@/lib/utils"; // Import cn for conditional class names
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner"; // Import sonner for notifications
-import { useCart } from "@/contexts/CartContext"; // Import useCart
+import { toast } from "sonner";
+import { useCart } from "@/contexts/CartContext";
+import { getAttributeIcon } from "@/lib/attributeIcons"; // Import attribute icons
+
+const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
+    <div className="flex flex-col">
+        <Label className="text-sm text-muted-foreground flex items-center gap-1.5">
+          <Icon className="h-3.5 w-3.5" />
+          {label}
+        </Label>
+        <div className="font-medium flex flex-wrap items-center gap-1.5 text-base pt-1">
+            {children}
+        </div>
+    </div>
+);
 
 const StorefrontProductDetail = () => {
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
   const { shopDetails, products, isLoading, error, appearanceSettings } = useStorefront();
-  const { addToCart } = useCart(); // Use addToCart from context
+  const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
 
   if (isLoading) {
@@ -36,7 +49,10 @@ const StorefrontProductDetail = () => {
         <h1 className="text-2xl font-bold">Product Not Found</h1>
         <p className="mt-2">The product you are looking for does not exist or is no longer available.</p>
         <Button asChild className="mt-4">
-          <Link to={`/shop/${shopSlug}`}>Back to Shop</Link>
+          <Link to={`/shop/${shopSlug}`}>
+            <Home className="mr-2 h-4 w-4" />
+            Back to Shop
+          </Link>
         </Button>
       </div>
     );
@@ -60,6 +76,10 @@ const StorefrontProductDetail = () => {
       slug: shopDetails.slug,
     }, quantity);
   };
+
+  const allDetails = Object.entries(product.details || {}).filter(([key, value]) => key !== 'type' && value && (!Array.isArray(value) || value.length > 0));
+  const options = allDetails.filter(([key]) => ['color', 'size', 'material'].includes(key)); // Example options
+  const specifications = allDetails.filter(([key]) => !['color', 'size', 'material'].includes(key)); // Example specs
 
   return (
     <div className="container py-8">
@@ -109,27 +129,53 @@ const StorefrontProductDetail = () => {
             </div>
           )}
 
-          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
-            <CardHeader><CardTitle className="text-xl">Product Details</CardTitle></CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              {Object.entries(product.details || {}).map(([key, value]) => {
-                if (key === 'type') return null;
-                const displayValue = Array.isArray(value) ? value.join(', ') : String(value);
-                return (
-                  <div key={key}>
-                    <p className="font-medium capitalize">{key.replace(/_/g, ' ')}:</p>
-                    <p className="text-muted-foreground">{displayValue}</p>
+          {(options.length > 0 || specifications.length > 0) && (
+            <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
+              <CardHeader><CardTitle className="text-xl">Product Details</CardTitle></CardHeader>
+              <CardContent className="p-4 space-y-4">
+                {options.length > 0 && (
+                  <div>
+                    <h3 className="text-base font-semibold mb-3">Options & Variants</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                      {options.map(([key, value]) => {
+                        const Icon = getAttributeIcon(key);
+                        return (
+                          <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
+                            {Array.isArray(value) ? (
+                              value.map(item => <Badge key={item} variant="outline">{item}</Badge>)
+                            ) : (
+                              <p className="text-base">{String(value)}</p>
+                            )}
+                          </DetailDisplayRow>
+                        );
+                      })}
+                    </div>
                   </div>
-                );
-              })}
-              {product.pricing_type === 'one_time' && (
-                <div>
-                  <p className="font-medium">Inventory:</p>
-                  <p className="text-muted-foreground">{product.inventory || 0}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                )}
+                {options.length > 0 && specifications.length > 0 && <hr className="my-4" />}
+                {specifications.length > 0 && (
+                  <div>
+                    <h3 className="text-base font-semibold mb-3">Specifications</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                      {specifications.map(([key, value]) => {
+                        const Icon = getAttributeIcon(key);
+                        return (
+                          <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
+                              <p className="text-base">{Array.isArray(value) ? value.join(', ') : String(value)}</p>
+                          </DetailDisplayRow>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {product.pricing_type === 'one_time' && (
+                  <DetailDisplayRow label="Inventory" icon={Home}> {/* Using Home icon as a placeholder for inventory */}
+                    <p className="text-base">{product.inventory || 0}</p>
+                  </DetailDisplayRow>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && (
             <div className="flex items-center gap-4">

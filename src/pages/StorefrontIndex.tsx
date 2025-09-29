@@ -10,10 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Search, ListFilter, ArrowUpNarrowWide, Tag } from "lucide-react";
+import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { getCategoryColor } from "@/lib/colorUtils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Import Avatar
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard"; // Import the new component
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -23,28 +24,14 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: { y: 0, opacity: 1 },
-};
-
 const StorefrontIndex = () => {
   const { shopDetails, products, isLoading, error, appearanceSettings } = useStorefront();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState("newest");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [priceFilter, setPriceFilter] = useState<string>("all"); // 'all', 'under-50', '50-100', '100-200', 'over-200'
+  const [priceFilter, setPriceFilter] = useState<string>("all");
 
   const blurEnabled = appearanceSettings?.blurEnabled;
-
-  // --- DEBUGGING LOGS ---
-  useEffect(() => {
-    console.log("StorefrontIndex: shopDetails", shopDetails);
-    console.log("StorefrontIndex: products", products);
-    console.log("StorefrontIndex: isLoading", isLoading);
-    console.log("StorefrontIndex: error", error);
-  }, [shopDetails, products, isLoading, error]);
-  // --- END DEBUGGING LOGS ---
 
   const availableCategories = useMemo(() => {
     const categories = new Set<string>();
@@ -109,6 +96,15 @@ const StorefrontIndex = () => {
       return acc;
     }, {} as { [key: string]: typeof products });
   }, [filteredAndSortedProducts]);
+
+  const hasActiveFilters = searchTerm || selectedCategories.length > 0 || priceFilter !== 'all' || sortOption !== 'newest';
+
+  const handleResetFilters = () => {
+    setSearchTerm("");
+    setSortOption("newest");
+    setSelectedCategories([]);
+    setPriceFilter("all");
+  };
 
   if (isLoading) {
     return (
@@ -179,83 +175,95 @@ const StorefrontIndex = () => {
       </motion.div>
 
       {/* Search, Filter, Sort Controls */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
-        <div className="relative w-full md:w-1/3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search products..."
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+      <div className={cn(
+        "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t",
+        blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
+      )}>
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="relative w-full md:w-1/3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search products..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
 
-        <div className="flex flex-wrap gap-2 w-full md:w-2/3 justify-end">
-          {/* Sort Dropdown */}
-          <Select value={sortOption} onValueChange={setSortOption}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <ArrowUpNarrowWide className="mr-2 h-4 w-4 text-muted-foreground" />
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">Newest</SelectItem>
-              <SelectItem value="oldest">Oldest</SelectItem>
-              <SelectItem value="price-asc">Price: Low to High</SelectItem>
-              <SelectItem value="price-desc">Price: High to Low</SelectItem>
-              <SelectItem value="name-asc">Name: A-Z</SelectItem>
-              <SelectItem value="name-desc">Name: Z-A</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-wrap gap-2 w-full md:w-2/3 justify-end">
+            {/* Sort Dropdown */}
+            <Select value={sortOption} onValueChange={setSortOption}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <ArrowUpNarrowWide className="mr-2 h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="oldest">Oldest</SelectItem>
+                <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                <SelectItem value="name-asc">Name: A-Z</SelectItem>
+                <SelectItem value="name-desc">Name: Z-A</SelectItem>
+              </SelectContent>
+            </Select>
 
-          {/* Category Filter */}
-          {availableCategories.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full md:w-[180px] justify-start">
-                  <ListFilter className="mr-2 h-4 w-4" />
-                  Category ({selectedCategories.length})
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {availableCategories.map(category => (
-                  <DropdownMenuCheckboxItem
-                    key={category}
-                    checked={selectedCategories.includes(category)}
-                    onCheckedChange={(checked) => {
-                      setSelectedCategories(prev =>
-                        checked ? [...prev, category] : prev.filter(c => c !== category)
-                      );
-                    }}
-                  >
-                    {category}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+            {/* Category Filter */}
+            {availableCategories.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full md:w-[180px] justify-start">
+                    <ListFilter className="mr-2 h-4 w-4" />
+                    Category ({selectedCategories.length})
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {availableCategories.map(category => (
+                    <DropdownMenuCheckboxItem
+                      key={category}
+                      checked={selectedCategories.includes(category)}
+                      onCheckedChange={(checked) => {
+                        setSelectedCategories(prev =>
+                          checked ? [...prev, category] : prev.filter(c => c !== category)
+                        );
+                      }}
+                    >
+                      {category}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
-          {/* Price Filter */}
-          <Select value={priceFilter} onValueChange={setPriceFilter}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <Tag className="mr-2 h-4 w-4 text-muted-foreground" />
-              <SelectValue placeholder="Price Range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Prices</SelectItem>
-              <SelectItem value="under-50">Under {formatCurrency(50, shopDetails.currency)}</SelectItem>
-              <SelectItem value="50-100">{formatCurrency(50, shopDetails.currency)} - {formatCurrency(100, shopDetails.currency)}</SelectItem>
-              <SelectItem value="100-200">{formatCurrency(100, shopDetails.currency)} - {formatCurrency(200, shopDetails.currency)}</SelectItem>
-              <SelectItem value="over-200">Over {formatCurrency(200, shopDetails.currency)}</SelectItem>
-            </SelectContent>
-          </Select>
+            {/* Price Filter */}
+            <Select value={priceFilter} onValueChange={setPriceFilter}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <Tag className="mr-2 h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Price Range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Prices</SelectItem>
+                <SelectItem value="under-50">Under {formatCurrency(50, shopDetails.currency)}</SelectItem>
+                <SelectItem value="50-100">{formatCurrency(50, shopDetails.currency)} - {formatCurrency(100, shopDetails.currency)}</SelectItem>
+                <SelectItem value="100-200">{formatCurrency(100, shopDetails.currency)} - {formatCurrency(200, shopDetails.currency)}</SelectItem>
+                <SelectItem value="over-200">Over {formatCurrency(200, shopDetails.currency)}</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {hasActiveFilters && (
+              <Button variant="ghost" onClick={handleResetFilters} className="w-full md:w-auto">
+                <XCircle className="mr-2 h-4 w-4" />
+                Reset Filters
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
       <h2 className="text-3xl font-bold font-heading mb-8 text-center">Our Products</h2>
       
-      {filteredAndSortedProducts.length === 0 ? (
+      {Object.keys(groupedProducts).length === 0 ? (
         <div className={cn(
           "text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg",
           blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
@@ -284,47 +292,9 @@ const StorefrontIndex = () => {
                 animate="visible"
                 className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
               >
-                {productsInCategory.map((product) => {
-                  const categoryColor = getCategoryColor(product.category);
-                  return (
-                    <motion.div key={product.id} variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
-                      <Link to={`/shop/${shopDetails.slug}/product/${product.id}`}>
-                        <Card className={cn(
-                          "h-full flex flex-col overflow-hidden transition-shadow hover:shadow-xl",
-                          blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
-                        )}>
-                          <CardContent className="p-0">
-                            <div className="aspect-square w-full overflow-hidden bg-muted">
-                              <MediaItem src={product.media_url} alt={product.name} type={product.media_type} className="object-cover transition-transform duration-300 group-hover:scale-105" />
-                            </div>
-                          </CardContent>
-                          <div className="p-4 flex-1 flex flex-col justify-between">
-                            <div>
-                              <h3 className="font-semibold text-lg leading-tight mb-1">{product.name}</h3>
-                              {product.category && (
-                                <Badge 
-                                  variant="outline" 
-                                  className={cn("mb-2", categoryColor.bg, categoryColor.text, categoryColor.border)}
-                                >
-                                  {product.category}
-                                </Badge>
-                              )}
-                              <p className="text-sm text-muted-foreground line-clamp-2">{product.caption}</p>
-                            </div>
-                            <div className="mt-4">
-                              <p className="text-xl font-bold text-primary">
-                                {formatCurrency(product.price, product.currency || shopDetails.currency)}
-                                {product.pricing_type === 'subscription' && (
-                                  <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                        </Card>
-                      </Link>
-                    </motion.div>
-                  );
-                })}
+                {productsInCategory.map((product) => (
+                  <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} />
+                ))}
               </motion.div>
             </div>
           ))}

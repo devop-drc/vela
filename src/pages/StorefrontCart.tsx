@@ -6,13 +6,12 @@ import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { useCart } from "@/contexts/CartContext"; // Import useCart
+import { useCart } from "@/contexts/CartContext";
 
 const StorefrontCart = () => {
   const { shopSlug, shopDetails, appearanceSettings } = useStorefront();
-  const { cartItems, updateQuantity, removeFromCart, subtotal, shipping, total } = useCart(); // Use cart context
+  const { cartItems, updateQuantity, removeFromCart, subtotal, shipping, total } = useCart();
   const blurEnabled = appearanceSettings?.blurEnabled;
 
   return (
@@ -40,20 +39,24 @@ const StorefrontCart = () => {
           <div className="lg:col-span-2 space-y-4">
             {cartItems.map(item => (
               <Card key={item.productId} className={cn(
-                "flex items-center p-4 gap-4",
+                "flex flex-col sm:flex-row items-center p-4 gap-4",
                 blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
               )}>
-                <div className="h-24 w-24 flex-shrink-0 rounded-md overflow-hidden bg-muted">
-                  <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
-                </div>
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 items-center gap-4">
+                <Link to={`/shop/${shopSlug}/product/${item.productId}`} className="flex-shrink-0">
+                  <div className="h-24 w-24 rounded-md overflow-hidden bg-muted">
+                    <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
+                  </div>
+                </Link>
+                <div className="flex-1 w-full sm:w-auto grid grid-cols-1 md:grid-cols-2 items-center gap-4 text-center sm:text-left">
                   <div>
-                    <h3 className="font-semibold text-lg">{item.name}</h3>
+                    <Link to={`/shop/${shopSlug}/product/${item.productId}`}>
+                      <h3 className="font-semibold text-lg hover:underline">{item.name}</h3>
+                    </Link>
                     <p className="text-muted-foreground text-sm">
                       {formatCurrency(item.price, item.currency || shopDetails?.currency)}
                     </p>
                   </div>
-                  <div className="flex items-center justify-end md:justify-start gap-4">
+                  <div className="flex items-center justify-center sm:justify-end gap-4">
                     <div className="flex items-center border rounded-md">
                       <Button
                         variant="ghost"
@@ -91,7 +94,7 @@ const StorefrontCart = () => {
             ))}
           </div>
           <div className="lg:col-span-1">
-            <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
+            <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "lg:sticky lg:top-24")}>
               <CardHeader><CardTitle>Order Summary</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between">
