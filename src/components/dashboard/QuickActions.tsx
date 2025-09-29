@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Archive, ShoppingBag, Palette, TestTube2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useSync } from "@/contexts/SyncContext";
+import { useSync } from "@/hooks/useSync";
 import { useIntegration } from "@/contexts/IntegrationContext";
 import { toast } from "sonner";
 import { showError } from "@/utils/toast";
@@ -28,9 +28,10 @@ export const QuickActions = () => {
         if (data.jobId) {
           await startNewSync(data.jobId);
         }
-      } catch (err: any) {
+      } catch (err) {
         toast.dismiss('sync-initiating');
-        showError(err.message || `Failed to start quick sync.`);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to start quick sync.';
+        showError(errorMessage);
       }
     });
   };
@@ -45,8 +46,9 @@ export const QuickActions = () => {
       
       toast.success(data.message || "Mock data generated successfully! Refreshing...", { id: toastId });
       setTimeout(() => window.location.reload(), 1500);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to generate mock data.", { id: toastId });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate mock data.';
+      toast.error(errorMessage, { id: toastId });
       setIsSeeding(false);
     }
   };

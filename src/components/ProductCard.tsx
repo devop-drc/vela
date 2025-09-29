@@ -52,7 +52,7 @@ const DetailRow = ({ icon: Icon, children }: { icon: React.ElementType, children
 );
 
 export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSize, onSelect, onEdit, onStatusChange }: ProductCardProps) => {
-  const { convertCurrency, shopDetails } = useShop();
+  const { shopDetails, exchangeRates } = useShop();
 
   const handleCardClick = () => {
     if (isSelectionModeActive) {
@@ -62,8 +62,26 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
     }
   };
 
-  const { details, caption } = product;
-  const displayPrice = convertCurrency(product.price);
+  const { details, caption, currency } = product;
+  // Format the original price with its currency
+  const originalPriceFormatted = product.price != null && currency 
+    ? new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(product.price)
+    : '';
+  
+  // Convert price to display currency if needed
+  let displayPrice = product.price;
+  if (product.price != null && currency && shopDetails?.currency && currency !== shopDetails.currency) {
+    // Get the exchange rate for the source currency (from ALL to currency)
+    const fromRate = exchangeRates?.[currency];
+    // Get the exchange rate for the target currency (from ALL to shop's currency)
+    const toRate = exchangeRates?.[shopDetails.currency];
+    
+    if (fromRate && toRate) {
+      // Convert from source currency to ALL, then to target currency
+      const rate = toRate / fromRate;
+      displayPrice = product.price * rate;
+    }
+  }
 
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
   
@@ -148,10 +166,26 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
 
           <div className="flex items-end justify-between pt-2">
             {product.price != null ? (
-              <p className="font-semibold text-lg">
-                {formatCurrency(displayPrice, shopDetails?.currency)}
-                {product.pricing_type === 'subscription' && <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>}
-              </p>
+              <div className="flex flex-col">
+                <p className="font-semibold text-lg">
+                  {displayPrice != null ? (
+                    <>
+                      {new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: shopDetails?.currency || 'USD'
+                      }).format(displayPrice)}
+                      {product.pricing_type === 'subscription' && (
+                        <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                      )}
+                    </>
+                  ) : 'N/A'}
+                </p>
+                {product.currency && product.currency !== shopDetails?.currency && (
+                  <span className="text-xs text-muted-foreground">
+                    {originalPriceFormatted}
+                  </span>
+                )}
+              </div>
             ) : (
               <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-600">
                 <AlertTriangle className="h-4 w-4" />

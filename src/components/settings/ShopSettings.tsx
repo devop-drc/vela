@@ -5,14 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Instagram, RefreshCw, Save, Loader2, Users, Image as ImageIcon, Store, Type, Info, Mail, DollarSign } from 'lucide-react';
+import { Instagram, RefreshCw, Save, Loader2, Users, Image as ImageIcon, Store, Type, Info, Mail, DollarSign, Copy } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useShop } from '@/contexts/ShopContext';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import { currencies } from '@/lib/currencies';
 
 const InfoRow = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
@@ -64,6 +64,21 @@ export const ShopSettings = () => {
     if (success) {
       showSuccess("Shop details updated!");
       reset(data); // Resets the form's dirty state
+    }
+  };
+
+  const handleCopyShopUrl = async () => {
+    if (shopDetails?.id) {
+      const shopUrl = `${window.location.origin}/shop/${shopDetails.id}`;
+      try {
+        await navigator.clipboard.writeText(shopUrl);
+        showSuccess("Shop URL copied to clipboard!");
+      } catch (err) {
+        showError("Failed to copy URL. Please try again manually.");
+        console.error("Failed to copy shop URL:", err);
+      }
+    } else {
+      showError("Shop URL not available yet.");
     }
   };
 
@@ -128,7 +143,11 @@ export const ShopSettings = () => {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-end border-t pt-6">
+            <CardFooter className="flex justify-between border-t pt-6">
+              <Button type="button" variant="outline" onClick={handleCopyShopUrl}>
+                <Copy className="mr-2 h-4 w-4" />
+                Copy Shop URL
+              </Button>
               <Button type="submit" disabled={isSubmitting || !isDirty}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Save Changes

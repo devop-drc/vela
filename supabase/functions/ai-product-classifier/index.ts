@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-const GEMINI_PRO_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_PRO_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,33 +16,48 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
 ` : '';
 
   return `
-  You are an expert AI for e-commerce, specializing in analyzing Instagram captions to create compelling and structured product listings.
+  You are an expert AI for e-commerce, specializing in analyzing Instagram captions to create structured product listings. Your task is to extract product information with high accuracy.
 
   **Primary Objectives:**
-  1.  **Consult Knowledge:** First, check your internal knowledge base for well-known products (e.g., "iPhone 13 Pro Max").
-  2.  **Learn from Examples:** Use the provided "Similar Product Examples" as a style guide for how this user structures their data (e.g., what attributes they use, their tone).
-  3.  **Analyze & Extract:** Analyze the new caption to identify the product and extract its details.
+  1. **Currency Detection:** Pay close attention to the currency mentioned in the caption (e.g., ALL, $, €, £). If no currency is specified, default to the local currency (ALL for Albania).
+  2. **Product Identification:** Determine if the post is selling a product. If not, return \`{"isProductPost": false}\`.
+  3. **Product Name:** Extract a clear and concise product name. If the product has a model number or specific identifier, include it.
+  4. **Category & Type:** Determine the most specific category and type based on the product name and description.
+  5. **Price Extraction:**
+     - Look for price patterns like "1000 ALL", "$10", "10€"
+     - If multiple prices are found, use the one that appears to be the main product price
+     - If no price is found, set price to null
+  6. **Specifications vs Options:**
+     - **Specifications (fixed details):** Material, dimensions, weight, model number, compatibility, features
+     - **Options (customer choices):** Size, color, quantity, style, configuration
+  7. **Attributes Extraction:**
+     - Extract all relevant attributes from the caption
+     - Use the user-defined keywords as primary guides
+     - For each attribute, include:
+         - \`"name"\`: Lowercase, snake_case key (e.g., "material", "screen_size")
+         - \`"value"\`: Extracted value(s) as string or array
+         - \`"inputType"\`: "text", "number", "color", "tags", "dropdown", "textarea"
+         - \`"isOption"\`: true if customer-selectable (size, color), false for fixed specs
+         - \`"possibleValues"\`: Array of options if applicable
+  8. **Description:** Create a compelling 2-3 sentence description highlighting key features and benefits
+  9. **Tags:** Generate 3-5 relevant tags for search and categorization
+
+  **Currency Handling:**
+  - If the caption includes "ALL", "Lek", or "Lekë", use "ALL" as currency
+  - For other currencies, use standard codes: USD, EUR, GBP, etc.
+  - If no currency is specified, default to "ALL"
+
+  **Common Albanian Product Terms:**
+  - Çmimi/Çmimi: Price
+  - Madhësia: Size
+  - Ngjyra: Color
+  - Materiali: Material
+  - Përmasat: Dimensions
+  - Pesha: Weight
+  - Përshkrimi: Description
 
   **User-Defined Keywords:**
-  The user has provided these keywords to help you. Use them as a primary guide for extraction. When you find a keyword, extract the data that follows it based on its description.
-  ${keywords.map(k => `- **${k.keyword}:** ${k.description}`).join('\n')}
-
-  **Analysis & Extraction Rules:**
-  1.  **Product Identification:** First, decide if the post is selling a product. If not, return \`{"isProductPost": false}\`.
-  2.  **Product Name:** Extract a clear and concise product name.
-  3.  **Sales Description:** Based on the caption, generate a new, compelling product description (2-3 sentences) that highlights the key benefits and appeals to the target audience. This should be sales-oriented, not just a summary.
-  4.  **Categorization:** Assign a broad 'categoryName' (e.g., "Clothing") and a specific 'typeName' (e.g., "T-Shirt").
-  5.  **Attributes Extraction:**
-      - Use the user-defined keywords as your primary guide.
-      - Also, find other common attributes (e.g., dimensions, weight, compatibility).
-      - For each attribute, create an object with:
-          - \`"name"\`: A lowercase, snake_case key (e.g., "material", "available_sizes").
-          - \`"value"\`: The extracted value(s). If there are multiple values (like sizes or colors), return them as an array of strings.
-          - \`"inputType"\`: The best UI input type. Choose from: "text", "number", "color", "tags", "dropdown", "textarea".
-          - \`"isOption"\`: A boolean. \`true\` if it's a customer-selectable option (like color, size, storage). \`false\` if it's a fixed specification (like material, dimensions, screen type).
-          - \`"possibleValues"\`: If 'dropdown', provide potential options based on the context.
-  6.  **Pricing:** Extract price and currency code (e.g., USD, EUR). If not found, default to null.
-  7.  **Tags:** Generate an array of 3-5 relevant tags.
+  ${keywords.length > 0 ? keywords.map(k => `- **${k.keyword}:** ${k.description}`).join('\n') : 'No custom keywords provided.'}
 
   ${similarProductsContext}
 
@@ -57,20 +72,112 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   **EXAMPLE JSON OUTPUT:**
   {
     "isProductPost": true,
-    "productName": "Vintage Sunset Tee",
-    "description": "Embrace golden hour vibes with our incredibly soft Vintage Sunset Tee. Its retro-inspired graphic and relaxed fit make it the perfect staple for any casual occasion.",
-    "categoryName": "Clothing",
-    "typeName": "T-Shirt",
-    "price": 35.00,
-    "currency": "USD",
-    "tags": ["vintage", "sunset", "graphic tee"],
+    "productName": "iPhone 13 Pro Max 256GB",
+    "description": "Experience cutting-edge technology with the iPhone 13 Pro Max. Features a stunning Super Retina XDR display, powerful A15 Bionic chip, and professional camera system for breathtaking photos and videos.",
+    "categoryName": "Electronics",
+    "typeName": "Smartphone",
+    "price": 150000,
+    "currency": "ALL",
+    "tags": ["iphone", "smartphone", "apple", "pro", "5g"],
     "attributes": [
-      { "name": "material", "value": "100% Ring-Spun Cotton", "inputType": "text", "isOption": false },
-      { "name": "available_sizes", "value": ["M", "L", "XL"], "inputType": "tags", "isOption": true },
-      { "name": "colors", "value": ["Off-white", "Heather Grey"], "inputType": "tags", "isOption": true }
+      { "name": "storage", "value": "256GB", "inputType": "dropdown", "isOption": true, "possibleValues": ["128GB", "256GB", "512GB"] },
+      { "name": "color", "value": ["Graphite", "Silver", "Gold", "Sierra Blue"], "inputType": "dropdown", "isOption": true },
+      { "name": "screen_size", "value": "6.7 inches", "inputType": "text", "isOption": false },
+      { "name": "camera", "value": "Pro 12MP camera system (Telephoto, Wide, Ultra Wide)", "inputType": "text", "isOption": false },
+      { "name": "battery_life", "value": "Up to 28 hours video playback", "inputType": "text", "isOption": false },
+      { "name": "condition", "value": "New", "inputType": "dropdown", "isOption": true, "possibleValues": ["New", "Refurbished", "Used"] },
+      { "name": "warranty", "value": "2 years", "inputType": "text", "isOption": false }
     ]
   }
+  
+  **FOR NON-PRODUCT POSTS:**
+  {
+    "isProductPost": false
+  }
 `;
+}
+
+// Function to convert price using exchange rates where ALL is the base currency for all rates
+async function convertPrice(price: number, fromCurrency: string, toCurrency: string, supabaseClient: any) {
+  console.log(`Converting ${price} ${fromCurrency} to ${toCurrency}`);
+  
+  if (fromCurrency === toCurrency) return price;
+  
+  try {
+    // First, try to get the exchange rate for the source currency (from ALL to fromCurrency)
+    const { data: fromRateData, error: fromRateError } = await supabaseClient
+      .from('exchange_rates_cache')
+      .select('rate, to_currency')
+      .eq('from_currency', 'ALL')
+      .eq('to_currency', fromCurrency)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    // Then, get the exchange rate for the target currency (from ALL to toCurrency)
+    const { data: toRateData, error: toRateError } = await supabaseClient
+      .from('exchange_rates_cache')
+      .select('rate, to_currency')
+      .eq('from_currency', 'ALL')
+      .eq('to_currency', toCurrency)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    // Log the retrieved rates for debugging
+    console.log('Exchange rates retrieved:', { fromRateData, toRateData });
+    
+    // If we're converting from ALL to another currency
+    if (fromCurrency === 'ALL' && toRateData) {
+      const converted = price * toRateData.rate;
+      console.log(`Converted ${price} ALL to ${converted} ${toCurrency} using rate: ${toRateData.rate}`);
+      return converted;
+    }
+    
+    // If we're converting to ALL from another currency
+    if (toCurrency === 'ALL' && fromRateData) {
+      const converted = price / fromRateData.rate;
+      console.log(`Converted ${price} ${fromCurrency} to ${converted} ALL using rate: ${fromRateData.rate}`);
+      return converted;
+    }
+    
+    // For any other conversion (non-ALL to non-ALL)
+    if (fromRateData && toRateData) {
+      // Convert source currency to ALL, then to target currency
+      // rate = (ALL/toCurrency) / (ALL/fromCurrency) = fromCurrency/toCurrency
+      const rate = fromRateData.rate / toRateData.rate;
+      const converted = price * rate;
+      
+      console.log(`Converted ${price} ${fromCurrency} to ${converted} ${toCurrency} ` +
+                  `using rates: ${fromRateData.rate} (ALL/${fromCurrency}) / ${toRateData.rate} (ALL/${toCurrency}) = ${rate}`);
+      return converted;
+    }
+    
+    // If we couldn't find the necessary rates
+    console.error('Could not find exchange rates for conversion:', {
+      fromCurrency,
+      toCurrency,
+      fromRateError: fromRateError?.message,
+      toRateError: toRateError?.message,
+      hasFromRate: !!fromRateData,
+      hasToRate: !!toRateData
+    });
+    
+    // As a fallback, try to get any available rates for debugging
+    const { data: allRates } = await supabaseClient
+      .from('exchange_rates_cache')
+      .select('from_currency, to_currency, rate, created_at')
+      .order('created_at', { ascending: false })
+      .limit(10);
+      
+    console.log('Available exchange rates:', allRates);
+    
+    return null;
+    
+  } catch (error) {
+    console.error('Error in convertPrice:', error);
+    return null;
+  }
 }
 
 serve(async (req) => {
@@ -78,7 +185,7 @@ serve(async (req) => {
 
   try {
     if (!GEMINI_API_KEY) throw new Error("Gemini API key is not configured.");
-    const { caption, user_id } = await req.json();
+    const { caption, user_id, target_currency = 'EUR' } = await req.json();
     if (!caption) throw new Error("Caption is required for analysis.");
     if (!user_id) throw new Error("User ID is required to fetch keywords.");
 
@@ -87,6 +194,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { persistSession: false } }
     );
+
+    // Get user's preferred currency
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('profiles')
+      .select('currency')
+      .eq('id', user_id)
+      .single();
+    
+    const userCurrency = userData?.currency || target_currency;
 
     const { data: keywords, error: keywordsError } = await supabaseAdmin
       .from('keywords')
@@ -122,14 +238,33 @@ serve(async (req) => {
     if (!geminiResponse.ok) throw new Error(`Gemini API error: ${await geminiResponse.text()}`);
     const geminiData = await geminiResponse.json();
     const analysisText = geminiData.candidates[0].content.parts[0].text;
-    const analysis = JSON.parse(analysisText);
+    let analysis = JSON.parse(analysisText);
 
-    const tokenUsage = geminiData.usageMetadata;
-    if (tokenUsage) {
-        console.log(`AI Product Classifier Token Usage: Prompt: ${tokenUsage.promptTokenCount}, Candidates: ${tokenUsage.candidatesTokenCount}`);
+    // Store the original price and currency as extracted
+    // The conversion will be handled in the UI based on user's display currency
+    const result = {
+      ...analysis,
+      original_price: analysis.price,
+      original_currency: analysis.currency,
+      is_price_converted: false,
+      tokenUsage: geminiData.usageMetadata,
+      currency_preferences: {
+        original_currency: analysis.currency,
+        display_currency: userCurrency,
+        is_converted: false
+      }
+    };
+
+    if (geminiData.usageMetadata) {
+      console.log(`AI Product Classifier Token Usage: Prompt: ${geminiData.usageMetadata.promptTokenCount}, Candidates: ${geminiData.usageMetadata.candidatesTokenCount}`);
     }
 
-    return new Response(JSON.stringify({ ...analysis, tokenUsage }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(result), { 
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json' 
+      } 
+    });
 
   } catch (error) {
     console.error('Classifier Function Error:', error.message);

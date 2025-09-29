@@ -220,8 +220,13 @@ const Products = () => {
   };
   const handleBulkDelete = async () => {
     const { error } = await supabase.from('products').delete().in('id', selectedProducts);
-    if (error) showError(`Failed to delete products: ${error.message}`);
-    else { showSuccess(`Successfully deleted ${selectedProducts.length} products.`); setSelectedProducts([]); }
+    if (error) {
+      showError(`Failed to delete products: ${error.message}`);
+    } else {
+      setProducts(prevProducts => prevProducts.filter(p => !selectedProducts.includes(p.id)));
+      showSuccess(`Successfully deleted ${selectedProducts.length} products.`);
+      setSelectedProducts([]);
+    }
     setBulkDeleteConfirm(false);
   };
   const handleApplySale = async (saleData: SaleFormData) => {

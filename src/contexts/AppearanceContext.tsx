@@ -231,7 +231,7 @@ const applySettingsToDOM = (settings: Partial<DesignSettings>) => {
   `;
 };
 
-const getRandomItem = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+const getRandomItem = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
 export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
   const [settings, setSettings] = useState<DesignSettings>(defaultSettings);
@@ -329,6 +329,8 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
     // 2. Random Fonts
     const fontCategoryName = getRandomItem(Object.keys(fontCategories)) as keyof typeof fontCategories;
     const { headings, body } = fontCategories[fontCategoryName];
+    
+    // eslint-disable-next-line prefer-const
     let headingFont = getRandomItem(headings);
     let bodyFont = getRandomItem(body);
     if (fontCategoryName !== 'Minimalist') {

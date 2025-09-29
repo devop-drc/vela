@@ -12,7 +12,21 @@ const getSupabaseAdmin = () => createClient(
   { auth: { persistSession: false } }
 );
 
-const processUser = async (supabaseAdmin: SupabaseClient, integration: any) => {
+interface Integration {
+  user_id: string;
+  access_token: string;
+  provider: string;
+}
+
+interface InstagramPost {
+  id: string;
+  caption?: string;
+  media_url: string;
+  thumbnail_url?: string;
+  media_type: string;
+}
+
+const processUser = async (supabaseAdmin: SupabaseClient, integration: Integration) => {
   const { user_id, access_token } = integration;
   console.log(`Starting sync for user: ${user_id}`);
 
@@ -49,7 +63,7 @@ const processUser = async (supabaseAdmin: SupabaseClient, integration: any) => {
     if (productsError) throw productsError;
 
     const existingPostIds = new Set(existingProducts.map(p => p.instagram_post_id));
-    const newPosts = allPosts.filter((p: any) => !existingPostIds.has(p.id));
+    const newPosts = allPosts.filter((p: InstagramPost) => !existingPostIds.has(p.id));
 
     // Step 4: Parallel analysis of new posts
     if (newPosts.length > 0) {
@@ -82,7 +96,7 @@ const processUser = async (supabaseAdmin: SupabaseClient, integration: any) => {
     }
 
     // Step 5: Check for deleted/archived posts
-    const allInstagramPostIds = new Set(allPosts.map((p: any) => p.id));
+    const allInstagramPostIds = new Set(allPosts.map((p: InstagramPost) => p.id));
     const productsToArchive = existingProducts.filter(p => p.instagram_post_id && !allInstagramPostIds.has(p.instagram_post_id));
     
     if (productsToArchive.length > 0) {
@@ -105,7 +119,16 @@ serve(async (req) => {
   }
 
   try {
-    // This function should be protected by a secret in a real-world scenario
+    const secret = req.headers.get('x-secret-key');
+    const envSecret = Deno.env.get('PERIODIC_SYNC_SECRET');
+
+    if (!secret || secret !== envSecret) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabaseAdmin = getSupabaseAdmin();
     
     // Fetch all users with an active Facebook integration

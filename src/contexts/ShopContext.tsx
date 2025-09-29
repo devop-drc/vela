@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
 
 interface ShopDetails {
+  id: string; // Add business ID here
   shop_name: string;
   logo_url: string;
   favicon_url: string;
@@ -24,7 +25,7 @@ interface ShopContextType {
   updateShopDetails: (details: Partial<ShopDetails>) => Promise<boolean>;
   fetchShopDetails: () => Promise<void>;
   exchangeRates: ExchangeRates | null;
-  convertCurrency: (amount: number | null | undefined) => number;
+  convertCurrency: (amount: number | null | undefined, fromCurrency?: string) => number;
 }
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
@@ -56,8 +57,10 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const { data: business } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
-    if (!business) {
+    const { data: business, error: businessError } = await supabase
+      .from('businesses').select('id').eq('user_id', user.id).single();
+    if (businessError || !business) {
+      console.error("Could not find your business:", businessError);
       setIsLoading(false);
       return;
     }
@@ -69,6 +72,7 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const finalDetails: ShopDetails = {
+      id: business.id, // Set the business ID here
       shop_name: dbDetails?.shop_name || igDetails?.shop_name || 'Your Shop',
       logo_url: igDetails?.logo_url || '',
       favicon_url: igDetails?.favicon_url || '/favicon.ico',
@@ -106,16 +110,35 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const convertCurrency = (amount: number | null | undefined) => {
+  const convertCurrency = (amount: number | null | undefined, fromCurrency?: string) => {
     const numericAmount = amount ?? 0;
     if (!shopDetails || !exchangeRates || !shopDetails.currency) {
       return numericAmount;
     }
-    const rate = exchangeRates[shopDetails.currency];
-    if (!rate) {
+
+    // If no fromCurrency is provided or it's the same as the shop's currency, return as is
+    if (!fromCurrency || fromCurrency === shopDetails.currency) {
       return numericAmount;
     }
-    return numericAmount * rate;
+
+    // Get the rate for the source currency (from ALL to fromCurrency)
+    const fromRate = exchangeRates[fromCurrency];
+    // Get the rate for the target currency (from ALL to shop's currency)
+    const toRate = exchangeRates[shopDetails.currency];
+
+    // If either rate is missing, return the original amount
+    if (!fromRate || !toRate) {
+      console.warn(`Missing exchange rate for conversion from ${fromCurrency} to ${shopDetails.currency}`);
+      return numericAmount;
+    }
+
+    // Convert from source currency to ALL, then to target currency
+    // rate = (ALL/toCurrency) / (ALL/fromCurrency) = fromCurrency/toCurrency
+    const rate = toRate / fromRate;
+    const convertedAmount = numericAmount * rate;
+    
+    // Round to 2 decimal places for display
+    return Math.round(convertedAmount * 100) / 100;
   };
 
   return (

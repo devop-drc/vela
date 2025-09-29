@@ -22,6 +22,12 @@ import { ShopProvider } from "./contexts/ShopContext";
 import { SyncProvider } from "./contexts/SyncContext";
 import Demo from "./pages/Demo";
 import Keywords from "./pages/Keywords";
+import StorefrontLayout from "./components/storefront/StorefrontLayout";
+import StorefrontIndex from "./pages/StorefrontIndex";
+import StorefrontProductDetail from "./pages/StorefrontProductDetail";
+import StorefrontCart from "./pages/StorefrontCart";
+import StorefrontCheckout from "./pages/StorefrontCheckout";
+import StorefrontOrderTracking from "./pages/StorefrontOrderTracking";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +43,16 @@ const App = () => (
               <IntegrationProvider>
                 <SyncProvider>
                   <Routes>
+                    {/* Public Storefront Routes */}
+                    <Route path="/shop/:businessId" element={<StorefrontLayout />}>
+                      <Route index element={<StorefrontIndex />} />
+                      <Route path="product/:productId" element={<StorefrontProductDetail />} />
+                      <Route path="cart" element={<StorefrontCart />} />
+                      <Route path="checkout" element={<StorefrontCheckout />} />
+                      <Route path="order-tracking" element={<StorefrontOrderTracking />} />
+                    </Route>
+
+                    {/* Existing Dashboard and Auth Routes */}
                     <Route path="/login" element={<Login />} />
                     <Route path="/demo" element={<Demo />} />
                     <Route element={<ProtectedRoute />}>

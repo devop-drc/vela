@@ -46,6 +46,7 @@ interface Product {
   media_gallery: string[] | null;
   caption: string;
   tags: string[];
+  category?: string;
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
   details: any;
@@ -71,7 +72,6 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
   });
-
   useEffect(() => {
     if (product && exchangeRates && shopDetails) {
       const displayCurrency = product.currency || shopDetails.currency || 'USD';
@@ -87,7 +87,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
         price: displayPrice,
         currency: displayCurrency,
         inventory: product.inventory || 0,
-        tags: product.tags || [],
+        tags: Array.isArray(product.tags) ? product.tags : [],
         pricing_type: product.pricing_type || 'one_time',
         billing_interval: product.billing_interval,
         details: product.details || { type: 'generic' },

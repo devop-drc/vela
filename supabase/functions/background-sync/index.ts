@@ -1,9 +1,65 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { crypto } from "https://deno.land/std@0.190.0/crypto/mod.ts";
+
+// Types
+interface InstagramPost {
+  id: string;
+  caption?: string;
+  media_url: string;
+  thumbnail_url?: string;
+  media_type: string;
+}
+
+interface AnalysisResult {
+  isProductPost: boolean;
+  productName?: string;
+  description?: string;
+  price?: number;
+  currency?: string;
+  tags?: string[];
+  categoryName?: string;
+  typeName?: string;
+  attributes?: { name: string; value: string | string[]; inputType?: string; possibleValues?: string[] }[];
+  tokenUsage?: { promptTokenCount?: number; candidatesTokenCount?: number };
+}
+
+interface LiveAnalysisResult {
+  post: InstagramPost & { captionHash: string };
+  analysis: AnalysisResult;
+  error: any;
+}
+
+interface ProductPayload {
+  id?: string;
+  name?: string;
+  caption?: string;
+  price?: number;
+  currency?: string;
+  tags?: string[];
+  category?: string;
+  details: { [key: string]: any };
+  business_id: string;
+  user_id: string;
+  status: string;
+  instagram_post_id: string;
+  media_url: string;
+  thumbnail_url?: string;
+  media_type: string;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Helper Functions
+const sha256 = async (text: string): Promise<string> => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
 const getSupabaseAdmin = () => createClient(
@@ -14,7 +70,8 @@ const getSupabaseAdmin = () => createClient(
 
 const toTitleCase = (str: string) => str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
-const upsertCategory = async (supabase: SupabaseClient, name: string, userId: string) => {
+// Database Functions
+const upsertCategory = async (supabase: SupabaseClient, name: string, userId: string): Promise<string> => {
   const normalizedName = toTitleCase(name);
   let { data, error } = await supabase.from('categories').select('id').eq('name', normalizedName).eq('user_id', userId).single();
   if (error && error.code !== 'PGRST116') throw error;
@@ -22,12 +79,12 @@ const upsertCategory = async (supabase: SupabaseClient, name: string, userId: st
   
   ({ data, error } = await supabase.from('categories').insert({ name: normalizedName, user_id: userId }).select('id').single());
   if (error) throw error;
-  return data.id;
+  return data!.id;
 };
 
-const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, categoryId: string, typeName: string, newAttributes: any[], userId: string) => {
+const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, categoryId: string, typeName: string, newAttributes: AnalysisResult['attributes'], userId: string): Promise<void> => {
   const normalizedTypeName = toTitleCase(typeName);
-  let { data: existingType, error } = await supabase.from('types').select('id, attributes').eq('category_id', categoryId).eq('name', normalizedTypeName).eq('user_id', userId).single();
+  const { data: existingType, error } = await supabase.from('types').select('id, attributes').eq('category_id', categoryId).eq('name', normalizedTypeName).eq('user_id', userId).single();
   if (error && error.code !== 'PGRST116') throw error;
 
   const newAttributesMap = new Map((newAttributes || []).map(attr => [attr.name, { name: attr.name, inputType: attr.inputType, possibleValues: attr.possibleValues }]));
@@ -49,108 +106,162 @@ const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, categoryId
   }
 };
 
-const updateJobProgress = async (supabase: SupabaseClient, jobId: string, progress: number, total: number, message: string, thumbnailUrl: string | null = null, caption: string | null = null, aiMessage: string | null = null, analysis_result: any | null = null) => {
-  const payload: any = { progress, total, message, status: 'in_progress', updated_at: new Date().toISOString() };
-  if (thumbnailUrl) payload.thumbnail_url = thumbnailUrl;
-  if (caption) payload.current_post_caption = caption;
-  if (aiMessage) payload.ai_analysis_message = aiMessage;
-  if (analysis_result) payload.analysis_result = analysis_result;
+const updateJobProgress = async (supabase: SupabaseClient, jobId: string, update: Partial<any>): Promise<void> => {
+  const payload = { ...update, updated_at: new Date().toISOString() };
   await supabase.from('sync_jobs').update(payload).eq('id', jobId);
 };
 
-const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: string, syncType: 'quick' | 'full') => {
-  const summary = { created: 0, updated: 0, skipped: 0, skipped_items: [] as any[], created_items: [] as any[], updated_items: [] as any[], total_ai_tokens_used: { prompt: 0, candidates: 0 } };
+// Main Sync Logic
+const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; token: string }, jobId: string, syncType: 'quick' | 'full') => {
+  const summary = {
+    created: 0, updated: 0, skipped: 0, cache_hits: 0,
+    skipped_items: [] as { name: string; reason: string; thumbnail_url?: string }[],
+    created_items: [] as ProductPayload[],
+    updated_items: [] as ProductPayload[],
+    total_ai_tokens_used: { prompt: 0, candidates: 0 },
+  };
+
   try {
     const { data: business, error: businessError } = await supabaseAdmin.from('businesses').select('id').eq('user_id', user.id).single();
     if (businessError || !business) throw new Error("Could not find business profile.");
 
-    await updateJobProgress(supabaseAdmin, jobId, 0, 100, "Fetching Instagram posts...");
+    await updateJobProgress(supabaseAdmin, jobId, { progress: 0, total: 100, message: "Fetching Instagram posts...", status: 'in_progress' });
     
     const { data: postsData, error: postsError } = await supabaseAdmin.functions.invoke('instagram-posts', { headers: { Authorization: `Bearer ${user.token}` } });
     if (postsError) throw postsError;
     if (postsData.error) throw new Error(postsData.error);
 
-    const allPosts = postsData.posts || [];
+    const allPosts: InstagramPost[] = postsData.posts || [];
     if (allPosts.length === 0) {
-      await supabaseAdmin.from('sync_jobs').update({ status: 'completed', message: 'No posts found to sync.', summary }).eq('id', jobId);
+      await updateJobProgress(supabaseAdmin, jobId, { status: 'completed', message: 'No posts found to sync.', summary });
       return;
     }
 
     const { data: existingProducts, error: productsError } = await supabaseAdmin.from('products').select('id, instagram_post_id').eq('business_id', business.id);
     if (productsError) throw productsError;
-    const existingProductMap = new Map(existingProducts.map(p => [p.instagram_post_id, p.id]));
+    const existingProductMap = new Map((existingProducts || []).map(p => [p.instagram_post_id, p.id]));
 
-    const postsToProcess = syncType === 'quick' ? allPosts.filter((p: any) => !existingProductMap.has(p.id)) : allPosts;
+    const postsToProcess: InstagramPost[] = syncType === 'quick' ? allPosts.filter(p => !existingProductMap.has(p.id)) : allPosts;
     const total = postsToProcess.length;
+
     if (total === 0) {
-      await supabaseAdmin.from('sync_jobs').update({ status: 'completed', message: 'No new posts to sync.', summary }).eq('id', jobId);
+      await updateJobProgress(supabaseAdmin, jobId, { status: 'completed', message: 'No new posts to sync.', summary });
       return;
     }
-    await updateJobProgress(supabaseAdmin, jobId, 0, total, `Found ${total} posts to process.`);
 
-    const productsToUpsert = [];
-    for (const [index, post] of postsToProcess.entries()) {
-      const captionSnippet = post.caption ? `"${post.caption.substring(0, 30)}..."` : `post without caption`;
-      await updateJobProgress(supabaseAdmin, jobId, index + 1, total, `Analyzing: ${captionSnippet}`, post.thumbnail_url || post.media_url, post.caption, "Running AI product classification...");
+    const { data: cacheEntries, error: cacheError } = await supabaseAdmin.from('ai_analysis_cache').select('*').eq('user_id', user.id);
+    if (cacheError) throw cacheError;
+    const cacheMap = new Map((cacheEntries || []).map((entry: any) => [entry.instagram_post_id, entry]));
 
+    const postsNeedingAnalysis: (InstagramPost & { captionHash: string })[] = [];
+    const analysisFromCache = new Map<string, AnalysisResult>();
+
+    for (const post of postsToProcess) {
       if (!post.caption) {
         summary.skipped++;
-        summary.skipped_items.push({ name: captionSnippet, reason: "Post has no caption to analyze.", thumbnail_url: post.thumbnail_url || post.media_url });
+        summary.skipped_items.push({ name: `Post without caption`, reason: "Post has no caption to analyze.", thumbnail_url: post.thumbnail_url || post.media_url });
         continue;
       }
+      const captionHash = await sha256(post.caption);
+      const cached = cacheMap.get(post.id);
 
-      const { data: analysis, error: analysisError } = await supabaseAdmin.functions.invoke('ai-product-classifier', { body: { caption: post.caption, user_id: user.id } });
-      
-      if (analysisError || analysis.error) {
+      if (cached && cached.caption_hash === captionHash) {
+        analysisFromCache.set(post.id, cached.analysis_result as AnalysisResult);
+        summary.cache_hits++;
+      } else {
+        postsNeedingAnalysis.push({ ...post, captionHash });
+      }
+    }
+
+    if (postsToProcess.length > 0 && postsNeedingAnalysis.length === 0) {
+      await updateJobProgress(supabaseAdmin, jobId, { status: 'completed', message: 'All posts are already up to date.', summary });
+      return;
+    }
+
+    await updateJobProgress(supabaseAdmin, jobId, { progress: 0, total, message: `Analyzing ${postsNeedingAnalysis.length} new posts...`, status: 'in_progress' });
+
+    const analysisPromises = postsNeedingAnalysis.map(post => 
+      supabaseAdmin.functions.invoke('ai-product-classifier', { body: { caption: post.caption, user_id: user.id } })
+        .then(({ data, error }) => ({ post, analysis: data as AnalysisResult, error }))
+    );
+    
+    const liveAnalysisResults: LiveAnalysisResult[] = await Promise.all(analysisPromises);
+    const newCacheEntries: any[] = [];
+
+    for (const { post, analysis, error } of liveAnalysisResults) {
+      const captionSnippet = `"${post.caption?.substring(0, 30) || ''}..."`;
+      if (error || !analysis) {
         summary.skipped++;
-        summary.skipped_items.push({ name: captionSnippet, reason: analysisError?.message || analysis?.error || "Analysis function failed.", thumbnail_url: post.thumbnail_url || post.media_url });
+        summary.skipped_items.push({ name: captionSnippet, reason: error?.message || "Analysis function failed.", thumbnail_url: post.thumbnail_url || post.media_url });
         continue;
       }
-      
+
       if (analysis.tokenUsage) {
-          summary.total_ai_tokens_used.prompt += analysis.tokenUsage.promptTokenCount || 0;
-          summary.total_ai_tokens_used.candidates += analysis.tokenUsage.candidatesTokenCount || 0;
+        summary.total_ai_tokens_used.prompt += analysis.tokenUsage.promptTokenCount || 0;
+        summary.total_ai_tokens_used.candidates += analysis.tokenUsage.candidatesTokenCount || 0;
+      }
+      
+      analysisFromCache.set(post.id, analysis);
+      newCacheEntries.push({
+        instagram_post_id: post.id,
+        user_id: user.id,
+        caption_hash: post.captionHash,
+        analysis_result: analysis
+      });
+    }
+
+    if (newCacheEntries.length > 0) {
+      await supabaseAdmin.from('ai_analysis_cache').upsert(newCacheEntries);
+    }
+
+    const productsToUpsert: ProductPayload[] = [];
+    let progress = 0;
+    for (const post of postsToProcess) {
+      const analysis = analysisFromCache.get(post.id);
+      if (!analysis) { // Post was skipped during analysis, so we skip it here too.
+        continue;
       }
 
-      await updateJobProgress(supabaseAdmin, jobId, index + 1, total, `Analyzing: ${captionSnippet}`, post.thumbnail_url || post.media_url, post.caption, "AI: Analysis complete.", analysis);
+      progress++;
+      await updateJobProgress(supabaseAdmin, jobId, { progress, total, message: `Saving products...` });
 
       if (!analysis.isProductPost) {
         summary.skipped++;
-        summary.skipped_items.push({ name: captionSnippet, reason: "AI determined this is not a product post.", thumbnail_url: post.thumbnail_url || post.media_url });
+        summary.skipped_items.push({ name: `"${post.caption?.substring(0, 30) || ''}..."`, reason: "AI determined this is not a product post.", thumbnail_url: post.thumbnail_url || post.media_url });
         continue;
       }
 
       const { categoryName, typeName, attributes, ...productInfo } = analysis;
       if (categoryName && typeName) {
         const categoryId = await upsertCategory(supabaseAdmin, categoryName, user.id);
-        await upsertTypeAndMergeAttributes(supabaseAdmin, categoryId, typeName, attributes || [], user.id);
+        await upsertTypeAndMergeAttributes(supabaseAdmin, categoryId, typeName, attributes, user.id);
       }
 
-      const details: { [key: string]: any } = { type: toTitleCase(typeName) };
+      const details: { [key: string]: any } = { type: toTitleCase(typeName || '') };
       if (attributes) {
         for (const attr of attributes) { details[attr.name] = attr.value; }
       }
 
-      const productPayload = {
+      const productPayload: ProductPayload = {
         name: productInfo.productName,
         caption: productInfo.description,
         price: productInfo.price,
         currency: productInfo.currency,
         tags: productInfo.tags,
-        category: toTitleCase(categoryName),
+        category: toTitleCase(categoryName || ''),
         details: details,
         business_id: business.id, 
         user_id: user.id, 
         status: 'Draft',
         instagram_post_id: post.id, 
         media_url: post.media_url, 
-        thumbnail_url: post.thumbnail_url, 
+        thumbnail_url: post.thumbnail_url || post.media_url, 
         media_type: post.media_type,
       };
 
       const existingId = existingProductMap.get(post.id);
       if (existingId) {
-        (productPayload as any).id = existingId;
+        productPayload.id = existingId;
         summary.updated++;
         summary.updated_items.push(productPayload);
       } else {
@@ -161,21 +272,21 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: any, jobId: stri
     }
 
     if (productsToUpsert.length > 0) {
-      await updateJobProgress(supabaseAdmin, jobId, total, total, `Saving ${productsToUpsert.length} products...`);
       const { error: upsertError } = await supabaseAdmin.from('products').upsert(productsToUpsert);
       if (upsertError) throw upsertError;
     }
 
     const finalMessage = `Sync complete. Created ${summary.created}, updated ${summary.updated}, skipped ${summary.skipped}.`;
-    await supabaseAdmin.from('sync_jobs').update({ status: 'completed', progress: total, total, message: finalMessage, summary }).eq('id', jobId);
-    console.log(`Full Sync AI Token Summary for Job ${jobId}: Prompt Tokens: ${summary.total_ai_tokens_used.prompt}, Candidate Tokens: ${summary.total_ai_tokens_used.candidates}`);
+    await updateJobProgress(supabaseAdmin, jobId, { status: 'completed', progress: total, total, message: finalMessage, summary });
+    console.log(`Sync AI Token Summary for Job ${jobId}: Prompt Tokens: ${summary.total_ai_tokens_used.prompt}, Candidate Tokens: ${summary.total_ai_tokens_used.candidates}`);
 
   } catch (error) {
     console.error('Background Sync Error:', error.message);
-    await supabaseAdmin.from('sync_jobs').update({ status: 'failed', message: error.message, summary }).eq('id', jobId);
+    await updateJobProgress(supabaseAdmin, jobId, { status: 'failed', message: error.message, summary });
   }
 };
 
+// Server Entry Point
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
