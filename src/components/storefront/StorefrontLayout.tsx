@@ -70,10 +70,24 @@ const StorefrontLayoutContent = () => {
       // Apply default settings if none are found
       applyStorefrontSettingsToDOM(defaultSettings);
     }
-    if (shopDetails?.shop_name) {
-      document.title = shopDetails.shop_name;
+
+    // Dynamically set page title and meta description
+    if (shopDetails) {
+      document.title = shopDetails.shop_name || "Storefront";
+      const metaDescriptionTag = document.querySelector('meta[name="description"]');
+      if (metaDescriptionTag) {
+        metaDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Welcome to ${shopDetails.shop_name}'s online store.`);
+      }
+      const ogTitleTag = document.querySelector('meta[property="og:title"]');
+      if (ogTitleTag) ogTitleTag.setAttribute('content', shopDetails.shop_name || "Storefront");
+      const ogDescriptionTag = document.querySelector('meta[property="og:description"]');
+      if (ogDescriptionTag) ogDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Welcome to ${shopDetails.shop_name}'s online store.`);
+      const ogImageTag = document.querySelector('meta[property="og:image"]');
+      if (ogImageTag && shopDetails.logo_url) ogImageTag.setAttribute('content', shopDetails.logo_url);
     } else {
       document.title = "Storefront";
+      const metaDescriptionTag = document.querySelector('meta[name="description"]');
+      if (metaDescriptionTag) metaDescriptionTag.setAttribute('content', "Discover unique products from various shops.");
     }
   }, [appearanceSettings, shopDetails]);
 

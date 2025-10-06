@@ -70,6 +70,7 @@ const StorefrontIndex = () => {
 
   const blurEnabled = appearanceSettings?.blurEnabled;
   const observerTarget = useRef<HTMLDivElement>(null); // Ref for the intersection observer target
+  const productsSectionRef = useRef<HTMLDivElement>(null); // Ref for the products section
 
   useEffect(() => {
     if (!observerTarget.current || !hasMoreProducts || isLoading || isLoadingMore) return;
@@ -197,6 +198,10 @@ const StorefrontIndex = () => {
     // Take the first 4 products from allProducts as featured
     return allProducts.slice(0, 4);
   }, [allProducts]);
+
+  const handleShopNowClick = () => {
+    productsSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   if (isLoading && allProducts.length === 0) { // Only show initial loading skeleton if no products are loaded yet
     return (
@@ -337,8 +342,8 @@ const StorefrontIndex = () => {
                 <Gift className="h-8 w-8 mx-auto mb-3" />
                 <p className="font-semibold text-lg">Limited Time Offer: 20% Off All New Arrivals!</p>
                 <p className="text-sm mt-2">Shop our latest collection and save big. Ends soon!</p>
-                <Button asChild className="mt-4">
-                  <Link to={`/shop/${shopDetails.slug}#products`}>Shop Now</Link>
+                <Button onClick={handleShopNowClick} className="mt-4">
+                  Shop Now
                 </Button>
               </div>
             </div>
@@ -362,7 +367,7 @@ const StorefrontIndex = () => {
           )}
 
           {/* Search, Filter, Sort Controls */}
-          <div id="products" className={cn(
+          <div ref={productsSectionRef} id="products" className={cn(
             "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-4",
             blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
           )}>

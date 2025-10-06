@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, Home, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, Apple, Paypal } from "lucide-react"; // Removed Google
+import { CheckCircle, Home, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, Apple, Paypal, ShieldCheck } from "lucide-react"; // Added ShieldCheck
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -178,6 +178,11 @@ const StorefrontCheckout = () => {
                   <SiDiscover className="h-8 w-8 text-muted-foreground" /> */}
                   <Wallet className="h-8 w-8 text-muted-foreground" />
                 </div>
+              </div>
+              {/* Trust Badges Placeholder */}
+              <div className="mt-6 p-4 border rounded-lg bg-emerald-50/50 text-emerald-700 flex items-center justify-center gap-3">
+                <ShieldCheck className="h-6 w-6" />
+                <p className="font-semibold text-sm">Secure Checkout Guaranteed</p>
               </div>
             </CardContent>
           </Card>
