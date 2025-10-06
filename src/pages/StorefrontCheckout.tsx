@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, Home, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck } from "lucide-react"; // Removed Apple and Paypal
+import { CheckCircle, Home, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck, Lock } from "lucide-react"; // Added Lock icon for CVV
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -163,7 +163,32 @@ const StorefrontCheckout = () => {
               <CardDescription>Securely enter your payment details.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="p-6 border rounded-lg bg-muted/50 text-muted-foreground text-center space-y-4">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cardNumber">Card Number</Label>
+                    <Input id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cardName">Name on Card</Label>
+                    <Input id="cardName" placeholder="John Doe" required />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="expiryDate">Expiry Date</Label>
+                    <Input id="expiryDate" placeholder="MM/YY" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cvv">CVV</Label>
+                    <div className="relative">
+                      <Input id="cvv" placeholder="123" type="password" maxLength={4} required />
+                      <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 border rounded-lg bg-muted/50 text-muted-foreground text-center space-y-4 mt-6">
                 <p className="font-medium">Payment gateway integration coming soon!</p>
                 <p className="text-sm mt-2">For now, this is a placeholder for card input and processing.</p>
                 <Separator />

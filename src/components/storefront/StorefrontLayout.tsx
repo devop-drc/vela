@@ -7,7 +7,7 @@ import { defaultSettings } from '@/contexts/AppearanceContext'; // Import defaul
 import { Skeleton } from '@/components/ui/skeleton';
 import { Toaster as Sonner } from "@/components/ui/sonner"; // Import Sonner
 import { CartProvider } from '@/contexts/CartContext'; // Import CartProvider
-// Removed StorefrontFilterSidebar import from here
+import { RecentlyViewedProvider } from '@/contexts/RecentlyViewedContext'; // Import RecentlyViewedProvider
 import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile
 
 // Function to apply settings to the DOM, similar to AppearanceContext
@@ -62,6 +62,7 @@ const StorefrontLayoutContent = () => {
   const { shopDetails, appearanceSettings, isLoading, error, products } = useStorefront();
   const isMobile = useIsMobile();
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false); // State for mobile sidebar
+  const [isSearchInputVisible, setIsSearchInputVisible] = useState(false); // State for search input visibility
 
   useEffect(() => {
     if (appearanceSettings) {
@@ -125,11 +126,15 @@ const StorefrontLayoutContent = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
-      <StorefrontHeader onToggleFilterSidebar={() => setIsFilterSidebarOpen(true)} />
+      <StorefrontHeader 
+        onToggleFilterSidebar={() => setIsFilterSidebarOpen(true)} 
+        isSearchInputVisible={isSearchInputVisible}
+        onToggleSearchInput={() => setIsSearchInputVisible(prev => !prev)}
+      />
       <main className="flex-1 flex">
         <div className="flex-1">
           {/* Pass sidebar state and toggle function to Outlet context */}
-          <Outlet context={{ onToggleFilterSidebar: () => setIsFilterSidebarOpen(true), isFilterSidebarOpen, setIsFilterSidebarOpen, products }} />
+          <Outlet context={{ onToggleFilterSidebar: () => setIsFilterSidebarOpen(true), isFilterSidebarOpen, setIsFilterSidebarOpen, products, isSearchInputVisible, onToggleSearchInput: () => setIsSearchInputVisible(prev => !prev) }} />
         </div>
       </main>
       <StorefrontFooter />
@@ -141,7 +146,9 @@ const StorefrontLayoutContent = () => {
 const StorefrontLayout = () => (
   <StorefrontProvider>
     <CartProvider>
-      <StorefrontLayoutContent />
+      <RecentlyViewedProvider> {/* Added RecentlyViewedProvider here */}
+        <StorefrontLayoutContent />
+      </RecentlyViewedProvider>
     </CartProvider>
   </StorefrontProvider>
 );

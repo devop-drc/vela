@@ -7,7 +7,7 @@ import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Loader2, ShoppingCart, Minus, Plus, Home, ArrowLeft, Star, Truck, Sparkles } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import { useCart } from "@/contexts/CartContext";
 import { getAttributeIcon } from "@/lib/attributeIcons"; // Import attribute icons
 import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard"; // Import StorefrontProductCard
 import { StorefrontBreadcrumb } from "@/components/storefront/StorefrontBreadcrumb"; // Import StorefrontBreadcrumb
+import { useRecentlyViewed } from "@/contexts/RecentlyViewedContext"; // Import useRecentlyViewed
 
 const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
@@ -33,6 +34,7 @@ const StorefrontProductDetail = () => {
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
   const { shopDetails, products, isLoading, error, appearanceSettings } = useStorefront();
   const { addToCart } = useCart();
+  const { addRecentlyViewed } = useRecentlyViewed(); // Use the new hook
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState<string | null>(null); // Placeholder for variant selection
   const [selectedSize, setSelectedSize] = useState<string | null>(null); // Placeholder for variant selection
@@ -46,6 +48,19 @@ const StorefrontProductDetail = () => {
   }
 
   const product = products.find(p => p.id === productId);
+
+  useEffect(() => {
+    if (product && shopDetails?.slug) {
+      addRecentlyViewed({
+        id: product.id,
+        name: product.name,
+        media_url: product.media_url,
+        price: product.price || 0,
+        currency: product.currency || shopDetails.currency || 'USD',
+        shopSlug: shopDetails.slug,
+      });
+    }
+  }, [product, shopDetails?.slug, addRecentlyViewed]);
 
   if (!product) {
     return (

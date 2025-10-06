@@ -1,18 +1,21 @@
 import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
-import { ShoppingBag, Filter, Search } from "lucide-react"; // Import Search icon
+import { ShoppingBag, Filter, Search, X } from "lucide-react"; // Import Search icon
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/contexts/CartContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { motion } from "framer-motion"; // Import motion
+import { motion, AnimatePresence } from "framer-motion"; // Import motion
+import { Input } from "../ui/input"; // Import Input
 
 interface StorefrontHeaderProps {
   onToggleFilterSidebar?: () => void;
+  isSearchInputVisible: boolean;
+  onToggleSearchInput: () => void;
 }
 
-export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProps) => {
+export const StorefrontHeader = ({ onToggleFilterSidebar, isSearchInputVisible, onToggleSearchInput }: StorefrontHeaderProps) => {
   const { shopDetails, appearanceSettings } = useStorefront();
   const { totalItems } = useCart();
   const isMobile = useIsMobile();
@@ -22,8 +25,14 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
-  const handleSearchClick = () => {
-    navigate(`/shop/${shopDetails.slug}?focusSearch=true`);
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const query = formData.get('searchQuery') as string;
+    if (query) {
+      navigate(`/shop/${shopDetails.slug}?search=${encodeURIComponent(query)}`);
+      onToggleSearchInput(); // Hide search input after search
+    }
   };
 
   return (
@@ -44,9 +53,9 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
           <Link to={`/shop/${shopDetails.slug}`} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
             Shop
           </Link>
-          <Button variant="ghost" size="icon" onClick={handleSearchClick}> {/* Search button */}
-            <Search className="h-5 w-5" />
-            <span className="sr-only">Search</span>
+          <Button variant="ghost" size="icon" onClick={onToggleSearchInput}> {/* Search button */}
+            {isSearchInputVisible ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+            <span className="sr-only">{isSearchInputVisible ? "Close Search" : "Open Search"}</span>
           </Button>
           {isMobile && onToggleFilterSidebar && (
             <Button variant="ghost" size="icon" onClick={onToggleFilterSidebar}>
@@ -75,6 +84,32 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
           </Link>
         </nav>
       </div>
+      <AnimatePresence>
+        {isSearchInputVisible && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className={cn(
+              "overflow-hidden border-t",
+              blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
+            )}
+          >
+            <form onSubmit={handleSearchSubmit} className="container py-3 flex items-center gap-2">
+              <Search className="h-5 w-5 text-muted-foreground" />
+              <Input
+                type="search"
+                name="searchQuery"
+                placeholder="Search products..."
+                className="flex-1"
+                autoFocus
+              />
+              <Button type="submit">Search</Button>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 };

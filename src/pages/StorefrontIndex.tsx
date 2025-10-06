@@ -1,5 +1,5 @@
 import { useStorefront } from "@/contexts/StorefrontContext";
-import { Link, useOutletContext } from "react-router-dom";
+import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
@@ -57,9 +57,10 @@ const containerVariants = {
 const StorefrontIndex = () => {
   const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, hasMoreProducts, fetchMoreProducts, isLoadingMore } = useStorefront();
   const isMobile = useIsMobile();
-  const { onToggleFilterSidebar, isFilterSidebarOpen, setIsFilterSidebarOpen } = useOutletContext<{ onToggleFilterSidebar: () => void; isFilterSidebarOpen: boolean; setIsFilterSidebarOpen: (open: boolean) => void }>();
+  const { onToggleFilterSidebar, isFilterSidebarOpen, setIsFilterSidebarOpen, isSearchInputVisible, onToggleSearchInput } = useOutletContext<{ onToggleFilterSidebar: () => void; isFilterSidebarOpen: boolean; setIsFilterSidebarOpen: (open: boolean) => void; isSearchInputVisible: boolean; onToggleSearchInput: () => void }>();
+  const [searchParams] = useSearchParams();
 
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
   const [sortOption, setSortOption] = useState("newest");
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
@@ -71,6 +72,19 @@ const StorefrontIndex = () => {
   const blurEnabled = appearanceSettings?.blurEnabled;
   const observerTarget = useRef<HTMLDivElement>(null); // Ref for the intersection observer target
   const productsSectionRef = useRef<HTMLDivElement>(null); // Ref for the products section
+
+  useEffect(() => {
+    // Update local searchTerm if URL search param changes
+    const urlSearchTerm = searchParams.get('search');
+    if (urlSearchTerm && urlSearchTerm !== searchTerm) {
+      setSearchTerm(urlSearchTerm);
+      if (!isSearchInputVisible) {
+        onToggleSearchInput(); // Show search input if search param is present
+      }
+    } else if (!urlSearchTerm && isSearchInputVisible) {
+      onToggleSearchInput(); // Hide search input if search param is removed
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!observerTarget.current || !hasMoreProducts || isLoading || isLoadingMore) return;
@@ -379,14 +393,19 @@ const StorefrontIndex = () => {
                   <ChevronRight className={cn("ml-2 h-4 w-4 transition-transform", isDesktopSidebarOpen && "rotate-180")} />
                 </Button>
               )}
+              {/* Search input is now in the header, this is just a placeholder for the layout */}
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search products..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                {!isSearchInputVisible && ( // Only show this input if the header search is not visible
+                  <>
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search products..."
+                      className="pl-10"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </>
+                )}
               </div>
             </div>
 

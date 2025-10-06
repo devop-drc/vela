@@ -1,9 +1,14 @@
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { useRecentlyViewed } from "@/contexts/RecentlyViewedContext"; // Import useRecentlyViewed
+import { formatCurrency } from "@/lib/formatters";
+import { MediaItem } from "../MediaItem";
+import { Eye } from "lucide-react";
 
 export const StorefrontFooter = () => {
   const { shopDetails, appearanceSettings } = useStorefront();
+  const { recentlyViewed } = useRecentlyViewed(); // Use the new hook
 
   if (!shopDetails) return null;
 
@@ -24,7 +29,7 @@ export const StorefrontFooter = () => {
             </a>
           )}
         </div>
-        <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-4 text-sm"> {/* Changed to grid for better layout */}
           <div className="space-y-2">
             <h4 className="font-semibold text-foreground mb-2">Shop</h4>
             <ul className="space-y-1">
@@ -44,6 +49,26 @@ export const StorefrontFooter = () => {
               <li><Link to="#" className="hover:underline">Returns & Refunds</Link></li>
             </ul>
           </div>
+          {recentlyViewed.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="font-semibold text-foreground mb-2 flex items-center gap-1"><Eye className="h-4 w-4" /> Recently Viewed</h4>
+              <ul className="space-y-2">
+                {recentlyViewed.map(product => (
+                  <li key={product.id}>
+                    <Link to={`/shop/${product.shopSlug}/product/${product.id}`} className="flex items-center gap-2 hover:text-foreground transition-colors">
+                      <div className="h-8 w-8 flex-shrink-0 rounded-md overflow-hidden bg-muted">
+                        <MediaItem src={product.media_url} alt={product.name} className="object-cover" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium leading-tight line-clamp-1">{product.name}</p>
+                        <p className="text-xs text-muted-foreground">{formatCurrency(product.price, product.currency)}</p>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     </footer>
