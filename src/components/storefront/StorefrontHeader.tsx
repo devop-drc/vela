@@ -1,13 +1,14 @@
-import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
-import { ShoppingBag, Filter, Search, X } from "lucide-react"; // Import Search icon
+import React, { useState } from "react"; // Added React and useState import
+import { Link, useNavigate } from "react-router-dom";
+import { ShoppingBag, Filter, Search, X } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/contexts/CartContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { motion, AnimatePresence } from "framer-motion"; // Import motion
-import { Input } from "../ui/input"; // Import Input
+import { motion, AnimatePresence } from "framer-motion";
+import { Input } from "../ui/input";
 
 interface StorefrontHeaderProps {
   onToggleFilterSidebar?: () => void;
@@ -17,8 +18,8 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
   const { shopDetails, appearanceSettings } = useStorefront();
   const { totalItems } = useCart();
   const isMobile = useIsMobile();
-  const navigate = useNavigate(); // Initialize useNavigate
-  const [isSearchInputVisible, setIsSearchInputVisible] = useState(false); // Local state for search input visibility on mobile
+  const navigate = useNavigate();
+  const [isSearchInputVisible, setIsSearchInputVisible] = useState(false);
 
   if (!shopDetails) return null;
 
@@ -30,7 +31,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
     const query = formData.get('searchQuery') as string;
     if (query) {
       navigate(`/shop/${shopDetails.slug}?search=${encodeURIComponent(query)}`);
-      if (isMobile) setIsSearchInputVisible(false); // Hide search input after search on mobile
+      if (isMobile) setIsSearchInputVisible(false);
     }
   };
 
@@ -38,7 +39,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
     <header className={cn(
       "sticky top-0 z-40 w-full border-b",
       blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background",
-      "shadow-md" // Added shadow-md for a subtle lift
+      "shadow-md"
     )}>
       <div className="container flex h-16 items-center justify-between">
         <Link to={`/shop/${shopDetails.slug}`} className="flex items-center space-x-2">
@@ -82,10 +83,10 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
             to={`/shop/${shopDetails.slug}/cart`}
             className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative")}
           >
-            <motion.span // Added motion.span for animation
-              key={totalItems} // Key changes when totalItems changes, triggering animation
+            <motion.span
+              key={totalItems}
               initial={{ scale: 1 }}
-              animate={totalItems > 0 ? { scale: [1, 1.2, 1] } : { scale: 1 }} // Pop animation
+              animate={totalItems > 0 ? { scale: [1, 1.2, 1] } : { scale: 1 }}
               transition={{ duration: 0.3 }}
               className="relative"
             >
