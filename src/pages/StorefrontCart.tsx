@@ -20,7 +20,7 @@ const StorefrontCart = () => {
 
       {cartItems.length === 0 ? (
         <Card className={cn(
-          "text-center py-12",
+          "text-center py-12 shadow-lg",
           blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
         )}>
           <CardHeader className="flex flex-col items-center">
@@ -39,11 +39,11 @@ const StorefrontCart = () => {
           <div className="lg:col-span-2 space-y-4">
             {cartItems.map(item => (
               <Card key={item.productId} className={cn(
-                "flex flex-col sm:flex-row items-center p-4 gap-4",
+                "flex flex-col sm:flex-row items-center p-4 gap-4 shadow-md",
                 blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
               )}>
                 <Link to={`/shop/${shopSlug}/product/${item.productId}`} className="flex-shrink-0">
-                  <div className="h-24 w-24 rounded-md overflow-hidden bg-muted">
+                  <div className="h-24 w-24 rounded-md overflow-hidden bg-muted border">
                     <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                   </div>
                 </Link>
@@ -94,7 +94,7 @@ const StorefrontCart = () => {
             ))}
           </div>
           <div className="lg:col-span-1">
-            <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "lg:sticky lg:top-24")}>
+            <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "lg:sticky lg:top-24 shadow-lg")}>
               <CardHeader><CardTitle>Order Summary</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between">

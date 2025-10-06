@@ -83,7 +83,7 @@ const StorefrontProductDetail = () => {
 
   return (
     <div className="container py-8">
-      <Button variant="ghost" asChild className="mb-6">
+      <Button variant="ghost" asChild className="mb-6 text-muted-foreground hover:text-foreground">
         <Link to={`/shop/${shopSlug}`}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Products
@@ -92,7 +92,7 @@ const StorefrontProductDetail = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Product Media */}
         <div>
-          <Carousel className="w-full rounded-lg overflow-hidden border">
+          <Carousel className="w-full rounded-lg overflow-hidden border shadow-md">
             <CarouselContent>
               {mediaItems.map((url: string, index: number) => (
                 <CarouselItem key={index}>
@@ -135,8 +135,8 @@ const StorefrontProductDetail = () => {
             </div>
           )}
 
-          {(options.length > 0 || specifications.length > 0) && (
-            <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
+          {(options.length > 0 || specifications.length > 0 || (product.pricing_type === 'one_time' && product.inventory !== null)) && (
+            <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-md")}>
               <CardHeader><CardTitle className="text-xl">Product Details</CardTitle></CardHeader>
               <CardContent className="p-4 space-y-4">
                 {options.length > 0 && (
@@ -174,10 +174,12 @@ const StorefrontProductDetail = () => {
                     </div>
                   </div>
                 )}
-                {product.pricing_type === 'one_time' && (
-                  <DetailDisplayRow label="Inventory" icon={Home}> {/* Using Home icon as a placeholder for inventory */}
-                    <p className="text-base">{product.inventory || 0}</p>
-                  </DetailDisplayRow>
+                {product.pricing_type === 'one_time' && product.inventory !== null && (
+                  <div className={cn("pt-4", (options.length > 0 || specifications.length > 0) && "border-t mt-4")}>
+                    <DetailDisplayRow label="Inventory" icon={Home}> {/* Using Home icon as a placeholder for inventory */}
+                      <p className="text-base">{product.inventory || 0}</p>
+                    </DetailDisplayRow>
+                  </div>
                 )}
               </CardContent>
             </Card>

@@ -220,7 +220,7 @@ const StorefrontIndex = () => {
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
               className={cn(
-                "hidden lg:flex flex-col border-r flex-shrink-0 sticky top-0 max-h-screen overflow-y-auto", // Added sticky, max-h-screen, overflow-y-auto
+                "hidden lg:flex flex-col border-r h-full flex-shrink-0 sticky top-0 max-h-screen overflow-y-auto",
                 blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
               )}
             >
@@ -238,8 +238,35 @@ const StorefrontIndex = () => {
         </AnimatePresence>
       )}
 
-      <div className={cn("flex-1 transition-all duration-200", !isMobile && isDesktopSidebarOpen ? "lg:ml-0" : "lg:ml-0")}> {/* Adjusted margin for desktop sidebar */}
+      <div className="flex-1">
         <div className="container py-8">
+          {/* Shop Header Section */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className={cn(
+              "mb-12 p-8 md:p-12 rounded-xl text-center relative overflow-hidden",
+              blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
+              "shadow-lg"
+            )}
+          >
+            {shopDetails.logo_url && (
+              <Avatar className="h-24 w-24 mx-auto mb-4 border-4 border-primary-foreground shadow-md">
+                <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
+                <AvatarFallback className="text-4xl font-bold bg-primary-foreground text-primary">{shopDetails.shop_name?.[0]}</AvatarFallback>
+              </Avatar>
+            )}
+            <h1 className="text-4xl md:text-5xl font-bold font-heading mb-2 leading-tight">
+              {shopDetails.shop_name}
+            </h1>
+            {shopDetails.headline && (
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                {shopDetails.headline}
+              </p>
+            )}
+          </motion.div>
+
           {/* Search, Filter, Sort Controls */}
           <div id="products" className={cn(
             "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-4",

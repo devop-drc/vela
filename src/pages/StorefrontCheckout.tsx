@@ -56,7 +56,7 @@ const StorefrontCheckout = () => {
 
   return (
     <div className="container py-8">
-      <Button variant="ghost" asChild className="mb-6">
+      <Button variant="ghost" asChild className="mb-6 text-muted-foreground hover:text-foreground">
         <Link to={`/shop/${shopSlug}/cart`}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Cart
@@ -66,7 +66,7 @@ const StorefrontCheckout = () => {
 
       <form id="checkout-form" onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
+          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg")}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><User className="h-5 w-5" /> Contact Information</CardTitle>
               <CardDescription>We'll use this to send you updates about your order.</CardDescription>
@@ -89,7 +89,7 @@ const StorefrontCheckout = () => {
             </CardContent>
           </Card>
 
-          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
+          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg")}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5" /> Shipping Information</CardTitle>
               <CardDescription>Where should we send your awesome products?</CardDescription>
@@ -120,7 +120,7 @@ const StorefrontCheckout = () => {
             </CardContent>
           </Card>
 
-          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
+          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg")}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" /> Payment Information</CardTitle>
               <CardDescription>Securely enter your payment details.</CardDescription>
@@ -135,7 +135,7 @@ const StorefrontCheckout = () => {
         </div>
 
         <div className="lg:col-span-1">
-          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "lg:sticky lg:top-24")}>
+          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "lg:sticky lg:top-24 shadow-lg")}>
             <CardHeader><CardTitle>Order Summary</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">

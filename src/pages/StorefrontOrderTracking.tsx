@@ -86,7 +86,7 @@ const StorefrontOrderTracking = () => {
 
   return (
     <div className="container py-8">
-      <Button variant="ghost" asChild className="mb-6">
+      <Button variant="ghost" asChild className="mb-6 text-muted-foreground hover:text-foreground">
         <Link to={`/shop/${shopSlug}`}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Shop
@@ -95,7 +95,7 @@ const StorefrontOrderTracking = () => {
       <h1 className="text-3xl font-bold font-heading mb-6 text-center">Track Your Order</h1>
 
       <Card className={cn(
-        "max-w-lg mx-auto",
+        "max-w-lg mx-auto shadow-lg",
         blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
       )}>
         <CardHeader>
