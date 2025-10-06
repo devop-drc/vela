@@ -11,15 +11,14 @@ import { Input } from "../ui/input"; // Import Input
 
 interface StorefrontHeaderProps {
   onToggleFilterSidebar?: () => void;
-  isSearchInputVisible: boolean;
-  onToggleSearchInput: () => void;
 }
 
-export const StorefrontHeader = ({ onToggleFilterSidebar, isSearchInputVisible, onToggleSearchInput }: StorefrontHeaderProps) => {
+export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProps) => {
   const { shopDetails, appearanceSettings } = useStorefront();
   const { totalItems } = useCart();
   const isMobile = useIsMobile();
   const navigate = useNavigate(); // Initialize useNavigate
+  const [isSearchInputVisible, setIsSearchInputVisible] = useState(false); // Local state for search input visibility on mobile
 
   if (!shopDetails) return null;
 
@@ -31,7 +30,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, isSearchInputVisible, 
     const query = formData.get('searchQuery') as string;
     if (query) {
       navigate(`/shop/${shopDetails.slug}?search=${encodeURIComponent(query)}`);
-      onToggleSearchInput(); // Hide search input after search
+      if (isMobile) setIsSearchInputVisible(false); // Hide search input after search on mobile
     }
   };
 
@@ -53,10 +52,26 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, isSearchInputVisible, 
           <Link to={`/shop/${shopDetails.slug}`} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
             Shop
           </Link>
-          <Button variant="ghost" size="icon" onClick={onToggleSearchInput}> {/* Search button */}
-            {isSearchInputVisible ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
-            <span className="sr-only">{isSearchInputVisible ? "Close Search" : "Open Search"}</span>
-          </Button>
+          {/* Desktop Search Input */}
+          {!isMobile && (
+            <form onSubmit={handleSearchSubmit} className="relative hidden md:flex items-center">
+              <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                name="searchQuery"
+                placeholder="Search products..."
+                className="pl-9 w-64"
+                defaultValue={new URLSearchParams(location.search).get('search') || ''}
+              />
+            </form>
+          )}
+          {/* Mobile Search Toggle Button */}
+          {isMobile && (
+            <Button variant="ghost" size="icon" onClick={() => setIsSearchInputVisible(prev => !prev)}>
+              {isSearchInputVisible ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+              <span className="sr-only">{isSearchInputVisible ? "Close Search" : "Open Search"}</span>
+            </Button>
+          )}
           {isMobile && onToggleFilterSidebar && (
             <Button variant="ghost" size="icon" onClick={onToggleFilterSidebar}>
               <Filter className="h-5 w-5" />
@@ -85,7 +100,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, isSearchInputVisible, 
         </nav>
       </div>
       <AnimatePresence>
-        {isSearchInputVisible && (
+        {isMobile && isSearchInputVisible && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -104,6 +119,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, isSearchInputVisible, 
                 placeholder="Search products..."
                 className="flex-1"
                 autoFocus
+                defaultValue={new URLSearchParams(location.search).get('search') || ''}
               />
               <Button type="submit">Search</Button>
             </form>

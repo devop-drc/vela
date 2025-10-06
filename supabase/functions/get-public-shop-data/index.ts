@@ -67,6 +67,34 @@ serve(async (req) => {
       throw productsError;
     }
 
+    // Fetch best sellers (top 5 products by total sales)
+    const { data: bestSellers, error: bestSellersError } = await supabaseAdmin.rpc('get_top_products', { p_business_id: businessId });
+    if (bestSellersError) {
+      console.error("Error fetching best sellers:", bestSellersError);
+    }
+
+    // Fetch recommended products (e.g., 4 random active products, excluding best sellers)
+    const { data: allActiveProducts, error: allActiveProductsError } = await supabaseAdmin
+      .from('products')
+      .select('*')
+      .eq('business_id', businessId)
+      .eq('status', 'Active');
+
+    let recommendedProducts: any[] = [];
+    if (allActiveProductsError) {
+      console.error("Error fetching all active products for recommendations:", allActiveProductsError);
+    } else if (allActiveProducts) {
+      const bestSellerIds = new Set((bestSellers || []).map((p: any) => p.product_id));
+      const availableForRecommendation = allActiveProducts.filter(p => !bestSellerIds.has(p.id));
+      
+      // Shuffle and pick up to 4 random products
+      for (let i = availableForRecommendation.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [availableForRecommendation[i], availableForRecommendation[j]] = [availableForRecommendation[j], availableForRecommendation[i]];
+      }
+      recommendedProducts = availableForRecommendation.slice(0, 4);
+    }
+
     return new Response(JSON.stringify({
       shopDetails: {
         id: businessId,
@@ -86,6 +114,8 @@ serve(async (req) => {
       products: products || [],
       totalProductsCount: totalProductsCount || 0, // Return total count
       hasMore: (offset + (products?.length || 0)) < (totalProductsCount || 0), // Calculate hasMore
+      bestSellers: bestSellers || [],
+      recommendedProducts: recommendedProducts || [],
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

@@ -1,60 +1,54 @@
 import { cn } from "@/lib/utils";
 import React from "react";
+import { motion } from "framer-motion";
 
-interface MarqueeProps extends React.HTMLAttributes<HTMLDivElement> {
-  pauseOnHover?: boolean;
+interface MarqueeProps {
+  className?: string;
   reverse?: boolean;
+  pauseOnHover?: boolean;
+  children?: React.ReactNode;
   vertical?: boolean;
   repeat?: number;
-  className?: string;
+  duration?: string; // Tailwind duration class, e.g., 'duration-[30s]'
+  gap?: string; // Tailwind gap class, e.g., 'gap-4'
 }
 
-const Marquee = React.forwardRef<HTMLDivElement, MarqueeProps>(
-  (
-    {
-      className,
-      pauseOnHover = false,
-      reverse = false,
-      vertical = false,
-      repeat = 4,
-      children,
-      ...props
-    },
-    ref,
-  ) => {
-    return (
-      <div
-        ref={ref}
+export function Marquee({
+  className,
+  reverse,
+  pauseOnHover = false,
+  children,
+  vertical = false,
+  repeat = 4,
+  duration = 'duration-[30s]',
+  gap = 'gap-4',
+}: MarqueeProps) {
+  return (
+    <div
+      className={cn(
+        "flex overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_20%,white_80%,transparent)]",
+        vertical && "[mask-image:linear-gradient(to_bottom,transparent,white_20%,white_80%,transparent)]",
+        className
+      )}
+    >
+      <motion.div
         className={cn(
-          "group flex overflow-hidden p-2 [--duration:80s] [--gap:1rem]",
-          {
-            "flex-row": !vertical,
-            "flex-col": vertical,
-          },
-          className,
+          "flex w-max items-center justify-center",
+          gap,
+          vertical && "flex-col h-max",
+          reverse ? "animate-marquee-reverse" : "animate-marquee",
+          pauseOnHover && "group-hover:paused",
+          duration,
+          vertical && (reverse ? "animate-marquee-vertical-reverse" : "animate-marquee-vertical")
         )}
-        {...props}
+        style={{ '--duration': duration.replace('duration-[', '').replace('s]', 's'), '--gap': gap.replace('gap-', '') }}
       >
         {Array(repeat)
           .fill(0)
           .map((_, i) => (
-            <div
-              key={i}
-              className={cn("flex shrink-0 justify-around [gap:var(--gap)]", {
-                "animate-marquee flex-row": !vertical,
-                "animate-marquee-vertical flex-col": vertical,
-                "group-hover:[animation-play-state:paused]": pauseOnHover,
-                "[animation-direction:reverse]": reverse,
-              })}
-            >
-              {children}
-            </div>
+            <React.Fragment key={i}>{children}</React.Fragment>
           ))}
-      </div>
-    );
-  },
-);
-
-Marquee.displayName = "Marquee";
-
-export default Marquee;
+      </motion.div>
+    </div>
+  );
+}

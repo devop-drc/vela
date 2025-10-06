@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter, ArrowRight, ChevronRight, Sparkles, Gift, Truck, RefreshCw } from "lucide-react";
+import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter, ArrowRight, ChevronRight, Sparkles, Gift, Truck, RefreshCw, Crown } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { getCategoryColor } from "@/lib/colorUtils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,6 +19,7 @@ import { StorefrontFilterSidebar } from "@/components/storefront/StorefrontFilte
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { curatedImages } from "@/contexts/AppearanceContext"; // Import curated images
+import { Marquee } from "@/components/ui/marquee"; // Import Marquee component
 
 interface Product {
   id: string;
@@ -55,9 +56,9 @@ const containerVariants = {
 };
 
 const StorefrontIndex = () => {
-  const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, hasMoreProducts, fetchMoreProducts, isLoadingMore } = useStorefront();
+  const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, hasMoreProducts, fetchMoreProducts, isLoadingMore, bestSellers, recommendedProducts } = useStorefront();
   const isMobile = useIsMobile();
-  const { onToggleFilterSidebar, isFilterSidebarOpen, setIsFilterSidebarOpen, isSearchInputVisible, onToggleSearchInput } = useOutletContext<{ onToggleFilterSidebar: () => void; isFilterSidebarOpen: boolean; setIsFilterSidebarOpen: (open: boolean) => void; isSearchInputVisible: boolean; onToggleSearchInput: () => void }>();
+  const { onToggleFilterSidebar, isFilterSidebarOpen, setIsFilterSidebarOpen } = useOutletContext<{ onToggleFilterSidebar: () => void; isFilterSidebarOpen: boolean; setIsFilterSidebarOpen: (open: boolean) => void }>();
   const [searchParams] = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
@@ -78,11 +79,8 @@ const StorefrontIndex = () => {
     const urlSearchTerm = searchParams.get('search');
     if (urlSearchTerm && urlSearchTerm !== searchTerm) {
       setSearchTerm(urlSearchTerm);
-      if (!isSearchInputVisible) {
-        onToggleSearchInput(); // Show search input if search param is present
-      }
-    } else if (!urlSearchTerm && isSearchInputVisible) {
-      onToggleSearchInput(); // Hide search input if search param is removed
+    } else if (!urlSearchTerm && searchTerm) {
+      setSearchTerm(""); // Clear search term if param is removed
     }
   }, [searchParams]);
 
@@ -207,11 +205,6 @@ const StorefrontIndex = () => {
     const randomIndex = Math.floor(Math.random() * curatedImages.length);
     return curatedImages[randomIndex].src;
   }, [appearanceSettings?.backgroundImageUrl]);
-
-  const featuredProducts = useMemo(() => {
-    // Take the first 4 products from allProducts as featured
-    return allProducts.slice(0, 4);
-  }, [allProducts]);
 
   const handleShopNowClick = () => {
     productsSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -363,17 +356,56 @@ const StorefrontIndex = () => {
             </div>
           </motion.div>
 
-          {/* Featured Products Section */}
-          {featuredProducts.length > 0 && (
+          {/* Promotional Marquee */}
+          <div className="my-12">
+            <Marquee pauseOnHover className="py-4 border-y">
+              <div className="flex items-center gap-8 text-lg font-semibold text-primary">
+                <Sparkles className="h-6 w-6 text-amber-500" />
+                <span>FLASH SALE: Up to 50% OFF on selected items!</span>
+                <Gift className="h-6 w-6 text-rose-500" />
+                <span>FREE SHIPPING on all orders over {formatCurrency(50, shopDetails.currency)}!</span>
+                <RefreshCw className="h-6 w-6 text-blue-500" />
+                <span>New Arrivals Every Week!</span>
+                <Tag className="h-6 w-6 text-emerald-500" />
+                <span>Don't miss out on our exclusive bundles!</span>
+              </div>
+            </Marquee>
+          </div>
+
+          {/* Best Sellers Section */}
+          {bestSellers.length > 0 && (
             <div className="mb-12">
-              <h2 className="text-4xl font-bold font-heading mb-8 text-center">Featured Products</h2>
+              <h2 className="text-4xl font-bold font-heading mb-8 text-center flex items-center justify-center gap-3">
+                <Crown className="h-8 w-8 text-amber-400" />
+                Best Sellers
+              </h2>
               <motion.div
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
                 className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8"
               >
-                {featuredProducts.map((product) => (
+                {bestSellers.map((product) => (
+                  <StorefrontProductCard key={product.product_id} product={product as Product} shopSlug={shopDetails.slug} />
+                ))}
+              </motion.div>
+            </div>
+          )}
+
+          {/* Recommended Products Section */}
+          {recommendedProducts.length > 0 && (
+            <div className="mb-12">
+              <h2 className="text-4xl font-bold font-heading mb-8 text-center flex items-center justify-center gap-3">
+                <Sparkles className="h-8 w-8 text-purple-400" />
+                Recommended For You
+              </h2>
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8"
+              >
+                {recommendedProducts.map((product) => (
                   <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} />
                 ))}
               </motion.div>
@@ -394,19 +426,17 @@ const StorefrontIndex = () => {
                 </Button>
               )}
               {/* Search input is now in the header, this is just a placeholder for the layout */}
-              <div className="relative flex-1">
-                {!isSearchInputVisible && ( // Only show this input if the header search is not visible
-                  <>
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search products..."
-                      className="pl-10"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </>
-                )}
-              </div>
+              {isMobile && (
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search products..."
+                    className="pl-10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-2 w-full md:w-2/3 justify-end">

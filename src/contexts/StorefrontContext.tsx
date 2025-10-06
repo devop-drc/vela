@@ -39,6 +39,13 @@ interface Product {
   created_at: string; // Add created_at for sorting
 }
 
+interface TopProduct {
+  product_id: string;
+  name: string;
+  media_url: string;
+  total_sold: number;
+}
+
 interface StorefrontContextType {
   shopDetails: ShopDetails | null;
   appearanceSettings: DesignSettings | null;
@@ -49,6 +56,8 @@ interface StorefrontContextType {
   hasMoreProducts: boolean;
   fetchMoreProducts: () => Promise<void>;
   isLoadingMore: boolean;
+  bestSellers: TopProduct[]; // New: Best selling products
+  recommendedProducts: Product[]; // New: Recommended products
 }
 
 const StorefrontContext = createContext<StorefrontContextType | undefined>(undefined);
@@ -74,6 +83,8 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreProducts, setHasMoreProducts] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [bestSellers, setBestSellers] = useState<TopProduct[]>([]); // New state
+  const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]); // New state
 
   const fetchStorefrontData = useCallback(async (pageToFetch: number = 1) => {
     if (!shopSlug) {
@@ -88,6 +99,8 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
       setProducts([]); // Clear products for initial load
       setHasMoreProducts(true); // Assume more until proven otherwise
       setCurrentPage(1);
+      setBestSellers([]); // Clear best sellers for initial load
+      setRecommendedProducts([]); // Clear recommended products for initial load
     } else {
       setIsLoadingMore(true);
     }
@@ -106,6 +119,8 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
 
       if (pageToFetch === 1) {
         setProducts(data.products);
+        setBestSellers(data.bestSellers || []); // Set best sellers
+        setRecommendedProducts(data.recommendedProducts || []); // Set recommended products
       } else {
         setProducts(prevProducts => [...prevProducts, ...data.products]);
       }
@@ -145,6 +160,8 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
     hasMoreProducts,
     fetchMoreProducts,
     isLoadingMore,
+    bestSellers, // Provide best sellers
+    recommendedProducts, // Provide recommended products
   };
 
   return (
