@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter, ArrowRight, ChevronRight, Sparkles, Gift, Truck, RefreshCw, Crown } from "lucide-react";
+import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter, ArrowRight, ChevronRight, Sparkles, Gift, Truck, RefreshCw, Crown, Info } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { getCategoryColor } from "@/lib/colorUtils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -135,13 +135,13 @@ const StorefrontIndex = () => {
     <div className="flex">
       <div className="flex-1">
         <div className="container py-8">
-          {/* Shop Header Section */}
+          {/* Hero Section */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className={cn(
-              "mb-12 p-8 md:p-12 rounded-xl text-center relative overflow-hidden",
+              "relative mb-16 p-8 md:p-16 rounded-xl text-center overflow-hidden min-h-[400px] flex items-center justify-center",
               blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
               "shadow-lg"
             )}
@@ -158,51 +158,51 @@ const StorefrontIndex = () => {
               `,
             }}
           >
-            <div className="absolute inset-0 bg-black/40" /> {/* Dark overlay for text readability */}
-            <div className="relative z-10 text-primary-foreground"> {/* Ensure text is above overlay */}
+            <div className="absolute inset-0 bg-black/50" /> {/* Darker overlay for text readability */}
+            <div className="relative z-10 text-primary-foreground max-w-4xl mx-auto"> {/* Ensure text is above overlay */}
               {shopDetails.logo_url && (
-                <Avatar className="h-24 w-24 mx-auto mb-4 border-4 border-primary-foreground shadow-md">
+                <Avatar className="h-28 w-28 mx-auto mb-6 border-4 border-primary-foreground shadow-md">
                   <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
-                  <AvatarFallback className="text-4xl font-bold bg-primary-foreground text-primary">{shopDetails.shop_name?.[0]}</AvatarFallback>
+                  <AvatarFallback className="text-5xl font-bold bg-primary-foreground text-primary">{shopDetails.shop_name?.[0]}</AvatarFallback>
                 </Avatar>
               )}
-              <h1 className="text-4xl md:text-5xl font-bold font-heading mb-2 leading-tight">
+              <h1 className="text-5xl md:text-6xl font-bold font-heading mb-4 leading-tight drop-shadow-lg">
                 {shopDetails.shop_name}
               </h1>
               {shopDetails.headline && (
-                <p className="text-xl max-w-3xl mx-auto">
+                <p className="text-xl md:text-2xl max-w-3xl mx-auto mb-8 drop-shadow-md">
                   {shopDetails.headline}
                 </p>
               )}
-              {/* Value Proposition */}
-              <div className="mt-6 flex flex-wrap justify-center gap-4">
-                <Badge variant="outline" className="text-base px-4 py-2 flex items-center gap-2 text-primary-foreground border-primary-foreground/50 bg-white/20 backdrop-blur-sm">
-                  <Sparkles className="h-5 w-5 text-amber-300" />
-                  Handcrafted Quality
-                </Badge>
-                <Badge variant="outline" className="text-base px-4 py-2 flex items-center gap-2 text-primary-foreground border-primary-foreground/50 bg-white/20 backdrop-blur-sm">
-                  <Truck className="h-5 w-5 text-blue-300" />
-                  Fast & Free Shipping
-                </Badge>
-                <Badge variant="outline" className="text-base px-4 py-2 flex items-center gap-2 text-primary-foreground border-primary-foreground/50 bg-white/20 backdrop-blur-sm">
-                  <RefreshCw className="h-5 w-5 text-emerald-300" />
-                  Easy 30-Day Returns
-                </Badge>
-              </div>
-              {/* Featured Products / Promotions (Placeholder) */}
-              <div className="mt-10 p-6 border border-primary-foreground/30 rounded-lg bg-black/30 backdrop-blur-sm text-primary-foreground text-center">
-                <Gift className="h-8 w-8 mx-auto mb-3" />
-                <p className="font-semibold text-lg">Limited Time Offer: 20% Off All New Arrivals!</p>
-                <p className="text-sm mt-2">Shop our latest collection and save big. Ends soon!</p>
-                <Button onClick={handleShopNowClick} className="mt-4">
-                  Shop Now
-                </Button>
-              </div>
+              <Button size="lg" onClick={handleShopNowClick} className="text-lg px-8 py-6 shadow-xl hover:scale-105 transition-transform">
+                Shop Now <ArrowRight className="ml-3 h-5 w-5" />
+              </Button>
             </div>
           </motion.div>
 
+          {/* About Us Section */}
+          {shopDetails.about && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className={cn(
+                "mb-16 p-8 rounded-xl shadow-lg text-center max-w-4xl mx-auto",
+                blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
+              )}
+            >
+              <h2 className="text-3xl font-bold font-heading mb-4 flex items-center justify-center gap-3">
+                <Info className="h-7 w-7 text-blue-500" />
+                About {shopDetails.shop_name}
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                {shopDetails.about}
+              </p>
+            </motion.div>
+          )}
+
           {/* Promotional Marquee */}
-          <div className="my-12">
+          <div className="my-16">
             <Marquee pauseOnHover className="py-4 border-y">
               <div className="flex items-center gap-8 text-lg font-semibold text-primary">
                 <Sparkles className="h-6 w-6 text-amber-500" />
@@ -219,8 +219,8 @@ const StorefrontIndex = () => {
 
           {/* Product Category Cards */}
           {uniqueCategories.length > 0 && (
-            <div className="mb-12">
-              <h2 className="text-4xl font-bold font-heading mb-8 text-center flex items-center justify-center gap-3">
+            <div className="mb-16">
+              <h2 className="text-4xl font-bold font-heading mb-10 text-center flex items-center justify-center gap-3">
                 <Filter className="h-8 w-8 text-blue-400" />
                 Shop by Category
               </h2>
@@ -276,8 +276,8 @@ const StorefrontIndex = () => {
 
           {/* Best Sellers Section */}
           {bestSellers.length > 0 && (
-            <div className="mb-12">
-              <h2 className="text-4xl font-bold font-heading mb-8 text-center flex items-center justify-center gap-3">
+            <div className="mb-16">
+              <h2 className="text-4xl font-bold font-heading mb-10 text-center flex items-center justify-center gap-3">
                 <Crown className="h-8 w-8 text-amber-400" />
                 Best Sellers
               </h2>
@@ -296,8 +296,8 @@ const StorefrontIndex = () => {
 
           {/* Recommended Products Section */}
           {recommendedProducts.length > 0 && (
-            <div className="mb-12">
-              <h2 className="text-4xl font-bold font-heading mb-8 text-center flex items-center justify-center gap-3">
+            <div className="mb-16">
+              <h2 className="text-4xl font-bold font-heading mb-10 text-center flex items-center justify-center gap-3">
                 <Sparkles className="h-8 w-8 text-purple-400" />
                 Recommended For You
               </h2>

@@ -95,7 +95,7 @@ export const StorefrontCheckoutModal = ({ onClose, onBackToCart }: StorefrontChe
 
   return (
     <div className="flex flex-col h-full">
-      <CardHeader className="pb-4">
+      <CardHeader className="pb-4 px-6"> {/* Added horizontal padding */}
         <CardTitle className="text-2xl font-bold font-heading">Checkout</CardTitle>
         <DialogDescription>Complete your purchase by providing your details.</DialogDescription>
       </CardHeader>
