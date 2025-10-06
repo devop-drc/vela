@@ -313,6 +313,13 @@ const StorefrontIndex = () => {
               </motion.div>
             </div>
           )}
+
+          {/* View All Products Button */}
+          <div className="text-center mt-16">
+            <Link to={`/shop/${shopDetails.slug}/products`} className={cn(buttonVariants({ size: "lg" }), "text-lg px-8 py-6 shadow-xl hover:scale-105 transition-transform")}>
+              View All Products <ArrowRight className="ml-3 h-5 w-5" />
+            </Link>
+          </div>
         </div>
       </div>
     </div>
