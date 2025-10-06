@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShoppingCart, ArrowRight, Trash2, Minus, Plus, Home } from "lucide-react";
+import { ShoppingCart, ArrowRight, Trash2, Minus, Plus, Home, ArrowLeft, Bookmark } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
@@ -92,6 +92,18 @@ const StorefrontCart = () => {
                 </div>
               </Card>
             ))}
+            <div className="flex justify-between items-center pt-4">
+                <Button variant="outline" asChild>
+                    <Link to={`/shop/${shopSlug}`}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Continue Shopping
+                    </Link>
+                </Button>
+                <Button variant="ghost" onClick={() => toast.info("Feature coming soon!")}>
+                    <Bookmark className="mr-2 h-4 w-4" />
+                    Save for Later
+                </Button>
+            </div>
           </div>
           <div className="lg:col-span-1">
             <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "lg:sticky lg:top-24 shadow-lg")}>

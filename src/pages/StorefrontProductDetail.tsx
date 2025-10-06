@@ -6,7 +6,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Loader2, ShoppingCart, Minus, Plus, Home, ArrowLeft } from "lucide-react";
+import { Loader2, ShoppingCart, Minus, Plus, Home, ArrowLeft, Star } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -119,12 +119,21 @@ const StorefrontProductDetail = () => {
               {product.details?.type && <span> &middot; {product.details.type}</span>}
             </p>
             <h1 className="text-4xl md:text-5xl font-bold font-heading mb-3 leading-tight">{product.name}</h1>
-            <p className="text-3xl font-bold text-primary">
-              {formatCurrency(product.price, product.currency || shopDetails?.currency)}
-              {product.pricing_type === 'subscription' && (
-                <span className="text-lg font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
-              )}
-            </p>
+            <div className="flex items-center gap-3 mb-3">
+                <p className="text-3xl font-bold text-primary">
+                {formatCurrency(product.price, product.currency || shopDetails?.currency)}
+                {product.pricing_type === 'subscription' && (
+                    <span className="text-lg font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                )}
+                </p>
+                {/* Placeholder for star ratings */}
+                <div className="flex items-center text-amber-500">
+                    {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={cn("h-5 w-5", i < 4 ? "fill-amber-500" : "fill-muted stroke-muted-foreground")} />
+                    ))}
+                    <span className="ml-2 text-sm text-muted-foreground">(4.0 / 5.0)</span>
+                </div>
+            </div>
           </div>
 
           <p className="text-muted-foreground leading-relaxed text-base">{product.caption || "No description provided."}</p>
@@ -232,6 +241,59 @@ const StorefrontProductDetail = () => {
           )}
         </div>
       </div>
+
+      {/* Customer Reviews Section (Placeholder) */}
+      <Card className={cn("mt-12 shadow-md", blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
+        <CardHeader>
+          <CardTitle className="text-2xl flex items-center gap-2">
+            <Star className="h-6 w-6 text-amber-500" />
+            Customer Reviews (12)
+          </CardTitle>
+          <p className="text-muted-foreground">What our customers are saying about this product.</p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center text-amber-500 text-3xl font-bold">
+              4.0
+              <span className="ml-2 flex">
+                {[...Array(5)].map((_, i) => (
+                    <Star key={i} className={cn("h-7 w-7", i < 4 ? "fill-amber-500" : "fill-muted stroke-muted-foreground")} />
+                ))}
+              </span>
+            </div>
+            <Button variant="outline">Write a Review</Button>
+          </div>
+          <div className="space-y-4">
+            {/* Example Review 1 */}
+            <div className="border-b pb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex text-amber-500">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className={cn("h-4 w-4", i < 5 ? "fill-amber-500" : "fill-muted stroke-muted-foreground")} />
+                  ))}
+                </div>
+                <p className="font-semibold text-sm">Amazing product!</p>
+              </div>
+              <p className="text-sm text-muted-foreground mb-2">"I absolutely love this product. The quality is fantastic and it arrived so quickly. Highly recommend!"</p>
+              <p className="text-xs text-muted-foreground">— Jane Doe, 2 days ago</p>
+            </div>
+            {/* Example Review 2 */}
+            <div className="border-b pb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex text-amber-500">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className={cn("h-4 w-4", i < 4 ? "fill-amber-500" : "fill-muted stroke-muted-foreground")} />
+                  ))}
+                </div>
+                <p className="font-semibold text-sm">Good value for money</p>
+              </div>
+              <p className="text-sm text-muted-foreground mb-2">"It's a solid product for the price. Met my expectations. Would buy again."</p>
+              <p className="text-xs text-muted-foreground">— John Smith, 1 week ago</p>
+            </div>
+            <Button variant="link" className="px-0">Read all 12 reviews</Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

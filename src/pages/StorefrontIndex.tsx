@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard";
 import { StorefrontFilterSidebar } from "@/components/storefront/StorefrontFilterSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { toast } from "sonner";
 
 interface Product {
   id: string;
@@ -159,6 +160,10 @@ const StorefrontIndex = () => {
   }, [filteredAndSortedProducts]);
 
   const hasActiveFilters = searchTerm || sortOption !== 'newest' || Object.values(filters).some(f => (Array.isArray(f) && f.length > 0) || (typeof f === 'string' && f !== 'all'));
+
+  const handleLoadMore = () => {
+    toast.info("Loading more products... (feature coming soon!)");
+  };
 
   if (isLoading) {
     return (
@@ -365,7 +370,7 @@ const StorefrontIndex = () => {
 
           {filteredAndSortedProducts.length > 0 && (
             <div className="text-center mt-16">
-              <Button variant="outline" size="lg" className="px-8 py-4 text-lg">
+              <Button variant="outline" size="lg" className="px-8 py-4 text-lg" onClick={handleLoadMore}>
                 Load More Products
               </Button>
             </div>
