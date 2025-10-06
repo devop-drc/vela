@@ -83,6 +83,8 @@ const StorefrontIndex = () => {
     return curatedImages[randomIndex].src;
   }, [appearanceSettings?.backgroundImageUrl]);
 
+  const blurEnabled = appearanceSettings?.blurEnabled; // Correctly destructure blurEnabled here
+
   if (isLoading) {
     return (
       <div className="container py-8">
