@@ -6,14 +6,15 @@ import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Loader2, ShoppingCart, Minus, Plus, Home, ArrowLeft, Star, Truck, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { Loader2, ShoppingCart, Minus, Plus, Home, ArrowLeft, Star, Truck, Sparkles } from "lucide-react";
+import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import { getAttributeIcon } from "@/lib/attributeIcons"; // Import attribute icons
+import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard"; // Import StorefrontProductCard
 
 const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
@@ -85,6 +86,11 @@ const StorefrontProductDetail = () => {
   const sizes = allDetails.find(([key]) => key === 'size')?.[1] as string[] || [];
   const otherOptions = allDetails.filter(([key]) => ['material'].includes(key)); // Example other options
   const specifications = allDetails.filter(([key]) => !['color', 'size', 'material', 'type'].includes(key)); // Example specs
+
+  const relatedProducts = useMemo(() => {
+    // Filter out the current product and take up to 4 other products
+    return products.filter(p => p.id !== product.id).slice(0, 4);
+  }, [products, product.id]);
 
   return (
     <div className="container py-8">
@@ -343,6 +349,18 @@ const StorefrontProductDetail = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* You might also like section */}
+      {relatedProducts.length > 0 && (
+        <div className="mt-12">
+          <h2 className="text-3xl font-bold font-heading mb-8 text-center">You might also like</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            {relatedProducts.map(p => (
+              <StorefrontProductCard key={p.id} product={p} shopSlug={shopDetails.slug} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

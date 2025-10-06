@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter, ArrowRight, ChevronRight, Sparkles, Gift } from "lucide-react";
+import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter, ArrowRight, ChevronRight, Sparkles, Gift, Truck, RefreshCw } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { getCategoryColor } from "@/lib/colorUtils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,6 +18,7 @@ import { StorefrontProductCard } from "@/components/storefront/StorefrontProduct
 import { StorefrontFilterSidebar } from "@/components/storefront/StorefrontFilterSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Skeleton } from "@/components/ui/skeleton";
+import { curatedImages } from "@/contexts/AppearanceContext"; // Import curated images
 
 interface Product {
   id: string;
@@ -183,6 +184,20 @@ const StorefrontIndex = () => {
 
   const hasActiveFilters = searchTerm || sortOption !== 'newest' || Object.values(filters).some(f => (Array.isArray(f) && f.length > 0) || (typeof f === 'string' && f !== 'all'));
 
+  const heroBackgroundImage = useMemo(() => {
+    if (appearanceSettings?.backgroundImageUrl) {
+      return appearanceSettings.backgroundImageUrl;
+    }
+    // Fallback to a random curated image if no custom background is set
+    const randomIndex = Math.floor(Math.random() * curatedImages.length);
+    return curatedImages[randomIndex].src;
+  }, [appearanceSettings?.backgroundImageUrl]);
+
+  const featuredProducts = useMemo(() => {
+    // Take the first 4 products from allProducts as featured
+    return allProducts.slice(0, 4);
+  }, [allProducts]);
+
   if (isLoading && allProducts.length === 0) { // Only show initial loading skeleton if no products are loaded yet
     return (
       <div className="container py-8">
@@ -273,46 +288,78 @@ const StorefrontIndex = () => {
               blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
               "shadow-lg"
             )}
+            style={{
+              backgroundImage: `url(${heroBackgroundImage})`,
+              backgroundSize: appearanceSettings?.backgroundSize || 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: appearanceSettings?.backgroundRepeat || 'no-repeat',
+              filter: `
+                brightness(${appearanceSettings?.backgroundBrightness || 100}%)
+                contrast(${appearanceSettings?.backgroundContrast || 100}%)
+                saturate(${appearanceSettings?.backgroundSaturation || 100}%)
+                hue-rotate(${appearanceSettings?.backgroundHue || 0}deg)
+              `,
+            }}
           >
-            {shopDetails.logo_url && (
-              <Avatar className="h-24 w-24 mx-auto mb-4 border-4 border-primary-foreground shadow-md">
-                <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
-                <AvatarFallback className="text-4xl font-bold bg-primary-foreground text-primary">{shopDetails.shop_name?.[0]}</AvatarFallback>
-              </Avatar>
-            )}
-            <h1 className="text-4xl md:text-5xl font-bold font-heading mb-2 leading-tight">
-              {shopDetails.shop_name}
-            </h1>
-            {shopDetails.headline && (
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                {shopDetails.headline}
-              </p>
-            )}
-            {/* Value Proposition */}
-            <div className="mt-6 flex flex-wrap justify-center gap-4">
-              <Badge variant="outline" className="text-base px-4 py-2 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-amber-500" />
-                Handcrafted Quality
-              </Badge>
-              <Badge variant="outline" className="text-base px-4 py-2 flex items-center gap-2">
-                <Truck className="h-5 w-5 text-blue-500" />
-                Fast & Free Shipping
-              </Badge>
-              <Badge variant="outline" className="text-base px-4 py-2 flex items-center gap-2">
-                <RefreshCw className="h-5 w-5 text-emerald-500" />
-                Easy 30-Day Returns
-              </Badge>
-            </div>
-            {/* Featured Products / Promotions (Placeholder) */}
-            <div className="mt-10 p-6 border rounded-lg bg-muted/50 text-muted-foreground text-center">
-              <Gift className="h-8 w-8 mx-auto mb-3" />
-              <p className="font-semibold text-lg">Limited Time Offer: 20% Off All New Arrivals!</p>
-              <p className="text-sm mt-2">Shop our latest collection and save big. Ends soon!</p>
-              <Button asChild className="mt-4">
-                <Link to={`/shop/${shopDetails.slug}#products`}>Shop Now</Link>
-              </Button>
+            <div className="absolute inset-0 bg-black/40" /> {/* Dark overlay for text readability */}
+            <div className="relative z-10 text-primary-foreground"> {/* Ensure text is above overlay */}
+              {shopDetails.logo_url && (
+                <Avatar className="h-24 w-24 mx-auto mb-4 border-4 border-primary-foreground shadow-md">
+                  <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
+                  <AvatarFallback className="text-4xl font-bold bg-primary-foreground text-primary">{shopDetails.shop_name?.[0]}</AvatarFallback>
+                </Avatar>
+              )}
+              <h1 className="text-4xl md:text-5xl font-bold font-heading mb-2 leading-tight">
+                {shopDetails.shop_name}
+              </h1>
+              {shopDetails.headline && (
+                <p className="text-xl max-w-3xl mx-auto">
+                  {shopDetails.headline}
+                </p>
+              )}
+              {/* Value Proposition */}
+              <div className="mt-6 flex flex-wrap justify-center gap-4">
+                <Badge variant="outline" className="text-base px-4 py-2 flex items-center gap-2 text-primary-foreground border-primary-foreground/50 bg-white/20 backdrop-blur-sm">
+                  <Sparkles className="h-5 w-5 text-amber-300" />
+                  Handcrafted Quality
+                </Badge>
+                <Badge variant="outline" className="text-base px-4 py-2 flex items-center gap-2 text-primary-foreground border-primary-foreground/50 bg-white/20 backdrop-blur-sm">
+                  <Truck className="h-5 w-5 text-blue-300" />
+                  Fast & Free Shipping
+                </Badge>
+                <Badge variant="outline" className="text-base px-4 py-2 flex items-center gap-2 text-primary-foreground border-primary-foreground/50 bg-white/20 backdrop-blur-sm">
+                  <RefreshCw className="h-5 w-5 text-emerald-300" />
+                  Easy 30-Day Returns
+                </Badge>
+              </div>
+              {/* Featured Products / Promotions (Placeholder) */}
+              <div className="mt-10 p-6 border border-primary-foreground/30 rounded-lg bg-black/30 backdrop-blur-sm text-primary-foreground text-center">
+                <Gift className="h-8 w-8 mx-auto mb-3" />
+                <p className="font-semibold text-lg">Limited Time Offer: 20% Off All New Arrivals!</p>
+                <p className="text-sm mt-2">Shop our latest collection and save big. Ends soon!</p>
+                <Button asChild className="mt-4">
+                  <Link to={`/shop/${shopDetails.slug}#products`}>Shop Now</Link>
+                </Button>
+              </div>
             </div>
           </motion.div>
+
+          {/* Featured Products Section */}
+          {featuredProducts.length > 0 && (
+            <div className="mb-12">
+              <h2 className="text-4xl font-bold font-heading mb-8 text-center">Featured Products</h2>
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8"
+              >
+                {featuredProducts.map((product) => (
+                  <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} />
+                ))}
+              </motion.div>
+            </div>
+          )}
 
           {/* Search, Filter, Sort Controls */}
           <div id="products" className={cn(
@@ -370,7 +417,7 @@ const StorefrontIndex = () => {
             </div>
           </div>
 
-          <h2 className="text-4xl font-bold font-heading mb-10 text-center">Our Products</h2>
+          <h2 className="text-4xl font-bold font-heading mb-10 text-center">All Products</h2>
           
           {filteredAndSortedProducts.length === 0 && !isLoading && !isLoadingMore ? ( // Check for no products after all loading
             <div className={cn(

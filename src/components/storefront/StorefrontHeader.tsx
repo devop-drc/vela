@@ -1,5 +1,5 @@
-import { Link } from "react-router-dom";
-import { ShoppingBag, Filter } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
+import { ShoppingBag, Filter, Search } from "lucide-react"; // Import Search icon
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -16,10 +16,15 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
   const { shopDetails, appearanceSettings } = useStorefront();
   const { totalItems } = useCart();
   const isMobile = useIsMobile();
+  const navigate = useNavigate(); // Initialize useNavigate
 
   if (!shopDetails) return null;
 
   const blurEnabled = appearanceSettings?.blurEnabled;
+
+  const handleSearchClick = () => {
+    navigate(`/shop/${shopDetails.slug}?focusSearch=true`);
+  };
 
   return (
     <header className={cn(
@@ -39,6 +44,10 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
           <Link to={`/shop/${shopDetails.slug}`} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
             Shop
           </Link>
+          <Button variant="ghost" size="icon" onClick={handleSearchClick}> {/* Search button */}
+            <Search className="h-5 w-5" />
+            <span className="sr-only">Search</span>
+          </Button>
           {isMobile && onToggleFilterSidebar && (
             <Button variant="ghost" size="icon" onClick={onToggleFilterSidebar}>
               <Filter className="h-5 w-5" />
