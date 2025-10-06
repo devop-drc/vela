@@ -1,4 +1,4 @@
-import React, { useState } from "react"; // Added React and useState import
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ShoppingBag, Filter, Search, X } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
@@ -19,7 +19,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
   const { totalItems } = useCart();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const [isSearchInputVisible, setIsSearchInputVisible] = useState(false);
+  const [isMobileSearchInputVisible, setIsMobileSearchInputVisible] = useState(false); // Local state for mobile search input visibility
 
   if (!shopDetails) return null;
 
@@ -31,7 +31,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
     const query = formData.get('searchQuery') as string;
     if (query) {
       navigate(`/shop/${shopDetails.slug}?search=${encodeURIComponent(query)}`);
-      if (isMobile) setIsSearchInputVisible(false);
+      if (isMobile) setIsMobileSearchInputVisible(false); // Hide mobile search input after search
     }
   };
 
@@ -53,7 +53,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
           <Link to={`/shop/${shopDetails.slug}`} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
             Shop
           </Link>
-          {/* Desktop Search Input */}
+          {/* Desktop Search Input - Always visible */}
           {!isMobile && (
             <form onSubmit={handleSearchSubmit} className="relative hidden md:flex items-center">
               <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
@@ -68,9 +68,9 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
           )}
           {/* Mobile Search Toggle Button */}
           {isMobile && (
-            <Button variant="ghost" size="icon" onClick={() => setIsSearchInputVisible(prev => !prev)}>
-              {isSearchInputVisible ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
-              <span className="sr-only">{isSearchInputVisible ? "Close Search" : "Open Search"}</span>
+            <Button variant="ghost" size="icon" onClick={() => setIsMobileSearchInputVisible(prev => !prev)}>
+              {isMobileSearchInputVisible ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+              <span className="sr-only">{isMobileSearchInputVisible ? "Close Search" : "Open Search"}</span>
             </Button>
           )}
           {isMobile && onToggleFilterSidebar && (
@@ -101,7 +101,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
         </nav>
       </div>
       <AnimatePresence>
-        {isMobile && isSearchInputVisible && (
+        {isMobile && isMobileSearchInputVisible && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}

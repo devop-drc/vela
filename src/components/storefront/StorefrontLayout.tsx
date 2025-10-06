@@ -62,7 +62,6 @@ const StorefrontLayoutContent = () => {
   const { shopDetails, appearanceSettings, isLoading, error, products } = useStorefront();
   const isMobile = useIsMobile();
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false); // State for mobile sidebar
-  const [isSearchInputVisible, setIsSearchInputVisible] = useState(false); // State for search input visibility
 
   useEffect(() => {
     if (appearanceSettings) {
@@ -128,13 +127,11 @@ const StorefrontLayoutContent = () => {
       <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
       <StorefrontHeader 
         onToggleFilterSidebar={() => setIsFilterSidebarOpen(true)} 
-        isSearchInputVisible={isSearchInputVisible}
-        onToggleSearchInput={() => setIsSearchInputVisible(prev => !prev)}
       />
       <main className="flex-1 flex">
         <div className="flex-1">
           {/* Pass sidebar state and toggle function to Outlet context */}
-          <Outlet context={{ onToggleFilterSidebar: () => setIsFilterSidebarOpen(true), isFilterSidebarOpen, setIsFilterSidebarOpen, products, isSearchInputVisible, onToggleSearchInput: () => setIsSearchInputVisible(prev => !prev) }} />
+          <Outlet context={{ onToggleFilterSidebar: () => setIsFilterSidebarOpen(true), isFilterSidebarOpen, setIsFilterSidebarOpen, products }} />
         </div>
       </main>
       <StorefrontFooter />
@@ -146,7 +143,7 @@ const StorefrontLayoutContent = () => {
 const StorefrontLayout = () => (
   <StorefrontProvider>
     <CartProvider>
-      <RecentlyViewedProvider> {/* Added RecentlyViewedProvider here */}
+      <RecentlyViewedProvider>
         <StorefrontLayoutContent />
       </RecentlyViewedProvider>
     </CartProvider>

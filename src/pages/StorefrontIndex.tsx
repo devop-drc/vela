@@ -425,16 +425,10 @@ const StorefrontIndex = () => {
                   <ChevronRight className={cn("ml-2 h-4 w-4 transition-transform", isDesktopSidebarOpen && "rotate-180")} />
                 </Button>
               )}
-              {/* Search input is now in the header, this is just a placeholder for the layout */}
+              {/* Search input is now entirely in the header, this div is just for layout consistency */}
               {isMobile && (
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search products..."
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+                  {/* This search input is removed as it's handled in the header */}
                 </div>
               )}
             </div>
