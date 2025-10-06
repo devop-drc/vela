@@ -99,7 +99,7 @@ export const StorefrontCheckoutModal = ({ onClose, onBackToCart }: StorefrontChe
         <CardTitle className="text-2xl font-bold font-heading">Checkout</CardTitle>
         <DialogDescription>Complete your purchase by providing your details.</DialogDescription>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto pr-4">
+      <CardContent className="flex-1 overflow-y-auto px-6"> {/* Added horizontal padding */}
         <CheckoutProgress currentStep={currentStep} />
 
         <form id="checkout-form" onSubmit={handleSubmit} className="space-y-8">

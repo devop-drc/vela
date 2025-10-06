@@ -26,7 +26,7 @@ import StorefrontLayout from "./components/storefront/StorefrontLayout";
 import StorefrontIndex from "./pages/StorefrontIndex";
 import StorefrontProductDetail from "./pages/StorefrontProductDetail";
 import StorefrontOrderTracking from "./pages/StorefrontOrderTracking";
-import { CartProvider } from "./contexts/CartContext"; // Import CartProvider
+import StorefrontAllProducts from "./pages/StorefrontAllProducts"; // Import the new page
 
 const queryClient = new QueryClient();
 
@@ -45,8 +45,8 @@ const App = () => (
                     {/* Public Storefront Routes */}
                     <Route path="/shop/:shopSlug" element={<StorefrontLayout />}>
                       <Route index element={<StorefrontIndex />} />
+                      <Route path="products" element={<StorefrontAllProducts />} /> {/* New route for all products */}
                       <Route path="product/:productId" element={<StorefrontProductDetail />} />
-                      {/* Cart and Checkout are now modals, so no direct routes here */}
                       <Route path="order-tracking" element={<StorefrontOrderTracking />} />
                     </Route>
 

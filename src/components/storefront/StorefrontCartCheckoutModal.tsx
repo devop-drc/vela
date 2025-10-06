@@ -41,7 +41,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={cn(
-        "max-w-lg h-[90vh] p-0 flex flex-col overflow-hidden",
+        "max-w-3xl h-[90vh] p-0 flex flex-col overflow-hidden", // Increased max-w to 3xl
         blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
       )}>
         <AnimatePresence initial={false} custom={direction}>

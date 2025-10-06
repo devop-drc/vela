@@ -31,7 +31,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: Storefro
     const formData = new FormData(e.currentTarget as HTMLFormElement);
     const query = formData.get('searchQuery') as string;
     if (query) {
-      navigate(`/shop/${shopDetails.slug}?search=${encodeURIComponent(query)}`);
+      navigate(`/shop/${shopDetails.slug}/products?search=${encodeURIComponent(query)}`); // Navigate to all products page with search
       if (isMobile) setIsMobileSearchInputVisible(false); // Hide mobile search input after search
     }
   };
@@ -52,7 +52,10 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: Storefro
         </Link>
         <nav className="flex items-center space-x-4">
           <Link to={`/shop/${shopDetails.slug}`} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
-            Shop
+            Home
+          </Link>
+          <Link to={`/shop/${shopDetails.slug}/products`} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
+            Products
           </Link>
           {/* Desktop Search Input - Always visible */}
           {!isMobile && (

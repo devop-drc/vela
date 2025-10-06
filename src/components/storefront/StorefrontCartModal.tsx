@@ -27,7 +27,7 @@ export const StorefrontCartModal = ({ onClose, onProceedToCheckout }: Storefront
         <CardTitle className="text-2xl font-bold font-heading">Your Shopping Cart</CardTitle>
         <DialogDescription>Review your items before proceeding to checkout.</DialogDescription>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto pr-4">
+      <CardContent className="flex-1 overflow-y-auto px-6"> {/* Added horizontal padding */}
         {cartItems.length === 0 && savedItems.length === 0 ? (
           <div className={cn(
             "text-center py-12 shadow-lg",
@@ -57,7 +57,7 @@ export const StorefrontCartModal = ({ onClose, onProceedToCheckout }: Storefront
                         <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                       </div>
                     </Link>
-                    <div className="flex-1 w-full sm:w-auto grid grid-cols-1 md:grid-cols-2 items-center gap-4 text-center sm:text-left">
+                    <div className="flex-1 w-full sm:w-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-4 text-center sm:text-left"> {/* Adjusted grid for wider modal */}
                       <div>
                         <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
                           <h3 className="font-semibold text-lg hover:underline">{item.name}</h3>
@@ -122,7 +122,7 @@ export const StorefrontCartModal = ({ onClose, onProceedToCheckout }: Storefront
                         <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                       </div>
                     </Link>
-                    <div className="flex-1 w-full sm:w-auto grid grid-cols-1 md:grid-cols-2 items-center gap-4 text-center sm:text-left">
+                    <div className="flex-1 w-full sm:w-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-4 text-center sm:text-left"> {/* Adjusted grid for wider modal */}
                       <div>
                         <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
                           <h3 className="font-semibold text-lg hover:underline">{item.name}</h3>
