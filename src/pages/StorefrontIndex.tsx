@@ -1,5 +1,5 @@
 import { useStorefront } from "@/contexts/StorefrontContext";
-import { Link, useOutletContext } from "react-router-dom"; // Import useOutletContext
+import { Link, useOutletContext } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter, ArrowRight } from "lucide-react";
+import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter, ArrowRight, ChevronRight } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { getCategoryColor } from "@/lib/colorUtils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -53,9 +53,9 @@ const containerVariants = {
 };
 
 const StorefrontIndex = () => {
-  const { shopDetails, products, isLoading, error, appearanceSettings } = useStorefront();
+  const { shopDetails, products: allProducts, isLoading, error, appearanceSettings } = useStorefront();
   const isMobile = useIsMobile();
-  const { isFilterSidebarOpen, setIsFilterSidebarOpen } = useOutletContext<{ isFilterSidebarOpen: boolean; setIsFilterSidebarOpen: (open: boolean) => void }>(); // Get from context
+  const { onToggleFilterSidebar, isFilterSidebarOpen, setIsFilterSidebarOpen } = useOutletContext<{ onToggleFilterSidebar: () => void; isFilterSidebarOpen: boolean; setIsFilterSidebarOpen: (open: boolean) => void; products: Product[] }>();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState("newest");
@@ -64,6 +64,7 @@ const StorefrontIndex = () => {
     tags: [],
     priceRange: "all",
   });
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true); // State for desktop sidebar visibility
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
@@ -82,7 +83,7 @@ const StorefrontIndex = () => {
   };
 
   const filteredAndSortedProducts = useMemo(() => {
-    let filtered = products;
+    let filtered = allProducts;
 
     // Search filter
     if (searchTerm) {
@@ -144,7 +145,7 @@ const StorefrontIndex = () => {
         default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
-  }, [products, searchTerm, sortOption, filters]);
+  }, [allProducts, searchTerm, sortOption, filters]);
 
   const groupedProducts = useMemo(() => {
     return filteredAndSortedProducts.reduce((acc, product) => {
@@ -154,7 +155,7 @@ const StorefrontIndex = () => {
       }
       acc[category].push(product);
       return acc;
-    }, {} as { [key: string]: typeof products });
+    }, {} as { [key: string]: typeof allProducts });
   }, [filteredAndSortedProducts]);
 
   const hasActiveFilters = searchTerm || sortOption !== 'newest' || Object.values(filters).some(f => (Array.isArray(f) && f.length > 0) || (typeof f === 'string' && f !== 'all'));
@@ -200,17 +201,45 @@ const StorefrontIndex = () => {
 
   return (
     <div className="flex">
-      {/* Mobile Filter Sidebar */}
+      {/* Mobile Filter Sidebar (Sheet) */}
       {isMobile && (
         <StorefrontFilterSidebar
           isOpen={isFilterSidebarOpen}
           onClose={() => setIsFilterSidebarOpen(false)}
-          products={products}
+          products={allProducts}
           currentFilters={filters}
           onFilterChange={handleFilterChange}
           onResetFilters={handleResetFilters}
           isMobile={isMobile}
         />
+      )}
+
+      {/* Desktop Filter Sidebar (Collapsible Aside) */}
+      {!isMobile && (
+        <AnimatePresence initial={false}>
+          {isDesktopSidebarOpen && (
+            <motion.aside
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: '20rem', opacity: 1 }} // w-80
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className={cn(
+                "hidden lg:flex flex-col border-r h-full flex-shrink-0",
+                blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
+              )}
+            >
+              <StorefrontFilterSidebar
+                isOpen={true} // Always open when rendered
+                onClose={() => setIsDesktopSidebarOpen(false)} // Close button for desktop
+                products={allProducts}
+                currentFilters={filters}
+                onFilterChange={handleFilterChange}
+                onResetFilters={handleResetFilters}
+                isMobile={false}
+              />
+            </motion.aside>
+          )}
+        </AnimatePresence>
       )}
 
       <div className="flex-1">
@@ -221,7 +250,7 @@ const StorefrontIndex = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className={cn(
-              "mb-16 p-8 md:p-16 rounded-xl text-center relative overflow-hidden min-h-[60vh] flex flex-col items-center justify-center", // Increased min-height, added flex for centering
+              "mb-16 p-8 md:p-16 rounded-xl text-center relative overflow-hidden min-h-[60vh] flex flex-col items-center justify-center",
               blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
               "shadow-lg"
             )}
@@ -231,31 +260,30 @@ const StorefrontIndex = () => {
                 : 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%)',
               backgroundSize: appearanceSettings?.backgroundImageUrl ? (appearanceSettings.backgroundSize || 'cover') : 'cover',
               backgroundPosition: 'center',
-              color: 'hsl(var(--primary-foreground))', // Ensure text is readable on primary background
+              color: 'hsl(var(--primary-foreground))',
             }}
           >
-            {/* Overlay for better text readability on images */}
             {appearanceSettings?.backgroundImageUrl && (
               <div className="absolute inset-0 bg-black/40 z-10" />
             )}
-            <div className="relative z-20"> {/* Content needs to be above the overlay */}
+            <div className="relative z-20">
               {shopDetails.logo_url && (
-                <Avatar className="h-32 w-32 mx-auto mb-6 border-4 border-primary-foreground shadow-md"> {/* Larger avatar, border color changed */}
+                <Avatar className="h-32 w-32 mx-auto mb-6 border-4 border-primary-foreground shadow-md">
                   <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
-                  <AvatarFallback className="text-5xl font-bold bg-primary-foreground text-primary">{shopDetails.shop_name?.[0]}</AvatarFallback> {/* Fallback colors adjusted */}
+                  <AvatarFallback className="text-5xl font-bold bg-primary-foreground text-primary">{shopDetails.shop_name?.[0]}</AvatarFallback>
                 </Avatar>
               )}
-              <h1 className="text-5xl md:text-7xl font-bold font-heading mb-4 leading-tight"> {/* Larger headline, removed text-shadow-lg */}
+              <h1 className="text-5xl md:text-7xl font-bold font-heading mb-4 leading-tight">
                 {shopDetails.headline || `Welcome to ${shopDetails.shop_name}!`}
               </h1>
               {shopDetails.about && (
-                <p className="text-xl max-w-4xl mx-auto mb-8 text-primary-foreground/90"> {/* Wider paragraph, added margin-bottom, removed text-shadow-md */}
+                <p className="text-xl max-w-4xl mx-auto mb-8 text-primary-foreground/90">
                   {shopDetails.about}
                 </p>
               )}
               <Link
                 to={`/shop/${shopDetails.slug}#products`}
-                className={cn(buttonVariants({ size: "xl", variant: "secondary" }), "flex items-center mx-auto")} // Secondary variant for contrast, larger size
+                className={cn(buttonVariants({ size: "xl", variant: "secondary" }), "flex items-center mx-auto")}
               >
                 Shop Now
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -264,23 +292,32 @@ const StorefrontIndex = () => {
           </motion.div>
 
           {/* Search, Filter, Sort Controls */}
-          <div id="products" className={cn( // Added ID for scrolling
-            "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-4", // Added flex-col/row and gap, stronger shadow
+          <div id="products" className={cn(
+            "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-4",
             blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
           )}>
-            <div className="relative w-full md:w-1/3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products..."
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              {!isMobile && (
+                <Button variant="outline" onClick={() => setIsDesktopSidebarOpen(prev => !prev)} className="flex-shrink-0">
+                  <Filter className="mr-2 h-4 w-4" />
+                  Filters
+                  <ChevronRight className={cn("ml-2 h-4 w-4 transition-transform", isDesktopSidebarOpen && "rotate-180")} />
+                </Button>
+              )}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search products..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2 w-full md:w-2/3 justify-end">
               {isMobile && (
-                <Button variant="outline" onClick={() => setIsFilterSidebarOpen(true)} className="w-full md:w-auto justify-start">
+                <Button variant="outline" onClick={onToggleFilterSidebar} className="w-full md:w-auto justify-start">
                   <Filter className="mr-2 h-4 w-4" />
                   Filters ({Object.values(filters).filter(f => (Array.isArray(f) && f.length > 0) || (typeof f === 'string' && f !== 'all')).length})
                 </Button>
@@ -325,13 +362,13 @@ const StorefrontIndex = () => {
               </p>
             </div>
           ) : (
-            <div className="space-y-16"> {/* Increased vertical spacing between categories */}
+            <div className="space-y-16">
               {Object.entries(groupedProducts).map(([category, productsInCategory]) => (
                 <div key={category}>
                   <h3 className={cn(
-                    "text-3xl font-bold font-heading mb-8 inline-block px-6 py-3 rounded-full", // Larger, rounded category badge
+                    "text-3xl font-bold font-heading mb-8 inline-block px-6 py-3 rounded-full",
                     blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
-                    getCategoryColor(category).bg, getCategoryColor(category).text, "shadow-md" // Added shadow
+                    getCategoryColor(category).bg, getCategoryColor(category).text, "shadow-md"
                   )}>
                     {category}
                   </h3>
@@ -339,7 +376,7 @@ const StorefrontIndex = () => {
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8" // Increased gap
+                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8"
                   >
                     {productsInCategory.map((product) => (
                       <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} />
@@ -350,10 +387,9 @@ const StorefrontIndex = () => {
             </div>
           )}
 
-          {/* Load More Button Placeholder */}
           {filteredAndSortedProducts.length > 0 && (
-            <div className="text-center mt-16"> {/* Increased margin-top */}
-              <Button variant="outline" size="lg" className="px-8 py-4 text-lg"> {/* Larger button */}
+            <div className="text-center mt-16">
+              <Button variant="outline" size="lg" className="px-8 py-4 text-lg">
                 Load More Products
               </Button>
             </div>

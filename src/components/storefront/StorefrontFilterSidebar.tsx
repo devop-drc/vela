@@ -74,12 +74,12 @@ export const StorefrontFilterSidebar = ({
 
   const handleApplyFilters = () => {
     onFilterChange(localFilters);
-    onClose();
+    onClose(); // Close sidebar after applying filters
   };
 
   const handleClearAll = () => {
     onResetFilters();
-    onClose();
+    onClose(); // Close sidebar after clearing filters
   };
 
   const { uniqueCategories, uniqueTags, uniqueDetailsAttributes } = useMemo(() => {
@@ -134,23 +134,30 @@ export const StorefrontFilterSidebar = ({
 
   const filterContent = (
     <div className="flex flex-col h-full">
-      {isMobile ? (
-        <SheetHeader className="p-4 border-b">
-          <SheetTitle className="flex items-center gap-2">
-            <Filter className="h-6 w-6" />
-            Advanced Filters
-          </SheetTitle>
-          <SheetDescription>Refine your product search.</SheetDescription>
-        </SheetHeader>
-      ) : (
-        <div className="p-4 border-b">
+      <SheetHeader className={cn("p-4 border-b flex-row items-center justify-between", !isMobile && "hidden")}> {/* Only show on mobile */}
+        <SheetTitle className="flex items-center gap-2">
+          <Filter className="h-6 w-6" />
+          Advanced Filters
+        </SheetTitle>
+        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close filters</span>
+        </Button>
+      </SheetHeader>
+      
+      {!isMobile && ( // Desktop header for the aside
+        <div className="p-4 border-b flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-bold">
             <Filter className="h-6 w-6" />
-            Advanced Filters
+            Filters
           </h2>
-          <p className="text-sm text-muted-foreground">Refine your product search.</p>
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close filters</span>
+          </Button>
         </div>
       )}
+
       <ScrollArea className="flex-1 px-4 py-6">
         <Accordion type="multiple" defaultValue={["Categories", "Price Range"]} className="w-full">
           {uniqueCategories.length > 0 && (
@@ -251,14 +258,6 @@ export const StorefrontFilterSidebar = ({
     );
   }
 
-  // Desktop view: render as a fixed aside, no Sheet wrapper
-  return (
-    <aside className={cn(
-      "hidden lg:flex flex-col border-r h-full",
-      blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
-      "w-64 flex-shrink-0"
-    )}>
-      {filterContent}
-    </aside>
-  );
+  // Desktop view: filterContent is rendered directly within the motion.aside in StorefrontIndex
+  return <>{filterContent}</>;
 };
