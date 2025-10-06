@@ -74,12 +74,16 @@ export const StorefrontFilterSidebar = ({
 
   const handleApplyFilters = () => {
     onFilterChange(localFilters);
-    onClose(); // Close sidebar after applying filters
+    if (isMobile) {
+      onClose(); // Close sidebar after applying filters on mobile
+    }
   };
 
   const handleClearAll = () => {
     onResetFilters();
-    onClose(); // Close sidebar after clearing filters
+    if (isMobile) {
+      onClose(); // Close sidebar after clearing filters on mobile
+    }
   };
 
   const { uniqueCategories, uniqueTags, uniqueDetailsAttributes } = useMemo(() => {
@@ -134,18 +138,18 @@ export const StorefrontFilterSidebar = ({
 
   const filterContent = (
     <div className="flex flex-col h-full">
-      <SheetHeader className={cn("p-4 border-b flex-row items-center justify-between", !isMobile && "hidden")}> {/* Only show on mobile */}
-        <SheetTitle className="flex items-center gap-2">
-          <Filter className="h-6 w-6" />
-          Advanced Filters
-        </SheetTitle>
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close filters</span>
-        </Button>
-      </SheetHeader>
-      
-      {!isMobile && ( // Desktop header for the aside
+      {isMobile ? (
+        <SheetHeader className="p-4 border-b flex-row items-center justify-between">
+          <SheetTitle className="flex items-center gap-2">
+            <Filter className="h-6 w-6" />
+            Advanced Filters
+          </SheetTitle>
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close filters</span>
+          </Button>
+        </SheetHeader>
+      ) : (
         <div className="p-4 border-b flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-bold">
             <Filter className="h-6 w-6" />

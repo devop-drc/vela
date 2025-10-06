@@ -55,7 +55,7 @@ const containerVariants = {
 const StorefrontIndex = () => {
   const { shopDetails, products: allProducts, isLoading, error, appearanceSettings } = useStorefront();
   const isMobile = useIsMobile();
-  const { onToggleFilterSidebar, isFilterSidebarOpen, setIsFilterSidebarOpen } = useOutletContext<{ onToggleFilterSidebar: () => void; isFilterSidebarOpen: boolean; setIsFilterSidebarOpen: (open: boolean) => void; products: Product[] }>();
+  const { onToggleFilterSidebar, isFilterSidebarOpen, setIsFilterSidebarOpen } = useOutletContext<{ onToggleFilterSidebar: () => void; isFilterSidebarOpen: boolean; setIsFilterSidebarOpen: (open: boolean) => void }>();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState("newest");
@@ -64,7 +64,7 @@ const StorefrontIndex = () => {
     tags: [],
     priceRange: "all",
   });
-  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true); // State for desktop sidebar visibility
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(false); // Desktop sidebar starts hidden
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
