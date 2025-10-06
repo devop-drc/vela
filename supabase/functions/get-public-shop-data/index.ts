@@ -18,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { shopSlug } = await req.json();
+    const { shopSlug, page = 1, limit = 12 } = await req.json(); // Add page and limit parameters
     if (!shopSlug) {
       return new Response(JSON.stringify({ error: "Missing shopSlug" }), {
         status: 400,
@@ -53,12 +53,15 @@ serve(async (req) => {
       throw designSettingsError;
     }
 
-    // Fetch active products for the business
-    const { data: products, error: productsError } = await supabaseAdmin
+    const offset = (page - 1) * limit;
+
+    // Fetch active products for the business with pagination
+    const { data: products, error: productsError, count: totalProductsCount } = await supabaseAdmin
       .from('products')
-      .select('*')
+      .select('*', { count: 'exact' }) // Get exact count
       .eq('business_id', businessId)
-      .eq('status', 'Active');
+      .eq('status', 'Active')
+      .range(offset, offset + limit - 1); // Apply range for pagination
 
     if (productsError) {
       throw productsError;
@@ -81,6 +84,8 @@ serve(async (req) => {
       },
       appearanceSettings: designSettings?.settings || null,
       products: products || [],
+      totalProductsCount: totalProductsCount || 0, // Return total count
+      hasMore: (offset + (products?.length || 0)) < (totalProductsCount || 0), // Calculate hasMore
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

@@ -36,6 +36,7 @@ interface Product {
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
   details: any;
+  created_at: string; // Add created_at for sorting
 }
 
 interface StorefrontContextType {
@@ -44,31 +45,57 @@ interface StorefrontContextType {
   products: Product[];
   isLoading: boolean;
   error: string | null;
+  currentPage: number;
+  hasMoreProducts: boolean;
+  fetchMoreProducts: () => Promise<void>;
+  isLoadingMore: boolean;
 }
 
 const StorefrontContext = createContext<StorefrontContextType | undefined>(undefined);
 
+// Helper to generate a URL-friendly slug
+const generateSlug = (name: string): string => {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove non-alphanumeric characters except spaces and hyphens
+    .trim()
+    .replace(/\s+/g, '-'); // Replace spaces with single hyphens
+};
+
+const PRODUCTS_PER_PAGE = 12; // Define a constant for limit
+
 export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
-  const { shopSlug } = useParams<{ shopSlug: string }>(); // Change to shopSlug
+  const { shopSlug } = useParams<{ shopSlug: string }>();
   const [shopDetails, setShopDetails] = useState<ShopDetails | null>(null);
   const [appearanceSettings, setAppearanceSettings] = useState<DesignSettings | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreProducts, setHasMoreProducts] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const fetchStorefrontData = useCallback(async () => {
-    if (!shopSlug) { // Use shopSlug here
+  const fetchStorefrontData = useCallback(async (pageToFetch: number = 1) => {
+    if (!shopSlug) {
       setError("Shop slug is missing from the URL.");
       setIsLoading(false);
+      setIsLoadingMore(false);
       return;
     }
 
-    setIsLoading(true);
+    if (pageToFetch === 1) {
+      setIsLoading(true);
+      setProducts([]); // Clear products for initial load
+      setHasMoreProducts(true); // Assume more until proven otherwise
+      setCurrentPage(1);
+    } else {
+      setIsLoadingMore(true);
+    }
     setError(null);
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('get-public-shop-data', {
-        body: { shopSlug }, // Pass shopSlug to the edge function
+        body: { shopSlug, page: pageToFetch, limit: PRODUCTS_PER_PAGE },
       });
 
       if (invokeError) throw invokeError;
@@ -76,19 +103,36 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
 
       setShopDetails(data.shopDetails);
       setAppearanceSettings(data.appearanceSettings);
-      setProducts(data.products);
+
+      if (pageToFetch === 1) {
+        setProducts(data.products);
+      } else {
+        setProducts(prevProducts => [...prevProducts, ...data.products]);
+      }
+      setHasMoreProducts(data.hasMore);
 
     } catch (err: any) {
       console.error("Failed to fetch storefront data:", err);
       showError(`Failed to load shop: ${err.message || "An unknown error occurred."}`);
       setError(err.message || "An unknown error occurred.");
     } finally {
-      setIsLoading(false);
+      if (pageToFetch === 1) {
+        setIsLoading(false);
+      } else {
+        setIsLoadingMore(false);
+      }
     }
-  }, [shopSlug]); // Depend on shopSlug
+  }, [shopSlug]);
+
+  const fetchMoreProducts = useCallback(async () => {
+    if (!hasMoreProducts || isLoading || isLoadingMore) return;
+    const nextPage = currentPage + 1;
+    setCurrentPage(nextPage);
+    await fetchStorefrontData(nextPage);
+  }, [currentPage, hasMoreProducts, isLoading, isLoadingMore, fetchStorefrontData]);
 
   useEffect(() => {
-    fetchStorefrontData();
+    fetchStorefrontData(1); // Initial fetch on mount or shopSlug change
   }, [fetchStorefrontData]);
 
   const contextValue: StorefrontContextType = {
@@ -97,6 +141,10 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
     products,
     isLoading,
     error,
+    currentPage,
+    hasMoreProducts,
+    fetchMoreProducts,
+    isLoadingMore,
   };
 
   return (

@@ -11,13 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter, ArrowRight, ChevronRight } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react"; // Import useRef
 import { getCategoryColor } from "@/lib/colorUtils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard";
 import { StorefrontFilterSidebar } from "@/components/storefront/StorefrontFilterSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 
 interface Product {
   id: string;
@@ -54,7 +54,7 @@ const containerVariants = {
 };
 
 const StorefrontIndex = () => {
-  const { shopDetails, products: allProducts, isLoading, error, appearanceSettings } = useStorefront();
+  const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, hasMoreProducts, fetchMoreProducts, isLoadingMore } = useStorefront();
   const isMobile = useIsMobile();
   const { onToggleFilterSidebar, isFilterSidebarOpen, setIsFilterSidebarOpen } = useOutletContext<{ onToggleFilterSidebar: () => void; isFilterSidebarOpen: boolean; setIsFilterSidebarOpen: (open: boolean) => void }>();
 
@@ -68,6 +68,28 @@ const StorefrontIndex = () => {
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(false); // Desktop sidebar starts hidden
 
   const blurEnabled = appearanceSettings?.blurEnabled;
+  const observerTarget = useRef<HTMLDivElement>(null); // Ref for the intersection observer target
+
+  useEffect(() => {
+    if (!observerTarget.current || !hasMoreProducts || isLoading || isLoadingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreProducts && !isLoading && !isLoadingMore) {
+          fetchMoreProducts();
+        }
+      },
+      { threshold: 1.0 } // Trigger when 100% of the target is visible
+    );
+
+    observer.observe(observerTarget.current);
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [observerTarget, hasMoreProducts, isLoading, isLoadingMore, fetchMoreProducts]);
 
   const handleFilterChange = (newFilters: FilterState) => {
     setFilters(newFilters);
@@ -161,11 +183,7 @@ const StorefrontIndex = () => {
 
   const hasActiveFilters = searchTerm || sortOption !== 'newest' || Object.values(filters).some(f => (Array.isArray(f) && f.length > 0) || (typeof f === 'string' && f !== 'all'));
 
-  const handleLoadMore = () => {
-    toast.info("Loading more products... (feature coming soon!)");
-  };
-
-  if (isLoading) {
+  if (isLoading && allProducts.length === 0) { // Only show initial loading skeleton if no products are loaded yet
     return (
       <div className="container py-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
@@ -330,7 +348,7 @@ const StorefrontIndex = () => {
 
           <h2 className="text-4xl font-bold font-heading mb-10 text-center">Our Products</h2>
           
-          {filteredAndSortedProducts.length === 0 ? (
+          {filteredAndSortedProducts.length === 0 && !isLoading && !isLoadingMore ? ( // Check for no products after all loading
             <div className={cn(
               "text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg",
               blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
@@ -368,12 +386,19 @@ const StorefrontIndex = () => {
             </div>
           )}
 
-          {filteredAndSortedProducts.length > 0 && (
-            <div className="text-center mt-16">
-              <Button variant="outline" size="lg" className="px-8 py-4 text-lg" onClick={handleLoadMore}>
-                Load More Products
-              </Button>
+          {isLoadingMore && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 mt-16">
+              {Array.from({ length: 4 }).map((_, i) => ( // Show a few skeletons
+                <div key={i} className="space-y-2">
+                  <Skeleton className="aspect-square w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ))}
             </div>
+          )}
+          {!isLoading && hasMoreProducts && (
+            <div ref={observerTarget} className="h-1 w-full" /> // Invisible target for observer
           )}
         </div>
       </div>
