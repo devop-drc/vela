@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, Home, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, Apple, Google, Paypal } from "lucide-react";
+import { CheckCircle, Home, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, Apple, Paypal } from "lucide-react"; // Removed Google
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,9 @@ import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
+
+// You might need to install these if they are not already available
+// import { SiVisa, SiMastercard, SiAmericanexpress, SiDiscover } from "react-icons/si"; // Example for card logos
 
 const CheckoutProgress = ({ currentStep }: { currentStep: number }) => {
   const steps = [
@@ -168,7 +171,11 @@ const StorefrontCheckout = () => {
                   <CreditCard className="h-8 w-8 text-muted-foreground" />
                   <Paypal className="h-8 w-8 text-muted-foreground" />
                   <Apple className="h-8 w-8 text-muted-foreground" />
-                  <Google className="h-8 w-8 text-muted-foreground" />
+                  {/* Example of other payment icons, you might need to install react-icons/si for these */}
+                  {/* <SiVisa className="h-8 w-8 text-muted-foreground" />
+                  <SiMastercard className="h-8 w-8 text-muted-foreground" />
+                  <SiAmericanexpress className="h-8 w-8 text-muted-foreground" />
+                  <SiDiscover className="h-8 w-8 text-muted-foreground" /> */}
                   <Wallet className="h-8 w-8 text-muted-foreground" />
                 </div>
               </div>
