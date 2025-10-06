@@ -163,10 +163,6 @@ const StorefrontIndex = () => {
   if (isLoading) {
     return (
       <div className="container py-8">
-        <div className="mb-12 p-8 md:p-12 rounded-xl text-center shadow-lg bg-card/70 backdrop-blur-lg">
-          <div className="h-10 w-3/4 mx-auto mb-4 bg-muted rounded" />
-          <div className="h-6 w-1/2 mx-auto bg-muted rounded" />
-        </div>
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
           <div className="relative w-full md:w-1/3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -224,7 +220,7 @@ const StorefrontIndex = () => {
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
               className={cn(
-                "hidden lg:flex flex-col border-r h-full flex-shrink-0",
+                "hidden lg:flex flex-col border-r flex-shrink-0 sticky top-0 max-h-screen overflow-y-auto", // Added sticky, max-h-screen, overflow-y-auto
                 blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
               )}
             >
@@ -242,55 +238,8 @@ const StorefrontIndex = () => {
         </AnimatePresence>
       )}
 
-      <div className="flex-1">
+      <div className={cn("flex-1 transition-all duration-200", !isMobile && isDesktopSidebarOpen ? "lg:ml-0" : "lg:ml-0")}> {/* Adjusted margin for desktop sidebar */}
         <div className="container py-8">
-          {/* Hero Section */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className={cn(
-              "mb-16 p-8 md:p-16 rounded-xl text-center relative overflow-hidden min-h-[60vh] flex flex-col items-center justify-center",
-              blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
-              "shadow-lg"
-            )}
-            style={{
-              backgroundImage: appearanceSettings?.backgroundImageUrl 
-                ? `url(${appearanceSettings.backgroundImageUrl})` 
-                : 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%)',
-              backgroundSize: appearanceSettings?.backgroundImageUrl ? (appearanceSettings.backgroundSize || 'cover') : 'cover',
-              backgroundPosition: 'center',
-              color: 'hsl(var(--primary-foreground))',
-            }}
-          >
-            {appearanceSettings?.backgroundImageUrl && (
-              <div className="absolute inset-0 bg-black/40 z-10" />
-            )}
-            <div className="relative z-20">
-              {shopDetails.logo_url && (
-                <Avatar className="h-32 w-32 mx-auto mb-6 border-4 border-primary-foreground shadow-md">
-                  <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
-                  <AvatarFallback className="text-5xl font-bold bg-primary-foreground text-primary">{shopDetails.shop_name?.[0]}</AvatarFallback>
-                </Avatar>
-              )}
-              <h1 className="text-5xl md:text-7xl font-bold font-heading mb-4 leading-tight">
-                {shopDetails.headline || `Welcome to ${shopDetails.shop_name}!`}
-              </h1>
-              {shopDetails.about && (
-                <p className="text-xl max-w-4xl mx-auto mb-8 text-primary-foreground/90">
-                  {shopDetails.about}
-                </p>
-              )}
-              <Link
-                to={`/shop/${shopDetails.slug}#products`}
-                className={cn(buttonVariants({ size: "xl", variant: "secondary" }), "flex items-center mx-auto")}
-              >
-                Shop Now
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </div>
-          </motion.div>
-
           {/* Search, Filter, Sort Controls */}
           <div id="products" className={cn(
             "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-4",
