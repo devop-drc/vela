@@ -34,7 +34,10 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
           </Avatar>
           <span className="font-bold text-lg">{shopDetails.shop_name}</span>
         </Link>
-        <nav className="flex items-center space-x-2"> {/* Adjusted gap for filter button */}
+        <nav className="flex items-center space-x-4"> {/* Adjusted gap for filter button */}
+          <Link to={`/shop/${shopDetails.slug}`} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
+            Shop
+          </Link>
           {isMobile && onToggleFilterSidebar && (
             <Button variant="ghost" size="icon" onClick={onToggleFilterSidebar}>
               <Filter className="h-5 w-5" />

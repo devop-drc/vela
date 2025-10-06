@@ -1,5 +1,5 @@
 import { useStorefront } from "@/contexts/StorefrontContext";
-import { Link } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom"; // Import useOutletContext
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
@@ -55,6 +55,7 @@ const containerVariants = {
 const StorefrontIndex = () => {
   const { shopDetails, products, isLoading, error, appearanceSettings } = useStorefront();
   const isMobile = useIsMobile();
+  const { isFilterSidebarOpen, setIsFilterSidebarOpen } = useOutletContext<{ isFilterSidebarOpen: boolean; setIsFilterSidebarOpen: (open: boolean) => void }>(); // Get from context
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState("newest");
@@ -63,7 +64,6 @@ const StorefrontIndex = () => {
     tags: [],
     priceRange: "all",
   });
-  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false); // State for mobile sidebar
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
@@ -210,19 +210,6 @@ const StorefrontIndex = () => {
           onFilterChange={handleFilterChange}
           onResetFilters={handleResetFilters}
           isMobile={isMobile}
-        />
-      )}
-
-      {/* Desktop Filter Sidebar */}
-      {!isMobile && (
-        <StorefrontFilterSidebar
-          isOpen={true} // Always open on desktop
-          onClose={() => {}} // No-op for desktop
-          products={products}
-          currentFilters={filters}
-          onFilterChange={handleFilterChange}
-          onResetFilters={handleResetFilters}
-          isMobile={false}
         />
       )}
 
