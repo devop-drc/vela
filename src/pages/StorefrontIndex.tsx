@@ -10,14 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter, ArrowRight, ChevronRight } from "lucide-react";
-import { useState, useMemo, useEffect, useRef } from "react"; // Import useRef
+import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter, ArrowRight, ChevronRight, Sparkles, Gift } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { getCategoryColor } from "@/lib/colorUtils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard";
 import { StorefrontFilterSidebar } from "@/components/storefront/StorefrontFilterSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Product {
   id: string;
@@ -288,6 +288,30 @@ const StorefrontIndex = () => {
                 {shopDetails.headline}
               </p>
             )}
+            {/* Value Proposition */}
+            <div className="mt-6 flex flex-wrap justify-center gap-4">
+              <Badge variant="outline" className="text-base px-4 py-2 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-amber-500" />
+                Handcrafted Quality
+              </Badge>
+              <Badge variant="outline" className="text-base px-4 py-2 flex items-center gap-2">
+                <Truck className="h-5 w-5 text-blue-500" />
+                Fast & Free Shipping
+              </Badge>
+              <Badge variant="outline" className="text-base px-4 py-2 flex items-center gap-2">
+                <RefreshCw className="h-5 w-5 text-emerald-500" />
+                Easy 30-Day Returns
+              </Badge>
+            </div>
+            {/* Featured Products / Promotions (Placeholder) */}
+            <div className="mt-10 p-6 border rounded-lg bg-muted/50 text-muted-foreground text-center">
+              <Gift className="h-8 w-8 mx-auto mb-3" />
+              <p className="font-semibold text-lg">Limited Time Offer: 20% Off All New Arrivals!</p>
+              <p className="text-sm mt-2">Shop our latest collection and save big. Ends soon!</p>
+              <Button asChild className="mt-4">
+                <Link to={`/shop/${shopDetails.slug}#products`}>Shop Now</Link>
+              </Button>
+            </div>
           </motion.div>
 
           {/* Search, Filter, Sort Controls */}

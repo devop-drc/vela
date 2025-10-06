@@ -6,7 +6,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Loader2, ShoppingCart, Minus, Plus, Home, ArrowLeft, Star } from "lucide-react";
+import { Loader2, ShoppingCart, Minus, Plus, Home, ArrowLeft, Star, Truck, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,8 @@ const StorefrontProductDetail = () => {
   const { shopDetails, products, isLoading, error, appearanceSettings } = useStorefront();
   const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null); // Placeholder for variant selection
+  const [selectedSize, setSelectedSize] = useState<string | null>(null); // Placeholder for variant selection
 
   if (isLoading) {
     return <div className="container py-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -66,9 +68,10 @@ const StorefrontProductDetail = () => {
       toast.error("Shop details not available.");
       return;
     }
+    // In a real app, you'd pass selected variants here
     addToCart({
       productId: product.id,
-      name: product.name,
+      name: product.name + (selectedColor ? ` (${selectedColor})` : '') + (selectedSize ? ` (${selectedSize})` : ''),
       price: product.price || 0,
       currency: product.currency || shopDetails.currency || 'USD',
       media_url: product.media_url,
@@ -78,8 +81,10 @@ const StorefrontProductDetail = () => {
   };
 
   const allDetails = Object.entries(product.details || {}).filter(([key, value]) => key !== 'type' && value && (!Array.isArray(value) || value.length > 0));
-  const options = allDetails.filter(([key]) => ['color', 'size', 'material'].includes(key)); // Example options
-  const specifications = allDetails.filter(([key]) => !['color', 'size', 'material'].includes(key)); // Example specs
+  const colors = allDetails.find(([key]) => key === 'color')?.[1] as string[] || [];
+  const sizes = allDetails.find(([key]) => key === 'size')?.[1] as string[] || [];
+  const otherOptions = allDetails.filter(([key]) => ['material'].includes(key)); // Example other options
+  const specifications = allDetails.filter(([key]) => !['color', 'size', 'material', 'type'].includes(key)); // Example specs
 
   return (
     <div className="container py-8">
@@ -144,56 +149,85 @@ const StorefrontProductDetail = () => {
             </div>
           )}
 
-          {(options.length > 0 || specifications.length > 0 || (product.pricing_type === 'one_time' && product.inventory !== null)) && (
+          {/* Variant Selection (Placeholder) */}
+          {(colors.length > 0 || sizes.length > 0 || otherOptions.length > 0) && (
             <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-md")}>
-              <CardHeader><CardTitle className="text-xl">Product Details</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-xl">Options</CardTitle></CardHeader>
               <CardContent className="p-4 space-y-4">
-                {options.length > 0 && (
-                  <div>
-                    <h3 className="text-base font-semibold mb-3">Options & Variants</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                      {options.map(([key, value]) => {
-                        const Icon = getAttributeIcon(key);
-                        return (
-                          <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
-                            {Array.isArray(value) ? (
-                              value.map(item => <Badge key={item} variant="outline">{item}</Badge>)
-                            ) : (
-                              <p className="text-base">{String(value)}</p>
-                            )}
-                          </DetailDisplayRow>
-                        );
-                      })}
+                {colors.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Color</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {colors.map(color => (
+                        <Button
+                          key={color}
+                          variant={selectedColor === color ? "default" : "outline"}
+                          onClick={() => setSelectedColor(color)}
+                          className={cn("capitalize", selectedColor === color && "ring-2 ring-primary ring-offset-2")}
+                        >
+                          {color}
+                        </Button>
+                      ))}
                     </div>
                   </div>
                 )}
-                {options.length > 0 && specifications.length > 0 && <hr className="my-4" />}
-                {specifications.length > 0 && (
-                  <div>
-                    <h3 className="text-base font-semibold mb-3">Specifications</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                      {specifications.map(([key, value]) => {
-                        const Icon = getAttributeIcon(key);
-                        return (
-                          <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
-                              <p className="text-base">{Array.isArray(value) ? value.join(', ') : String(value)}</p>
-                          </DetailDisplayRow>
-                        );
-                      })}
+                {sizes.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Size</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {sizes.map(size => (
+                        <Button
+                          key={size}
+                          variant={selectedSize === size ? "default" : "outline"}
+                          onClick={() => setSelectedSize(size)}
+                          className={cn(selectedSize === size && "ring-2 ring-primary ring-offset-2")}
+                        >
+                          {size}
+                        </Button>
+                      ))}
                     </div>
                   </div>
                 )}
-                {product.pricing_type === 'one_time' && product.inventory !== null && (
-                  <div className={cn("pt-4", (options.length > 0 || specifications.length > 0) && "border-t mt-4")}>
-                    <DetailDisplayRow label="Inventory" icon={Home}> {/* Using Home icon as a placeholder for inventory */}
-                      <p className="text-base">{product.inventory || 0}</p>
-                    </DetailDisplayRow>
+                {otherOptions.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                    {otherOptions.map(([key, value]) => {
+                      const Icon = getAttributeIcon(key);
+                      return (
+                        <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
+                          {Array.isArray(value) ? (
+                            value.map(item => <Badge key={item} variant="outline">{item}</Badge>)
+                          ) : (
+                            <p className="text-base">{String(value)}</p>
+                          )}
+                        </DetailDisplayRow>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
             </Card>
           )}
 
+          {/* Specifications */}
+          {specifications.length > 0 && (
+            <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-md")}>
+              <CardHeader><CardTitle className="text-xl">Specifications</CardTitle></CardHeader>
+              <CardContent className="p-4 space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                  {specifications.map(([key, value]) => {
+                    const Icon = getAttributeIcon(key);
+                    return (
+                      <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
+                          <p className="text-base">{Array.isArray(value) ? value.join(', ') : String(value)}</p>
+                      </DetailDisplayRow>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Inventory & Add to Cart */}
           {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && (
             <div className="flex items-center gap-4">
               <div className="flex items-center border rounded-md">
@@ -239,6 +273,21 @@ const StorefrontProductDetail = () => {
               Subscribe Now
             </Button>
           )}
+
+          {/* Shipping & Returns (Placeholder) */}
+          <Card className={cn("shadow-md", blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
+            <CardContent className="p-4 flex items-center gap-4">
+              <Truck className="h-6 w-6 text-muted-foreground flex-shrink-0" />
+              <div>
+                <p className="font-semibold">Free Shipping & Easy Returns</p>
+                <p className="text-sm text-muted-foreground">
+                  Enjoy free standard shipping on all orders over {formatCurrency(50, shopDetails?.currency)}.
+                  <br />
+                  Not satisfied? Return within 30 days for a full refund. <Link to="#" className="text-primary hover:underline">Learn more</Link>.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 

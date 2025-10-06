@@ -4,19 +4,51 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, Home, ArrowLeft, CreditCard, MapPin, User, Loader2 } from "lucide-react";
+import { CheckCircle, Home, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, Apple, Google, Paypal } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import { useState } from "react";
+import { Separator } from "@/components/ui/separator";
+
+const CheckoutProgress = ({ currentStep }: { currentStep: number }) => {
+  const steps = [
+    { name: "Contact", icon: User },
+    { name: "Shipping", icon: MapPin },
+    { name: "Payment", icon: CreditCard },
+  ];
+
+  return (
+    <div className="flex justify-between items-center mb-8">
+      {steps.map((step, index) => (
+        <div key={step.name} className="flex flex-col items-center flex-1">
+          <div className={cn(
+            "flex items-center justify-center h-10 w-10 rounded-full border-2",
+            index + 1 <= currentStep ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground text-muted-foreground",
+            index + 1 === currentStep && "ring-2 ring-primary ring-offset-2"
+          )}>
+            {index + 1 < currentStep ? <CheckCircle className="h-5 w-5" /> : <step.icon className="h-5 w-5" />}
+          </div>
+          <p className={cn(
+            "text-sm mt-2",
+            index + 1 <= currentStep ? "font-semibold text-foreground" : "text-muted-foreground"
+          )}>
+            {step.name}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const StorefrontCheckout = () => {
   const { shopSlug, shopDetails, appearanceSettings } = useStorefront();
   const { cartItems, subtotal, shipping, total, clearCart } = useCart();
   const blurEnabled = appearanceSettings?.blurEnabled;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1); // State for checkout progress
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +95,8 @@ const StorefrontCheckout = () => {
         </Link>
       </Button>
       <h1 className="text-3xl font-bold font-heading mb-6">Checkout</h1>
+
+      <CheckoutProgress currentStep={currentStep} />
 
       <form id="checkout-form" onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
@@ -126,9 +160,17 @@ const StorefrontCheckout = () => {
               <CardDescription>Securely enter your payment details.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="p-6 border rounded-lg bg-muted/50 text-muted-foreground text-center">
+              <div className="p-6 border rounded-lg bg-muted/50 text-muted-foreground text-center space-y-4">
                 <p className="font-medium">Payment gateway integration coming soon!</p>
                 <p className="text-sm mt-2">For now, this is a placeholder for card input and processing.</p>
+                <Separator />
+                <div className="flex items-center justify-center gap-4">
+                  <CreditCard className="h-8 w-8 text-muted-foreground" />
+                  <Paypal className="h-8 w-8 text-muted-foreground" />
+                  <Apple className="h-8 w-8 text-muted-foreground" />
+                  <Google className="h-8 w-8 text-muted-foreground" />
+                  <Wallet className="h-8 w-8 text-muted-foreground" />
+                </div>
               </div>
             </CardContent>
           </Card>
