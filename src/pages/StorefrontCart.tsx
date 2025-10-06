@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/contexts/CartContext";
 import { Separator } from "@/components/ui/separator";
+import { StorefrontBreadcrumb } from "@/components/storefront/StorefrontBreadcrumb"; // Import StorefrontBreadcrumb
 
 const StorefrontCart = () => {
   const { shopSlug, shopDetails, appearanceSettings } = useStorefront();
@@ -17,6 +18,7 @@ const StorefrontCart = () => {
 
   return (
     <div className="container py-8">
+      <StorefrontBreadcrumb /> {/* Added breadcrumb here */}
       <h1 className="text-3xl font-bold font-heading mb-6">Your Shopping Cart</h1>
 
       {cartItems.length === 0 && savedItems.length === 0 ? (

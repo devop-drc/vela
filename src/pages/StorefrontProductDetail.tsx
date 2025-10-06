@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import { getAttributeIcon } from "@/lib/attributeIcons"; // Import attribute icons
 import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard"; // Import StorefrontProductCard
+import { StorefrontBreadcrumb } from "@/components/storefront/StorefrontBreadcrumb"; // Import StorefrontBreadcrumb
 
 const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
@@ -94,12 +95,7 @@ const StorefrontProductDetail = () => {
 
   return (
     <div className="container py-8">
-      <Button variant="ghost" asChild className="mb-6 text-muted-foreground hover:text-foreground">
-        <Link to={`/shop/${shopSlug}`}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Products
-        </Link>
-      </Button>
+      <StorefrontBreadcrumb /> {/* Added breadcrumb here */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Product Media */}
         <div>

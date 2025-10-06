@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, Home, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, Apple, Paypal, ShieldCheck } from "lucide-react"; // Added ShieldCheck
+import { CheckCircle, Home, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck } from "lucide-react"; // Removed Apple and Paypal
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -169,8 +169,9 @@ const StorefrontCheckout = () => {
                 <Separator />
                 <div className="flex items-center justify-center gap-4">
                   <CreditCard className="h-8 w-8 text-muted-foreground" />
-                  <Paypal className="h-8 w-8 text-muted-foreground" />
-                  <Apple className="h-8 w-8 text-muted-foreground" />
+                  {/* Placeholder for PayPal and Apple Pay icons */}
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/b/b7/PayPal_Logo_Icon_2014.svg" alt="PayPal" className="h-8 w-8" />
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/e/e5/Apple_Pay_logo.svg" alt="Apple Pay" className="h-8 w-8" />
                   {/* Example of other payment icons, you might need to install react-icons/si for these */}
                   {/* <SiVisa className="h-8 w-8 text-muted-foreground" />
                   <SiMastercard className="h-8 w-8 text-muted-foreground" />
