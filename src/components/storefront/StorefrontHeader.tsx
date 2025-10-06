@@ -12,9 +12,10 @@ import { Input } from "../ui/input";
 
 interface StorefrontHeaderProps {
   onToggleFilterSidebar?: () => void;
+  onOpenCart: () => void; // New prop to open the cart modal
 }
 
-export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProps) => {
+export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: StorefrontHeaderProps) => {
   const { shopDetails, appearanceSettings } = useStorefront();
   const { totalItems } = useCart();
   const isMobile = useIsMobile();
@@ -79,9 +80,11 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
               <span className="sr-only">Open Filters</span>
             </Button>
           )}
-          <Link
-            to={`/shop/${shopDetails.slug}/cart`}
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative")}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onOpenCart} // Call onOpenCart prop
+            className="relative"
           >
             <motion.span
               key={totalItems}
@@ -97,7 +100,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar }: StorefrontHeaderProp
                 </span>
               )}
             </motion.span>
-          </Link>
+          </Button>
         </nav>
       </div>
       <AnimatePresence>

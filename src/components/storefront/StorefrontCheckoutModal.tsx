@@ -1,10 +1,10 @@
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, Home, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck, Lock } from "lucide-react"; // Added Lock icon for CVV
+import { CheckCircle, Home, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck, Lock } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
+import { DialogDescription } from "@/components/ui/dialog";
 
 // You might need to install these if they are not already available
 // import { SiVisa, SiMastercard, SiAmericanexpress, SiDiscover } from "react-icons/si"; // Example for card logos
@@ -46,8 +47,13 @@ const CheckoutProgress = ({ currentStep }: { currentStep: number }) => {
   );
 };
 
-const StorefrontCheckout = () => {
-  const { shopSlug, shopDetails, appearanceSettings } = useStorefront();
+interface StorefrontCheckoutModalProps {
+  onClose: () => void;
+  onBackToCart: () => void;
+}
+
+export const StorefrontCheckoutModal = ({ onClose, onBackToCart }: StorefrontCheckoutModalProps) => {
+  const { shopDetails, appearanceSettings } = useStorefront();
   const { cartItems, subtotal, shipping, total, clearCart } = useCart();
   const blurEnabled = appearanceSettings?.blurEnabled;
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,39 +76,33 @@ const StorefrontCheckout = () => {
     
     clearCart(); // Clear the cart after successful order
     setIsSubmitting(false);
+    onClose(); // Close the modal
     // Redirect to order tracking or confirmation page
-    window.location.href = `/shop/${shopSlug}/order-tracking?orderId=DEMO-${Date.now()}`;
+    window.location.href = `/shop/${shopDetails?.slug}/order-tracking?orderId=DEMO-${Date.now()}`;
   };
 
   if (cartItems.length === 0) {
     return (
-      <div className="container py-8 text-center text-muted-foreground">
+      <div className="flex flex-col h-full items-center justify-center text-center text-muted-foreground p-8">
         <h1 className="text-2xl font-bold">Your Cart is Empty</h1>
         <p className="mt-2">You need to add items to your cart before checking out.</p>
-        <Button asChild className="mt-4">
-          <Link to={`/shop/${shopSlug}`}>
-            <Home className="mr-2 h-4 w-4" />
-            Back to Shop
-          </Link>
+        <Button onClick={onClose} className="mt-4">
+          Back to Shop
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="container py-8">
-      <Button variant="ghost" asChild className="mb-6 text-muted-foreground hover:text-foreground">
-        <Link to={`/shop/${shopSlug}/cart`}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Cart
-        </Link>
-      </Button>
-      <h1 className="text-3xl font-bold font-heading mb-6">Checkout</h1>
+    <div className="flex flex-col h-full">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-2xl font-bold font-heading">Checkout</CardTitle>
+        <DialogDescription>Complete your purchase by providing your details.</DialogDescription>
+      </CardHeader>
+      <CardContent className="flex-1 overflow-y-auto pr-4">
+        <CheckoutProgress currentStep={currentStep} />
 
-      <CheckoutProgress currentStep={currentStep} />
-
-      <form id="checkout-form" onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
+        <form id="checkout-form" onSubmit={handleSubmit} className="space-y-8">
           <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg")}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><User className="h-5 w-5" /> Contact Information</CardTitle>
@@ -212,51 +212,27 @@ const StorefrontCheckout = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        <div className="lg:col-span-1">
-          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "lg:sticky lg:top-24 shadow-lg")}>
-            <CardHeader><CardTitle>Order Summary</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                {cartItems.map(item => (
-                  <div key={item.productId} className="flex justify-between text-sm">
-                    <span>{item.name} (x{item.quantity})</span>
-                    <span>{formatCurrency(item.price * item.quantity, shopDetails?.currency)}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-between border-t pt-4">
-                <span>Subtotal:</span>
-                <span className="font-semibold">{formatCurrency(subtotal, shopDetails?.currency)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Shipping:</span>
-                <span className="font-semibold">{formatCurrency(shipping, shopDetails?.currency)}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold border-t pt-4">
-                <span>Total:</span>
-                <span>{formatCurrency(total, shopDetails?.currency)}</span>
-              </div>
-              <Button type="submit" className="w-full" disabled={cartItems.length === 0 || isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Placing Order...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Place Order
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </form>
+        </form>
+      </CardContent>
+      <div className="p-6 border-t flex justify-between items-center">
+        <Button type="button" variant="ghost" onClick={onBackToCart}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Cart
+        </Button>
+        <Button type="submit" form="checkout-form" disabled={cartItems.length === 0 || isSubmitting}>
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Placing Order...
+            </>
+          ) : (
+            <>
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Place Order
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 };
-
-export default StorefrontCheckout;

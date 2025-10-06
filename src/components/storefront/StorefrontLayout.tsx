@@ -9,6 +9,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner"; // Import Sonner
 import { CartProvider } from '@/contexts/CartContext'; // Import CartProvider
 import { RecentlyViewedProvider } from '@/contexts/RecentlyViewedContext'; // Import RecentlyViewedProvider
 import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile
+import { StorefrontCartCheckoutModal } from './StorefrontCartCheckoutModal'; // Import the new modal
 
 // Function to apply settings to the DOM, similar to AppearanceContext
 const applyStorefrontSettingsToDOM = (settings: any) => {
@@ -62,6 +63,7 @@ const StorefrontLayoutContent = () => {
   const { shopDetails, appearanceSettings, isLoading, error, products } = useStorefront();
   const isMobile = useIsMobile();
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false); // State for mobile sidebar
+  const [isCartCheckoutModalOpen, setIsCartCheckoutModalOpen] = useState(false); // State for cart/checkout modal
 
   useEffect(() => {
     if (appearanceSettings) {
@@ -83,7 +85,7 @@ const StorefrontLayoutContent = () => {
       const ogDescriptionTag = document.querySelector('meta[property="og:description"]');
       if (ogDescriptionTag) ogDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Welcome to ${shopDetails.shop_name}'s online store.`);
       const ogImageTag = document.querySelector('meta[property="og:image"]');
-      if (ogImageTag && shopDetails.logo_url) ogImageTag.setAttribute('content', shopDetails.logo_url);
+      if (ogImageTag) ogImageTag.setAttribute('content', shopDetails.logo_url || ''); // Ensure og:image is set
     } else {
       document.title = "Storefront";
       const metaDescriptionTag = document.querySelector('meta[name="description"]');
@@ -127,15 +129,16 @@ const StorefrontLayoutContent = () => {
       <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
       <StorefrontHeader 
         onToggleFilterSidebar={() => setIsFilterSidebarOpen(true)} 
+        onOpenCart={() => setIsCartCheckoutModalOpen(true)} // Pass function to open cart modal
       />
       <main className="flex-1 flex">
         <div className="flex-1">
-          {/* Pass sidebar state and toggle function to Outlet context */}
           <Outlet context={{ onToggleFilterSidebar: () => setIsFilterSidebarOpen(true), isFilterSidebarOpen, setIsFilterSidebarOpen, products }} />
         </div>
       </main>
       <StorefrontFooter />
       <Sonner />
+      <StorefrontCartCheckoutModal isOpen={isCartCheckoutModalOpen} onClose={() => setIsCartCheckoutModalOpen(false)} />
     </div>
   );
 };
