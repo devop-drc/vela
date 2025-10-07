@@ -19,6 +19,7 @@ import { getCategoryIcon } from "@/lib/categoryIcons";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import * as LucideIcons from 'lucide-react'; // Import all Lucide icons
+import { StorefrontAnnouncement } from "@/types/storefront"; // Import new type
 
 interface Product {
   id: string;
@@ -37,14 +38,6 @@ interface Product {
   billing_interval: 'month' | 'year' | null;
   details: { [key: string]: any };
   created_at: string;
-}
-
-interface MarqueeElement {
-  id: string;
-  message: string;
-  icon_name: string;
-  is_active: boolean;
-  display_order: number;
 }
 
 const sectionVariants = {
@@ -70,10 +63,10 @@ const itemVariants = {
 const StorefrontIndex = () => {
   const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, bestSellers, recommendedProducts } = useStorefront();
   const productsSectionRef = useRef<HTMLDivElement>(null);
-  const [marqueeElements, setMarqueeElements] = useState<MarqueeElement[]>([]); // Changed from marqueePromotions
+  const [storefrontAnnouncements, setStorefrontAnnouncements] = useState<StorefrontAnnouncement[]>([]); // Renamed state
 
   useEffect(() => {
-    const fetchMarqueeElements = async () => {
+    const fetchStorefrontAnnouncements = async () => { // Renamed function
       if (!shopDetails?.userId) return;
 
       const { data, error } = await supabase
@@ -83,14 +76,14 @@ const StorefrontIndex = () => {
         .order('display_order', { ascending: true });
 
       if (error) {
-        console.error("Error fetching marquee elements:", error);
+        console.error("Error fetching storefront announcements:", error); // Renamed error message
       } else {
-        setMarqueeElements(data || []);
+        setStorefrontAnnouncements(data as StorefrontAnnouncement[]); // Renamed state update
       }
     };
 
     if (shopDetails) {
-      fetchMarqueeElements();
+      fetchStorefrontAnnouncements();
     }
   }, [shopDetails]);
 
@@ -136,8 +129,8 @@ const StorefrontIndex = () => {
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
-  const getIconComponent = (iconName: string) => {
-    const Icon = (LucideIcons as any)[iconName];
+  const getIconComponent = (iconName: keyof typeof LucideIcons) => { // Use keyof typeof LucideIcons
+    const Icon = LucideIcons[iconName]; // Access directly
     return Icon ? <Icon className="h-5 w-5 md:h-6 md:w-6 text-primary" /> : <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-primary" />;
   };
 
@@ -220,8 +213,8 @@ const StorefrontIndex = () => {
           </div>
         </motion.section>
 
-        {/* Promotional Marquee */}
-        {marqueeElements.length > 0 && (
+        {/* Storefront Announcements */}
+        {storefrontAnnouncements.length > 0 && ( // Renamed state
           <motion.section
             initial="hidden"
             animate="visible"
@@ -229,7 +222,7 @@ const StorefrontIndex = () => {
             className="my-12 md:my-16"
           >
             <Marquee pauseOnHover className="py-3 md:py-4 border-y-2 border-primary/20 bg-primary/10">
-              {marqueeElements.map(element => (
+              {storefrontAnnouncements.map(element => ( // Renamed state
                 <div key={element.id} className="flex items-center gap-6 md:gap-8 text-base md:text-lg font-semibold text-primary">
                   {getIconComponent(element.icon_name)}
                   <span>{element.message}</span>

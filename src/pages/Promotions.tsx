@@ -3,17 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, MessageSquareText, Percent, Gift, Edit, Trash2, CalendarIcon, CheckCircle, XCircle, Sparkles } from "lucide-react";
+import { Loader2, PlusCircle, MessageSquareText, Percent, Gift, Edit, Trash2, CalendarIcon, CheckCircle, XCircle, Sparkles, Megaphone } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { showError, showSuccess } from "@/utils/toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { PromotionEditorModal } from "@/components/PromotionEditorModal";
-import { MarqueeEditorModal } from "@/components/MarqueeEditorModal"; // Import MarqueeEditorModal
-import { MarqueeElement } from "@/pages/MarqueeSettings"; // Re-use MarqueeElement interface
+import { StorefrontAnnouncementEditorModal } from "@/components/StorefrontAnnouncementEditorModal"; // Renamed import
+import { StorefrontAnnouncement } from "@/types/storefront"; // New type import
 import { format } from "date-fns";
 import * as LucideIcons from 'lucide-react'; // Import all Lucide icons
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"; // Import AlertDialog
 
 interface Promotion {
   id: string;
@@ -29,26 +30,29 @@ interface Promotion {
 const Promotions = () => {
   const { setTitle } = usePageTitle();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
-  const [marqueeElements, setMarqueeElements] = useState<MarqueeElement[]>([]); // State for marquee elements
+  const [storefrontAnnouncements, setStorefrontAnnouncements] = useState<StorefrontAnnouncement[]>([]); // Renamed state
   const [isLoading, setIsLoading] = useState(true);
   const [isPromotionEditorOpen, setIsPromotionEditorOpen] = useState(false);
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
-  const [isMarqueeEditorOpen, setIsMarqueeEditorOpen] = useState(false); // State for marquee modal
-  const [selectedMarqueeElement, setSelectedMarqueeElement] = useState<MarqueeElement | null>(null); // State for selected marquee element
+  const [isAnnouncementEditorOpen, setIsAnnouncementEditorOpen] = useState(false); // Renamed state
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<StorefrontAnnouncement | null>(null); // Renamed state
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; type: 'promotion' | 'announcement' } | null>(null);
+
 
   useEffect(() => {
     setTitle("Promotions");
   }, [setTitle]);
 
-  const fetchPromotionsAndMarquee = async () => {
+  const fetchPromotionsAndAnnouncements = async () => { // Renamed function
     setIsLoading(true);
     const { data: promotionsData, error: promotionsError } = await supabase
       .from("promotions")
       .select("*")
       .order("created_at", { ascending: false });
 
-    const { data: marqueeData, error: marqueeError } = await supabase
-      .from("marquee_elements")
+    const { data: announcementsData, error: announcementsError } = await supabase // Renamed data fetch
+      .from("marquee_elements") // Still fetching from marquee_elements table
       .select("*")
       .order("display_order", { ascending: true });
 
@@ -58,20 +62,20 @@ const Promotions = () => {
       setPromotions(promotionsData as Promotion[]);
     }
 
-    if (marqueeError) {
-      showError("Could not fetch marquee elements.");
+    if (announcementsError) { // Renamed error
+      showError("Could not fetch storefront announcements."); // Renamed error message
     } else {
-      setMarqueeElements(marqueeData as MarqueeElement[]);
+      setStorefrontAnnouncements(announcementsData as StorefrontAnnouncement[]); // Renamed state update
     }
     setIsLoading(false);
   };
 
   useEffect(() => {
-    fetchPromotionsAndMarquee();
+    fetchPromotionsAndAnnouncements();
   }, []);
 
   const handlePromotionSave = () => {
-    fetchPromotionsAndMarquee();
+    fetchPromotionsAndAnnouncements();
     setIsPromotionEditorOpen(false);
     setSelectedPromotion(null);
   };
@@ -81,15 +85,9 @@ const Promotions = () => {
     setIsPromotionEditorOpen(true);
   };
 
-  const handlePromotionDelete = async (promotionId: string) => {
-    if (!window.confirm("Are you sure you want to delete this promotion? This action cannot be undone.")) return;
-    const { error } = await supabase.from("promotions").delete().eq("id", promotionId);
-    if (error) {
-      showError(`Failed to delete promotion: ${error.message}`);
-    } else {
-      showSuccess("Promotion deleted.");
-      fetchPromotionsAndMarquee();
-    }
+  const handlePromotionDelete = (promotionId: string) => {
+    setItemToDelete({ id: promotionId, type: 'promotion' });
+    setIsDeleteConfirmOpen(true);
   };
 
   const getPromotionIcon = (type: Promotion['type']) => {
@@ -113,31 +111,49 @@ const Promotions = () => {
     }
   };
 
-  const handleMarqueeSave = () => {
-    fetchPromotionsAndMarquee();
-    setIsMarqueeEditorOpen(false);
-    setSelectedMarqueeElement(null);
+  const handleAnnouncementSave = () => { // Renamed function
+    fetchPromotionsAndAnnouncements();
+    setIsAnnouncementEditorOpen(false); // Renamed state
+    setSelectedAnnouncement(null); // Renamed state
   };
 
-  const handleMarqueeEdit = (element: MarqueeElement) => {
-    setSelectedMarqueeElement(element);
-    setIsMarqueeEditorOpen(true);
+  const handleAnnouncementEdit = (element: StorefrontAnnouncement) => { // Renamed function
+    setSelectedAnnouncement(element); // Renamed state
+    setIsAnnouncementEditorOpen(true); // Renamed state
   };
 
-  const handleMarqueeDelete = async (elementId: string) => {
-    if (!window.confirm("Are you sure you want to delete this marquee element?")) return;
-    const { error } = await supabase.from("marquee_elements").delete().eq("id", elementId);
-    if (error) {
-      showError(`Failed to delete element: ${error.message}`);
-    } else {
-      showSuccess("Marquee element deleted.");
-      fetchPromotionsAndMarquee();
-    }
+  const handleAnnouncementDelete = (elementId: string) => { // Renamed function
+    setItemToDelete({ id: elementId, type: 'announcement' });
+    setIsDeleteConfirmOpen(true);
   };
 
-  const getMarqueeIconComponent = (iconName: string) => {
+  const getAnnouncementIconComponent = (iconName: string) => { // Renamed function
     const Icon = (LucideIcons as any)[iconName];
     return Icon ? <Icon className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />;
+  };
+
+  const confirmDeletion = async () => {
+    if (!itemToDelete) return;
+
+    if (itemToDelete.type === 'promotion') {
+      const { error } = await supabase.from("promotions").delete().eq("id", itemToDelete.id);
+      if (error) {
+        showError(`Failed to delete promotion: ${error.message}`);
+      } else {
+        showSuccess("Promotion deleted.");
+        fetchPromotionsAndAnnouncements();
+      }
+    } else if (itemToDelete.type === 'announcement') {
+      const { error } = await supabase.from("marquee_elements").delete().eq("id", itemToDelete.id);
+      if (error) {
+        showError(`Failed to delete announcement: ${error.message}`);
+      } else {
+        showSuccess("Storefront announcement deleted.");
+        fetchPromotionsAndAnnouncements();
+      }
+    }
+    setIsDeleteConfirmOpen(false);
+    setItemToDelete(null);
   };
 
   return (
@@ -148,12 +164,30 @@ const Promotions = () => {
         onSave={handlePromotionSave}
         promotion={selectedPromotion}
       />
-      <MarqueeEditorModal
-        isOpen={isMarqueeEditorOpen}
-        onClose={() => { setIsMarqueeEditorOpen(false); setSelectedMarqueeElement(null); }}
-        onSave={handleMarqueeSave}
-        element={selectedMarqueeElement}
+      <StorefrontAnnouncementEditorModal // Renamed component
+        isOpen={isAnnouncementEditorOpen} // Renamed state
+        onClose={() => { setIsAnnouncementEditorOpen(false); setSelectedAnnouncement(null); }} // Renamed state
+        onSave={handleAnnouncementSave} // Renamed function
+        element={selectedAnnouncement} // Renamed prop
       />
+
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the selected {itemToDelete?.type}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeletion} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Yes, delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -252,22 +286,22 @@ const Promotions = () => {
           </CardContent>
         </Card>
 
-        {/* Marquee Elements Section */}
+        {/* Storefront Announcements Section */}
         <div className="flex items-center justify-between pt-8">
           <div>
-            <h2 className="text-2xl font-bold">Marquee Elements</h2>
+            <h2 className="text-2xl font-bold">Storefront Announcements</h2> {/* Renamed title */}
             <p className="text-muted-foreground">
               Manage the scrolling text messages displayed on your storefront.
             </p>
           </div>
-          <Button onClick={() => setIsMarqueeEditorOpen(true)}>
+          <Button onClick={() => setIsAnnouncementEditorOpen(true)}> {/* Renamed state */}
             <PlusCircle className="mr-2 h-4 w-4" />
-            Add Marquee Element
+            Add Announcement
           </Button>
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>Your Marquee Elements</CardTitle>
+            <CardTitle>Your Storefront Announcements</CardTitle> {/* Renamed title */}
             <CardDescription>
               These messages will appear in a scrolling banner on your storefront homepage.
             </CardDescription>
@@ -291,11 +325,11 @@ const Promotions = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {marqueeElements.length > 0 ? (
-                    marqueeElements.map((element) => (
+                  {storefrontAnnouncements.length > 0 ? ( // Renamed state
+                    storefrontAnnouncements.map((element) => ( // Renamed state
                       <TableRow key={element.id}>
                         <TableCell>{element.display_order}</TableCell>
-                        <TableCell>{getMarqueeIconComponent(element.icon_name)}</TableCell>
+                        <TableCell>{getAnnouncementIconComponent(element.icon_name)}</TableCell> {/* Renamed function */}
                         <TableCell className="font-medium max-w-[300px] truncate">{element.message}</TableCell>
                         <TableCell>
                           {element.is_active ? (
@@ -306,10 +340,10 @@ const Promotions = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleMarqueeEdit(element)}>
+                            <Button variant="ghost" size="icon" onClick={() => handleAnnouncementEdit(element)}> {/* Renamed function */}
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleMarqueeDelete(element.id)}>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleAnnouncementDelete(element.id)}> {/* Renamed function */}
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -319,7 +353,7 @@ const Promotions = () => {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={5} className="h-24 text-center">
-                        No marquee elements added yet.
+                        No storefront announcements added yet.
                       </TableCell>
                     </TableRow>
                   )}

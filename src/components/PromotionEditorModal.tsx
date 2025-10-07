@@ -82,7 +82,7 @@ interface PromotionEditorModalProps {
   promotion: Promotion | null;
 }
 
-export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: PromotionEditorModalProps) => {
+export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: PromotionEditorModalModalProps) => {
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
   const [selectedProductNames, setSelectedProductNames] = useState<string[]>([]);
 
