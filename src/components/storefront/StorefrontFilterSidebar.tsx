@@ -51,6 +51,7 @@ export const StorefrontFilterSidebar = ({
 }: StorefrontFilterSidebarProps) => {
   const { shopDetails, appearanceSettings } = useStorefront();
   const blurEnabled = appearanceSettings?.blurEnabled;
+  const borderRadius = appearanceSettings?.['--radius'] || '0.5rem'; // Default border-radius
 
   const [localFilters, setLocalFilters] = useState<FilterState>(currentFilters);
 
@@ -255,7 +256,14 @@ export const StorefrontFilterSidebar = ({
   if (isMobile) {
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent side="left" className={cn("w-full sm:max-w-xs p-0 flex flex-col", blurEnabled && "bg-card/80 backdrop-blur-lg")}>
+        <SheetContent 
+          side="left" 
+          className={cn(
+            "w-full sm:max-w-xs p-0 flex flex-col", 
+            blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
+          )}
+          style={{ borderRadius: borderRadius }} // Apply border-radius
+        >
           {filterContent}
         </SheetContent>
       </Sheet>

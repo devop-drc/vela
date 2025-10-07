@@ -15,6 +15,7 @@ import { StorefrontProductCard } from "@/components/storefront/StorefrontProduct
 import { Skeleton } from "@/components/ui/skeleton";
 import { curatedImages } from "@/contexts/AppearanceContext";
 import { Marquee } from "@/components/ui/marquee";
+import { getCategoryIcon } from "@/lib/categoryIcons"; // Import category icons
 
 interface Product {
   id: string;
@@ -63,16 +64,13 @@ const StorefrontIndex = () => {
     return allProducts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 8);
   }, [allProducts]);
 
-  const handleShopNowClick = () => {
-    productsSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const uniqueCategories = useMemo(() => {
-    const categories = new Set<string>();
+  const uniqueCategoriesWithCount = useMemo(() => {
+    const categoriesMap = new Map<string, number>();
     allProducts.forEach(p => {
-      if (p.category) categories.add(p.category);
+      const category = p.category || 'Uncategorized';
+      categoriesMap.set(category, (categoriesMap.get(category) || 0) + 1);
     });
-    return Array.from(categories).sort();
+    return Array.from(categoriesMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [allProducts]);
 
   const heroBackgroundImage = useMemo(() => {
@@ -136,6 +134,7 @@ const StorefrontIndex = () => {
               saturate(${appearanceSettings?.backgroundSaturation || 100}%)
               hue-rotate(${appearanceSettings?.backgroundHue || 0}deg)
             `,
+            borderRadius: appearanceSettings?.['--radius'] || '1.5rem', // Apply border-radius
           }}
         >
           <div className="absolute inset-0 bg-black/40" />
@@ -152,14 +151,19 @@ const StorefrontIndex = () => {
               {shopDetails.shop_name}
             </motion.h1>
             {shopDetails.headline && (
-              <motion.p variants={itemVariants} className="text-xl md:text-2xl max-w-3xl mx-auto mb-8 drop-shadow-md">
+              <motion.p variants={itemVariants} className="text-xl md:text-2xl max-w-3xl mx-auto mb-4 drop-shadow-md">
                 {shopDetails.headline}
               </motion.p>
             )}
+            {shopDetails.about && ( // Add about text here
+              <motion.p variants={itemVariants} className="text-base md:text-lg max-w-3xl mx-auto mb-8 drop-shadow-md">
+                {shopDetails.about}
+              </motion.p>
+            )}
             <motion.div variants={itemVariants}>
-              <Button size="lg" onClick={handleShopNowClick} className="text-lg px-8 py-6 shadow-xl hover:scale-105 transition-transform">
+              <Link to={`/shop/${shopDetails.slug}/products`} className={cn(buttonVariants({ size: "lg" }), "text-lg px-8 py-6 shadow-xl hover:scale-105 transition-transform")}>
                 Shop Now <ArrowRight className="ml-3 h-5 w-5" />
-              </Button>
+              </Link>
             </motion.div>
           </div>
         </motion.section>
@@ -186,7 +190,7 @@ const StorefrontIndex = () => {
         </motion.section>
 
         {/* Featured Categories */}
-        {uniqueCategories.length > 0 && (
+        {uniqueCategoriesWithCount.length > 0 && (
           <motion.section
             initial="hidden"
             animate="visible"
@@ -201,41 +205,25 @@ const StorefrontIndex = () => {
               variants={sectionVariants}
               className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8"
             >
-              {uniqueCategories.map(category => {
-                const categoryProduct = allProducts.find(p => p.category === category);
+              {uniqueCategoriesWithCount.map(([category, count]) => {
+                const CategoryIcon = getCategoryIcon(category);
                 const categoryColor = getCategoryColor(category);
                 return (
                   <motion.div key={category} variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
                     <Link to={`/shop/${shopDetails.slug}/products?category=${encodeURIComponent(category)}`}>
                       <Card className={cn(
-                        "group h-full flex flex-col overflow-hidden transition-shadow hover:shadow-xl",
-                        blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
+                        "group h-full flex flex-col items-center justify-center p-6 text-center transition-shadow hover:shadow-xl",
+                        blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
+                        "shadow-md"
                       )}>
-                        <CardContent className="p-0">
-                          <div className="aspect-square w-full overflow-hidden bg-muted">
-                            {categoryProduct?.media_url ? (
-                              <MediaItem
-                                src={categoryProduct.media_url}
-                                alt={category}
-                                type={categoryProduct.media_type}
-                                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                              />
-                            ) : (
-                              <div className="flex items-center justify-center h-full text-muted-foreground">
-                                <Package className="h-12 w-12" />
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                        <div className="p-4 flex-1 flex flex-col justify-between">
-                          <h3 className="font-semibold text-lg leading-tight mb-1 line-clamp-2">{category}</h3>
-                          <Badge
-                            variant="outline"
-                            className={cn("mb-2", categoryColor.bg, categoryColor.text, categoryColor.border)}
-                          >
-                            {allProducts.filter(p => p.category === category).length} Products
-                          </Badge>
-                        </div>
+                        <CategoryIcon className={cn("h-16 w-16 mb-4", categoryColor.text)} />
+                        <h3 className="font-semibold text-lg leading-tight mb-1 line-clamp-2">{category}</h3>
+                        <Badge
+                          variant="outline"
+                          className={cn("mb-2", categoryColor.bg, categoryColor.text, categoryColor.border)}
+                        >
+                          {count} Products
+                        </Badge>
                       </Card>
                     </Link>
                   </motion.div>
@@ -311,27 +299,6 @@ const StorefrontIndex = () => {
                 <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} />
               ))}
             </motion.div>
-          </motion.section>
-        )}
-
-        {/* About Us Section */}
-        {shopDetails.about && (
-          <motion.section
-            initial="hidden"
-            animate="visible"
-            variants={sectionVariants}
-            className={cn(
-              "mb-16 p-8 rounded-xl shadow-lg text-center max-w-4xl mx-auto",
-              blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
-            )}
-          >
-            <h2 className="text-3xl font-bold font-heading mb-4 flex items-center justify-center gap-3">
-              <Info className="h-7 w-7 text-blue-500" />
-              About {shopDetails.shop_name}
-            </h2>
-            <p className="text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap">
-              {shopDetails.about}
-            </p>
           </motion.section>
         )}
 

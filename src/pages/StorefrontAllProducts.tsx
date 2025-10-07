@@ -70,6 +70,7 @@ const StorefrontAllProducts = () => {
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(false);
 
   const blurEnabled = appearanceSettings?.blurEnabled;
+  const borderRadius = appearanceSettings?.['--radius'] || '0.5rem'; // Default border-radius
   const observerTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -249,6 +250,7 @@ const StorefrontAllProducts = () => {
                 "hidden lg:flex flex-col border-r h-full flex-shrink-0 sticky top-0 max-h-screen overflow-y-auto",
                 blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
               )}
+              style={{ borderRadius: borderRadius }} // Apply border-radius
             >
               <StorefrontFilterSidebar
                 isOpen={true}
@@ -271,7 +273,7 @@ const StorefrontAllProducts = () => {
           <div className={cn(
             "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-4",
             blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
-          )}>
+          )} style={{ borderRadius: borderRadius }}> {/* Apply border-radius */}
             <div className="flex items-center gap-2 w-full md:w-auto">
               {!isMobile && (
                 <Button variant="outline" onClick={() => setIsDesktopSidebarOpen(prev => !prev)} className="flex-shrink-0">

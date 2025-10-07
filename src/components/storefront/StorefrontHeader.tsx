@@ -25,6 +25,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: Storefro
   if (!shopDetails) return null;
 
   const blurEnabled = appearanceSettings?.blurEnabled;
+  const borderRadius = appearanceSettings?.['--radius'] || '0.5rem'; // Default border-radius
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +42,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: Storefro
       "sticky top-0 z-40 w-full border-b",
       blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background",
       "shadow-md"
-    )}>
+    )} style={{ borderRadius: appearanceSettings?.layoutStyle === 'floating' ? borderRadius : '0' }}>
       <div className="container flex h-16 items-center justify-between">
         <Link to={`/shop/${shopDetails.slug}`} className="flex items-center space-x-2">
           <Avatar className="h-8 w-8">
