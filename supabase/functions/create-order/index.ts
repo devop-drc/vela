@@ -52,7 +52,7 @@ serve(async (req) => {
         total_amount: totalAmount,
         currency: currency,
       })
-      .select('id')
+      .select('*') // Select all columns to return the full order object
       .single();
 
     if (orderInsertError || !newOrder) {
@@ -81,7 +81,7 @@ serve(async (req) => {
       throw new Error(`Order created, but failed to add items: ${orderItemsInsertError.message}`);
     }
 
-    return new Response(JSON.stringify({ message: "Order placed successfully!", orderId }), {
+    return new Response(JSON.stringify({ message: "Order placed successfully!", order: newOrder }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
