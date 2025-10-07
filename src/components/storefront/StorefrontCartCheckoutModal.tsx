@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft } from "lucide-react";
+import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
@@ -19,7 +19,7 @@ interface StorefrontCartCheckoutModalProps {
 }
 
 export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartCheckoutModalProps) => {
-  const { cartItems, totalItems, subtotal, shipping, total, updateQuantity, removeFromCart, clearCart, checkoutSuccess } = useCart();
+  const { cartItems, savedItems, totalItems, subtotal, shipping, total, updateQuantity, removeFromCart, clearCart, saveForLater, moveToCart, removeSavedItem } = useCart();
   const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const { toast } = useToast();
   const [isCheckoutMode, setIsCheckoutMode] = useState(false);
@@ -29,11 +29,8 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
   useEffect(() => {
     if (!isOpen) {
       setIsCheckoutMode(false); // Reset to cart view when modal closes
-      if (checkoutSuccess) {
-        clearCart(); // Clear cart after successful checkout and modal closes
-      }
     }
-  }, [isOpen, checkoutSuccess, clearCart]);
+  }, [isOpen]);
 
   const convertedTotalPrice = useMemo(() => {
     if (!shopDetails?.currency) return 0;
@@ -66,122 +63,158 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
           </Button>
         </DialogHeader>
 
-        {checkoutSuccess ? (
+        {cartItems.length === 0 && savedItems.length === 0 && !isCheckoutMode ? (
           <div className="flex flex-col items-center justify-center flex-1 p-8 text-center">
-            <CheckCircle className="h-24 w-24 text-green-500 mb-6" />
-            <h3 className="text-3xl font-bold mb-4">Order Placed Successfully!</h3>
-            <p className="text-lg text-muted-foreground mb-8">Thank you for your purchase. Your order is being processed.</p>
-            <Button onClick={onClose}>Continue Shopping</Button>
+            <ShoppingBag className="h-24 w-24 text-muted-foreground mb-6" />
+            <h3 className="text-3xl font-bold mb-4">Your cart is empty</h3>
+            <p className="text-lg text-muted-foreground mb-8">Looks like you haven't added anything to your cart yet.</p>
+            <Button onClick={onClose}>Start Shopping</Button>
           </div>
         ) : (
           <>
-            {cartItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center flex-1 p-8 text-center">
-                <ShoppingBag className="h-24 w-24 text-muted-foreground mb-6" />
-                <h3 className="text-3xl font-bold mb-4">Your cart is empty</h3>
-                <p className="text-lg text-muted-foreground mb-8">Looks like you haven't added anything to your cart yet.</p>
-                <Button onClick={onClose}>Start Shopping</Button>
-              </div>
+            {isCheckoutMode ? (
+              <CheckoutForm 
+                onSubmit={async (formData) => {
+                  // This onSubmit is handled internally by CheckoutForm now
+                  // The CheckoutForm will handle the supabase.functions.invoke('create-order')
+                  // and then redirect.
+                  // We just need to ensure the modal closes if needed, but the redirect will handle it.
+                }} 
+                onBackToCart={() => setIsCheckoutMode(false)}
+                isSubmitting={false} // isSubmitting is handled internally by CheckoutForm
+                totalPrice={convertedTotalPrice}
+                currency={shopDetails?.currency || 'USD'}
+              />
             ) : (
               <>
-                {isCheckoutMode ? (
-                  <CheckoutForm 
-                    onSubmit={async (formData) => {
-                      // This onSubmit is handled internally by CheckoutForm now
-                      // The CheckoutForm will handle the supabase.functions.invoke('create-order')
-                      // and then redirect.
-                      // We just need to ensure the modal closes if needed, but the redirect will handle it.
-                    }} 
-                    onBackToCart={() => setIsCheckoutMode(false)}
-                    isSubmitting={false} // isSubmitting is handled internally by CheckoutForm
-                    totalPrice={convertedTotalPrice}
-                    currency={shopDetails?.currency || 'USD'}
-                  />
-                ) : (
-                  <div className="flex-1 overflow-y-auto p-6">
-                    <div className="grid gap-6">
-                      {cartItems.map(item => (
-                        <Card key={item.productId} className={cn(
-                          "flex items-center p-4",
-                          blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
-                        )}>
-                          <MediaItem 
-                            src={item.media_url} 
-                            alt={item.name} 
-                            type={item.media_type} 
-                            className="h-20 w-20 object-cover rounded-md mr-4" 
-                          />
-                          <div className="flex-1 grid gap-1">
-                            <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="font-semibold hover:underline">
-                              {item.name}
+                <div className="flex-1 overflow-y-auto p-6">
+                  <div className="space-y-6">
+                    {cartItems.length > 0 && (
+                      <div className="space-y-4">
+                        <h2 className="text-xl font-bold font-heading">Items in Cart ({cartItems.length})</h2>
+                        {cartItems.map(item => (
+                          <Card key={item.productId} className={cn(
+                            "flex flex-col sm:flex-row items-center p-4 gap-4 shadow-md",
+                            blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
+                          )}>
+                            <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
+                              <div className="h-24 w-24 rounded-md overflow-hidden bg-muted border">
+                                <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
+                              </div>
                             </Link>
-                            <p className="text-sm text-muted-foreground">
-                              {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
-                            </p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <Button 
-                                variant="outline" 
-                                size="icon" 
-                                className="h-7 w-7" 
-                                onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                                disabled={item.quantity <= 1}
-                              >
-                                <Minus className="h-4 w-4" />
-                              </Button>
-                              <span className="font-medium">{item.quantity}</span>
-                              <Button 
-                                variant="outline" 
-                                size="icon" 
-                                className="h-7 w-7" 
-                                onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                              >
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="ml-auto text-destructive hover:text-destructive" 
-                                onClick={() => removeFromCart(item.productId)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                <span className="sr-only">Remove item</span>
-                              </Button>
+                            <div className="flex-1 w-full sm:w-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-4 text-center sm:text-left">
+                              <div>
+                                <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
+                                  <h3 className="font-semibold text-lg hover:underline">{item.name}</h3>
+                                </Link>
+                                <p className="text-muted-foreground text-sm">
+                                  {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
+                                </p>
+                              </div>
+                              <div className="flex items-center justify-center sm:justify-end gap-4">
+                                <div className="flex items-center border rounded-md">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                                    disabled={item.quantity <= 1}
+                                  >
+                                    <Minus className="h-4 w-4" />
+                                  </Button>
+                                  <Input
+                                    type="number"
+                                    value={item.quantity}
+                                    onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
+                                    className="w-16 text-center border-y-0 border-x rounded-none focus-visible:ring-0"
+                                    min={1}
+                                  />
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                <p className="font-semibold text-lg">
+                                  {formatCurrency(item.price * item.quantity, shopDetails?.currency)}
+                                </p>
+                                <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.productId)} className="text-destructive hover:text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                  <span className="sr-only">Remove {item.name}</span>
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                            <Button variant="ghost" size="sm" onClick={() => saveForLater(item)} className="flex-shrink-0">
+                                <Bookmark className="mr-2 h-4 w-4" />
+                                Save for Later
+                            </Button>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
 
-                {!isCheckoutMode && (
-                  <div className="p-6 border-t">
-                    <div className="flex justify-between items-center text-lg font-semibold mb-4">
-                      <span>Subtotal ({totalItems} items):</span>
-                      <span>{formatCurrency(subtotal, shopDetails?.currency)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-lg font-semibold mb-4">
-                      <span>Shipping:</span>
-                      <span>{formatCurrency(shipping, shopDetails?.currency)}</span>
-                    </div>
-                    <Separator className="my-4" />
-                    <div className="flex justify-between items-center text-xl font-bold mb-4">
-                      <span>Total:</span>
-                      <span>{formatCurrency(total, shopDetails?.currency)}</span>
-                    </div>
-                    <Button 
-                      className="w-full py-3 text-lg" 
-                      onClick={() => setIsCheckoutMode(true)}
-                      disabled={cartItems.length === 0}
-                    >
-                      <CreditCard className="mr-2 h-5 w-5" />
-                      Proceed to Checkout
-                    </Button>
-                    <Button variant="link" className="w-full mt-2" onClick={onClose}>
-                      Continue Shopping
-                    </Button>
+                    {savedItems.length > 0 && (
+                      <div className="space-y-4 mt-8">
+                        <h2 className="text-xl font-bold font-heading">Saved for Later ({savedItems.length})</h2>
+                        {savedItems.map(item => (
+                          <Card key={item.productId} className={cn(
+                            "flex flex-col sm:flex-row items-center p-4 gap-4 shadow-md",
+                            blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
+                          )}>
+                            <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
+                              <div className="h-24 w-24 rounded-md overflow-hidden bg-muted border">
+                                <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
+                              </div>
+                            </Link>
+                            <div className="flex-1 w-full sm:w-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-4 text-center sm:text-left">
+                              <div>
+                                <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
+                                  <h3 className="font-semibold text-lg hover:underline">{item.name}</h3>
+                                </Link>
+                                <p className="text-muted-foreground text-sm">
+                                  {formatCurrency(item.price, shopDetails?.currency)}
+                                </p>
+                              </div>
+                              <div className="flex items-center justify-center sm:justify-end gap-4">
+                                <Button variant="outline" size="sm" onClick={() => moveToCart(item.productId)}>
+                                    <MoveRight className="mr-2 h-4 w-4" />
+                                    Move to Cart
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => removeSavedItem(item.productId)} className="text-destructive hover:text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                  <span className="sr-only">Remove {item.name}</span>
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+
+                <div className="p-6 border-t space-y-4">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span className="font-semibold">{formatCurrency(subtotal, shopDetails?.currency)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Shipping:</span>
+                    <span className="font-semibold">{formatCurrency(shipping, shopDetails?.currency)}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold border-t pt-4">
+                    <span>Total:</span>
+                    <span>{formatCurrency(total, shopDetails?.currency)}</span>
+                  </div>
+                  <Button className="w-full" onClick={() => setIsCheckoutMode(true)} disabled={cartItems.length === 0}>
+                    Proceed to Checkout
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" className="w-full" onClick={onClose}>
+                    Continue Shopping
+                  </Button>
+                </div>
               </>
             )}
           </>

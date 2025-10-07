@@ -7,12 +7,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
-import { X, Filter, Tag, DollarSign, Palette, Ruler, Layers, Info } from "lucide-react";
+import { X, Filter, Tag, DollarSign, Palette, Ruler, Layers, Info, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { Slider } from "@/components/ui/slider"; // Import Slider
+import { motion } from "framer-motion";
 
 interface Product {
   id: string;
@@ -67,19 +68,26 @@ export const StorefrontFilterSidebar = ({
       const newValues = currentValues.includes(value)
         ? currentValues.filter(item => item !== value)
         : [...currentValues, value];
-      return { ...prev, [filterKey]: newValues };
+      const updatedFilters = { ...prev, [filterKey]: newValues };
+      onFilterChange(updatedFilters); // Apply immediately
+      return updatedFilters;
     });
   };
 
   const handlePriceRangeChange = (range: [number, number]) => {
-    setLocalFilters(prev => ({ ...prev, priceRange: range }));
+    setLocalFilters(prev => {
+      const updatedFilters = { ...prev, priceRange: range };
+      onFilterChange(updatedFilters); // Apply immediately
+      return updatedFilters;
+    });
   };
 
-  const handleApplyFilters = () => {
-    onFilterChange(localFilters);
-    if (isMobile) {
-      onClose();
-    }
+  const handleClearSection = (filterKey: keyof FilterState) => {
+    setLocalFilters(prev => {
+      const updatedFilters = { ...prev, [filterKey]: filterKey === 'priceRange' ? [0, maxPrice] : [] };
+      onFilterChange(updatedFilters); // Apply immediately
+      return updatedFilters;
+    });
   };
 
   const handleClearAll = () => {
@@ -154,19 +162,42 @@ export const StorefrontFilterSidebar = ({
   }, [maxPrice]);
 
 
-  const FilterSection = ({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) => (
-    <AccordionItem value={title}>
-      <AccordionTrigger className="py-3 text-base font-semibold">
-        <div className="flex items-center gap-2">
-          <Icon className="h-5 w-5 text-muted-foreground" />
-          {title}
-        </div>
-      </AccordionTrigger>
-      <AccordionContent className="pb-4 pt-2">
-        {children}
-      </AccordionContent>
-    </AccordionItem>
-  );
+  const FilterSection = ({ title, icon: Icon, filterKey, children }: { title: string; icon: React.ElementType; filterKey: keyof FilterState; children: React.ReactNode }) => {
+    const isFilterApplied = useMemo(() => {
+      const filterValue = localFilters[filterKey];
+      if (filterKey === 'priceRange') {
+        return filterValue[0] !== 0 || filterValue[1] !== maxPrice;
+      }
+      return Array.isArray(filterValue) && filterValue.length > 0;
+    }, [localFilters, filterKey, maxPrice]);
+
+    return (
+      <AccordionItem value={title}>
+        <AccordionTrigger className="py-3 text-base font-semibold">
+          <div className="flex items-center gap-2">
+            <Icon className="h-5 w-5 text-muted-foreground" />
+            {title}
+          </div>
+          {isFilterApplied && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.15 }}
+              onClick={(e) => { e.stopPropagation(); handleClearSection(filterKey); }}
+              className="ml-auto mr-2 p-1 rounded-full hover:bg-accent-foreground/10 text-muted-foreground hover:text-foreground"
+              aria-label={`Clear ${title} filters`}
+            >
+              <XCircle className="h-4 w-4" />
+            </motion.button>
+          )}
+        </AccordionTrigger>
+        <AccordionContent className="pb-4 pt-2">
+          {children}
+        </AccordionContent>
+      </AccordionItem>
+    );
+  };
 
   const filterContent = (
     <div className="flex flex-col h-full">
@@ -197,7 +228,7 @@ export const StorefrontFilterSidebar = ({
       <ScrollArea className="flex-1 px-4 py-6">
         <Accordion type="multiple" defaultValue={["Categories", "Price Range"]} className="w-full">
           {uniqueCategories.length > 0 && (
-            <FilterSection title="Categories" icon={Info}>
+            <FilterSection title="Categories" icon={Info} filterKey="categories">
               <div className="flex flex-wrap gap-2">
                 {uniqueCategories.map(category => (
                   <Button
@@ -214,7 +245,7 @@ export const StorefrontFilterSidebar = ({
             </FilterSection>
           )}
 
-          <FilterSection title="Price Range" icon={DollarSign}>
+          <FilterSection title="Price Range" icon={DollarSign} filterKey="priceRange">
             <div className="px-2 space-y-4">
               <Slider
                 min={0}
@@ -232,7 +263,7 @@ export const StorefrontFilterSidebar = ({
           </FilterSection>
 
           {uniqueTags.length > 0 && (
-            <FilterSection title="Tags" icon={Tag}>
+            <FilterSection title="Tags" icon={Tag} filterKey="tags">
               <div className="flex flex-wrap gap-2">
                 {uniqueTags.map(tag => (
                   <Button
@@ -252,7 +283,7 @@ export const StorefrontFilterSidebar = ({
           {uniqueDetailsAttributes.map(attr => {
             const Icon = getAttributeIcon(attr.name);
             return attr.values.length > 0 ? (
-              <FilterSection key={attr.name} title={attr.name.replace(/_/g, ' ')} icon={Icon}>
+              <FilterSection key={attr.name} title={attr.name.replace(/_/g, ' ')} icon={Icon} filterKey={attr.name}>
                 <div className="flex flex-wrap gap-2">
                   {attr.values.map(value => (
                     <Button
@@ -272,7 +303,6 @@ export const StorefrontFilterSidebar = ({
         </Accordion>
       </ScrollArea>
       <div className="p-4 border-t flex gap-2">
-        <Button onClick={handleApplyFilters} className="flex-1">Apply Filters</Button>
         <Button variant="outline" onClick={handleClearAll} className="flex-1">Clear All</Button>
       </div>
     </div>
@@ -286,7 +316,7 @@ export const StorefrontFilterSidebar = ({
           className={cn(
             "w-full sm:max-w-xs p-0 flex flex-col", 
             blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
-            isFloatingLayout && "rounded-none" // No border-radius for floating layout
+            isFloatingLayout && "rounded-none"
           )}
           style={{ borderRadius: isFloatingLayout ? '0' : borderRadius }}
         >

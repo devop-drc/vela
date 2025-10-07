@@ -54,14 +54,16 @@ const DashboardLayout = () => {
   );
 
   const mainPaddingClasses = {
-    compact: 'md:pl-[16rem]', // 224px + 32px padding
-    default: 'md:pl-[18rem]', // 256px + 32px padding
-    spacious: 'md:pl-[20rem]', // 288px + 32px padding
+    compact: 'md:pl-[calc(14rem+2rem)]', // 224px + 32px padding
+    default: 'md:pl-[calc(16rem+2rem)]', // 256px + 32px padding
+    spacious: 'md:pl-[calc(18rem+2rem)]', // 288px + 32px padding
   };
+
+  const sidebarWidthValue = settings.sidebarWidth === 'compact' ? '14rem' : settings.sidebarWidth === 'spacious' ? '18rem' : '16rem';
 
   if (settings.layoutStyle === 'docked') {
     return (
-      <div className="relative flex h-screen bg-transparent">
+      <div className="relative flex h-screen bg-transparent" style={{ '--sidebar-width': sidebarWidthValue } as React.CSSProperties}>
         <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
@@ -74,7 +76,7 @@ const DashboardLayout = () => {
   }
 
   return (
-    <div className="relative h-screen bg-transparent">
+    <div className="relative h-screen bg-transparent" style={{ '--sidebar-width': sidebarWidthValue } as React.CSSProperties}>
       <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
       <Sidebar />
       <Header title={title} />

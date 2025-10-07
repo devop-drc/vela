@@ -62,7 +62,7 @@ const StorefrontAllProducts = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
-  const [sortOption, setSortOption] = useState("newest");
+  const [sortOption, setSortOption] = useState(searchParams.get('sort') || "newest");
   const [filters, setFilters] = useState<FilterState>({
     categories: searchParams.getAll('category') || [],
     tags: searchParams.getAll('tag') || [],
@@ -106,10 +106,26 @@ const StorefrontAllProducts = () => {
 
     const urlCategories = searchParams.getAll('category');
     const urlTags = searchParams.getAll('tag');
-    if (JSON.stringify(urlCategories) !== JSON.stringify(filters.categories) || JSON.stringify(urlTags) !== JSON.stringify(filters.tags)) {
-      setFilters(prev => ({ ...prev, categories: urlCategories, tags: urlTags }));
+    const urlSort = searchParams.get('sort');
+
+    setFilters(prev => {
+      const newFilters = { ...prev };
+      if (JSON.stringify(urlCategories) !== JSON.stringify(prev.categories)) {
+        newFilters.categories = urlCategories;
+      }
+      if (JSON.stringify(urlTags) !== JSON.stringify(prev.tags)) {
+        newFilters.tags = urlTags;
+      }
+      return newFilters;
+    });
+
+    if (urlSort !== null && urlSort !== sortOption) {
+      setSortOption(urlSort);
+    } else if (urlSort === null && sortOption !== 'newest') {
+      setSortOption('newest');
     }
-  }, [searchParams, searchTerm, filters.categories, filters.tags]);
+
+  }, [searchParams, searchTerm, filters.categories, filters.tags, sortOption]);
 
   useEffect(() => {
     if (!observerTarget.current || !hasMoreProducts || isLoading || isLoadingMore) return;
@@ -157,7 +173,7 @@ const StorefrontAllProducts = () => {
 
   const debouncedSetSearchTerm = useCallback(
     debounce((query: string) => {
-      setSearchTerm(query);
+      setSearchTerm(query); // Update local state immediately for responsive input
       const newSearchParams = new URLSearchParams(searchParams);
       if (query) {
         newSearchParams.set('search', query);
@@ -171,8 +187,18 @@ const StorefrontAllProducts = () => {
 
   const handleLocalSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
-    setSearchTerm(query); // Update local state immediately for responsive input
     debouncedSetSearchTerm(query); // Debounce the actual search param update
+  };
+
+  const handleSortChange = (value: string) => {
+    setSortOption(value);
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (value !== 'newest') {
+      newSearchParams.set('sort', value);
+    } else {
+      newSearchParams.delete('sort');
+    }
+    setSearchParams(newSearchParams, { replace: true });
   };
 
   const filteredAndSortedProducts = useMemo(() => {
@@ -256,7 +282,7 @@ const StorefrontAllProducts = () => {
     ? (isFloatingLayout ? `calc(${sidebarWidth} + ${sidebarGap} + ${floatingHeaderOffset})` : `calc(${sidebarWidth} + ${sidebarGap})`)
     : '0';
 
-  const stickyBarTop = isFloatingLayout ? `calc(${headerHeight} + ${floatingHeaderOffset} + ${floatingHeaderOffset})` : headerHeight;
+  const stickyBarTop = isFloatingLayout ? `calc(${headerHeight} + ${floatingHeaderOffset} + ${floatingHeaderOffset})` : `calc(${headerHeight} + 1rem)`;
 
 
   if (isLoading && allProducts.length === 0) {
@@ -368,7 +394,7 @@ const StorefrontAllProducts = () => {
                   Filters ({Object.values(filters).filter(f => (Array.isArray(f) && f.length > 0) || (typeof f === 'string' && f !== 'all')).length})
                 </Button>
               )}
-              <Select value={sortOption} onValueChange={setSortOption}>
+              <Select value={sortOption} onValueChange={handleSortChange}>
                 <SelectTrigger className="w-full md:w-[180px]">
                   <ArrowUpNarrowWide className="mr-2 h-4 w-4 text-muted-foreground" />
                   <SelectValue placeholder="Sort by" />
@@ -408,10 +434,10 @@ const StorefrontAllProducts = () => {
               {Object.entries(groupedProducts).map(([category, productsInCategory]) => (
                 <div key={category}>
                   <h3 className={cn(
-                    "text-3xl font-bold font-heading mb-8 inline-block px-4 py-2 rounded-md", // Adjusted padding and border-radius
+                    "text-3xl font-bold font-heading mb-8 inline-block px-4 py-2 rounded-md",
                     blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
                     getCategoryColor(category).bg, getCategoryColor(category).text,
-                    "shadow-sm" // Softer shadow
+                    "shadow-sm"
                   )}>
                     {category}
                   </h3>

@@ -40,10 +40,11 @@ const Header = ({ title }: HeaderProps) => {
       "z-30 flex items-center justify-between h-16 px-6 transition-all",
       isFloating
         ? "fixed top-4 right-4 left-4 border rounded-lg"
-        : "border-b",
+        : "border-b", // Docked layout has border-b and expands
       isFloating && (headerLeftMarginClasses[settings.sidebarWidth || 'default']),
-      blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
-    )}>
+      blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
+      !isFloating && "md:ml-[calc(var(--sidebar-width)+2rem)] md:pr-8" // Ensure full width for docked
+    )} style={{ '--sidebar-width': settings.sidebarWidth === 'compact' ? '14rem' : settings.sidebarWidth === 'spacious' ? '18rem' : '16rem' } as React.CSSProperties}>
       <div className="flex items-center gap-4">
         <h1 className="text-xl font-bold hidden md:block">{title}</h1>
         <div className="relative flex-1 max-w-md">

@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { curatedImages } from "@/contexts/AppearanceContext";
 import { Marquee } from "@/components/ui/marquee";
 import { getCategoryIcon } from "@/lib/categoryIcons"; // Import category icons
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // Import ScrollArea and ScrollBar
 
 interface Product {
   id: string;
@@ -61,7 +62,7 @@ const StorefrontIndex = () => {
   const productsSectionRef = useRef<HTMLDivElement>(null);
 
   const newArrivals = useMemo(() => {
-    return allProducts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 8);
+    return allProducts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10); // Limit to 10
   }, [allProducts]);
 
   const uniqueCategoriesWithCount = useMemo(() => {
@@ -73,16 +74,35 @@ const StorefrontIndex = () => {
     return Array.from(categoriesMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [allProducts]);
 
-  const heroBackgroundImage = useMemo(() => {
-    if (appearanceSettings?.backgroundImageUrl) {
-      return appearanceSettings.backgroundImageUrl;
-    }
-    // Only pick a random image if no specific URL is set
-    const randomIndex = Math.floor(Math.random() * curatedImages.length);
-    return curatedImages[randomIndex].src;
-  }, [appearanceSettings?.backgroundImageUrl]);
+  const heroBackgroundStyle = useMemo(() => {
+    const style: React.CSSProperties = {
+      borderRadius: appearanceSettings?.['--radius'] || '1.5rem',
+      filter: `
+        brightness(${appearanceSettings?.backgroundBrightness || 100}%)
+        contrast(${appearanceSettings?.backgroundContrast || 100}%)
+        saturate(${appearanceSettings?.backgroundSaturation || 100}%)
+        hue-rotate(${appearanceSettings?.backgroundHue || 0}deg)
+      `,
+    };
 
-  const blurEnabled = appearanceSettings?.blurEnabled; // Correctly destructure blurEnabled here
+    if (appearanceSettings?.backgroundImageUrl) {
+      style.backgroundImage = `url(${appearanceSettings.backgroundImageUrl})`;
+      style.backgroundSize = appearanceSettings.backgroundSize || 'cover';
+      style.backgroundPosition = 'center';
+      style.backgroundRepeat = appearanceSettings.backgroundRepeat || 'no-repeat';
+      style.backgroundColor = 'transparent'; // Ensure solid color is not applied if image is present
+    } else if (appearanceSettings?.solidBackgroundColor) {
+      style.backgroundImage = 'none';
+      style.backgroundColor = `hsl(${appearanceSettings.solidBackgroundColor})`;
+    } else {
+      // Fallback to transparent if no specific background is set
+      style.backgroundImage = 'none';
+      style.backgroundColor = 'transparent';
+    }
+    return style;
+  }, [appearanceSettings]);
+
+  const blurEnabled = appearanceSettings?.blurEnabled;
 
   if (isLoading) {
     return (
@@ -121,21 +141,9 @@ const StorefrontIndex = () => {
           variants={sectionVariants}
           className={cn(
             "relative mb-16 p-0 rounded-xl text-center overflow-hidden min-h-[450px] flex items-center justify-center",
-            "shadow-lg hero-blob-background" // Added hero-blob-background class
+            "shadow-lg hero-blob-background"
           )}
-          style={{
-            backgroundImage: `url(${heroBackgroundImage})`,
-            backgroundSize: appearanceSettings?.backgroundSize || 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: appearanceSettings?.backgroundRepeat || 'no-repeat',
-            borderRadius: appearanceSettings?.['--radius'] || '1.5rem', // Apply border-radius
-            filter: `
-              brightness(${appearanceSettings?.backgroundBrightness || 100}%)
-              contrast(${appearanceSettings?.backgroundContrast || 100}%)
-              saturate(${appearanceSettings?.backgroundSaturation || 100}%)
-              hue-rotate(${appearanceSettings?.backgroundHue || 0}deg)
-            `,
-          }}
+          style={heroBackgroundStyle}
         >
           {/* Overlay for text readability */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
@@ -144,7 +152,6 @@ const StorefrontIndex = () => {
           <div 
             className={cn(
               "relative z-10 text-primary-foreground max-w-4xl mx-auto p-8 md:p-16 h-full w-full flex flex-col items-center justify-center",
-              // Removed bg-card/70 backdrop-blur-lg from here to make it less "card-like"
             )}
           >
             {shopDetails.logo_url && (
@@ -163,7 +170,7 @@ const StorefrontIndex = () => {
                 {shopDetails.headline}
               </motion.p>
             )}
-            {shopDetails.about && ( // Add about text here
+            {shopDetails.about && (
               <motion.p variants={itemVariants} className="text-base md:text-lg max-w-3xl mx-auto mb-8 drop-shadow-md">
                 {shopDetails.about}
               </motion.p>
@@ -252,14 +259,21 @@ const StorefrontIndex = () => {
               <Crown className="h-8 w-8 text-amber-400" />
               Our Best Sellers
             </h2>
-            <motion.div
-              variants={sectionVariants}
-              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8"
-            >
-              {bestSellers.map((product) => (
-                <StorefrontProductCard key={product.product_id} product={product as Product} shopSlug={shopDetails.slug} />
-              ))}
-            </motion.div>
+            <ScrollArea className="w-full whitespace-nowrap pb-4">
+              <div className="flex w-max space-x-8 p-4">
+                {bestSellers.map((product) => (
+                  <StorefrontProductCard key={product.product_id} product={product as Product} shopSlug={shopDetails.slug} className="w-[280px] flex-shrink-0" />
+                ))}
+                {bestSellers.length >= 10 && (
+                  <div className="flex-shrink-0 w-[280px] flex items-center justify-center">
+                    <Link to={`/shop/${shopDetails.slug}/products?sort=best-sellers`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "text-lg px-8 py-6")}>
+                      View All <ArrowRight className="ml-3 h-5 w-5" />
+                    </Link>
+                  </div>
+                )}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
           </motion.section>
         )}
 
@@ -275,14 +289,21 @@ const StorefrontIndex = () => {
               <Sparkles className="h-8 w-8 text-purple-400" />
               New Arrivals
             </h2>
-            <motion.div
-              variants={sectionVariants}
-              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8"
-            >
-              {newArrivals.map((product) => (
-                <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} />
-              ))}
-            </motion.div>
+            <ScrollArea className="w-full whitespace-nowrap pb-4">
+              <div className="flex w-max space-x-8 p-4">
+                {newArrivals.map((product) => (
+                  <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} className="w-[280px] flex-shrink-0" />
+                ))}
+                {newArrivals.length >= 10 && (
+                  <div className="flex-shrink-0 w-[280px] flex items-center justify-center">
+                    <Link to={`/shop/${shopDetails.slug}/products?sort=newest`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "text-lg px-8 py-6")}>
+                      View All <ArrowRight className="ml-3 h-5 w-5" />
+                    </Link>
+                  </div>
+                )}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
           </motion.section>
         )}
 
@@ -298,14 +319,21 @@ const StorefrontIndex = () => {
               <Gift className="h-8 w-8 text-rose-400" />
               Recommended For You
             </h2>
-            <motion.div
-              variants={sectionVariants}
-              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8"
-            >
-              {recommendedProducts.map((product) => (
-                <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} />
-              ))}
-            </motion.div>
+            <ScrollArea className="w-full whitespace-nowrap pb-4">
+              <div className="flex w-max space-x-8 p-4">
+                {recommendedProducts.map((product) => (
+                  <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} className="w-[280px] flex-shrink-0" />
+                ))}
+                {recommendedProducts.length >= 10 && (
+                  <div className="flex-shrink-0 w-[280px] flex items-center justify-center">
+                    <Link to={`/shop/${shopDetails.slug}/products?sort=recommended`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "text-lg px-8 py-6")}>
+                      View All <ArrowRight className="ml-3 h-5 w-5" />
+                    </Link>
+                  </div>
+                )}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
           </motion.section>
         )}
 
@@ -319,7 +347,7 @@ const StorefrontIndex = () => {
         >
           <Link 
             to={`/shop/${shopDetails.slug}/products`} 
-            onClick={() => window.scrollTo(0, 0)} // Scroll to top on click
+            onClick={() => window.scrollTo(0, 0)}
             className={cn(buttonVariants({ size: "lg" }), "text-lg px-8 py-6 shadow-xl hover:scale-105 transition-transform")}
           >
             View All Products <ArrowRight className="ml-3 h-5 w-5" />

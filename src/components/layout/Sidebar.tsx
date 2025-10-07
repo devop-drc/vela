@@ -60,7 +60,7 @@ const Sidebar = () => {
             "border-border",
             blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
           )
-    )}>
+    )} style={{ '--sidebar-width': sidebarWidthClasses[settings.sidebarWidth || 'default'] } as React.CSSProperties}>
       <div className={cn(
         "p-4 border-b flex items-center",
         isPrimary ? 'border-primary-foreground/20' : 'border-border'

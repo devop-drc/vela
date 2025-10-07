@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -88,6 +88,7 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash_on_delivery'>('card');
 
   const [currentStep, setCurrentStep] = useState(1);
+  const [localIsSubmitting, setLocalIsSubmitting] = useState(false); // Internal submitting state
 
   const validateStep = () => {
     if (currentStep === 1) {
@@ -138,8 +139,11 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
       return;
     }
 
+    setLocalIsSubmitting(true); // Set internal submitting state
+
     if (!shopDetails?.slug || !shopDetails?.currency) {
       toast.error("Shop details are missing. Cannot place order.");
+      setLocalIsSubmitting(false);
       return;
     }
 
@@ -159,7 +163,7 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
           cartItems: orderItems,
           totalAmount: totalPrice,
           currency: shopDetails.currency,
-          paymentMethod: paymentMethod, // Pass selected payment method
+          paymentMethod: paymentMethod,
         },
       });
 
@@ -172,12 +176,13 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
       });
       
       clearCart();
-      // Redirect to order tracking or confirmation page
       window.location.href = `/shop/${shopDetails?.slug}/order-tracking?orderId=${data.order.id}`;
 
     } catch (err: any) {
       console.error("Order placement failed:", err);
       toast.error(`Failed to place order: ${err.message || "An unexpected error occurred."}`);
+    } finally {
+      setLocalIsSubmitting(false);
     }
   };
 
@@ -203,9 +208,11 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
                   <CardDescription>We'll use this to send you updates about your order.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>
                       <Input id="firstName" placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="lastName">Last Name</Label>
                       <Input id="lastName" placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
                     </div>
@@ -274,7 +281,7 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
-                    <div className="flex items-center space-x-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
                       <Label htmlFor="payment-card" className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
@@ -348,7 +355,6 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
                       </div>
                     )}
                   </div>
-                  {/* Trust Badges Placeholder */}
                   <div className="mt-6 p-4 border rounded-lg bg-emerald-50/50 text-emerald-700 flex items-center justify-center gap-3">
                     <ShieldCheck className="h-6 w-6" />
                     <p className="font-semibold text-sm">Secure Checkout Guaranteed</p>
@@ -372,8 +378,8 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
             Back to Cart
           </Button>
         )}
-        <Button type="submit" form="checkout-form" disabled={isSubmitting || cartItems.length === 0}>
-          {isSubmitting ? (
+        <Button type="submit" form="checkout-form" disabled={localIsSubmitting || cartItems.length === 0}>
+          {localIsSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Placing Order...

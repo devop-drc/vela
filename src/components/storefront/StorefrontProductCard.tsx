@@ -30,6 +30,7 @@ interface Product {
 interface StorefrontProductCardProps {
   product: Product;
   shopSlug: string;
+  className?: string; // Add className prop
 }
 
 const itemVariants = {
@@ -37,7 +38,7 @@ const itemVariants = {
   visible: { y: 0, opacity: 1 },
 };
 
-export const StorefrontProductCard = ({ product, shopSlug }: StorefrontProductCardProps) => {
+export const StorefrontProductCard = ({ product, shopSlug, className }: StorefrontProductCardProps) => {
   const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const blurEnabled = appearanceSettings?.blurEnabled;
   const categoryColor = getCategoryColor(product.category);
@@ -46,7 +47,7 @@ export const StorefrontProductCard = ({ product, shopSlug }: StorefrontProductCa
   const displayPrice = convertCurrency(product.price, product.currency);
 
   return (
-    <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
+    <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }} className={className}>
       <Link to={`/shop/${shopDetails?.slug}/product/${product.id}`}>
         <Card className={cn(
           "group h-full flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
