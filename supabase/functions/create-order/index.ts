@@ -18,9 +18,9 @@ serve(async (req) => {
   }
 
   try {
-    const { shopSlug, customerInfo, cartItems, totalAmount, currency } = await req.json();
+    const { shopSlug, customerInfo, cartItems, totalAmount, currency, paymentMethod } = await req.json();
 
-    if (!shopSlug || !customerInfo || !cartItems || cartItems.length === 0 || !totalAmount || !currency) {
+    if (!shopSlug || !customerInfo || !cartItems || cartItems.length === 0 || !totalAmount || !currency || !paymentMethod) {
       return new Response(JSON.stringify({ error: "Missing required order details." }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -48,9 +48,11 @@ serve(async (req) => {
         business_id: businessId,
         customer_name: `${customerInfo.firstName} ${customerInfo.lastName}`,
         customer_email: customerInfo.email,
-        status: 'Pending', // Default status for new orders
+        status: 'Pending', // Default order status for new orders
         total_amount: totalAmount,
         currency: currency,
+        payment_method: paymentMethod, // New: Store selected payment method
+        payment_status: paymentMethod === 'cash_on_delivery' ? 'pending' : 'processing', // New: Set initial payment status
       })
       .select('*') // Select all columns to return the full order object
       .single();
@@ -76,7 +78,7 @@ serve(async (req) => {
     if (orderItemsInsertError) {
       // If order items fail, consider rolling back the order or marking it as problematic
       console.error(`Failed to insert order items for order ${orderId}:`, orderItemsInsertError);
-      // Optionally, update the order status to 'Failed' or 'Problematic'
+      // Optionally, update the order status to 'Problematic'
       await supabaseAdmin.from('orders').update({ status: 'Problematic', message: 'Failed to add items' }).eq('id', orderId);
       throw new Error(`Order created, but failed to add items: ${orderItemsInsertError.message}`);
     }
