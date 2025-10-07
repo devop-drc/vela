@@ -173,11 +173,13 @@ export const StorefrontFilterSidebar = ({
 
     return (
       <AccordionItem value={title}>
-        <AccordionTrigger className="py-3 text-base font-semibold">
-          <div className="flex items-center gap-2">
-            <Icon className="h-5 w-5 text-muted-foreground" />
-            {title}
-          </div>
+        <div className="flex items-center justify-between py-3 text-base font-semibold"> {/* This div wraps the trigger and clear button */}
+          <AccordionTrigger className="flex-1 py-0 pr-3"> {/* AccordionTrigger is now flex-1 */}
+            <div className="flex items-center gap-2">
+              <Icon className="h-5 w-5 text-muted-foreground" />
+              {title}
+            </div>
+          </AccordionTrigger>
           <AnimatePresence>
             {isFilterApplied && (
               <motion.button
@@ -186,14 +188,14 @@ export const StorefrontFilterSidebar = ({
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.15 }}
                 onClick={(e) => { e.stopPropagation(); handleClearSection(filterKey); }}
-                className="ml-auto mr-2 p-1 rounded-full hover:bg-accent-foreground/10 text-muted-foreground hover:text-foreground"
+                className="p-1 rounded-full hover:bg-accent-foreground/10 text-muted-foreground hover:text-foreground"
                 aria-label={`Clear ${title} filters`}
               >
                 <XCircle className="h-4 w-4" />
               </motion.button>
             )}
           </AnimatePresence>
-        </AccordionTrigger>
+        </div>
         <AccordionContent className="pb-4 pt-2">
           {children}
         </AccordionContent>
