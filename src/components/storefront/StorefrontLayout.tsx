@@ -106,8 +106,7 @@ const StorefrontLayoutContent = () => {
       };
 
       if (shopDetails.favicon_url) {
-        const proxiedFaviconUrl = `https://images.weserv.nl/?url=${encodeURIComponent(shopDetails.favicon_url)}&w=32&h=32&fit=contain&mask=circle`;
-        setFavicon(proxiedFaviconUrl);
+        setFavicon(shopDetails.favicon_url); // Use direct URL
       }
     } else {
       document.title = "Storefront";

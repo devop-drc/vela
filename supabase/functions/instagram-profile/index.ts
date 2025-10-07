@@ -53,8 +53,8 @@ serve(async (req) => {
       shop_name: igProfileData.name || igAccount.name,
       username: igProfileData.username,
       description: igProfileData.biography,
-      logo_url: igProfileData.profile_picture_url,
-      favicon_url: igAccount.picture?.data?.url,
+      logo_url: igProfileData.profile_picture_url, // Use Instagram profile picture
+      favicon_url: igProfileData.profile_picture_url, // Use Instagram profile picture for favicon
       followers_count: igProfileData.followers_count,
       media_count: igProfileData.media_count,
     };

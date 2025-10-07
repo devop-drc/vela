@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
-import { ShoppingBag, Filter, Search, X, Menu, Home, Package, Truck } from "lucide-react";
+import { ShoppingBag, Filter, Search, X, Menu, Home, Package, Truck, ArrowUpNarrowWide } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "../ui/input";
 import { debounce } from 'lodash'; // Import debounce
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const DESKTOP_SIDEBAR_WIDTH = '20rem'; // 320px
 
@@ -63,6 +64,11 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
     if (isMobile) setIsMobileSearchInputVisible(false);
   };
 
+  const handleSortChange = (value: string) => {
+    searchParams.set('sort', value);
+    navigate(`/shop/${shopDetails.slug}/products?${searchParams.toString()}`);
+  };
+
   // Dynamic styles for desktop header when sidebar is open
   const desktopHeaderStyle: React.CSSProperties = {};
   if (!isMobile && isDesktopSidebarOpen && isOnProductsPage) {
@@ -76,60 +82,51 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
       isFloatingLayout ? "md:top-4 md:left-4 md:right-4" : "" // Adjust position for floating on desktop
     )} style={desktopHeaderStyle}> {/* Apply dynamic style here */}
       <div className={cn(
-        "container flex h-14 md:h-16 items-center justify-between",
+        "container flex h-14 md:h-16 items-center", // Removed justify-between here
         isFloatingLayout
           ? "border rounded-lg shadow-md" // Floating style
           : "border-b shadow-sm", // Docked style
         blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
       )} style={{ borderRadius: isFloatingLayout ? borderRadius : '0' }}>
-        <Link to={`/shop/${shopDetails.slug}`} className="flex items-center space-x-2">
-          <Avatar className="h-7 w-7 md:h-8 md:w-8">
-            <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
-            <AvatarFallback className="text-sm md:text-base">{shopDetails.shop_name?.[0]}</AvatarFallback>
-          </Avatar>
-          <span className="font-bold text-base md:text-lg">{shopDetails.shop_name}</span>
-        </Link>
-        <nav className="flex items-center space-x-2 md:space-x-4">
-          {/* Desktop Navigation Links */}
-          <Link to={`/shop/${shopDetails.slug}`} className={cn(buttonVariants({ variant: "ghost" }), "hidden lg:inline-flex text-sm md:text-base")}>
-            Home
-          </Link>
-          <Link to={`/shop/${shopDetails.slug}/products`} className={cn(buttonVariants({ variant: "ghost" }), "hidden lg:inline-flex text-sm md:text-base")}>
-            Products
-          </Link>
-          <Link to={`/shop/${shopDetails.slug}/order-tracking`} className={cn(buttonVariants({ variant: "ghost" }), "hidden lg:inline-flex text-sm md:text-base")}>
-            Track Order
-          </Link>
 
-          {/* Desktop Search Input */}
-          {!isMobile && (
-            <div className="relative hidden md:flex items-center">
-              <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                name="searchQuery"
-                placeholder="Search products..."
-                className={cn(
-                  "pl-9 w-48 lg:w-64 text-sm",
-                  blurEnabled ? "bg-input/50" : "bg-input"
-                )}
-                value={localSearchTerm}
-                onChange={handleSearchChange}
-              />
-            </div>
-          )}
+        {/* Left Section: Logo + Name */}
+        <div className="flex items-center space-x-2 flex-1 justify-start">
+          <Link to={`/shop/${shopDetails.slug}`} className="flex items-center space-x-2">
+            <Avatar className="h-7 w-7 md:h-8 md:w-8">
+              <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
+              <AvatarFallback className="text-sm md:text-base">{shopDetails.shop_name?.[0]}</AvatarFallback>
+            </Avatar>
+            <span className="font-bold text-base md:text-lg">{shopDetails.shop_name}</span>
+          </Link>
+        </div>
 
-          {/* Desktop Filter & Sort Buttons (only on products page) */}
-          {!isMobile && isOnProductsPage && (
-            <>
-              <Button variant="outline" onClick={onToggleFilterSidebar} className="flex-shrink-0 text-sm md:text-base h-9 md:h-10">
-                <Filter className="mr-2 h-4 w-4" />
-                Filters
-              </Button>
-              {/* Sort dropdown can be added here if needed, similar to the products page */}
-            </>
-          )}
+        {/* Middle Section: Filters + Sort (Desktop only, on products page) */}
+        {!isMobile && isOnProductsPage && (
+          <div className="flex items-center gap-2 flex-1 justify-center">
+            <Button variant="outline" onClick={onToggleFilterSidebar} className="flex-shrink-0 text-sm md:text-base h-9 md:h-10">
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+            </Button>
+            {/* Sort Dropdown */}
+            <Select value={searchParams.get('sort') || "newest"} onValueChange={handleSortChange}>
+              <SelectTrigger className="w-[180px] h-9 md:h-10 text-sm">
+                <ArrowUpNarrowWide className="mr-2 h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest" className="text-sm">Newest</SelectItem>
+                <SelectItem value="oldest" className="text-sm">Oldest</SelectItem>
+                <SelectItem value="price-asc" className="text-sm">Price: Low to High</SelectItem>
+                <SelectItem value="price-desc" className="text-sm">Price: High to Low</SelectItem>
+                <SelectItem value="name-asc" className="text-sm">Name: A-Z</SelectItem>
+                <SelectItem value="name-desc" className="text-sm">Name: Z-A</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
+        {/* Right Section: Mobile Nav/Search/Filter Toggles + Cart */}
+        <nav className="flex items-center space-x-2 md:space-x-4 flex-1 justify-end">
           {/* Mobile Dropdown Menu */}
           {isMobile && (
             <DropdownMenu>
