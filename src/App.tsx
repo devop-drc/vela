@@ -29,7 +29,7 @@ import StorefrontAllProducts from "./pages/StorefrontAllProducts";
 import StorefrontClientOrders from "./pages/StorefrontClientOrders"; // Use this for all customer orders
 import Disputes from "./pages/Disputes";
 import Promotions from "./pages/Promotions";
-import MarqueeSettings from "./pages/MarqueeSettings"; // Import the new MarqueeSettings page
+// import MarqueeSettings from "./pages/MarqueeSettings"; // Removed MarqueeSettings import
 
 const queryClient = new QueryClient();
 
@@ -69,7 +69,7 @@ const App = () => (
                           <Route path="/out-of-stock" element={<OutOfStock />} />
                           <Route path="/disputes" element={<Disputes />} />
                           <Route path="/promotions" element={<Promotions />} />
-                          <Route path="/marquee" element={<MarqueeSettings />} /> {/* New route for marquee settings */}
+                          {/* <Route path="/marquee" element={<MarqueeSettings />} /> Removed route for marquee settings */}
                         </Route>
                       </Route>
                     </Route>

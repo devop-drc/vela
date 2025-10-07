@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Home, ShoppingBag, Settings, Package, Archive, MessageSquareQuote, Link as LinkIcon, MessageSquareWarning, Megaphone, Sparkles } from "lucide-react"; // Added Sparkles icon
+import { Home, ShoppingBag, Settings, Package, Archive, MessageSquareQuote, Link as LinkIcon, MessageSquareWarning, Megaphone, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { motion } from "framer-motion";
@@ -21,7 +21,7 @@ const Sidebar = () => {
     { to: "/orders", icon: ShoppingBag, label: "Orders" },
     { to: "/disputes", icon: MessageSquareWarning, label: "Disputes" },
     { to: "/promotions", icon: Megaphone, label: "Promotions" },
-    { to: "/marquee", icon: Sparkles, label: "Marquee" }, // New: Marquee settings page
+    // { to: "/marquee", icon: Sparkles, label: "Marquee" }, // Removed Marquee settings page link
     { to: "/keywords", icon: MessageSquareQuote, label: "AI Keywords" },
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
