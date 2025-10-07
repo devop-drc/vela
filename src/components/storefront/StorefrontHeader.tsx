@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ShoppingBag, Filter, Search, X } from "lucide-react";
+import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { ShoppingBag, Filter, Search, X, Menu, Home, Package, Truck } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "../ui/input";
 import { debounce } from 'lodash'; // Import debounce
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const DESKTOP_SIDEBAR_WIDTH = '20rem'; // 320px
 
@@ -24,6 +25,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
   const { totalItems } = useCart();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [localSearchTerm, setLocalSearchTerm] = useState(searchParams.get('search') || '');
   const [isMobileSearchInputVisible, setIsMobileSearchInputVisible] = useState(false);
@@ -33,6 +35,8 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
   const blurEnabled = appearanceSettings?.blurEnabled;
   const borderRadius = appearanceSettings?.['--radius'] || '0.5rem';
   const isFloatingLayout = appearanceSettings?.layoutStyle === 'floating';
+
+  const isOnProductsPage = location.pathname.includes('/products');
 
   // Debounced function to update search params
   const debouncedSetSearchParam = useCallback(
@@ -61,7 +65,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
 
   // Dynamic styles for desktop header when sidebar is open
   const desktopHeaderStyle: React.CSSProperties = {};
-  if (!isMobile && isDesktopSidebarOpen) {
+  if (!isMobile && isDesktopSidebarOpen && isOnProductsPage) {
     desktopHeaderStyle.left = DESKTOP_SIDEBAR_WIDTH;
     desktopHeaderStyle.width = `calc(100% - ${DESKTOP_SIDEBAR_WIDTH})`;
   }
@@ -86,12 +90,17 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
           <span className="font-bold text-base md:text-lg">{shopDetails.shop_name}</span>
         </Link>
         <nav className="flex items-center space-x-2 md:space-x-4">
-          <Link to={`/shop/${shopDetails.slug}`} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex text-sm md:text-base")}>
+          {/* Desktop Navigation Links */}
+          <Link to={`/shop/${shopDetails.slug}`} className={cn(buttonVariants({ variant: "ghost" }), "hidden lg:inline-flex text-sm md:text-base")}>
             Home
           </Link>
-          <Link to={`/shop/${shopDetails.slug}/products`} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex text-sm md:text-base")}>
+          <Link to={`/shop/${shopDetails.slug}/products`} className={cn(buttonVariants({ variant: "ghost" }), "hidden lg:inline-flex text-sm md:text-base")}>
             Products
           </Link>
+          <Link to={`/shop/${shopDetails.slug}/order-tracking`} className={cn(buttonVariants({ variant: "ghost" }), "hidden lg:inline-flex text-sm md:text-base")}>
+            Track Order
+          </Link>
+
           {/* Desktop Search Input */}
           {!isMobile && (
             <div className="relative hidden md:flex items-center">
@@ -109,6 +118,51 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
               />
             </div>
           )}
+
+          {/* Desktop Filter & Sort Buttons (only on products page) */}
+          {!isMobile && isOnProductsPage && (
+            <>
+              <Button variant="outline" onClick={onToggleFilterSidebar} className="flex-shrink-0 text-sm md:text-base h-9 md:h-10">
+                <Filter className="mr-2 h-4 w-4" />
+                Filters
+              </Button>
+              {/* Sort dropdown can be added here if needed, similar to the products page */}
+            </>
+          )}
+
+          {/* Mobile Dropdown Menu */}
+          {isMobile && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Open navigation menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link to={`/shop/${shopDetails.slug}`} className="flex items-center gap-2 text-sm">
+                    <Home className="h-4 w-4" /> Home
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to={`/shop/${shopDetails.slug}/products`} className="flex items-center gap-2 text-sm">
+                    <Package className="h-4 w-4" /> Products
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to={`/shop/${shopDetails.slug}/order-tracking`} className="flex items-center gap-2 text-sm">
+                    <Truck className="h-4 w-4" /> Track Order
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onOpenCart} className="flex items-center gap-2 text-sm">
+                  <ShoppingBag className="h-4 w-4" /> Cart ({totalItems})
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
           {/* Mobile Search Toggle Button */}
           {isMobile && (
             <Button variant="ghost" size="icon" onClick={() => setIsMobileSearchInputVisible(prev => !prev)}>
@@ -116,33 +170,39 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
               <span className="sr-only">{isMobileSearchInputVisible ? "Close Search" : "Open Search"}</span>
             </Button>
           )}
-          {isMobile && onToggleFilterSidebar && (
+          
+          {/* Mobile Filter Toggle Button (only on products page) */}
+          {isMobile && isOnProductsPage && onToggleFilterSidebar && (
             <Button variant="ghost" size="icon" onClick={onToggleFilterSidebar}>
               <Filter className="h-5 w-5" />
               <span className="sr-only">Open Filters</span>
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onOpenCart}
-            className="relative"
-          >
-            <motion.span
-              key={totalItems}
-              initial={{ scale: 1 }}
-              animate={totalItems > 0 ? { scale: [1, 1.2, 1] } : { scale: 1 }}
-              transition={{ duration: 0.3 }}
+
+          {/* Cart Button (always visible on desktop, only icon on mobile) */}
+          {!isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onOpenCart}
               className="relative"
             >
-              <ShoppingBag className="h-5 w-5" />
-              {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-                  {totalItems}
-                </span>
-              )}
-            </motion.span>
-          </Button>
+              <motion.span
+                key={totalItems}
+                initial={{ scale: 1 }}
+                animate={totalItems > 0 ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className="relative"
+              >
+                <ShoppingBag className="h-5 w-5" />
+                {totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                    {totalItems}
+                  </span>
+                )}
+              </motion.span>
+            </Button>
+          )}
         </nav>
       </div>
       <AnimatePresence>

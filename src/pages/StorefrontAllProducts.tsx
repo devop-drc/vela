@@ -82,10 +82,7 @@ const StorefrontAllProducts = () => {
     tags: searchParams.getAll('tag') || [],
     priceRange: [0, 1000], // Default max price, will be updated by maxPrice from useMemo
   });
-  // const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true); // Now managed by context
   
-  // ... existing useEffects ...
-
   const blurEnabled = appearanceSettings?.blurEnabled;
   const borderRadius = appearanceSettings?.['--radius'] || '0.5rem';
   const isFloatingLayout = appearanceSettings?.layoutStyle === 'floating';
@@ -363,50 +360,44 @@ const StorefrontAllProducts = () => {
         <div className="container py-6 md:py-8">
           <StorefrontBreadcrumb />
 
-          <div className={cn(
-            "sticky z-30 py-3 md:py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-6 md:mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4",
-            blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
-          )} style={{ borderRadius: borderRadius, top: stickyBarTop }}>
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              {!isMobile && (
-                <Button variant="outline" onClick={() => setIsDesktopFilterSidebarOpen(prev => !prev)} className="flex-shrink-0 text-sm md:text-base h-9 md:h-10">
-                  <Filter className="mr-2 h-4 w-4" />
-                  Filters
-                  <ChevronRight className={cn("ml-2 h-4 w-4 transition-transform", isDesktopFilterSidebarOpen && "rotate-180")} />
-                </Button>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-2 w-full md:w-2/3 justify-end">
-              {isMobile && (
+          {/* Filter and Sort Bar (Mobile only, Desktop controls are in Header) */}
+          {isMobile && (
+            <div className={cn(
+              "sticky z-30 py-3 md:py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-6 md:mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4",
+              blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
+            )} style={{ borderRadius: borderRadius, top: stickyBarTop }}>
+              <div className="flex items-center gap-2 w-full md:w-auto">
                 <Button variant="outline" onClick={onToggleFilterSidebar} className="w-full md:w-auto justify-start text-sm h-9">
                   <Filter className="mr-2 h-4 w-4" />
                   Filters ({Object.values(filters).filter(f => (Array.isArray(f) && f.length > 0) || (typeof f === 'string' && f !== 'all')).length})
                 </Button>
-              )}
-              <Select value={sortOption} onValueChange={handleSortChange}>
-                <SelectTrigger className="w-full md:w-[180px] h-9 md:h-10 text-sm">
-                  <ArrowUpNarrowWide className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest" className="text-sm">Newest</SelectItem>
-                  <SelectItem value="oldest" className="text-sm">Oldest</SelectItem>
-                  <SelectItem value="price-asc" className="text-sm">Price: Low to High</SelectItem>
-                  <SelectItem value="price-desc" className="text-sm">Price: High to Low</SelectItem>
-                  <SelectItem value="name-asc" className="text-sm">Name: A-Z</SelectItem>
-                  <SelectItem value="name-desc" className="text-sm">Name: Z-A</SelectItem>
-                </SelectContent>
-              </Select>
+              </div>
 
-              {hasActiveFilters && (
-                <Button variant="ghost" onClick={handleResetFilters} className="w-full md:w-auto text-sm h-9 md:h-10">
-                  <XCircle className="mr-2 h-4 w-4" />
-                  Reset Filters
-                </Button>
-              )}
+              <div className="flex flex-wrap gap-2 w-full md:w-2/3 justify-end">
+                <Select value={sortOption} onValueChange={handleSortChange}>
+                  <SelectTrigger className="w-full md:w-[180px] h-9 md:h-10 text-sm">
+                    <ArrowUpNarrowWide className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest" className="text-sm">Newest</SelectItem>
+                    <SelectItem value="oldest" className="text-sm">Oldest</SelectItem>
+                    <SelectItem value="price-asc" className="text-sm">Price: Low to High</SelectItem>
+                    <SelectItem value="price-desc" className="text-sm">Price: High to Low</SelectItem>
+                    <SelectItem value="name-asc" className="text-sm">Name: A-Z</SelectItem>
+                    <SelectItem value="name-desc" className="text-sm">Name: Z-A</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {hasActiveFilters && (
+                  <Button variant="ghost" onClick={handleResetFilters} className="w-full md:w-auto text-sm h-9 md:h-10">
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Reset Filters
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <h2 className="text-3xl md:text-4xl font-bold font-heading mb-8 md:mb-10 text-center">All Products</h2>
           

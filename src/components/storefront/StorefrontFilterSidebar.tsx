@@ -59,9 +59,11 @@ export const StorefrontFilterSidebar = ({
   const isFloatingLayout = appearanceSettings?.layoutStyle === 'floating';
 
   const [localFilters, setLocalFilters] = useState<FilterState>(currentFilters);
+  const [localPriceRange, setLocalPriceRange] = useState<[number, number]>(currentFilters.priceRange);
 
   useEffect(() => {
     setLocalFilters(currentFilters);
+    setLocalPriceRange(currentFilters.priceRange);
   }, [currentFilters]);
 
   const handleToggleFilter = (filterKey: keyof FilterState, value: string) => {
@@ -76,18 +78,27 @@ export const StorefrontFilterSidebar = ({
     });
   };
 
+  // Debounced function for price range to avoid excessive re-renders during drag
+  const debouncedPriceRangeChange = useMemo(
+    () =>
+      debounce((range: [number, number]) => {
+        onFilterChange(prev => ({ ...prev, priceRange: range }));
+      }, 100), // Adjust debounce delay as needed
+    [onFilterChange]
+  );
+
   const handlePriceRangeChange = (range: [number, number]) => {
-    setLocalFilters(prev => {
-      const updatedFilters = { ...prev, priceRange: range };
-      onFilterChange(updatedFilters); // Apply immediately
-      return updatedFilters;
-    });
+    setLocalPriceRange(range); // Update local state immediately for smooth dragging
+    debouncedPriceRangeChange(range); // Debounce the actual filter application
   };
 
   const handleClearSection = (filterKey: keyof FilterState) => {
     setLocalFilters(prev => {
       const updatedFilters = { ...prev, [filterKey]: filterKey === 'priceRange' ? [0, maxPrice] : [] };
       onFilterChange(updatedFilters); // Apply immediately
+      if (filterKey === 'priceRange') {
+        setLocalPriceRange([0, maxPrice]);
+      }
       return updatedFilters;
     });
   };
@@ -157,6 +168,7 @@ export const StorefrontFilterSidebar = ({
 
       // Only update if there's a significant change or initial setup
       if (adjustedMin !== prev.priceRange[0] || adjustedMax !== prev.priceRange[1] || newMax !== (maxPrice > 0 ? maxPrice : 100)) {
+        setLocalPriceRange([adjustedMin, adjustedMax]); // Update local state for slider
         return { ...prev, priceRange: [adjustedMin, adjustedMax] };
       }
       return prev;
@@ -257,13 +269,13 @@ export const StorefrontFilterSidebar = ({
                 min={0}
                 max={maxPrice > 0 ? maxPrice : 100} // Ensure max is at least 100 if no products
                 step={1}
-                value={localFilters.priceRange}
+                value={localPriceRange} // Use local state for smooth dragging
                 onValueChange={handlePriceRangeChange}
                 className="w-full"
               />
               <div className="flex justify-between text-sm font-medium">
-                <span>{formatCurrency(localFilters.priceRange[0], shopDetails?.currency)}</span>
-                <span>{formatCurrency(localFilters.priceRange[1], shopDetails?.currency)}</span>
+                <span>{formatCurrency(localPriceRange[0], shopDetails?.currency)}</span>
+                <span>{formatCurrency(localPriceRange[1], shopDetails?.currency)}</span>
               </div>
             </div>
           </FilterSection>
@@ -334,12 +346,12 @@ export const StorefrontFilterSidebar = ({
 
   return (
     <motion.aside
-      initial={{ x: '-100%', opacity: 0 }}
-      animate={{ x: '0%', opacity: 1 }}
-      exit={{ x: '-100%', opacity: 0 }}
+      initial={{ x: '-100%', opacity: 0, pointerEvents: 'none' }} // Initially hidden and non-interactive
+      animate={{ x: isOpen ? '0%' : '-100%', opacity: isOpen ? 1 : 0, pointerEvents: isOpen ? 'auto' : 'none' }} // Control visibility and interaction
+      exit={{ x: '-100%', opacity: 0, pointerEvents: 'none' }}
       transition={{ duration: 0.2 }}
       className={cn(
-        "hidden lg:flex flex-col flex-shrink-0 fixed z-30", // Full height
+        "flex-col flex-shrink-0 fixed z-30", // Full height
         blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
         isFloatingLayout ? "border rounded-lg" : "border-r"
       )}
@@ -349,8 +361,6 @@ export const StorefrontFilterSidebar = ({
         top: isFloatingLayout ? '1rem' : '0', // Add top margin
         bottom: isFloatingLayout ? '1rem' : '0', // Add bottom margin
         borderRadius: isFloatingLayout ? borderRadius : '0',
-        pointerEvents: isOpen ? 'auto' : 'none', // Disable interaction when hidden
-        opacity: isOpen ? 1 : 0, // Control visibility
       }}
     >
       {filterContent}

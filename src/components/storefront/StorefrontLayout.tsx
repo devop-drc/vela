@@ -10,6 +10,7 @@ import { CartProvider } from '@/contexts/CartContext'; // Import CartProvider
 import { RecentlyViewedProvider } from '@/contexts/RecentlyViewedContext'; // Import RecentlyViewedProvider
 import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile
 import { StorefrontCartCheckoutModal } from './StorefrontCartCheckoutModal'; // Import the new modal
+import { StorefrontBottomNav } from './StorefrontBottomNav'; // Import the new bottom nav
 import { cn } from '@/lib/utils'; // Import cn for conditional classnames
 
 // Function to apply settings to the DOM, similar to AppearanceContext
@@ -90,6 +91,24 @@ const StorefrontLayoutContent = () => {
       if (ogDescriptionTag) ogDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Welcome to ${shopDetails.shop_name}'s online store.`);
       const ogImageTag = document.querySelector('meta[property="og:image"]');
       if (ogImageTag) ogImageTag.setAttribute('content', shopDetails.logo_url || ''); // Ensure og:image is set
+
+      // Set favicon
+      const setFavicon = (url: string) => {
+        let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+        if (link) {
+          link.href = url;
+        } else {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          link.href = url;
+          document.head.appendChild(link);
+        }
+      };
+
+      if (shopDetails.favicon_url) {
+        const proxiedFaviconUrl = `https://images.weserv.nl/?url=${encodeURIComponent(shopDetails.favicon_url)}&w=32&h=32&fit=contain&mask=circle`;
+        setFavicon(proxiedFaviconUrl);
+      }
     } else {
       document.title = "Storefront";
       const metaDescriptionTag = document.querySelector('meta[name="description"]');
@@ -172,7 +191,7 @@ const StorefrontLayoutContent = () => {
     );
   }
 
-  const headerHeight = '4rem'; // 64px
+  const headerHeight = '3.5rem'; // 56px for mobile, 64px for desktop
   const floatingHeaderOffset = '1rem'; // 16px
   const mainContentPaddingTop = appearanceSettings?.layoutStyle === 'floating' ? `calc(${headerHeight} + ${floatingHeaderOffset} + ${floatingHeaderOffset})` : headerHeight;
 
@@ -184,7 +203,7 @@ const StorefrontLayoutContent = () => {
         onOpenCart={() => setIsCartCheckoutModalOpen(true)}
         isDesktopSidebarOpen={isDesktopFilterSidebarOpen} // Pass desktop sidebar state
       />
-      <main className="flex-1 overflow-y-auto" style={{ paddingTop: mainContentPaddingTop }}>
+      <main className="flex-1 overflow-y-auto" style={{ paddingTop: mainContentPaddingTop, paddingBottom: isMobile ? '4rem' : '0' }}> {/* Add padding-bottom for mobile nav */}
         <Outlet context={{ 
           onToggleFilterSidebar: () => setIsFilterSidebarOpen(true), 
           isFilterSidebarOpen, 
@@ -196,6 +215,7 @@ const StorefrontLayoutContent = () => {
         }} />
       </main>
       <StorefrontFooter ref={footerRef} />
+      <StorefrontBottomNav /> {/* Render the new bottom navigation */}
       <Sonner />
       <StorefrontCartCheckoutModal isOpen={isCartCheckoutModalOpen} onClose={() => setIsCartCheckoutModalOpen(false)} />
     </div>
