@@ -203,7 +203,7 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
         <CheckoutProgress currentStep={currentStep} />
       </div>
 
-      <form id="checkout-form" onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto px-6 pb-6 space-y-8">
+      <form id="checkout-form" onSubmit={handleFormSubmit} className="flex-1 flex flex-col overflow-y-auto px-6 pb-6 space-y-8">
         <AnimatePresence mode="wait">
           {currentStep === 1 && (
             <motion.div
@@ -212,13 +212,14 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.2 }}
+              className="flex-1 flex flex-col"
             >
-              <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg")}>
-                <CardHeader>
+              <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg flex-1 flex flex-col")}>
+                <CardHeader className="flex-shrink-0">
                   <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><User className="h-5 w-5" /> Contact Information</CardTitle>
                   <CardDescription className="text-sm md:text-base">We'll use this to send you updates about your order.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 flex-1 overflow-y-auto">
                     <div className="space-y-2">
                       <Label htmlFor="firstName" className="text-sm">First Name</Label>
                       <Input id="firstName" placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
@@ -243,13 +244,14 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.2 }}
+              className="flex-1 flex flex-col"
             >
-              <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg")}>
-                <CardHeader>
+              <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg flex-1 flex flex-col")}>
+                <CardHeader className="flex-shrink-0">
                   <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><MapPin className="h-5 w-5" /> Shipping Information</CardTitle>
                   <CardDescription className="text-sm md:text-base">Where should we send your awesome products?</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 flex-1 overflow-y-auto">
                     <div className="space-y-2">
                       <Label htmlFor="address" className="text-sm">Shipping Address</Label>
                       <Input id="address" placeholder="123 Main St" value={address} onChange={(e) => setAddress(e.target.value)} required />
@@ -288,92 +290,87 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.2 }}
+              className="flex-1 flex flex-col"
             >
-              <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg")}>
-                <CardHeader>
+              <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg flex-1 flex flex-col")}>
+                <CardHeader className="flex-shrink-0">
                   <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><CreditCard className="h-5 w-5" /> Payment Information</CardTitle>
                   <CardDescription className="text-sm md:text-base">Choose your preferred payment method.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                      <Label htmlFor="payment-card" className="flex items-center gap-2 cursor-pointer text-sm md:text-base">
-                        <input
-                          type="radio"
-                          id="payment-card"
-                          name="paymentMethod"
-                          value="card"
-                          checked={paymentMethod === 'card'}
-                          onChange={() => setPaymentMethod('card')}
-                          className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
-                        />
-                        <span>Debit/Credit Card / PayPal</span>
-                      </Label>
-                      <Label htmlFor="payment-cash" className="flex items-center gap-2 cursor-pointer text-sm md:text-base">
-                        <input
-                          type="radio"
-                          id="payment-cash"
-                          name="paymentMethod"
-                          value="cash_on_delivery"
-                          checked={paymentMethod === 'cash_on_delivery'}
-                          onChange={() => setPaymentMethod('cash_on_delivery')}
-                          className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
-                        />
-                        <span>Cash on Delivery</span>
-                      </Label>
-                    </div>
+                <CardContent className="space-y-6 flex-1 overflow-y-auto">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                    <Label htmlFor="payment-card" className="flex items-center gap-2 cursor-pointer text-sm md:text-base">
+                      <input
+                        type="radio"
+                        id="payment-card"
+                        name="paymentMethod"
+                        value="card"
+                        checked={paymentMethod === 'card'}
+                        onChange={() => setPaymentMethod('card')}
+                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
+                      />
+                      <span>Debit/Credit Card / PayPal</span>
+                    </Label>
+                    <Label htmlFor="payment-cash" className="flex items-center gap-2 cursor-pointer text-sm md:text-base">
+                      <input
+                        type="radio"
+                        id="payment-cash"
+                        name="paymentMethod"
+                        value="cash_on_delivery"
+                        checked={paymentMethod === 'cash_on_delivery'}
+                        onChange={() => setPaymentMethod('cash_on_delivery')}
+                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
+                      />
+                      <span>Cash on Delivery</span>
+                    </Label>
+                  </div>
 
-                    {paymentMethod === 'card' ? (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="cardNumber" className="text-sm">Card Number</Label>
-                            <Input id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} required />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="cardName" className="text-sm">Name on Card</Label>
-                            <Input id="cardName" placeholder="John Doe" value={cardName} onChange={(e) => setCardName(e.target.value)} required />
-                          </div>
+                  {paymentMethod === 'card' ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="cardNumber" className="text-sm">Card Number</Label>
+                          <Input id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} required />
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="expiryDate" className="text-sm">Expiry Date</Label>
-                            <Input id="expiryDate" placeholder="MM/YY" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} required />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="cvv" className="text-sm">CVV</Label>
-                            <div className="relative">
-                              <Input id="cvv" placeholder="123" type="password" maxLength={4} value={cvv} onChange={(e) => setCvv(e.target.value)} required />
-                              <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            </div>
-                          </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="cardName" className="text-sm">Name on Card</Label>
+                          <Input id="cardName" placeholder="John Doe" value={cardName} onChange={(e) => setCardName(e.target.value)} required />
                         </div>
-                        <div className="p-6 border rounded-lg bg-muted/50 text-muted-foreground text-center space-y-4 mt-6">
-                          <p className="font-medium text-base">Payment gateway integration coming soon!</p>
-                          <p className="text-sm mt-2">For now, this is a placeholder for card input and processing.</p>
-                          <Separator />
-                          <div className="flex items-center justify-center gap-4">
-                            <CreditCard className="h-8 w-8 text-muted-foreground" />
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b7/PayPal_Logo_Icon_2014.svg" alt="PayPal" className="h-8 w-8" />
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/e/e5/Apple_Pay_logo.svg" alt="Apple Pay" className="h-8 w-8" />
-                            <Wallet className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="expiryDate" className="text-sm">Expiry Date</Label>
+                          <Input id="expiryDate" placeholder="MM/YY" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="cvv" className="text-sm">CVV</Label>
+                          <div className="relative">
+                            <Input id="cvv" placeholder="123" type="password" maxLength={4} value={cvv} onChange={(e) => setCvv(e.target.value)} required />
+                            <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           </div>
                         </div>
                       </div>
-                    ) : (
-                      <div className="p-6 border rounded-lg bg-blue-50/50 text-blue-700 flex items-center gap-4">
-                        <DollarSign className="h-6 w-6 flex-shrink-0" />
-                        <div>
-                          <p className="font-semibold text-base">Pay with Cash on Delivery</p>
-                          <p className="text-sm">You will pay {formatCurrency(totalPrice, currency)} in cash when your order is delivered.</p>
+                      <div className="p-6 border rounded-lg bg-muted/50 text-muted-foreground text-center space-y-4 mt-6">
+                        <p className="font-medium text-base">Payment gateway integration coming soon!</p>
+                        <p className="text-sm mt-2">For now, this is a placeholder for card input and processing.</p>
+                        <Separator />
+                        <div className="flex items-center justify-center gap-4">
+                          <CreditCard className="h-8 w-8 text-muted-foreground" />
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/b/b7/PayPal_Logo_Icon_2014.svg" alt="PayPal" className="h-8 w-8" />
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/e/e5/Apple_Pay_logo.svg" alt="Apple Pay" className="h-8 w-8" />
+                          <Wallet className="h-8 w-8 text-muted-foreground" />
                         </div>
                       </div>
-                    )}
-                  </div>
-                  <div className="mt-6 p-4 border rounded-lg bg-emerald-50/50 text-emerald-700 flex items-center justify-center gap-3">
-                    <ShieldCheck className="h-6 w-6" />
-                    <p className="font-semibold text-sm">Secure Checkout Guaranteed</p>
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="p-6 border rounded-lg bg-blue-50/50 text-blue-700 flex items-center gap-4">
+                      <DollarSign className="h-6 w-6 flex-shrink-0" />
+                      <div>
+                        <p className="font-semibold text-base">Pay with Cash on Delivery</p>
+                        <p className="text-sm">You will pay {formatCurrency(totalPrice, currency)} in cash when your order is delivered.</p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
