@@ -14,6 +14,7 @@ import { useStorefront } from "@/contexts/StorefrontContext";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { Slider } from "@/components/ui/slider"; // Import Slider
 import { motion, AnimatePresence } from "framer-motion"; // Import AnimatePresence
+import { debounce } from 'lodash'; // Import debounce
 
 interface Product {
   id: string;
