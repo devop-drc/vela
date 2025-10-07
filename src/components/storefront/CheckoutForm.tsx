@@ -91,51 +91,58 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
   const [localIsSubmitting, setLocalIsSubmitting] = useState(false); // Internal submitting state
 
   const validateStep = () => {
+    console.log(`Validating step ${currentStep}...`);
     if (currentStep === 1) {
-      if (!firstName || !lastName || !email) {
-        toast.error("Please fill in all contact information.");
-        return false;
-      }
+      if (!firstName) { toast.error("First Name is required."); console.log("Validation failed: First Name missing."); return false; }
+      if (!lastName) { toast.error("Last Name is required."); console.log("Validation failed: Last Name missing."); return false; }
+      if (!email) { toast.error("Email is required."); console.log("Validation failed: Email missing."); return false; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        toast.error("Please enter a valid email address.");
+        toast.error("Please enter a valid email address."); console.log("Validation failed: Invalid email format.");
         return false;
       }
     } else if (currentStep === 2) {
-      if (!address || !city || !state || !zip) {
-        toast.error("Please fill in all shipping information.");
-        return false;
+      if (!address) { toast.error("Shipping Address is required."); console.log("Validation failed: Address missing."); return false; }
+      if (!city) { toast.error("City is required."); console.log("Validation failed: City missing."); return false; }
+      if (!state) { toast.error("State/Province is required."); console.log("Validation failed: State missing."); return false; }
+      if (!zip) { toast.error("Zip/Postal Code is required."); console.log("Validation failed: Zip missing."); return false; }
+    } else if (currentStep === 3) {
+      if (paymentMethod === 'card') {
+        if (!cardNumber) { toast.error("Card Number is required."); console.log("Validation failed: Card Number missing."); return false; }
+        if (!cardName) { toast.error("Name on Card is required."); console.log("Validation failed: Name on Card missing."); return false; }
+        if (!expiryDate) { toast.error("Expiry Date is required."); console.log("Validation failed: Expiry Date missing."); return false; }
+        if (!cvv) { toast.error("CVV is required."); console.log("Validation failed: CVV missing."); return false; }
+        
+        if (!/^\d{13,19}$/.test(cardNumber.replace(/\s/g, ''))) {
+          toast.error("Please enter a valid card number (13-19 digits)."); console.log("Validation failed: Invalid card number format.");
+          return false;
+        }
+        if (!/^(0[1-9]|1[0-2])\/?([0-9]{2})$/.test(expiryDate)) {
+          toast.error("Please enter a valid expiry date (MM/YY)."); console.log("Validation failed: Invalid expiry date format.");
+          return false;
+        }
+        if (!/^\d{3,4}$/.test(cvv)) {
+          toast.error("Please enter a valid CVV (3-4 digits)."); console.log("Validation failed: Invalid CVV format.");
+          return false;
+        }
       }
-    } else if (currentStep === 3 && paymentMethod === 'card') {
-      if (!cardNumber || !cardName || !expiryDate || !cvv) {
-        toast.error("Please fill in all card details.");
-        return false;
-      }
-      // Basic card validation (can be expanded)
-      if (!/^\d{13,19}$/.test(cardNumber.replace(/\s/g, ''))) {
-        toast.error("Please enter a valid card number.");
-        return false;
-      }
-      if (!/^(0[1-9]|1[0-2])\/?([0-9]{2})$/.test(expiryDate)) {
-        toast.error("Please enter a valid expiry date (MM/YY).");
-        return false;
-      }
-      if (!/^\d{3,4}$/.test(cvv)) {
-        toast.error("Please enter a valid CVV.");
-        return false;
-      }
+      // If paymentMethod is 'cash_on_delivery', no further validation is needed for step 3.
     }
+    console.log(`Validation for step ${currentStep} passed.`);
     return true;
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateStep()) {
+    const isValid = validateStep();
+    console.log(`handleFormSubmit: Validation result for step ${currentStep}: ${isValid}`);
+    if (!isValid) {
       return;
     }
 
     if (currentStep < 3) {
       setCurrentStep(prev => prev + 1);
+      console.log(`handleFormSubmit: Moving to next step: ${currentStep + 1}`);
       return;
     }
 
