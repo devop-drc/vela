@@ -13,7 +13,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { Slider } from "@/components/ui/slider"; // Import Slider
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion"; // Import AnimatePresence
 
 interface Product {
   id: string;
@@ -173,12 +173,12 @@ export const StorefrontFilterSidebar = ({
 
     return (
       <AccordionItem value={title}>
-        <AccordionTrigger className="py-3 text-base font-semibold group"> {/* Added group class */}
+        <AccordionTrigger className="py-3 text-base font-semibold">
           <div className="flex items-center gap-2">
             <Icon className="h-5 w-5 text-muted-foreground" />
             {title}
           </div>
-          <AnimatePresence> {/* Wrap with AnimatePresence */}
+          <AnimatePresence>
             {isFilterApplied && (
               <motion.button
                 initial={{ opacity: 0, scale: 0.8 }}
