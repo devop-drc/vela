@@ -76,12 +76,12 @@ const StorefrontIndex = () => {
 
   useEffect(() => {
     const fetchMarqueePromotions = async () => {
-      if (!shopDetails?.id) return;
+      if (!shopDetails?.userId) return; // Use shopDetails.userId
 
       const { data, error } = await supabase
         .from('promotions')
         .select('*')
-        .eq('user_id', shopDetails.id) // Assuming user_id in promotions table is business.user_id
+        .eq('user_id', shopDetails.userId) // Filter by user_id
         .eq('type', 'marquee_text')
         .eq('is_active', true)
         .or(`end_date.gte.${new Date().toISOString()},end_date.is.null`)
@@ -258,7 +258,7 @@ const StorefrontIndex = () => {
             >
               {uniqueCategoriesWithCount.map(([category, count]) => {
                 const CategoryIcon = getCategoryIcon(category);
-                const categoryColor = getCategoryColor(category);
+                // const categoryColor = getCategoryColor(category); // Removed dynamic color
                 return (
                   <motion.div key={category} variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
                     <Link to={`/shop/${shopDetails.slug}/products?category=${encodeURIComponent(category)}`}>
@@ -267,11 +267,11 @@ const StorefrontIndex = () => {
                         blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
                         "shadow-md"
                       )}>
-                        <CategoryIcon className={cn("h-14 w-14 md:h-16 md:w-16 mb-3 md:mb-4", categoryColor.text)} />
+                        <CategoryIcon className={cn("h-14 w-14 md:h-16 md:w-16 mb-3 md:mb-4 text-primary")} /> {/* Used text-primary */}
                         <h3 className="font-semibold text-base md:text-lg leading-tight mb-1 line-clamp-2">{category}</h3>
                         <Badge
                           variant="outline"
-                          className={cn("text-xs md:text-sm mb-2", categoryColor.bg, categoryColor.text, categoryColor.border)}
+                          className={cn("text-xs md:text-sm mb-2 bg-primary/10 text-primary border-primary/30")} {/* Used primary color */}
                         >
                           {count} Products
                         </Badge>

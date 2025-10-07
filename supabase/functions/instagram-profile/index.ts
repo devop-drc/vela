@@ -12,24 +12,24 @@ serve(async (req) => {
   }
 
   try {
+    const { user_id } = await req.json(); // Expect user_id in the body
+    if (!user_id) throw new Error('User ID is required.');
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', // Use service role key for admin access
+      { auth: { persistSession: false } }
     );
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not found');
 
     const { data: integration, error: integrationError } = await supabase
       .from('integrations')
       .select('access_token')
-      .eq('user_id', user.id)
+      .eq('user_id', user_id) // Use the provided user_id
       .eq('provider', 'facebook')
       .single();
 
     if (integrationError || !integration) {
-      throw new Error("Instagram integration not found. Please connect your account in the settings.");
+      throw new Error("Instagram integration not found for this user. Please connect your account in the settings.");
     }
     const userAccessToken = integration.access_token;
 
@@ -42,7 +42,7 @@ serve(async (req) => {
     if (!igAccount) throw new Error('No linked Instagram Business Account found.');
     
     const igAccountId = igAccount.instagram_business_account.id;
-    const fields = 'name,username,profile_picture_url,biography,followers_count,media_count';
+    const fields = 'name,username,profile_picture_url,biography,followers_count,media_count,website'; // Added 'website' to fields
     const igProfileUrl = `https://graph.facebook.com/v19.0/${igAccountId}?fields=${fields}&access_token=${userAccessToken}`;
     
     const igProfileResponse = await fetch(igProfileUrl);
@@ -57,6 +57,7 @@ serve(async (req) => {
       favicon_url: igProfileData.profile_picture_url, // Use Instagram profile picture for favicon
       followers_count: igProfileData.followers_count,
       media_count: igProfileData.media_count,
+      instagram_url: `https://www.instagram.com/${igProfileData.username}`, // Construct Instagram profile URL
     };
 
     return new Response(JSON.stringify(shopData), {

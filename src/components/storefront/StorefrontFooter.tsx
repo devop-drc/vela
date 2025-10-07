@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { useRecentlyViewed } from "@/contexts/RecentlyViewedContext"; // Import useRecentlyViewed
 import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "../MediaItem";
-import { Eye, Facebook, Instagram, Twitter, Youtube, Mail } from "lucide-react"; // Added social icons
+import { Eye, Instagram, Mail } from "lucide-react"; // Only Instagram and Mail icons
 import React from "react";
 
 export const StorefrontFooter = React.forwardRef<HTMLDivElement>((props, ref) => {
@@ -33,22 +33,15 @@ export const StorefrontFooter = React.forwardRef<HTMLDivElement>((props, ref) =>
           <p className="text-sm max-w-md">{shopDetails.headline || shopDetails.about}</p>
           {shopDetails.contact_email && (
             <a href={`mailto:${shopDetails.contact_email}`} className="text-sm hover:underline text-primary hover:text-primary-foreground transition-colors flex items-center gap-2">
-              <Mail className="h-4 w-4 text-primary" /> {shopDetails.contact_email} {/* Changed to text-primary */}
+              <Mail className="h-4 w-4 text-primary" /> {shopDetails.contact_email}
             </a>
           )}
           <div className="flex space-x-3 md:space-x-4 mt-3 md:mt-4">
-            <a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"> {/* Changed hover to text-primary */}
-              <Facebook className="h-5 w-5" />
-            </a>
-            <a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"> {/* Changed hover to text-primary */}
-              <Instagram className="h-5 w-5" />
-            </a>
-            <a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"> {/* Changed hover to text-primary */}
-              <Twitter className="h-5 w-5" />
-            </a>
-            <a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"> {/* Changed hover to text-primary */}
-              <Youtube className="h-5 w-5" />
-            </a>
+            {shopDetails.instagram_url && (
+              <a href={shopDetails.instagram_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
+                <Instagram className="h-5 w-5" />
+              </a>
+            )}
           </div>
         </div>
 
@@ -60,7 +53,7 @@ export const StorefrontFooter = React.forwardRef<HTMLDivElement>((props, ref) =>
               <li><Link to={`/shop/${shopDetails.slug}/products`} className="hover:underline">All Products</Link></li>
               <li><Link to={`/shop/${shopDetails.slug}/cart`} className="hover:underline">Cart</Link></li>
               <li><Link to={`/shop/${shopDetails.slug}/checkout`} className="hover:underline">Checkout</Link></li>
-              <li><Link to={`/shop/${shopDetails.slug}/orders`} className="hover:underline">My Orders</Link></li> {/* New: My Orders link */}
+              <li><Link to={`/shop/${shopDetails.slug}/orders`} className="hover:underline">My Orders</Link></li>
             </ul>
           </div>
           <div className="space-y-2">
@@ -74,8 +67,8 @@ export const StorefrontFooter = React.forwardRef<HTMLDivElement>((props, ref) =>
             </ul>
           </div>
           {recentlyViewed.length > 0 && (
-            <div className="space-y-2 col-span-2 sm:col-span-1"> {/* Ensure it takes full width on small screens */}
-              <h4 className="font-semibold text-foreground mb-2 flex items-center justify-center md:justify-start gap-1 text-base"><Eye className="h-4 w-4 text-primary" /> Recently Viewed</h4> {/* Changed to text-primary */}
+            <div className="space-y-2 col-span-2 sm:col-span-1">
+              <h4 className="font-semibold text-foreground mb-2 flex items-center justify-center md:justify-start gap-1 text-base"><Eye className="h-4 w-4 text-primary" /> Recently Viewed</h4>
               <ul className="space-y-2">
                 {recentlyViewed.map(product => (
                   <li key={product.id}>

@@ -53,6 +53,18 @@ serve(async (req) => {
       throw designSettingsError;
     }
 
+    // Fetch Instagram profile data to get the instagram_url
+    const { data: instagramProfile, error: instagramProfileError } = await supabaseAdmin.functions.invoke('instagram-profile', {
+      headers: { 'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` }, // Use service role key for function invocation
+      body: { user_id: userId } // Pass user_id to the instagram-profile function
+    });
+
+    if (instagramProfileError) {
+      console.error("Error invoking instagram-profile function:", instagramProfileError);
+    } else if (instagramProfile.error) {
+      console.error("Error from instagram-profile function:", instagramProfile.error);
+    }
+
     const offset = (page - 1) * limit;
 
     // Fetch active products for the business with pagination
@@ -98,6 +110,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       shopDetails: {
         id: businessId,
+        user_id: userId, // Include user_id here
         name: shopDetails.businesses.name, // Business name from the join
         shop_name: shopDetails.shop_name,
         slug: shopDetails.slug,
@@ -109,6 +122,7 @@ serve(async (req) => {
         contact_email: shopDetails.contact_email,
         followers_count: shopDetails.followers_count,
         media_count: shopDetails.media_count,
+        instagram_url: instagramProfile?.instagram_url || null, // Include Instagram URL
       },
       appearanceSettings: designSettings?.settings || null,
       products: products || [],

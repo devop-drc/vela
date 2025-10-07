@@ -6,6 +6,7 @@ import { DesignSettings } from './AppearanceContext'; // Re-use DesignSettings t
 
 interface ShopDetails {
   id: string;
+  userId: string; // Added user ID here
   name: string;
   shop_name: string;
   slug: string; // Include slug in ShopDetails
@@ -17,6 +18,7 @@ interface ShopDetails {
   contact_email?: string;
   followers_count?: number;
   media_count?: number;
+  instagram_url?: string; // Added Instagram URL
 }
 
 interface Product {
@@ -136,7 +138,22 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
       if (invokeError) throw invokeError;
       if (data.error) throw new Error(data.error);
 
-      setShopDetails(data.shopDetails);
+      setShopDetails({
+        id: data.shopDetails.id,
+        userId: data.shopDetails.user_id, // Set the user ID here
+        name: data.shopDetails.name,
+        shop_name: data.shopDetails.shop_name,
+        slug: data.shopDetails.slug,
+        logo_url: data.shopDetails.logo_url,
+        favicon_url: data.shopDetails.favicon_url,
+        currency: data.shopDetails.currency,
+        headline: data.shopDetails.headline,
+        about: data.shopDetails.about,
+        contact_email: data.shopDetails.contact_email,
+        followers_count: data.shopDetails.followers_count,
+        media_count: data.shopDetails.media_count,
+        instagram_url: data.shopDetails.instagram_url, // Set Instagram URL
+      });
       setAppearanceSettings(data.appearanceSettings);
 
       if (pageToFetch === 1) {
