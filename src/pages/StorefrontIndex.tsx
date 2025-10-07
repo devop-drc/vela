@@ -73,28 +73,16 @@ const StorefrontIndex = () => {
     return Array.from(categoriesMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [allProducts]);
 
-  const heroBackgroundStyle = useMemo(() => {
-    const baseStyle: React.CSSProperties = {
-      backgroundSize: appearanceSettings?.backgroundSize || 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: appearanceSettings?.backgroundRepeat || 'no-repeat',
-      borderRadius: appearanceSettings?.['--radius'] || '1.5rem',
-      filter: `
-        brightness(${appearanceSettings?.backgroundBrightness || 100}%)
-        contrast(${appearanceSettings?.backgroundContrast || 100}%)
-        saturate(${appearanceSettings?.backgroundSaturation || 100}%)
-        hue-rotate(${appearanceSettings?.backgroundHue || 0}deg)
-      `,
-    };
-
+  const heroBackgroundImage = useMemo(() => {
     if (appearanceSettings?.backgroundImageUrl) {
-      return { ...baseStyle, backgroundImage: `url(${appearanceSettings.backgroundImageUrl})` };
+      return appearanceSettings.backgroundImageUrl;
     }
-    // Default to blob animation if no custom image is set
-    return { ...baseStyle, backgroundImage: 'none' };
-  }, [appearanceSettings]);
+    // Only pick a random image if no specific URL is set
+    const randomIndex = Math.floor(Math.random() * curatedImages.length);
+    return curatedImages[randomIndex].src;
+  }, [appearanceSettings?.backgroundImageUrl]);
 
-  const blurEnabled = appearanceSettings?.blurEnabled;
+  const blurEnabled = appearanceSettings?.blurEnabled; // Correctly destructure blurEnabled here
 
   if (isLoading) {
     return (
@@ -133,10 +121,21 @@ const StorefrontIndex = () => {
           variants={sectionVariants}
           className={cn(
             "relative mb-16 p-0 rounded-xl text-center overflow-hidden min-h-[450px] flex items-center justify-center",
-            "shadow-lg",
-            !appearanceSettings?.backgroundImageUrl && "hero-blob-background" // Apply blob animation only if no custom image
+            "shadow-lg hero-blob-background" // Added hero-blob-background class
           )}
-          style={heroBackgroundStyle}
+          style={{
+            backgroundImage: `url(${heroBackgroundImage})`,
+            backgroundSize: appearanceSettings?.backgroundSize || 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: appearanceSettings?.backgroundRepeat || 'no-repeat',
+            borderRadius: appearanceSettings?.['--radius'] || '1.5rem', // Apply border-radius
+            filter: `
+              brightness(${appearanceSettings?.backgroundBrightness || 100}%)
+              contrast(${appearanceSettings?.backgroundContrast || 100}%)
+              saturate(${appearanceSettings?.backgroundSaturation || 100}%)
+              hue-rotate(${appearanceSettings?.backgroundHue || 0}deg)
+            `,
+          }}
         >
           {/* Overlay for text readability */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
@@ -145,6 +144,7 @@ const StorefrontIndex = () => {
           <div 
             className={cn(
               "relative z-10 text-primary-foreground max-w-4xl mx-auto p-8 md:p-16 h-full w-full flex flex-col items-center justify-center",
+              // Removed bg-card/70 backdrop-blur-lg from here to make it less "card-like"
             )}
           >
             {shopDetails.logo_url && (
@@ -185,11 +185,11 @@ const StorefrontIndex = () => {
         >
           <Marquee pauseOnHover className="py-4 border-y-2 border-primary/20 bg-primary/10">
             <div className="flex items-center gap-8 text-lg font-semibold text-primary">
-              <Sparkles className="h-6 w-6 text-amber-500 flex-shrink-0" />
+              <Sparkles className="h-6 w-6 text-amber-500" />
               <span>FLASH SALE: Up to 50% OFF on selected items!</span>
-              <Gift className="h-6 w-6 text-rose-500 flex-shrink-0" />
+              <Gift className="h-6 w-6 text-rose-500" />
               <span>FREE SHIPPING on all orders over {formatCurrency(50, shopDetails.currency)}!</span>
-              <RefreshCw className="h-6 w-6 text-blue-500 flex-shrink-0" />
+              <RefreshCw className="h-6 w-6 text-blue-500" />
               <span>New Arrivals Every Week!</span>
               <span>Discover unique handcrafted goods!</span>
             </div>

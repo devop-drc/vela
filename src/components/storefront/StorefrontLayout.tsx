@@ -134,7 +134,7 @@ const StorefrontLayoutContent = () => {
         onToggleFilterSidebar={() => setIsFilterSidebarOpen(true)} 
         onOpenCart={() => setIsCartCheckoutModalOpen(true)}
       />
-      <main className={cn("flex-1 flex", mainContentPaddingTop)}> {/* Added flex to main for sidebar sticky positioning */}
+      <main className={cn("flex-1 overflow-y-auto", mainContentPaddingTop)}> {/* Apply dynamic padding and overflow */}
         <Outlet context={{ onToggleFilterSidebar: () => setIsFilterSidebarOpen(true), isFilterSidebarOpen, setIsFilterSidebarOpen, products }} />
       </main>
       <StorefrontFooter />

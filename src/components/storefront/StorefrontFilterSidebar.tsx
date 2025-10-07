@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { getAttributeIcon } from "@/lib/attributeIcons";
-import { DualRangeSlider } from "@/components/ui/DualRangeSlider"; // Import DualRangeSlider
+import { Slider } from "@/components/ui/slider"; // Import Slider
 
 interface Product {
   id: string;
@@ -55,17 +55,31 @@ export const StorefrontFilterSidebar = ({
   const borderRadius = appearanceSettings?.['--radius'] || '0.5rem';
   const isFloatingLayout = appearanceSettings?.layoutStyle === 'floating';
 
-  // Use currentFilters directly and call onFilterChange immediately
+  const [localFilters, setLocalFilters] = useState<FilterState>(currentFilters);
+
+  useEffect(() => {
+    setLocalFilters(currentFilters);
+  }, [currentFilters]);
+
   const handleToggleFilter = (filterKey: keyof FilterState, value: string) => {
-    const currentValues = (currentFilters[filterKey] as string[]) || [];
-    const newValues = currentValues.includes(value)
-      ? currentValues.filter(item => item !== value)
-      : [...currentValues, value];
-    onFilterChange({ ...currentFilters, [filterKey]: newValues });
+    setLocalFilters(prev => {
+      const currentValues = (prev[filterKey] as string[]) || [];
+      const newValues = currentValues.includes(value)
+        ? currentValues.filter(item => item !== value)
+        : [...currentValues, value];
+      return { ...prev, [filterKey]: newValues };
+    });
   };
 
   const handlePriceRangeChange = (range: [number, number]) => {
-    onFilterChange({ ...currentFilters, priceRange: range });
+    setLocalFilters(prev => ({ ...prev, priceRange: range }));
+  };
+
+  const handleApplyFilters = () => {
+    onFilterChange(localFilters);
+    if (isMobile) {
+      onClose();
+    }
   };
 
   const handleClearAll = () => {
@@ -119,12 +133,25 @@ export const StorefrontFilterSidebar = ({
     };
   }, [products, convertCurrency]);
 
-  // Ensure currentFilters priceRange is within valid bounds when maxPrice changes
+  // Ensure localFilters priceRange is within valid bounds when maxPrice changes
   useEffect(() => {
-    if (currentFilters.priceRange[1] === 1000 && maxPrice !== 1000) { // Only update if default and maxPrice is different
-      onFilterChange(prev => ({ ...prev, priceRange: [0, maxPrice] }));
-    }
-  }, [maxPrice, currentFilters.priceRange, onFilterChange]);
+    setLocalFilters(prev => {
+      const currentMin = prev.priceRange[0];
+      const currentMax = prev.priceRange[1];
+      const newMax = maxPrice > 0 ? maxPrice : 100; // Ensure max is at least 100
+
+      // Adjust currentMax if it exceeds the new maxPrice
+      const adjustedMax = Math.min(currentMax, newMax);
+      // Adjust currentMin if it exceeds the adjustedMax
+      const adjustedMin = Math.min(currentMin, adjustedMax);
+
+      // Only update if there's a significant change or initial setup
+      if (adjustedMin !== prev.priceRange[0] || adjustedMax !== prev.priceRange[1] || newMax !== (maxPrice > 0 ? maxPrice : 100)) {
+        return { ...prev, priceRange: [adjustedMin, adjustedMax] };
+      }
+      return prev;
+    });
+  }, [maxPrice]);
 
 
   const FilterSection = ({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) => (
@@ -175,10 +202,10 @@ export const StorefrontFilterSidebar = ({
                 {uniqueCategories.map(category => (
                   <Button
                     key={category}
-                    variant={currentFilters.categories.includes(category) ? "default" : "outline"}
+                    variant={localFilters.categories.includes(category) ? "default" : "outline"}
                     size="sm"
                     onClick={() => handleToggleFilter('categories', category)}
-                    className={cn(currentFilters.categories.includes(category) && "ring-2 ring-primary ring-offset-2")}
+                    className={cn(localFilters.categories.includes(category) && "ring-2 ring-primary ring-offset-2")}
                   >
                     {category}
                   </Button>
@@ -189,13 +216,18 @@ export const StorefrontFilterSidebar = ({
 
           <FilterSection title="Price Range" icon={DollarSign}>
             <div className="px-2 space-y-4">
-              <DualRangeSlider
+              <Slider
                 min={0}
                 max={maxPrice > 0 ? maxPrice : 100} // Ensure max is at least 100 if no products
-                value={currentFilters.priceRange}
+                step={1}
+                value={localFilters.priceRange}
                 onValueChange={handlePriceRangeChange}
-                formatLabel={(value) => formatCurrency(value, shopDetails?.currency)}
+                className="w-full"
               />
+              <div className="flex justify-between text-sm font-medium">
+                <span>{formatCurrency(localFilters.priceRange[0], shopDetails?.currency)}</span>
+                <span>{formatCurrency(localFilters.priceRange[1], shopDetails?.currency)}</span>
+              </div>
             </div>
           </FilterSection>
 
@@ -205,10 +237,10 @@ export const StorefrontFilterSidebar = ({
                 {uniqueTags.map(tag => (
                   <Button
                     key={tag}
-                    variant={(currentFilters.tags as string[] || []).includes(tag) ? "default" : "outline"}
+                    variant={(localFilters.tags as string[] || []).includes(tag) ? "default" : "outline"}
                     size="sm"
                     onClick={() => handleToggleFilter('tags', tag)}
-                    className={cn((currentFilters.tags as string[] || []).includes(tag) && "ring-2 ring-primary ring-offset-2")}
+                    className={cn((localFilters.tags as string[] || []).includes(tag) && "ring-2 ring-primary ring-offset-2")}
                   >
                     {tag}
                   </Button>
@@ -225,10 +257,10 @@ export const StorefrontFilterSidebar = ({
                   {attr.values.map(value => (
                     <Button
                       key={value}
-                      variant={(currentFilters[attr.name] as string[] || []).includes(value) ? "default" : "outline"}
+                      variant={(localFilters[attr.name] as string[] || []).includes(value) ? "default" : "outline"}
                       size="sm"
                       onClick={() => handleToggleFilter(attr.name, value)}
-                      className={cn((currentFilters[attr.name] as string[] || []).includes(value) && "ring-2 ring-primary ring-offset-2")}
+                      className={cn((localFilters[attr.name] as string[] || []).includes(value) && "ring-2 ring-primary ring-offset-2")}
                     >
                       {value}
                     </Button>
@@ -240,6 +272,7 @@ export const StorefrontFilterSidebar = ({
         </Accordion>
       </ScrollArea>
       <div className="p-4 border-t flex gap-2">
+        <Button onClick={handleApplyFilters} className="flex-1">Apply Filters</Button>
         <Button variant="outline" onClick={handleClearAll} className="flex-1">Clear All</Button>
       </div>
     </div>

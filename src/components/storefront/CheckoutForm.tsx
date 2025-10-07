@@ -12,7 +12,6 @@ import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
-import { motion } from "framer-motion"; // Import motion for animations
 
 const CheckoutProgress = ({ currentStep }: { currentStep: number }) => {
   const steps = [
