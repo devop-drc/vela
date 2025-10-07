@@ -173,24 +173,26 @@ export const StorefrontFilterSidebar = ({
 
     return (
       <AccordionItem value={title}>
-        <AccordionTrigger className="py-3 text-base font-semibold">
+        <AccordionTrigger className="py-3 text-base font-semibold group"> {/* Added group class */}
           <div className="flex items-center gap-2">
             <Icon className="h-5 w-5 text-muted-foreground" />
             {title}
           </div>
-          {isFilterApplied && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.15 }}
-              onClick={(e) => { e.stopPropagation(); handleClearSection(filterKey); }}
-              className="ml-auto mr-2 p-1 rounded-full hover:bg-accent-foreground/10 text-muted-foreground hover:text-foreground"
-              aria-label={`Clear ${title} filters`}
-            >
-              <XCircle className="h-4 w-4" />
-            </motion.button>
-          )}
+          <AnimatePresence> {/* Wrap with AnimatePresence */}
+            {isFilterApplied && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.15 }}
+                onClick={(e) => { e.stopPropagation(); handleClearSection(filterKey); }}
+                className="ml-auto mr-2 p-1 rounded-full hover:bg-accent-foreground/10 text-muted-foreground hover:text-foreground"
+                aria-label={`Clear ${title} filters`}
+              >
+                <XCircle className="h-4 w-4" />
+              </motion.button>
+            )}
+          </AnimatePresence>
         </AccordionTrigger>
         <AccordionContent className="pb-4 pt-2">
           {children}

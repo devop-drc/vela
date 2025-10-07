@@ -12,13 +12,14 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { CheckoutForm } from "./CheckoutForm"; // Import the new CheckoutForm
+import { Input } from "@/components/ui/input"; // <--- ADDED THIS IMPORT
 
 interface StorefrontCartCheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartCheckoutModalProps) => {
+export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartCheckoutModalModalProps) => {
   const { cartItems, savedItems, totalItems, subtotal, shipping, total, updateQuantity, removeFromCart, clearCart, saveForLater, moveToCart, removeSavedItem } = useCart();
   const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const { toast } = useToast();
