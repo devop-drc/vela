@@ -417,7 +417,7 @@ const StorefrontAllProducts = () => {
                   <h3 className={cn(
                     "text-2xl md:text-3xl font-bold font-heading mb-6 md:mb-8 inline-block px-3 py-1 md:px-4 md:py-2 rounded-md",
                     blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
-                    getCategoryColor(category).bg, getCategoryColor(category).text,
+                    "bg-primary/10 text-primary border-primary/30", // Changed to primary color
                     "shadow-sm"
                   )}>
                     {category}

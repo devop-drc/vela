@@ -12,9 +12,9 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { getAttributeIcon } from "@/lib/attributeIcons";
-import { Slider } from "@/components/ui/slider"; // Import Slider
-import { motion, AnimatePresence } from "framer-motion"; // Import AnimatePresence
-import { debounce } from 'lodash'; // Import debounce
+import { Slider } from "@/components/ui/slider";
+import { motion, AnimatePresence } from "framer-motion";
+import { debounce } from 'lodash';
 
 interface Product {
   id: string;
@@ -29,8 +29,8 @@ interface Product {
 interface FilterState {
   categories: string[];
   tags: string[];
-  priceRange: [number, number]; // Change to tuple for min/max
-  [key: string]: string[] | [number, number]; // For dynamic attributes
+  priceRange: [number, number];
+  [key: string]: string[] | [number, number];
 }
 
 interface StorefrontFilterSidebarProps {
@@ -41,10 +41,10 @@ interface StorefrontFilterSidebarProps {
   onFilterChange: (newFilters: FilterState) => void;
   onResetFilters: () => void;
   isMobile: boolean;
-  setWasDesktopFilterSidebarExplicitlyOpened?: (open: boolean) => void; // New prop
+  setWasDesktopFilterSidebarExplicitlyOpened?: (open: boolean) => void;
 }
 
-const DESKTOP_SIDEBAR_WIDTH = '20rem'; // 320px
+const DESKTOP_SIDEBAR_WIDTH = '20rem';
 
 export const StorefrontFilterSidebar = ({
   isOpen,
@@ -54,7 +54,7 @@ export const StorefrontFilterSidebar = ({
   onFilterChange,
   onResetFilters,
   isMobile,
-  setWasDesktopFilterSidebarExplicitlyOpened, // Destructure new prop
+  setWasDesktopFilterSidebarExplicitlyOpened,
 }: StorefrontFilterSidebarProps) => {
   const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const blurEnabled = appearanceSettings?.blurEnabled;
@@ -76,29 +76,28 @@ export const StorefrontFilterSidebar = ({
         ? currentValues.filter(item => item !== value)
         : [...currentValues, value];
       const updatedFilters = { ...prev, [filterKey]: newValues };
-      onFilterChange(updatedFilters); // Apply immediately
+      onFilterChange(updatedFilters);
       return updatedFilters;
     });
   };
 
-  // Debounced function for price range to avoid excessive re-renders during drag
   const debouncedPriceRangeChange = useMemo(
     () =>
       debounce((range: [number, number]) => {
         onFilterChange(prev => ({ ...prev, priceRange: range }));
-      }, 100), // Adjust debounce delay as needed
+      }, 100),
     [onFilterChange]
   );
 
   const handlePriceRangeChange = (range: [number, number]) => {
-    setLocalPriceRange(range); // Update local state immediately for smooth dragging
-    debouncedPriceRangeChange(range); // Debounce the actual filter application
+    setLocalPriceRange(range);
+    debouncedPriceRangeChange(range);
   };
 
   const handleClearSection = (filterKey: keyof FilterState) => {
     setLocalFilters(prev => {
       const updatedFilters = { ...prev, [filterKey]: filterKey === 'priceRange' ? [0, maxPrice] : [] };
-      onFilterChange(updatedFilters); // Apply immediately
+      onFilterChange(updatedFilters);
       if (filterKey === 'priceRange') {
         setLocalPriceRange([0, maxPrice]);
       }
@@ -112,7 +111,7 @@ export const StorefrontFilterSidebar = ({
       onClose();
     }
     if (setWasDesktopFilterSidebarExplicitlyOpened) {
-      setWasDesktopFilterSidebarExplicitlyOpened(false); // Reset explicit state when clearing all
+      setWasDesktopFilterSidebarExplicitlyOpened(false);
     }
   };
 
@@ -156,25 +155,21 @@ export const StorefrontFilterSidebar = ({
         name: key,
         values: Array.from(values).sort(),
       })).sort((a, b) => a.name.localeCompare(b.name)),
-      maxPrice: Math.ceil(currentMaxPrice / 10) * 10, // Round up to nearest 10 for slider max
+      maxPrice: Math.ceil(currentMaxPrice / 10) * 10,
     };
   }, [products, convertCurrency]);
 
-  // Ensure localFilters priceRange is within valid bounds when maxPrice changes
   useEffect(() => {
     setLocalFilters(prev => {
       const currentMin = prev.priceRange[0];
       const currentMax = prev.priceRange[1];
-      const newMax = maxPrice > 0 ? maxPrice : 100; // Ensure max is at least 100
+      const newMax = maxPrice > 0 ? maxPrice : 100;
 
-      // Adjust currentMax if it exceeds the new maxPrice
       const adjustedMax = Math.min(currentMax, newMax);
-      // Adjust currentMin if it exceeds the adjustedMax
       const adjustedMin = Math.min(currentMin, adjustedMax);
 
-      // Only update if there's a significant change or initial setup
       if (adjustedMin !== prev.priceRange[0] || adjustedMax !== prev.priceRange[1] || newMax !== (maxPrice > 0 ? maxPrice : 100)) {
-        setLocalPriceRange([adjustedMin, adjustedMax]); // Update local state for slider
+        setLocalPriceRange([adjustedMin, adjustedMax]);
         return { ...prev, priceRange: [adjustedMin, adjustedMax] };
       }
       return prev;
@@ -193,10 +188,10 @@ export const StorefrontFilterSidebar = ({
 
     return (
       <AccordionItem value={title}>
-        <div className="flex items-center justify-between py-3 text-base font-semibold"> {/* This div wraps the trigger and clear button */}
-          <AccordionTrigger className="flex-1 py-0 pr-3 text-base"> {/* AccordionTrigger is now flex-1 */}
+        <div className="flex items-center justify-between py-3 text-base font-semibold">
+          <AccordionTrigger className="flex-1 py-0 pr-3 text-base">
             <div className="flex items-center gap-2">
-              <Icon className="h-5 w-5 text-primary" /> {/* Changed to text-primary */}
+              <Icon className="h-5 w-5 text-primary" />
               {title}
             </div>
           </AccordionTrigger>
@@ -228,7 +223,7 @@ export const StorefrontFilterSidebar = ({
       {isMobile ? (
         <SheetHeader className="p-4 border-b flex-row items-center justify-between">
           <SheetTitle className="flex items-center gap-2 text-xl font-bold">
-            <Filter className="h-6 w-6 text-primary" /> {/* Changed to text-primary */}
+            <Filter className="h-6 w-6 text-primary" />
             Advanced Filters
           </SheetTitle>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
@@ -239,7 +234,7 @@ export const StorefrontFilterSidebar = ({
       ) : (
         <div className="p-4 border-b flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-bold">
-            <Filter className="h-6 w-6 text-primary" /> {/* Changed to text-primary */}
+            <Filter className="h-6 w-6 text-primary" />
             Filters
           </h2>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
@@ -273,9 +268,9 @@ export const StorefrontFilterSidebar = ({
             <div className="px-2 space-y-4">
               <Slider
                 min={0}
-                max={maxPrice > 0 ? maxPrice : 100} // Ensure max is at least 100 if no products
+                max={maxPrice > 0 ? maxPrice : 100}
                 step={1}
-                value={localPriceRange} // Use local state for smooth dragging
+                value={localPriceRange}
                 onValueChange={handlePriceRangeChange}
                 className="w-full"
               />
@@ -338,7 +333,7 @@ export const StorefrontFilterSidebar = ({
         <SheetContent 
           side="left" 
           className={cn(
-            "w-full sm:max-w-xs p-0 flex flex-col h-full", // Ensure full height for mobile
+            "w-full sm:max-w-xs p-0 flex flex-col h-full",
             blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
             isFloatingLayout && "rounded-none"
           )}
@@ -352,20 +347,20 @@ export const StorefrontFilterSidebar = ({
 
   return (
     <motion.aside
-      initial={{ x: '-100%', opacity: 0, pointerEvents: 'none' }} // Initially hidden and non-interactive
-      animate={{ x: isOpen ? '0%' : '-100%', opacity: isOpen ? 1 : 0, pointerEvents: isOpen ? 'auto' : 'none' }} // Control visibility and interaction
+      initial={{ x: '-100%', opacity: 0, pointerEvents: 'none' }}
+      animate={{ x: isOpen ? '0%' : '-100%', opacity: isOpen ? 1 : 0, pointerEvents: isOpen ? 'auto' : 'none' }}
       exit={{ x: '-100%', opacity: 0, pointerEvents: 'none' }}
       transition={{ duration: 0.2 }}
       className={cn(
-        "flex-col flex-shrink-0 fixed z-30", // Full height
+        "flex-col flex-shrink-0 fixed z-30",
         blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
         isFloatingLayout ? "border rounded-lg" : "border-r"
       )}
       style={{
         width: DESKTOP_SIDEBAR_WIDTH,
-        left: isFloatingLayout ? '1rem' : '0', // Adjust left for floating layout
-        top: isFloatingLayout ? '1rem' : '0', // Add top margin
-        bottom: isFloatingLayout ? '1rem' : '0', // Add bottom margin
+        left: isFloatingLayout ? '1rem' : '0',
+        top: isFloatingLayout ? '1rem' : '0',
+        bottom: isFloatingLayout ? '1rem' : '0',
         borderRadius: isFloatingLayout ? borderRadius : '0',
       }}
     >

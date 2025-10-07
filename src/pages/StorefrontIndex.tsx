@@ -8,16 +8,16 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Gift, RefreshCw, Crown, Info, Package } from "lucide-react";
-import { useState, useMemo, useRef, useEffect } from "react"; // Added useEffect
+import { useState, useMemo, useRef, useEffect } from "react";
 import { getCategoryColor } from "@/lib/colorUtils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { curatedImages } from "@/contexts/AppearanceContext";
 import { Marquee } from "@/components/ui/marquee";
-import { getCategoryIcon } from "@/lib/categoryIcons"; // Import category icons
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // Import ScrollArea and ScrollBar
-import { supabase } from "@/integrations/supabase/client"; // Import supabase
+import { getCategoryIcon } from "@/lib/categoryIcons";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Product {
   id: string;
@@ -76,12 +76,12 @@ const StorefrontIndex = () => {
 
   useEffect(() => {
     const fetchMarqueePromotions = async () => {
-      if (!shopDetails?.userId) return; // Use shopDetails.userId
+      if (!shopDetails?.userId) return;
 
       const { data, error } = await supabase
         .from('promotions')
         .select('*')
-        .eq('user_id', shopDetails.userId) // Filter by user_id
+        .eq('user_id', shopDetails.userId)
         .eq('type', 'marquee_text')
         .eq('is_active', true)
         .or(`end_date.gte.${new Date().toISOString()},end_date.is.null`)
@@ -100,7 +100,7 @@ const StorefrontIndex = () => {
   }, [shopDetails]);
 
   const newArrivals = useMemo(() => {
-    return allProducts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10); // Limit to 10
+    return allProducts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10);
   }, [allProducts]);
 
   const uniqueCategoriesWithCount = useMemo(() => {
@@ -128,12 +128,11 @@ const StorefrontIndex = () => {
       style.backgroundSize = appearanceSettings.backgroundSize || 'cover';
       style.backgroundPosition = 'center';
       style.backgroundRepeat = appearanceSettings.backgroundRepeat || 'no-repeat';
-      style.backgroundColor = 'transparent'; // Ensure solid color is not applied if image is present
+      style.backgroundColor = 'transparent';
     } else if (appearanceSettings?.solidBackgroundColor) {
       style.backgroundImage = 'none';
       style.backgroundColor = `hsl(${appearanceSettings.solidBackgroundColor})`;
     } else {
-      // Fallback to transparent if no specific background is set
       style.backgroundImage = 'none';
       style.backgroundColor = 'transparent';
     }
@@ -232,7 +231,7 @@ const StorefrontIndex = () => {
             <Marquee pauseOnHover className="py-3 md:py-4 border-y-2 border-primary/20 bg-primary/10">
               {marqueePromotions.map(promo => (
                 <div key={promo.id} className="flex items-center gap-6 md:gap-8 text-base md:text-lg font-semibold text-primary">
-                  <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-primary" /> {/* Changed to text-primary */}
+                  <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-primary" />
                   <span>{promo.value.message}</span>
                 </div>
               ))}
@@ -249,7 +248,7 @@ const StorefrontIndex = () => {
             className="mb-12 md:mb-16"
           >
             <h2 className="text-3xl md:text-4xl font-bold font-heading mb-8 md:mb-10 text-center flex items-center justify-center gap-2 md:gap-3">
-              <Package className="h-7 w-7 md:h-8 md:w-8 text-primary" /> {/* Changed to text-primary */}
+              <Package className="h-7 w-7 md:h-8 md:w-8 text-primary" />
               Shop by Category
             </h2>
             <motion.div
@@ -258,7 +257,6 @@ const StorefrontIndex = () => {
             >
               {uniqueCategoriesWithCount.map(([category, count]) => {
                 const CategoryIcon = getCategoryIcon(category);
-                // const categoryColor = getCategoryColor(category); // Removed dynamic color
                 return (
                   <motion.div key={category} variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
                     <Link to={`/shop/${shopDetails.slug}/products?category=${encodeURIComponent(category)}`}>
@@ -267,11 +265,11 @@ const StorefrontIndex = () => {
                         blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
                         "shadow-md"
                       )}>
-                        <CategoryIcon className={cn("h-14 w-14 md:h-16 md:w-16 mb-3 md:mb-4 text-primary")} /> {/* Used text-primary */}
+                        <CategoryIcon className={cn("h-14 w-14 md:h-16 md:w-16 mb-3 md:mb-4 text-primary")} />
                         <h3 className="font-semibold text-base md:text-lg leading-tight mb-1 line-clamp-2">{category}</h3>
                         <Badge
                           variant="outline"
-                          className={cn("text-xs md:text-sm mb-2 bg-primary/10 text-primary border-primary/30")} {/* Used primary color */}
+                          className={cn("text-xs md:text-sm mb-2 bg-primary/10 text-primary border-primary/30")}
                         >
                           {count} Products
                         </Badge>
@@ -293,7 +291,7 @@ const StorefrontIndex = () => {
             className="mb-12 md:mb-16"
           >
             <h2 className="text-3xl md:text-4xl font-bold font-heading mb-8 md:mb-10 text-center flex items-center justify-center gap-2 md:gap-3">
-              <Crown className="h-7 w-7 md:h-8 md:w-8 text-primary" /> {/* Changed to text-primary */}
+              <Crown className="h-7 w-7 md:h-8 md:w-8 text-primary" />
               Our Best Sellers
             </h2>
             <ScrollArea className="w-full whitespace-nowrap pb-4">
@@ -323,7 +321,7 @@ const StorefrontIndex = () => {
             className="mb-12 md:mb-16"
           >
             <h2 className="text-3xl md:text-4xl font-bold font-heading mb-8 md:mb-10 text-center flex items-center justify-center gap-2 md:gap-3">
-              <Sparkles className="h-7 w-7 md:h-8 md:w-8 text-primary" /> {/* Changed to text-primary */}
+              <Sparkles className="h-7 w-7 md:h-8 md:w-8 text-primary" />
               New Arrivals
             </h2>
             <ScrollArea className="w-full whitespace-nowrap pb-4">
@@ -353,7 +351,7 @@ const StorefrontIndex = () => {
             className="mb-12 md:mb-16"
           >
             <h2 className="text-3xl md:text-4xl font-bold font-heading mb-8 md:mb-10 text-center flex items-center justify-center gap-2 md:gap-3">
-              <Gift className="h-7 w-7 md:h-8 md:w-8 text-primary" /> {/* Changed to text-primary */}
+              <Gift className="h-7 w-7 md:h-8 md:w-8 text-primary" />
               Recommended For You
             </h2>
             <ScrollArea className="w-full whitespace-nowrap pb-4">

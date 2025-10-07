@@ -41,7 +41,7 @@ const itemVariants = {
 export const StorefrontProductCard = ({ product, shopSlug, className }: StorefrontProductCardProps) => {
   const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const blurEnabled = appearanceSettings?.blurEnabled;
-  const categoryColor = getCategoryColor(product.category);
+  // const categoryColor = getCategoryColor(product.category); // Removed dynamic category color
 
   // Convert product price to shop's display currency
   const displayPrice = convertCurrency(product.price, product.currency);
@@ -73,7 +73,7 @@ export const StorefrontProductCard = ({ product, shopSlug, className }: Storefro
                   {product.category && (
                     <Badge 
                       variant="outline" 
-                      className={cn(categoryColor.bg, categoryColor.text, categoryColor.border, "text-xs")}
+                      className={cn("text-xs bg-primary/10 text-primary border-primary/30")} // Changed to primary color
                     >
                       {product.category}
                     </Badge>
