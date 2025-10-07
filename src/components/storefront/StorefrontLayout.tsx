@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Outlet } from 'react-router-dom';
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import { StorefrontHeader } from './StorefrontHeader';
@@ -65,7 +65,9 @@ const StorefrontLayoutContent = () => {
   const { shopDetails, appearanceSettings, isLoading, error, products } = useStorefront();
   const isMobile = useIsMobile();
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false); // State for mobile sidebar
+  const [isDesktopFilterSidebarOpen, setIsDesktopFilterSidebarOpen] = useState(false); // State for desktop sidebar
   const [isCartCheckoutModalOpen, setIsCartCheckoutModalOpen] = useState(false); // State for cart/checkout modal
+  const footerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (appearanceSettings) {
@@ -95,6 +97,50 @@ const StorefrontLayoutContent = () => {
     }
   }, [appearanceSettings, shopDetails]);
 
+  // Autohide/Autoshow desktop filter sidebar based on footer visibility
+  useEffect(() => {
+    if (isMobile || !footerRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          const footerHeight = entry.boundingClientRect.height;
+          const intersectionRatio = entry.intersectionRect.height / footerHeight;
+          
+          // If footer overlaps by more than 20%, hide the sidebar
+          if (intersectionRatio > 0.2) {
+            setIsDesktopFilterSidebarOpen(false);
+          } else if (intersectionRatio <= 0.2 && window.location.pathname.includes('/products')) {
+            // If footer is mostly out of view and on products page, show sidebar
+            setIsDesktopFilterSidebarOpen(true);
+          }
+        });
+      },
+      { threshold: [0, 0.2, 0.8, 1] } // Observe at different intersection ratios
+    );
+
+    observer.observe(footerRef.current);
+
+    return () => {
+      if (footerRef.current) {
+        observer.unobserve(footerRef.current);
+      }
+    };
+  }, [isMobile, footerRef, setIsDesktopFilterSidebarOpen]);
+
+  // Reset desktop filter sidebar state when navigating away from /products
+  useEffect(() => {
+    if (!window.location.pathname.includes('/products')) {
+      setIsDesktopFilterSidebarOpen(false);
+    } else {
+      // Only open if not mobile and on products page
+      if (!isMobile) {
+        setIsDesktopFilterSidebarOpen(true);
+      }
+    }
+  }, [window.location.pathname, isMobile]);
+
+
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -119,9 +165,9 @@ const StorefrontLayoutContent = () => {
   if (error) {
     return (
       <div className="flex flex-col min-h-screen items-center justify-center text-center p-8">
-        <h1 className="text-2xl font-bold text-destructive">Error Loading Storefront</h1>
-        <p className="text-muted-foreground mt-2">{error}</p>
-        <p className="text-sm text-muted-foreground mt-4">Please check the URL or contact support.</p>
+        <h1 className="text-xl md:text-2xl font-bold text-destructive">Error Loading Storefront</h1>
+        <p className="text-sm md:text-base text-muted-foreground mt-2">{error}</p>
+        <p className="text-xs md:text-sm text-muted-foreground mt-4">Please check the URL or contact support.</p>
       </div>
     );
   }
@@ -136,7 +182,7 @@ const StorefrontLayoutContent = () => {
       <StorefrontHeader 
         onToggleFilterSidebar={() => setIsFilterSidebarOpen(true)} 
         onOpenCart={() => setIsCartCheckoutModalOpen(true)}
-        isDesktopSidebarOpen={!isMobile && isFilterSidebarOpen} // Pass desktop sidebar state
+        isDesktopSidebarOpen={isDesktopFilterSidebarOpen} // Pass desktop sidebar state
       />
       <main className="flex-1 overflow-y-auto" style={{ paddingTop: mainContentPaddingTop }}>
         <Outlet context={{ 
@@ -145,11 +191,11 @@ const StorefrontLayoutContent = () => {
           setIsFilterSidebarOpen, 
           products,
           // Pass desktop sidebar state to Outlet context as well
-          isDesktopFilterSidebarOpen: !isMobile && isFilterSidebarOpen,
-          setIsDesktopFilterSidebarOpen: setIsFilterSidebarOpen,
+          isDesktopFilterSidebarOpen,
+          setIsDesktopFilterSidebarOpen,
         }} />
       </main>
-      <StorefrontFooter />
+      <StorefrontFooter ref={footerRef} />
       <Sonner />
       <StorefrontCartCheckoutModal isOpen={isCartCheckoutModalOpen} onClose={() => setIsCartCheckoutModalOpen(false)} />
     </div>

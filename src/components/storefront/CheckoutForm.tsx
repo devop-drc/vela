@@ -52,6 +52,7 @@ interface CheckoutFormData {
   city: string;
   state: string;
   zip: string;
+  country: string; // Added country
   notes?: string;
   cardNumber?: string;
   cardName?: string;
@@ -80,6 +81,7 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [zip, setZip] = useState('');
+  const [country, setCountry] = useState('Albania'); // Default to Albania
   const [notes, setNotes] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [cardName, setCardName] = useState('');
@@ -105,6 +107,7 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
       if (!city) { toast.error("City is required."); console.log("Validation failed: City missing."); return false; }
       if (!state) { toast.error("State/Province is required."); console.log("Validation failed: State missing."); return false; }
       if (!zip) { toast.error("Zip/Postal Code is required."); console.log("Validation failed: Zip missing."); return false; }
+      if (!country) { toast.error("Country is required."); console.log("Validation failed: Country missing."); return false; }
     } else if (currentStep === 3) {
       if (paymentMethod === 'card') {
         if (!cardNumber) { toast.error("Card Number is required."); console.log("Validation failed: Card Number missing."); return false; }
@@ -155,7 +158,7 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
       return;
     }
 
-    const customerInfo = { firstName, lastName, email, address, city, state, zip, notes };
+    const customerInfo = { firstName, lastName, email, address, city, state, zip, country, notes };
     const orderItems = cartItems.map(item => ({
       productId: item.productId,
       name: item.name,
@@ -212,20 +215,20 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
             >
               <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg")}>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><User className="h-5 w-5" /> Contact Information</CardTitle>
-                  <CardDescription>We'll use this to send you updates about your order.</CardDescription>
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><User className="h-5 w-5" /> Contact Information</CardTitle>
+                  <CardDescription className="text-sm md:text-base">We'll use this to send you updates about your order.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
+                      <Label htmlFor="firstName" className="text-sm">First Name</Label>
                       <Input id="firstName" placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
+                      <Label htmlFor="lastName" className="text-sm">Last Name</Label>
                       <Input id="lastName" placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="email" className="text-sm">Email</Label>
                       <Input id="email" type="email" placeholder="john.doe@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                     </div>
                 </CardContent>
@@ -243,30 +246,34 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
             >
               <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg")}>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5" /> Shipping Information</CardTitle>
-                  <CardDescription>Where should we send your awesome products?</CardDescription>
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><MapPin className="h-5 w-5" /> Shipping Information</CardTitle>
+                  <CardDescription className="text-sm md:text-base">Where should we send your awesome products?</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="address">Shipping Address</Label>
+                      <Label htmlFor="address" className="text-sm">Shipping Address</Label>
                       <Input id="address" placeholder="123 Main St" value={address} onChange={(e) => setAddress(e.target.value)} required />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="city">City</Label>
+                        <Label htmlFor="city" className="text-sm">City</Label>
                         <Input id="city" placeholder="Anytown" value={city} onChange={(e) => setCity(e.target.value)} required />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="state">State/Province</Label>
+                        <Label htmlFor="state" className="text-sm">State/Province</Label>
                         <Input id="state" placeholder="CA" value={state} onChange={(e) => setState(e.target.value)} required />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="zip">Zip/Postal Code</Label>
+                        <Label htmlFor="zip" className="text-sm">Zip/Postal Code</Label>
                         <Input id="zip" placeholder="90210" value={zip} onChange={(e) => setZip(e.target.value)} required />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="notes">Order Notes (Optional)</Label>
+                      <Label htmlFor="country" className="text-sm">Country</Label>
+                      <Input id="country" placeholder="Albania" value={country} onChange={(e) => setCountry(e.target.value)} disabled required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="notes" className="text-sm">Order Notes (Optional)</Label>
                       <Textarea id="notes" rows={3} placeholder="Leave a note for the seller..." value={notes} onChange={(e) => setNotes(e.target.value)} />
                     </div>
                 </CardContent>
@@ -284,13 +291,13 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
             >
               <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg")}>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" /> Payment Information</CardTitle>
-                  <CardDescription>Choose your preferred payment method.</CardDescription>
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><CreditCard className="h-5 w-5" /> Payment Information</CardTitle>
+                  <CardDescription className="text-sm md:text-base">Choose your preferred payment method.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                      <Label htmlFor="payment-card" className="flex items-center gap-2 cursor-pointer">
+                      <Label htmlFor="payment-card" className="flex items-center gap-2 cursor-pointer text-sm md:text-base">
                         <input
                           type="radio"
                           id="payment-card"
@@ -302,7 +309,7 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
                         />
                         <span>Debit/Credit Card / PayPal</span>
                       </Label>
-                      <Label htmlFor="payment-cash" className="flex items-center gap-2 cursor-pointer">
+                      <Label htmlFor="payment-cash" className="flex items-center gap-2 cursor-pointer text-sm md:text-base">
                         <input
                           type="radio"
                           id="payment-cash"
@@ -320,21 +327,21 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="cardNumber">Card Number</Label>
+                            <Label htmlFor="cardNumber" className="text-sm">Card Number</Label>
                             <Input id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} required />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="cardName">Name on Card</Label>
+                            <Label htmlFor="cardName" className="text-sm">Name on Card</Label>
                             <Input id="cardName" placeholder="John Doe" value={cardName} onChange={(e) => setCardName(e.target.value)} required />
                           </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="expiryDate">Expiry Date</Label>
+                            <Label htmlFor="expiryDate" className="text-sm">Expiry Date</Label>
                             <Input id="expiryDate" placeholder="MM/YY" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} required />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="cvv">CVV</Label>
+                            <Label htmlFor="cvv" className="text-sm">CVV</Label>
                             <div className="relative">
                               <Input id="cvv" placeholder="123" type="password" maxLength={4} value={cvv} onChange={(e) => setCvv(e.target.value)} required />
                               <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -342,7 +349,7 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
                           </div>
                         </div>
                         <div className="p-6 border rounded-lg bg-muted/50 text-muted-foreground text-center space-y-4 mt-6">
-                          <p className="font-medium">Payment gateway integration coming soon!</p>
+                          <p className="font-medium text-base">Payment gateway integration coming soon!</p>
                           <p className="text-sm mt-2">For now, this is a placeholder for card input and processing.</p>
                           <Separator />
                           <div className="flex items-center justify-center gap-4">
@@ -357,7 +364,7 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
                       <div className="p-6 border rounded-lg bg-blue-50/50 text-blue-700 flex items-center gap-4">
                         <DollarSign className="h-6 w-6 flex-shrink-0" />
                         <div>
-                          <p className="font-semibold">Pay with Cash on Delivery</p>
+                          <p className="font-semibold text-base">Pay with Cash on Delivery</p>
                           <p className="text-sm">You will pay {formatCurrency(totalPrice, currency)} in cash when your order is delivered.</p>
                         </div>
                       </div>
@@ -376,17 +383,17 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
 
       <div className="p-6 border-t flex justify-between items-center">
         {currentStep > 1 ? (
-          <Button type="button" variant="ghost" onClick={() => setCurrentStep(prev => prev - 1)}>
+          <Button type="button" variant="ghost" onClick={() => setCurrentStep(prev => prev - 1)} className="text-sm md:text-base">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
         ) : (
-          <Button type="button" variant="ghost" onClick={onBackToCart}>
+          <Button type="button" variant="ghost" onClick={onBackToCart} className="text-sm md:text-base">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Cart
           </Button>
         )}
-        <Button type="submit" form="checkout-form" disabled={localIsSubmitting || cartItems.length === 0}>
+        <Button type="submit" form="checkout-form" disabled={localIsSubmitting || cartItems.length === 0} className="text-sm md:text-base">
           {localIsSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

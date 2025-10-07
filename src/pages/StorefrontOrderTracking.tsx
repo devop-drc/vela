@@ -120,11 +120,11 @@ const StorefrontOrderTracking = () => {
 
   const getStatusIcon = (status: OrderStatusType) => {
     switch (status) {
-      case "Fulfilled": return <CheckCircle className="h-16 w-16 text-emerald-500 mx-auto" />;
-      case "In Progress": return <Truck className="h-16 w-16 text-blue-500 mx-auto" />;
-      case "Pending": return <Package className="h-16 w-16 text-amber-500 mx-auto" />;
-      case "Problematic": return <XCircle className="h-16 w-16 text-destructive mx-auto" />;
-      default: return <Search className="h-16 w-16 text-muted-foreground mx-auto" />;
+      case "Fulfilled": return <CheckCircle className="h-12 w-12 md:h-16 md:w-16 text-emerald-500 mx-auto" />;
+      case "In Progress": return <Truck className="h-12 w-12 md:h-16 md:w-16 text-blue-500 mx-auto" />;
+      case "Pending": return <Package className="h-12 w-12 md:h-16 md:w-16 text-amber-500 mx-auto" />;
+      case "Problematic": return <XCircle className="h-12 w-12 md:h-16 md:w-16 text-destructive mx-auto" />;
+      default: return <Search className="h-12 w-12 md:h-16 md:w-16 text-muted-foreground mx-auto" />;
     }
   };
 
@@ -139,37 +139,38 @@ const StorefrontOrderTracking = () => {
   };
 
   return (
-    <div className="container py-8">
-      <Button variant="ghost" asChild className="mb-6 text-muted-foreground hover:text-foreground">
+    <div className="container py-6 md:py-8">
+      <Button variant="ghost" asChild className="mb-4 md:mb-6 text-muted-foreground hover:text-foreground text-sm md:text-base">
         <Link to={`/shop/${shopSlug}`}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Shop
         </Link>
       </Button>
-      <h1 className="text-3xl font-bold font-heading mb-6 text-center">Track Your Order</h1>
+      <h1 className="text-2xl md:text-3xl font-bold font-heading mb-4 md:mb-6 text-center">Track Your Order</h1>
 
       <Card className={cn(
         "max-w-lg mx-auto shadow-lg",
         blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
       )}>
         <CardHeader>
-          <CardTitle>Find Your Order</CardTitle>
-          <CardDescription>Enter your order ID and email to check its status.</CardDescription>
+          <CardTitle className="text-xl md:text-2xl">Find Your Order</CardTitle>
+          <CardDescription className="text-sm md:text-base">Enter your order ID and email to check its status.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleTrackOrder} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="orderId">Order ID</Label>
+              <Label htmlFor="orderId" className="text-sm">Order ID</Label>
               <Input
                 id="orderId"
                 placeholder="e.g., 12345"
                 value={orderIdInput}
                 onChange={(e) => setOrderIdInput(e.target.value)}
                 required
+                className="text-sm md:text-base"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="customerEmail">Email Address</Label>
+              <Label htmlFor="customerEmail" className="text-sm">Email Address</Label>
               <Input
                 id="customerEmail"
                 type="email"
@@ -177,9 +178,10 @@ const StorefrontOrderTracking = () => {
                 value={customerEmailInput}
                 onChange={(e) => setCustomerEmailInput(e.target.value)}
                 required
+                className="text-sm md:text-base"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full text-sm md:text-base" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -191,51 +193,51 @@ const StorefrontOrderTracking = () => {
 
           {searchAttempted && !isLoading && (
             order ? (
-              <div className="mt-8 p-6 border rounded-lg bg-muted/50 text-center space-y-4">
+              <div className="mt-6 md:mt-8 p-4 md:p-6 border rounded-lg bg-muted/50 text-center space-y-3 md:space-y-4">
                 {getStatusIcon(order.status)}
-                <h3 className={cn("text-xl font-semibold", getStatusColorClass(order.status))}>
+                <h3 className={cn("text-lg md:text-xl font-semibold", getStatusColorClass(order.status))}>
                   Order Status: {order.status}
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-sm md:text-base text-muted-foreground">
                   Your order <span className="font-medium">#{order.id.substring(0, 8)}</span> is currently{" "}
                   <span className="font-medium lowercase">{order.status}</span>.
                 </p>
                 
-                <Separator className="my-6" />
+                <Separator className="my-4 md:my-6" />
 
-                <div className="text-left space-y-4">
-                  <h4 className="text-lg font-semibold flex items-center gap-2"><User className="h-5 w-5" /> Customer Details</h4>
+                <div className="text-left space-y-3 md:space-y-4">
+                  <h4 className="text-base md:text-lg font-semibold flex items-center gap-2"><User className="h-4 w-4 md:h-5 md:w-5" /> Customer Details</h4>
                   <p className="text-sm"><span className="font-medium">Name:</span> {order.customer_name}</p>
                   <p className="text-sm"><span className="font-medium">Email:</span> {order.customer_email}</p>
                   <p className="text-sm"><span className="font-medium">Order Date:</span> {new Date(order.created_at).toLocaleDateString()}</p>
                   <p className="text-sm"><span className="font-medium">Total Amount:</span> {formatCurrency(order.total_amount, order.currency)}</p>
                 </div>
 
-                <Separator className="my-6" />
+                <Separator className="my-4 md:my-6" />
 
-                <div className="text-left space-y-4">
-                  <h4 className="text-lg font-semibold flex items-center gap-2"><Package className="h-5 w-5" /> Items Ordered</h4>
+                <div className="text-left space-y-3 md:space-y-4">
+                  <h4 className="text-base md:text-lg font-semibold flex items-center gap-2"><Package className="h-4 w-4 md:h-5 md:w-5" /> Items Ordered</h4>
                   <div className="space-y-3">
                     {order.order_items.map((item, index) => (
                       <div key={index} className="flex items-center gap-4 border-b pb-3 last:border-b-0 last:pb-0">
-                        <img src={item.products.media_url} alt={item.products.name} className="h-16 w-16 rounded-md object-cover bg-muted" />
+                        <img src={item.products.media_url} alt={item.products.name} className="h-14 w-14 md:h-16 md:w-16 rounded-md object-cover bg-muted" />
                         <div className="flex-1">
-                          <p className="font-medium">{item.products.name}</p>
-                          <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                          <p className="font-medium text-sm md:text-base">{item.products.name}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground">Qty: {item.quantity}</p>
                         </div>
-                        <p className="font-medium">{formatCurrency(item.price_at_purchase * item.quantity, item.products.currency)}</p>
+                        <p className="font-medium text-sm md:text-base">{formatCurrency(item.price_at_purchase * item.quantity, item.products.currency)}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="mt-8 p-6 border rounded-lg bg-destructive/10 text-center space-y-4">
+              <div className="mt-6 md:mt-8 p-4 md:p-6 border rounded-lg bg-destructive/10 text-center space-y-3 md:space-y-4">
                 {getStatusIcon("Not Found")}
-                <h3 className={cn("text-xl font-semibold", getStatusColorClass("Not Found"))}>
+                <h3 className={cn("text-lg md:text-xl font-semibold", getStatusColorClass("Not Found"))}>
                   Order Not Found
                 </h3>
-                <p className="text-muted-foreground">Please double-check your Order ID and email address.</p>
+                <p className="text-sm md:text-base text-muted-foreground">Please double-check your Order ID and email address.</p>
               </div>
             )
           )}

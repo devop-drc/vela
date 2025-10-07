@@ -72,24 +72,24 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
       isFloatingLayout ? "md:top-4 md:left-4 md:right-4" : "" // Adjust position for floating on desktop
     )} style={desktopHeaderStyle}> {/* Apply dynamic style here */}
       <div className={cn(
-        "container flex h-16 items-center justify-between",
+        "container flex h-14 md:h-16 items-center justify-between",
         isFloatingLayout
           ? "border rounded-lg shadow-md" // Floating style
           : "border-b shadow-sm", // Docked style
         blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
       )} style={{ borderRadius: isFloatingLayout ? borderRadius : '0' }}>
         <Link to={`/shop/${shopDetails.slug}`} className="flex items-center space-x-2">
-          <Avatar className="h-8 w-8">
+          <Avatar className="h-7 w-7 md:h-8 md:w-8">
             <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
-            <AvatarFallback>{shopDetails.shop_name?.[0]}</AvatarFallback>
+            <AvatarFallback className="text-sm md:text-base">{shopDetails.shop_name?.[0]}</AvatarFallback>
           </Avatar>
-          <span className="font-bold text-lg">{shopDetails.shop_name}</span>
+          <span className="font-bold text-base md:text-lg">{shopDetails.shop_name}</span>
         </Link>
-        <nav className="flex items-center space-x-4">
-          <Link to={`/shop/${shopDetails.slug}`} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
+        <nav className="flex items-center space-x-2 md:space-x-4">
+          <Link to={`/shop/${shopDetails.slug}`} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex text-sm md:text-base")}>
             Home
           </Link>
-          <Link to={`/shop/${shopDetails.slug}/products`} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
+          <Link to={`/shop/${shopDetails.slug}/products`} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex text-sm md:text-base")}>
             Products
           </Link>
           {/* Desktop Search Input */}
@@ -101,7 +101,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
                 name="searchQuery"
                 placeholder="Search products..."
                 className={cn(
-                  "pl-9 w-64",
+                  "pl-9 w-48 lg:w-64 text-sm",
                   blurEnabled ? "bg-input/50" : "bg-input"
                 )}
                 value={localSearchTerm}
@@ -164,14 +164,14 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
                 name="searchQuery"
                 placeholder="Search products..."
                 className={cn(
-                  "flex-1",
+                  "flex-1 text-sm",
                   blurEnabled ? "bg-input/50" : "bg-input"
                 )}
                 autoFocus
                 value={localSearchTerm}
                 onChange={(e) => setLocalSearchTerm(e.target.value)}
               />
-              <Button type="submit">Search</Button>
+              <Button type="submit" className="text-sm">Search</Button>
             </form>
           </motion.div>
         )}

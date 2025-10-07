@@ -20,11 +20,11 @@ import { useRecentlyViewed } from "@/contexts/RecentlyViewedContext"; // Import 
 
 const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
-        <Label className="text-sm text-muted-foreground flex items-center gap-1.5">
-          <Icon className="h-3.5 w-3.5" />
+        <Label className="text-xs md:text-sm text-muted-foreground flex items-center gap-1">
+          <Icon className="h-3 w-3 md:h-3.5 md:w-3.5" />
           {label}
         </Label>
-        <div className="font-medium flex flex-wrap items-center gap-1.5 text-base pt-1">
+        <div className="font-medium flex flex-wrap items-center gap-1 text-sm md:text-base pt-1">
             {children}
         </div>
     </div>
@@ -51,9 +51,9 @@ const StorefrontProductDetail = () => {
   if (error) {
     return (
       <div className="container py-8 text-center text-destructive">
-        <h1 className="text-2xl font-bold">Error Loading Product</h1>
-        <p className="mt-2">{error}</p>
-        <Button asChild className="mt-4">
+        <h1 className="text-xl md:text-2xl font-bold">Error Loading Product</h1>
+        <p className="mt-2 text-sm md:text-base">{error}</p>
+        <Button asChild className="mt-4 text-sm md:text-base">
           <Link to={`/shop/${shopSlug}/products`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Products
@@ -81,9 +81,9 @@ const StorefrontProductDetail = () => {
   if (!product) {
     return (
       <div className="container py-8 text-center text-muted-foreground">
-        <h1 className="text-2xl font-bold">Product Not Found</h1>
-        <p className="mt-2">The product you are looking for does not exist or is no longer available.</p>
-        <Button asChild className="mt-4">
+        <h1 className="text-xl md:text-2xl font-bold">Product Not Found</h1>
+        <p className="mt-2 text-sm md:text-base">The product you are looking for does not exist or is no longer available.</p>
+        <Button asChild className="mt-4 text-sm md:text-base">
           <Link to={`/shop/${shopSlug}/products`}>
             <Home className="mr-2 h-4 w-4" />
             Back to Shop
@@ -129,7 +129,7 @@ const StorefrontProductDetail = () => {
   }, [products, product.id]);
 
   return (
-    <div className="container py-8">
+    <div className="container py-6 md:py-8">
       <StorefrontBreadcrumb /> {/* Added breadcrumb here */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Product Media */}
@@ -154,53 +154,53 @@ const StorefrontProductDetail = () => {
         </div>
 
         {/* Product Details */}
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           <div>
             <p className="text-sm font-medium text-muted-foreground mb-1">
               <span>{product.category || 'Uncategorized'}</span>
               {product.details?.type && <span> &middot; {product.details.type}</span>}
             </p>
-            <h1 className="text-4xl md:text-5xl font-bold font-heading mb-3 leading-tight">{product.name}</h1>
+            <h1 className="text-3xl md:text-5xl font-bold font-heading mb-2 md:mb-3 leading-tight">{product.name}</h1>
             <div className="flex items-center gap-3 mb-3">
-                <p className="text-3xl font-bold text-primary">
+                <p className="text-2xl md:text-3xl font-bold text-primary">
                 {formatCurrency(displayPrice, shopDetails?.currency)}
                 {product.pricing_type === 'subscription' && (
-                    <span className="text-lg font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                    <span className="text-base md:text-lg font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                 )}
                 </p>
                 {/* Placeholder for star ratings */}
                 <div className="flex items-center text-amber-500">
                     {[...Array(5)].map((_, i) => (
-                        <Star key={i} className={cn("h-5 w-5", i < 4 ? "fill-amber-500" : "fill-muted stroke-muted-foreground")} />
+                        <Star key={i} className={cn("h-4 w-4 md:h-5 md:w-5", i < 4 ? "fill-amber-500" : "fill-muted stroke-muted-foreground")} />
                     ))}
-                    <span className="ml-2 text-sm text-muted-foreground">(4.0 / 5.0)</span>
+                    <span className="ml-1 md:ml-2 text-sm text-muted-foreground">(4.0 / 5.0)</span>
                 </div>
             </div>
           </div>
 
-          <p className="text-muted-foreground leading-relaxed text-base">{product.caption || "No description provided."}</p>
+          <p className="text-sm md:text-base text-muted-foreground leading-relaxed">{product.caption || "No description provided."}</p>
 
           {product.tags && product.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {product.tags.map((tag: string) => <Badge key={tag} variant="outline">{tag}</Badge>)}
+              {product.tags.map((tag: string) => <Badge key={tag} variant="outline" className="text-xs md:text-sm">{tag}</Badge>)}
             </div>
           )}
 
           {/* Variant Selection (Placeholder) */}
           {(colors.length > 0 || sizes.length > 0 || otherOptions.length > 0) && (
             <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-md")}>
-              <CardHeader><CardTitle className="text-xl">Options</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-lg md:text-xl">Options</CardTitle></CardHeader>
               <CardContent className="p-4 space-y-4">
                 {colors.length > 0 && (
                   <div className="space-y-2">
-                    <Label>Color</Label>
+                    <Label className="text-sm">Color</Label>
                     <div className="flex flex-wrap gap-2">
                       {colors.map(color => (
                         <Button
                           key={color}
                           variant={selectedColor === color ? "default" : "outline"}
                           onClick={() => setSelectedColor(color)}
-                          className={cn("capitalize", selectedColor === color && "ring-2 ring-primary ring-offset-2")}
+                          className={cn("capitalize text-sm md:text-base", selectedColor === color && "ring-2 ring-primary ring-offset-2")}
                         >
                           {color}
                         </Button>
@@ -210,14 +210,14 @@ const StorefrontProductDetail = () => {
                 )}
                 {sizes.length > 0 && (
                   <div className="space-y-2">
-                    <Label>Size</Label>
+                    <Label className="text-sm">Size</Label>
                     <div className="flex flex-wrap gap-2">
                       {sizes.map(size => (
                         <Button
                           key={size}
                           variant={selectedSize === size ? "default" : "outline"}
                           onClick={() => setSelectedSize(size)}
-                          className={cn(selectedSize === size && "ring-2 ring-primary ring-offset-2")}
+                          className={cn("text-sm md:text-base", selectedSize === size && "ring-2 ring-primary ring-offset-2")}
                         >
                           {size}
                         </Button>
@@ -226,15 +226,15 @@ const StorefrontProductDetail = () => {
                   </div>
                 )}
                 {otherOptions.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 md:gap-x-6 gap-y-3 md:gap-y-4">
                     {otherOptions.map(([key, value]) => {
                       const Icon = getAttributeIcon(key);
                       return (
                         <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
                           {Array.isArray(value) ? (
-                            value.map(item => <Badge key={item} variant="outline">{item}</Badge>)
+                            value.map(item => <Badge key={item} variant="outline" className="text-xs md:text-sm">{item}</Badge>)
                           ) : (
-                            <p className="text-base">{String(value)}</p>
+                            <p className="text-sm md:text-base">{String(value)}</p>
                           )}
                         </DetailDisplayRow>
                       );
@@ -248,14 +248,14 @@ const StorefrontProductDetail = () => {
           {/* Specifications */}
           {specifications.length > 0 && (
             <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-md")}>
-              <CardHeader><CardTitle className="text-xl">Specifications</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-lg md:text-xl">Specifications</CardTitle></CardHeader>
               <CardContent className="p-4 space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 md:gap-x-6 gap-y-3 md:gap-y-4">
                   {specifications.map(([key, value]) => {
                     const Icon = getAttributeIcon(key);
                     return (
                       <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
-                          <p className="text-base">{Array.isArray(value) ? value.join(', ') : String(value)}</p>
+                          <p className="text-sm md:text-base">{Array.isArray(value) ? value.join(', ') : String(value)}</p>
                       </DetailDisplayRow>
                     );
                   })}
@@ -273,6 +273,7 @@ const StorefrontProductDetail = () => {
                   size="icon"
                   onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
                   disabled={quantity <= 1}
+                  className="h-8 w-8 md:h-9 md:w-9"
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
@@ -280,7 +281,7 @@ const StorefrontProductDetail = () => {
                   type="number"
                   value={quantity}
                   onChange={(e) => setQuantity(Math.max(1, Math.min(product.inventory || 1, parseInt(e.target.value) || 1)))}
-                  className="w-16 text-center border-y-0 border-x rounded-none focus-visible:ring-0"
+                  className="w-14 md:w-16 text-center border-y-0 border-x rounded-none focus-visible:ring-0 text-sm md:text-base"
                   min={1}
                   max={product.inventory || 1}
                 />
@@ -289,23 +290,24 @@ const StorefrontProductDetail = () => {
                   size="icon"
                   onClick={() => setQuantity(prev => Math.min(product.inventory || 1, prev + 1))}
                   disabled={quantity >= (product.inventory || 1)}
+                  className="h-8 w-8 md:h-9 md:w-9"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              <Button size="lg" className="flex-1" onClick={handleAddToCart}>
+              <Button size="lg" className="flex-1 text-base md:text-lg" onClick={handleAddToCart}>
                 <ShoppingCart className="mr-2 h-5 w-5" />
                 Add to Cart
               </Button>
             </div>
           )}
           {product.pricing_type === 'one_time' && (product.inventory === null || product.inventory <= 0) && (
-            <Button size="lg" className="w-full" disabled>
+            <Button size="lg" className="w-full text-base md:text-lg" disabled>
               Out of Stock
             </Button>
           )}
           {product.pricing_type === 'subscription' && (
-            <Button size="lg" className="w-full" onClick={handleAddToCart}>
+            <Button size="lg" className="w-full text-base md:text-lg" onClick={handleAddToCart}>
               <ShoppingCart className="mr-2 h-5 w-5" />
               Subscribe Now
             </Button>
@@ -316,7 +318,7 @@ const StorefrontProductDetail = () => {
             <CardContent className="p-4 flex items-center gap-4">
               <Truck className="h-6 w-6 text-muted-foreground flex-shrink-0" />
               <div>
-                <p className="font-semibold">Free Shipping & Easy Returns</p>
+                <p className="font-semibold text-base">Free Shipping & Easy Returns</p>
                 <p className="text-sm text-muted-foreground">
                   Enjoy free standard shipping on all orders over {formatCurrency(50, shopDetails?.currency)}.
                   <br />
@@ -329,25 +331,25 @@ const StorefrontProductDetail = () => {
       </div>
 
       {/* Customer Reviews Section (Placeholder) */}
-      <Card className={cn("mt-12 shadow-md", blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
+      <Card className={cn("mt-8 md:mt-12 shadow-md", blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
         <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-2">
+          <CardTitle className="text-xl md:text-2xl flex items-center gap-2">
             <Star className="h-6 w-6 text-amber-500" />
             Customer Reviews (12)
           </CardTitle>
-          <p className="text-muted-foreground">What our customers are saying about this product.</p>
+          <p className="text-sm md:text-base text-muted-foreground">What our customers are saying about this product.</p>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center gap-4">
-            <div className="flex items-center text-amber-500 text-3xl font-bold">
+            <div className="flex items-center text-amber-500 text-2xl md:text-3xl font-bold">
               4.0
               <span className="ml-2 flex">
                 {[...Array(5)].map((_, i) => (
-                    <Star key={i} className={cn("h-7 w-7", i < 4 ? "fill-amber-500" : "fill-muted stroke-muted-foreground")} />
+                    <Star key={i} className={cn("h-6 w-6 md:h-7 md:w-7", i < 4 ? "fill-amber-500" : "fill-muted stroke-muted-foreground")} />
                 ))}
               </span>
             </div>
-            <Button variant="outline">Write a Review</Button>
+            <Button variant="outline" className="text-sm md:text-base">Write a Review</Button>
           </div>
           <div className="space-y-4">
             {/* Example Review 1 */}
@@ -358,7 +360,7 @@ const StorefrontProductDetail = () => {
                     <Star key={i} className={cn("h-4 w-4", i < 5 ? "fill-amber-500" : "fill-muted stroke-muted-foreground")} />
                   ))}
                 </div>
-                <p className="font-semibold text-sm">Amazing product!</p>
+                <p className="font-semibold text-sm md:text-base">Amazing product!</p>
               </div>
               <p className="text-sm text-muted-foreground mb-2">"I absolutely love this product. The quality is fantastic and it arrived so quickly. Highly recommend!"</p>
               <p className="text-xs text-muted-foreground">— Jane Doe, 2 days ago</p>
@@ -371,21 +373,21 @@ const StorefrontProductDetail = () => {
                     <Star key={i} className={cn("h-4 w-4", i < 4 ? "fill-amber-500" : "fill-muted stroke-muted-foreground")} />
                   ))}
                 </div>
-                <p className="font-semibold text-sm">Good value for money</p>
+                <p className="font-semibold text-sm md:text-base">Good value for money</p>
               </div>
               <p className="text-sm text-muted-foreground mb-2">"It's a solid product for the price. Met my expectations. Would buy again."</p>
               <p className="text-xs text-muted-foreground">— John Smith, 1 week ago</p>
             </div>
-            <Button variant="link" className="px-0">Read all 12 reviews</Button>
+            <Button variant="link" className="px-0 text-sm md:text-base">Read all 12 reviews</Button>
           </div>
         </CardContent>
       </Card>
 
       {/* You might also like section */}
       {relatedProducts.length > 0 && (
-        <div className="mt-12">
-          <h2 className="text-3xl font-bold font-heading mb-8 text-center">You might also like</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+        <div className="mt-8 md:mt-12">
+          <h2 className="text-2xl md:text-3xl font-bold font-heading mb-6 md:mb-8 text-center">You might also like</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
             {relatedProducts.map(p => (
               <StorefrontProductCard key={p.id} product={p} shopSlug={shopDetails.slug} />
             ))}

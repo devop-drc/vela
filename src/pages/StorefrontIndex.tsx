@@ -124,11 +124,11 @@ const StorefrontIndex = () => {
   }
 
   if (error) {
-    return <div className="container py-8 text-destructive">{error}</div>;
+    return <div className="container py-8 text-destructive text-base md:text-lg">{error}</div>;
   }
 
   if (!shopDetails) {
-    return <div className="container py-8 text-center text-muted-foreground">Shop details not found.</div>;
+    return <div className="container py-8 text-center text-muted-foreground text-base md:text-lg">Shop details not found.</div>;
   }
 
   return (
@@ -156,28 +156,28 @@ const StorefrontIndex = () => {
           >
             {shopDetails.logo_url && (
               <motion.div variants={itemVariants}>
-                <Avatar className="h-28 w-28 mx-auto mb-6 border-4 border-primary-foreground shadow-md">
+                <Avatar className="h-24 w-24 md:h-28 md:w-28 mx-auto mb-4 md:mb-6 border-4 border-primary-foreground shadow-md">
                   <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
-                  <AvatarFallback className="text-5xl font-bold bg-primary-foreground text-primary">{shopDetails.shop_name?.[0]}</AvatarFallback>
+                  <AvatarFallback className="text-4xl md:text-5xl font-bold bg-primary-foreground text-primary">{shopDetails.shop_name?.[0]}</AvatarFallback>
                 </Avatar>
               </motion.div>
             )}
-            <motion.h1 variants={itemVariants} className="text-5xl md:text-6xl font-bold font-heading mb-4 leading-tight drop-shadow-lg">
+            <motion.h1 variants={itemVariants} className="text-4xl md:text-6xl font-bold font-heading mb-3 md:mb-4 leading-tight drop-shadow-lg">
               {shopDetails.shop_name}
             </motion.h1>
             {shopDetails.headline && (
-              <motion.p variants={itemVariants} className="text-xl md:text-2xl max-w-3xl mx-auto mb-4 drop-shadow-md">
+              <motion.p variants={itemVariants} className="text-lg md:text-2xl max-w-3xl mx-auto mb-3 md:mb-4 drop-shadow-md">
                 {shopDetails.headline}
               </motion.p>
             )}
             {shopDetails.about && (
-              <motion.p variants={itemVariants} className="text-base md:text-lg max-w-3xl mx-auto mb-8 drop-shadow-md">
+              <motion.p variants={itemVariants} className="text-base md:text-lg max-w-3xl mx-auto mb-6 md:mb-8 drop-shadow-md">
                 {shopDetails.about}
               </motion.p>
             )}
             <motion.div variants={itemVariants}>
-              <Link to={`/shop/${shopDetails.slug}/products`} className={cn(buttonVariants({ size: "lg" }), "text-lg px-8 py-6 shadow-xl hover:scale-105 transition-transform")}>
-                Shop Now <ArrowRight className="ml-3 h-5 w-5" />
+              <Link to={`/shop/${shopDetails.slug}/products`} className={cn(buttonVariants({ size: "lg" }), "text-base md:text-lg px-6 py-4 md:px-8 md:py-6 shadow-xl hover:scale-105 transition-transform")}>
+                Shop Now <ArrowRight className="ml-2 md:ml-3 h-4 w-4 md:h-5 md:w-5" />
               </Link>
             </motion.div>
           </div>
@@ -188,15 +188,15 @@ const StorefrontIndex = () => {
           initial="hidden"
           animate="visible"
           variants={sectionVariants}
-          className="my-16"
+          className="my-12 md:my-16"
         >
-          <Marquee pauseOnHover className="py-4 border-y-2 border-primary/20 bg-primary/10">
-            <div className="flex items-center gap-8 text-lg font-semibold text-primary">
-              <Sparkles className="h-6 w-6 text-amber-500" />
+          <Marquee pauseOnHover className="py-3 md:py-4 border-y-2 border-primary/20 bg-primary/10">
+            <div className="flex items-center gap-6 md:gap-8 text-base md:text-lg font-semibold text-primary">
+              <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-amber-500" />
               <span>FLASH SALE: Up to 50% OFF on selected items!</span>
-              <Gift className="h-6 w-6 text-rose-500" />
+              <Gift className="h-5 w-5 md:h-6 md:w-6 text-rose-500" />
               <span>FREE SHIPPING on all orders over {formatCurrency(50, shopDetails.currency)}!</span>
-              <RefreshCw className="h-6 w-6 text-blue-500" />
+              <RefreshCw className="h-5 w-5 md:h-6 md:w-6 text-blue-500" />
               <span>New Arrivals Every Week!</span>
               <span>Discover unique handcrafted goods!</span>
             </div>
@@ -209,15 +209,15 @@ const StorefrontIndex = () => {
             initial="hidden"
             animate="visible"
             variants={sectionVariants}
-            className="mb-16"
+            className="mb-12 md:mb-16"
           >
-            <h2 className="text-4xl font-bold font-heading mb-10 text-center flex items-center justify-center gap-3">
-              <Package className="h-8 w-8 text-blue-400" />
+            <h2 className="text-3xl md:text-4xl font-bold font-heading mb-8 md:mb-10 text-center flex items-center justify-center gap-2 md:gap-3">
+              <Package className="h-7 w-7 md:h-8 md:w-8 text-blue-400" />
               Shop by Category
             </h2>
             <motion.div
               variants={sectionVariants}
-              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8"
+              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8"
             >
               {uniqueCategoriesWithCount.map(([category, count]) => {
                 const CategoryIcon = getCategoryIcon(category);
@@ -226,15 +226,15 @@ const StorefrontIndex = () => {
                   <motion.div key={category} variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
                     <Link to={`/shop/${shopDetails.slug}/products?category=${encodeURIComponent(category)}`}>
                       <Card className={cn(
-                        "group h-full flex flex-col items-center justify-center p-6 text-center transition-shadow hover:shadow-xl",
+                        "group h-full flex flex-col items-center justify-center p-5 md:p-6 text-center transition-shadow hover:shadow-xl",
                         blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
                         "shadow-md"
                       )}>
-                        <CategoryIcon className={cn("h-16 w-16 mb-4", categoryColor.text)} />
-                        <h3 className="font-semibold text-lg leading-tight mb-1 line-clamp-2">{category}</h3>
+                        <CategoryIcon className={cn("h-14 w-14 md:h-16 md:w-16 mb-3 md:mb-4", categoryColor.text)} />
+                        <h3 className="font-semibold text-base md:text-lg leading-tight mb-1 line-clamp-2">{category}</h3>
                         <Badge
                           variant="outline"
-                          className={cn("mb-2", categoryColor.bg, categoryColor.text, categoryColor.border)}
+                          className={cn("text-xs md:text-sm mb-2", categoryColor.bg, categoryColor.text, categoryColor.border)}
                         >
                           {count} Products
                         </Badge>
@@ -253,21 +253,21 @@ const StorefrontIndex = () => {
             initial="hidden"
             animate="visible"
             variants={sectionVariants}
-            className="mb-16"
+            className="mb-12 md:mb-16"
           >
-            <h2 className="text-4xl font-bold font-heading mb-10 text-center flex items-center justify-center gap-3">
-              <Crown className="h-8 w-8 text-amber-400" />
+            <h2 className="text-3xl md:text-4xl font-bold font-heading mb-8 md:mb-10 text-center flex items-center justify-center gap-2 md:gap-3">
+              <Crown className="h-7 w-7 md:h-8 md:w-8 text-amber-400" />
               Our Best Sellers
             </h2>
             <ScrollArea className="w-full whitespace-nowrap pb-4">
-              <div className="flex w-max space-x-8 p-4">
+              <div className="flex w-max space-x-6 md:space-x-8 p-4">
                 {bestSellers.map((product) => (
-                  <StorefrontProductCard key={product.product_id} product={product as Product} shopSlug={shopDetails.slug} className="w-[280px] flex-shrink-0" />
+                  <StorefrontProductCard key={product.product_id} product={product as Product} shopSlug={shopDetails.slug} className="w-[240px] md:w-[280px] flex-shrink-0" />
                 ))}
                 {bestSellers.length >= 10 && (
-                  <div className="flex-shrink-0 w-[280px] flex items-center justify-center">
-                    <Link to={`/shop/${shopDetails.slug}/products?sort=best-sellers`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "text-lg px-8 py-6")}>
-                      View All <ArrowRight className="ml-3 h-5 w-5" />
+                  <div className="flex-shrink-0 w-[240px] md:w-[280px] flex items-center justify-center">
+                    <Link to={`/shop/${shopDetails.slug}/products?sort=best-sellers`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "text-base md:text-lg px-6 py-4 md:px-8 md:py-6")}>
+                      View All <ArrowRight className="ml-2 md:ml-3 h-4 w-4 md:h-5 md:w-5" />
                     </Link>
                   </div>
                 )}
@@ -283,21 +283,21 @@ const StorefrontIndex = () => {
             initial="hidden"
             animate="visible"
             variants={sectionVariants}
-            className="mb-16"
+            className="mb-12 md:mb-16"
           >
-            <h2 className="text-4xl font-bold font-heading mb-10 text-center flex items-center justify-center gap-3">
-              <Sparkles className="h-8 w-8 text-purple-400" />
+            <h2 className="text-3xl md:text-4xl font-bold font-heading mb-8 md:mb-10 text-center flex items-center justify-center gap-2 md:gap-3">
+              <Sparkles className="h-7 w-7 md:h-8 md:w-8 text-purple-400" />
               New Arrivals
             </h2>
             <ScrollArea className="w-full whitespace-nowrap pb-4">
-              <div className="flex w-max space-x-8 p-4">
+              <div className="flex w-max space-x-6 md:space-x-8 p-4">
                 {newArrivals.map((product) => (
-                  <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} className="w-[280px] flex-shrink-0" />
+                  <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} className="w-[240px] md:w-[280px] flex-shrink-0" />
                 ))}
                 {newArrivals.length >= 10 && (
-                  <div className="flex-shrink-0 w-[280px] flex items-center justify-center">
-                    <Link to={`/shop/${shopDetails.slug}/products?sort=newest`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "text-lg px-8 py-6")}>
-                      View All <ArrowRight className="ml-3 h-5 w-5" />
+                  <div className="flex-shrink-0 w-[240px] md:w-[280px] flex items-center justify-center">
+                    <Link to={`/shop/${shopDetails.slug}/products?sort=newest`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "text-base md:text-lg px-6 py-4 md:px-8 md:py-6")}>
+                      View All <ArrowRight className="ml-2 md:ml-3 h-4 w-4 md:h-5 md:w-5" />
                     </Link>
                   </div>
                 )}
@@ -313,21 +313,21 @@ const StorefrontIndex = () => {
             initial="hidden"
             animate="visible"
             variants={sectionVariants}
-            className="mb-16"
+            className="mb-12 md:mb-16"
           >
-            <h2 className="text-4xl font-bold font-heading mb-10 text-center flex items-center justify-center gap-3">
-              <Gift className="h-8 w-8 text-rose-400" />
+            <h2 className="text-3xl md:text-4xl font-bold font-heading mb-8 md:mb-10 text-center flex items-center justify-center gap-2 md:gap-3">
+              <Gift className="h-7 w-7 md:h-8 md:w-8 text-rose-400" />
               Recommended For You
             </h2>
             <ScrollArea className="w-full whitespace-nowrap pb-4">
-              <div className="flex w-max space-x-8 p-4">
+              <div className="flex w-max space-x-6 md:space-x-8 p-4">
                 {recommendedProducts.map((product) => (
-                  <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} className="w-[280px] flex-shrink-0" />
+                  <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} className="w-[240px] md:w-[280px] flex-shrink-0" />
                 ))}
                 {recommendedProducts.length >= 10 && (
-                  <div className="flex-shrink-0 w-[280px] flex items-center justify-center">
-                    <Link to={`/shop/${shopDetails.slug}/products?sort=recommended`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "text-lg px-8 py-6")}>
-                      View All <ArrowRight className="ml-3 h-5 w-5" />
+                  <div className="flex-shrink-0 w-[240px] md:w-[280px] flex items-center justify-center">
+                    <Link to={`/shop/${shopDetails.slug}/products?sort=recommended`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "text-base md:text-lg px-6 py-4 md:px-8 md:py-6")}>
+                      View All <ArrowRight className="ml-2 md:ml-3 h-4 w-4 md:h-5 md:w-5" />
                     </Link>
                   </div>
                 )}
@@ -342,15 +342,15 @@ const StorefrontIndex = () => {
           initial="hidden"
           animate="visible"
           variants={sectionVariants}
-          className="text-center mt-16"
+          className="text-center mt-12 md:mt-16"
           ref={productsSectionRef}
         >
           <Link 
             to={`/shop/${shopDetails.slug}/products`} 
             onClick={() => window.scrollTo(0, 0)}
-            className={cn(buttonVariants({ size: "lg" }), "text-lg px-8 py-6 shadow-xl hover:scale-105 transition-transform")}
+            className={cn(buttonVariants({ size: "lg" }), "text-base md:text-lg px-6 py-4 md:px-8 md:py-6 shadow-xl hover:scale-105 transition-transform")}
           >
-            View All Products <ArrowRight className="ml-3 h-5 w-5" />
+            View All Products <ArrowRight className="ml-2 md:ml-3 h-4 w-4 md:h-5 md:w-5" />
           </Link>
         </motion.div>
       </div>

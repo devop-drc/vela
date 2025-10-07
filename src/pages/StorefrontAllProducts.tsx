@@ -285,7 +285,7 @@ const StorefrontAllProducts = () => {
 
   const hasActiveFilters = searchTerm || sortOption !== 'newest' || filters.categories.length > 0 || filters.tags.length > 0 || filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice;
 
-  const headerHeight = '4rem'; // 64px
+  const headerHeight = '3.5rem'; // 56px for mobile, 64px for desktop
   const floatingHeaderOffset = '1rem'; // 16px
 
   // Calculate dynamic padding for main content
@@ -300,16 +300,16 @@ const StorefrontAllProducts = () => {
 
   if (isLoading && allProducts.length === 0) {
     return (
-      <div className="container py-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
+      <div className="container py-6 md:py-8">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6 md:mb-8">
           <div className="relative w-full md:w-1/3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search products..." className="pl-10" disabled />
+            <Input placeholder="Search products..." className="pl-10 text-sm" disabled />
           </div>
           <div className="flex gap-2 w-full md:w-2/3 justify-end">
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-9 w-24 md:h-10 md:w-32" />
+            <Skeleton className="h-9 w-24 md:h-10 md:w-32" />
+            <Skeleton className="h-9 w-24 md:h-10 md:w-32" />
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -326,11 +326,11 @@ const StorefrontAllProducts = () => {
   }
 
   if (error) {
-    return <div className="container py-8 text-destructive">{error}</div>;
+    return <div className="container py-8 text-destructive text-base md:text-lg">{error}</div>;
   }
 
   if (!shopDetails) {
-    return <div className="container py-8 text-center text-muted-foreground">Shop details not found.</div>;
+    return <div className="container py-8 text-center text-muted-foreground text-base md:text-lg">Shop details not found.</div>;
   }
 
   return (
@@ -348,49 +348,28 @@ const StorefrontAllProducts = () => {
       )}
 
       {!isMobile && (
-        <AnimatePresence initial={false}>
-          {isDesktopFilterSidebarOpen && (
-            <motion.aside
-              initial={{ x: '-100%', opacity: 0 }}
-              animate={{ x: '0%', opacity: 1 }}
-              exit={{ x: '-100%', opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className={cn(
-                "hidden lg:flex flex-col flex-shrink-0 fixed z-30 top-0 bottom-0", // Full height
-                blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
-                isFloatingLayout ? "border rounded-lg" : "border-r"
-              )}
-              style={{
-                width: DESKTOP_SIDEBAR_WIDTH,
-                left: isFloatingLayout ? floatingHeaderOffset : '0', // Adjust left for floating layout
-                borderRadius: isFloatingLayout ? borderRadius : '0',
-              }}
-            >
-              <StorefrontFilterSidebar
-                isOpen={true}
-                onClose={() => setIsDesktopFilterSidebarOpen(false)}
-                products={allProducts}
-                currentFilters={filters}
-                onFilterChange={handleFilterChange}
-                onResetFilters={handleResetFilters}
-                isMobile={false}
-              />
-            </motion.aside>
-          )}
-        </AnimatePresence>
+        <StorefrontFilterSidebar
+          isOpen={isDesktopFilterSidebarOpen}
+          onClose={() => setIsDesktopFilterSidebarOpen(false)}
+          products={allProducts}
+          currentFilters={filters}
+          onFilterChange={handleFilterChange}
+          onResetFilters={handleResetFilters}
+          isMobile={false}
+        />
       )}
 
       <div className="flex-1 transition-all duration-200" style={{ paddingLeft: mainContentPaddingLeft }}>
-        <div className="container py-8">
+        <div className="container py-6 md:py-8">
           <StorefrontBreadcrumb />
 
           <div className={cn(
-            "sticky z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-4",
+            "sticky z-30 py-3 md:py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-6 md:mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4",
             blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
           )} style={{ borderRadius: borderRadius, top: stickyBarTop }}>
             <div className="flex items-center gap-2 w-full md:w-auto">
               {!isMobile && (
-                <Button variant="outline" onClick={() => setIsDesktopFilterSidebarOpen(prev => !prev)} className="flex-shrink-0">
+                <Button variant="outline" onClick={() => setIsDesktopFilterSidebarOpen(prev => !prev)} className="flex-shrink-0 text-sm md:text-base h-9 md:h-10">
                   <Filter className="mr-2 h-4 w-4" />
                   Filters
                   <ChevronRight className={cn("ml-2 h-4 w-4 transition-transform", isDesktopFilterSidebarOpen && "rotate-180")} />
@@ -400,28 +379,28 @@ const StorefrontAllProducts = () => {
 
             <div className="flex flex-wrap gap-2 w-full md:w-2/3 justify-end">
               {isMobile && (
-                <Button variant="outline" onClick={onToggleFilterSidebar} className="w-full md:w-auto justify-start">
+                <Button variant="outline" onClick={onToggleFilterSidebar} className="w-full md:w-auto justify-start text-sm h-9">
                   <Filter className="mr-2 h-4 w-4" />
                   Filters ({Object.values(filters).filter(f => (Array.isArray(f) && f.length > 0) || (typeof f === 'string' && f !== 'all')).length})
                 </Button>
               )}
               <Select value={sortOption} onValueChange={handleSortChange}>
-                <SelectTrigger className="w-full md:w-[180px]">
+                <SelectTrigger className="w-full md:w-[180px] h-9 md:h-10 text-sm">
                   <ArrowUpNarrowWide className="mr-2 h-4 w-4 text-muted-foreground" />
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="newest">Newest</SelectItem>
-                  <SelectItem value="oldest">Oldest</SelectItem>
-                  <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                  <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                  <SelectItem value="name-asc">Name: A-Z</SelectItem>
-                  <SelectItem value="name-desc">Name: Z-A</SelectItem>
+                  <SelectItem value="newest" className="text-sm">Newest</SelectItem>
+                  <SelectItem value="oldest" className="text-sm">Oldest</SelectItem>
+                  <SelectItem value="price-asc" className="text-sm">Price: Low to High</SelectItem>
+                  <SelectItem value="price-desc" className="text-sm">Price: High to Low</SelectItem>
+                  <SelectItem value="name-asc" className="text-sm">Name: A-Z</SelectItem>
+                  <SelectItem value="name-desc" className="text-sm">Name: Z-A</SelectItem>
                 </SelectContent>
               </Select>
 
               {hasActiveFilters && (
-                <Button variant="ghost" onClick={handleResetFilters} className="w-full md:w-auto">
+                <Button variant="ghost" onClick={handleResetFilters} className="w-full md:w-auto text-sm h-9 md:h-10">
                   <XCircle className="mr-2 h-4 w-4" />
                   Reset Filters
                 </Button>
@@ -429,23 +408,23 @@ const StorefrontAllProducts = () => {
             </div>
           </div>
 
-          <h2 className="text-4xl font-bold font-heading mb-10 text-center">All Products</h2>
+          <h2 className="text-3xl md:text-4xl font-bold font-heading mb-8 md:mb-10 text-center">All Products</h2>
           
           {filteredAndSortedProducts.length === 0 && !isLoading && !isLoadingMore ? (
-            <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg">
-              <h3 className="text-xl font-semibold">No Products Found</h3>
-              <p className="text-base mt-2">
+            <div className="text-center py-16 md:py-20 text-muted-foreground border-2 border-dashed rounded-lg">
+              <h3 className="text-xl md:text-2xl font-semibold">No Products Found</h3>
+              <p className="text-sm md:text-base mt-1 md:mt-2">
                 It looks like you don't have any active products yet.
                 <br />
                 Please go to your <Link to="/" className="text-primary hover:underline">dashboard</Link>, then the "Products" section, and set some products to "Active" status to display them here.
               </p>
             </div>
           ) : (
-            <div className="space-y-16">
+            <div className="space-y-12 md:space-y-16">
               {Object.entries(groupedProducts).map(([category, productsInCategory]) => (
                 <div key={category}>
                   <h3 className={cn(
-                    "text-3xl font-bold font-heading mb-8 inline-block px-4 py-2 rounded-md",
+                    "text-2xl md:text-3xl font-bold font-heading mb-6 md:mb-8 inline-block px-3 py-1 md:px-4 md:py-2 rounded-md",
                     blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
                     getCategoryColor(category).bg, getCategoryColor(category).text,
                     "shadow-sm"
@@ -456,7 +435,7 @@ const StorefrontAllProducts = () => {
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8"
+                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8"
                   >
                     {productsInCategory.map((product) => (
                       <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} />
@@ -468,7 +447,7 @@ const StorefrontAllProducts = () => {
           )}
 
           {isLoadingMore && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 mt-16">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 mt-12 md:mt-16">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="space-y-2">
                   <Skeleton className="aspect-square w-full" />

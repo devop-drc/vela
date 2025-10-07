@@ -176,7 +176,7 @@ export const StorefrontFilterSidebar = ({
     return (
       <AccordionItem value={title}>
         <div className="flex items-center justify-between py-3 text-base font-semibold"> {/* This div wraps the trigger and clear button */}
-          <AccordionTrigger className="flex-1 py-0 pr-3"> {/* AccordionTrigger is now flex-1 */}
+          <AccordionTrigger className="flex-1 py-0 pr-3 text-base"> {/* AccordionTrigger is now flex-1 */}
             <div className="flex items-center gap-2">
               <Icon className="h-5 w-5 text-muted-foreground" />
               {title}
@@ -209,7 +209,7 @@ export const StorefrontFilterSidebar = ({
     <div className="flex flex-col h-full">
       {isMobile ? (
         <SheetHeader className="p-4 border-b flex-row items-center justify-between">
-          <SheetTitle className="flex items-center gap-2">
+          <SheetTitle className="flex items-center gap-2 text-xl font-bold">
             <Filter className="h-6 w-6" />
             Advanced Filters
           </SheetTitle>
@@ -242,7 +242,7 @@ export const StorefrontFilterSidebar = ({
                     variant={localFilters.categories.includes(category) ? "default" : "outline"}
                     size="sm"
                     onClick={() => handleToggleFilter('categories', category)}
-                    className={cn(localFilters.categories.includes(category) && "ring-2 ring-primary ring-offset-2")}
+                    className={cn("text-sm", localFilters.categories.includes(category) && "ring-2 ring-primary ring-offset-2")}
                   >
                     {category}
                   </Button>
@@ -277,7 +277,7 @@ export const StorefrontFilterSidebar = ({
                     variant={(localFilters.tags as string[] || []).includes(tag) ? "default" : "outline"}
                     size="sm"
                     onClick={() => handleToggleFilter('tags', tag)}
-                    className={cn((localFilters.tags as string[] || []).includes(tag) && "ring-2 ring-primary ring-offset-2")}
+                    className={cn("text-sm", (localFilters.tags as string[] || []).includes(tag) && "ring-2 ring-primary ring-offset-2")}
                   >
                     {tag}
                   </Button>
@@ -297,7 +297,7 @@ export const StorefrontFilterSidebar = ({
                       variant={(localFilters[attr.name] as string[] || []).includes(value) ? "default" : "outline"}
                       size="sm"
                       onClick={() => handleToggleFilter(attr.name, value)}
-                      className={cn((localFilters[attr.name] as string[] || []).includes(value) && "ring-2 ring-primary ring-offset-2")}
+                      className={cn("text-sm", (localFilters[attr.name] as string[] || []).includes(value) && "ring-2 ring-primary ring-offset-2")}
                     >
                       {value}
                     </Button>
@@ -309,7 +309,7 @@ export const StorefrontFilterSidebar = ({
         </Accordion>
       </ScrollArea>
       <div className="p-4 border-t flex gap-2">
-        <Button variant="outline" onClick={handleClearAll} className="flex-1">Clear All</Button>
+        <Button variant="outline" onClick={handleClearAll} className="flex-1 text-sm md:text-base">Clear All</Button>
       </div>
     </div>
   );
@@ -332,5 +332,28 @@ export const StorefrontFilterSidebar = ({
     );
   }
 
-  return <>{filterContent}</>;
+  return (
+    <motion.aside
+      initial={{ x: '-100%', opacity: 0 }}
+      animate={{ x: '0%', opacity: 1 }}
+      exit={{ x: '-100%', opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className={cn(
+        "hidden lg:flex flex-col flex-shrink-0 fixed z-30", // Full height
+        blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
+        isFloatingLayout ? "border rounded-lg" : "border-r"
+      )}
+      style={{
+        width: DESKTOP_SIDEBAR_WIDTH,
+        left: isFloatingLayout ? '1rem' : '0', // Adjust left for floating layout
+        top: isFloatingLayout ? '1rem' : '0', // Add top margin
+        bottom: isFloatingLayout ? '1rem' : '0', // Add bottom margin
+        borderRadius: isFloatingLayout ? borderRadius : '0',
+        pointerEvents: isOpen ? 'auto' : 'none', // Disable interaction when hidden
+        opacity: isOpen ? 1 : 0, // Control visibility
+      }}
+    >
+      {filterContent}
+    </motion.aside>
+  );
 };

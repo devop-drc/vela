@@ -65,9 +65,9 @@ export const StorefrontProductCard = ({ product, shopSlug, className }: Storefro
               />
             </div>
           </CardContent>
-          <div className="p-4 flex-1 flex flex-col justify-between">
+          <div className="p-3 md:p-4 flex-1 flex flex-col justify-between">
             <div>
-              <h3 className="font-semibold text-lg leading-tight mb-1 line-clamp-2">{product.name}</h3>
+              <h3 className="font-semibold text-base md:text-lg leading-tight mb-1 line-clamp-2">{product.name}</h3>
               {(product.category || product.details?.type) && (
                 <div className="flex items-center gap-1 mb-2">
                   {product.category && (
@@ -85,10 +85,10 @@ export const StorefrontProductCard = ({ product, shopSlug, className }: Storefro
                   )}
                 </div>
               )}
-              <p className="text-sm text-muted-foreground line-clamp-2">{product.caption}</p>
+              <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">{product.caption}</p>
             </div>
-            <div className="mt-4">
-              <p className="text-xl font-bold text-primary">
+            <div className="mt-3 md:mt-4">
+              <p className="text-lg md:text-xl font-bold text-primary">
                 {formatCurrency(displayPrice, shopDetails?.currency)}
                 {product.pricing_type === 'subscription' && (
                   <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>

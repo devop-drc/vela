@@ -46,15 +46,15 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
           blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
         )}
       >
-        <DialogHeader className="p-6 border-b flex-row items-center justify-between">
-          <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
+        <DialogHeader className="p-4 md:p-6 border-b flex-row items-center justify-between">
+          <DialogTitle className="flex items-center gap-2 text-xl md:text-2xl font-bold">
             {isCheckoutMode ? (
-              <Button variant="ghost" size="icon" onClick={() => setIsCheckoutMode(false)} className="mr-2">
+              <Button variant="ghost" size="icon" onClick={() => setIsCheckoutMode(false)} className="mr-2 h-8 w-8 md:h-9 md:w-9">
                 <ArrowLeft className="h-5 w-5" />
                 <span className="sr-only">Back to Cart</span>
               </Button>
             ) : (
-              <ShoppingBag className="h-7 w-7" />
+              <ShoppingBag className="h-6 w-6 md:h-7 md:w-7" />
             )}
             {isCheckoutMode ? "Checkout" : "Your Cart"}
           </DialogTitle>
@@ -66,10 +66,10 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
 
         {cartItems.length === 0 && savedItems.length === 0 && !isCheckoutMode ? (
           <div className="flex flex-col items-center justify-center flex-1 p-8 text-center">
-            <ShoppingBag className="h-24 w-24 text-muted-foreground mb-6" />
-            <h3 className="text-3xl font-bold mb-4">Your cart is empty</h3>
-            <p className="text-lg text-muted-foreground mb-8">Looks like you haven't added anything to your cart yet.</p>
-            <Button onClick={onClose}>Start Shopping</Button>
+            <ShoppingBag className="h-20 w-20 md:h-24 md:w-24 text-muted-foreground mb-6" />
+            <h3 className="text-2xl md:text-3xl font-bold mb-4">Your cart is empty</h3>
+            <p className="text-base md:text-lg text-muted-foreground mb-8">Looks like you haven't added anything to your cart yet.</p>
+            <Button onClick={onClose} className="text-base md:text-lg">Start Shopping</Button>
           </div>
         ) : (
           <>
@@ -88,37 +88,38 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
               />
             ) : (
               <>
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto p-4 md:p-6">
                   <div className="space-y-6">
                     {cartItems.length > 0 && (
                       <div className="space-y-4">
-                        <h2 className="text-xl font-bold font-heading">Items in Cart ({cartItems.length})</h2>
+                        <h2 className="text-lg md:text-xl font-bold font-heading">Items in Cart ({cartItems.length})</h2>
                         {cartItems.map(item => (
                           <Card key={item.productId} className={cn(
-                            "flex flex-col sm:flex-row items-center p-4 gap-4 shadow-md",
+                            "flex flex-col sm:flex-row items-center p-3 md:p-4 gap-3 md:gap-4 shadow-md",
                             blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
                           )}>
                             <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
-                              <div className="h-24 w-24 rounded-md overflow-hidden bg-muted border">
+                              <div className="h-20 w-20 md:h-24 md:w-24 rounded-md overflow-hidden bg-muted border">
                                 <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                               </div>
                             </Link>
-                            <div className="flex-1 w-full sm:w-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-4 text-center sm:text-left">
+                            <div className="flex-1 w-full sm:w-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-3 md:gap-4 text-center sm:text-left">
                               <div>
                                 <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
-                                  <h3 className="font-semibold text-lg hover:underline">{item.name}</h3>
+                                  <h3 className="font-semibold text-base md:text-lg hover:underline">{item.name}</h3>
                                 </Link>
                                 <p className="text-muted-foreground text-sm">
                                   {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
                                 </p>
                               </div>
-                              <div className="flex items-center justify-center sm:justify-end gap-4">
+                              <div className="flex items-center justify-center sm:justify-end gap-3 md:gap-4">
                                 <div className="flex items-center border rounded-md">
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                                     disabled={item.quantity <= 1}
+                                    className="h-8 w-8"
                                   >
                                     <Minus className="h-4 w-4" />
                                   </Button>
@@ -126,27 +127,28 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                     type="number"
                                     value={item.quantity}
                                     onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
-                                    className="w-16 text-center border-y-0 border-x rounded-none focus-visible:ring-0"
+                                    className="w-14 md:w-16 text-center border-y-0 border-x rounded-none focus-visible:ring-0 text-sm"
                                     min={1}
                                   />
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                                    className="h-8 w-8"
                                   >
                                     <Plus className="h-4 w-4" />
                                   </Button>
                                 </div>
-                                <p className="font-semibold text-lg">
+                                <p className="font-semibold text-base md:text-lg">
                                   {formatCurrency(item.price * item.quantity, shopDetails?.currency)}
                                 </p>
-                                <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.productId)} className="text-destructive hover:text-destructive">
+                                <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.productId)} className="text-destructive hover:text-destructive h-8 w-8">
                                   <Trash2 className="h-4 w-4" />
                                   <span className="sr-only">Remove {item.name}</span>
                                 </Button>
                               </div>
                             </div>
-                            <Button variant="ghost" size="sm" onClick={() => saveForLater(item)} className="flex-shrink-0">
+                            <Button variant="ghost" size="sm" onClick={() => saveForLater(item)} className="flex-shrink-0 text-sm">
                                 <Bookmark className="mr-2 h-4 w-4" />
                                 Save for Later
                             </Button>
@@ -156,33 +158,33 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                     )}
 
                     {savedItems.length > 0 && (
-                      <div className="space-y-4 mt-8">
-                        <h2 className="text-xl font-bold font-heading">Saved for Later ({savedItems.length})</h2>
+                      <div className="space-y-4 mt-6 md:mt-8">
+                        <h2 className="text-lg md:text-xl font-bold font-heading">Saved for Later ({savedItems.length})</h2>
                         {savedItems.map(item => (
                           <Card key={item.productId} className={cn(
-                            "flex flex-col sm:flex-row items-center p-4 gap-4 shadow-md",
+                            "flex flex-col sm:flex-row items-center p-3 md:p-4 gap-3 md:gap-4 shadow-md",
                             blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
                           )}>
                             <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
-                              <div className="h-24 w-24 rounded-md overflow-hidden bg-muted border">
+                              <div className="h-20 w-20 md:h-24 md:w-24 rounded-md overflow-hidden bg-muted border">
                                 <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                               </div>
                             </Link>
-                            <div className="flex-1 w-full sm:w-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-4 text-center sm:text-left">
+                            <div className="flex-1 w-full sm:w-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-3 md:gap-4 text-center sm:text-left">
                               <div>
                                 <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
-                                  <h3 className="font-semibold text-lg hover:underline">{item.name}</h3>
+                                  <h3 className="font-semibold text-base md:text-lg hover:underline">{item.name}</h3>
                                 </Link>
                                 <p className="text-muted-foreground text-sm">
                                   {formatCurrency(item.price, shopDetails?.currency)}
                                 </p>
                               </div>
-                              <div className="flex items-center justify-center sm:justify-end gap-4">
-                                <Button variant="outline" size="sm" onClick={() => moveToCart(item.productId)}>
+                              <div className="flex items-center justify-center sm:justify-end gap-3 md:gap-4">
+                                <Button variant="outline" size="sm" onClick={() => moveToCart(item.productId)} className="text-sm">
                                     <MoveRight className="mr-2 h-4 w-4" />
                                     Move to Cart
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => removeSavedItem(item.productId)} className="text-destructive hover:text-destructive">
+                                <Button variant="ghost" size="icon" onClick={() => removeSavedItem(item.productId)} className="text-destructive hover:text-destructive h-8 w-8">
                                   <Trash2 className="h-4 w-4" />
                                   <span className="sr-only">Remove {item.name}</span>
                                 </Button>
@@ -195,24 +197,24 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                   </div>
                 </div>
 
-                <div className="p-6 border-t space-y-4">
-                  <div className="flex justify-between">
+                <div className="p-4 md:p-6 border-t space-y-4">
+                  <div className="flex justify-between text-sm md:text-base">
                     <span>Subtotal:</span>
                     <span className="font-semibold">{formatCurrency(subtotal, shopDetails?.currency)}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between text-sm md:text-base">
                     <span>Shipping:</span>
                     <span className="font-semibold">{formatCurrency(shipping, shopDetails?.currency)}</span>
                   </div>
-                  <div className="flex justify-between text-lg font-bold border-t pt-4">
+                  <div className="flex justify-between text-lg md:text-xl font-bold border-t pt-4">
                     <span>Total:</span>
                     <span>{formatCurrency(total, shopDetails?.currency)}</span>
                   </div>
-                  <Button className="w-full" onClick={() => setIsCheckoutMode(true)} disabled={cartItems.length === 0}>
+                  <Button className="w-full text-base md:text-lg" onClick={() => setIsCheckoutMode(true)} disabled={cartItems.length === 0}>
                     Proceed to Checkout
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" className="w-full" onClick={onClose}>
+                  <Button variant="ghost" className="w-full text-base md:text-lg" onClick={onClose}>
                     Continue Shopping
                   </Button>
                 </div>
