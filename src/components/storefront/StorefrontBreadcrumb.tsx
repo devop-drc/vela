@@ -15,43 +15,31 @@ export const StorefrontBreadcrumb = () => {
 
   const breadcrumbs: BreadcrumbItem[] = [];
 
-  // Home / Shop link
-  if (shopDetails?.slug) {
-    breadcrumbs.push({ label: shopDetails.shop_name, path: `/shop/${shopDetails.slug}` });
-  } else {
-    breadcrumbs.push({ label: 'Shop', path: `/shop/${shopSlug}` });
-  }
+  // Always start with the shop's home page
+  breadcrumbs.push({ label: shopDetails?.shop_name || 'Shop', path: `/shop/${shopSlug}` });
 
-  // Add other segments based on current path
   const pathSegments = location.pathname.split('/').filter(segment => segment && segment !== 'shop' && segment !== shopSlug);
+  let currentPathAccumulator = `/shop/${shopSlug}`;
 
   pathSegments.forEach((segment, index) => {
-    const currentPath = `/${['shop', shopSlug, ...pathSegments.slice(0, index + 1)].join('/')}`;
-    let label = segment.replace(/-/g, ' ');
-
-    // Special handling for product detail page
-    if (segment === productId && productId) {
+    if (segment === 'products') {
+      currentPathAccumulator += `/${segment}`;
+      breadcrumbs.push({ label: 'Products', path: currentPathAccumulator });
+    } else if (segment === 'product' && pathSegments[index + 1] === productId) {
+      // This is the '/product' segment before the actual product ID.
+      // We want to ensure 'Products' is in the breadcrumb before the product name.
+      const productsPath = `/shop/${shopSlug}/products`;
+      if (!breadcrumbs.some(b => b.path === productsPath)) {
+        breadcrumbs.push({ label: 'Products', path: productsPath });
+      }
+      // Do not add '/product' as a separate breadcrumb item.
+    } else if (segment === productId && productId) {
+      currentPathAccumulator += `/product/${segment}`; // Build the full product path
       const product = products.find(p => p.id === productId);
-      if (product) {
-        label = product.name;
-      }
-      // The previous segment was 'products', so we need to ensure it's correctly labeled and linked
-      if (pathSegments[index - 1] === 'products') {
-        breadcrumbs.push({ label: 'Products', path: `/shop/${shopSlug}/products` });
-      }
-    } else if (segment === 'products') { // Corrected: Link to /products
-      label = 'Products';
-    } else if (segment === 'cart') {
-      label = 'Cart';
-    } else if (segment === 'checkout') {
-      label = 'Checkout';
-    } else if (segment === 'order-tracking') {
-      label = 'Order Tracking';
-    }
-
-    // Only add if not already added by special handling (e.g., 'Products' before product name)
-    if (!breadcrumbs.some(b => b.path === currentPath)) {
-      breadcrumbs.push({ label: label.charAt(0).toUpperCase() + label.slice(1), path: currentPath });
+      breadcrumbs.push({ label: product?.name || 'Product Detail', path: currentPathAccumulator });
+    } else {
+      currentPathAccumulator += `/${segment}`;
+      breadcrumbs.push({ label: segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' '), path: currentPathAccumulator });
     }
   });
 

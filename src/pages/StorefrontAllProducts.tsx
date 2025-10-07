@@ -301,11 +301,11 @@ const StorefrontAllProducts = () => {
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
               className={cn(
-                "hidden lg:flex flex-col border-r h-full flex-shrink-0 sticky top-0 overflow-y-auto",
+                "hidden lg:flex flex-col border-r h-[calc(100vh-4rem)] flex-shrink-0 fixed top-16 overflow-y-auto", // Fixed position, calc height
                 blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
-                isFloatingLayout ? "ml-4 rounded-none" : "" // Add margin-left and remove border-radius for floating layout
+                isFloatingLayout ? "ml-4" : "rounded-none" // Conditional margin and border-radius
               )}
-              style={{ borderRadius: isFloatingLayout ? '0' : borderRadius }}
+              style={{ borderRadius: isFloatingLayout ? borderRadius : '0' }} // Apply dynamic border-radius
             >
               <StorefrontFilterSidebar
                 isOpen={true}
@@ -321,7 +321,7 @@ const StorefrontAllProducts = () => {
         </AnimatePresence>
       )}
 
-      <div className="flex-1">
+      <div className={cn("flex-1", !isMobile && isDesktopSidebarOpen && (isFloatingLayout ? "ml-[calc(20rem+1rem)]" : "ml-[20rem]"))}> {/* Adjust main content margin */}
         <div className="container py-8">
           <StorefrontBreadcrumb />
 

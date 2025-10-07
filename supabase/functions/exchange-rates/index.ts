@@ -59,6 +59,13 @@ serve(async (req) => {
 
     const newRates = data.conversion_rates;
 
+    // Add a fallback for ALL (Albanian Lek) if not provided by the API
+    // Assuming 1 USD = 93.5 ALL as a reasonable approximation if not present
+    if (!newRates['ALL']) {
+      newRates['ALL'] = 93.5; 
+      console.log("Added fallback rate for ALL (Albanian Lek).");
+    }
+
     // 4. Update the cache in the database
     const { error: upsertError } = await supabaseAdmin
       .from('exchange_rates_cache')

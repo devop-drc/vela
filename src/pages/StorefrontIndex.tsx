@@ -120,8 +120,7 @@ const StorefrontIndex = () => {
           animate="visible"
           variants={sectionVariants}
           className={cn(
-            "relative mb-16 p-8 md:p-16 rounded-xl text-center overflow-hidden min-h-[450px] flex items-center justify-center",
-            blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
+            "relative mb-16 p-0 rounded-xl text-center overflow-hidden min-h-[450px] flex items-center justify-center",
             "shadow-lg hero-blob-background" // Added hero-blob-background class
           )}
           style={{
@@ -129,17 +128,24 @@ const StorefrontIndex = () => {
             backgroundSize: appearanceSettings?.backgroundSize || 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: appearanceSettings?.backgroundRepeat || 'no-repeat',
-            filter: `
-              brightness(${appearanceSettings?.backgroundBrightness || 100}%)
-              contrast(${appearanceSettings?.backgroundContrast || 100}%)
-              saturate(${appearanceSettings?.backgroundSaturation || 100}%)
-              hue-rotate(${appearanceSettings?.backgroundHue || 0}deg)
-            `,
             borderRadius: appearanceSettings?.['--radius'] || '1.5rem', // Apply border-radius
           }}
         >
           <div className="absolute inset-0 bg-black/40" />
-          <div className="relative z-10 text-primary-foreground max-w-4xl mx-auto">
+          <div 
+            className={cn(
+              "relative z-10 text-primary-foreground max-w-4xl mx-auto p-8 md:p-16 h-full w-full flex flex-col items-center justify-center",
+              blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card/0" // Apply blur to inner content
+            )}
+            style={{
+              filter: `
+                brightness(${appearanceSettings?.backgroundBrightness || 100}%)
+                contrast(${appearanceSettings?.backgroundContrast || 100}%)
+                saturate(${appearanceSettings?.backgroundSaturation || 100}%)
+                hue-rotate(${appearanceSettings?.backgroundHue || 0}deg)
+              `,
+            }}
+          >
             {shopDetails.logo_url && (
               <motion.div variants={itemVariants}>
                 <Avatar className="h-28 w-28 mx-auto mb-6 border-4 border-primary-foreground shadow-md">
@@ -184,7 +190,6 @@ const StorefrontIndex = () => {
               <span>FREE SHIPPING on all orders over {formatCurrency(50, shopDetails.currency)}!</span>
               <RefreshCw className="h-6 w-6 text-blue-500" />
               <span>New Arrivals Every Week!</span>
-              <Package className="h-6 w-6 text-emerald-500" />
               <span>Discover unique handcrafted goods!</span>
             </div>
           </Marquee>
