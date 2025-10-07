@@ -11,7 +11,7 @@ import { MediaItem } from "@/components/MediaItem";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { CheckoutForm } from "./CheckoutForm"; // Assuming this is your checkout form component
+import { CheckoutForm } from "./CheckoutForm"; // Import the new CheckoutForm
 
 interface StorefrontCartCheckoutModalProps {
   isOpen: boolean;
@@ -19,7 +19,7 @@ interface StorefrontCartCheckoutModalProps {
 }
 
 export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartCheckoutModalProps) => {
-  const { cartItems, totalItems, totalPrice, updateQuantity, removeItem, clearCart, checkout, isCheckingOut, checkoutError, checkoutSuccess } = useCart();
+  const { cartItems, totalItems, subtotal, shipping, total, updateQuantity, removeFromCart, clearCart, checkoutSuccess } = useCart();
   const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const { toast } = useToast();
   const [isCheckoutMode, setIsCheckoutMode] = useState(false);
@@ -35,25 +35,10 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
     }
   }, [isOpen, checkoutSuccess, clearCart]);
 
-  useEffect(() => {
-    if (checkoutError) {
-      toast({
-        title: "Checkout Error",
-        description: checkoutError,
-        variant: "destructive",
-      });
-    }
-  }, [checkoutError, toast]);
-
-  const handleCheckout = async (formData: any) => {
-    await checkout(formData);
-  };
-
   const convertedTotalPrice = useMemo(() => {
     if (!shopDetails?.currency) return 0;
-    // totalPrice is already in the shop's display currency from useCart
-    return totalPrice;
-  }, [totalPrice, shopDetails?.currency]);
+    return total; // total is already in the shop's display currency from useCart
+  }, [total, shopDetails?.currency]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -100,19 +85,23 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
             ) : (
               <>
                 {isCheckoutMode ? (
-                  <div className="flex-1 overflow-y-auto p-6">
-                    <CheckoutForm 
-                      onSubmit={handleCheckout} 
-                      isSubmitting={isCheckingOut} 
-                      totalPrice={convertedTotalPrice}
-                      currency={shopDetails?.currency || 'USD'}
-                    />
-                  </div>
+                  <CheckoutForm 
+                    onSubmit={async (formData) => {
+                      // This onSubmit is handled internally by CheckoutForm now
+                      // The CheckoutForm will handle the supabase.functions.invoke('create-order')
+                      // and then redirect.
+                      // We just need to ensure the modal closes if needed, but the redirect will handle it.
+                    }} 
+                    onBackToCart={() => setIsCheckoutMode(false)}
+                    isSubmitting={false} // isSubmitting is handled internally by CheckoutForm
+                    totalPrice={convertedTotalPrice}
+                    currency={shopDetails?.currency || 'USD'}
+                  />
                 ) : (
                   <div className="flex-1 overflow-y-auto p-6">
                     <div className="grid gap-6">
                       {cartItems.map(item => (
-                        <Card key={item.id} className={cn(
+                        <Card key={item.productId} className={cn(
                           "flex items-center p-4",
                           blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
                         )}>
@@ -123,7 +112,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                             className="h-20 w-20 object-cover rounded-md mr-4" 
                           />
                           <div className="flex-1 grid gap-1">
-                            <Link to={`/shop/${shopDetails?.slug}/product/${item.id}`} onClick={onClose} className="font-semibold hover:underline">
+                            <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="font-semibold hover:underline">
                               {item.name}
                             </Link>
                             <p className="text-sm text-muted-foreground">
@@ -134,7 +123,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                 variant="outline" 
                                 size="icon" 
                                 className="h-7 w-7" 
-                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                                 disabled={item.quantity <= 1}
                               >
                                 <Minus className="h-4 w-4" />
@@ -144,7 +133,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                 variant="outline" 
                                 size="icon" 
                                 className="h-7 w-7" 
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                               >
                                 <Plus className="h-4 w-4" />
                               </Button>
@@ -152,7 +141,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                 variant="ghost" 
                                 size="icon" 
                                 className="ml-auto text-destructive hover:text-destructive" 
-                                onClick={() => removeItem(item.id)}
+                                onClick={() => removeFromCart(item.productId)}
                               >
                                 <Trash2 className="h-4 w-4" />
                                 <span className="sr-only">Remove item</span>
@@ -169,14 +158,23 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                   <div className="p-6 border-t">
                     <div className="flex justify-between items-center text-lg font-semibold mb-4">
                       <span>Subtotal ({totalItems} items):</span>
-                      <span>{formatCurrency(convertedTotalPrice, shopDetails?.currency)}</span>
+                      <span>{formatCurrency(subtotal, shopDetails?.currency)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-lg font-semibold mb-4">
+                      <span>Shipping:</span>
+                      <span>{formatCurrency(shipping, shopDetails?.currency)}</span>
+                    </div>
+                    <Separator className="my-4" />
+                    <div className="flex justify-between items-center text-xl font-bold mb-4">
+                      <span>Total:</span>
+                      <span>{formatCurrency(total, shopDetails?.currency)}</span>
                     </div>
                     <Button 
                       className="w-full py-3 text-lg" 
                       onClick={() => setIsCheckoutMode(true)}
-                      disabled={isCheckingOut}
+                      disabled={cartItems.length === 0}
                     >
-                      {isCheckingOut ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CreditCard className="mr-2 h-5 w-5" />}
+                      <CreditCard className="mr-2 h-5 w-5" />
                       Proceed to Checkout
                     </Button>
                     <Button variant="link" className="w-full mt-2" onClick={onClose}>
