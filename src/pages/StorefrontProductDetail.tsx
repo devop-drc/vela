@@ -21,7 +21,7 @@ import { useRecentlyViewed } from "@/contexts/RecentlyViewedContext"; // Import 
 const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
         <Label className="text-xs md:text-sm text-muted-foreground flex items-center gap-1">
-          <Icon className="h-3 w-3 md:h-3.5 md:w-3.5" />
+          <Icon className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" /> {/* Changed to text-primary */}
           {label}
         </Label>
         <div className="font-medium flex flex-wrap items-center gap-1 text-sm md:text-base pt-1">
@@ -182,7 +182,7 @@ const StorefrontProductDetail = () => {
 
           {product.tags && product.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {product.tags.map((tag: string) => <Badge key={tag} variant="outline" className="text-xs md:text-sm">{tag}</Badge>)}
+              {product.tags.map((tag: string) => <Badge key={tag} variant="outline" className="text-xs md:text-sm bg-primary/10 text-primary border-primary/30">{tag}</Badge>)} {/* Changed to primary color */}
             </div>
           )}
 
@@ -232,7 +232,7 @@ const StorefrontProductDetail = () => {
                       return (
                         <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
                           {Array.isArray(value) ? (
-                            value.map(item => <Badge key={item} variant="outline" className="text-xs md:text-sm">{item}</Badge>)
+                            value.map(item => <Badge key={item} variant="outline" className="text-xs md:text-sm bg-primary/10 text-primary border-primary/30">{item}</Badge>) // Changed to primary color
                           ) : (
                             <p className="text-sm md:text-base">{String(value)}</p>
                           )}
@@ -316,7 +316,7 @@ const StorefrontProductDetail = () => {
           {/* Shipping & Returns (Placeholder) */}
           <Card className={cn("shadow-md", blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
             <CardContent className="p-4 flex items-center gap-4">
-              <Truck className="h-6 w-6 text-muted-foreground flex-shrink-0" />
+              <Truck className="h-6 w-6 text-primary flex-shrink-0" /> {/* Changed to text-primary */}
               <div>
                 <p className="font-semibold text-base">Free Shipping & Easy Returns</p>
                 <p className="text-sm text-muted-foreground">

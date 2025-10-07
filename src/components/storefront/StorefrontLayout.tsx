@@ -67,6 +67,7 @@ const StorefrontLayoutContent = () => {
   const isMobile = useIsMobile();
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false); // State for mobile sidebar
   const [isDesktopFilterSidebarOpen, setIsDesktopFilterSidebarOpen] = useState(false); // State for desktop sidebar
+  const [wasDesktopFilterSidebarExplicitlyOpened, setWasDesktopFilterSidebarExplicitlyOpened] = useState(false); // New state to track explicit user action
   const [isCartCheckoutModalOpen, setIsCartCheckoutModalOpen] = useState(false); // State for cart/checkout modal
   const footerRef = useRef<HTMLDivElement>(null);
 
@@ -129,8 +130,11 @@ const StorefrontLayoutContent = () => {
           if (intersectionRatio > 0.2) {
             setIsDesktopFilterSidebarOpen(false);
           } else if (intersectionRatio <= 0.2 && window.location.pathname.includes('/products')) {
-            // If footer is mostly out of view and on products page, show sidebar
-            setIsDesktopFilterSidebarOpen(true);
+            // If footer is mostly out of view and on products page, show sidebar,
+            // BUT ONLY IF IT WAS EXPLICITLY OPENED BEFORE
+            if (wasDesktopFilterSidebarExplicitlyOpened) {
+              setIsDesktopFilterSidebarOpen(true);
+            }
           }
         });
       },
@@ -144,25 +148,26 @@ const StorefrontLayoutContent = () => {
         observer.unobserve(footerRef.current);
       }
     };
-  }, [isMobile, footerRef, setIsDesktopFilterSidebarOpen]);
+  }, [isMobile, footerRef, setIsDesktopFilterSidebarOpen, wasDesktopFilterSidebarExplicitlyOpened]); // Add new state to dependencies
 
   // Reset desktop filter sidebar state when navigating away from /products
   useEffect(() => {
     if (!window.location.pathname.includes('/products')) {
       setIsDesktopFilterSidebarOpen(false);
+      setWasDesktopFilterSidebarExplicitlyOpened(false); // Reset explicit state too
     } else {
       // Only open if not mobile and on products page
-      if (!isMobile) {
+      if (!isMobile && wasDesktopFilterSidebarExplicitlyOpened) { // Only open if explicitly opened before
         setIsDesktopFilterSidebarOpen(true);
       }
     }
-  }, [window.location.pathname, isMobile]);
+  }, [window.location.pathname, isMobile, wasDesktopFilterSidebarExplicitlyOpened]);
 
 
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen">
-        <StorefrontHeader onOpenCart={() => setIsCartCheckoutModalOpen(true)} isDesktopSidebarOpen={false} setIsDesktopFilterSidebarOpen={setIsDesktopFilterSidebarOpen} />
+        <StorefrontHeader onOpenCart={() => setIsCartCheckoutModalOpen(true)} isDesktopSidebarOpen={false} setIsDesktopFilterSidebarOpen={setIsDesktopFilterSidebarOpen} setWasDesktopFilterSidebarExplicitlyOpened={setWasDesktopFilterSidebarExplicitlyOpened} />
         <main className="flex-1 container py-8 mt-16"> {/* Added mt-16 to main for header */}
           <Skeleton className="h-10 w-1/2 mb-6" />
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -202,6 +207,7 @@ const StorefrontLayoutContent = () => {
         onOpenCart={() => setIsCartCheckoutModalOpen(true)}
         isDesktopSidebarOpen={isDesktopFilterSidebarOpen} // Pass desktop sidebar state
         setIsDesktopFilterSidebarOpen={setIsDesktopFilterSidebarOpen} // Pass setter for desktop sidebar
+        setWasDesktopFilterSidebarExplicitlyOpened={setWasDesktopFilterSidebarExplicitlyOpened} // Pass new setter
       />
       <main className="flex-1 overflow-y-auto" style={{ paddingTop: mainContentPaddingTop, paddingBottom: isMobile ? '4rem' : '0' }}> {/* Add padding-bottom for mobile nav */}
         <Outlet context={{ 
@@ -212,6 +218,7 @@ const StorefrontLayoutContent = () => {
           // Pass desktop sidebar state to Outlet context as well
           isDesktopFilterSidebarOpen,
           setIsDesktopFilterSidebarOpen,
+          setWasDesktopFilterSidebarExplicitlyOpened, // Pass new setter to Outlet context
         }} />
       </main>
       <StorefrontFooter ref={footerRef} />

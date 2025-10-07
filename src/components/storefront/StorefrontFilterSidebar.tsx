@@ -41,6 +41,7 @@ interface StorefrontFilterSidebarProps {
   onFilterChange: (newFilters: FilterState) => void;
   onResetFilters: () => void;
   isMobile: boolean;
+  setWasDesktopFilterSidebarExplicitlyOpened?: (open: boolean) => void; // New prop
 }
 
 const DESKTOP_SIDEBAR_WIDTH = '20rem'; // 320px
@@ -53,6 +54,7 @@ export const StorefrontFilterSidebar = ({
   onFilterChange,
   onResetFilters,
   isMobile,
+  setWasDesktopFilterSidebarExplicitlyOpened, // Destructure new prop
 }: StorefrontFilterSidebarProps) => {
   const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const blurEnabled = appearanceSettings?.blurEnabled;
@@ -108,6 +110,9 @@ export const StorefrontFilterSidebar = ({
     onResetFilters();
     if (isMobile) {
       onClose();
+    }
+    if (setWasDesktopFilterSidebarExplicitlyOpened) {
+      setWasDesktopFilterSidebarExplicitlyOpened(false); // Reset explicit state when clearing all
     }
   };
 
@@ -191,7 +196,7 @@ export const StorefrontFilterSidebar = ({
         <div className="flex items-center justify-between py-3 text-base font-semibold"> {/* This div wraps the trigger and clear button */}
           <AccordionTrigger className="flex-1 py-0 pr-3 text-base"> {/* AccordionTrigger is now flex-1 */}
             <div className="flex items-center gap-2">
-              <Icon className="h-5 w-5 text-muted-foreground" />
+              <Icon className="h-5 w-5 text-primary" /> {/* Changed to text-primary */}
               {title}
             </div>
           </AccordionTrigger>
@@ -223,7 +228,7 @@ export const StorefrontFilterSidebar = ({
       {isMobile ? (
         <SheetHeader className="p-4 border-b flex-row items-center justify-between">
           <SheetTitle className="flex items-center gap-2 text-xl font-bold">
-            <Filter className="h-6 w-6" />
+            <Filter className="h-6 w-6 text-primary" /> {/* Changed to text-primary */}
             Advanced Filters
           </SheetTitle>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
@@ -234,7 +239,7 @@ export const StorefrontFilterSidebar = ({
       ) : (
         <div className="p-4 border-b flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-bold">
-            <Filter className="h-6 w-6" />
+            <Filter className="h-6 w-6 text-primary" /> {/* Changed to text-primary */}
             Filters
           </h2>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">

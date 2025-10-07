@@ -79,7 +79,7 @@ export const StorefrontProductCard = ({ product, shopSlug, className }: Storefro
                     </Badge>
                   )}
                   {product.details?.type && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30"> {/* Changed to primary color */}
                       {product.details.type}
                     </Badge>
                   )}

@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 const navItems = [
   { to: "/", icon: Home, label: "Home" },
   { to: "/products", icon: Package, label: "Products" },
-  { to: "/order-tracking", icon: Truck, label: "Track Order" },
+  { to: "/orders", icon: Truck, label: "My Orders" }, // Changed to My Orders
 ];
 
 export const StorefrontBottomNav = () => {

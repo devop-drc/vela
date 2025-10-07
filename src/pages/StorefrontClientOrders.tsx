@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Search, Package, CheckCircle, Truck, Home, XCircle, Loader2, ArrowLeft, User, Mail, Calendar, Banknote, Handshake } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,9 +12,10 @@ import { showError, showSuccess } from "@/utils/toast";
 import { formatCurrency } from "@/lib/formatters";
 import { Separator } from "@/components/ui/separator";
 import { MediaItem } from "@/components/MediaItem";
-import { ReportIssueModal } from "@/components/storefront/ReportIssueModal"; // Import the new modal
+import { ReportIssueModal } from "@/components/storefront/ReportIssueModal";
+import { StorefrontOrderDetailModal } from "@/components/storefront/StorefrontOrderDetailModal"; // Import the new modal
 
-type OrderStatusType = 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic';
+type OrderStatusType = 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic' | 'Cancelled';
 
 interface OrderItem {
   quantity: number;
@@ -34,25 +35,30 @@ interface OrderDetails {
   total_amount: number;
   created_at: string;
   currency: string;
+  payment_method: string;
+  payment_status: string;
   order_items: OrderItem[];
 }
 
 const StorefrontClientOrders = () => {
   const { shopSlug, appearanceSettings } = useStorefront();
-  const [customerEmail, setCustomerEmail] = useState("");
+  const [searchParams] = useSearchParams();
+  const [customerEmailInput, setCustomerEmailInput] = useState(searchParams.get('email') || "");
+  const [orderIdInput, setOrderIdInput] = useState(searchParams.get('orderId') || ""); // For direct order tracking
   const [orders, setOrders] = useState<OrderDetails[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchAttempted, setSearchAttempted] = useState(false);
-  const [selectedOrderForIssue, setSelectedOrderForIssue] = useState<OrderDetails | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderDetails | null>(null);
+  const [isOrderDetailModalOpen, setIsOrderDetailModalOpen] = useState(false);
   const blurEnabled = appearanceSettings?.blurEnabled;
 
-  const fetchOrders = async (e?: React.FormEvent) => {
+  const fetchOrders = useCallback(async (e?: React.FormEvent) => {
     e?.preventDefault();
     setIsLoading(true);
     setOrders([]);
     setSearchAttempted(true);
 
-    if (!customerEmail) {
+    if (!customerEmailInput) {
       showError("Please enter your email address.");
       setIsLoading(false);
       return;
@@ -70,7 +76,7 @@ const StorefrontClientOrders = () => {
       }
       const businessId = shopData.business_id;
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select(`
           id,
@@ -80,6 +86,8 @@ const StorefrontClientOrders = () => {
           total_amount,
           created_at,
           currency,
+          payment_method,
+          payment_status,
           order_items (
             quantity,
             price_at_purchase,
@@ -90,15 +98,25 @@ const StorefrontClientOrders = () => {
             )
           )
         `)
-        .eq('customer_email', customerEmail)
+        .eq('customer_email', customerEmailInput)
         .eq('business_id', businessId)
         .order('created_at', { ascending: false });
+
+      if (orderIdInput) {
+        query = query.eq('id', orderIdInput);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Error fetching orders:", error);
         setOrders([]);
       } else if (data) {
         setOrders(data as OrderDetails[]);
+        if (orderIdInput && data.length > 0) {
+          setSelectedOrder(data[0] as OrderDetails);
+          setIsOrderDetailModalOpen(true);
+        }
       } else {
         setOrders([]);
       }
@@ -109,29 +127,39 @@ const StorefrontClientOrders = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [customerEmailInput, orderIdInput, shopSlug]);
+
+  useEffect(() => {
+    if (customerEmailInput && (orderIdInput || !searchAttempted)) { // Only fetch if email is present and either orderId is present or it's the initial load
+      fetchOrders();
+    }
+  }, [customerEmailInput, orderIdInput, fetchOrders, searchAttempted]);
 
   const getStatusColorClass = (status: OrderStatusType) => {
     switch (status) {
-      case "Fulfilled": return "text-emerald-500";
-      case "Given to Courier": return "text-blue-500";
-      case "Order Packaged": return "text-blue-500";
-      case "Order Seen": return "text-amber-500";
-      case "Pending": return "text-amber-500";
-      case "Problematic": return "text-destructive";
-      default: return "text-muted-foreground";
+      case "Fulfilled": return "bg-emerald-500";
+      case "Given to Courier": return "bg-blue-500";
+      case "Order Packaged": return "bg-blue-500";
+      case "Order Seen": return "bg-amber-500";
+      case "Pending": return "bg-amber-500";
+      case "Problematic": return "bg-destructive";
+      case "Cancelled": return "bg-gray-500";
+      default: return "bg-muted-foreground";
     }
+  };
+
+  const handleOrderUpdate = () => {
+    fetchOrders(); // Refetch orders after an update in the modal
   };
 
   return (
     <div className="container py-6 md:py-8">
-      {selectedOrderForIssue && (
-        <ReportIssueModal
-          isOpen={!!selectedOrderForIssue}
-          onClose={() => setSelectedOrderForIssue(null)}
-          orderId={selectedOrderForIssue.id}
-          customerEmail={selectedOrderForIssue.customer_email}
-          onIssueReported={() => { /* Optionally refetch orders */ }}
+      {selectedOrder && (
+        <StorefrontOrderDetailModal
+          isOpen={isOrderDetailModalOpen}
+          onClose={() => setIsOrderDetailModalOpen(false)}
+          order={selectedOrder}
+          onOrderUpdate={handleOrderUpdate}
         />
       )}
 
@@ -159,12 +187,24 @@ const StorefrontClientOrders = () => {
                 id="customerEmail"
                 type="email"
                 placeholder="your.email@example.com"
-                value={customerEmail}
-                onChange={(e) => setCustomerEmail(e.target.value)}
+                value={customerEmailInput}
+                onChange={(e) => setCustomerEmailInput(e.target.value)}
                 required
                 className="text-sm md:text-base"
               />
             </div>
+            {orderIdInput && (
+              <div className="space-y-2">
+                <Label htmlFor="orderId" className="text-sm">Specific Order ID (Optional)</Label>
+                <Input
+                  id="orderId"
+                  placeholder="e.g., 12345"
+                  value={orderIdInput}
+                  onChange={(e) => setOrderIdInput(e.target.value)}
+                  className="text-sm md:text-base"
+                />
+              </div>
+            )}
             <Button type="submit" className="w-full text-sm md:text-base" disabled={isLoading}>
               {isLoading ? (
                 <>
@@ -180,9 +220,9 @@ const StorefrontClientOrders = () => {
               <div className="mt-6 md:mt-8 space-y-6">
                 {orders.map(order => (
                   <Card key={order.id} className={cn(
-                    "p-4 md:p-6 shadow-md",
+                    "p-4 md:p-6 shadow-md cursor-pointer hover:shadow-lg transition-shadow",
                     blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
-                  )}>
+                  )} onClick={() => { setSelectedOrder(order); setIsOrderDetailModalOpen(true); }}>
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="font-semibold text-lg md:text-xl">Order #{order.id.substring(0, 8)}</h3>
                       <Badge className={cn("text-white", getStatusColorClass(order.status))}>{order.status}</Badge>
@@ -196,7 +236,7 @@ const StorefrontClientOrders = () => {
                     <div className="space-y-3">
                       {order.order_items.map((item, index) => (
                         <div key={index} className="flex items-center gap-3">
-                          <img src={item.products.media_url} alt={item.products.name} className="h-12 w-12 rounded-md object-cover bg-muted" />
+                          <MediaItem src={item.products.media_url} alt={item.products.name} className="h-12 w-12 rounded-md object-cover bg-muted" />
                           <div className="flex-1">
                             <p className="font-medium text-sm">{item.products.name}</p>
                             <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
@@ -204,15 +244,6 @@ const StorefrontClientOrders = () => {
                           <p className="font-medium text-sm">{formatCurrency(item.price_at_purchase * item.quantity, item.products.currency)}</p>
                         </div>
                       ))}
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                      <Link to={`/shop/${shopSlug}/order-tracking?orderId=${order.id}&email=${order.customer_email}`} className={cn(buttonVariants({ variant: "outline" }), "flex-1 text-sm md:text-base")}>
-                        View Details
-                      </Link>
-                      <Button variant="outline" onClick={() => setSelectedOrderForIssue(order)} className="flex-1 text-sm md:text-base">
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Report Issue
-                      </Button>
                     </div>
                   </Card>
                 ))}

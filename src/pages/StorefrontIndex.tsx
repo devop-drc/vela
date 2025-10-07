@@ -232,7 +232,7 @@ const StorefrontIndex = () => {
             <Marquee pauseOnHover className="py-3 md:py-4 border-y-2 border-primary/20 bg-primary/10">
               {marqueePromotions.map(promo => (
                 <div key={promo.id} className="flex items-center gap-6 md:gap-8 text-base md:text-lg font-semibold text-primary">
-                  <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-amber-500" />
+                  <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-primary" /> {/* Changed to text-primary */}
                   <span>{promo.value.message}</span>
                 </div>
               ))}
@@ -249,7 +249,7 @@ const StorefrontIndex = () => {
             className="mb-12 md:mb-16"
           >
             <h2 className="text-3xl md:text-4xl font-bold font-heading mb-8 md:mb-10 text-center flex items-center justify-center gap-2 md:gap-3">
-              <Package className="h-7 w-7 md:h-8 md:w-8 text-blue-400" />
+              <Package className="h-7 w-7 md:h-8 md:w-8 text-primary" /> {/* Changed to text-primary */}
               Shop by Category
             </h2>
             <motion.div
@@ -293,7 +293,7 @@ const StorefrontIndex = () => {
             className="mb-12 md:mb-16"
           >
             <h2 className="text-3xl md:text-4xl font-bold font-heading mb-8 md:mb-10 text-center flex items-center justify-center gap-2 md:gap-3">
-              <Crown className="h-7 w-7 md:h-8 md:w-8 text-amber-400" />
+              <Crown className="h-7 w-7 md:h-8 md:w-8 text-primary" /> {/* Changed to text-primary */}
               Our Best Sellers
             </h2>
             <ScrollArea className="w-full whitespace-nowrap pb-4">
@@ -323,7 +323,7 @@ const StorefrontIndex = () => {
             className="mb-12 md:mb-16"
           >
             <h2 className="text-3xl md:text-4xl font-bold font-heading mb-8 md:mb-10 text-center flex items-center justify-center gap-2 md:gap-3">
-              <Sparkles className="h-7 w-7 md:h-8 md:w-8 text-purple-400" />
+              <Sparkles className="h-7 w-7 md:h-8 md:w-8 text-primary" /> {/* Changed to text-primary */}
               New Arrivals
             </h2>
             <ScrollArea className="w-full whitespace-nowrap pb-4">
@@ -353,7 +353,7 @@ const StorefrontIndex = () => {
             className="mb-12 md:mb-16"
           >
             <h2 className="text-3xl md:text-4xl font-bold font-heading mb-8 md:mb-10 text-center flex items-center justify-center gap-2 md:gap-3">
-              <Gift className="h-7 w-7 md:h-8 md:w-8 text-rose-400" />
+              <Gift className="h-7 w-7 md:h-8 md:w-8 text-primary" /> {/* Changed to text-primary */}
               Recommended For You
             </h2>
             <ScrollArea className="w-full whitespace-nowrap pb-4">

@@ -25,9 +25,8 @@ import Keywords from "./pages/Keywords";
 import StorefrontLayout from "./components/storefront/StorefrontLayout";
 import StorefrontIndex from "./pages/StorefrontIndex";
 import StorefrontProductDetail from "./pages/StorefrontProductDetail";
-import StorefrontOrderTracking from "./pages/StorefrontOrderTracking";
 import StorefrontAllProducts from "./pages/StorefrontAllProducts";
-import StorefrontClientOrders from "./pages/StorefrontClientOrders";
+import StorefrontClientOrders from "./pages/StorefrontClientOrders"; // Use this for all customer orders
 import Disputes from "./pages/Disputes";
 import Promotions from "./pages/Promotions"; // Import the new Promotions page
 
@@ -50,8 +49,8 @@ const App = () => (
                       <Route index element={<StorefrontIndex />} />
                       <Route path="products" element={<StorefrontAllProducts />} />
                       <Route path="product/:productId" element={<StorefrontProductDetail />} />
-                      <Route path="order-tracking" element={<StorefrontOrderTracking />} />
-                      <Route path="orders" element={<StorefrontClientOrders />} />
+                      {/* Consolidated orders page for customers */}
+                      <Route path="orders" element={<StorefrontClientOrders />} /> 
                     </Route>
 
                     {/* Existing Dashboard and Auth Routes */}

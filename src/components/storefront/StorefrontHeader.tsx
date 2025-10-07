@@ -20,9 +20,10 @@ interface StorefrontHeaderProps {
   onOpenCart: () => void;
   isDesktopSidebarOpen: boolean; // New prop
   setIsDesktopFilterSidebarOpen: (open: boolean) => void; // New prop to control desktop sidebar
+  setWasDesktopFilterSidebarExplicitlyOpened: (open: boolean) => void; // New prop to track explicit user action
 }
 
-export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopSidebarOpen, setIsDesktopFilterSidebarOpen }: StorefrontHeaderProps) => {
+export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopSidebarOpen, setIsDesktopFilterSidebarOpen, setWasDesktopFilterSidebarExplicitlyOpened }: StorefrontHeaderProps) => {
   const { shopDetails, appearanceSettings } = useStorefront();
   const { totalItems } = useCart();
   const isMobile = useIsMobile();
@@ -71,7 +72,10 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
   };
 
   const handleDesktopFilterToggle = () => {
-    setIsDesktopFilterSidebarOpen(prev => !prev);
+    setIsDesktopFilterSidebarOpen(prev => {
+      setWasDesktopFilterSidebarExplicitlyOpened(!prev); // Update explicit state
+      return !prev;
+    });
   };
 
   // Dynamic styles for desktop header when sidebar is open
@@ -114,8 +118,8 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
           <Link to={`/shop/${shopDetails.slug}/products`} className={cn(buttonVariants({ variant: "ghost" }), "text-sm md:text-base")}>
             Products
           </Link>
-          <Link to={`/shop/${shopDetails.slug}/order-tracking`} className={cn(buttonVariants({ variant: "ghost" }), "text-sm md:text-base")}>
-            Track Order
+          <Link to={`/shop/${shopDetails.slug}/orders`} className={cn(buttonVariants({ variant: "ghost" }), "text-sm md:text-base")}>
+            My Orders
           </Link>
 
           {/* Desktop Search Input */}
@@ -191,13 +195,8 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to={`/shop/${shopDetails.slug}/order-tracking`} className="flex items-center gap-2 text-sm">
-                    <Truck className="h-4 w-4" /> Track Order
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
                   <Link to={`/shop/${shopDetails.slug}/orders`} className="flex items-center gap-2 text-sm">
-                    <ShoppingBag className="h-4 w-4" /> My Orders
+                    <Truck className="h-4 w-4" /> My Orders
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
