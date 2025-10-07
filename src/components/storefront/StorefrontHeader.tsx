@@ -29,6 +29,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: Storefro
 
   const blurEnabled = appearanceSettings?.blurEnabled;
   const borderRadius = appearanceSettings?.['--radius'] || '0.5rem';
+  const isFloatingLayout = appearanceSettings?.layoutStyle === 'floating';
 
   // Debounced function to update search params
   const debouncedSetSearchParam = useCallback(
@@ -57,12 +58,16 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: Storefro
 
   return (
     <header className={cn(
-      "sticky top-0 z-40 w-full border-b",
-      blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background",
-      "shadow-md",
-      appearanceSettings?.layoutStyle === 'floating' && "md:fixed md:top-4 md:left-4 md:right-4 md:w-[calc(100%-2rem)] md:max-w-[1400px] md:mx-auto"
-    )} style={{ borderRadius: appearanceSettings?.layoutStyle === 'floating' ? borderRadius : '0' }}>
-      <div className="container flex h-16 items-center justify-between">
+      "fixed top-0 left-0 right-0 z-40 transition-all", // Always fixed
+      isFloatingLayout ? "md:top-4 md:left-4 md:right-4" : "" // Adjust position for floating on desktop
+    )}>
+      <div className={cn(
+        "container flex h-16 items-center justify-between",
+        isFloatingLayout
+          ? "border rounded-lg shadow-md" // Floating style
+          : "border-b shadow-sm", // Docked style
+        blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
+      )} style={{ borderRadius: isFloatingLayout ? borderRadius : '0' }}>
         <Link to={`/shop/${shopDetails.slug}`} className="flex items-center space-x-2">
           <Avatar className="h-8 w-8">
             <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />

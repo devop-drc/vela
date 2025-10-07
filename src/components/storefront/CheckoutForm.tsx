@@ -204,14 +204,10 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName">First Name</Label>
-                        <Input id="firstName" placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName">Last Name</Label>
-                        <Input id="lastName" placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
-                      </div>
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input id="firstName" placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input id="lastName" placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>

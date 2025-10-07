@@ -125,7 +125,9 @@ const StorefrontLayoutContent = () => {
     );
   }
 
-  const mainContentPaddingTop = appearanceSettings?.layoutStyle === 'floating' ? 'pt-24' : 'pt-0'; // Adjust padding for floating header
+  const headerHeight = '4rem'; // 64px
+  const floatingHeaderOffset = '1rem'; // 16px
+  const mainContentPaddingTop = appearanceSettings?.layoutStyle === 'floating' ? `calc(${headerHeight} + ${floatingHeaderOffset} + ${floatingHeaderOffset})` : headerHeight;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -134,7 +136,7 @@ const StorefrontLayoutContent = () => {
         onToggleFilterSidebar={() => setIsFilterSidebarOpen(true)} 
         onOpenCart={() => setIsCartCheckoutModalOpen(true)}
       />
-      <main className={cn("flex-1 overflow-y-auto", mainContentPaddingTop)}> {/* Apply dynamic padding and overflow */}
+      <main className="flex-1 overflow-y-auto" style={{ paddingTop: mainContentPaddingTop }}>
         <Outlet context={{ onToggleFilterSidebar: () => setIsFilterSidebarOpen(true), isFilterSidebarOpen, setIsFilterSidebarOpen, products }} />
       </main>
       <StorefrontFooter />

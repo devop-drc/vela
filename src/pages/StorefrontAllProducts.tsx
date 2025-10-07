@@ -243,6 +243,22 @@ const StorefrontAllProducts = () => {
 
   const hasActiveFilters = searchTerm || sortOption !== 'newest' || filters.categories.length > 0 || filters.tags.length > 0 || filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice;
 
+  const sidebarWidth = '20rem'; // 320px
+  const sidebarGap = '1rem'; // 16px
+  const headerHeight = '4rem'; // 64px
+  const floatingHeaderOffset = '1rem'; // 16px
+
+  const desktopSidebarTop = isFloatingLayout ? `calc(${floatingHeaderOffset} + ${headerHeight} + ${floatingHeaderOffset})` : headerHeight;
+  const desktopSidebarHeight = isFloatingLayout ? `calc(100vh - ${floatingHeaderOffset} - ${desktopSidebarTop})` : `calc(100vh - ${headerHeight})`;
+  const desktopSidebarLeft = isFloatingLayout ? floatingHeaderOffset : '0';
+
+  const mainContentPaddingLeft = !isMobile && isDesktopSidebarOpen
+    ? (isFloatingLayout ? `calc(${sidebarWidth} + ${sidebarGap} + ${floatingHeaderOffset})` : `calc(${sidebarWidth} + ${sidebarGap})`)
+    : '0';
+
+  const stickyBarTop = isFloatingLayout ? `calc(${headerHeight} + ${floatingHeaderOffset} + ${floatingHeaderOffset})` : headerHeight;
+
+
   if (isLoading && allProducts.length === 0) {
     return (
       <div className="container py-8">
@@ -296,16 +312,22 @@ const StorefrontAllProducts = () => {
         <AnimatePresence initial={false}>
           {isDesktopSidebarOpen && (
             <motion.aside
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: '20rem', opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
+              initial={{ x: '-100%', opacity: 0 }}
+              animate={{ x: '0%', opacity: 1 }}
+              exit={{ x: '-100%', opacity: 0 }}
               transition={{ duration: 0.2 }}
               className={cn(
-                "hidden lg:flex flex-col border-r h-[calc(100vh-4rem)] flex-shrink-0 fixed top-16 overflow-y-auto", // Fixed position, calc height
+                "hidden lg:flex flex-col flex-shrink-0 fixed z-30",
                 blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
-                isFloatingLayout ? "ml-4" : "rounded-none" // Conditional margin and border-radius
+                isFloatingLayout ? "border rounded-lg" : "border-r"
               )}
-              style={{ borderRadius: isFloatingLayout ? borderRadius : '0' }} // Apply dynamic border-radius
+              style={{
+                width: sidebarWidth,
+                top: desktopSidebarTop,
+                height: desktopSidebarHeight,
+                left: desktopSidebarLeft,
+                borderRadius: isFloatingLayout ? borderRadius : '0',
+              }}
             >
               <StorefrontFilterSidebar
                 isOpen={true}
@@ -321,14 +343,14 @@ const StorefrontAllProducts = () => {
         </AnimatePresence>
       )}
 
-      <div className={cn("flex-1", !isMobile && isDesktopSidebarOpen && (isFloatingLayout ? "ml-[calc(20rem+1rem)]" : "ml-[20rem]"))}> {/* Adjust main content margin */}
+      <div className="flex-1 transition-all duration-200" style={{ paddingLeft: mainContentPaddingLeft }}>
         <div className="container py-8">
           <StorefrontBreadcrumb />
 
           <div className={cn(
-            "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-4",
+            "sticky z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-4",
             blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
-          )} style={{ borderRadius: borderRadius }}>
+          )} style={{ borderRadius: borderRadius, top: stickyBarTop }}>
             <div className="flex items-center gap-2 w-full md:w-auto">
               {!isMobile && (
                 <Button variant="outline" onClick={() => setIsDesktopSidebarOpen(prev => !prev)} className="flex-shrink-0">
