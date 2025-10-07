@@ -38,9 +38,12 @@ const itemVariants = {
 };
 
 export const StorefrontProductCard = ({ product, shopSlug }: StorefrontProductCardProps) => {
-  const { shopDetails, appearanceSettings } = useStorefront();
+  const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const blurEnabled = appearanceSettings?.blurEnabled;
   const categoryColor = getCategoryColor(product.category);
+
+  // Convert product price to shop's display currency
+  const displayPrice = convertCurrency(product.price, product.currency);
 
   return (
     <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
@@ -74,7 +77,7 @@ export const StorefrontProductCard = ({ product, shopSlug }: StorefrontProductCa
             </div>
             <div className="mt-4">
               <p className="text-xl font-bold text-primary">
-                {formatCurrency(product.price, product.currency || shopDetails?.currency)}
+                {formatCurrency(displayPrice, shopDetails?.currency)}
                 {product.pricing_type === 'subscription' && (
                   <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                 )}

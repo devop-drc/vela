@@ -77,6 +77,7 @@ const StorefrontIndex = () => {
     if (appearanceSettings?.backgroundImageUrl) {
       return appearanceSettings.backgroundImageUrl;
     }
+    // Only pick a random image if no specific URL is set
     const randomIndex = Math.floor(Math.random() * curatedImages.length);
     return curatedImages[randomIndex].src;
   }, [appearanceSettings?.backgroundImageUrl]);

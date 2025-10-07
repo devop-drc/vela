@@ -35,6 +35,8 @@ export const StorefrontBreadcrumb = () => {
       if (product) {
         label = product.name;
       }
+    } else if (segment === 'products') { // Corrected: Link to /products
+      label = 'Products';
     } else if (segment === 'cart') {
       label = 'Cart';
     } else if (segment === 'checkout') {

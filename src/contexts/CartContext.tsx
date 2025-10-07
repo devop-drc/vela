@@ -5,8 +5,8 @@ import { toast } from 'sonner';
 export interface CartItem {
   productId: string;
   name: string;
-  price: number;
-  currency: string;
+  price: number; // This price should already be in the shop's display currency
+  currency: string; // This currency should be the shop's display currency
   quantity: number;
   media_url: string;
   media_type: string | null;
@@ -38,7 +38,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const CART_STORAGE_KEY = 'storefront_cart';
 const SAVED_STORAGE_KEY = 'storefront_saved_for_later';
 
-export const CartProvider = ({ children }: { ReactNode }) => {
+export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     if (typeof window !== 'undefined') {
       const savedCart = localStorage.getItem(CART_STORAGE_KEY);

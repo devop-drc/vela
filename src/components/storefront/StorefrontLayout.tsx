@@ -10,6 +10,7 @@ import { CartProvider } from '@/contexts/CartContext'; // Import CartProvider
 import { RecentlyViewedProvider } from '@/contexts/RecentlyViewedContext'; // Import RecentlyViewedProvider
 import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile
 import { StorefrontCartCheckoutModal } from './StorefrontCartCheckoutModal'; // Import the new modal
+import { cn } from '@/lib/utils'; // Import cn for conditional classnames
 
 // Function to apply settings to the DOM, similar to AppearanceContext
 const applyStorefrontSettingsToDOM = (settings: any) => {
@@ -124,14 +125,16 @@ const StorefrontLayoutContent = () => {
     );
   }
 
+  const mainContentPaddingTop = appearanceSettings?.layoutStyle === 'floating' ? 'pt-24' : 'pt-0'; // Adjust padding for floating header
+
   return (
     <div className="flex flex-col min-h-screen">
       <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
       <StorefrontHeader 
         onToggleFilterSidebar={() => setIsFilterSidebarOpen(true)} 
-        onOpenCart={() => setIsCartCheckoutModalOpen(true)} // Pass function to open cart modal
+        onOpenCart={() => setIsCartCheckoutModalOpen(true)}
       />
-      <main className="flex-1 flex">
+      <main className={cn("flex-1 flex", mainContentPaddingTop)}> {/* Apply dynamic padding */}
         <div className="flex-1">
           <Outlet context={{ onToggleFilterSidebar: () => setIsFilterSidebarOpen(true), isFilterSidebarOpen, setIsFilterSidebarOpen, products }} />
         </div>

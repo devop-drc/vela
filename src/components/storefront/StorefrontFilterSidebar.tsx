@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { getAttributeIcon } from "@/lib/attributeIcons";
+import { Slider } from "@/components/ui/slider"; // Import Slider
 
 interface Product {
   id: string;
@@ -26,8 +27,8 @@ interface Product {
 interface FilterState {
   categories: string[];
   tags: string[];
-  priceRange: string;
-  [key: string]: string[] | string; // For dynamic attributes
+  priceRange: [number, number]; // Change to tuple for min/max
+  [key: string]: string[] | [number, number]; // For dynamic attributes
 }
 
 interface StorefrontFilterSidebarProps {
@@ -49,9 +50,9 @@ export const StorefrontFilterSidebar = ({
   onResetFilters,
   isMobile,
 }: StorefrontFilterSidebarProps) => {
-  const { shopDetails, appearanceSettings } = useStorefront();
+  const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const blurEnabled = appearanceSettings?.blurEnabled;
-  const borderRadius = appearanceSettings?.['--radius'] || '0.5rem'; // Default border-radius
+  const borderRadius = appearanceSettings?.['--radius'] || '0.5rem';
 
   const [localFilters, setLocalFilters] = useState<FilterState>(currentFilters);
 
@@ -59,47 +60,54 @@ export const StorefrontFilterSidebar = ({
     setLocalFilters(currentFilters);
   }, [currentFilters]);
 
-  const handleCheckboxChange = (filterKey: keyof FilterState, value: string, checked: boolean) => {
+  const handleToggleFilter = (filterKey: keyof FilterState, value: string) => {
     setLocalFilters(prev => {
       const currentValues = (prev[filterKey] as string[]) || [];
-      const newValues = checked
-        ? [...currentValues, value]
-        : currentValues.filter(item => item !== value);
+      const newValues = currentValues.includes(value)
+        ? currentValues.filter(item => item !== value)
+        : [...currentValues, value];
       return { ...prev, [filterKey]: newValues };
     });
   };
 
-  const handleRadioChange = (filterKey: keyof FilterState, value: string) => {
-    setLocalFilters(prev => ({ ...prev, [filterKey]: value }));
+  const handlePriceRangeChange = (range: [number, number]) => {
+    setLocalFilters(prev => ({ ...prev, priceRange: range }));
   };
 
   const handleApplyFilters = () => {
     onFilterChange(localFilters);
     if (isMobile) {
-      onClose(); // Close sidebar after applying filters on mobile
+      onClose();
     }
   };
 
   const handleClearAll = () => {
     onResetFilters();
     if (isMobile) {
-      onClose(); // Close sidebar after clearing filters on mobile
+      onClose();
     }
   };
 
-  const { uniqueCategories, uniqueTags, uniqueDetailsAttributes } = useMemo(() => {
+  const { uniqueCategories, uniqueTags, uniqueDetailsAttributes, maxPrice } = useMemo(() => {
     const categories = new Set<string>();
     const tags = new Set<string>();
     const detailsAttributes: { [key: string]: Set<string> } = {};
+    let currentMaxPrice = 0;
 
     products.forEach(product => {
       if (product.category) categories.add(product.category);
       product.tags?.forEach(tag => tags.add(tag));
+      if (product.price !== null) {
+        const convertedPrice = convertCurrency(product.price, product.currency);
+        if (convertedPrice > currentMaxPrice) {
+          currentMaxPrice = convertedPrice;
+        }
+      }
 
       for (const key in product.details) {
         if (Object.prototype.hasOwnProperty.call(product.details, key)) {
           const value = product.details[key];
-          if (value !== undefined && value !== null && key !== 'type') { // Exclude 'type' as it's usually part of category
+          if (value !== undefined && value !== null && key !== 'type') {
             if (!detailsAttributes[key]) {
               detailsAttributes[key] = new Set<string>();
             }
@@ -120,8 +128,9 @@ export const StorefrontFilterSidebar = ({
         name: key,
         values: Array.from(values).sort(),
       })).sort((a, b) => a.name.localeCompare(b.name)),
+      maxPrice: Math.ceil(currentMaxPrice / 10) * 10, // Round up to nearest 10 for slider max
     };
-  }, [products]);
+  }, [products, convertCurrency]);
 
   const FilterSection = ({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) => (
     <AccordionItem value={title}>
@@ -167,60 +176,52 @@ export const StorefrontFilterSidebar = ({
         <Accordion type="multiple" defaultValue={["Categories", "Price Range"]} className="w-full">
           {uniqueCategories.length > 0 && (
             <FilterSection title="Categories" icon={Info}>
-              <div className="grid grid-cols-1 gap-2">
+              <div className="flex flex-wrap gap-2">
                 {uniqueCategories.map(category => (
-                  <Label key={category} className="flex items-center space-x-2 cursor-pointer">
-                    <Checkbox
-                      checked={(localFilters.categories as string[] || []).includes(category)}
-                      onCheckedChange={(checked: boolean) => handleCheckboxChange('categories', category, checked)}
-                    />
-                    <span>{category}</span>
-                  </Label>
+                  <Button
+                    key={category}
+                    variant={localFilters.categories.includes(category) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleToggleFilter('categories', category)}
+                    className={cn(localFilters.categories.includes(category) && "ring-2 ring-primary ring-offset-2")}
+                  >
+                    {category}
+                  </Button>
                 ))}
               </div>
             </FilterSection>
           )}
 
           <FilterSection title="Price Range" icon={DollarSign}>
-            <RadioGroup
-              value={localFilters.priceRange as string}
-              onValueChange={(value) => handleRadioChange('priceRange', value)}
-              className="grid grid-cols-1 gap-2"
-            >
-              <Label className="flex items-center space-x-2 cursor-pointer">
-                <RadioGroupItem value="all" />
-                <span>All Prices</span>
-              </Label>
-              <Label className="flex items-center space-x-2 cursor-pointer">
-                <RadioGroupItem value="under-50" />
-                <span>Under {formatCurrency(50, shopDetails?.currency)}</span>
-              </Label>
-              <Label className="flex items-center space-x-2 cursor-pointer">
-                <RadioGroupItem value="50-100" />
-                <span>{formatCurrency(50, shopDetails?.currency)} - {formatCurrency(100, shopDetails?.currency)}</span>
-              </Label>
-              <Label className="flex items-center space-x-2 cursor-pointer">
-                <RadioGroupItem value="100-200" />
-                <span>{formatCurrency(100, shopDetails?.currency)} - {formatCurrency(200, shopDetails?.currency)}</span>
-              </Label>
-              <Label className="flex items-center space-x-2 cursor-pointer">
-                <RadioGroupItem value="over-200" />
-                <span>Over {formatCurrency(200, shopDetails?.currency)}</span>
-              </Label>
-            </RadioGroup>
+            <div className="px-2 space-y-4">
+              <Slider
+                min={0}
+                max={maxPrice > 0 ? maxPrice : 100} // Ensure max is at least 100 if no products
+                step={1}
+                value={localFilters.priceRange}
+                onValueChange={handlePriceRangeChange}
+                className="w-full"
+              />
+              <div className="flex justify-between text-sm font-medium">
+                <span>{formatCurrency(localFilters.priceRange[0], shopDetails?.currency)}</span>
+                <span>{formatCurrency(localFilters.priceRange[1], shopDetails?.currency)}</span>
+              </div>
+            </div>
           </FilterSection>
 
           {uniqueTags.length > 0 && (
             <FilterSection title="Tags" icon={Tag}>
-              <div className="grid grid-cols-1 gap-2">
+              <div className="flex flex-wrap gap-2">
                 {uniqueTags.map(tag => (
-                  <Label key={tag} className="flex items-center space-x-2 cursor-pointer">
-                    <Checkbox
-                      checked={(localFilters.tags as string[] || []).includes(tag)}
-                      onCheckedChange={(checked: boolean) => handleCheckboxChange('tags', tag, checked)}
-                    />
-                    <span>{tag}</span>
-                  </Label>
+                  <Button
+                    key={tag}
+                    variant={localFilters.tags.includes(tag) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleToggleFilter('tags', tag)}
+                    className={cn(localFilters.tags.includes(tag) && "ring-2 ring-primary ring-offset-2")}
+                  >
+                    {tag}
+                  </Button>
                 ))}
               </div>
             </FilterSection>
@@ -230,15 +231,17 @@ export const StorefrontFilterSidebar = ({
             const Icon = getAttributeIcon(attr.name);
             return attr.values.length > 0 ? (
               <FilterSection key={attr.name} title={attr.name.replace(/_/g, ' ')} icon={Icon}>
-                <div className="grid grid-cols-1 gap-2">
+                <div className="flex flex-wrap gap-2">
                   {attr.values.map(value => (
-                    <Label key={value} className="flex items-center space-x-2 cursor-pointer">
-                      <Checkbox
-                        checked={(localFilters[attr.name] as string[] || []).includes(value)}
-                        onCheckedChange={(checked: boolean) => handleCheckboxChange(attr.name, value, checked)}
-                      />
-                      <span>{value}</span>
-                    </Label>
+                    <Button
+                      key={value}
+                      variant={(localFilters[attr.name] as string[] || []).includes(value) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleToggleFilter(attr.name, value)}
+                      className={cn((localFilters[attr.name] as string[] || []).includes(value) && "ring-2 ring-primary ring-offset-2")}
+                    >
+                      {value}
+                    </Button>
                   ))}
                 </div>
               </FilterSection>
@@ -262,7 +265,7 @@ export const StorefrontFilterSidebar = ({
             "w-full sm:max-w-xs p-0 flex flex-col", 
             blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
           )}
-          style={{ borderRadius: borderRadius }} // Apply border-radius
+          style={{ borderRadius: borderRadius }}
         >
           {filterContent}
         </SheetContent>
@@ -270,6 +273,5 @@ export const StorefrontFilterSidebar = ({
     );
   }
 
-  // Desktop view: filterContent is rendered directly within the motion.aside in StorefrontIndex
   return <>{filterContent}</>;
 };

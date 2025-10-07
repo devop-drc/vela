@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Search, ListFilter, ArrowUpNarrowWide, Tag, XCircle, Filter, ArrowRight, ChevronRight, Sparkles, Gift, Truck, RefreshCw, Crown } from "lucide-react";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { getCategoryColor } from "@/lib/colorUtils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard";
@@ -19,6 +19,7 @@ import { StorefrontFilterSidebar } from "@/components/storefront/StorefrontFilte
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StorefrontBreadcrumb } from "@/components/storefront/StorefrontBreadcrumb";
+import { debounce } from 'lodash'; // Import debounce
 
 interface Product {
   id: string;
@@ -42,8 +43,8 @@ interface Product {
 interface FilterState {
   categories: string[];
   tags: string[];
-  priceRange: string;
-  [key: string]: string[] | string; // For dynamic attributes
+  priceRange: [number, number];
+  [key: string]: string[] | [number, number]; // For dynamic attributes
 }
 
 const containerVariants = {
@@ -55,32 +56,59 @@ const containerVariants = {
 };
 
 const StorefrontAllProducts = () => {
-  const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, hasMoreProducts, fetchMoreProducts, isLoadingMore } = useStorefront();
+  const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, hasMoreProducts, fetchMoreProducts, isLoadingMore, convertCurrency } = useStorefront();
   const isMobile = useIsMobile();
   const { onToggleFilterSidebar, isFilterSidebarOpen, setIsFilterSidebarOpen } = useOutletContext<{ onToggleFilterSidebar: () => void; isFilterSidebarOpen: boolean; setIsFilterSidebarOpen: (open: boolean) => void }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
   const [sortOption, setSortOption] = useState("newest");
   const [filters, setFilters] = useState<FilterState>({
-    categories: [],
-    tags: [],
-    priceRange: "all",
+    categories: searchParams.getAll('category') || [],
+    tags: searchParams.getAll('tag') || [],
+    priceRange: [0, 1000], // Default max price, will be updated by maxPrice from useMemo
   });
-  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true); // Desktop sidebar open by default
 
   const blurEnabled = appearanceSettings?.blurEnabled;
-  const borderRadius = appearanceSettings?.['--radius'] || '0.5rem'; // Default border-radius
+  const borderRadius = appearanceSettings?.['--radius'] || '0.5rem';
   const observerTarget = useRef<HTMLDivElement>(null);
+
+  // Determine max price for the slider
+  const maxPrice = useMemo(() => {
+    let currentMax = 0;
+    allProducts.forEach(p => {
+      if (p.price !== null) {
+        const convertedPrice = convertCurrency(p.price, p.currency);
+        if (convertedPrice > currentMax) {
+          currentMax = convertedPrice;
+        }
+      }
+    });
+    return Math.ceil(currentMax / 10) * 10 || 100; // Round up to nearest 10, or 100 if no products
+  }, [allProducts, convertCurrency]);
+
+  useEffect(() => {
+    // Initialize priceRange with maxPrice once it's determined
+    if (filters.priceRange[1] === 1000 && maxPrice !== 1000) { // Only update if default and maxPrice is different
+      setFilters(prev => ({ ...prev, priceRange: [0, maxPrice] }));
+    }
+  }, [maxPrice, filters.priceRange]);
 
   useEffect(() => {
     const urlSearchTerm = searchParams.get('search');
-    if (urlSearchTerm && urlSearchTerm !== searchTerm) {
+    if (urlSearchTerm !== null && urlSearchTerm !== searchTerm) {
       setSearchTerm(urlSearchTerm);
-    } else if (!urlSearchTerm && searchTerm) {
+    } else if (urlSearchTerm === null && searchTerm) {
       setSearchTerm("");
     }
-  }, [searchParams]);
+
+    const urlCategories = searchParams.getAll('category');
+    const urlTags = searchParams.getAll('tag');
+    if (JSON.stringify(urlCategories) !== JSON.stringify(filters.categories) || JSON.stringify(urlTags) !== JSON.stringify(filters.tags)) {
+      setFilters(prev => ({ ...prev, categories: urlCategories, tags: urlTags }));
+    }
+  }, [searchParams, searchTerm, filters.categories, filters.tags]);
 
   useEffect(() => {
     if (!observerTarget.current || !hasMoreProducts || isLoading || isLoadingMore) return;
@@ -105,6 +133,14 @@ const StorefrontAllProducts = () => {
 
   const handleFilterChange = (newFilters: FilterState) => {
     setFilters(newFilters);
+    // Update URL search params based on new filters
+    const newSearchParams = new URLSearchParams();
+    if (searchTerm) newSearchParams.set('search', searchTerm);
+    if (sortOption !== 'newest') newSearchParams.set('sort', sortOption);
+    newFilters.categories.forEach(cat => newSearchParams.append('category', cat));
+    newFilters.tags.forEach(tag => newSearchParams.append('tag', tag));
+    // Price range and other dynamic attributes can also be added if needed
+    setSearchParams(newSearchParams, { replace: true });
   };
 
   const handleResetFilters = () => {
@@ -113,8 +149,29 @@ const StorefrontAllProducts = () => {
     setFilters({
       categories: [],
       tags: [],
-      priceRange: "all",
+      priceRange: [0, maxPrice],
     });
+    setSearchParams({}, { replace: true }); // Clear all search params
+  };
+
+  const debouncedSetSearchTerm = useCallback(
+    debounce((query: string) => {
+      setSearchTerm(query);
+      const newSearchParams = new URLSearchParams(searchParams);
+      if (query) {
+        newSearchParams.set('search', query);
+      } else {
+        newSearchParams.delete('search');
+      }
+      setSearchParams(newSearchParams, { replace: true });
+    }, 300),
+    [searchParams, setSearchParams]
+  );
+
+  const handleLocalSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchTerm(query); // Update local state immediately for responsive input
+    debouncedSetSearchTerm(query); // Debounce the actual search param update
   };
 
   const filteredAndSortedProducts = useMemo(() => {
@@ -136,18 +193,11 @@ const StorefrontAllProducts = () => {
       filtered = filtered.filter(p => p.tags?.some(tag => filters.tags.includes(tag)));
     }
 
-    if (filters.priceRange !== 'all') {
-      filtered = filtered.filter(p => {
-        const price = p.price || 0;
-        switch (filters.priceRange) {
-          case 'under-50': return price < 50;
-          case '50-100': return price >= 50 && price <= 100;
-          case '100-200': return price > 100 && price <= 200;
-          case 'over-200': return price > 200;
-          default: return true;
-        }
-      });
-    }
+    // Apply price range filter using converted prices
+    filtered = filtered.filter(p => {
+      const price = convertCurrency(p.price, p.currency);
+      return price >= filters.priceRange[0] && price <= filters.priceRange[1];
+    });
 
     for (const key in filters) {
       if (key !== 'categories' && key !== 'tags' && key !== 'priceRange' && Array.isArray(filters[key]) && (filters[key] as string[]).length > 0) {
@@ -164,9 +214,12 @@ const StorefrontAllProducts = () => {
     }
 
     return filtered.sort((a, b) => {
+      const priceA = convertCurrency(a.price, a.currency);
+      const priceB = convertCurrency(b.price, b.currency);
+
       switch (sortOption) {
-        case 'price-asc': return (a.price || 0) - (b.price || 0);
-        case 'price-desc': return (b.price || 0) - (a.price || 0);
+        case 'price-asc': return priceA - priceB;
+        case 'price-desc': return priceB - priceA;
         case 'name-asc': return a.name.localeCompare(b.name);
         case 'name-desc': return b.name.localeCompare(a.name);
         case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -174,7 +227,7 @@ const StorefrontAllProducts = () => {
         default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
-  }, [allProducts, searchTerm, sortOption, filters]);
+  }, [allProducts, searchTerm, sortOption, filters, convertCurrency]);
 
   const groupedProducts = useMemo(() => {
     return filteredAndSortedProducts.reduce((acc, product) => {
@@ -187,7 +240,7 @@ const StorefrontAllProducts = () => {
     }, {} as { [key: string]: typeof allProducts });
   }, [filteredAndSortedProducts]);
 
-  const hasActiveFilters = searchTerm || sortOption !== 'newest' || Object.values(filters).some(f => (Array.isArray(f) && f.length > 0) || (typeof f === 'string' && f !== 'all'));
+  const hasActiveFilters = searchTerm || sortOption !== 'newest' || filters.categories.length > 0 || filters.tags.length > 0 || filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice;
 
   if (isLoading && allProducts.length === 0) {
     return (
@@ -250,7 +303,7 @@ const StorefrontAllProducts = () => {
                 "hidden lg:flex flex-col border-r h-full flex-shrink-0 sticky top-0 max-h-screen overflow-y-auto",
                 blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
               )}
-              style={{ borderRadius: borderRadius }} // Apply border-radius
+              style={{ borderRadius: borderRadius }}
             >
               <StorefrontFilterSidebar
                 isOpen={true}
@@ -273,7 +326,7 @@ const StorefrontAllProducts = () => {
           <div className={cn(
             "sticky top-16 z-30 py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-4",
             blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
-          )} style={{ borderRadius: borderRadius }}> {/* Apply border-radius */}
+          )} style={{ borderRadius: borderRadius }}>
             <div className="flex items-center gap-2 w-full md:w-auto">
               {!isMobile && (
                 <Button variant="outline" onClick={() => setIsDesktopSidebarOpen(prev => !prev)} className="flex-shrink-0">
@@ -318,10 +371,7 @@ const StorefrontAllProducts = () => {
           <h2 className="text-4xl font-bold font-heading mb-10 text-center">All Products</h2>
           
           {filteredAndSortedProducts.length === 0 && !isLoading && !isLoadingMore ? (
-            <div className={cn(
-              "text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg",
-              blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
-            )}>
+            <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg">
               <h3 className="text-xl font-semibold">No Products Found</h3>
               <p className="text-base mt-2">
                 It looks like you don't have any active products yet.

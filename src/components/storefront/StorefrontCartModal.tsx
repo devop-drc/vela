@@ -63,7 +63,7 @@ export const StorefrontCartModal = ({ onClose, onProceedToCheckout }: Storefront
                           <h3 className="font-semibold text-lg hover:underline">{item.name}</h3>
                         </Link>
                         <p className="text-muted-foreground text-sm">
-                          {formatCurrency(item.price, item.currency || shopDetails?.currency)}
+                          {formatCurrency(item.price, shopDetails?.currency)} {/* Display in shop's currency */}
                         </p>
                       </div>
                       <div className="flex items-center justify-center sm:justify-end gap-4">
@@ -92,7 +92,7 @@ export const StorefrontCartModal = ({ onClose, onProceedToCheckout }: Storefront
                           </Button>
                         </div>
                         <p className="font-semibold text-lg">
-                          {formatCurrency(item.price * item.quantity, item.currency || shopDetails?.currency)}
+                          {formatCurrency(item.price * item.quantity, shopDetails?.currency)} {/* Display in shop's currency */}
                         </p>
                         <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.productId)} className="text-destructive hover:text-destructive">
                           <Trash2 className="h-4 w-4" />
@@ -128,7 +128,7 @@ export const StorefrontCartModal = ({ onClose, onProceedToCheckout }: Storefront
                           <h3 className="font-semibold text-lg hover:underline">{item.name}</h3>
                         </Link>
                         <p className="text-muted-foreground text-sm">
-                          {formatCurrency(item.price, item.currency || shopDetails?.currency)}
+                          {formatCurrency(item.price, shopDetails?.currency)} {/* Display in shop's currency */}
                         </p>
                       </div>
                       <div className="flex items-center justify-center sm:justify-end gap-4">

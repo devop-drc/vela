@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useCallback } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ShoppingBag, Filter, Search, X } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,6 +9,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "../ui/input";
+import { debounce } from 'lodash'; // Import debounce
 
 interface StorefrontHeaderProps {
   onToggleFilterSidebar?: () => void;
@@ -20,28 +21,46 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: Storefro
   const { totalItems } = useCart();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const [isMobileSearchInputVisible, setIsMobileSearchInputVisible] = useState(false); // Local state for mobile search input visibility
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchParams.get('search') || '');
+  const [isMobileSearchInputVisible, setIsMobileSearchInputVisible] = useState(false);
 
   if (!shopDetails) return null;
 
   const blurEnabled = appearanceSettings?.blurEnabled;
-  const borderRadius = appearanceSettings?.['--radius'] || '0.5rem'; // Default border-radius
+  const borderRadius = appearanceSettings?.['--radius'] || '0.5rem';
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  // Debounced function to update search params
+  const debouncedSetSearchParam = useCallback(
+    debounce((query: string) => {
+      if (query) {
+        searchParams.set('search', query);
+      } else {
+        searchParams.delete('search');
+      }
+      navigate(`/shop/${shopDetails.slug}/products?${searchParams.toString()}`);
+    }, 300), // 300ms debounce
+    [shopDetails.slug, navigate, searchParams]
+  );
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setLocalSearchTerm(query);
+    debouncedSetSearchParam(query);
+  };
+
+  const handleMobileSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget as HTMLFormElement);
-    const query = formData.get('searchQuery') as string;
-    if (query) {
-      navigate(`/shop/${shopDetails.slug}/products?search=${encodeURIComponent(query)}`); // Navigate to all products page with search
-      if (isMobile) setIsMobileSearchInputVisible(false); // Hide mobile search input after search
-    }
+    debouncedSetSearchParam(localSearchTerm);
+    if (isMobile) setIsMobileSearchInputVisible(false);
   };
 
   return (
     <header className={cn(
       "sticky top-0 z-40 w-full border-b",
       blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background",
-      "shadow-md"
+      "shadow-md",
+      appearanceSettings?.layoutStyle === 'floating' && "md:fixed md:top-4 md:left-4 md:right-4 md:w-[calc(100%-2rem)] md:max-w-[1400px] md:mx-auto"
     )} style={{ borderRadius: appearanceSettings?.layoutStyle === 'floating' ? borderRadius : '0' }}>
       <div className="container flex h-16 items-center justify-between">
         <Link to={`/shop/${shopDetails.slug}`} className="flex items-center space-x-2">
@@ -58,18 +77,19 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: Storefro
           <Link to={`/shop/${shopDetails.slug}/products`} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
             Products
           </Link>
-          {/* Desktop Search Input - Always visible */}
+          {/* Desktop Search Input */}
           {!isMobile && (
-            <form onSubmit={handleSearchSubmit} className="relative hidden md:flex items-center">
+            <div className="relative hidden md:flex items-center">
               <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 name="searchQuery"
                 placeholder="Search products..."
                 className="pl-9 w-64"
-                defaultValue={new URLSearchParams(location.search).get('search') || ''}
+                value={localSearchTerm}
+                onChange={handleSearchChange}
               />
-            </form>
+            </div>
           )}
           {/* Mobile Search Toggle Button */}
           {isMobile && (
@@ -87,7 +107,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: Storefro
           <Button
             variant="ghost"
             size="icon"
-            onClick={onOpenCart} // Call onOpenCart prop
+            onClick={onOpenCart}
             className="relative"
           >
             <motion.span
@@ -119,7 +139,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: Storefro
               blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
             )}
           >
-            <form onSubmit={handleSearchSubmit} className="container py-3 flex items-center gap-2">
+            <form onSubmit={handleMobileSearchSubmit} className="container py-3 flex items-center gap-2">
               <Search className="h-5 w-5 text-muted-foreground" />
               <Input
                 type="search"
@@ -127,7 +147,8 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: Storefro
                 placeholder="Search products..."
                 className="flex-1"
                 autoFocus
-                defaultValue={new URLSearchParams(location.search).get('search') || ''}
+                value={localSearchTerm}
+                onChange={(e) => setLocalSearchTerm(e.target.value)}
               />
               <Button type="submit">Search</Button>
             </form>

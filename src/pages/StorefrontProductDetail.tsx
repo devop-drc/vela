@@ -32,19 +32,35 @@ const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon
 
 const StorefrontProductDetail = () => {
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
-  const { shopDetails, products, isLoading, error, appearanceSettings } = useStorefront();
+  const { shopDetails, products, isLoading, error, appearanceSettings, convertCurrency } = useStorefront();
   const { addToCart } = useCart();
   const { addRecentlyViewed } = useRecentlyViewed(); // Use the new hook
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState<string | null>(null); // Placeholder for variant selection
   const [selectedSize, setSelectedSize] = useState<string | null>(null); // Placeholder for variant selection
 
+  useEffect(() => {
+    // Scroll to top when component mounts or productId changes
+    window.scrollTo(0, 0);
+  }, [productId]);
+
   if (isLoading) {
     return <div className="container py-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
   if (error) {
-    return <div className="container py-8 text-destructive">{error}</div>;
+    return (
+      <div className="container py-8 text-center text-destructive">
+        <h1 className="text-2xl font-bold">Error Loading Product</h1>
+        <p className="mt-2">{error}</p>
+        <Button asChild className="mt-4">
+          <Link to={`/shop/${shopSlug}/products`}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Products
+          </Link>
+        </Button>
+      </div>
+    );
   }
 
   const product = products.find(p => p.id === productId);
@@ -68,7 +84,7 @@ const StorefrontProductDetail = () => {
         <h1 className="text-2xl font-bold">Product Not Found</h1>
         <p className="mt-2">The product you are looking for does not exist or is no longer available.</p>
         <Button asChild className="mt-4">
-          <Link to={`/shop/${shopSlug}`}>
+          <Link to={`/shop/${shopSlug}/products`}>
             <Home className="mr-2 h-4 w-4" />
             Back to Shop
           </Link>
@@ -80,6 +96,9 @@ const StorefrontProductDetail = () => {
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
   const blurEnabled = appearanceSettings?.blurEnabled;
 
+  // Convert product price to shop's display currency
+  const displayPrice = convertCurrency(product.price, product.currency);
+
   const handleAddToCart = () => {
     if (!shopDetails?.slug) {
       toast.error("Shop details not available.");
@@ -89,8 +108,9 @@ const StorefrontProductDetail = () => {
     addToCart({
       productId: product.id,
       name: product.name + (selectedColor ? ` (${selectedColor})` : '') + (selectedSize ? ` (${selectedSize})` : ''),
-      price: product.price || 0,
-      currency: product.currency || shopDetails.currency || 'USD',
+      // Pass the converted price and shop's currency to cart
+      price: displayPrice, 
+      currency: shopDetails.currency || 'USD',
       media_url: product.media_url,
       media_type: product.media_type,
       slug: shopDetails.slug,
@@ -143,7 +163,7 @@ const StorefrontProductDetail = () => {
             <h1 className="text-4xl md:text-5xl font-bold font-heading mb-3 leading-tight">{product.name}</h1>
             <div className="flex items-center gap-3 mb-3">
                 <p className="text-3xl font-bold text-primary">
-                {formatCurrency(product.price, product.currency || shopDetails?.currency)}
+                {formatCurrency(displayPrice, shopDetails?.currency)}
                 {product.pricing_type === 'subscription' && (
                     <span className="text-lg font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                 )}
