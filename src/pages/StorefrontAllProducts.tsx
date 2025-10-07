@@ -20,6 +20,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StorefrontBreadcrumb } from "@/components/storefront/StorefrontBreadcrumb";
 import { debounce } from 'lodash'; // Import debounce
+import { getCategoryIcon } from "@/lib/categoryIcons"; // Import getCategoryIcon
 
 interface Product {
   id: string;
@@ -301,7 +302,7 @@ const StorefrontAllProducts = () => {
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
               className={cn(
-                "hidden lg:flex flex-col border-r h-[calc(100vh-4rem)] flex-shrink-0 fixed top-16 overflow-y-auto", // Fixed position, calc height
+                "hidden lg:flex flex-col border-r h-[calc(100vh-4rem)] flex-shrink-0 sticky top-16 overflow-y-auto", // Changed to sticky
                 blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
                 isFloatingLayout ? "ml-4" : "rounded-none" // Conditional margin and border-radius
               )}
@@ -383,28 +384,31 @@ const StorefrontAllProducts = () => {
             </div>
           ) : (
             <div className="space-y-16">
-              {Object.entries(groupedProducts).map(([category, productsInCategory]) => (
-                <div key={category}>
-                  <h3 className={cn(
-                    "text-3xl font-bold font-heading mb-8 inline-block px-4 py-2 rounded-md", // Adjusted padding and border-radius
-                    blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
-                    getCategoryColor(category).bg, getCategoryColor(category).text,
-                    "shadow-sm" // Softer shadow
-                  )}>
-                    {category}
-                  </h3>
-                  <motion.div
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8"
-                  >
-                    {productsInCategory.map((product) => (
-                      <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} />
-                    ))}
-                  </motion.div>
-                </div>
-              ))}
+              {Object.entries(groupedProducts).map(([category, productsInCategory]) => {
+                const CategoryIcon = getCategoryIcon(category);
+                return (
+                  <div key={category}>
+                    <h3 className={cn(
+                      "text-3xl font-bold font-heading mb-8 inline-flex items-center gap-3 px-4 py-2 rounded-md text-foreground", // Removed bg/text colors
+                      blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
+                      "shadow-sm" // Softer shadow
+                    )}>
+                      <CategoryIcon className="h-7 w-7 text-muted-foreground" /> {/* Icon added */}
+                      {category}
+                    </h3>
+                    <motion.div
+                      variants={containerVariants}
+                      initial="hidden"
+                      animate="visible"
+                      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8"
+                    >
+                      {productsInCategory.map((product) => (
+                        <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} />
+                      ))}
+                    </motion.div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
