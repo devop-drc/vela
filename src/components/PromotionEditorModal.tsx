@@ -22,22 +22,14 @@ import { Badge } from "./ui/badge";
 
 const promotionSchema = z.object({
   name: z.string().min(1, "Promotion name is required"),
-  type: z.enum(['marquee_text', 'discount', 'offer']),
+  type: z.enum(['discount', 'offer']), // Removed 'marquee_text'
   value: z.any(), // This will be dynamically validated
   start_date: z.date().optional().nullable(),
   end_date: z.date().optional().nullable(),
   is_active: z.boolean().default(true),
   target_products: z.array(z.string()).optional().nullable(),
 }).superRefine((data, ctx) => {
-  if (data.type === 'marquee_text') {
-    if (!data.value?.message || data.value.message.trim() === '') {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Marquee message is required.",
-        path: ["value.message"],
-      });
-    }
-  } else if (data.type === 'discount') {
+  if (data.type === 'discount') {
     if (!data.value?.discountType) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -75,7 +67,7 @@ type PromotionFormData = z.infer<typeof promotionSchema>;
 interface Promotion {
   id: string;
   name: string;
-  type: 'marquee_text' | 'discount' | 'offer';
+  type: 'discount' | 'offer'; // Removed 'marquee_text'
   value: any;
   start_date: string | null;
   end_date: string | null;
@@ -97,7 +89,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
   const { register, handleSubmit, reset, control, watch, setValue, formState: { errors, isSubmitting } } = useForm<PromotionFormData>({
     resolver: zodResolver(promotionSchema),
     defaultValues: {
-      type: 'marquee_text',
+      type: 'discount', // Default to discount
       is_active: true,
       value: {},
       target_products: [],
@@ -123,8 +115,8 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
     } else {
       reset({
         name: "",
-        type: 'marquee_text',
-        value: { message: "" },
+        type: 'discount', // Default to discount
+        value: { discountType: "percentage", discountValue: 0 }, // Default value for discount
         start_date: null,
         end_date: null,
         is_active: true,
@@ -209,15 +201,13 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                     <Select onValueChange={(value: PromotionFormData['type']) => {
                       field.onChange(value);
                       // Reset value object when type changes
-                      if (value === 'marquee_text') setValue('value', { message: "" });
-                      else if (value === 'discount') setValue('value', { discountType: "percentage", discountValue: 0 });
+                      if (value === 'discount') setValue('value', { discountType: "percentage", discountValue: 0 });
                       else if (value === 'offer') setValue('value', { offerType: "free_shipping", minOrderValue: 0 });
                     }} value={field.value}>
                       <SelectTrigger id="type">
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="marquee_text"><MessageSquareText className="mr-2 h-4 w-4" /> Marquee Text</SelectItem>
                         <SelectItem value="discount"><Percent className="mr-2 h-4 w-4" /> Discount</SelectItem>
                         <SelectItem value="offer"><Gift className="mr-2 h-4 w-4" /> Offer</SelectItem>
                       </SelectContent>
@@ -226,14 +216,6 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                 />
                 {errors.type && <p className="text-sm text-destructive mt-1">{errors.type.message}</p>}
               </div>
-
-              {promotionType === 'marquee_text' && (
-                <div className="space-y-2">
-                  <Label htmlFor="marqueeMessage">Marquee Message</Label>
-                  <Textarea id="marqueeMessage" {...register("value.message")} placeholder="e.g., Flash Sale! Get 20% off all items this week!" />
-                  {errors.value?.message && <p className="text-sm text-destructive mt-1">{errors.value.message.message}</p>}
-                </div>
-              )}
 
               {promotionType === 'discount' && (
                 <div className="grid grid-cols-2 gap-4">

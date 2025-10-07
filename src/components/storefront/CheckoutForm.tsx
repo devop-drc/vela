@@ -22,7 +22,7 @@ const CheckoutProgress = ({ currentStep }: { currentStep: number }) => {
   ];
 
   return (
-    <div className="flex justify-between items-center mb-8">
+    <div className="flex justify-between items-center mb-8 flex-shrink-0"> {/* Added flex-shrink-0 */}
       {steps.map((step, index) => (
         <div key={step.name} className="flex flex-col items-center flex-1">
           <div className={cn(
@@ -199,7 +199,7 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-6 pt-6">
+      <div className="px-6 pt-6 flex-shrink-0"> {/* Added flex-shrink-0 */}
         <CheckoutProgress currentStep={currentStep} />
       </div>
 
@@ -381,7 +381,7 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
         </AnimatePresence>
       </form>
 
-      <div className="p-6 border-t flex justify-between items-center">
+      <div className="p-6 border-t flex justify-between items-center flex-shrink-0"> {/* Added flex-shrink-0 */}
         {currentStep > 1 ? (
           <Button type="button" variant="ghost" onClick={() => setCurrentStep(prev => prev - 1)} className="text-sm md:text-base">
             <ArrowLeft className="mr-2 h-4 w-4" />

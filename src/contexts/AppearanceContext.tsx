@@ -1,8 +1,9 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Session } from '@supabase/supabase-js'; // Rewriting this line
+import { Session } from '@supabase/supabase-js';
 import { showError, showSuccess } from '@/utils/toast';
 import { hexToHsl } from '@/utils/colors';
+import { loadGoogleFont } from '@/lib/fontUtils'; // Import loadGoogleFont
 
 // --- THEME DEFINITIONS ---
 interface ColorScheme {
@@ -169,20 +170,6 @@ interface AppearanceContextType {
 }
 
 const AppearanceContext = createContext<AppearanceContextType | undefined>(undefined);
-
-const loadedFonts = new Set();
-const loadGoogleFont = (fontName: string) => {
-  if (loadedFonts.has(fontName) || fontName === 'Inter' || fontName.includes('system-ui')) {
-    return;
-  }
-  const fontUrl = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@300;400;500;600;700&display=swap`;
-  const link = document.createElement('link');
-  link.id = `font-${fontName}`;
-  link.href = fontUrl;
-  link.rel = 'stylesheet';
-  document.head.appendChild(link);
-  loadedFonts.add(fontName);
-};
 
 const applySettingsToDOM = (settings: Partial<DesignSettings>) => {
   const root = document.documentElement;

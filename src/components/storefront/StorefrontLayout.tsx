@@ -12,6 +12,7 @@ import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile
 import { StorefrontCartCheckoutModal } from './StorefrontCartCheckoutModal'; // Import the new modal
 import { StorefrontBottomNav } from './StorefrontBottomNav'; // Import the new bottom nav
 import { cn } from '@/lib/utils'; // Import cn for conditional classnames
+import { loadGoogleFont } from '@/lib/fontUtils'; // Import loadGoogleFont
 
 // Function to apply settings to the DOM, similar to AppearanceContext
 const applyStorefrontSettingsToDOM = (settings: any) => {
@@ -25,9 +26,11 @@ const applyStorefrontSettingsToDOM = (settings: any) => {
   }
   if (effectiveSettings.fontSans) {
     root.style.setProperty('--font-sans', `'${effectiveSettings.fontSans}', sans-serif`);
+    loadGoogleFont(effectiveSettings.fontSans); // Load font for storefront
   }
   if (effectiveSettings.fontHeading) {
     root.style.setProperty('--font-heading', `'${effectiveSettings.fontHeading}', sans-serif`);
+    loadGoogleFont(effectiveSettings.fontHeading); // Load font for storefront
   }
 
   if (effectiveSettings.blurEnabled) {

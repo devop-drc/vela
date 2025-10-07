@@ -46,7 +46,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
           blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
         )}
       >
-        <DialogHeader className="p-4 md:p-6 border-b flex-row items-center justify-between">
+        <DialogHeader className="p-4 md:p-6 border-b flex-row items-center justify-between flex-shrink-0"> {/* Added flex-shrink-0 */}
           <DialogTitle className="flex items-center gap-2 text-xl md:text-2xl font-bold">
             {isCheckoutMode ? (
               <Button variant="ghost" size="icon" onClick={() => setIsCheckoutMode(false)} className="mr-2 h-8 w-8 md:h-9 md:w-9">
@@ -197,7 +197,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                   </div>
                 </div>
 
-                <div className="p-4 md:p-6 border-t space-y-4">
+                <div className="p-4 md:p-6 border-t space-y-4 flex-shrink-0"> {/* Added flex-shrink-0 */}
                   <div className="flex justify-between text-sm md:text-base">
                     <span>Subtotal:</span>
                     <span className="font-semibold">{formatCurrency(subtotal, shopDetails?.currency)}</span>

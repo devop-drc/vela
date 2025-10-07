@@ -15,7 +15,7 @@ import { format } from "date-fns";
 interface Promotion {
   id: string;
   name: string;
-  type: 'marquee_text' | 'discount' | 'offer';
+  type: 'discount' | 'offer'; // Removed 'marquee_text'
   value: any;
   start_date: string | null;
   end_date: string | null;
@@ -36,7 +36,11 @@ const Promotions = () => {
 
   const fetchPromotions = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase.from("promotions").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabase
+      .from("promotions")
+      .select("*")
+      .not('type', 'eq', 'marquee_text') // Exclude marquee_text promotions
+      .order("created_at", { ascending: false });
     if (error) {
       showError("Could not fetch promotions.");
     } else {
@@ -73,7 +77,6 @@ const Promotions = () => {
 
   const getPromotionIcon = (type: Promotion['type']) => {
     switch (type) {
-      case 'marquee_text': return <MessageSquareText className="h-4 w-4" />;
       case 'discount': return <Percent className="h-4 w-4" />;
       case 'offer': return <Gift className="h-4 w-4" />;
       default: return null;
@@ -82,7 +85,6 @@ const Promotions = () => {
 
   const getPromotionDetails = (promotion: Promotion) => {
     switch (promotion.type) {
-      case 'marquee_text': return promotion.value?.message;
       case 'discount':
         if (promotion.value?.discountType === 'percentage') return `${promotion.value.discountValue}% Off`;
         if (promotion.value?.discountType === 'flat') return `$${promotion.value.discountValue} Off`;

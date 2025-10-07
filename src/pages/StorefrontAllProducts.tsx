@@ -405,10 +405,16 @@ const StorefrontAllProducts = () => {
             <div className="text-center py-16 md:py-20 text-muted-foreground border-2 border-dashed rounded-lg">
               <h3 className="text-xl md:text-2xl font-semibold">No Products Found</h3>
               <p className="text-sm md:text-base mt-1 md:mt-2">
-                It looks like you don't have any active products yet.
-                <br />
-                Please go to your <Link to="/" className="text-primary hover:underline">dashboard</Link>, then the "Products" section, and set some products to "Active" status to display them here.
+                {hasActiveFilters
+                  ? "No products match your current filters or search criteria."
+                  : "It looks like you don't have any active products yet."}
               </p>
+              {hasActiveFilters && (
+                <Button onClick={handleResetFilters} className="mt-4 text-sm md:text-base">
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Clear All Filters
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-12 md:space-y-16">
@@ -417,7 +423,7 @@ const StorefrontAllProducts = () => {
                   <h3 className={cn(
                     "text-2xl md:text-3xl font-bold font-heading mb-6 md:mb-8 inline-block px-3 py-1 md:px-4 md:py-2 rounded-md",
                     blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
-                    "bg-primary/10 text-primary border-primary/30", // Changed to primary color
+                    "bg-primary/10 text-primary border-primary/30",
                     "shadow-sm"
                   )}>
                     {category}

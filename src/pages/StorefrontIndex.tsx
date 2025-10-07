@@ -18,6 +18,7 @@ import { Marquee } from "@/components/ui/marquee";
 import { getCategoryIcon } from "@/lib/categoryIcons";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
+import * as LucideIcons from 'lucide-react'; // Import all Lucide icons
 
 interface Product {
   id: string;
@@ -38,15 +39,12 @@ interface Product {
   created_at: string;
 }
 
-interface Promotion {
+interface MarqueeElement {
   id: string;
-  name: string;
-  type: 'marquee_text' | 'discount' | 'offer';
-  value: any;
-  start_date: string | null;
-  end_date: string | null;
+  message: string;
+  icon_name: string;
   is_active: boolean;
-  target_products: string[] | null;
+  display_order: number;
 }
 
 const sectionVariants = {
@@ -72,30 +70,27 @@ const itemVariants = {
 const StorefrontIndex = () => {
   const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, bestSellers, recommendedProducts } = useStorefront();
   const productsSectionRef = useRef<HTMLDivElement>(null);
-  const [marqueePromotions, setMarqueePromotions] = useState<Promotion[]>([]);
+  const [marqueeElements, setMarqueeElements] = useState<MarqueeElement[]>([]); // Changed from marqueePromotions
 
   useEffect(() => {
-    const fetchMarqueePromotions = async () => {
+    const fetchMarqueeElements = async () => {
       if (!shopDetails?.userId) return;
 
       const { data, error } = await supabase
-        .from('promotions')
+        .from('marquee_elements') // Fetch from new table
         .select('*')
-        .eq('user_id', shopDetails.userId)
-        .eq('type', 'marquee_text')
         .eq('is_active', true)
-        .or(`end_date.gte.${new Date().toISOString()},end_date.is.null`)
-        .or(`start_date.lte.${new Date().toISOString()},start_date.is.null`);
+        .order('display_order', { ascending: true });
 
       if (error) {
-        console.error("Error fetching marquee promotions:", error);
+        console.error("Error fetching marquee elements:", error);
       } else {
-        setMarqueePromotions(data || []);
+        setMarqueeElements(data || []);
       }
     };
 
     if (shopDetails) {
-      fetchMarqueePromotions();
+      fetchMarqueeElements();
     }
   }, [shopDetails]);
 
@@ -140,6 +135,11 @@ const StorefrontIndex = () => {
   }, [appearanceSettings]);
 
   const blurEnabled = appearanceSettings?.blurEnabled;
+
+  const getIconComponent = (iconName: string) => {
+    const Icon = (LucideIcons as any)[iconName];
+    return Icon ? <Icon className="h-5 w-5 md:h-6 md:w-6 text-primary" /> : <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-primary" />;
+  };
 
   if (isLoading) {
     return (
@@ -221,7 +221,7 @@ const StorefrontIndex = () => {
         </motion.section>
 
         {/* Promotional Marquee */}
-        {marqueePromotions.length > 0 && (
+        {marqueeElements.length > 0 && (
           <motion.section
             initial="hidden"
             animate="visible"
@@ -229,10 +229,10 @@ const StorefrontIndex = () => {
             className="my-12 md:my-16"
           >
             <Marquee pauseOnHover className="py-3 md:py-4 border-y-2 border-primary/20 bg-primary/10">
-              {marqueePromotions.map(promo => (
-                <div key={promo.id} className="flex items-center gap-6 md:gap-8 text-base md:text-lg font-semibold text-primary">
-                  <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-primary" />
-                  <span>{promo.value.message}</span>
+              {marqueeElements.map(element => (
+                <div key={element.id} className="flex items-center gap-6 md:gap-8 text-base md:text-lg font-semibold text-primary">
+                  {getIconComponent(element.icon_name)}
+                  <span>{element.message}</span>
                 </div>
               ))}
             </Marquee>
