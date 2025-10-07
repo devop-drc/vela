@@ -11,12 +11,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "../ui/input";
 import { debounce } from 'lodash'; // Import debounce
 
+const DESKTOP_SIDEBAR_WIDTH = '20rem'; // 320px
+
 interface StorefrontHeaderProps {
   onToggleFilterSidebar?: () => void;
-  onOpenCart: () => void; // New prop to open the cart modal
+  onOpenCart: () => void;
+  isDesktopSidebarOpen: boolean; // New prop
 }
 
-export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: StorefrontHeaderProps) => {
+export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopSidebarOpen }: StorefrontHeaderProps) => {
   const { shopDetails, appearanceSettings } = useStorefront();
   const { totalItems } = useCart();
   const isMobile = useIsMobile();
@@ -56,11 +59,18 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: Storefro
     if (isMobile) setIsMobileSearchInputVisible(false);
   };
 
+  // Dynamic styles for desktop header when sidebar is open
+  const desktopHeaderStyle: React.CSSProperties = {};
+  if (!isMobile && isDesktopSidebarOpen) {
+    desktopHeaderStyle.left = DESKTOP_SIDEBAR_WIDTH;
+    desktopHeaderStyle.width = `calc(100% - ${DESKTOP_SIDEBAR_WIDTH})`;
+  }
+
   return (
     <header className={cn(
-      "fixed top-0 left-0 right-0 z-40 transition-all", // Always fixed
+      "fixed top-0 left-0 right-0 z-40 transition-all duration-200", // Always fixed
       isFloatingLayout ? "md:top-4 md:left-4 md:right-4" : "" // Adjust position for floating on desktop
-    )}>
+    )} style={desktopHeaderStyle}> {/* Apply dynamic style here */}
       <div className={cn(
         "container flex h-16 items-center justify-between",
         isFloatingLayout

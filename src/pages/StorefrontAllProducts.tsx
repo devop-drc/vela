@@ -55,10 +55,24 @@ const containerVariants = {
   },
 };
 
+const DESKTOP_SIDEBAR_WIDTH = '20rem'; // 320px
+
 const StorefrontAllProducts = () => {
   const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, hasMoreProducts, fetchMoreProducts, isLoadingMore, convertCurrency } = useStorefront();
   const isMobile = useIsMobile();
-  const { onToggleFilterSidebar, isFilterSidebarOpen, setIsFilterSidebarOpen } = useOutletContext<{ onToggleFilterSidebar: () => void; isFilterSidebarOpen: boolean; setIsFilterSidebarOpen: (open: boolean) => void }>();
+  const { 
+    onToggleFilterSidebar, 
+    isFilterSidebarOpen, 
+    setIsFilterSidebarOpen, 
+    isDesktopFilterSidebarOpen, // New context prop
+    setIsDesktopFilterSidebarOpen, // New context prop
+  } = useOutletContext<{ 
+    onToggleFilterSidebar: () => void; 
+    isFilterSidebarOpen: boolean; 
+    setIsFilterSidebarOpen: (open: boolean) => void;
+    isDesktopFilterSidebarOpen: boolean;
+    setIsDesktopFilterSidebarOpen: (open: boolean) => void;
+  }>();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
@@ -68,7 +82,9 @@ const StorefrontAllProducts = () => {
     tags: searchParams.getAll('tag') || [],
     priceRange: [0, 1000], // Default max price, will be updated by maxPrice from useMemo
   });
-  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true); // Desktop sidebar open by default
+  // const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true); // Now managed by context
+  
+  // ... existing useEffects ...
 
   const blurEnabled = appearanceSettings?.blurEnabled;
   const borderRadius = appearanceSettings?.['--radius'] || '0.5rem';
@@ -269,21 +285,18 @@ const StorefrontAllProducts = () => {
 
   const hasActiveFilters = searchTerm || sortOption !== 'newest' || filters.categories.length > 0 || filters.tags.length > 0 || filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice;
 
-  const sidebarWidth = '20rem'; // 320px
-  const sidebarGap = '1rem'; // 16px
   const headerHeight = '4rem'; // 64px
   const floatingHeaderOffset = '1rem'; // 16px
 
-  const desktopSidebarTop = isFloatingLayout ? `calc(${floatingHeaderOffset} + ${headerHeight} + ${floatingHeaderOffset})` : headerHeight;
-  const desktopSidebarHeight = isFloatingLayout ? `calc(100vh - ${floatingHeaderOffset} - ${desktopSidebarTop})` : `calc(100vh - ${headerHeight})`;
-  const desktopSidebarLeft = isFloatingLayout ? floatingHeaderOffset : '0';
-
-  const mainContentPaddingLeft = !isMobile && isDesktopSidebarOpen
-    ? (isFloatingLayout ? `calc(${sidebarWidth} + ${sidebarGap} + ${floatingHeaderOffset})` : `calc(${sidebarWidth} + ${sidebarGap})`)
+  // Calculate dynamic padding for main content
+  const mainContentPaddingLeft = !isMobile && isDesktopFilterSidebarOpen
+    ? `calc(${DESKTOP_SIDEBAR_WIDTH} + 2rem)` // Sidebar width + gap
     : '0';
 
-  const stickyBarTop = isFloatingLayout ? `calc(${headerHeight} + ${floatingHeaderOffset} + ${floatingHeaderOffset})` : `calc(${headerHeight} + 1rem)`;
-
+  // Calculate top position for sticky elements (like the filter/sort bar)
+  const stickyBarTop = isFloatingLayout 
+    ? `calc(${headerHeight} + ${floatingHeaderOffset} + ${floatingHeaderOffset})` 
+    : `calc(${headerHeight} + 1rem)`; // 1rem for some spacing below header
 
   if (isLoading && allProducts.length === 0) {
     return (
@@ -336,28 +349,26 @@ const StorefrontAllProducts = () => {
 
       {!isMobile && (
         <AnimatePresence initial={false}>
-          {isDesktopSidebarOpen && (
+          {isDesktopFilterSidebarOpen && (
             <motion.aside
               initial={{ x: '-100%', opacity: 0 }}
               animate={{ x: '0%', opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ duration: 0.2 }}
               className={cn(
-                "hidden lg:flex flex-col flex-shrink-0 fixed z-30",
+                "hidden lg:flex flex-col flex-shrink-0 fixed z-30 top-0 bottom-0", // Full height
                 blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
                 isFloatingLayout ? "border rounded-lg" : "border-r"
               )}
               style={{
-                width: sidebarWidth,
-                top: desktopSidebarTop,
-                height: desktopSidebarHeight,
-                left: desktopSidebarLeft,
+                width: DESKTOP_SIDEBAR_WIDTH,
+                left: isFloatingLayout ? floatingHeaderOffset : '0', // Adjust left for floating layout
                 borderRadius: isFloatingLayout ? borderRadius : '0',
               }}
             >
               <StorefrontFilterSidebar
                 isOpen={true}
-                onClose={() => setIsDesktopSidebarOpen(false)}
+                onClose={() => setIsDesktopFilterSidebarOpen(false)}
                 products={allProducts}
                 currentFilters={filters}
                 onFilterChange={handleFilterChange}
@@ -379,10 +390,10 @@ const StorefrontAllProducts = () => {
           )} style={{ borderRadius: borderRadius, top: stickyBarTop }}>
             <div className="flex items-center gap-2 w-full md:w-auto">
               {!isMobile && (
-                <Button variant="outline" onClick={() => setIsDesktopSidebarOpen(prev => !prev)} className="flex-shrink-0">
+                <Button variant="outline" onClick={() => setIsDesktopFilterSidebarOpen(prev => !prev)} className="flex-shrink-0">
                   <Filter className="mr-2 h-4 w-4" />
                   Filters
-                  <ChevronRight className={cn("ml-2 h-4 w-4 transition-transform", isDesktopSidebarOpen && "rotate-180")} />
+                  <ChevronRight className={cn("ml-2 h-4 w-4 transition-transform", isDesktopFilterSidebarOpen && "rotate-180")} />
                 </Button>
               )}
             </div>

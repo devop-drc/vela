@@ -42,6 +42,8 @@ interface StorefrontFilterSidebarProps {
   isMobile: boolean;
 }
 
+const DESKTOP_SIDEBAR_WIDTH = '20rem'; // 320px
+
 export const StorefrontFilterSidebar = ({
   isOpen,
   onClose,
@@ -318,7 +320,7 @@ export const StorefrontFilterSidebar = ({
         <SheetContent 
           side="left" 
           className={cn(
-            "w-full sm:max-w-xs p-0 flex flex-col", 
+            "w-full sm:max-w-xs p-0 flex flex-col h-full", // Ensure full height for mobile
             blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
             isFloatingLayout && "rounded-none"
           )}

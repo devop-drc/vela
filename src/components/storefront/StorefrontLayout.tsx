@@ -48,8 +48,9 @@ const applyStorefrontSettingsToDOM = (settings: any) => {
     bgOverlay.style.backgroundImage = 'none';
     bgOverlay.style.backgroundColor = `hsl(${effectiveSettings.solidBackgroundColor})`;
   } else {
-    bgOverlay.style.backgroundImage = 'none';
-    bgOverlay.style.backgroundColor = `hsl(${effectiveSettings['--background']})`;
+    // Fallback to transparent if no specific background is set
+    style.backgroundImage = 'none';
+    style.backgroundColor = 'transparent';
   }
   
   bgOverlay.style.filter = `
@@ -97,7 +98,7 @@ const StorefrontLayoutContent = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen">
-        <StorefrontHeader onOpenCart={() => setIsCartCheckoutModalOpen(true)} />
+        <StorefrontHeader onOpenCart={() => setIsCartCheckoutModalOpen(true)} isDesktopSidebarOpen={false} />
         <main className="flex-1 container py-8 mt-16"> {/* Added mt-16 to main for header */}
           <Skeleton className="h-10 w-1/2 mb-6" />
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -135,9 +136,18 @@ const StorefrontLayoutContent = () => {
       <StorefrontHeader 
         onToggleFilterSidebar={() => setIsFilterSidebarOpen(true)} 
         onOpenCart={() => setIsCartCheckoutModalOpen(true)}
+        isDesktopSidebarOpen={!isMobile && isFilterSidebarOpen} // Pass desktop sidebar state
       />
       <main className="flex-1 overflow-y-auto" style={{ paddingTop: mainContentPaddingTop }}>
-        <Outlet context={{ onToggleFilterSidebar: () => setIsFilterSidebarOpen(true), isFilterSidebarOpen, setIsFilterSidebarOpen, products }} />
+        <Outlet context={{ 
+          onToggleFilterSidebar: () => setIsFilterSidebarOpen(true), 
+          isFilterSidebarOpen, 
+          setIsFilterSidebarOpen, 
+          products,
+          // Pass desktop sidebar state to Outlet context as well
+          isDesktopFilterSidebarOpen: !isMobile && isFilterSidebarOpen,
+          setIsDesktopFilterSidebarOpen: setIsFilterSidebarOpen,
+        }} />
       </main>
       <StorefrontFooter />
       <Sonner />
