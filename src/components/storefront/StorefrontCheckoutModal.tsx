@@ -13,6 +13,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { DialogDescription } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 
 // You might need to install these if they are not already available
 // import { SiVisa, SiMastercard, SiAmericanexpress, SiDiscover } from "react-icons/si"; // Example for card logos
@@ -59,26 +60,69 @@ export const StorefrontCheckoutModal = ({ onClose, onBackToCart }: StorefrontChe
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1); // State for checkout progress
 
+  // Form state
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zip, setZip] = useState('');
+  const [notes, setNotes] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
+  const [cvv, setCvv] = useState('');
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500)); 
     
-    // In a real app, this would involve sending order data to Supabase
-    // and handling payment processing.
-    // For this demo, we'll just show a success toast.
+    if (!shopDetails?.slug || !shopDetails?.currency) {
+      toast.error("Shop details are missing. Cannot place order.");
+      setIsSubmitting(false);
+      return;
+    }
 
-    toast.success("Order placed successfully! Thank you for your purchase.", {
-      description: `Your order total was ${formatCurrency(total, shopDetails?.currency)}.`,
-      icon: <CheckCircle className="h-5 w-5 text-emerald-500" />,
-    });
-    
-    clearCart(); // Clear the cart after successful order
-    setIsSubmitting(false);
-    onClose(); // Close the modal
-    // Redirect to order tracking or confirmation page
-    window.location.href = `/shop/${shopDetails?.slug}/order-tracking?orderId=DEMO-${Date.now()}`;
+    const customerInfo = { firstName, lastName, email, address, city, state, zip, notes };
+    const orderItems = cartItems.map(item => ({
+      productId: item.productId,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+    }));
+
+    try {
+      const { data, error } = await supabase.functions.invoke('create-order', {
+        body: {
+          shopSlug: shopDetails.slug,
+          customerInfo,
+          cartItems: orderItems,
+          totalAmount: total,
+          currency: shopDetails.currency,
+        },
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      toast.success("Order placed successfully! Thank you for your purchase.", {
+        description: `Your order total was ${formatCurrency(total, shopDetails?.currency)}.`,
+        icon: <CheckCircle className="h-5 w-5 text-emerald-500" />,
+      });
+      
+      clearCart(); // Clear the cart after successful order
+      onClose(); // Close the modal
+      // Redirect to order tracking or confirmation page
+      window.location.href = `/shop/${shopDetails?.slug}/order-tracking?orderId=${data.orderId}`;
+
+    } catch (err: any) {
+      console.error("Order placement failed:", err);
+      toast.error(`Failed to place order: ${err.message || "An unexpected error occurred."}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (cartItems.length === 0) {
@@ -112,16 +156,16 @@ export const StorefrontCheckoutModal = ({ onClose, onBackToCart }: StorefrontChe
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" placeholder="John" required />
+                    <Input id="firstName" placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" placeholder="Doe" required />
+                    <Input id="lastName" placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="john.doe@example.com" required />
+                  <Input id="email" type="email" placeholder="john.doe@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 </div>
             </CardContent>
           </Card>
@@ -134,25 +178,25 @@ export const StorefrontCheckoutModal = ({ onClose, onBackToCart }: StorefrontChe
             <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="address">Shipping Address</Label>
-                  <Input id="address" placeholder="123 Main St" required />
+                  <Input id="address" placeholder="123 Main St" value={address} onChange={(e) => setAddress(e.target.value)} required />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="city">City</Label>
-                    <Input id="city" placeholder="Anytown" required />
+                    <Input id="city" placeholder="Anytown" value={city} onChange={(e) => setCity(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="state">State/Province</Label>
-                    <Input id="state" placeholder="CA" required />
+                    <Input id="state" placeholder="CA" value={state} onChange={(e) => setState(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="zip">Zip/Postal Code</Label>
-                    <Input id="zip" placeholder="90210" required />
+                    <Input id="zip" placeholder="90210" value={zip} onChange={(e) => setZip(e.target.value)} required />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="notes">Order Notes (Optional)</Label>
-                  <Textarea id="notes" rows={3} placeholder="Leave a note for the seller..." />
+                  <Textarea id="notes" rows={3} placeholder="Leave a note for the seller..." value={notes} onChange={(e) => setNotes(e.target.value)} />
                 </div>
             </CardContent>
           </Card>
@@ -167,22 +211,22 @@ export const StorefrontCheckoutModal = ({ onClose, onBackToCart }: StorefrontChe
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="cardNumber">Card Number</Label>
-                    <Input id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" required />
+                    <Input id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="cardName">Name on Card</Label>
-                    <Input id="cardName" placeholder="John Doe" required />
+                    <Input id="cardName" placeholder="John Doe" value={cardName} onChange={(e) => setCardName(e.target.value)} required />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="expiryDate">Expiry Date</Label>
-                    <Input id="expiryDate" placeholder="MM/YY" required />
+                    <Input id="expiryDate" placeholder="MM/YY" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="cvv">CVV</Label>
                     <div className="relative">
-                      <Input id="cvv" placeholder="123" type="password" maxLength={4} required />
+                      <Input id="cvv" placeholder="123" type="password" maxLength={4} value={cvv} onChange={(e) => setCvv(e.target.value)} required />
                       <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     </div>
                   </div>
