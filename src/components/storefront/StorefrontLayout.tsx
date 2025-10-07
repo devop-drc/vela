@@ -49,8 +49,8 @@ const applyStorefrontSettingsToDOM = (settings: any) => {
     bgOverlay.style.backgroundColor = `hsl(${effectiveSettings.solidBackgroundColor})`;
   } else {
     // Fallback to transparent if no specific background is set
-    style.backgroundImage = 'none';
-    style.backgroundColor = 'transparent';
+    bgOverlay.style.backgroundImage = 'none';
+    bgOverlay.style.backgroundColor = 'transparent';
   }
   
   bgOverlay.style.filter = `
