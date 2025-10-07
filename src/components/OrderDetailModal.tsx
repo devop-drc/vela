@@ -4,18 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Package, User, Mail, Calendar, Banknote } from "lucide-react";
+import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye } from "lucide-react";
 import { Separator } from "./ui/separator";
 import { ScrollArea } from "./ui/scroll-area";
 import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 type Order = {
   id: string;
   customer_name: string;
   customer_email: string;
-  status: string;
+  status: 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic';
   total_amount: number;
   created_at: string;
   currency: string;
@@ -33,9 +34,11 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
   const [items, setItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<Order['status']>('Pending');
 
   useEffect(() => {
     if (order) {
+      setCurrentStatus(order.status);
       const fetchOrderItems = async () => {
         setIsLoading(true);
         const { data, error } = await supabase
@@ -62,7 +65,7 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
     }
   }, [order]);
 
-  const handleStatusUpdate = async (newStatus: string) => {
+  const handleStatusUpdate = async (newStatus: Order['status']) => {
     if (!order) return;
     setIsUpdating(true);
     const { error } = await supabase
@@ -74,22 +77,34 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
       showError(`Failed to update status: ${error.message}`);
     } else {
       showSuccess(`Order marked as ${newStatus}.`);
-      onUpdate();
+      setCurrentStatus(newStatus); // Update local state immediately
+      onUpdate(); // Trigger parent to refetch/update
     }
     setIsUpdating(false);
   };
 
   if (!order) return null;
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: Order['status']) => {
     switch (status) {
       case 'Fulfilled': return 'bg-emerald-500';
-      case 'In Progress': return 'bg-blue-500';
-      case 'Pending':
-      default:
-        return 'bg-amber-500';
+      case 'Given to Courier': return 'bg-blue-500';
+      case 'Order Packaged': return 'bg-blue-500';
+      case 'Order Seen': return 'bg-amber-500';
+      case 'Pending': return 'bg-amber-500';
+      case 'Problematic': return 'bg-destructive';
+      default: return 'bg-gray-500';
     }
   };
+
+  const statusOptions: { value: Order['status']; label: string; icon: React.ElementType }[] = [
+    { value: 'Pending', label: 'Pending', icon: Package },
+    { value: 'Order Seen', label: 'Order Seen', icon: Eye },
+    { value: 'Order Packaged', label: 'Order Packaged', icon: Box },
+    { value: 'Given to Courier', label: 'Given to Courier', icon: Truck },
+    { value: 'Fulfilled', label: 'Fulfilled', icon: CheckCircle },
+    { value: 'Problematic', label: 'Problematic', icon: XCircle },
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -138,13 +153,29 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
             </div>
           </div>
         </ScrollArea>
-        <DialogFooter className="pt-4">
+        <DialogFooter className="pt-4 flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
           <div className="flex items-center gap-2 mr-auto">
             <span className="text-sm">Status:</span>
-            <Badge className={cn("text-white", getStatusColor(order.status))}>{order.status}</Badge>
+            <Badge className={cn("text-white", getStatusColor(currentStatus))}>{currentStatus}</Badge>
           </div>
-          {order.status === 'Pending' && <Button onClick={() => handleStatusUpdate('In Progress')} disabled={isUpdating}>Mark as In Progress</Button>}
-          {order.status === 'In Progress' && <Button onClick={() => handleStatusUpdate('Fulfilled')} disabled={isUpdating}>Mark as Fulfilled</Button>}
+          <div className="flex gap-2">
+            <Select value={currentStatus} onValueChange={(value: Order['status']) => handleStatusUpdate(value)} disabled={isUpdating}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Change Status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <div className="flex items-center gap-2">
+                      <option.icon className="h-4 w-4" />
+                      {option.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="ghost" onClick={onClose}>Close</Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

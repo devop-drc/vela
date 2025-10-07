@@ -174,7 +174,7 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
           cartItems: orderItems,
           totalAmount: totalPrice,
           currency: shopDetails.currency,
-          paymentMethod: paymentMethod,
+          paymentMethod: paymentMethod, // Pass the selected payment method
         },
       });
 

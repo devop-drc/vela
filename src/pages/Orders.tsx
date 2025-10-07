@@ -22,7 +22,7 @@ type Order = {
   id: string;
   customer_name: string;
   customer_email: string;
-  status: string;
+  status: 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic';
   total_amount: number;
   created_at: string;
   currency: string;
@@ -31,13 +31,16 @@ type Order = {
 const OrderTable = ({ orders, onSelectOrder }: { orders: Order[], onSelectOrder: (order: Order) => void }) => {
   const { shopDetails, convertCurrency } = useShop();
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: Order['status']) => {
     switch (status) {
       case 'Fulfilled': return 'bg-emerald-100 text-emerald-800 border-emerald-300';
-      case 'In Progress': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'Pending':
+      case 'Given to Courier': return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'Order Packaged': return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'Order Seen': return 'bg-amber-100 text-amber-800 border-amber-300';
+      case 'Pending': return 'bg-amber-100 text-amber-800 border-amber-300';
+      case 'Problematic': return 'bg-destructive/10 text-destructive border-destructive/30';
       default:
-        return 'bg-amber-100 text-amber-800 border-amber-300';
+        return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
@@ -177,8 +180,11 @@ const Orders = () => {
           <TabsList>
             <TabsTrigger value="All">All</TabsTrigger>
             <TabsTrigger value="Pending">Pending</TabsTrigger>
-            <TabsTrigger value="In Progress">In Progress</TabsTrigger>
+            <TabsTrigger value="Order Seen">Order Seen</TabsTrigger>
+            <TabsTrigger value="Order Packaged">Order Packaged</TabsTrigger>
+            <TabsTrigger value="Given to Courier">Given to Courier</TabsTrigger>
             <TabsTrigger value="Fulfilled">Fulfilled</TabsTrigger>
+            <TabsTrigger value="Problematic">Problematic</TabsTrigger>
           </TabsList>
           <Card className="mt-4">
             <CardContent className="p-0">

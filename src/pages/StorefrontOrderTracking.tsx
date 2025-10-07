@@ -3,17 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, Package, CheckCircle, Truck, Home, XCircle, Loader2, ArrowLeft, User, Mail, Calendar, Banknote } from "lucide-react";
+import { Search, Package, CheckCircle, Truck, Home, XCircle, Loader2, ArrowLeft, User, Mail, Calendar, Banknote, Handshake } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { supabase } from "@/integrations/supabase/client";
-import { showError } from "@/utils/toast";
+import { showError, showSuccess } from "@/utils/toast";
 import { formatCurrency } from "@/lib/formatters";
 import { Separator } from "@/components/ui/separator";
 import { MediaItem } from "@/components/MediaItem";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type OrderStatusType = 'Pending' | 'In Progress' | 'Fulfilled' | 'Problematic' | 'Not Found' | null;
+type OrderStatusType = 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic' | 'Not Found' | null;
 
 interface OrderItem {
   quantity: number;
@@ -36,6 +39,93 @@ interface OrderDetails {
   order_items: OrderItem[];
 }
 
+interface ReportIssueModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  orderId: string;
+  customerEmail: string;
+  onIssueReported: () => void;
+}
+
+const ReportIssueModal = ({ isOpen, onClose, orderId, customerEmail, onIssueReported }: ReportIssueModalProps) => {
+  const [reason, setReason] = useState('');
+  const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    if (!reason) {
+      showError("Please select a reason for the issue.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('order_disputes').insert({
+        order_id: orderId,
+        customer_email: customerEmail,
+        reason,
+        message,
+        status: 'Open',
+      });
+
+      if (error) throw error;
+
+      showSuccess("Issue reported successfully! We will get back to you soon.");
+      onIssueReported();
+      onClose();
+    } catch (err: any) {
+      console.error("Failed to report issue:", err);
+      showError(`Failed to report issue: ${err.message || "An unexpected error occurred."}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Report an Issue with Order #{orderId.substring(0, 8)}</DialogTitle>
+          <DialogDescription>
+            Please tell us what went wrong with your order. We'll review it and get back to you.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="reason">Reason for Issue</Label>
+            <Select value={reason} onValueChange={setReason}>
+              <SelectTrigger id="reason">
+                <SelectValue placeholder="Select a reason" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Delivery Late">Delivery Late</SelectItem>
+                <SelectItem value="Product Missing">Product Missing</SelectItem>
+                <SelectItem value="Product Damaged">Product Damaged</SelectItem>
+                <SelectItem value="Incorrect Product">Incorrect Product</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="message">Your Message (Optional)</Label>
+            <Textarea id="message" rows={4} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Provide more details about the issue..." />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={isSubmitting || !reason}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Submit Report
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const StorefrontOrderTracking = () => {
   const { shopSlug, appearanceSettings } = useStorefront();
   const [searchParams] = useSearchParams();
@@ -44,6 +134,7 @@ const StorefrontOrderTracking = () => {
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [searchAttempted, setSearchAttempted] = useState(false);
+  const [isReportIssueModalOpen, setIsReportIssueModalOpen] = useState(false);
   const blurEnabled = appearanceSettings?.blurEnabled;
 
   useEffect(() => {
@@ -118,10 +209,28 @@ const StorefrontOrderTracking = () => {
     }
   };
 
+  const handleConfirmReceipt = async () => {
+    if (!order) return;
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.from('orders').update({ status: 'Fulfilled' }).eq('id', order.id);
+      if (error) throw error;
+      showSuccess("Order receipt confirmed! Thank you.");
+      setOrder(prev => prev ? { ...prev, status: 'Fulfilled' } : null);
+    } catch (err: any) {
+      console.error("Failed to confirm receipt:", err);
+      showError(`Failed to confirm receipt: ${err.message || "An unexpected error occurred."}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const getStatusIcon = (status: OrderStatusType) => {
     switch (status) {
       case "Fulfilled": return <CheckCircle className="h-12 w-12 md:h-16 md:w-16 text-emerald-500 mx-auto" />;
-      case "In Progress": return <Truck className="h-12 w-12 md:h-16 md:w-16 text-blue-500 mx-auto" />;
+      case "Given to Courier": return <Truck className="h-12 w-12 md:h-16 md:w-16 text-blue-500 mx-auto" />;
+      case "Order Packaged": return <Package className="h-12 w-12 md:h-16 md:w-16 text-blue-500 mx-auto" />;
+      case "Order Seen": return <Search className="h-12 w-12 md:h-16 md:w-16 text-amber-500 mx-auto" />;
       case "Pending": return <Package className="h-12 w-12 md:h-16 md:w-16 text-amber-500 mx-auto" />;
       case "Problematic": return <XCircle className="h-12 w-12 md:h-16 md:w-16 text-destructive mx-auto" />;
       default: return <Search className="h-12 w-12 md:h-16 md:w-16 text-muted-foreground mx-auto" />;
@@ -131,7 +240,9 @@ const StorefrontOrderTracking = () => {
   const getStatusColorClass = (status: OrderStatusType) => {
     switch (status) {
       case "Fulfilled": return "text-emerald-500";
-      case "In Progress": return "text-blue-500";
+      case "Given to Courier": return "text-blue-500";
+      case "Order Packaged": return "text-blue-500";
+      case "Order Seen": return "text-amber-500";
       case "Pending": return "text-amber-500";
       case "Problematic": return "text-destructive";
       default: return "text-muted-foreground";
@@ -140,6 +251,16 @@ const StorefrontOrderTracking = () => {
 
   return (
     <div className="container py-6 md:py-8">
+      {order && isReportIssueModalOpen && (
+        <ReportIssueModal
+          isOpen={isReportIssueModalOpen}
+          onClose={() => setIsReportIssueModalOpen(false)}
+          orderId={order.id}
+          customerEmail={order.customer_email}
+          onIssueReported={() => { /* Maybe refetch order details or just close */ }}
+        />
+      )}
+
       <Button variant="ghost" asChild className="mb-4 md:mb-6 text-muted-foreground hover:text-foreground text-sm md:text-base">
         <Link to={`/shop/${shopSlug}`}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -230,6 +351,21 @@ const StorefrontOrderTracking = () => {
                     ))}
                   </div>
                 </div>
+                
+                {(order.status === 'Given to Courier' || order.status === 'Problematic') && (
+                  <div className="flex flex-col sm:flex-row gap-3 mt-6 md:mt-8">
+                    {order.status === 'Given to Courier' && (
+                      <Button onClick={handleConfirmReceipt} disabled={isLoading} className="flex-1 text-sm md:text-base">
+                        <Handshake className="mr-2 h-4 w-4" />
+                        Confirm Receipt
+                      </Button>
+                    )}
+                    <Button variant="outline" onClick={() => setIsReportIssueModalOpen(true)} className="flex-1 text-sm md:text-base">
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Report an Issue
+                    </Button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="mt-6 md:mt-8 p-4 md:p-6 border rounded-lg bg-destructive/10 text-center space-y-3 md:space-y-4">

@@ -14,6 +14,7 @@ import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client"; // Import supabase client
+import { CheckoutForm } from "./CheckoutForm"; // Import the new CheckoutForm
 
 // You might need to install these if they are not already available
 // import { SiVisa, SiMastercard, SiAmericanexpress, SiDiscover } from "react-icons/si"; // Example for card logos
@@ -101,6 +102,7 @@ export const StorefrontCheckoutModal = ({ onClose, onBackToCart }: StorefrontChe
           cartItems: orderItems,
           totalAmount: total,
           currency: shopDetails.currency,
+          paymentMethod: 'card', // Defaulting to 'card' for now, will be dynamic with CheckoutForm
         },
       });
 

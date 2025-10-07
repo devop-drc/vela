@@ -60,7 +60,8 @@ export const StorefrontFooter = React.forwardRef<HTMLDivElement>((props, ref) =>
               <li><Link to={`/shop/${shopDetails.slug}/products`} className="hover:underline">All Products</Link></li>
               <li><Link to={`/shop/${shopDetails.slug}/cart`} className="hover:underline">Cart</Link></li>
               <li><Link to={`/shop/${shopDetails.slug}/checkout`} className="hover:underline">Checkout</Link></li>
-              <li><Link to={`/shop/${shopDetails.slug}/order-tracking`} className="hover:underline">Order Tracking</Link></li>
+              <li><Link to={`/shop/${shopDetails.slug}/orders`} className="hover:underline">My Orders</Link></li> {/* New: My Orders link */}
+              <li><Link to={`/shop/${shopDetails.slug}/order-tracking`} className="hover:underline">Track Order</Link></li>
             </ul>
           </div>
           <div className="space-y-2">
