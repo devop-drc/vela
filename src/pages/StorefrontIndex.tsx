@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Gift, RefreshCw, Crown, Info, Package } from "lucide-react";
-import { useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react"; // Added useEffect
 import { getCategoryColor } from "@/lib/colorUtils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard";
@@ -17,6 +17,7 @@ import { curatedImages } from "@/contexts/AppearanceContext";
 import { Marquee } from "@/components/ui/marquee";
 import { getCategoryIcon } from "@/lib/categoryIcons"; // Import category icons
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // Import ScrollArea and ScrollBar
+import { supabase } from "@/integrations/supabase/client"; // Import supabase
 
 interface Product {
   id: string;
@@ -35,6 +36,17 @@ interface Product {
   billing_interval: 'month' | 'year' | null;
   details: { [key: string]: any };
   created_at: string;
+}
+
+interface Promotion {
+  id: string;
+  name: string;
+  type: 'marquee_text' | 'discount' | 'offer';
+  value: any;
+  start_date: string | null;
+  end_date: string | null;
+  is_active: boolean;
+  target_products: string[] | null;
 }
 
 const sectionVariants = {
@@ -60,6 +72,32 @@ const itemVariants = {
 const StorefrontIndex = () => {
   const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, bestSellers, recommendedProducts } = useStorefront();
   const productsSectionRef = useRef<HTMLDivElement>(null);
+  const [marqueePromotions, setMarqueePromotions] = useState<Promotion[]>([]);
+
+  useEffect(() => {
+    const fetchMarqueePromotions = async () => {
+      if (!shopDetails?.id) return;
+
+      const { data, error } = await supabase
+        .from('promotions')
+        .select('*')
+        .eq('user_id', shopDetails.id) // Assuming user_id in promotions table is business.user_id
+        .eq('type', 'marquee_text')
+        .eq('is_active', true)
+        .or(`end_date.gte.${new Date().toISOString()},end_date.is.null`)
+        .or(`start_date.lte.${new Date().toISOString()},start_date.is.null`);
+
+      if (error) {
+        console.error("Error fetching marquee promotions:", error);
+      } else {
+        setMarqueePromotions(data || []);
+      }
+    };
+
+    if (shopDetails) {
+      fetchMarqueePromotions();
+    }
+  }, [shopDetails]);
 
   const newArrivals = useMemo(() => {
     return allProducts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10); // Limit to 10
@@ -184,24 +222,23 @@ const StorefrontIndex = () => {
         </motion.section>
 
         {/* Promotional Marquee */}
-        <motion.section
-          initial="hidden"
-          animate="visible"
-          variants={sectionVariants}
-          className="my-12 md:my-16"
-        >
-          <Marquee pauseOnHover className="py-3 md:py-4 border-y-2 border-primary/20 bg-primary/10">
-            <div className="flex items-center gap-6 md:gap-8 text-base md:text-lg font-semibold text-primary">
-              <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-amber-500" />
-              <span>FLASH SALE: Up to 50% OFF on selected items!</span>
-              <Gift className="h-5 w-5 md:h-6 md:w-6 text-rose-500" />
-              <span>FREE SHIPPING on all orders over {formatCurrency(50, shopDetails.currency)}!</span>
-              <RefreshCw className="h-5 w-5 md:h-6 md:w-6 text-blue-500" />
-              <span>New Arrivals Every Week!</span>
-              <span>Discover unique handcrafted goods!</span>
-            </div>
-          </Marquee>
-        </motion.section>
+        {marqueePromotions.length > 0 && (
+          <motion.section
+            initial="hidden"
+            animate="visible"
+            variants={sectionVariants}
+            className="my-12 md:my-16"
+          >
+            <Marquee pauseOnHover className="py-3 md:py-4 border-y-2 border-primary/20 bg-primary/10">
+              {marqueePromotions.map(promo => (
+                <div key={promo.id} className="flex items-center gap-6 md:gap-8 text-base md:text-lg font-semibold text-primary">
+                  <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-amber-500" />
+                  <span>{promo.value.message}</span>
+                </div>
+              ))}
+            </Marquee>
+          </motion.section>
+        )}
 
         {/* Featured Categories */}
         {uniqueCategoriesWithCount.length > 0 && (

@@ -27,8 +27,9 @@ import StorefrontIndex from "./pages/StorefrontIndex";
 import StorefrontProductDetail from "./pages/StorefrontProductDetail";
 import StorefrontOrderTracking from "./pages/StorefrontOrderTracking";
 import StorefrontAllProducts from "./pages/StorefrontAllProducts";
-import StorefrontClientOrders from "./pages/StorefrontClientOrders"; // Import the new client orders page
-import Disputes from "./pages/Disputes"; // Import the new admin disputes page
+import StorefrontClientOrders from "./pages/StorefrontClientOrders";
+import Disputes from "./pages/Disputes";
+import Promotions from "./pages/Promotions"; // Import the new Promotions page
 
 const queryClient = new QueryClient();
 
@@ -50,7 +51,7 @@ const App = () => (
                       <Route path="products" element={<StorefrontAllProducts />} />
                       <Route path="product/:productId" element={<StorefrontProductDetail />} />
                       <Route path="order-tracking" element={<StorefrontOrderTracking />} />
-                      <Route path="orders" element={<StorefrontClientOrders />} /> {/* New route for client orders */}
+                      <Route path="orders" element={<StorefrontClientOrders />} />
                     </Route>
 
                     {/* Existing Dashboard and Auth Routes */}
@@ -66,7 +67,8 @@ const App = () => (
                           <Route path="/settings" element={<Settings />} />
                           <Route path="/keywords" element={<Keywords />} />
                           <Route path="/out-of-stock" element={<OutOfStock />} />
-                          <Route path="/disputes" element={<Disputes />} /> {/* New route for admin disputes */}
+                          <Route path="/disputes" element={<Disputes />} />
+                          <Route path="/promotions" element={<Promotions />} /> {/* New route for admin promotions */}
                         </Route>
                       </Route>
                     </Route>
