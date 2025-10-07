@@ -97,7 +97,7 @@ const StorefrontLayoutContent = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen">
-        <StorefrontHeader />
+        <StorefrontHeader onOpenCart={() => setIsCartCheckoutModalOpen(true)} />
         <main className="flex-1 container py-8">
           <Skeleton className="h-10 w-1/2 mb-6" />
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -134,10 +134,8 @@ const StorefrontLayoutContent = () => {
         onToggleFilterSidebar={() => setIsFilterSidebarOpen(true)} 
         onOpenCart={() => setIsCartCheckoutModalOpen(true)}
       />
-      <main className={cn("flex-1 flex", mainContentPaddingTop)}> {/* Apply dynamic padding */}
-        <div className="flex-1">
-          <Outlet context={{ onToggleFilterSidebar: () => setIsFilterSidebarOpen(true), isFilterSidebarOpen, setIsFilterSidebarOpen, products }} />
-        </div>
+      <main className={cn("flex-1 overflow-y-auto", mainContentPaddingTop)}> {/* Apply dynamic padding and overflow */}
+        <Outlet context={{ onToggleFilterSidebar: () => setIsFilterSidebarOpen(true), isFilterSidebarOpen, setIsFilterSidebarOpen, products }} />
       </main>
       <StorefrontFooter />
       <Sonner />

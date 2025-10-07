@@ -65,13 +65,22 @@ export const StorefrontProductCard = ({ product, shopSlug }: StorefrontProductCa
           <div className="p-4 flex-1 flex flex-col justify-between">
             <div>
               <h3 className="font-semibold text-lg leading-tight mb-1 line-clamp-2">{product.name}</h3>
-              {product.category && (
-                <Badge 
-                  variant="outline" 
-                  className={cn("mb-2", categoryColor.bg, categoryColor.text, categoryColor.border)}
-                >
-                  {product.category}
-                </Badge>
+              {(product.category || product.details?.type) && (
+                <div className="flex items-center gap-1 mb-2">
+                  {product.category && (
+                    <Badge 
+                      variant="outline" 
+                      className={cn(categoryColor.bg, categoryColor.text, categoryColor.border)}
+                    >
+                      {product.category}
+                    </Badge>
+                  )}
+                  {product.details?.type && (
+                    <Badge variant="secondary" className="text-xs">
+                      {product.details.type}
+                    </Badge>
+                  )}
+                </div>
               )}
               <p className="text-sm text-muted-foreground line-clamp-2">{product.caption}</p>
             </div>

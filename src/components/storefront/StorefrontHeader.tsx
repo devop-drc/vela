@@ -85,7 +85,10 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: Storefro
                 type="search"
                 name="searchQuery"
                 placeholder="Search products..."
-                className="pl-9 w-64"
+                className={cn(
+                  "pl-9 w-64",
+                  blurEnabled ? "bg-input/50" : "bg-input"
+                )}
                 value={localSearchTerm}
                 onChange={handleSearchChange}
               />
@@ -145,7 +148,10 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart }: Storefro
                 type="search"
                 name="searchQuery"
                 placeholder="Search products..."
-                className="flex-1"
+                className={cn(
+                  "flex-1",
+                  blurEnabled ? "bg-input/50" : "bg-input"
+                )}
                 autoFocus
                 value={localSearchTerm}
                 onChange={(e) => setLocalSearchTerm(e.target.value)}
