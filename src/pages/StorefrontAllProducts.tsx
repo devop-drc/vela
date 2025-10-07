@@ -72,6 +72,7 @@ const StorefrontAllProducts = () => {
 
   const blurEnabled = appearanceSettings?.blurEnabled;
   const borderRadius = appearanceSettings?.['--radius'] || '0.5rem';
+  const isFloatingLayout = appearanceSettings?.layoutStyle === 'floating';
   const observerTarget = useRef<HTMLDivElement>(null);
 
   // Determine max price for the slider
@@ -300,10 +301,11 @@ const StorefrontAllProducts = () => {
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
               className={cn(
-                "hidden lg:flex flex-col border-r h-full flex-shrink-0 sticky top-0 max-h-screen overflow-y-auto",
-                blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
+                "hidden lg:flex flex-col border-r h-full flex-shrink-0 sticky top-0 overflow-y-auto",
+                blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
+                isFloatingLayout ? "ml-4 rounded-none" : "" // Add margin-left and remove border-radius for floating layout
               )}
-              style={{ borderRadius: borderRadius }}
+              style={{ borderRadius: isFloatingLayout ? '0' : borderRadius }}
             >
               <StorefrontFilterSidebar
                 isOpen={true}

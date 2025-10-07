@@ -35,6 +35,10 @@ export const StorefrontBreadcrumb = () => {
       if (product) {
         label = product.name;
       }
+      // The previous segment was 'products', so we need to ensure it's correctly labeled and linked
+      if (pathSegments[index - 1] === 'products') {
+        breadcrumbs.push({ label: 'Products', path: `/shop/${shopSlug}/products` });
+      }
     } else if (segment === 'products') { // Corrected: Link to /products
       label = 'Products';
     } else if (segment === 'cart') {
@@ -45,7 +49,10 @@ export const StorefrontBreadcrumb = () => {
       label = 'Order Tracking';
     }
 
-    breadcrumbs.push({ label: label.charAt(0).toUpperCase() + label.slice(1), path: currentPath });
+    // Only add if not already added by special handling (e.g., 'Products' before product name)
+    if (!breadcrumbs.some(b => b.path === currentPath)) {
+      breadcrumbs.push({ label: label.charAt(0).toUpperCase() + label.slice(1), path: currentPath });
+    }
   });
 
   return (

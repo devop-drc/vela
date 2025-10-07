@@ -122,7 +122,7 @@ const StorefrontIndex = () => {
           className={cn(
             "relative mb-16 p-8 md:p-16 rounded-xl text-center overflow-hidden min-h-[450px] flex items-center justify-center",
             blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
-            "shadow-lg"
+            "shadow-lg hero-blob-background" // Added hero-blob-background class
           )}
           style={{
             backgroundImage: `url(${heroBackgroundImage})`,
@@ -176,7 +176,7 @@ const StorefrontIndex = () => {
           variants={sectionVariants}
           className="my-16"
         >
-          <Marquee pauseOnHover className="py-4 border-y">
+          <Marquee pauseOnHover className="py-4 border-y-2 border-primary/20 bg-primary/10">
             <div className="flex items-center gap-8 text-lg font-semibold text-primary">
               <Sparkles className="h-6 w-6 text-amber-500" />
               <span>FLASH SALE: Up to 50% OFF on selected items!</span>

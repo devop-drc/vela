@@ -53,6 +53,7 @@ export const StorefrontFilterSidebar = ({
   const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const blurEnabled = appearanceSettings?.blurEnabled;
   const borderRadius = appearanceSettings?.['--radius'] || '0.5rem';
+  const isFloatingLayout = appearanceSettings?.layoutStyle === 'floating';
 
   const [localFilters, setLocalFilters] = useState<FilterState>(currentFilters);
 
@@ -215,10 +216,10 @@ export const StorefrontFilterSidebar = ({
                 {uniqueTags.map(tag => (
                   <Button
                     key={tag}
-                    variant={localFilters.tags.includes(tag) ? "default" : "outline"}
+                    variant={(localFilters.tags as string[] || []).includes(tag) ? "default" : "outline"}
                     size="sm"
                     onClick={() => handleToggleFilter('tags', tag)}
-                    className={cn(localFilters.tags.includes(tag) && "ring-2 ring-primary ring-offset-2")}
+                    className={cn((localFilters.tags as string[] || []).includes(tag) && "ring-2 ring-primary ring-offset-2")}
                   >
                     {tag}
                   </Button>
@@ -263,9 +264,10 @@ export const StorefrontFilterSidebar = ({
           side="left" 
           className={cn(
             "w-full sm:max-w-xs p-0 flex flex-col", 
-            blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
+            blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
+            isFloatingLayout && "rounded-none" // No border-radius for floating layout
           )}
-          style={{ borderRadius: borderRadius }}
+          style={{ borderRadius: isFloatingLayout ? '0' : borderRadius }}
         >
           {filterContent}
         </SheetContent>
