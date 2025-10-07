@@ -114,7 +114,7 @@ const StorefrontIndex = () => {
   return (
     <div className="flex-1">
       <div className="container py-8">
-        {/* Hero Section */}
+        {/* Hero Section - Redesigned */}
         <motion.section
           initial="hidden"
           animate="visible"
@@ -129,22 +129,23 @@ const StorefrontIndex = () => {
             backgroundPosition: 'center',
             backgroundRepeat: appearanceSettings?.backgroundRepeat || 'no-repeat',
             borderRadius: appearanceSettings?.['--radius'] || '1.5rem', // Apply border-radius
+            filter: `
+              brightness(${appearanceSettings?.backgroundBrightness || 100}%)
+              contrast(${appearanceSettings?.backgroundContrast || 100}%)
+              saturate(${appearanceSettings?.backgroundSaturation || 100}%)
+              hue-rotate(${appearanceSettings?.backgroundHue || 0}deg)
+            `,
           }}
         >
-          <div className="absolute inset-0 bg-black/40" />
+          {/* Overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
+          
+          {/* Content Wrapper */}
           <div 
             className={cn(
               "relative z-10 text-primary-foreground max-w-4xl mx-auto p-8 md:p-16 h-full w-full flex flex-col items-center justify-center",
-              blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card/0" // Apply blur to inner content
+              // Removed bg-card/70 backdrop-blur-lg from here to make it less "card-like"
             )}
-            style={{
-              filter: `
-                brightness(${appearanceSettings?.backgroundBrightness || 100}%)
-                contrast(${appearanceSettings?.backgroundContrast || 100}%)
-                saturate(${appearanceSettings?.backgroundSaturation || 100}%)
-                hue-rotate(${appearanceSettings?.backgroundHue || 0}deg)
-              `,
-            }}
           >
             {shopDetails.logo_url && (
               <motion.div variants={itemVariants}>
@@ -316,7 +317,11 @@ const StorefrontIndex = () => {
           className="text-center mt-16"
           ref={productsSectionRef}
         >
-          <Link to={`/shop/${shopDetails.slug}/products`} className={cn(buttonVariants({ size: "lg" }), "text-lg px-8 py-6 shadow-xl hover:scale-105 transition-transform")}>
+          <Link 
+            to={`/shop/${shopDetails.slug}/products`} 
+            onClick={() => window.scrollTo(0, 0)} // Scroll to top on click
+            className={cn(buttonVariants({ size: "lg" }), "text-lg px-8 py-6 shadow-xl hover:scale-105 transition-transform")}
+          >
             View All Products <ArrowRight className="ml-3 h-5 w-5" />
           </Link>
         </motion.div>

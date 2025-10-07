@@ -49,7 +49,9 @@ export const StorefrontProductCard = ({ product, shopSlug }: StorefrontProductCa
     <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
       <Link to={`/shop/${shopDetails?.slug}/product/${product.id}`}>
         <Card className={cn(
-          "group h-full flex flex-col overflow-hidden transition-shadow hover:shadow-xl",
+          "group h-full flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
+          "border border-input/50 hover:border-primary/70", // Subtle border, highlights on hover
+          "shadow-sm hover:shadow-lg", // Softer shadow, more prominent on hover
           blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
         )}>
           <CardContent className="p-0">
@@ -70,7 +72,7 @@ export const StorefrontProductCard = ({ product, shopSlug }: StorefrontProductCa
                   {product.category && (
                     <Badge 
                       variant="outline" 
-                      className={cn(categoryColor.bg, categoryColor.text, categoryColor.border)}
+                      className={cn(categoryColor.bg, categoryColor.text, categoryColor.border, "text-xs")}
                     >
                       {product.category}
                     </Badge>

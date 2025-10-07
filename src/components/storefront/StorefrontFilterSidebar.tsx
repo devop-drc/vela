@@ -133,6 +133,27 @@ export const StorefrontFilterSidebar = ({
     };
   }, [products, convertCurrency]);
 
+  // Ensure localFilters priceRange is within valid bounds when maxPrice changes
+  useEffect(() => {
+    setLocalFilters(prev => {
+      const currentMin = prev.priceRange[0];
+      const currentMax = prev.priceRange[1];
+      const newMax = maxPrice > 0 ? maxPrice : 100; // Ensure max is at least 100
+
+      // Adjust currentMax if it exceeds the new maxPrice
+      const adjustedMax = Math.min(currentMax, newMax);
+      // Adjust currentMin if it exceeds the adjustedMax
+      const adjustedMin = Math.min(currentMin, adjustedMax);
+
+      // Only update if there's a significant change or initial setup
+      if (adjustedMin !== prev.priceRange[0] || adjustedMax !== prev.priceRange[1] || newMax !== (maxPrice > 0 ? maxPrice : 100)) {
+        return { ...prev, priceRange: [adjustedMin, adjustedMax] };
+      }
+      return prev;
+    });
+  }, [maxPrice]);
+
+
   const FilterSection = ({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) => (
     <AccordionItem value={title}>
       <AccordionTrigger className="py-3 text-base font-semibold">

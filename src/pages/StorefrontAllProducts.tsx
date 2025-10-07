@@ -386,9 +386,10 @@ const StorefrontAllProducts = () => {
               {Object.entries(groupedProducts).map(([category, productsInCategory]) => (
                 <div key={category}>
                   <h3 className={cn(
-                    "text-3xl font-bold font-heading mb-8 inline-block px-6 py-3 rounded-full",
+                    "text-3xl font-bold font-heading mb-8 inline-block px-4 py-2 rounded-md", // Adjusted padding and border-radius
                     blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
-                    getCategoryColor(category).bg, getCategoryColor(category).text, "shadow-md"
+                    getCategoryColor(category).bg, getCategoryColor(category).text,
+                    "shadow-sm" // Softer shadow
                   )}>
                     {category}
                   </h3>
