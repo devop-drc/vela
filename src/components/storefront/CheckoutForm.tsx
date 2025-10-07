@@ -133,6 +133,7 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("handleFormSubmit called");
     
     const isValid = validateStep();
     console.log(`handleFormSubmit: Validation result for step ${currentStep}: ${isValid}`);
@@ -199,7 +200,7 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
         <CheckoutProgress currentStep={currentStep} />
       </div>
 
-      <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto px-6 pb-6 space-y-8">
+      <form id="checkout-form" onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto px-6 pb-6 space-y-8">
         <AnimatePresence mode="wait">
           {currentStep === 1 && (
             <motion.div
