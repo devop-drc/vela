@@ -38,6 +38,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
   const blurEnabled = appearanceSettings?.blurEnabled;
   const borderRadius = appearanceSettings?.['--radius'] || '0.5rem';
   const isFloatingLayout = appearanceSettings?.layoutStyle === 'floating';
+  const isPrimaryStyle = appearanceSettings?.sidebarStyle === 'primary'; // Check sidebarStyle
 
   const isOnProductsPage = location.pathname.includes('/products');
 
@@ -95,7 +96,9 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
         isFloatingLayout
           ? "border rounded-lg shadow-md" // Floating style
           : "border-b shadow-sm", // Docked style
-        blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
+        isPrimaryStyle // Apply primary style if selected in admin
+          ? cn(blurEnabled ? "bg-primary/80 backdrop-blur-lg" : "bg-primary", "text-primary-foreground")
+          : cn(blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card", "text-foreground")
       )} style={{ borderRadius: isFloatingLayout ? borderRadius : '0' }}>
 
         {/* Left Section: Logo + Name */}

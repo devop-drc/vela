@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { MediaItem } from "@/components/MediaItem";
 import { ReportIssueModal } from "@/components/storefront/ReportIssueModal";
 import { StorefrontOrderDetailModal } from "@/components/storefront/StorefrontOrderDetailModal"; // Import the new modal
+import { Badge } from "@/components/ui/badge"; // Import Badge component
 
 type OrderStatusType = 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic' | 'Cancelled';
 

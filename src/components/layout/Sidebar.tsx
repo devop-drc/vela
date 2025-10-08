@@ -79,11 +79,11 @@ const Sidebar = () => {
         <ShoppingBag className="h-6 w-6 mr-2" />
         <h1 className="text-xl font-bold">InstaShopify</h1>
       </div>
-      <nav className="flex-1 p-4 space-y-4"> {/* Adjusted space-y-6 to space-y-4 */}
+      <nav className="flex-1 p-4 space-y-6"> {/* Increased space-y for groups */}
         {navGroups.map((group) => (
           <div key={group.name}>
             <h2 className={cn(
-              "text-xs font-semibold uppercase tracking-normal mb-1 px-4", // Adjusted tracking and mb, added px
+              "text-xs font-semibold uppercase tracking-wide mb-2 px-4", // Adjusted tracking, mb, and px
               isPrimary ? "text-primary-foreground/60" : "text-muted-foreground"
             )}>
               <group.icon className="inline-block h-4 w-4 mr-2" />

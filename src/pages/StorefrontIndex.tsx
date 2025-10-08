@@ -288,7 +288,7 @@ const StorefrontIndex = () => {
                   return (
                     <StorefrontProductCard 
                       key={product.product_id} 
-                      product={product as Product} 
+                      product={{ ...product, id: product.product_id }} // Map product_id to id
                       shopSlug={shopDetails.slug} 
                       className="w-[240px] md:w-[280px] flex-shrink-0" 
                       externalShopDetails={shopDetails}
