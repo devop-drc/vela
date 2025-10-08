@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Checkbox } from "./ui/checkbox";
-import { AlertTriangle, Palette, Ruler, Tag, Frame, ScanText, Cog } from "lucide-react";
+import { AlertTriangle, Palette, Ruler, Tag, Frame, ScanText, Cog, Package } from "lucide-react"; // Import Package icon
 import { ProductStatusDropdown } from "./ProductStatusDropdown";
 import { Badge } from "./ui/badge";
 import { formatCurrency } from "@/lib/formatters";
@@ -52,7 +52,7 @@ const DetailRow = ({ icon: Icon, children }: { icon: React.ElementType, children
 );
 
 export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSize, onSelect, onEdit, onStatusChange }: ProductCardProps) => {
-  const { shopDetails, exchangeRates } = useShop();
+  const { shopDetails, convertCurrency } = useShop();
 
   const handleCardClick = () => {
     if (isSelectionModeActive) {
@@ -71,16 +71,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
   // Convert price to display currency if needed
   let displayPrice = product.price;
   if (product.price != null && currency && shopDetails?.currency && currency !== shopDetails.currency) {
-    // Get the exchange rate for the source currency (from ALL to currency)
-    const fromRate = exchangeRates?.[currency];
-    // Get the exchange rate for the target currency (from ALL to shop's currency)
-    const toRate = exchangeRates?.[shopDetails.currency];
-    
-    if (fromRate && toRate) {
-      // Convert from source currency to ALL, then to target currency
-      const rate = toRate / fromRate;
-      displayPrice = product.price * rate;
-    }
+    displayPrice = convertCurrency(product.price, product.currency);
   }
 
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
@@ -190,6 +181,12 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
               <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-600">
                 <AlertTriangle className="h-4 w-4" />
                 Set Price
+              </div>
+            )}
+            {product.pricing_type === 'one_time' && (
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Package className="h-4 w-4" />
+                <span>{product.inventory} in stock</span>
               </div>
             )}
             <ProductStatusDropdown 

@@ -33,7 +33,7 @@ const AttributeInput = ({ control, fieldName, inputType }: any) => {
     case 'number':
       return <Controller name={name} control={control} render={({ field }) => <Input type="number" {...field} value={field.value || ''} />} />;
     case 'tags':
-      return <Controller name={name} control={control} render={({ field }) => <TagInput {...field} />} />;
+      return <Controller name={name} control={control} render={({ field }) => <TagInput {...field} value={Array.isArray(field.value) ? field.value : (field.value ? [field.value] : [])} />} />;
     case 'color':
         return <Controller name={name} control={control} render={({ field }) => <Input type="color" {...field} value={field.value || '#000000'} className="h-10 w-16" />} />;
     default:
@@ -164,7 +164,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
                   </div>
                   <Textarea id="caption" {...captionProps} ref={(e) => { rhfRef(e); textAreaRef.current = e as HTMLTextAreaElement; }} placeholder="No description provided." className="border-0 border-b-2 rounded-none bg-transparent p-0 text-base text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors resize-none" />
-                  <div><Label>Tags</Label><Controller control={control} name="tags" render={({ field }) => <TagInput {...field} />} /></div>
+                  <div><Label>Tags</Label><Controller control={control} name="tags" render={({ field }) => <TagInput {...field} value={Array.isArray(field.value) ? field.value : (field.value ? [field.value] : [])} />} /></div>
                   <div className="space-y-2 pt-2">
                     <Label>Pricing & Inventory</Label>
                     <div className="flex items-center gap-4"><Controller control={control} name="pricing_type" render={({ field }) => (<ToggleGroup type="single" onValueChange={field.onChange} value={field.value} variant="outline" size="sm"><ToggleGroupItem value="one_time">One-time</ToggleGroupItem><ToggleGroupItem value="subscription">Subscription</ToggleGroupItem></ToggleGroup>)} /></div>

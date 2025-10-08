@@ -141,7 +141,7 @@ const StorefrontClientOrders = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [customerEmailInput, orderIdInput, fetchOrders, searchParams, urlShopSlug]); // Depend on urlShopSlug
+  }, [customerEmailInput, orderIdInput, urlShopSlug]); // Depend on urlShopSlug
 
   useEffect(() => {
     if (customerEmailInput && (orderIdInput || searchParams.get('email')) && urlShopSlug) { // Only fetch if email is present and either orderId is present or email was in URL

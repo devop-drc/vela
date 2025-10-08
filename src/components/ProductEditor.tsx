@@ -66,26 +66,24 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mediaItems, setMediaItems] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const { shopDetails, exchangeRates } = useShop();
+  const { shopDetails, convertCurrency } = useShop();
   const [typeAttributes, setTypeAttributes] = useState<any[]>([]);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
   });
   useEffect(() => {
-    if (product && exchangeRates && shopDetails) {
-      const displayCurrency = product.currency || shopDetails.currency || 'USD';
-      const rate = exchangeRates[displayCurrency] || 1;
-      const priceInUSD = product.price || 0;
-      const displayPrice = parseFloat((priceInUSD * rate).toFixed(2));
+    if (product && shopDetails) {
+      // Convert price from product.currency (stored in DB) to shopDetails.currency (display)
+      const priceInDisplayCurrency = convertCurrency(product.price, product.currency);
 
       form.reset({
         name: product.name || "",
         status: product.status || "Draft",
         caption: product.caption || "",
         category: product.category || "",
-        price: displayPrice,
-        currency: displayCurrency,
+        price: priceInDisplayCurrency, // Set price in display currency for the form
+        currency: shopDetails.currency || 'USD', // Always use shop's currency for the form's currency selector
         inventory: product.inventory || 0,
         tags: Array.isArray(product.tags) ? product.tags : [],
         pricing_type: product.pricing_type || 'one_time',
@@ -95,6 +93,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
       setMediaItems(gallery);
     } else if (product) {
+      // Fallback if shopDetails not loaded yet, use product's original currency
       form.reset({
         name: product.name || "",
         status: product.status || "Draft",
@@ -111,7 +110,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     } else {
       setMediaItems([]);
     }
-  }, [product, form.reset, shopDetails, exchangeRates]);
+  }, [product, form.reset, shopDetails, convertCurrency]);
   
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
@@ -229,14 +228,8 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     setIsSubmitting(true);
     await logFeedback(product, data);
 
-    const selectedCurrency = data.currency || shopDetails?.currency || 'USD';
-    const rate = exchangeRates ? exchangeRates[selectedCurrency] : 1;
-    if (!rate) {
-        showError(`Could not find exchange rate for ${selectedCurrency}. Price not saved correctly.`);
-        setIsSubmitting(false);
-        return;
-    }
-    const priceInUSD = data.price / rate;
+    // Convert price from display currency (data.currency) to USD for storage
+    const priceInUSD = convertCurrency(data.price, data.currency);
 
     const cleanedDetails: { [key: string]: any } = { type: data.details.type };
     if (typeAttributes) {
@@ -249,7 +242,9 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
 
     const { error } = await supabase.from('products').update({
         name: data.name, status: data.status, caption: data.caption, category: data.category,
-        price: priceInUSD, currency: selectedCurrency, inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
+        price: priceInUSD, // Save price in USD
+        currency: data.currency, // Save the selected currency
+        inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
         tags: data.tags, pricing_type: data.pricing_type,
         billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
         details: cleanedDetails,
