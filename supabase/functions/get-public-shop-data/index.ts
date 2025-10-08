@@ -53,19 +53,6 @@ serve(async (req) => {
       throw designSettingsError;
     }
 
-    // Fetch Instagram profile data to get the instagram_url
-    // This is now redundant as instagram_url is stored in shop_details, but kept for reference if needed
-    // const { data: instagramProfile, error: instagramProfileError } = await supabaseAdmin.functions.invoke('instagram-profile', {
-    //   headers: { 'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` }, // Use service role key for function invocation
-    //   body: { user_id: userId } // Pass user_id to the instagram-profile function
-    // });
-
-    // if (instagramProfileError) {
-    //   console.error("Error invoking instagram-profile function:", instagramProfileError);
-    // } else if (instagramProfile.error) {
-    //   console.error("Error from instagram-profile function:", instagramProfile.error);
-    // }
-
     const offset = (page - 1) * limit;
 
     // Fetch active products for the business with pagination
@@ -108,6 +95,31 @@ serve(async (req) => {
       recommendedProducts = availableForRecommendation.slice(0, 4);
     }
 
+    // Fetch active promotions for the business
+    const { data: promotions, error: promotionsError } = await supabaseAdmin
+      .from('promotions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .or(`start_date.is.null,start_date.lte.${new Date().toISOString()}`)
+      .or(`end_date.is.null,end_date.gte.${new Date().toISOString()}`);
+
+    if (promotionsError) {
+      console.error("Error fetching promotions:", promotionsError);
+    }
+
+    // Fetch active marquee elements for the business
+    const { data: marqueeElements, error: marqueeElementsError } = await supabaseAdmin
+      .from('marquee_elements')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    if (marqueeElementsError) {
+      console.error("Error fetching marquee elements:", marqueeElementsError);
+    }
+
     return new Response(JSON.stringify({
       shopDetails: {
         id: businessId,
@@ -132,6 +144,8 @@ serve(async (req) => {
       hasMore: (offset + (products?.length || 0)) < (totalProductsCount || 0), // Calculate hasMore
       bestSellers: bestSellers || [],
       recommendedProducts: recommendedProducts || [],
+      promotions: promotions || [], // Include promotions
+      marqueeElements: marqueeElements || [], // Include marquee elements
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

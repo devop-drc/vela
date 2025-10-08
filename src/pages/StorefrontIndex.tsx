@@ -62,36 +62,13 @@ const itemVariants = {
 };
 
 const StorefrontIndex = () => {
-  const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, bestSellers, recommendedProducts } = useStorefront();
+  const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, bestSellers, recommendedProducts, marqueeElements } = useStorefront();
   const productsSectionRef = useRef<HTMLDivElement>(null);
-  const [storefrontAnnouncements, setStorefrontAnnouncements] = useState<StorefrontAnnouncement[]>([]); // Renamed state
 
   // Drag-to-scroll refs
   const bestSellersScrollRef = useDragToScroll<HTMLDivElement>();
   const newArrivalsScrollRef = useDragToScroll<HTMLDivElement>();
   const recommendedProductsScrollRef = useDragToScroll<HTMLDivElement>();
-
-  useEffect(() => {
-    const fetchStorefrontAnnouncements = async () => { // Renamed function
-      if (!shopDetails?.userId) return;
-
-      const { data, error } = await supabase
-        .from('marquee_elements') // Fetch from new table
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
-
-      if (error) {
-        console.error("Error fetching storefront announcements:", error); // Renamed error message
-      } else {
-        setStorefrontAnnouncements(data as StorefrontAnnouncement[]); // Renamed state update
-      }
-    };
-
-    if (shopDetails) {
-      fetchStorefrontAnnouncements();
-    }
-  }, [shopDetails]);
 
   const newArrivals = useMemo(() => {
     return allProducts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10);
@@ -229,7 +206,7 @@ const StorefrontIndex = () => {
         </motion.section>
 
         {/* Storefront Announcements */}
-        {storefrontAnnouncements.length > 0 && ( // Renamed state
+        {marqueeElements.length > 0 && (
           <motion.section
             initial="hidden"
             animate="visible"
@@ -237,7 +214,7 @@ const StorefrontIndex = () => {
             className="my-12 md:my-16"
           >
             <Marquee pauseOnHover className="py-3 md:py-4 border-y-2 border-primary/20 bg-primary/10">
-              {storefrontAnnouncements.map(element => ( // Renamed state
+              {marqueeElements.map(element => (
                 <div key={element.id} className="flex items-center gap-6 md:gap-8 text-base md:text-lg font-semibold text-primary">
                   {getIconComponent(element.icon_name)}
                   <span>{element.message}</span>

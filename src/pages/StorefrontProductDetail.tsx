@@ -32,7 +32,7 @@ const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon
 
 const StorefrontProductDetail = () => {
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
-  const { shopDetails, products, isLoading, error, appearanceSettings, convertCurrency } = useStorefront();
+  const { shopDetails, products, isLoading, error, appearanceSettings, convertCurrency, promotions } = useStorefront();
   const { addToCart } = useCart();
   const { addRecentlyViewed } = useRecentlyViewed(); // Use the new hook
   const [quantity, setQuantity] = useState(1);
@@ -84,7 +84,7 @@ const StorefrontProductDetail = () => {
         <h1 className="text-xl md:text-2xl font-bold">Product Not Found</h1>
         <p className="mt-2 text-sm md:text-base">The product you are looking for does not exist or is no longer available.</p>
         <Button asChild className="mt-4 text-sm md:text-base">
-          <Link to={`/shop/${shopSlug}/products`}>
+          <Link to={`/shop/${shopDetails.slug}/products`}>
             <Home className="mr-2 h-4 w-4" />
             Back to Shop
           </Link>
@@ -99,9 +99,43 @@ const StorefrontProductDetail = () => {
   // Convert product price to shop's display currency
   const displayPrice = convertCurrency(product.price, product.currency);
 
+  const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && product.inventory <= 0);
+
+  const activePromotions = promotions.filter(promo => {
+    if (!promo.is_active) return false;
+    const now = new Date();
+    const startDate = promo.start_date ? new Date(promo.start_date) : null;
+    const endDate = promo.end_date ? new Date(promo.end_date) : null;
+
+    if (startDate && now < startDate) return false;
+    if (endDate && now > endDate) return false;
+
+    if (promo.target_products && promo.target_products.length > 0) {
+      return promo.target_products.includes(product.id);
+    }
+    return true; // Applies to all products if target_products is empty
+  });
+
+  const getPromotionBadge = (promo: Promotion) => {
+    switch (promo.type) {
+      case 'discount':
+        if (promo.value?.discountType === 'percentage') return `${promo.value.discountValue}% OFF`;
+        if (promo.value?.discountType === 'flat') return `-${formatCurrency(promo.value.discountValue, shopDetails?.currency)} OFF`;
+        return 'Discount';
+      case 'offer':
+        if (promo.value?.offerType === 'free_shipping') return 'Free Shipping';
+        return 'Offer';
+      default: return null;
+    }
+  };
+
   const handleAddToCart = () => {
     if (!shopDetails?.slug) {
       toast.error("Shop details not available.");
+      return;
+    }
+    if (isOutOfStock) {
+      toast.error("This product is currently out of stock.");
       return;
     }
     // In a real app, you'd pass selected variants here
@@ -160,7 +194,23 @@ const StorefrontProductDetail = () => {
               <span>{product.category || 'Uncategorized'}</span>
               {product.details?.type && <span> &middot; {product.details.type}</span>}
             </p>
-            <h1 className="text-3xl md:text-5xl font-bold font-heading mb-2 md:mb-3 leading-tight">{product.name}</h1>
+            <h1 className="text-3xl md:text-5xl font-bold font-heading mb-2 md:mb-3 leading-tight flex items-center gap-2">
+              {product.name}
+              {isOutOfStock && (
+                <Badge variant="destructive" className="text-sm md:text-base">
+                  Out of Stock
+                </Badge>
+              )}
+              {activePromotions.length > 0 && !isOutOfStock && (
+                <div className="flex gap-1">
+                  {activePromotions.map(promo => (
+                    <Badge key={promo.id} className="bg-emerald-500 text-white text-sm md:text-base">
+                      {getPromotionBadge(promo)}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </h1>
             <div className="flex items-center gap-3 mb-3">
                 <p className="text-2xl md:text-3xl font-bold text-primary">
                 {formatCurrency(displayPrice, shopDetails?.currency)}
@@ -295,7 +345,7 @@ const StorefrontProductDetail = () => {
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              <Button size="lg" className="flex-1 text-base md:text-lg" onClick={handleAddToCart}>
+              <Button size="lg" className="flex-1 text-base md:text-lg" onClick={handleAddToCart} disabled={isOutOfStock}>
                 <ShoppingCart className="mr-2 h-5 w-5" />
                 Add to Cart
               </Button>
@@ -307,7 +357,7 @@ const StorefrontProductDetail = () => {
             </Button>
           )}
           {product.pricing_type === 'subscription' && (
-            <Button size="lg" className="w-full text-base md:text-lg" onClick={handleAddToCart}>
+            <Button size="lg" className="w-full text-base md:text-lg" onClick={handleAddToCart} disabled={isOutOfStock}>
               <ShoppingCart className="mr-2 h-5 w-5" />
               Subscribe Now
             </Button>

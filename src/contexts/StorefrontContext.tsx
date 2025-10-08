@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
 import { DesignSettings } from './AppearanceContext'; // Re-use DesignSettings type
+import { StorefrontAnnouncement } from '@/types/storefront';
 
 interface ShopDetails {
   id: string;
@@ -48,6 +49,17 @@ interface TopProduct {
   total_sold: number;
 }
 
+interface Promotion {
+  id: string;
+  name: string;
+  type: 'discount' | 'offer';
+  value: any;
+  start_date: string | null;
+  end_date: string | null;
+  is_active: boolean;
+  target_products: string[] | null;
+}
+
 interface ExchangeRates {
   [key: string]: number;
 }
@@ -66,6 +78,8 @@ interface StorefrontContextType {
   recommendedProducts: Product[]; // New: Recommended products
   exchangeRates: ExchangeRates | null; // Add exchangeRates to context type
   convertCurrency: (amount: number | null | undefined, fromCurrency?: string) => number; // Add convertCurrency
+  promotions: Promotion[]; // New: Active promotions
+  marqueeElements: StorefrontAnnouncement[]; // New: Marquee elements
 }
 
 const StorefrontContext = createContext<StorefrontContextType | undefined>(undefined);
@@ -94,6 +108,8 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
   const [bestSellers, setBestSellers] = useState<TopProduct[]>([]); // New state
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]); // New state
   const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(null); // New state for exchange rates
+  const [promotions, setPromotions] = useState<Promotion[]>([]); // New state for promotions
+  const [marqueeElements, setMarqueeElements] = useState<StorefrontAnnouncement[]>([]); // New state for marquee elements
 
   // Fetch exchange rates once on mount
   useEffect(() => {
@@ -125,6 +141,8 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
       setCurrentPage(1);
       setBestSellers([]); // Clear best sellers for initial load
       setRecommendedProducts([]); // Clear recommended products for initial load
+      setPromotions([]); // Clear promotions for initial load
+      setMarqueeElements([]); // Clear marquee elements for initial load
     } else {
       setIsLoadingMore(true);
     }
@@ -160,6 +178,8 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         setProducts(data.products);
         setBestSellers(data.bestSellers || []); // Set best sellers
         setRecommendedProducts(data.recommendedProducts || []); // Set recommended products
+        setPromotions(data.promotions || []); // Set promotions
+        setMarqueeElements(data.marqueeElements || []); // Set marquee elements
       } else {
         setProducts(prevProducts => [...prevProducts, ...data.products]);
       }
@@ -234,6 +254,8 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
     recommendedProducts, // Provide recommended products
     exchangeRates, // Provide exchange rates
     convertCurrency, // Provide convertCurrency
+    promotions, // Provide promotions
+    marqueeElements, // Provide marquee elements
   };
 
   return (
