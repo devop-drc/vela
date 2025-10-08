@@ -67,16 +67,42 @@ const applyStorefrontSettingsToDOM = (settings: any, shopDetails: any) => {
   // Dynamically set page title and meta description
   if (shopDetails) {
     document.title = shopDetails.shop_name || "Storefront";
-    const metaDescriptionTag = document.querySelector('meta[name="description"]');
-    if (metaDescriptionTag) {
-      metaDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Welcome to ${shopDetails.shop_name}'s online store.`);
+
+    // Update meta description
+    let metaDescriptionTag = document.querySelector('meta[name="description"]');
+    if (!metaDescriptionTag) {
+      metaDescriptionTag = document.createElement('meta');
+      metaDescriptionTag.name = 'description';
+      document.head.appendChild(metaDescriptionTag);
     }
-    const ogTitleTag = document.querySelector('meta[property="og:title"]');
-    if (ogTitleTag) ogTitleTag.setAttribute('content', shopDetails.shop_name || "Storefront");
-    const ogDescriptionTag = document.querySelector('meta[property="og:description"]');
-    if (ogDescriptionTag) ogDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Welcome to ${shopDetails.shop_name}'s online store.`);
-    const ogImageTag = document.querySelector('meta[property="og:image"]');
-    if (ogImageTag) ogImageTag.setAttribute('content', shopDetails.logo_url || ''); // Ensure og:image is set
+    metaDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Welcome to ${shopDetails.shop_name}'s online store.`);
+
+    // Update Open Graph title
+    let ogTitleTag = document.querySelector('meta[property="og:title"]');
+    if (!ogTitleTag) {
+      ogTitleTag = document.createElement('meta');
+      ogTitleTag.setAttribute('property', 'og:title');
+      document.head.appendChild(ogTitleTag);
+    }
+    ogTitleTag.setAttribute('content', shopDetails.shop_name || "Storefront");
+
+    // Update Open Graph description
+    let ogDescriptionTag = document.querySelector('meta[property="og:description"]');
+    if (!ogDescriptionTag) {
+      ogDescriptionTag = document.createElement('meta');
+      ogDescriptionTag.setAttribute('property', 'og:description');
+      document.head.appendChild(ogDescriptionTag);
+    }
+    ogDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Welcome to ${shopDetails.shop_name}'s online store.`);
+
+    // Update Open Graph image
+    let ogImageTag = document.querySelector('meta[property="og:image"]');
+    if (!ogImageTag) {
+      ogImageTag = document.createElement('meta');
+      ogImageTag.setAttribute('property', 'og:image');
+      document.head.appendChild(ogImageTag);
+    }
+    ogImageTag.setAttribute('content', shopDetails.logo_url || '');
 
     // Set favicon
     const setFavicon = (url: string | null) => {
@@ -90,13 +116,11 @@ const applyStorefrontSettingsToDOM = (settings: any, shopDetails: any) => {
           link.href = url;
           document.head.appendChild(link);
         }
-        console.log("Favicon URL set:", url); // Debugging
       } else {
         // If no URL, remove existing favicon or set to a transparent one
         if (link) {
           link.remove(); // Remove the link element entirely
         }
-        console.log("Favicon removed or not set (no URL provided)."); // Debugging
       }
     };
 
@@ -105,14 +129,12 @@ const applyStorefrontSettingsToDOM = (settings: any, shopDetails: any) => {
     } else {
       setFavicon(null); // Explicitly remove favicon if no URL is provided
     }
-    console.log("Shop Logo URL for header/footer:", shopDetails.logo_url); // Debugging
   } else {
     document.title = "Storefront";
-    const metaDescriptionTag = document.querySelector('meta[name="description"]');
+    let metaDescriptionTag = document.querySelector('meta[name="description"]');
     if (metaDescriptionTag) metaDescriptionTag.setAttribute('content', "Discover unique products from various shops.");
     let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
     if (link) link.remove(); // Remove default favicon if shopDetails not loaded
-    console.log("Shop details not available, removing favicon and no logo."); // Debugging
   }
 };
 
@@ -240,7 +262,7 @@ const StorefrontLayoutContent = () => {
         }} />
       </main>
       <StorefrontFooter ref={footerRef} />
-      <StorefrontBottomNav /> {/* Render the new bottom navigation */}
+      <StorefrontBottomNav onOpenCart={() => setIsCartCheckoutModalOpen(true)} /> {/* Corrected: Pass onOpenCart prop */}
       <Sonner />
       <StorefrontCartCheckoutModal isOpen={isCartCheckoutModalOpen} onClose={() => setIsCartCheckoutModalOpen(false)} />
     </div>

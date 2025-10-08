@@ -11,7 +11,11 @@ const navItems = [
   { to: "/orders", icon: Truck, label: "My Orders" }, // Changed to My Orders
 ];
 
-export const StorefrontBottomNav = () => {
+interface StorefrontBottomNavProps {
+  onOpenCart: () => void; // Add onOpenCart prop
+}
+
+export const StorefrontBottomNav = ({ onOpenCart }: StorefrontBottomNavProps) => {
   const isMobile = useIsMobile();
   const { shopSlug } = useParams<{ shopSlug: string }>();
   const { totalItems } = useCart();
@@ -40,7 +44,7 @@ export const StorefrontBottomNav = () => {
             </NavLink>
           ))}
           <button
-            onClick={() => { /* This button will open the cart modal, handled by StorefrontLayout */ }}
+            onClick={onOpenCart} {/* Corrected: Call onOpenCart */}
             className="flex flex-col items-center justify-center text-muted-foreground w-full h-full transition-colors text-xs relative"
           >
             <motion.span
