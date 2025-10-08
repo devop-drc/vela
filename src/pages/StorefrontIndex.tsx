@@ -20,6 +20,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import * as LucideIcons from 'lucide-react'; // Import all Lucide icons
 import { StorefrontAnnouncement } from "@/types/storefront"; // Import new type
+import { useDragToScroll } from "@/hooks/use-drag-to-scroll"; // Import useDragToScroll hook
 
 interface Product {
   id: string;
@@ -64,6 +65,11 @@ const StorefrontIndex = () => {
   const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, bestSellers, recommendedProducts } = useStorefront();
   const productsSectionRef = useRef<HTMLDivElement>(null);
   const [storefrontAnnouncements, setStorefrontAnnouncements] = useState<StorefrontAnnouncement[]>([]); // Renamed state
+
+  // Drag-to-scroll refs
+  const bestSellersScrollRef = useDragToScroll<HTMLDivElement>();
+  const newArrivalsScrollRef = useDragToScroll<HTMLDivElement>();
+  const recommendedProductsScrollRef = useDragToScroll<HTMLDivElement>();
 
   useEffect(() => {
     const fetchStorefrontAnnouncements = async () => { // Renamed function
@@ -111,18 +117,16 @@ const StorefrontIndex = () => {
       `,
     };
 
-    if (appearanceSettings?.backgroundImageUrl) {
-      style.backgroundImage = `url(${appearanceSettings.backgroundImageUrl})`;
-      style.backgroundSize = appearanceSettings.backgroundSize || 'cover';
+    if (appearanceSettings?.heroBackgroundMediaUrl) {
+      style.backgroundImage = `url(${appearanceSettings.heroBackgroundMediaUrl})`;
+      style.backgroundSize = 'cover'; // Always cover for hero background media
       style.backgroundPosition = 'center';
-      style.backgroundRepeat = appearanceSettings.backgroundRepeat || 'no-repeat';
+      style.backgroundRepeat = 'no-repeat';
       style.backgroundColor = 'transparent';
-    } else if (appearanceSettings?.solidBackgroundColor) {
-      style.backgroundImage = 'none';
-      style.backgroundColor = `hsl(${appearanceSettings.solidBackgroundColor})`;
     } else {
+      // Fallback to primary color if no specific hero background is set
       style.backgroundImage = 'none';
-      style.backgroundColor = 'transparent';
+      style.backgroundColor = `hsl(${appearanceSettings?.primary || '220 10% 15%'})`;
     }
     return style;
   }, [appearanceSettings]);
@@ -171,10 +175,21 @@ const StorefrontIndex = () => {
           variants={sectionVariants}
           className={cn(
             "relative mb-16 p-0 rounded-xl text-center overflow-hidden min-h-[450px] flex items-center justify-center",
-            "shadow-lg hero-blob-background"
+            "shadow-lg",
+            appearanceSettings?.showHeroBlobAnimation && "hero-blob-background show-blob"
           )}
           style={heroBackgroundStyle}
         >
+          {appearanceSettings?.heroBackgroundMediaUrl && appearanceSettings.heroBackgroundMediaType === 'video' && (
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover z-0"
+              src={appearanceSettings.heroBackgroundMediaUrl}
+            />
+          )}
           {/* Overlay for text readability */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
           
@@ -288,7 +303,7 @@ const StorefrontIndex = () => {
               Our Best Sellers
             </h2>
             <ScrollArea className="w-full whitespace-nowrap pb-4">
-              <div className="flex w-max space-x-6 md:space-x-8 p-4">
+              <div ref={bestSellersScrollRef} className="flex w-max space-x-6 md:space-x-8 p-4">
                 {bestSellers.map((product) => (
                   <StorefrontProductCard key={product.product_id} product={product as Product} shopSlug={shopDetails.slug} className="w-[240px] md:w-[280px] flex-shrink-0" />
                 ))}
@@ -318,7 +333,7 @@ const StorefrontIndex = () => {
               New Arrivals
             </h2>
             <ScrollArea className="w-full whitespace-nowrap pb-4">
-              <div className="flex w-max space-x-6 md:space-x-8 p-4">
+              <div ref={newArrivalsScrollRef} className="flex w-max space-x-6 md:space-x-8 p-4">
                 {newArrivals.map((product) => (
                   <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} className="w-[240px] md:w-[280px] flex-shrink-0" />
                 ))}
@@ -348,7 +363,7 @@ const StorefrontIndex = () => {
               Recommended For You
             </h2>
             <ScrollArea className="w-full whitespace-nowrap pb-4">
-              <div className="flex w-max space-x-6 md:space-x-8 p-4">
+              <div ref={recommendedProductsScrollRef} className="flex w-max space-x-6 md:space-x-8 p-4">
                 {recommendedProducts.map((product) => (
                   <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} className="w-[240px] md:w-[280px] flex-shrink-0" />
                 ))}

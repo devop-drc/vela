@@ -66,13 +66,18 @@ serve(async (req) => {
       if (!longLivedTokenResponse.ok) throw new Error(longLivedTokenData.error.message);
       const longLivedToken = longLivedTokenData.access_token;
 
-      const profileUrl = `https://graph.facebook.com/v19.0/me?fields=id,email,first_name,last_name,picture&access_token=${longLivedToken}`;
+      const profileUrl = `https://graph.facebook.com/v19.0/me?fields=id,email,first_name,last_name,picture,accounts{instagram_business_account{username,profile_picture_url,name}}&access_token=${longLivedToken}`;
       const profileResponse = await fetch(profileUrl);
       const profileData = await profileResponse.json();
       if (!profileResponse.ok) throw new Error(profileData.error.message);
       
-      const { email, first_name, last_name, picture } = profileData;
+      const { email, first_name, last_name, picture, accounts } = profileData;
       if (!email) throw new Error("Could not retrieve email from Facebook. Please ensure your account has a verified email and you granted email permissions.");
+
+      const igAccount = accounts?.data?.find((page: any) => page.instagram_business_account)?.instagram_business_account;
+      const instagram_username = igAccount?.username;
+      const instagram_profile_picture_url = igAccount?.profile_picture_url;
+      const instagram_shop_name = igAccount?.name;
 
       const supabaseAdmin = getSupabaseAdmin();
       let userId: string;
@@ -94,6 +99,7 @@ serve(async (req) => {
             last_name,
             avatar_url: picture?.data?.url,
             full_name: `${first_name} ${last_name || ''}`.trim(),
+            username: instagram_username, // Store Instagram username in user_metadata
           }
         });
         if (createUserError) throw createUserError;
@@ -106,6 +112,21 @@ serve(async (req) => {
         access_token: longLivedToken,
       }, { onConflict: 'user_id,provider' });
       if (upsertError) throw upsertError;
+
+      // Update or insert shop_details with Instagram info
+      const shopDetailsPayload = {
+        business_id: (await supabaseAdmin.from('businesses').select('id').eq('user_id', userId).single()).data?.id,
+        shop_name: instagram_shop_name || `${first_name}'s Shop`,
+        slug: instagram_username ? instagram_username.toLowerCase().replace(/[^a-z0-9-]/g, '') : `${first_name.toLowerCase()}-shop`,
+        logo_url: instagram_profile_picture_url || picture?.data?.url,
+        favicon_url: instagram_profile_picture_url || picture?.data?.url,
+        contact_email: email,
+        instagram_url: instagram_username ? `https://www.instagram.com/${instagram_username}` : null,
+      };
+
+      const { error: shopDetailsUpsertError } = await supabaseAdmin.from('shop_details').upsert(shopDetailsPayload, { onConflict: 'business_id' });
+      if (shopDetailsUpsertError) console.error("Error upserting shop details:", shopDetailsUpsertError);
+
 
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',

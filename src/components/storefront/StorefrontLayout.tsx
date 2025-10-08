@@ -110,12 +110,21 @@ const StorefrontLayoutContent = () => {
       };
 
       if (shopDetails.favicon_url) {
-        setFavicon(shopDetails.favicon_url); // Use direct URL
+        // Use weserv.nl for proxying and resizing if it's an external URL
+        const faviconUrl = shopDetails.favicon_url.startsWith('http') 
+          ? `https://images.weserv.nl/?url=${encodeURIComponent(shopDetails.favicon_url)}&w=32&h=32&fit=contain&mask=circle`
+          : shopDetails.favicon_url; // Use directly if local path
+        setFavicon(faviconUrl);
+      } else {
+        // Fallback to default favicon if none is provided
+        setFavicon('/favicon.ico');
       }
     } else {
       document.title = "Storefront";
       const metaDescriptionTag = document.querySelector('meta[name="description"]');
       if (metaDescriptionTag) metaDescriptionTag.setAttribute('content', "Discover unique products from various shops.");
+      let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (link) link.href = '/favicon.ico';
     }
   }, [appearanceSettings, shopDetails]);
 

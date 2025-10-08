@@ -136,6 +136,10 @@ export interface DesignSettings extends ColorScheme {
   sidebarWidth: 'compact' | 'default' | 'spacious';
   blurEnabled: boolean;
   customThemes?: CustomTheme[];
+  // New Hero Card settings
+  heroBackgroundMediaUrl?: string;
+  heroBackgroundMediaType?: 'image' | 'video';
+  showHeroBlobAnimation: boolean;
 }
 
 export const defaultSettings: DesignSettings = {
@@ -154,6 +158,10 @@ export const defaultSettings: DesignSettings = {
   sidebarWidth: 'default',
   blurEnabled: true,
   customThemes: [],
+  // Default Hero Card settings
+  heroBackgroundMediaUrl: undefined,
+  heroBackgroundMediaType: 'image',
+  showHeroBlobAnimation: true,
 };
 
 interface AppearanceContextType {
@@ -349,6 +357,22 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
     const backgroundBrightness = 80 + Math.floor(Math.random() * 41); // 80-120
     const backgroundContrast = 90 + Math.floor(Math.random() * 41); // 90-130
 
+    // 6. Random Hero Background & Blob
+    const heroBackgroundOptions = ['none', 'image', 'video'];
+    const randomHeroBackgroundType = getRandomItem(heroBackgroundOptions);
+    let heroBackgroundMediaUrl: string | undefined = undefined;
+    let heroBackgroundMediaType: 'image' | 'video' | undefined = undefined;
+    if (randomHeroBackgroundType === 'image') {
+      heroBackgroundMediaUrl = getRandomItem(curatedImages).src;
+      heroBackgroundMediaType = 'image';
+    } else if (randomHeroBackgroundType === 'video') {
+      // Placeholder for video URLs, replace with actual video assets if available
+      heroBackgroundMediaUrl = 'https://assets.mixkit.co/videos/preview/mixkit-abstract-liquid-background-4942-large.mp4'; 
+      heroBackgroundMediaType = 'video';
+    }
+    const showHeroBlobAnimation = Math.random() > 0.5;
+
+
     const newSettings: Partial<DesignSettings> = {
       ...randomTheme.light,
       themeName: randomTheme.name,
@@ -364,6 +388,9 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
       blurEnabled,
       backgroundBrightness,
       backgroundContrast,
+      heroBackgroundMediaUrl,
+      heroBackgroundMediaType,
+      showHeroBlobAnimation,
     };
 
     setSettings(prev => {
@@ -389,7 +416,7 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
       const updatedThemes = [...(prev.customThemes || []), newTheme];
       const newSettings = { ...prev, customThemes: updatedThemes, themeName: newTheme.name };
       debouncedSave(newSettings);
-      showSuccess(`Theme "${themeName}" saved!`);
+  showSuccess(`Theme "${themeName}" saved!`);
       return newSettings;
     });
   };

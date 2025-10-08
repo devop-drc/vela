@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
-import { ShoppingBag, Filter, Search, X, Menu, Home, Package, Truck, ArrowUpNarrowWide } from "lucide-react";
+import { ShoppingCart, Filter, Search, X, Menu, Home, Package, Truck, ArrowUpNarrowWide } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -109,7 +109,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
           </Link>
         </div>
 
-        {/* Middle Section: Desktop Nav Links & Search (always present) / Filters & Sort (conditional) */}
+        {/* Middle Section: Desktop Nav Links & Filters/Sort (conditional) */}
         <div className="flex-1 hidden lg:flex items-center justify-center space-x-4 px-4"> {/* Added flex-1, hidden on mobile */}
           {/* Desktop Navigation Links */}
           <Link to={`/shop/${shopDetails.slug}`} className={cn(buttonVariants({ variant: "ghost" }), "text-sm md:text-base")}>
@@ -121,22 +121,6 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
           <Link to={`/shop/${shopDetails.slug}/orders`} className={cn(buttonVariants({ variant: "ghost" }), "text-sm md:text-base")}>
             My Orders
           </Link>
-
-          {/* Desktop Search Input */}
-          <div className="relative flex items-center">
-            <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              name="searchQuery"
-              placeholder="Search products..."
-              className={cn(
-                "pl-9 w-48 lg:w-64 text-sm",
-                blurEnabled ? "bg-input/50" : "bg-input"
-              )}
-              value={localSearchTerm}
-              onChange={handleSearchChange}
-            />
-          </div>
 
           {/* Filters + Sort (Desktop only, on products page) */}
           <AnimatePresence>
@@ -172,8 +156,24 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
           </AnimatePresence>
         </div>
 
-        {/* Right Section: Mobile Toggles + Cart */}
-        <nav className="flex items-center space-x-2 md:space-x-4 flex-shrink-0"> {/* Removed flex-1, added flex-shrink-0 */}
+        {/* Right Section: Search + Cart + Mobile Toggles */}
+        <nav className="flex items-center space-x-2 md:space-x-4 flex-shrink-0">
+          {/* Desktop Search Input (moved here) */}
+          <div className="relative hidden lg:flex items-center">
+            <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              name="searchQuery"
+              placeholder="Search products..."
+              className={cn(
+                "pl-9 w-48 lg:w-64 text-sm",
+                blurEnabled ? "bg-input/50" : "bg-input"
+              )}
+              value={localSearchTerm}
+              onChange={handleSearchChange}
+            />
+          </div>
+
           {/* Mobile Dropdown Menu */}
           {isMobile && (
             <DropdownMenu>
@@ -201,7 +201,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onOpenCart} className="flex items-center gap-2 text-sm">
-                  <ShoppingBag className="h-4 w-4" /> Cart ({totalItems})
+                  <ShoppingCart className="h-4 w-4" /> Cart ({totalItems})
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -223,7 +223,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
             </Button>
           )}
 
-          {/* Cart Button (always visible on desktop, only icon on mobile) */}
+          {/* Cart Button (always visible) */}
           <Button
             variant="ghost"
             size="icon"
@@ -237,7 +237,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
               transition={{ duration: 0.3 }}
               className="relative"
             >
-              <ShoppingBag className="h-5 w-5" />
+              <ShoppingCart className="h-5 w-5" /> {/* Changed to ShoppingCart */}
               {totalItems > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
                   {totalItems}

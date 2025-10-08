@@ -11,6 +11,7 @@ import { ThemeSelector } from "./ThemeSelector";
 import { FontSelector } from "./FontSelector";
 import { AdvancedPanel } from "./AdvancedPanel";
 import { BackgroundImageSelector } from "./BackgroundImageSelector";
+import { HeroBackgroundSettings } from "./HeroBackgroundSettings"; // Import new component
 import { AnimatePresence } from "framer-motion";
 import { Sparkles, Save } from "lucide-react";
 import { Switch } from "../ui/switch";
@@ -170,6 +171,16 @@ export const AppearancePanel = () => {
             </div>
             <Switch checked={settings.blurEnabled} onCheckedChange={(checked) => updateSetting('blurEnabled', checked)} />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Hero Section Background</CardTitle>
+          <CardDescription>Customize the background of your storefront's hero section.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <HeroBackgroundSettings />
         </CardContent>
       </Card>
 

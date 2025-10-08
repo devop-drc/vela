@@ -54,16 +54,17 @@ serve(async (req) => {
     }
 
     // Fetch Instagram profile data to get the instagram_url
-    const { data: instagramProfile, error: instagramProfileError } = await supabaseAdmin.functions.invoke('instagram-profile', {
-      headers: { 'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` }, // Use service role key for function invocation
-      body: { user_id: userId } // Pass user_id to the instagram-profile function
-    });
+    // This is now redundant as instagram_url is stored in shop_details, but kept for reference if needed
+    // const { data: instagramProfile, error: instagramProfileError } = await supabaseAdmin.functions.invoke('instagram-profile', {
+    //   headers: { 'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` }, // Use service role key for function invocation
+    //   body: { user_id: userId } // Pass user_id to the instagram-profile function
+    // });
 
-    if (instagramProfileError) {
-      console.error("Error invoking instagram-profile function:", instagramProfileError);
-    } else if (instagramProfile.error) {
-      console.error("Error from instagram-profile function:", instagramProfile.error);
-    }
+    // if (instagramProfileError) {
+    //   console.error("Error invoking instagram-profile function:", instagramProfileError);
+    // } else if (instagramProfile.error) {
+    //   console.error("Error from instagram-profile function:", instagramProfile.error);
+    // }
 
     const offset = (page - 1) * limit;
 
@@ -122,7 +123,8 @@ serve(async (req) => {
         contact_email: shopDetails.contact_email,
         followers_count: shopDetails.followers_count,
         media_count: shopDetails.media_count,
-        instagram_url: instagramProfile?.instagram_url || null, // Include Instagram URL
+        instagram_url: shopDetails.instagram_url || null, // Use instagram_url from shop_details
+        username: shopDetails.username || null, // Use username from shop_details
       },
       appearanceSettings: designSettings?.settings || null,
       products: products || [],

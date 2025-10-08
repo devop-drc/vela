@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Instagram, RefreshCw, Save, Loader2, Users, Image as ImageIcon, Store, Type, Info, Mail, DollarSign, Copy } from 'lucide-react';
+import { Instagram, RefreshCw, Save, Loader2, Users, Image as ImageIcon, Store, Type, Info, Mail, DollarSign, Copy, Link as LinkIcon } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useShop } from '@/contexts/ShopContext';
 import { Label } from '../ui/label';
@@ -15,12 +15,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { showSuccess, showError } from '@/utils/toast';
 import { currencies } from '@/lib/currencies';
 
-const InfoRow = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
+const InfoRow = ({ icon: Icon, label, value, link }: { icon: React.ElementType, label: string, value: React.ReactNode, link?: string }) => (
   <div className="flex items-start gap-3">
     <Icon className="h-5 w-5 text-muted-foreground mt-1 flex-shrink-0" />
     <div className="flex-1">
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="font-medium">{value || 'N/A'}</p>
+      {link ? (
+        <a href={link} target="_blank" rel="noopener noreferrer" className="font-medium flex items-center gap-1 hover:underline">
+          {value} <LinkIcon className="h-3 w-3" />
+        </a>
+      ) : (
+        <p className="font-medium">{value || 'N/A'}</p>
+      )}
     </div>
   </div>
 );
@@ -46,14 +52,18 @@ export const ShopSettings = () => {
 
   const fetchSyncedDetails = useCallback(async () => {
     setIsRefreshing(true);
-    const { data, error } = await supabase.functions.invoke('instagram-profile');
+    if (!shopDetails?.id) { // Ensure business ID is available
+      setIsRefreshing(false);
+      return;
+    }
+    const { data, error } = await supabase.functions.invoke('instagram-profile', { body: { user_id: shopDetails.userId } });
     if (error || data.error) {
       console.error("Failed to refresh IG data", error || data.error);
     } else {
       setSyncedData(data);
     }
     setIsRefreshing(false);
-  }, []);
+  }, [shopDetails?.userId]);
 
   useEffect(() => {
     fetchSyncedDetails();
@@ -180,6 +190,7 @@ export const ShopSettings = () => {
             </div>
             <InfoRow icon={Users} label="Followers" value={syncedData?.followers_count?.toLocaleString()} />
             <InfoRow icon={ImageIcon} label="Posts" value={syncedData?.media_count?.toLocaleString()} />
+            <InfoRow icon={Instagram} label="Instagram Profile" value={`@${syncedData?.username}`} link={syncedData?.instagram_url} />
             <Alert>
               <Instagram className="h-4 w-4" />
               <AlertTitle>Read-Only</AlertTitle>

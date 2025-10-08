@@ -33,9 +33,19 @@ const DashboardLayout = () => {
       };
 
       if (shopDetails.favicon_url) {
-        const proxiedFaviconUrl = `https://images.weserv.nl/?url=${encodeURIComponent(shopDetails.favicon_url)}&w=32&h=32&fit=contain&mask=circle`;
-        setFavicon(proxiedFaviconUrl);
+        // Use weserv.nl for proxying and resizing if it's an external URL
+        const faviconUrl = shopDetails.favicon_url.startsWith('http') 
+          ? `https://images.weserv.nl/?url=${encodeURIComponent(shopDetails.favicon_url)}&w=32&h=32&fit=contain&mask=circle`
+          : shopDetails.favicon_url; // Use directly if local path
+        setFavicon(faviconUrl);
+      } else {
+        // Fallback to default favicon if none is provided
+        setFavicon('/favicon.ico');
       }
+    } else {
+      document.title = title; // Fallback if shopDetails not loaded yet
+      let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (link) link.href = '/favicon.ico';
     }
   }, [shopDetails, title]);
 

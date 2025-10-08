@@ -14,6 +14,8 @@ interface ShopDetails {
   contact_email?: string;
   followers_count?: number;
   media_count?: number;
+  instagram_url?: string; // Added Instagram URL
+  username?: string; // Added Instagram username
 }
 
 interface ExchangeRates {
@@ -76,7 +78,7 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const { data: dbDetails } = await supabase.from('shop_details').select('*').eq('business_id', business.id).single();
-    const { data: igDetails, error: igError } = await supabase.functions.invoke('instagram-profile');
+    const { data: igDetails, error: igError } = await supabase.functions.invoke('instagram-profile', { body: { user_id: user.id } });
     if (igError || igDetails.error) {
       console.error("Failed to fetch Instagram details:", igError || igDetails.error);
     }
@@ -85,14 +87,16 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
       id: business.id, // Set the business ID here
       shop_name: dbDetails?.shop_name || igDetails?.shop_name || 'Your Shop',
       slug: dbDetails?.slug || generateSlug(dbDetails?.shop_name || igDetails?.shop_name || 'your-shop'), // Use existing slug or generate
-      logo_url: igDetails?.logo_url || '',
-      favicon_url: igDetails?.favicon_url || '/favicon.ico',
+      logo_url: dbDetails?.logo_url || igDetails?.logo_url || '',
+      favicon_url: dbDetails?.favicon_url || igDetails?.favicon_url || '/favicon.ico',
       currency: dbDetails?.currency || 'USD',
       headline: dbDetails?.headline || '',
       about: dbDetails?.about || igDetails?.description || '',
       contact_email: dbDetails?.contact_email || user.email || '',
       followers_count: igDetails?.followers_count,
       media_count: igDetails?.media_count,
+      instagram_url: dbDetails?.instagram_url || igDetails?.instagram_url || null, // Prioritize DB, then IG
+      username: igDetails?.username || null,
     };
 
     setShopDetails(finalDetails);

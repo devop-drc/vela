@@ -143,32 +143,32 @@
     overflow: hidden;
   }
 
-  .hero-blob-background::before,
-  .hero-blob-background::after {
+  .hero-blob-background.show-blob::before,
+  .hero-blob-background.show-blob::after {
     content: '';
     position: absolute;
     border-radius: 50%;
-    background: hsl(var(--primary) / 0.2); /* Use primary color with transparency */
-    filter: blur(80px); /* Apply blur for a soft blob effect */
-    opacity: 0.7;
-    animation: blob-animation 15s infinite ease-in-out alternate;
+    background: hsl(var(--primary) / 0.4); /* More vibrant primary color */
+    filter: blur(100px); /* More blur */
+    opacity: 0.8; /* More opaque */
+    animation: blob-animation 20s infinite ease-in-out alternate; /* Slower, longer animation */
     z-index: 0;
   }
 
-  .hero-blob-background::before {
-    width: 300px;
-    height: 300px;
-    top: -50px;
-    left: -50px;
+  .hero-blob-background.show-blob::before {
+    width: 400px; /* Larger */
+    height: 400px; /* Larger */
+    top: -80px;
+    left: -80px;
     animation-delay: 0s;
   }
 
-  .hero-blob-background::after {
-    width: 400px;
-    height: 400px;
-    bottom: -100px;
-    right: -100px;
-    animation-delay: 7.5s;
+  .hero-blob-background.show-blob::after {
+    width: 500px; /* Larger */
+    height: 500px; /* Larger */
+    bottom: -120px;
+    right: -120px;
+    animation-delay: 10s; /* Adjusted delay */
   }
 
   @keyframes blob-animation {
@@ -176,13 +176,13 @@
       transform: translate(0, 0) scale(1);
     }
     25% {
-      transform: translate(50px, -50px) scale(1.1);
+      transform: translate(80px, -80px) scale(1.2); /* More movement, larger scale */
     }
     50% {
-      transform: translate(0, 50px) scale(0.9);
+      transform: translate(-80px, 80px) scale(0.9);
     }
     75% {
-      transform: translate(-50px, -50px) scale(1.2);
+      transform: translate(100px, -100px) scale(1.3);
     }
     100% {
       transform: translate(0, 0) scale(1);
