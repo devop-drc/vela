@@ -30,7 +30,7 @@ interface ShopContextType {
   updateShopDetails: (details: Partial<ShopDetails>) => Promise<boolean>;
   fetchShopDetails: () => Promise<void>;
   exchangeRates: ExchangeRates | null;
-  convertCurrency: (amount: number | null | undefined, fromCurrency?: string) => number;
+  convertCurrency: (amount: number | null | undefined, fromCurrency?: string, toCurrency?: string) => number;
 }
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
@@ -79,7 +79,11 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const { data: dbDetails } = await supabase.from('shop_details').select('*').eq('business_id', business.id).single();
+    const { data: dbDetails, error: dbDetailsError } = await supabase.from('shop_details').select('*').eq('business_id', business.id).single();
+    if (dbDetailsError && dbDetailsError.code !== 'PGRST116') { // PGRST116 = no rows found
+      console.error("Error fetching shop details from DB:", dbDetailsError);
+    }
+
     const { data: igDetails, error: igError } = await supabase.functions.invoke('instagram-profile', { body: { user_id: user.id } });
     if (igError || igDetails.error) {
       console.error("Failed to fetch Instagram details:", igError || igDetails.error);
@@ -88,10 +92,11 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     const finalDetails: ShopDetails = {
       id: business.id, // Set the business ID here
       userId: user.id, // Set the user ID here
+      name: dbDetails?.name || business.name, // Prioritize DB name, then business name
       shop_name: dbDetails?.shop_name || igDetails?.shop_name || 'Your Shop',
       slug: dbDetails?.slug || generateSlug(dbDetails?.shop_name || igDetails?.shop_name || 'your-shop'), // Use existing slug or generate
-      logo_url: dbDetails?.logo_url || null, // Always pull from DB, which is now populated by storage
-      favicon_url: dbDetails?.favicon_url || null, // Always pull from DB, which is now populated by storage
+      logo_url: dbDetails?.logo_url || igDetails?.logo_url || null, // Prioritize DB, then IG
+      favicon_url: dbDetails?.favicon_url || igDetails?.favicon_url || null, // Prioritize DB, then IG
       currency: dbDetails?.currency || 'USD',
       headline: dbDetails?.headline || '',
       about: dbDetails?.about || igDetails?.description || '',
@@ -151,32 +156,33 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const convertCurrency = (amount: number | null | undefined, fromCurrency?: string) => {
+  const convertCurrency = (amount: number | null | undefined, fromCurrency?: string, toCurrency?: string) => {
     const numericAmount = amount ?? 0;
-    if (!shopDetails || !exchangeRates || !shopDetails.currency) {
+    const targetCurrency = toCurrency || shopDetails?.currency || 'USD';
+
+    if (!shopDetails || !exchangeRates || !targetCurrency) {
       return numericAmount;
     }
 
-    // If no fromCurrency is provided or it's the same as the shop's currency, return as is
-    if (!fromCurrency || fromCurrency === shopDetails.currency) {
+    // If no fromCurrency is provided or it's the same as the target currency, return as is
+    if (!fromCurrency || fromCurrency === targetCurrency) {
       return numericAmount;
     }
 
-    // Get the rate for the source currency (from ALL to fromCurrency)
+    // Get the rate for the source currency (from USD to fromCurrency)
     const fromRate = exchangeRates[fromCurrency];
-    // Get the rate for the target currency (from ALL to shop's currency)
-    const toRate = exchangeRates[shopDetails.currency];
+    // Get the rate for the target currency (from USD to targetCurrency)
+    const toRate = exchangeRates[targetCurrency];
 
     // If either rate is missing, return the original amount
     if (!fromRate || !toRate) {
-      console.warn(`Missing exchange rate for conversion from ${fromCurrency} to ${shopDetails.currency}`);
+      console.warn(`Missing exchange rate for conversion from ${fromCurrency} to ${targetCurrency}`);
       return numericAmount;
     }
 
-    // Convert from source currency to ALL, then to target currency
-    // rate = (ALL/toCurrency) / (ALL/fromCurrency) = fromCurrency/toCurrency
-    const rate = toRate / fromRate;
-    const convertedAmount = numericAmount * rate;
+    // Convert from source currency to USD, then from USD to target currency
+    const amountInUSD = numericAmount / fromRate;
+    const convertedAmount = amountInUSD * toRate;
     
     // Round to 2 decimal places for display
     return Math.round(convertedAmount * 100) / 100;

@@ -24,12 +24,16 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
   const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const { toast } = useToast();
   const [isCheckoutMode, setIsCheckoutMode] = useState(false);
+  const [isOrderConfirmed, setIsOrderConfirmed] = useState(false); // New state for order confirmation
+  const [confirmedOrderId, setConfirmedOrderId] = useState<string | null>(null); // Store order ID for confirmation message
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
   useEffect(() => {
     if (!isOpen) {
       setIsCheckoutMode(false); // Reset to cart view when modal closes
+      setIsOrderConfirmed(false); // Reset confirmation state
+      setConfirmedOrderId(null); // Clear confirmed order ID
     }
   }, [isOpen]);
 
@@ -38,8 +42,9 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
     return total; // total is already in the shop's display currency from useCart
   }, [total, shopDetails?.currency]);
 
-  const handleOrderConfirmed = () => {
-    onClose(); // Close the modal after order is confirmed
+  const handleOrderSuccess = (orderId: string) => {
+    setIsOrderConfirmed(true);
+    setConfirmedOrderId(orderId);
   };
 
   return (
@@ -52,7 +57,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
       >
         <DialogHeader className="p-4 md:p-6 border-b flex-row items-center justify-between flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl md:text-2xl font-bold">
-            {isCheckoutMode ? (
+            {isCheckoutMode && !isOrderConfirmed ? (
               <Button variant="ghost" size="icon" onClick={() => setIsCheckoutMode(false)} className="mr-2 h-8 w-8 md:h-9 md:w-9">
                 <ArrowLeft className="h-5 w-5" />
                 <span className="sr-only">Back to Cart</span>
@@ -60,7 +65,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
             ) : (
               <ShoppingBag className="h-6 w-6 md:h-7 md:w-7" />
             )}
-            {isCheckoutMode ? "Checkout" : "Your Cart"}
+            {isOrderConfirmed ? "Order Confirmed!" : (isCheckoutMode ? "Checkout" : "Your Cart")}
           </DialogTitle>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
             <X className="h-4 w-4" />
@@ -68,7 +73,18 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
           </Button>
         </DialogHeader>
 
-        {cartItems.length === 0 && savedItems.length === 0 && !isCheckoutMode ? (
+        {isOrderConfirmed ? (
+          <div className="flex flex-col items-center justify-center flex-1 p-8 text-center">
+            <CheckCircle className="h-20 w-20 md:h-24 md:w-24 text-emerald-500 mb-6" />
+            <h3 className="text-2xl md:text-3xl font-bold mb-4">Thank You for Your Order!</h3>
+            <p className="text-base md:text-lg text-muted-foreground mb-4">Your order <span className="font-semibold">#{confirmedOrderId?.substring(0, 8)}</span> has been placed successfully.</p>
+            <p className="text-sm md:text-base text-muted-foreground mb-8">You will receive an email confirmation shortly with details and tracking information.</p>
+            <Button onClick={onClose} className="text-base md:text-lg">Continue Shopping</Button>
+            <Button asChild variant="link" className="mt-2 text-base md:text-lg">
+              <Link to={`/shop/${shopDetails?.slug}/orders?orderId=${confirmedOrderId}`} onClick={onClose}>View My Orders</Link>
+            </Button>
+          </div>
+        ) : (cartItems.length === 0 && savedItems.length === 0 && !isCheckoutMode ? (
           <div className="flex flex-col items-center justify-center flex-1 p-8 text-center">
             <ShoppingBag className="h-20 w-20 md:h-24 md:w-24 text-muted-foreground mb-6" />
             <h3 className="text-2xl md:text-3xl font-bold mb-4">Your cart is empty</h3>
@@ -79,17 +95,11 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
           <>
             {isCheckoutMode ? (
               <CheckoutForm 
-                onSubmit={async (formData) => {
-                  // This onSubmit is handled internally by CheckoutForm now
-                  // The CheckoutForm will handle the supabase.functions.invoke('create-order')
-                  // and then redirect.
-                  // We just need to ensure the modal closes if needed, but the redirect will handle it.
-                }} 
+                onOrderSuccess={handleOrderSuccess} // Pass the new prop
                 onBackToCart={() => setIsCheckoutMode(false)}
                 isSubmitting={false} // isSubmitting is handled internally by CheckoutForm
                 totalPrice={convertedTotalPrice}
                 currency={shopDetails?.currency || 'USD'}
-                onOrderConfirmed={handleOrderConfirmed} // Pass the new prop
               />
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-3 flex-1 overflow-hidden">

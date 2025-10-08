@@ -18,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { shopSlug, customerInfo, cartItems, totalAmount, currency, paymentMethod } = await req.json();
+    const { shopSlug, customerInfo, cartItems, totalAmount, currency, paymentMethod, shippingAddress, shippingCity, shippingState, shippingZip, shippingCountry, orderNotes } = await req.json();
 
     if (!shopSlug || !customerInfo || !cartItems || cartItems.length === 0 || !totalAmount || !currency || !paymentMethod) {
       return new Response(JSON.stringify({ error: "Missing required order details." }), {
@@ -53,6 +53,12 @@ serve(async (req) => {
         currency: currency,
         payment_method: paymentMethod, // New: Store selected payment method
         payment_status: paymentMethod === 'cash_on_delivery' ? 'pending' : 'processing', // New: Set initial payment status
+        shipping_address: shippingAddress, // New: Store shipping details
+        shipping_city: shippingCity,
+        shipping_state: shippingState,
+        shipping_zip: shippingZip,
+        shipping_country: shippingCountry,
+        order_notes: orderNotes,
       })
       .select('*') // Select all columns to return the full order object
       .single();

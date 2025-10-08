@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck, Lock, DollarSign } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
-import { cn } from "@/lib/utils";
+import { cn } "@/lib/utils";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import { Separator } from "@/components/ui/separator";
@@ -62,14 +62,14 @@ interface CheckoutFormData {
 }
 
 interface CheckoutFormProps {
-  onSubmit: (data: CheckoutFormData) => Promise<void>;
+  onOrderSuccess: (orderId: string) => void; // New prop for success callback
   onBackToCart: () => void;
   isSubmitting: boolean;
   totalPrice: number;
   currency: string;
 }
 
-export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice, currency }: CheckoutFormProps) => {
+export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, totalPrice, currency }: CheckoutFormProps) => {
   const { shopDetails, appearanceSettings } = useStorefront();
   const { cartItems, clearCart } = useCart();
   const blurEnabled = appearanceSettings?.blurEnabled;
@@ -175,6 +175,12 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
           totalAmount: totalPrice,
           currency: shopDetails.currency,
           paymentMethod: paymentMethod, // Pass the selected payment method
+          shippingAddress: address, // Pass shipping details
+          shippingCity: city,
+          shippingState: state,
+          shippingZip: zip,
+          shippingCountry: country,
+          orderNotes: notes,
         },
       });
 
@@ -187,8 +193,8 @@ export const CheckoutForm = ({ onSubmit, onBackToCart, isSubmitting, totalPrice,
       });
       
       clearCart();
-      window.location.href = `/shop/${shopDetails?.slug}/order-tracking?orderId=${data.order.id}`;
-
+      onOrderSuccess(data.order.id); // Call the success callback with order ID
+      // No redirect here, modal will handle closing
     } catch (err: any) {
       console.error("Order placement failed:", err);
       toast.error(`Failed to place order: ${err.message || "An unexpected error occurred."}`);
