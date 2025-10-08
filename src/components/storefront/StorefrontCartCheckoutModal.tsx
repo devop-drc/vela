@@ -38,6 +38,10 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
     return total; // total is already in the shop's display currency from useCart
   }, [total, shopDetails?.currency]);
 
+  const handleOrderConfirmed = () => {
+    onClose(); // Close the modal after order is confirmed
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
@@ -85,6 +89,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                 isSubmitting={false} // isSubmitting is handled internally by CheckoutForm
                 totalPrice={convertedTotalPrice}
                 currency={shopDetails?.currency || 'USD'}
+                onOrderConfirmed={handleOrderConfirmed} // Pass the new prop
               />
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-3 flex-1 overflow-hidden">
@@ -176,7 +181,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                   <h3 className="font-semibold text-base md:text-lg hover:underline">{item.name}</h3>
                                 </Link>
                                 <p className="text-muted-foreground text-sm">
-                                  {formatCurrency(item.price, shopDetails?.currency)}
+                                  {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
                                 </p>
                               </div>
                               <div className="flex items-center justify-center sm:justify-end gap-3 md:gap-4">

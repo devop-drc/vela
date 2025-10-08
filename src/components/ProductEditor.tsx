@@ -229,7 +229,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     await logFeedback(product, data);
 
     // Convert price from display currency (data.currency) to USD for storage
-    const priceInUSD = convertCurrency(data.price, data.currency);
+    const priceInUSD = convertCurrency(data.price, data.currency, 'USD'); // Explicitly convert to USD
 
     const cleanedDetails: { [key: string]: any } = { type: data.details.type };
     if (typeAttributes) {

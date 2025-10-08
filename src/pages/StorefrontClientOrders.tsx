@@ -100,6 +100,12 @@ const StorefrontClientOrders = () => {
           currency,
           payment_method,
           payment_status,
+          shipping_address,
+          shipping_city,
+          shipping_state,
+          shipping_zip,
+          shipping_country,
+          order_notes,
           order_items (
             quantity,
             price_at_purchase,
