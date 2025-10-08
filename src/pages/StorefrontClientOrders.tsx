@@ -189,8 +189,11 @@ const StorefrontClientOrders = () => {
         "max-w-2xl mx-auto shadow-lg",
         blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
       )}>
-        <CardHeader>
-          <CardTitle className="text-xl md:text-2xl">View Your Orders</CardTitle>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl md:text-2xl flex items-center gap-2">
+            <Search className="h-6 w-6 text-primary" />
+            View Your Orders
+          </CardTitle>
           <CardDescription className="text-sm md:text-base">Enter your email address to see all orders associated with it.</CardDescription>
         </CardHeader>
         <CardContent>

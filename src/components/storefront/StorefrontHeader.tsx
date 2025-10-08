@@ -95,7 +95,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
         "container flex h-14 md:h-16 items-center justify-between", // Restored justify-between
         isFloatingLayout
           ? "border rounded-lg shadow-md" // Floating style
-          : "border-b shadow-sm", // Docked style
+          : "shadow-sm", // Docked style, removed border-b
         isPrimaryStyle // Apply primary style if selected in admin
           ? cn(blurEnabled ? "bg-primary/80 backdrop-blur-lg" : "bg-primary", "text-primary-foreground")
           : cn(blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card", "text-foreground")
