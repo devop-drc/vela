@@ -142,7 +142,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                 transition={{ duration: 0.2 }}
                               >
                                 <Card className={cn(
-                                  "flex flex-col sm:flex-row items-center p-3 md:p-4 gap-3 md:gap-4 shadow-md",
+                                  "flex items-start p-3 md:p-4 gap-3 md:gap-4 shadow-md",
                                   blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
                                 )}>
                                   <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
@@ -150,26 +150,32 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                     </div>
                                   </Link>
-                                  <div className="flex-1 w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 text-center sm:text-left">
-                                    <div className="flex-1">
+                                  <div className="flex-1 flex flex-col gap-1 md:gap-2">
+                                    {/* Top Row: Product Name & Individual Price */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                                       <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
                                         <h3 className="font-semibold text-base md:text-lg hover:underline">{item.name}</h3>
                                       </Link>
-                                      <p className="text-muted-foreground text-sm">
+                                      <p className="text-muted-foreground text-sm sm:text-base flex-shrink-0">
                                         {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
                                       </p>
                                     </div>
-                                    <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 mt-3 sm:mt-0">
-                                      <div className="flex items-center border rounded-md">
-                                        <Button
+
+                                    {/* Bottom Row: Quantity, Total Price, Actions */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 mt-2">
+                                      <div className="flex items-center border rounded-md flex-shrink-0">
+                                        <motion.button
+                                          type="button"
                                           variant="ghost"
                                           size="icon"
                                           onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                                           disabled={item.quantity <= 1}
                                           className="h-8 w-8"
+                                          whileHover={{ scale: 1.1 }}
+                                          whileTap={{ scale: 0.9 }}
                                         >
                                           <Minus className="h-4 w-4" />
-                                        </Button>
+                                        </motion.button>
                                         <Input
                                           type="number"
                                           value={item.quantity}
@@ -177,27 +183,46 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                           className="w-14 md:w-16 text-center border-y-0 border-x rounded-none focus-visible:ring-0 text-sm"
                                           min={1}
                                         />
-                                        <Button
+                                        <motion.button
+                                          type="button"
                                           variant="ghost"
                                           size="icon"
                                           onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                                           className="h-8 w-8"
+                                          whileHover={{ scale: 1.1 }}
+                                          whileTap={{ scale: 0.9 }}
                                         >
                                           <Plus className="h-4 w-4" />
-                                        </Button>
+                                        </motion.button>
                                       </div>
-                                      <p className="font-semibold text-base md:text-lg">
+                                      <p className="font-semibold text-base md:text-lg flex-shrink-0">
                                         {formatCurrency(item.price * item.quantity, shopDetails?.currency)}
                                       </p>
-                                      <div className="flex items-center gap-2">
-                                        <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.productId)} className="text-destructive hover:text-destructive h-8 w-8">
+                                      <div className="flex items-center gap-2 flex-shrink-0">
+                                        <motion.button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => removeFromCart(item.productId)}
+                                          className="text-destructive hover:text-destructive h-8 w-8"
+                                          whileHover={{ scale: 1.1 }}
+                                          whileTap={{ scale: 0.9 }}
+                                        >
                                           <Trash2 className="h-4 w-4" />
                                           <span className="sr-only">Remove {item.name}</span>
-                                        </Button>
-                                        <Button variant="ghost" size="sm" onClick={() => saveForLater(item)} className="text-sm">
+                                        </motion.button>
+                                        <motion.button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => saveForLater(item)}
+                                          className="text-sm"
+                                          whileHover={{ scale: 1.05 }}
+                                          whileTap={{ scale: 0.95 }}
+                                        >
                                             <Bookmark className="mr-2 h-4 w-4" />
                                             Save for Later
-                                        </Button>
+                                        </motion.button>
                                       </div>
                                     </div>
                                   </div>
@@ -222,7 +247,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                 transition={{ duration: 0.2 }}
                               >
                                 <Card className={cn(
-                                  "flex flex-col sm:flex-row items-center p-3 md:p-4 gap-3 md:gap-4 shadow-md",
+                                  "flex items-start p-3 md:p-4 gap-3 md:gap-4 shadow-md",
                                   blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
                                 )}>
                                   <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
@@ -230,24 +255,43 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                     </div>
                                   </Link>
-                                  <div className="flex-1 w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 text-center sm:text-left">
-                                    <div className="flex-1">
+                                  <div className="flex-1 flex flex-col gap-1 md:gap-2">
+                                    {/* Top Row: Product Name & Individual Price */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                                       <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
                                         <h3 className="font-semibold text-base md:text-lg hover:underline">{item.name}</h3>
                                       </Link>
-                                      <p className="text-muted-foreground text-sm">
+                                      <p className="text-muted-foreground text-sm sm:text-base flex-shrink-0">
                                         {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
                                       </p>
                                     </div>
-                                    <div className="flex items-center justify-center gap-3 md:gap-4 mt-3 sm:mt-0">
-                                      <Button variant="outline" size="sm" onClick={() => moveToCart(item.productId)} className="text-sm">
+
+                                    {/* Bottom Row: Actions */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 md:gap-4 mt-2">
+                                      <motion.button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => moveToCart(item.productId)}
+                                        className="text-sm"
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                      >
                                           <MoveRight className="mr-2 h-4 w-4" />
                                           Move to Cart
-                                      </Button>
-                                      <Button variant="ghost" size="icon" onClick={() => removeSavedItem(item.productId)} className="text-destructive hover:text-destructive h-8 w-8">
+                                      </motion.button>
+                                      <motion.button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => removeSavedItem(item.productId)}
+                                        className="text-destructive hover:text-destructive h-8 w-8"
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                      >
                                         <Trash2 className="h-4 w-4" />
                                         <span className="sr-only">Remove {item.name}</span>
-                                      </Button>
+                                      </motion.button>
                                     </div>
                                   </div>
                                 </Card>
