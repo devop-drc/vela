@@ -242,7 +242,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
               </div>
             )}
           </>
-        )}
+        ))}
       </DialogContent>
     </Dialog>
   );

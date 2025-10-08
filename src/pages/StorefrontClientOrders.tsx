@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, Package, CheckCircle, Truck, Home, XCircle, Loader2, ArrowLeft, User, Mail, Calendar, Banknote, Handshake } from "lucide-react";
+import { Search, Package, CheckCircle, Truck, Home, XCircle, Loader2, ArrowLeft, User, Mail, Calendar, Banknote, Handshake, MessageSquareWarning, Hash, CreditCard, Eye, Box } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useStorefront } from "@/contexts/StorefrontContext";
@@ -12,9 +12,10 @@ import { showError, showSuccess } from "@/utils/toast";
 import { formatCurrency } from "@/lib/formatters";
 import { Separator } from "@/components/ui/separator";
 import { MediaItem } from "@/components/MediaItem";
-import { ReportIssueModal } from "@/components/storefront/ReportIssueModal";
-import { StorefrontOrderDetailModal } from "@/components/storefront/StorefrontOrderDetailModal"; // Import the new modal
-import { Badge } from "@/components/ui/badge"; // Import Badge component
+import { StorefrontOrderDetailModal } from "@/components/storefront/StorefrontOrderDetailModal";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type OrderStatusType = 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic' | 'Cancelled';
 
@@ -49,20 +50,47 @@ interface OrderDetails {
 
 const LOCAL_STORAGE_EMAIL_KEY = 'storefront_customer_email';
 
+const getStatusColorClass = (status: OrderStatusType) => {
+  switch (status) {
+    case "Fulfilled": return "bg-emerald-100 text-emerald-800 border-emerald-300";
+    case "Given to Courier": return "bg-blue-100 text-blue-800 border-blue-300";
+    case "Order Packaged": return "bg-blue-100 text-blue-800 border-blue-300";
+    case "Order Seen": return "bg-amber-100 text-amber-800 border-amber-300";
+    case "Pending": return "bg-amber-100 text-amber-800 border-amber-300";
+    case "Problematic": return "bg-destructive/10 text-destructive border-destructive/30";
+    case "Cancelled": return "bg-gray-100 text-gray-800 border-gray-300";
+    default: return "bg-gray-100 text-gray-800 border-gray-300";
+  }
+};
+
+const getStatusIcon = (status: OrderStatusType) => {
+  switch (status) {
+    case "Fulfilled": return <CheckCircle className="h-4 w-4" />;
+    case "Given to Courier": return <Truck className="h-4 w-4" />;
+    case "Order Packaged": return <Box className="h-4 w-4" />;
+    case "Order Seen": return <Eye className="h-4 w-4" />;
+    case "Pending": return <Package className="h-4 w-4" />;
+    case "Problematic": return <XCircle className="h-4 w-4" />;
+    case "Cancelled": return <XCircle className="h-4 w-4" />;
+    default: return <Package className="h-4 w-4" />;
+  }
+};
+
 const StorefrontClientOrders = () => {
-  const { shopDetails: contextShopSlug, appearanceSettings } = useStorefront(); // Get shopSlug from context
-  const { shopSlug: urlShopSlug } = useParams<{ shopSlug: string }>(); // Get shopSlug from URL params
+  const { shopDetails: contextShopDetails, appearanceSettings, convertCurrency } = useStorefront();
+  const { shopSlug: urlShopSlug } = useParams<{ shopSlug: string }>();
   const [searchParams] = useSearchParams();
   const [customerEmailInput, setCustomerEmailInput] = useState(() => {
-    // Initialize from local storage or URL param
     return searchParams.get('email') || localStorage.getItem(LOCAL_STORAGE_EMAIL_KEY) || "";
   });
-  const [orderIdInput, setOrderIdInput] = useState(searchParams.get('orderId') || ""); // For direct order tracking
+  const [orderIdInput, setOrderIdInput] = useState(searchParams.get('orderId') || "");
   const [orders, setOrders] = useState<OrderDetails[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderDetails | null>(null);
   const [isOrderDetailModalOpen, setIsOrderDetailModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<OrderStatusType | 'All'>('All');
+
   const blurEnabled = appearanceSettings?.blurEnabled;
 
   const fetchOrders = useCallback(async (e?: React.FormEvent) => {
@@ -86,7 +114,7 @@ const StorefrontClientOrders = () => {
       const { data: shopData, error: shopError } = await supabase
         .from('shop_details')
         .select('business_id')
-        .eq('slug', urlShopSlug) // Use urlShopSlug for the query
+        .eq('slug', urlShopSlug)
         .single();
 
       if (shopError || !shopData) {
@@ -141,7 +169,6 @@ const StorefrontClientOrders = () => {
           setSelectedOrder(data[0] as OrderDetails);
           setIsOrderDetailModalOpen(true);
         }
-        // Save email to local storage on successful fetch
         localStorage.setItem(LOCAL_STORAGE_EMAIL_KEY, customerEmailInput);
       } else {
         setOrders([]);
@@ -153,26 +180,24 @@ const StorefrontClientOrders = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [customerEmailInput, orderIdInput, urlShopSlug]); // Depend on urlShopSlug
+  }, [customerEmailInput, orderIdInput, urlShopSlug]);
 
   useEffect(() => {
-    if (customerEmailInput && (orderIdInput || searchParams.get('email')) && urlShopSlug) { // Only fetch if email is present and either orderId is present or email was in URL
+    if (customerEmailInput && (orderIdInput || searchParams.get('email')) && urlShopSlug) {
       fetchOrders();
     }
   }, [customerEmailInput, orderIdInput, fetchOrders, searchParams, urlShopSlug]);
 
-  const getStatusColorClass = (status: OrderStatusType) => {
-    switch (status) {
-      case "Fulfilled": return "bg-emerald-500";
-      case "Given to Courier": return "bg-blue-500";
-      case "Order Packaged": return "bg-blue-500";
-      case "Order Seen": return "bg-amber-500";
-      case "Pending": return "bg-amber-500";
-      case "Problematic": return "bg-destructive";
-      case "Cancelled": return "bg-gray-500";
-      default: return "bg-muted-foreground";
+  const handleOrderUpdate = useCallback(() => {
+    fetchOrders(); // Re-fetch orders after an update in the modal
+  }, [fetchOrders]);
+
+  const filteredOrders = useMemo(() => {
+    if (statusFilter === 'All') {
+      return orders;
     }
-  };
+    return orders.filter(order => order.status === statusFilter);
+  }, [orders, statusFilter]);
 
   return (
     <div className="container py-6 md:py-8">
@@ -186,7 +211,7 @@ const StorefrontClientOrders = () => {
       )}
 
       <Button variant="ghost" asChild className="mb-4 md:mb-6 text-muted-foreground hover:text-foreground text-sm md:text-base">
-        <Link to={`/shop/${urlShopSlug}`}> {/* Use urlShopSlug for the link */}
+        <Link to={`/shop/${urlShopSlug}`}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Shop
         </Link>
@@ -194,7 +219,7 @@ const StorefrontClientOrders = () => {
       <h1 className="text-2xl md:text-3xl font-bold font-heading mb-4 md:mb-6 text-center">My Orders</h1>
 
       <Card className={cn(
-        "max-w-2xl mx-auto shadow-lg",
+        "max-w-4xl mx-auto shadow-lg",
         blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
       )}>
         <CardHeader className="pb-4">
@@ -241,38 +266,62 @@ const StorefrontClientOrders = () => {
           </form>
 
           {searchAttempted && !isLoading && (
-            orders.length > 0 ? (
-              <div className="mt-6 md:mt-8 space-y-6">
-                {orders.map(order => (
-                  <Card key={order.id} className={cn(
-                    "p-4 md:p-6 shadow-md cursor-pointer hover:shadow-lg transition-shadow",
-                    blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
-                  )} onClick={() => { setSelectedOrder(order); setIsOrderDetailModalOpen(true); }}>
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-semibold text-lg md:text-xl">Order #{order.id.substring(0, 8)}</h3>
-                      <Badge className={cn("text-white", getStatusColorClass(order.status))}>{order.status}</Badge>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                      <p><span className="font-medium">Date:</span> {new Date(order.created_at).toLocaleDateString()}</p>
-                      <p><span className="font-medium">Total:</span> {formatCurrency(order.total_amount, order.currency)}</p>
-                      <p><span className="font-medium">Payment:</span> <span className="capitalize">{order.payment_method.replace(/_/g, ' ')} ({order.payment_status})</span></p>
-                    </div>
-                    <Separator className="my-4" />
-                    <h4 className="font-semibold text-base mb-3">Items:</h4>
-                    <div className="space-y-3">
-                      {order.order_items.map((item, index) => (
-                        <div key={index} className="flex items-center gap-3">
-                          <MediaItem src={item.products.media_url} alt={item.products.name} className="h-12 w-12 rounded-md object-cover bg-muted" />
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{item.products.name}</p>
-                            <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
-                          </div>
-                          <p className="font-medium text-sm">{formatCurrency(item.price_at_purchase * item.quantity, item.products.currency)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-                ))}
+            filteredOrders.length > 0 ? (
+              <div className="mt-6 md:mt-8 space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-lg md:text-xl font-semibold">Your Orders ({filteredOrders.length})</h2>
+                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as OrderStatusType | 'All')}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filter by Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Statuses</SelectItem>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="Order Seen">Order Seen</SelectItem>
+                      <SelectItem value="Order Packaged">Order Packaged</SelectItem>
+                      <SelectItem value="Given to Courier">Given to Courier</SelectItem>
+                      <SelectItem value="Fulfilled">Fulfilled</SelectItem>
+                      <SelectItem value="Problematic">Problematic</SelectItem>
+                      <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Order ID</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead className="w-[100px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredOrders.map(order => (
+                      <TableRow key={order.id} onClick={() => { setSelectedOrder(order); setIsOrderDetailModalOpen(true); }} className="cursor-pointer hover:bg-accent">
+                        <TableCell className="font-medium">#{order.id.substring(0, 8)}</TableCell>
+                        <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={cn("font-normal", getStatusColorClass(order.status))}>
+                            {getStatusIcon(order.status)}
+                            <span className="ml-1">{order.status}</span>
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(order.total_amount, order.currency)}
+                          {contextShopDetails?.currency && order.currency !== contextShopDetails.currency && (
+                            <div className="text-xs font-normal text-muted-foreground">
+                              (~{formatCurrency(convertCurrency(order.total_amount, order.currency), contextShopDetails.currency)})
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="outline" size="sm">View</Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             ) : (
               <div className="mt-6 md:mt-8 p-4 md:p-6 border rounded-lg bg-muted/50 text-center space-y-3 md:space-y-4">

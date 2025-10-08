@@ -97,14 +97,7 @@ const StorefrontProductDetail = () => {
   const blurEnabled = appearanceSettings?.blurEnabled;
 
   // Convert product price to shop's display currency
-  const displayPrice = convertCurrency(product.price, product.currency);
-
-  // --- DEBUGGING CURRENCY ---
-  console.log(`Product Detail: ${product.name}`);
-  console.log(`  Original Price: ${product.price} ${product.currency}`);
-  console.log(`  Shop Currency: ${shopDetails?.currency}`);
-  console.log(`  Display Price (converted): ${displayPrice}`);
-  // --- END DEBUGGING CURRENCY ---
+  const originalDisplayPrice = convertCurrency(product.price, product.currency);
 
   const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && product.inventory <= 0);
 
@@ -122,6 +115,23 @@ const StorefrontProductDetail = () => {
     }
     return true; // Applies to all products if target_products is empty
   });
+
+  let discountedPrice = originalDisplayPrice;
+  let hasDiscount = false;
+
+  if (activePromotions.length > 0 && originalDisplayPrice !== null) {
+    const firstDiscount = activePromotions.find(p => p.type === 'discount');
+    if (firstDiscount && firstDiscount.value) {
+      if (firstDiscount.value.discountType === 'percentage') {
+        discountedPrice = originalDisplayPrice * (1 - firstDiscount.value.discountValue / 100);
+        hasDiscount = true;
+      } else if (firstDiscount.value.discountType === 'flat') {
+        discountedPrice = originalDisplayPrice - firstDiscount.value.discountValue;
+        hasDiscount = true;
+      }
+      discountedPrice = Math.max(0, discountedPrice);
+    }
+  }
 
   const getPromotionBadge = (promo: Promotion) => {
     switch (promo.type) {
@@ -150,7 +160,7 @@ const StorefrontProductDetail = () => {
       productId: product.id,
       name: product.name + (selectedColor ? ` (${selectedColor})` : '') + (selectedSize ? ` (${selectedSize})` : ''),
       // Pass the converted price and shop's currency to cart
-      price: displayPrice, 
+      price: hasDiscount ? discountedPrice : originalDisplayPrice, // Use discounted price if applicable
       currency: shopDetails.currency || 'USD',
       media_url: product.media_url,
       media_type: product.media_type,
@@ -171,7 +181,7 @@ const StorefrontProductDetail = () => {
 
   return (
     <div className="container py-6 md:py-8">
-      <StorefrontBreadcrumb /> {/* Added breadcrumb here */}
+      <StorefrontBreadcrumb />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Product Media */}
         <div>
@@ -180,7 +190,7 @@ const StorefrontProductDetail = () => {
               {mediaItems.map((url: string, index: number) => (
                 <CarouselItem key={index}>
                   <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
-                    <MediaItem src={url} alt={`${product.name} - image ${index + 1}`} />
+                    <MediaItem src={url} alt={`${product.name} - image ${index + 1}`} className={cn(isOutOfStock && "grayscale")} /> {/* Apply grayscale here */}
                   </div>
                 </CarouselItem>
               ))}
@@ -219,12 +229,26 @@ const StorefrontProductDetail = () => {
               )}
             </h1>
             <div className="flex items-center gap-3 mb-3">
-                <p className="text-2xl md:text-3xl font-bold text-primary">
-                {formatCurrency(displayPrice, shopDetails?.currency)}
-                {product.pricing_type === 'subscription' && (
-                    <span className="text-base md:text-lg font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                {hasDiscount && originalDisplayPrice !== null ? (
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-base text-muted-foreground line-through">
+                      {formatCurrency(originalDisplayPrice, shopDetails?.currency)}
+                    </p>
+                    <p className="text-2xl md:text-3xl font-bold text-primary">
+                      {formatCurrency(discountedPrice, shopDetails?.currency)}
+                      {product.pricing_type === 'subscription' && (
+                          <span className="text-base md:text-lg font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                      )}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-2xl md:text-3xl font-bold text-primary">
+                    {originalDisplayPrice != null ? formatCurrency(originalDisplayPrice, shopDetails?.currency) : 'N/A'}
+                    {product.pricing_type === 'subscription' && (
+                        <span className="text-base md:text-lg font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                    )}
+                  </p>
                 )}
-                </p>
                 {/* Placeholder for star ratings */}
                 <div className="flex items-center text-amber-500">
                     {[...Array(5)].map((_, i) => (
@@ -239,7 +263,7 @@ const StorefrontProductDetail = () => {
 
           {product.tags && product.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {product.tags.map((tag: string) => <Badge key={tag} variant="outline" className="text-xs md:text-sm bg-primary/10 text-primary border-primary/30">{tag}</Badge>)} {/* Changed to primary color */}
+              {product.tags.map((tag: string) => <Badge key={tag} variant="outline" className="text-xs md:text-sm bg-primary/10 text-primary border-primary/30">{tag}</Badge>)}
             </div>
           )}
 
@@ -289,7 +313,7 @@ const StorefrontProductDetail = () => {
                       return (
                         <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
                           {Array.isArray(value) ? (
-                            value.map(item => <Badge key={item} variant="outline" className="text-xs md:text-sm bg-primary/10 text-primary border-primary/30">{item}</Badge>) // Changed to primary color
+                            value.map(item => <Badge key={item} variant="outline" className="text-xs md:text-sm bg-primary/10 text-primary border-primary/30">{item}</Badge>)
                           ) : (
                             <p className="text-sm md:text-base">{String(value)}</p>
                           )}
@@ -373,7 +397,7 @@ const StorefrontProductDetail = () => {
           {/* Shipping & Returns (Placeholder) */}
           <Card className={cn("shadow-md", blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
             <CardContent className="p-4 flex items-center gap-4">
-              <Truck className="h-6 w-6 text-primary flex-shrink-0" /> {/* Changed to text-primary */}
+              <Truck className="h-6 w-6 text-primary flex-shrink-0" />
               <div>
                 <p className="font-semibold text-base">Free Shipping & Easy Returns</p>
                 <p className="text-sm text-muted-foreground">

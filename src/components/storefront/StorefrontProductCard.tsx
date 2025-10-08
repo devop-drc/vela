@@ -83,14 +83,7 @@ export const StorefrontProductCard = ({
   const blurEnabled = effectiveAppearanceSettings?.blurEnabled;
 
   // Convert product price to shop's display currency
-  const displayPrice = effectiveConvertCurrency ? effectiveConvertCurrency(product.price, product.currency) : product.price;
-
-  // --- DEBUGGING CURRENCY ---
-  console.log(`Product: ${product.name}`);
-  console.log(`  Original Price: ${product.price} ${product.currency}`);
-  console.log(`  Shop Currency: ${effectiveShopDetails?.currency}`);
-  console.log(`  Display Price (converted): ${displayPrice}`);
-  // --- END DEBUGGING CURRENCY ---
+  const originalDisplayPrice = effectiveConvertCurrency ? effectiveConvertCurrency(product.price, product.currency) : product.price;
 
   const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && product.inventory <= 0);
 
@@ -104,14 +97,29 @@ export const StorefrontProductCard = ({
     if (endDate && now > endDate) return false;
 
     if (promo.target_products && promo.target_products.length > 0) {
-      // --- DEBUGGING BEST SELLERS / PROMOTIONS ---
-      console.log(`  Checking promotion for product ID: ${product.id}`);
-      console.log(`  Promotion target products: ${promo.target_products}`);
-      // --- END DEBUGGING ---
       return promo.target_products.includes(product.id);
     }
     return true; // Applies to all products if target_products is empty
   });
+
+  let discountedPrice = originalDisplayPrice;
+  let hasDiscount = false;
+
+  if (activePromotions.length > 0 && originalDisplayPrice !== null) {
+    // For simplicity, apply the first active discount found.
+    // In a real scenario, you might have logic to apply the best discount or combine them.
+    const firstDiscount = activePromotions.find(p => p.type === 'discount');
+    if (firstDiscount && firstDiscount.value) {
+      if (firstDiscount.value.discountType === 'percentage') {
+        discountedPrice = originalDisplayPrice * (1 - firstDiscount.value.discountValue / 100);
+        hasDiscount = true;
+      } else if (firstDiscount.value.discountType === 'flat') {
+        discountedPrice = originalDisplayPrice - firstDiscount.value.discountValue;
+        hasDiscount = true;
+      }
+      discountedPrice = Math.max(0, discountedPrice); // Ensure price doesn't go below zero
+    }
+  }
 
   const getPromotionBadge = (promo: StorefrontPromotion) => {
     switch (promo.type) {
@@ -133,24 +141,23 @@ export const StorefrontProductCard = ({
 
   return (
     <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }} className={className}>
-      <Link 
-        to={`/shop/${effectiveShopDetails.slug}/product/${product.id}`} 
-        // Allow clicking even if out of stock, but the detail page will show "Coming Soon"
+      <Link
+        to={`/shop/${effectiveShopDetails.slug}/product/${product.id}`}
       >
         <Card className={cn(
           "group h-full flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
           "border border-input/50 hover:border-primary/70",
           "shadow-sm hover:shadow-lg",
           blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
-          isOutOfStock && "opacity-80" // Reduced opacity, not grayscale
+          isOutOfStock && "opacity-80"
         )}>
           <CardContent className="p-0 relative">
             <div className="aspect-square w-full overflow-hidden bg-muted">
-              <MediaItem 
-                src={product.media_url} 
-                alt={product.name} 
-                type={product.media_type} 
-                className={cn("object-cover transition-transform duration-300 group-hover:scale-105", isOutOfStock && "grayscale")} // Apply grayscale here
+              <MediaItem
+                src={product.media_url}
+                alt={product.name}
+                type={product.media_type}
+                className={cn("object-cover transition-transform duration-300 group-hover:scale-105", isOutOfStock && "grayscale")}
               />
             </div>
             {isOutOfStock && (
@@ -174,8 +181,8 @@ export const StorefrontProductCard = ({
               {(product.category || product.details?.type) && (
                 <div className="flex items-center gap-1 mb-2">
                   {product.category && (
-                    <Badge 
-                      variant="outline" 
+                    <Badge
+                      variant="outline"
                       className={cn("text-xs bg-primary/10 text-primary border-primary/30")}
                     >
                       {product.category}
@@ -191,12 +198,26 @@ export const StorefrontProductCard = ({
               <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">{product.caption}</p>
             </div>
             <div className="mt-3 md:mt-4">
-              <p className="text-lg md:text-xl font-bold text-primary">
-                {displayPrice != null ? formatCurrency(displayPrice, effectiveShopDetails?.currency) : 'N/A'}
-                {product.pricing_type === 'subscription' && (
-                  <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
-                )}
-              </p>
+              {hasDiscount && originalDisplayPrice !== null ? (
+                <div className="flex items-baseline gap-2">
+                  <p className="text-sm text-muted-foreground line-through">
+                    {formatCurrency(originalDisplayPrice, effectiveShopDetails?.currency)}
+                  </p>
+                  <p className="text-lg md:text-xl font-bold text-primary">
+                    {formatCurrency(discountedPrice, effectiveShopDetails?.currency)}
+                    {product.pricing_type === 'subscription' && (
+                      <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                    )}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-lg md:text-xl font-bold text-primary">
+                  {originalDisplayPrice != null ? formatCurrency(originalDisplayPrice, effectiveShopDetails?.currency) : 'N/A'}
+                  {product.pricing_type === 'subscription' && (
+                    <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                  )}
+                </p>
+              )}
             </div>
           </div>
         </Card>
