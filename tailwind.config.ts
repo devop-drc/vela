@@ -94,11 +94,13 @@ export default {
         },
         "marquee": {
           from: { transform: "translateX(0)" },
-          to: { transform: "translateX(calc(-100% - var(--gap)))" },
+          // Moves 50% of the animated element's width + half the gap.
+          // This works when the animated element contains two copies of the content + one gap.
+          to: { transform: "translateX(calc(-50% - var(--gap) / 2))" },
         },
         "marquee-vertical": {
           from: { transform: "translateY(0)" },
-          to: { transform: "translateY(calc(-100% - var(--gap)))" },
+          to: { transform: "translateY(calc(-50% - var(--gap) / 2))" },
         },
       },
       animation: {
