@@ -93,60 +93,54 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
   const [localIsSubmitting, setLocalIsSubmitting] = useState(false); // Internal submitting state
 
   const validateStep = () => {
-    console.log(`Validating step ${currentStep}...`);
     if (currentStep === 1) {
-      if (!firstName) { toast.error("First Name is required."); console.log("Validation failed: First Name missing."); return false; }
-      if (!lastName) { toast.error("Last Name is required."); console.log("Validation failed: Last Name missing."); return false; }
-      if (!email) { toast.error("Email is required."); console.log("Validation failed: Email missing."); return false; }
+      if (!firstName.trim()) { toast.error("First Name is required."); return false; }
+      if (!lastName.trim()) { toast.error("Last Name is required."); return false; }
+      if (!email.trim()) { toast.error("Email is required."); return false; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        toast.error("Please enter a valid email address."); console.log("Validation failed: Invalid email format.");
+        toast.error("Please enter a valid email address.");
         return false;
       }
     } else if (currentStep === 2) {
-      if (!address) { toast.error("Shipping Address is required."); console.log("Validation failed: Address missing."); return false; }
-      if (!city) { toast.error("City is required."); console.log("Validation failed: City missing."); return false; }
-      if (!state) { toast.error("State/Province is required."); console.log("Validation failed: State missing."); return false; }
-      if (!zip) { toast.error("Zip/Postal Code is required."); console.log("Validation failed: Zip missing."); return false; }
-      if (!country) { toast.error("Country is required."); console.log("Validation failed: Country missing."); return false; }
+      if (!address.trim()) { toast.error("Shipping Address is required."); return false; }
+      if (!city.trim()) { toast.error("City is required."); return false; }
+      if (!state.trim()) { toast.error("State/Province is required."); return false; }
+      if (!zip.trim()) { toast.error("Zip/Postal Code is required."); return false; }
+      if (!country.trim()) { toast.error("Country is required."); return false; }
     } else if (currentStep === 3) {
       if (paymentMethod === 'card') {
-        if (!cardNumber) { toast.error("Card Number is required."); console.log("Validation failed: Card Number missing."); return false; }
-        if (!cardName) { toast.error("Name on Card is required."); console.log("Validation failed: Name on Card missing."); return false; }
-        if (!expiryDate) { toast.error("Expiry Date is required."); console.log("Validation failed: Expiry Date missing."); return false; }
-        if (!cvv) { toast.error("CVV is required."); console.log("Validation failed: CVV missing."); return false; }
+        if (!cardNumber.trim()) { toast.error("Card Number is required."); return false; }
+        if (!cardName.trim()) { toast.error("Name on Card is required."); return false; }
+        if (!expiryDate.trim()) { toast.error("Expiry Date is required."); return false; }
+        if (!cvv.trim()) { toast.error("CVV is required."); return false; }
         
         if (!/^\d{13,19}$/.test(cardNumber.replace(/\s/g, ''))) {
-          toast.error("Please enter a valid card number (13-19 digits)."); console.log("Validation failed: Invalid card number format.");
+          toast.error("Please enter a valid card number (13-19 digits).");
           return false;
         }
         if (!/^(0[1-9]|1[0-2])\/?([0-9]{2})$/.test(expiryDate)) {
-          toast.error("Please enter a valid expiry date (MM/YY)."); console.log("Validation failed: Invalid expiry date format.");
+          toast.error("Please enter a valid expiry date (MM/YY).");
           return false;
         }
         if (!/^\d{3,4}$/.test(cvv)) {
-          toast.error("Please enter a valid CVV (3-4 digits)."); console.log("Validation failed: Invalid CVV format.");
+          toast.error("Please enter a valid CVV (3-4 digits).");
           return false;
         }
       }
-      // If paymentMethod is 'cash_on_delivery', no further validation is needed for step 3.
     }
-    console.log(`Validation for step ${currentStep} passed.`);
     return true;
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("handleFormSubmit called");
     
     const isValid = validateStep();
-    console.log(`handleFormSubmit: Validation result for step ${currentStep}: ${isValid}`);
     if (!isValid) {
       return;
     }
 
     if (currentStep < 3) {
       setCurrentStep(prev => prev + 1);
-      console.log(`handleFormSubmit: Moving to next step: ${currentStep + 1}`);
       return;
     }
 
