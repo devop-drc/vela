@@ -5,6 +5,7 @@ import { Skeleton } from "../ui/skeleton";
 import { Crown } from "lucide-react";
 import { StorefrontProductCard } from "../storefront/StorefrontProductCard";
 import { useShop } from "@/contexts/ShopContext";
+import { useAppearance } from "@/contexts/AppearanceContext"; // Import useAppearance
 
 interface TopProduct {
   product_id: string;
@@ -28,7 +29,8 @@ interface TopProduct {
 export const TopProducts = () => {
   const [products, setProducts] = useState<TopProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { shopDetails } = useShop();
+  const { shopDetails, convertCurrency } = useShop(); // Get from admin context
+  const { settings: appearanceSettings } = useAppearance(); // Get from admin context
 
   useEffect(() => {
     const fetchTopProducts = async () => {
@@ -88,6 +90,10 @@ export const TopProducts = () => {
                   }}
                   shopSlug={shopDetails.slug}
                   className="flex-1"
+                  externalShopDetails={shopDetails} // Pass shopDetails from admin context
+                  externalAppearanceSettings={appearanceSettings} // Pass appearanceSettings from admin context
+                  externalConvertCurrency={convertCurrency} // Pass convertCurrency from admin context
+                  externalPromotions={[]} // Promotions are not fetched in TopProducts, pass empty array
                 />
               </div>
             ))}

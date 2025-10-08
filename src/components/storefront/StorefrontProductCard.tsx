@@ -5,7 +5,9 @@ import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useStorefront } from "@/contexts/StorefrontContext";
+import { useStorefront, ShopDetails as StorefrontShopDetails, DesignSettings as StorefrontDesignSettings, Promotion as StorefrontPromotion } from "@/contexts/StorefrontContext"; // Import types
+import { useShop } from "@/contexts/ShopContext"; // Import useShop for dashboard context
+import { useAppearance } from "@/contexts/AppearanceContext"; // Import useAppearance for dashboard context
 import { Percent, Gift } from "lucide-react";
 
 interface Product {
@@ -27,21 +29,15 @@ interface Product {
   details: any;
 }
 
-interface Promotion {
-  id: string;
-  name: string;
-  type: 'discount' | 'offer';
-  value: any;
-  start_date: string | null;
-  end_date: string | null;
-  is_active: boolean;
-  target_products: string[] | null;
-}
-
 interface StorefrontProductCardProps {
   product: Product;
-  shopSlug: string;
+  shopSlug: string; // This is always passed
   className?: string;
+  // Optional props for when used outside StorefrontProvider (e.g., in Dashboard)
+  externalShopDetails?: StorefrontShopDetails | null;
+  externalAppearanceSettings?: StorefrontDesignSettings | null;
+  externalConvertCurrency?: (amount: number | null | undefined, fromCurrency?: string) => number;
+  externalPromotions?: StorefrontPromotion[];
 }
 
 const itemVariants = {
@@ -49,16 +45,49 @@ const itemVariants = {
   visible: { y: 0, opacity: 1 },
 };
 
-export const StorefrontProductCard = ({ product, shopSlug, className }: StorefrontProductCardProps) => {
-  const { shopDetails, appearanceSettings, convertCurrency, promotions } = useStorefront();
-  const blurEnabled = appearanceSettings?.blurEnabled;
+export const StorefrontProductCard = ({
+  product,
+  shopSlug,
+  className,
+  externalShopDetails,
+  externalAppearanceSettings,
+  externalConvertCurrency,
+  externalPromotions,
+}: StorefrontProductCardProps) => {
+  // Attempt to get context values from StorefrontProvider, but don't throw if context is undefined
+  let contextShopDetails: StorefrontShopDetails | null = null;
+  let contextAppearanceSettings: StorefrontDesignSettings | null = null;
+  let contextConvertCurrency: ((amount: number | null | undefined, fromCurrency?: string) => number) | undefined = undefined;
+  let contextPromotions: StorefrontPromotion[] | undefined = undefined;
+
+  try {
+    // This will only work if inside StorefrontProvider
+    const storefrontContext = useStorefront();
+    contextShopDetails = storefrontContext.shopDetails;
+    contextAppearanceSettings = storefrontContext.appearanceSettings;
+    contextConvertCurrency = storefrontContext.convertCurrency;
+    contextPromotions = storefrontContext.promotions;
+  } catch (e) {
+    // Expected error if not in StorefrontProvider, ignore
+  }
+
+  // Fallback to external props or dashboard context if storefront context is not available
+  const { shopDetails: adminShopDetails, convertCurrency: adminConvertCurrency } = useShop();
+  const { settings: adminAppearanceSettings } = useAppearance();
+
+  const effectiveShopDetails = externalShopDetails || contextShopDetails || adminShopDetails;
+  const effectiveConvertCurrency = externalConvertCurrency || contextConvertCurrency || adminConvertCurrency;
+  const effectiveAppearanceSettings = externalAppearanceSettings || contextAppearanceSettings || adminAppearanceSettings;
+  const effectivePromotions = externalPromotions || contextPromotions || [];
+
+  const blurEnabled = effectiveAppearanceSettings?.blurEnabled;
 
   // Convert product price to shop's display currency
-  const displayPrice = convertCurrency(product.price, product.currency);
+  const displayPrice = effectiveConvertCurrency ? effectiveConvertCurrency(product.price, product.currency) : product.price;
 
   const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && product.inventory <= 0);
 
-  const activePromotions = promotions.filter(promo => {
+  const activePromotions = effectivePromotions.filter(promo => {
     if (!promo.is_active) return false;
     const now = new Date();
     const startDate = promo.start_date ? new Date(promo.start_date) : null;
@@ -73,11 +102,11 @@ export const StorefrontProductCard = ({ product, shopSlug, className }: Storefro
     return true; // Applies to all products if target_products is empty
   });
 
-  const getPromotionBadge = (promo: Promotion) => {
+  const getPromotionBadge = (promo: StorefrontPromotion) => {
     switch (promo.type) {
       case 'discount':
         if (promo.value?.discountType === 'percentage') return `${promo.value.discountValue}% OFF`;
-        if (promo.value?.discountType === 'flat') return `-${formatCurrency(promo.value.discountValue, shopDetails?.currency)} OFF`;
+        if (promo.value?.discountType === 'flat') return `-${formatCurrency(promo.value.discountValue, effectiveShopDetails?.currency)} OFF`;
         return 'Discount';
       case 'offer':
         if (promo.value?.offerType === 'free_shipping') return 'Free Shipping';
@@ -86,10 +115,15 @@ export const StorefrontProductCard = ({ product, shopSlug, className }: Storefro
     }
   };
 
+  // If no effectiveShopDetails, we can't render the card meaningfully
+  if (!effectiveShopDetails) {
+    return null;
+  }
+
   return (
     <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }} className={className}>
       <Link 
-        to={`/shop/${shopDetails?.slug}/product/${product.id}`} 
+        to={`/shop/${effectiveShopDetails.slug}/product/${product.id}`} 
         onClick={(e) => { if (isOutOfStock) e.preventDefault(); }}
         className={cn(isOutOfStock && "pointer-events-none")}
       >
@@ -148,7 +182,7 @@ export const StorefrontProductCard = ({ product, shopSlug, className }: Storefro
             </div>
             <div className="mt-3 md:mt-4">
               <p className="text-lg md:text-xl font-bold text-primary">
-                {displayPrice != null ? formatCurrency(displayPrice, shopDetails?.currency) : 'N/A'}
+                {displayPrice != null ? formatCurrency(displayPrice, effectiveShopDetails?.currency) : 'N/A'}
                 {product.pricing_type === 'subscription' && (
                   <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                 )}
