@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck, Lock, DollarSign, Mail, City, Globe, StickyNote, Calendar } from "lucide-react";
+import { CheckCircle, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck, Lock, DollarSign, Mail, Globe, StickyNote, Calendar } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -269,7 +269,7 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
                       <div className="space-y-2">
                         <Label htmlFor="city" className="text-sm">City</Label>
                         <div className="relative">
-                          <City className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input id="city" placeholder="Anytown" value={city} onChange={(e) => setCity(e.target.value)} required className="pl-10" />
                         </div>
                       </div>
