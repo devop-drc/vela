@@ -85,6 +85,13 @@ export const StorefrontProductCard = ({
   // Convert product price to shop's display currency
   const displayPrice = effectiveConvertCurrency ? effectiveConvertCurrency(product.price, product.currency) : product.price;
 
+  // --- DEBUGGING CURRENCY ---
+  console.log(`Product: ${product.name}`);
+  console.log(`  Original Price: ${product.price} ${product.currency}`);
+  console.log(`  Shop Currency: ${effectiveShopDetails?.currency}`);
+  console.log(`  Display Price (converted): ${displayPrice}`);
+  // --- END DEBUGGING CURRENCY ---
+
   const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && product.inventory <= 0);
 
   const activePromotions = effectivePromotions.filter(promo => {
@@ -97,6 +104,10 @@ export const StorefrontProductCard = ({
     if (endDate && now > endDate) return false;
 
     if (promo.target_products && promo.target_products.length > 0) {
+      // --- DEBUGGING BEST SELLERS / PROMOTIONS ---
+      console.log(`  Checking promotion for product ID: ${product.id}`);
+      console.log(`  Promotion target products: ${promo.target_products}`);
+      // --- END DEBUGGING ---
       return promo.target_products.includes(product.id);
     }
     return true; // Applies to all products if target_products is empty

@@ -281,18 +281,22 @@ const StorefrontIndex = () => {
             </h2>
             <ScrollArea className="w-full whitespace-nowrap pb-4">
               <div ref={bestSellersScrollRef} className="flex w-max space-x-6 md:space-x-8 p-4">
-                {bestSellers.map((product) => (
-                  <StorefrontProductCard 
-                    key={product.product_id} 
-                    product={product as Product} 
-                    shopSlug={shopDetails.slug} 
-                    className="w-[240px] md:w-[280px] flex-shrink-0" 
-                    externalShopDetails={shopDetails}
-                    externalAppearanceSettings={appearanceSettings}
-                    externalConvertCurrency={promotions ? (amount, currency) => promotions.length > 0 ? amount : convertCurrency(amount, currency) : convertCurrency} // Pass convertCurrency
-                    externalPromotions={promotions}
-                  />
-                ))}
+                {bestSellers.map((product) => {
+                  // --- DEBUGGING BEST SELLERS ---
+                  console.log(`Best Seller Product ID: ${product.product_id}`);
+                  // --- END DEBUGGING ---
+                  return (
+                    <StorefrontProductCard 
+                      key={product.product_id} 
+                      product={product as Product} 
+                      shopSlug={shopDetails.slug} 
+                      className="w-[240px] md:w-[280px] flex-shrink-0" 
+                      externalShopDetails={shopDetails}
+                      externalAppearanceSettings={appearanceSettings}
+                      externalPromotions={promotions}
+                    />
+                  );
+                })}
                 {bestSellers.length >= 10 && (
                   <div className="flex-shrink-0 w-[240px] md:w-[280px] flex items-center justify-center">
                     <Link to={`/shop/${shopDetails.slug}/products?sort=best-sellers`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "text-base md:text-lg px-6 py-4 md:px-8 md:py-6")}>
@@ -328,7 +332,6 @@ const StorefrontIndex = () => {
                     className="w-[240px] md:w-[280px] flex-shrink-0" 
                     externalShopDetails={shopDetails}
                     externalAppearanceSettings={appearanceSettings}
-                    externalConvertCurrency={promotions ? (amount, currency) => promotions.length > 0 ? amount : convertCurrency(amount, currency) : convertCurrency} // Pass convertCurrency
                     externalPromotions={promotions}
                   />
                 ))}
@@ -367,7 +370,6 @@ const StorefrontIndex = () => {
                     className="w-[240px] md:w-[280px] flex-shrink-0" 
                     externalShopDetails={shopDetails}
                     externalAppearanceSettings={appearanceSettings}
-                    externalConvertCurrency={promotions ? (amount, currency) => promotions.length > 0 ? amount : convertCurrency(amount, currency) : convertCurrency} // Pass convertCurrency
                     externalPromotions={promotions}
                   />
                 ))}

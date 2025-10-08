@@ -43,7 +43,8 @@ interface OrderDetails {
 const LOCAL_STORAGE_EMAIL_KEY = 'storefront_customer_email';
 
 const StorefrontClientOrders = () => {
-  const { shopSlug, appearanceSettings } = useStorefront();
+  const { shopSlug: contextShopSlug, appearanceSettings } = useStorefront(); // Get shopSlug from context
+  const { shopSlug: urlShopSlug } = useParams<{ shopSlug: string }>(); // Get shopSlug from URL params
   const [searchParams] = useSearchParams();
   const [customerEmailInput, setCustomerEmailInput] = useState(() => {
     // Initialize from local storage or URL param
@@ -68,12 +69,17 @@ const StorefrontClientOrders = () => {
       setIsLoading(false);
       return;
     }
+    if (!urlShopSlug) {
+      showError("Shop URL is invalid. Cannot fetch orders.");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const { data: shopData, error: shopError } = await supabase
         .from('shop_details')
         .select('business_id')
-        .eq('slug', shopSlug)
+        .eq('slug', urlShopSlug) // Use urlShopSlug for the query
         .single();
 
       if (shopError || !shopData) {
@@ -134,13 +140,13 @@ const StorefrontClientOrders = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [customerEmailInput, orderIdInput, shopSlug]);
+  }, [customerEmailInput, orderIdInput, urlShopSlug]); // Depend on urlShopSlug
 
   useEffect(() => {
-    if (customerEmailInput && (orderIdInput || searchParams.get('email'))) { // Only fetch if email is present and either orderId is present or email was in URL
+    if (customerEmailInput && (orderIdInput || searchParams.get('email')) && urlShopSlug) { // Only fetch if email is present and either orderId is present or email was in URL
       fetchOrders();
     }
-  }, [customerEmailInput, orderIdInput, fetchOrders, searchParams]);
+  }, [customerEmailInput, orderIdInput, fetchOrders, searchParams, urlShopSlug]);
 
   const getStatusColorClass = (status: OrderStatusType) => {
     switch (status) {
@@ -171,7 +177,7 @@ const StorefrontClientOrders = () => {
       )}
 
       <Button variant="ghost" asChild className="mb-4 md:mb-6 text-muted-foreground hover:text-foreground text-sm md:text-base">
-        <Link to={`/shop/${shopSlug}`}>
+        <Link to={`/shop/${urlShopSlug}`}> {/* Use urlShopSlug for the link */}
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Shop
         </Link>

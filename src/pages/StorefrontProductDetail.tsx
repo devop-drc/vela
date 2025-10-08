@@ -99,6 +99,13 @@ const StorefrontProductDetail = () => {
   // Convert product price to shop's display currency
   const displayPrice = convertCurrency(product.price, product.currency);
 
+  // --- DEBUGGING CURRENCY ---
+  console.log(`Product Detail: ${product.name}`);
+  console.log(`  Original Price: ${product.price} ${product.currency}`);
+  console.log(`  Shop Currency: ${shopDetails?.currency}`);
+  console.log(`  Display Price (converted): ${displayPrice}`);
+  // --- END DEBUGGING CURRENCY ---
+
   const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && product.inventory <= 0);
 
   const activePromotions = promotions.filter(promo => {

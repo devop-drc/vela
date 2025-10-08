@@ -97,16 +97,20 @@ const applyStorefrontSettingsToDOM = (settings: any, shopDetails: any) => {
         ? `https://images.weserv.nl/?url=${encodeURIComponent(shopDetails.favicon_url)}&w=32&h=32&fit=contain&mask=circle`
         : shopDetails.favicon_url; // Use directly if local path
       setFavicon(faviconUrl);
+      console.log("Favicon URL set:", faviconUrl); // Debugging
     } else {
       // Fallback to default favicon if none is provided
       setFavicon('/favicon.ico');
+      console.log("Favicon URL set to default: /favicon.ico"); // Debugging
     }
+    console.log("Shop Logo URL for header/footer:", shopDetails.logo_url); // Debugging
   } else {
     document.title = "Storefront";
     const metaDescriptionTag = document.querySelector('meta[name="description"]');
     if (metaDescriptionTag) metaDescriptionTag.setAttribute('content', "Discover unique products from various shops.");
     let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
     if (link) link.href = '/favicon.ico';
+    console.log("Shop details not available, using default favicon and no logo."); // Debugging
   }
 };
 
