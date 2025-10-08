@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency } from "@/lib/formatters";
+import { Badge } from "@/components/ui/badge"; // Import Badge component
 
 interface Product {
   id: string;
