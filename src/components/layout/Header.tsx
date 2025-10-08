@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Link as LinkIcon } from "lucide-react";
+import { Search, Link as LinkIcon, LogOut, User as UserIcon, Settings } from "lucide-react"; // Import LogOut, UserIcon, and Settings
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { useShop } from "@/contexts/ShopContext";
 import { showSuccess, showError } from "@/utils/toast";
+import { useState, useEffect } from "react"; // Import useState and useEffect
 
 interface HeaderProps {
   title: string;
@@ -27,6 +28,15 @@ const Header = ({ title }: HeaderProps) => {
   const { shopDetails } = useShop();
   const isFloating = settings.layoutStyle === 'floating';
   const blurEnabled = settings.blurEnabled;
+  const [user, setUser] = useState<any>(null); // State to hold user info
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    fetchUser();
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -56,9 +66,9 @@ const Header = ({ title }: HeaderProps) => {
 
   return (
     <header className={cn(
-      "z-30 flex items-center justify-between h-16 px-6 transition-all",
+      "fixed top-0 left-0 right-0 z-30 flex items-center justify-between h-16 px-6 transition-all",
       isFloating
-        ? "fixed top-4 right-4 left-4 border rounded-lg"
+        ? "top-4 right-4 left-4 border rounded-lg"
         : "border-b", // Docked layout has border-b and expands
       isFloating && (headerLeftMarginClasses[settings.sidebarWidth || 'default']),
       blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
@@ -85,7 +95,38 @@ const Header = ({ title }: HeaderProps) => {
           <LinkIcon className="mr-2 h-4 w-4" />
           Get Storefront URL
         </Button>
-        {/* Removed the profile dropdown menu */}
+        {user && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={user.user_metadata?.avatar_url || undefined} alt={user.user_metadata?.first_name || "User"} />
+                  <AvatarFallback>
+                    {user.user_metadata?.first_name?.[0] || <UserIcon className="h-4 w-4" />}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{user.user_metadata?.full_name || user.email}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate('/settings')}>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </header>
   );

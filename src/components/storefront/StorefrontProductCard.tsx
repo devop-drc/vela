@@ -149,7 +149,7 @@ export const StorefrontProductCard = ({
           "border border-input/50 hover:border-primary/70",
           "shadow-sm hover:shadow-lg",
           blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
-          isOutOfStock && "opacity-80"
+          isOutOfStock && "opacity-80" // Apply opacity for out of stock
         )}>
           <CardContent className="p-0 relative">
             <div className="aspect-square w-full overflow-hidden bg-muted">
