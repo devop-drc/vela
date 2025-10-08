@@ -4,12 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Search, ListFilter, ArrowUpNarrowWide } from "lucide-react";
+import { Loader2, Search, ListFilter, ArrowUpNarrowWide, Tag, DollarSign, XCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency } from "@/lib/formatters";
-import { Badge } from "@/components/ui/badge"; // Import Badge component
+import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Slider } from "@/components/ui/slider";
+import { getAttributeIcon } from "@/lib/attributeIcons";
+import { motion, AnimatePresence } from "framer-motion";
+import { debounce } from 'lodash';
 
 interface Product {
   id: string;
@@ -19,6 +24,16 @@ interface Product {
   currency: string | null;
   media_url: string;
   created_at: string;
+  category: string;
+  tags: string[];
+  details: { [key: string]: any };
+}
+
+interface FilterState {
+  categories: string[];
+  tags: string[];
+  priceRange: [number, number];
+  [key: string]: string[] | [number, number]; // For dynamic attributes
 }
 
 interface ProductSelectorProps {
@@ -36,47 +51,190 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [currentSelection, setCurrentSelection] = useState<string[]>(selectedProductIds);
 
+  const [allCategories, setAllCategories] = useState<string[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [allDetailsAttributes, setAllDetailsAttributes] = useState<{ name: string; values: string[] }[]>([]);
+  const [filters, setFilters] = useState<FilterState>({
+    categories: [],
+    tags: [],
+    priceRange: [0, 1000], // Initial dummy value, will be updated by maxPrice
+  });
+  const [localPriceRange, setLocalPriceRange] = useState<[number, number]>([0, 1000]);
+
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchProductsAndMetadata = async () => {
       setIsLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setIsLoading(false);
         return;
       }
-      const { data, error } = await supabase
-        .from("products")
-        .select("id, name, status, price, currency, media_url, created_at")
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error("Error fetching products:", error);
-      } else {
-        setAllProducts(data as Product[]);
+      const [productsRes, categoriesRes, typesRes] = await Promise.all([
+        supabase.from("products").select("id, name, status, price, currency, media_url, created_at, category, tags, details").eq('user_id', user.id).order('created_at', { ascending: false }),
+        supabase.from("categories").select("name").eq('user_id', user.id),
+        supabase.from("types").select("name, attributes").eq('user_id', user.id),
+      ]);
+
+      if (productsRes.error) { console.error("Error fetching products:", productsRes.error); }
+      else { setAllProducts(productsRes.data as Product[]); }
+
+      if (categoriesRes.error) { console.error("Error fetching categories:", categoriesRes.error); }
+      else { setAllCategories(categoriesRes.data?.map(c => c.name) || []); }
+
+      if (typesRes.error) { console.error("Error fetching types:", typesRes.error); }
+      else {
+        const uniqueAttributes = new Map<string, Set<string>>();
+        typesRes.data?.forEach(type => {
+          (type.attributes as any[] || []).forEach(attr => {
+            if (!uniqueAttributes.has(attr.name)) {
+              uniqueAttributes.set(attr.name, new Set<string>());
+            }
+            // If the attribute has possibleValues, add them
+            if (attr.possibleValues && Array.isArray(attr.possibleValues)) {
+              attr.possibleValues.forEach((val: string) => uniqueAttributes.get(attr.name)?.add(val));
+            }
+          });
+        });
+        setAllDetailsAttributes(Array.from(uniqueAttributes.entries()).map(([name, values]) => ({ name, values: Array.from(values).sort() })));
       }
+
+      // Extract all unique tags from products
+      const uniqueTags = new Set<string>();
+      productsRes.data?.forEach(p => p.tags?.forEach(tag => uniqueTags.add(tag)));
+      setAllTags(Array.from(uniqueTags).sort());
+
       setIsLoading(false);
     };
-    fetchProducts();
+    fetchProductsAndMetadata();
   }, []);
 
-  const filteredAndSortedProducts = useMemo(() => {
-    return allProducts
-      .filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        (statusFilter === "All" || p.status === statusFilter)
-      )
-      .sort((a, b) => {
-        switch (sortOption) {
-          case 'price-asc': return (a.price || 0) - (b.price || 0);
-          case 'price-desc': return (b.price || 0) - (a.price || 0);
-          case 'name-asc': return a.name.localeCompare(b.name);
-          case 'name-desc': return b.name.localeCompare(a.name);
-          case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  const maxPrice = useMemo(() => {
+    let currentMax = 0;
+    allProducts.forEach(p => {
+      if (p.price !== null) {
+        const convertedPrice = convertCurrency(p.price, p.currency);
+        if (convertedPrice > currentMax) {
+          currentMax = convertedPrice;
         }
-      });
-  }, [allProducts, searchTerm, sortOption, statusFilter]);
+      }
+    });
+    return Math.ceil(currentMax / 10) * 10 || 100;
+  }, [allProducts, convertCurrency]);
+
+  useEffect(() => {
+    // Initialize priceRange with maxPrice once it's determined
+    if (filters.priceRange[1] === 1000 && maxPrice !== 1000) {
+      setFilters(prev => ({ ...prev, priceRange: [0, maxPrice] }));
+      setLocalPriceRange([0, maxPrice]);
+    }
+  }, [maxPrice, filters.priceRange]);
+
+  const debouncedPriceRangeChange = useMemo(
+    () =>
+      debounce((range: [number, number]) => {
+        setFilters(prev => ({ ...prev, priceRange: range }));
+      }, 100),
+    [setFilters]
+  );
+
+  const handlePriceRangeChange = (range: [number, number]) => {
+    setLocalPriceRange(range);
+    debouncedPriceRangeChange(range);
+  };
+
+  const handleToggleFilter = (filterKey: keyof FilterState, value: string) => {
+    setFilters(prev => {
+      const currentValues = (prev[filterKey] as string[]) || [];
+      const newValues = currentValues.includes(value)
+        ? currentValues.filter(item => item !== value)
+        : [...currentValues, value];
+      return { ...prev, [filterKey]: newValues };
+    });
+  };
+
+  const handleClearSection = (filterKey: keyof FilterState) => {
+    setFilters(prev => {
+      const updatedFilters = { ...prev, [filterKey]: filterKey === 'priceRange' ? [0, maxPrice] : [] };
+      if (filterKey === 'priceRange') {
+        setLocalPriceRange([0, maxPrice]);
+      }
+      return updatedFilters;
+    });
+  };
+
+  const hasActiveFilters = useMemo(() => {
+    return searchTerm || statusFilter !== 'All' || sortOption !== 'newest' ||
+           filters.categories.length > 0 || filters.tags.length > 0 ||
+           filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice ||
+           Object.entries(filters).some(([key, value]) => key !== 'categories' && key !== 'tags' && key !== 'priceRange' && Array.isArray(value) && value.length > 0);
+  }, [searchTerm, statusFilter, sortOption, filters, maxPrice]);
+
+  const handleResetAllFilters = () => {
+    setSearchTerm("");
+    setSortOption("newest");
+    setStatusFilter("All");
+    setFilters({
+      categories: [],
+      tags: [],
+      priceRange: [0, maxPrice],
+    });
+    setLocalPriceRange([0, maxPrice]);
+  };
+
+  const filteredAndSortedProducts = useMemo(() => {
+    let filtered = allProducts;
+
+    if (searchTerm) {
+      filtered = filtered.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    }
+
+    if (statusFilter !== "All") {
+      filtered = filtered.filter(p => p.status === statusFilter);
+    }
+
+    if (filters.categories.length > 0) {
+      filtered = filtered.filter(p => p.category && filters.categories.includes(p.category));
+    }
+
+    if (filters.tags.length > 0) {
+      filtered = filtered.filter(p => p.tags?.some(tag => filters.tags.includes(tag)));
+    }
+
+    filtered = filtered.filter(p => {
+      const price = convertCurrency(p.price, p.currency);
+      return price >= filters.priceRange[0] && price <= filters.priceRange[1];
+    });
+
+    for (const key in filters) {
+      if (key !== 'categories' && key !== 'tags' && key !== 'priceRange' && Array.isArray(filters[key]) && (filters[key] as string[]).length > 0) {
+        const selectedValues = filters[key] as string[];
+        filtered = filtered.filter(p => {
+          const productDetailValue = p.details?.[key];
+          if (!productDetailValue) return false;
+          if (Array.isArray(productDetailValue)) {
+            return productDetailValue.some(val => selectedValues.includes(String(val)));
+          }
+          return selectedValues.includes(String(productDetailValue));
+        });
+      }
+    }
+
+    return filtered.sort((a, b) => {
+      const priceA = convertCurrency(a.price, a.currency);
+      const priceB = convertCurrency(b.price, b.currency);
+
+      switch (sortOption) {
+        case 'price-asc': return priceA - priceB;
+        case 'price-desc': return priceB - priceA;
+        case 'name-asc': return a.name.localeCompare(b.name);
+        case 'name-desc': return b.name.localeCompare(a.name);
+        case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'newest':
+        default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+  }, [allProducts, searchTerm, sortOption, statusFilter, filters, convertCurrency, maxPrice]);
 
   const handleSelectOne = useCallback((productId: string) => {
     setCurrentSelection(prev =>
@@ -138,6 +296,117 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        <div className="p-4 border-b flex flex-wrap gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <ListFilter className="mr-2 h-4 w-4" />
+                Categories ({filters.categories.length})
+                {filters.categories.length > 0 && <XCircle className="ml-2 h-3 w-3" onClick={(e) => { e.stopPropagation(); handleClearSection('categories'); }} />}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {allCategories.map(category => (
+                <DropdownMenuCheckboxItem
+                  key={category}
+                  checked={filters.categories.includes(category)}
+                  onCheckedChange={() => handleToggleFilter('categories', category)}
+                >
+                  {category}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Tag className="mr-2 h-4 w-4" />
+                Tags ({filters.tags.length})
+                {filters.tags.length > 0 && <XCircle className="ml-2 h-3 w-3" onClick={(e) => { e.stopPropagation(); handleClearSection('tags'); }} />}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              <DropdownMenuLabel>Filter by Tag</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {allTags.map(tag => (
+                <DropdownMenuCheckboxItem
+                  key={tag}
+                  checked={filters.tags.includes(tag)}
+                  onCheckedChange={() => handleToggleFilter('tags', tag)}
+                >
+                  {tag}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <DollarSign className="mr-2 h-4 w-4" />
+                Price Range
+                {(filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice) && <XCircle className="ml-2 h-3 w-3" onClick={(e) => { e.stopPropagation(); handleClearSection('priceRange'); }} />}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-64 p-4">
+              <DropdownMenuLabel>Filter by Price</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <Slider
+                min={0}
+                max={maxPrice}
+                step={1}
+                value={localPriceRange}
+                onValueChange={handlePriceRangeChange}
+                className="w-full my-4"
+              />
+              <div className="flex justify-between text-sm font-medium">
+                <span>{formatCurrency(localPriceRange[0], shopDetails?.currency)}</span>
+                <span>{formatCurrency(localPriceRange[1], shopDetails?.currency)}</span>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {allDetailsAttributes.map(attr => {
+            const Icon = getAttributeIcon(attr.name);
+            const filterKey = attr.name;
+            const isFilterApplied = (filters[filterKey] as string[] || []).length > 0;
+            return attr.values.length > 0 ? (
+              <DropdownMenu key={filterKey}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Icon className="mr-2 h-4 w-4" />
+                    {attr.name.replace(/_/g, ' ')} ({isFilterApplied ? (filters[filterKey] as string[]).length : 0})
+                    {isFilterApplied && <XCircle className="ml-2 h-3 w-3" onClick={(e) => { e.stopPropagation(); handleClearSection(filterKey); }} />}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56">
+                  <DropdownMenuLabel>Filter by {attr.name.replace(/_/g, ' ')}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {attr.values.map(value => (
+                    <DropdownMenuCheckboxItem
+                      key={value}
+                      checked={(filters[filterKey] as string[] || []).includes(value)}
+                      onCheckedChange={() => handleToggleFilter(filterKey, value)}
+                    >
+                      {value}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null;
+          })}
+
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={handleResetAllFilters} className="text-destructive hover:text-destructive">
+              <XCircle className="mr-2 h-4 w-4" />
+              Clear All Filters
+            </Button>
+          )}
+        </div>
+
         {isLoading ? (
           <div className="p-4 space-y-2">
             <Loader2 className="h-8 w-8 animate-spin mx-auto" />

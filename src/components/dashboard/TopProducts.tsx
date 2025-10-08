@@ -3,9 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "../ui/skeleton";
 import { Crown } from "lucide-react";
-import { StorefrontProductCard } from "../storefront/StorefrontProductCard";
 import { useShop } from "@/contexts/ShopContext";
-import { useAppearance } from "@/contexts/AppearanceContext"; // Import useAppearance
+import { formatCurrency, formatLargeNumber } from "@/lib/formatters";
 
 interface TopProduct {
   product_id: string;
@@ -14,23 +13,12 @@ interface TopProduct {
   total_sold: number;
   price: number | null;
   currency: string | null;
-  media_type: string | null;
-  thumbnail_url?: string;
-  caption: string;
-  category: string;
-  tags: string[];
-  pricing_type: 'one_time' | 'subscription';
-  billing_interval: 'month' | 'year' | null;
-  details: any;
-  status: 'Active' | 'Draft' | 'Out of Stock';
-  inventory: number;
 }
 
 export const TopProducts = () => {
   const [products, setProducts] = useState<TopProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { shopDetails, convertCurrency } = useShop(); // Get from admin context
-  const { settings: appearanceSettings } = useAppearance(); // Get from admin context
+  const { shopDetails, convertCurrency } = useShop();
 
   useEffect(() => {
     const fetchTopProducts = async () => {
@@ -53,7 +41,7 @@ export const TopProducts = () => {
     fetchTopProducts();
   }, []);
 
-  if (!shopDetails) return null; // Ensure shopDetails are loaded for slug
+  if (!shopDetails) return null;
 
   return (
     <Card>
@@ -70,31 +58,13 @@ export const TopProducts = () => {
                 {index === 0 && <Crown className="h-6 w-6 text-amber-400" />}
                 {index === 1 && <div className="h-6 w-6 text-slate-400 font-bold text-center">2</div>}
                 {index === 2 && <div className="h-6 w-6 text-orange-400 font-bold text-center">3</div>}
-                <StorefrontProductCard 
-                  product={{
-                    id: product.product_id,
-                    name: product.name,
-                    media_url: product.media_url,
-                    price: product.price,
-                    currency: product.currency,
-                    media_type: product.media_type,
-                    thumbnail_url: product.thumbnail_url,
-                    caption: product.caption,
-                    category: product.category,
-                    tags: product.tags,
-                    pricing_type: product.pricing_type,
-                    billing_interval: product.billing_interval,
-                    details: product.details,
-                    status: product.status,
-                    inventory: product.inventory,
-                  }}
-                  shopSlug={shopDetails.slug}
-                  className="flex-1"
-                  externalShopDetails={shopDetails} // Pass shopDetails from admin context
-                  externalAppearanceSettings={appearanceSettings} // Pass appearanceSettings from admin context
-                  externalConvertCurrency={convertCurrency} // Pass convertCurrency from admin context
-                  externalPromotions={[]} // Promotions are not fetched in TopProducts, pass empty array
-                />
+                <img src={product.media_url} alt={product.name} className="h-12 w-12 rounded-md object-cover bg-muted" />
+                <div className="flex-1">
+                  <p className="font-medium truncate">{product.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {formatCurrency(convertCurrency(product.price, product.currency), shopDetails.currency)} &middot; {formatLargeNumber(product.total_sold)} sold
+                  </p>
+                </div>
               </div>
             ))}
           </div>

@@ -3,18 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, MessageSquareText, Percent, Gift, Edit, Trash2, CalendarIcon, CheckCircle, XCircle, Sparkles, Megaphone } from "lucide-react";
+import { Loader2, PlusCircle, MessageSquareText, Percent, Gift, Edit, Trash2, CalendarIcon, CheckCircle, XCircle, Sparkles, Megaphone, Repeat2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { showError, showSuccess } from "@/utils/toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { PromotionEditorModal } from "@/components/PromotionEditorModal";
-import { StorefrontAnnouncementEditorModal } from "@/components/StorefrontAnnouncementEditorModal"; // Renamed import
-import { StorefrontAnnouncement } from "@/types/storefront"; // New type import
+import { StorefrontAnnouncementEditorModal } from "@/components/StorefrontAnnouncementEditorModal";
+import { StorefrontAnnouncement } from "@/types/storefront";
 import { format } from "date-fns";
-import * as LucideIcons from 'lucide-react'; // Import all Lucide icons
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"; // Import AlertDialog
+import * as LucideIcons from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Marquee } from "@/components/ui/marquee";
 
 interface Promotion {
   id: string;
@@ -30,12 +31,12 @@ interface Promotion {
 const Promotions = () => {
   const { setTitle } = usePageTitle();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
-  const [storefrontAnnouncements, setStorefrontAnnouncements] = useState<StorefrontAnnouncement[]>([]); // Renamed state
+  const [storefrontAnnouncements, setStorefrontAnnouncements] = useState<StorefrontAnnouncement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPromotionEditorOpen, setIsPromotionEditorOpen] = useState(false);
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
-  const [isAnnouncementEditorOpen, setIsAnnouncementEditorOpen] = useState(false); // Renamed state
-  const [selectedAnnouncement, setSelectedAnnouncement] = useState<StorefrontAnnouncement | null>(null); // Renamed state
+  const [isAnnouncementEditorOpen, setIsAnnouncementEditorOpen] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<StorefrontAnnouncement | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; type: 'promotion' | 'announcement' } | null>(null);
 
@@ -44,15 +45,15 @@ const Promotions = () => {
     setTitle("Promotions");
   }, [setTitle]);
 
-  const fetchPromotionsAndAnnouncements = async () => { // Renamed function
+  const fetchPromotionsAndAnnouncements = async () => {
     setIsLoading(true);
     const { data: promotionsData, error: promotionsError } = await supabase
       .from("promotions")
       .select("*")
       .order("created_at", { ascending: false });
 
-    const { data: announcementsData, error: announcementsError } = await supabase // Renamed data fetch
-      .from("marquee_elements") // Still fetching from marquee_elements table
+    const { data: announcementsData, error: announcementsError } = await supabase
+      .from("marquee_elements")
       .select("*")
       .order("display_order", { ascending: true });
 
@@ -62,10 +63,10 @@ const Promotions = () => {
       setPromotions(promotionsData as Promotion[]);
     }
 
-    if (announcementsError) { // Renamed error
-      showError("Could not fetch storefront announcements."); // Renamed error message
+    if (announcementsError) {
+      showError("Could not fetch storefront announcements.");
     } else {
-      setStorefrontAnnouncements(announcementsData as StorefrontAnnouncement[]); // Renamed state update
+      setStorefrontAnnouncements(announcementsData as StorefrontAnnouncement[]);
     }
     setIsLoading(false);
   };
@@ -90,6 +91,20 @@ const Promotions = () => {
     setIsDeleteConfirmOpen(true);
   };
 
+  const handleRerunPromotion = (promotion: Promotion) => {
+    // Create a new promotion object with a new ID, and set it as inactive initially
+    const newPromotion = {
+      ...promotion,
+      id: crypto.randomUUID(), // Generate a new ID
+      name: `${promotion.name} (Copy)`, // Indicate it's a copy
+      is_active: false, // Start as inactive
+      start_date: null, // Clear dates for a fresh start
+      end_date: null,
+    };
+    setSelectedPromotion(newPromotion);
+    setIsPromotionEditorOpen(true);
+  };
+
   const getPromotionIcon = (type: Promotion['type']) => {
     switch (type) {
       case 'discount': return <Percent className="h-4 w-4" />;
@@ -111,23 +126,23 @@ const Promotions = () => {
     }
   };
 
-  const handleAnnouncementSave = () => { // Renamed function
+  const handleAnnouncementSave = () => {
     fetchPromotionsAndAnnouncements();
-    setIsAnnouncementEditorOpen(false); // Renamed state
-    setSelectedAnnouncement(null); // Renamed state
+    setIsAnnouncementEditorOpen(false);
+    setSelectedAnnouncement(null);
   };
 
-  const handleAnnouncementEdit = (element: StorefrontAnnouncement) => { // Renamed function
-    setSelectedAnnouncement(element); // Renamed state
-    setIsAnnouncementEditorOpen(true); // Renamed state
+  const handleAnnouncementEdit = (element: StorefrontAnnouncement) => {
+    setSelectedAnnouncement(element);
+    setIsAnnouncementEditorOpen(true);
   };
 
-  const handleAnnouncementDelete = (elementId: string) => { // Renamed function
+  const handleAnnouncementDelete = (elementId: string) => {
     setItemToDelete({ id: elementId, type: 'announcement' });
     setIsDeleteConfirmOpen(true);
   };
 
-  const getAnnouncementIconComponent = (iconName: string) => { // Renamed function
+  const getAnnouncementIconComponent = (iconName: string) => {
     const Icon = (LucideIcons as any)[iconName];
     return Icon ? <Icon className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />;
   };
@@ -164,11 +179,11 @@ const Promotions = () => {
         onSave={handlePromotionSave}
         promotion={selectedPromotion}
       />
-      <StorefrontAnnouncementEditorModal // Renamed component
-        isOpen={isAnnouncementEditorOpen} // Renamed state
-        onClose={() => { setIsAnnouncementEditorOpen(false); setSelectedAnnouncement(null); }} // Renamed state
-        onSave={handleAnnouncementSave} // Renamed function
-        element={selectedAnnouncement} // Renamed prop
+      <StorefrontAnnouncementEditorModal
+        isOpen={isAnnouncementEditorOpen}
+        onClose={() => { setIsAnnouncementEditorOpen(false); setSelectedAnnouncement(null); }}
+        onSave={handleAnnouncementSave}
+        element={selectedAnnouncement}
       />
 
       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
@@ -224,7 +239,7 @@ const Promotions = () => {
                     <TableHead>Details</TableHead>
                     <TableHead>Active</TableHead>
                     <TableHead>Duration</TableHead>
-                    <TableHead className="text-right w-[120px]">Actions</TableHead>
+                    <TableHead className="text-right w-[150px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -263,10 +278,13 @@ const Promotions = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handlePromotionEdit(promo)}>
+                            <Button variant="ghost" size="icon" onClick={() => handleRerunPromotion(promo)} title="Rerun Promotion">
+                              <Repeat2 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handlePromotionEdit(promo)} title="Edit Promotion">
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handlePromotionDelete(promo.id)}>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handlePromotionDelete(promo.id)} title="Delete Promotion">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -289,19 +307,35 @@ const Promotions = () => {
         {/* Storefront Announcements Section */}
         <div className="flex items-center justify-between pt-8">
           <div>
-            <h2 className="text-2xl font-bold">Storefront Announcements</h2> {/* Renamed title */}
+            <h2 className="text-2xl font-bold">Storefront Announcements</h2>
             <p className="text-muted-foreground">
               Manage the scrolling text messages displayed on your storefront.
             </p>
           </div>
-          <Button onClick={() => setIsAnnouncementEditorOpen(true)}> {/* Renamed state */}
+          <Button onClick={() => setIsAnnouncementEditorOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Announcement
           </Button>
         </div>
+        {/* Marquee Live Preview */}
+        {storefrontAnnouncements.filter(e => e.is_active).length > 0 && (
+          <div className="space-y-2 pt-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2"><Megaphone className="h-5 w-5" /> Live Preview</h3>
+            <div className="border rounded-lg p-2 bg-muted/50">
+              <Marquee pauseOnHover className="py-2 border-y-2 border-primary/20 bg-primary/10">
+                {storefrontAnnouncements.filter(e => e.is_active).map(element => (
+                  <div key={element.id} className="flex items-center gap-6 text-base font-semibold text-primary">
+                    {getAnnouncementIconComponent(element.icon_name)}
+                    <span>{element.message}</span>
+                  </div>
+                ))}
+              </Marquee>
+            </div>
+          </div>
+        )}
         <Card>
           <CardHeader>
-            <CardTitle>Your Storefront Announcements</CardTitle> {/* Renamed title */}
+            <CardTitle>Your Storefront Announcements</CardTitle>
             <CardDescription>
               These messages will appear in a scrolling banner on your storefront homepage.
             </CardDescription>
@@ -325,11 +359,11 @@ const Promotions = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {storefrontAnnouncements.length > 0 ? ( // Renamed state
-                    storefrontAnnouncements.map((element) => ( // Renamed state
+                  {storefrontAnnouncements.length > 0 ? (
+                    storefrontAnnouncements.map((element) => (
                       <TableRow key={element.id}>
                         <TableCell>{element.display_order}</TableCell>
-                        <TableCell>{getAnnouncementIconComponent(element.icon_name)}</TableCell> {/* Renamed function */}
+                        <TableCell>{getAnnouncementIconComponent(element.icon_name)}</TableCell>
                         <TableCell className="font-medium max-w-[300px] truncate">{element.message}</TableCell>
                         <TableCell>
                           {element.is_active ? (
@@ -340,10 +374,10 @@ const Promotions = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleAnnouncementEdit(element)}> {/* Renamed function */}
+                            <Button variant="ghost" size="icon" onClick={() => handleAnnouncementEdit(element)}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleAnnouncementDelete(element.id)}> {/* Renamed function */}
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleAnnouncementDelete(element.id)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
