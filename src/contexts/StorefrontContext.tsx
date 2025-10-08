@@ -11,8 +11,8 @@ interface ShopDetails {
   name: string;
   shop_name: string;
   slug: string; // Include slug in ShopDetails
-  logo_url: string;
-  favicon_url: string;
+  logo_url: string | null; // Can be null
+  favicon_url: string | null; // Can be null
   currency: string;
   headline?: string;
   about?: string;
@@ -165,8 +165,8 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         name: data.shopDetails.name,
         shop_name: data.shopDetails.shop_name,
         slug: data.shopDetails.slug,
-        logo_url: data.shopDetails.logo_url,
-        favicon_url: data.shopDetails.favicon_url,
+        logo_url: data.shopDetails.logo_url || null, // Ensure null if empty
+        favicon_url: data.shopDetails.favicon_url || null, // Ensure null if empty
         currency: data.shopDetails.currency,
         headline: data.shopDetails.headline,
         about: data.shopDetails.about,
