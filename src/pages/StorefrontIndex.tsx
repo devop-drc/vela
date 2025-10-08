@@ -62,7 +62,7 @@ const itemVariants = {
 };
 
 const StorefrontIndex = () => {
-  const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, bestSellers, recommendedProducts, marqueeElements } = useStorefront();
+  const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, bestSellers, recommendedProducts, marqueeElements, promotions } = useStorefront();
   const productsSectionRef = useRef<HTMLDivElement>(null);
 
   // Drag-to-scroll refs
@@ -282,7 +282,16 @@ const StorefrontIndex = () => {
             <ScrollArea className="w-full whitespace-nowrap pb-4">
               <div ref={bestSellersScrollRef} className="flex w-max space-x-6 md:space-x-8 p-4">
                 {bestSellers.map((product) => (
-                  <StorefrontProductCard key={product.product_id} product={product as Product} shopSlug={shopDetails.slug} className="w-[240px] md:w-[280px] flex-shrink-0" />
+                  <StorefrontProductCard 
+                    key={product.product_id} 
+                    product={product as Product} 
+                    shopSlug={shopDetails.slug} 
+                    className="w-[240px] md:w-[280px] flex-shrink-0" 
+                    externalShopDetails={shopDetails}
+                    externalAppearanceSettings={appearanceSettings}
+                    externalConvertCurrency={promotions ? (amount, currency) => promotions.length > 0 ? amount : convertCurrency(amount, currency) : convertCurrency} // Pass convertCurrency
+                    externalPromotions={promotions}
+                  />
                 ))}
                 {bestSellers.length >= 10 && (
                   <div className="flex-shrink-0 w-[240px] md:w-[280px] flex items-center justify-center">
@@ -312,7 +321,16 @@ const StorefrontIndex = () => {
             <ScrollArea className="w-full whitespace-nowrap pb-4">
               <div ref={newArrivalsScrollRef} className="flex w-max space-x-6 md:space-x-8 p-4">
                 {newArrivals.map((product) => (
-                  <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} className="w-[240px] md:w-[280px] flex-shrink-0" />
+                  <StorefrontProductCard 
+                    key={product.id} 
+                    product={product} 
+                    shopSlug={shopDetails.slug} 
+                    className="w-[240px] md:w-[280px] flex-shrink-0" 
+                    externalShopDetails={shopDetails}
+                    externalAppearanceSettings={appearanceSettings}
+                    externalConvertCurrency={promotions ? (amount, currency) => promotions.length > 0 ? amount : convertCurrency(amount, currency) : convertCurrency} // Pass convertCurrency
+                    externalPromotions={promotions}
+                  />
                 ))}
                 {newArrivals.length >= 10 && (
                   <div className="flex-shrink-0 w-[240px] md:w-[280px] flex items-center justify-center">
@@ -342,7 +360,16 @@ const StorefrontIndex = () => {
             <ScrollArea className="w-full whitespace-nowrap pb-4">
               <div ref={recommendedProductsScrollRef} className="flex w-max space-x-6 md:space-x-8 p-4">
                 {recommendedProducts.map((product) => (
-                  <StorefrontProductCard key={product.id} product={product} shopSlug={shopDetails.slug} className="w-[240px] md:w-[280px] flex-shrink-0" />
+                  <StorefrontProductCard 
+                    key={product.id} 
+                    product={product} 
+                    shopSlug={shopDetails.slug} 
+                    className="w-[240px] md:w-[280px] flex-shrink-0" 
+                    externalShopDetails={shopDetails}
+                    externalAppearanceSettings={appearanceSettings}
+                    externalConvertCurrency={promotions ? (amount, currency) => promotions.length > 0 ? amount : convertCurrency(amount, currency) : convertCurrency} // Pass convertCurrency
+                    externalPromotions={promotions}
+                  />
                 ))}
                 {recommendedProducts.length >= 10 && (
                   <div className="flex-shrink-0 w-[240px] md:w-[280px] flex items-center justify-center">

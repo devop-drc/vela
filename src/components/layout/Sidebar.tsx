@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Home, ShoppingBag, Settings, Package, Archive, MessageSquareQuote, Link as LinkIcon, MessageSquareWarning, Megaphone, Sparkles } from "lucide-react";
+import { Home, ShoppingBag, Settings, Package, Archive, MessageSquareQuote, Link as LinkIcon, MessageSquareWarning, Megaphone, Sparkles, Users, Store, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { motion } from "framer-motion";
@@ -14,37 +14,45 @@ const Sidebar = () => {
   const isPrimary = settings.sidebarStyle === 'primary';
   const blurEnabled = settings.blurEnabled;
 
-  const navItems = [
-    { to: "/", icon: Home, label: "Dashboard" },
-    { to: "/products", icon: Package, label: "Products" },
-    { to: "/out-of-stock", icon: Archive, label: "Out of Stock" },
-    { to: "/orders", icon: ShoppingBag, label: "Orders" },
-    { to: "/disputes", icon: MessageSquareWarning, label: "Disputes" },
-    { to: "/promotions", icon: Megaphone, label: "Promotions" },
-    // { to: "/marquee", icon: Sparkles, label: "Marquee" }, // Removed Marquee settings page link
-    { to: "/keywords", icon: MessageSquareQuote, label: "AI Keywords" },
-    { to: "/settings", icon: Settings, label: "Settings" },
+  const navGroups = [
+    {
+      name: "Dashboard",
+      icon: LayoutDashboard,
+      items: [
+        { to: "/", icon: Home, label: "Overview" },
+      ]
+    },
+    {
+      name: "Product Management",
+      icon: Package,
+      items: [
+        { to: "/products", icon: Package, label: "All Products" },
+        { to: "/out-of-stock", icon: Archive, label: "Out of Stock" },
+        { to: "/promotions", icon: Megaphone, label: "Promotions" },
+        { to: "/keywords", icon: MessageSquareQuote, label: "AI Keywords" },
+      ]
+    },
+    {
+      name: "Customer & Order Management",
+      icon: Users,
+      items: [
+        { to: "/orders", icon: ShoppingBag, label: "Orders" },
+        { to: "/disputes", icon: MessageSquareWarning, label: "Disputes" },
+      ]
+    },
+    {
+      name: "Store Management",
+      icon: Store,
+      items: [
+        { to: "/settings", icon: Settings, label: "Settings" },
+      ]
+    }
   ];
 
   const sidebarWidthClasses = {
     compact: 'w-56', // 224px
     default: 'w-64', // 256px
     spacious: 'w-72', // 288px
-  };
-
-  const handleCopyStorefrontUrl = async () => {
-    if (shopDetails?.slug) {
-      const storefrontUrl = `${window.location.origin}/shop/${shopDetails.slug}`;
-      try {
-        await navigator.clipboard.writeText(storefrontUrl);
-        showSuccess("Storefront URL copied to clipboard!");
-      } catch (err) {
-        showError("Failed to copy URL. Please try again manually.");
-        console.error("Failed to copy storefront URL:", err);
-      }
-    } else {
-      showError("Your shop URL is not available yet. Please set your shop name in settings.");
-    }
   };
 
   return (
@@ -71,40 +79,42 @@ const Sidebar = () => {
         <ShoppingBag className="h-6 w-6 mr-2" />
         <h1 className="text-xl font-bold">InstaShopify</h1>
       </div>
-      <nav className="flex-1 p-4 space-y-2">
-        {navItems.map((item) => (
-          <motion.div key={item.to} whileHover={{ x: 4 }} transition={{ type: "spring", stiffness: 400, damping: 15 }}>
-            <NavLink
-              to={item.to}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                  isPrimary
-                    ? "text-primary-foreground/70 hover:bg-primary-foreground/10"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                  isActive && (isPrimary
-                    ? "bg-primary-foreground/10 text-primary-foreground"
-                    : "bg-accent text-accent-foreground")
-                )
-              }
-            >
-              <item.icon className="mr-3 h-5 w-5" />
-              {item.label}
-            </NavLink>
-          </motion.div>
+      <nav className="flex-1 p-4 space-y-6">
+        {navGroups.map((group) => (
+          <div key={group.name}>
+            <h2 className={cn(
+              "text-xs font-semibold uppercase tracking-wider mb-2 px-3",
+              isPrimary ? "text-primary-foreground/60" : "text-muted-foreground"
+            )}>
+              <group.icon className="inline-block h-4 w-4 mr-2" />
+              {group.name}
+            </h2>
+            <div className="space-y-1">
+              {group.items.map((item) => (
+                <motion.div key={item.to} whileHover={{ x: 4 }} transition={{ type: "spring", stiffness: 400, damping: 15 }}>
+                  <NavLink
+                    to={item.to}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                        isPrimary
+                          ? "text-primary-foreground/70 hover:bg-primary-foreground/10"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                        isActive && (isPrimary
+                          ? "bg-primary-foreground/10 text-primary-foreground"
+                          : "bg-accent text-accent-foreground")
+                      )
+                    }
+                  >
+                    <item.icon className="mr-3 h-5 w-5" />
+                    {item.label}
+                  </NavLink>
+                </motion.div>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
-      <div className="p-4 border-t">
-        <Button 
-          variant="outline" 
-          className="w-full" 
-          onClick={handleCopyStorefrontUrl}
-          disabled={!shopDetails?.slug}
-        >
-          <LinkIcon className="mr-2 h-4 w-4" />
-          Get Storefront URL
-        </Button>
-      </div>
     </aside>
   );
 };

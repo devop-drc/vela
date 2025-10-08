@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight, ArrowRight } from "lucide-react"; // Added ArrowRight
+import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight, ArrowRight } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
@@ -11,8 +11,8 @@ import { MediaItem } from "@/components/MediaItem";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { CheckoutForm } from "./CheckoutForm"; // Import the new CheckoutForm
-import { Input } from "@/components/ui/input"; // <--- ADDED THIS IMPORT
+import { CheckoutForm } from "./CheckoutForm";
+import { Input } from "@/components/ui/input";
 
 interface StorefrontCartCheckoutModalProps {
   isOpen: boolean;
@@ -46,7 +46,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
           blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
         )}
       >
-        <DialogHeader className="p-4 md:p-6 border-b flex-row items-center justify-between flex-shrink-0"> {/* Added flex-shrink-0 */}
+        <DialogHeader className="p-4 md:p-6 border-b flex-row items-center justify-between flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl md:text-2xl font-bold">
             {isCheckoutMode ? (
               <Button variant="ghost" size="icon" onClick={() => setIsCheckoutMode(false)} className="mr-2 h-8 w-8 md:h-9 md:w-9">
@@ -87,8 +87,8 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                 currency={shopDetails?.currency || 'USD'}
               />
             ) : (
-              <>
-                <div className="flex-1 overflow-y-auto p-4 md:p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 flex-1 overflow-hidden">
+                <div className="lg:col-span-2 flex flex-col overflow-y-auto p-4 md:p-6 border-r">
                   <div className="space-y-6">
                     {cartItems.length > 0 && (
                       <div className="space-y-4">
@@ -197,28 +197,34 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                   </div>
                 </div>
 
-                <div className="p-4 md:p-6 border-t space-y-4 flex-shrink-0"> {/* Added flex-shrink-0 */}
-                  <div className="flex justify-between text-sm md:text-base">
-                    <span>Subtotal:</span>
-                    <span className="font-semibold">{formatCurrency(subtotal, shopDetails?.currency)}</span>
+                <div className="lg:col-span-1 flex flex-col p-4 md:p-6 border-t lg:border-t-0">
+                  <div className="space-y-4 flex-1">
+                    <h2 className="text-lg md:text-xl font-bold font-heading">Order Summary</h2>
+                    <div className="flex justify-between text-sm md:text-base">
+                      <span>Subtotal ({totalItems} items):</span>
+                      <span className="font-semibold">{formatCurrency(subtotal, shopDetails?.currency)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm md:text-base">
+                      <span>Shipping:</span>
+                      <span className="font-semibold">{formatCurrency(shipping, shopDetails?.currency)}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between text-lg md:text-xl font-bold pt-2">
+                      <span>Total:</span>
+                      <span>{formatCurrency(total, shopDetails?.currency)}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm md:text-base">
-                    <span>Shipping:</span>
-                    <span className="font-semibold">{formatCurrency(shipping, shopDetails?.currency)}</span>
+                  <div className="mt-6 flex-shrink-0">
+                    <Button className="w-full text-base md:text-lg" onClick={() => setIsCheckoutMode(true)} disabled={cartItems.length === 0}>
+                      Proceed to Checkout
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" className="w-full text-base md:text-lg mt-2" onClick={onClose}>
+                      Continue Shopping
+                    </Button>
                   </div>
-                  <div className="flex justify-between text-lg md:text-xl font-bold border-t pt-4">
-                    <span>Total:</span>
-                    <span>{formatCurrency(total, shopDetails?.currency)}</span>
-                  </div>
-                  <Button className="w-full text-base md:text-lg" onClick={() => setIsCheckoutMode(true)} disabled={cartItems.length === 0}>
-                    Proceed to Checkout
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" className="w-full text-base md:text-lg" onClick={onClose}>
-                    Continue Shopping
-                  </Button>
                 </div>
-              </>
+              </div>
             )}
           </>
         )}

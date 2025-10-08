@@ -139,7 +139,7 @@ export const StorefrontProductCard = ({
                 src={product.media_url} 
                 alt={product.name} 
                 type={product.media_type} 
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                className={cn("object-cover transition-transform duration-300 group-hover:scale-105", isOutOfStock && "grayscale")} // Apply grayscale here
               />
             </div>
             {isOutOfStock && (

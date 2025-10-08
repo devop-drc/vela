@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye } from "lucide-react";
+import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye, XCircle } from "lucide-react"; // Import XCircle
 import { Separator } from "./ui/separator";
 import { ScrollArea } from "./ui/scroll-area";
 import { useShop } from "@/contexts/ShopContext";

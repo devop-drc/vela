@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search } from "lucide-react";
+import { Search, Link as LinkIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
+import { useShop } from "@/contexts/ShopContext";
+import { showSuccess, showError } from "@/utils/toast";
 
 interface HeaderProps {
   title: string;
@@ -21,6 +24,7 @@ interface HeaderProps {
 const Header = ({ title }: HeaderProps) => {
   const navigate = useNavigate();
   const { settings } = useAppearance();
+  const { shopDetails } = useShop();
   const isFloating = settings.layoutStyle === 'floating';
   const blurEnabled = settings.blurEnabled;
 
@@ -33,6 +37,21 @@ const Header = ({ title }: HeaderProps) => {
     compact: 'md:left-[calc(14rem+2rem)]', // 224px + 32px
     default: 'md:left-[calc(16rem+2rem)]', // 256px + 32px
     spacious: 'md:left-[calc(18rem+2rem)]', // 288px + 32px
+  };
+
+  const handleCopyStorefrontUrl = async () => {
+    if (shopDetails?.slug) {
+      const storefrontUrl = `${window.location.origin}/shop/${shopDetails.slug}`;
+      try {
+        await navigator.clipboard.writeText(storefrontUrl);
+        showSuccess("Storefront URL copied to clipboard!");
+      } catch (err) {
+        showError("Failed to copy URL. Please try again manually.");
+        console.error("Failed to copy storefront URL:", err);
+      }
+    } else {
+      showError("Your shop URL is not available yet. Please set your shop name in settings.");
+    }
   };
 
   return (
@@ -56,23 +75,34 @@ const Header = ({ title }: HeaderProps) => {
           />
         </div>
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Avatar className="h-9 w-9 cursor-pointer">
-            <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
-            <AvatarFallback>CN</AvatarFallback>
-          </Avatar>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>My Account</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Profile</DropdownMenuItem>
-          <DropdownMenuItem>Billing</DropdownMenuItem>
-          <DropdownMenuItem>Settings</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center gap-4">
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={handleCopyStorefrontUrl}
+          disabled={!shopDetails?.slug}
+        >
+          <LinkIcon className="mr-2 h-4 w-4" />
+          Get Storefront URL
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Avatar className="h-9 w-9 cursor-pointer">
+              <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+              <AvatarFallback>CN</AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>Profile</DropdownMenuItem>
+            <DropdownMenuItem>Billing</DropdownMenuItem>
+            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   );
 };
