@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
-import { ShoppingCart, Filter, Search, X, Menu, Home, Package, Truck, ArrowUpNarrowWide } from "lucide-react";
+import { ShoppingBag, Filter, Search, X, Menu, Home, Package, Truck, ArrowUpNarrowWide, ShoppingCart as ShoppingCartIcon } from "lucide-react"; // Renamed ShoppingCart to ShoppingCartIcon
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -242,7 +242,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onOpenCart} className="flex items-center gap-2 text-sm">
-                  <ShoppingCart className="h-4 w-4" /> Cart ({totalItems})
+                  <ShoppingBag className="h-4 w-4" /> Cart ({totalItems})
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -278,7 +278,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
               transition={{ duration: 0.3 }}
               className="relative"
             >
-              <ShoppingCart className="h-5 w-5" /> {/* Changed to ShoppingCart */}
+              <ShoppingBag className="h-5 w-5" />
               {totalItems > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary-foreground text-xs text-primary">
                   {totalItems}

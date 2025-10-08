@@ -42,7 +42,6 @@ interface OrderDetails {
   order_items: OrderItem[];
   shipping_address?: string;
   shipping_city?: string;
-  shipping_state?: string;
   shipping_zip?: string;
   shipping_country?: string;
   order_notes?: string;
@@ -233,26 +232,32 @@ const StorefrontClientOrders = () => {
           <form onSubmit={fetchOrders} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="customerEmail" className="text-sm">Email Address</Label>
-              <Input
-                id="customerEmail"
-                type="email"
-                placeholder="your.email@example.com"
-                value={customerEmailInput}
-                onChange={(e) => setCustomerEmailInput(e.target.value)}
-                required
-                className="text-sm md:text-base"
-              />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="customerEmail"
+                  type="email"
+                  placeholder="your.email@example.com"
+                  value={customerEmailInput}
+                  onChange={(e) => setCustomerEmailInput(e.target.value)}
+                  required
+                  className="pl-10 text-sm md:text-base"
+                />
+              </div>
             </div>
             {orderIdInput && (
               <div className="space-y-2">
                 <Label htmlFor="orderId" className="text-sm">Specific Order ID (Optional)</Label>
-                <Input
-                  id="orderId"
-                  placeholder="e.g., 12345"
-                  value={orderIdInput}
-                  onChange={(e) => setOrderIdInput(e.target.value)}
-                  className="text-sm md:text-base"
-                />
+                <div className="relative">
+                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="orderId"
+                    placeholder="e.g., 12345"
+                    value={orderIdInput}
+                    onChange={(e) => setOrderIdInput(e.target.value)}
+                    className="pl-10 text-sm md:text-base"
+                  />
+                </div>
               </div>
             )}
             <Button type="submit" className="w-full text-sm md:text-base" disabled={isLoading}>

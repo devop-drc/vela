@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck, Lock, DollarSign } from "lucide-react";
+import { CheckCircle, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck, Lock, DollarSign, Mail, City, Globe, StickyNote, Calendar } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ import { useCart } from "@/contexts/CartContext";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion"; // Import AnimatePresence
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const CheckoutProgress = ({ currentStep }: { currentStep: number }) => {
   const steps = [
@@ -50,7 +51,6 @@ interface CheckoutFormData {
   email: string;
   address: string;
   city: string;
-  state: string;
   zip: string;
   country: string; // Added country
   notes?: string;
@@ -79,7 +79,6 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
-  const [state, setState] = useState('');
   const [zip, setZip] = useState('');
   const [country, setCountry] = useState('Albania'); // Default to Albania
   const [notes, setNotes] = useState('');
@@ -104,7 +103,6 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
     } else if (currentStep === 2) {
       if (!address.trim()) { toast.error("Shipping Address is required."); return false; }
       if (!city.trim()) { toast.error("City is required."); return false; }
-      if (!state.trim()) { toast.error("State/Province is required."); return false; }
       if (!zip.trim()) { toast.error("Zip/Postal Code is required."); return false; }
       if (!country.trim()) { toast.error("Country is required."); return false; }
     } else if (currentStep === 3) {
@@ -152,7 +150,7 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
       return;
     }
 
-    const customerInfo = { firstName, lastName, email, address, city, state, zip, country, notes };
+    const customerInfo = { firstName, lastName, email, address, city, zip, country, notes };
     const orderItems = cartItems.map(item => ({
       productId: item.productId,
       name: item.name,
@@ -171,7 +169,6 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
           paymentMethod: paymentMethod, // Pass the selected payment method
           shippingAddress: address, // Pass shipping details
           shippingCity: city,
-          shippingState: state,
           shippingZip: zip,
           shippingCountry: country,
           orderNotes: notes,
@@ -222,15 +219,24 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
                 <CardContent className="space-y-4 flex-1 overflow-y-auto">
                     <div className="space-y-2">
                       <Label htmlFor="firstName" className="text-sm">First Name</Label>
-                      <Input id="firstName" placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input id="firstName" placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="pl-10" />
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="lastName" className="text-sm">Last Name</Label>
-                      <Input id="lastName" placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input id="lastName" placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="pl-10" />
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email" className="text-sm">Email</Label>
-                      <Input id="email" type="email" placeholder="john.doe@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input id="email" type="email" placeholder="john.doe@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10" />
+                      </div>
                     </div>
                 </CardContent>
               </Card>
@@ -254,29 +260,49 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
                 <CardContent className="space-y-4 flex-1 overflow-y-auto">
                     <div className="space-y-2">
                       <Label htmlFor="address" className="text-sm">Shipping Address</Label>
-                      <Input id="address" placeholder="123 Main St" value={address} onChange={(e) => setAddress(e.target.value)} required />
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input id="address" placeholder="123 Main St" value={address} onChange={(e) => setAddress(e.target.value)} required className="pl-10" />
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {/* Changed to 2 columns */}
                       <div className="space-y-2">
                         <Label htmlFor="city" className="text-sm">City</Label>
-                        <Input id="city" placeholder="Anytown" value={city} onChange={(e) => setCity(e.target.value)} required />
+                        <div className="relative">
+                          <City className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input id="city" placeholder="Anytown" value={city} onChange={(e) => setCity(e.target.value)} required className="pl-10" />
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="state" className="text-sm">State/Province</Label>
-                        <Input id="state" placeholder="CA" value={state} onChange={(e) => setState(e.target.value)} required />
-                      </div>
+                      {/* Removed State/Province field */}
                       <div className="space-y-2">
                         <Label htmlFor="zip" className="text-sm">Zip/Postal Code</Label>
-                        <Input id="zip" placeholder="90210" value={zip} onChange={(e) => setZip(e.target.value)} required />
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input id="zip" placeholder="90210" value={zip} onChange={(e) => setZip(e.target.value)} required className="pl-10" />
+                        </div>
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="country" className="text-sm">Country</Label>
-                      <Input id="country" placeholder="Albania" value={country} onChange={(e) => setCountry(e.target.value)} disabled required />
+                      <div className="relative">
+                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Select value={country} onValueChange={setCountry} disabled>
+                          <SelectTrigger id="country" className="pl-10">
+                            <SelectValue placeholder="Select country" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Albania">Albania</SelectItem>
+                            {/* Add other countries if needed in the future */}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="notes" className="text-sm">Order Notes (Optional)</Label>
-                      <Textarea id="notes" rows={3} placeholder="Leave a note for the seller..." value={notes} onChange={(e) => setNotes(e.target.value)} />
+                      <div className="relative">
+                        <StickyNote className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Textarea id="notes" rows={3} placeholder="Leave a note for the seller..." value={notes} onChange={(e) => setNotes(e.target.value)} className="pl-10 pt-3" />
+                      </div>
                     </div>
                 </CardContent>
               </Card>
@@ -330,23 +356,32 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="cardNumber" className="text-sm">Card Number</Label>
-                          <Input id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} required />
+                          <div className="relative">
+                            <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} required className="pl-10" />
+                          </div>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="cardName" className="text-sm">Name on Card</Label>
-                          <Input id="cardName" placeholder="John Doe" value={cardName} onChange={(e) => setCardName(e.target.value)} required />
+                          <div className="relative">
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input id="cardName" placeholder="John Doe" value={cardName} onChange={(e) => setCardName(e.target.value)} required className="pl-10" />
+                          </div>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="expiryDate" className="text-sm">Expiry Date</Label>
-                          <Input id="expiryDate" placeholder="MM/YY" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} required />
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input id="expiryDate" placeholder="MM/YY" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} required className="pl-10" />
+                          </div>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="cvv" className="text-sm">CVV</Label>
                           <div className="relative">
-                            <Input id="cvv" placeholder="123" type="password" maxLength={4} value={cvv} onChange={(e) => setCvv(e.target.value)} required />
-                            <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input id="cvv" placeholder="123" type="password" maxLength={4} value={cvv} onChange={(e) => setCvv(e.target.value)} required className="pl-10" />
                           </div>
                         </div>
                       </div>

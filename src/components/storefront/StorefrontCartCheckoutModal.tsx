@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight, ArrowRight } from "lucide-react";
+import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight, ArrowRight, User, Mail, MapPin, City, Globe, StickyNote, Calendar, Lock, DollarSign } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
@@ -150,8 +150,8 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                     </div>
                                   </Link>
-                                  <div className="flex-1 w-full sm:w-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-3 md:gap-4 text-center sm:text-left">
-                                    <div>
+                                  <div className="flex-1 w-full sm:w-auto flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4 text-center sm:text-left">
+                                    <div className="flex-1">
                                       <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
                                         <h3 className="font-semibold text-base md:text-lg hover:underline">{item.name}</h3>
                                       </Link>
@@ -159,7 +159,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                         {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
                                       </p>
                                     </div>
-                                    <div className="flex items-center justify-center sm:justify-end gap-3 md:gap-4">
+                                    <div className="flex items-center justify-center gap-3 md:gap-4">
                                       <div className="flex items-center border rounded-md">
                                         <Button
                                           variant="ghost"
@@ -228,8 +228,8 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                     </div>
                                   </Link>
-                                  <div className="flex-1 w-full sm:w-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-3 md:gap-4 text-center sm:text-left">
-                                    <div>
+                                  <div className="flex-1 w-full sm:w-auto flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4 text-center sm:text-left">
+                                    <div className="flex-1">
                                       <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
                                         <h3 className="font-semibold text-base md:text-lg hover:underline">{item.name}</h3>
                                       </Link>
@@ -237,7 +237,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                         {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
                                       </p>
                                     </div>
-                                    <div className="flex items-center justify-center sm:justify-end gap-3 md:gap-4">
+                                    <div className="flex items-center justify-center gap-3 md:gap-4">
                                       <Button variant="outline" size="sm" onClick={() => moveToCart(item.productId)} className="text-sm">
                                           <MoveRight className="mr-2 h-4 w-4" />
                                           Move to Cart
