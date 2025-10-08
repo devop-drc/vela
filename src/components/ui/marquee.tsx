@@ -34,13 +34,9 @@ export const Marquee = ({
       speed={speed}
       delay={0}
       play={true}
-      style={{
-        '--gap': gap,
-        display: 'flex', // Ensure flex context for children
-        flexDirection: vertical ? 'column' : 'row',
-        alignItems: 'center', // Center items vertically
-        justifyContent: 'center', // Center items horizontally
-      } as React.CSSProperties}
+      // Pass gap directly to FastMarquee, it handles internal spacing
+      // Remove explicit flex styles as FastMarquee manages its own internal layout
+      style={{ '--gap': gap } as React.CSSProperties} // Keep --gap for potential custom styling of children if needed
       {...props}
     >
       {children}
