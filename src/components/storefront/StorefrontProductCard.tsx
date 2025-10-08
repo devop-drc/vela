@@ -124,15 +124,14 @@ export const StorefrontProductCard = ({
     <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }} className={className}>
       <Link 
         to={`/shop/${effectiveShopDetails.slug}/product/${product.id}`} 
-        onClick={(e) => { if (isOutOfStock) e.preventDefault(); }}
-        className={cn(isOutOfStock && "pointer-events-none")}
+        // Allow clicking even if out of stock, but the detail page will show "Coming Soon"
       >
         <Card className={cn(
           "group h-full flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
           "border border-input/50 hover:border-primary/70",
           "shadow-sm hover:shadow-lg",
           blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
-          isOutOfStock && "opacity-60 grayscale"
+          isOutOfStock && "opacity-80" // Reduced opacity, not grayscale
         )}>
           <CardContent className="p-0 relative">
             <div className="aspect-square w-full overflow-hidden bg-muted">
@@ -144,8 +143,8 @@ export const StorefrontProductCard = ({
               />
             </div>
             {isOutOfStock && (
-              <Badge variant="destructive" className="absolute top-2 left-2 text-xs md:text-sm">
-                Out of Stock
+              <Badge variant="secondary" className="absolute top-2 left-2 text-xs md:text-sm bg-amber-500 text-white">
+                Coming Soon
               </Badge>
             )}
             {activePromotions.length > 0 && !isOutOfStock && (

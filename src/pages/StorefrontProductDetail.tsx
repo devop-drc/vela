@@ -197,8 +197,8 @@ const StorefrontProductDetail = () => {
             <h1 className="text-3xl md:text-5xl font-bold font-heading mb-2 md:mb-3 leading-tight flex items-center gap-2">
               {product.name}
               {isOutOfStock && (
-                <Badge variant="destructive" className="text-sm md:text-base">
-                  Out of Stock
+                <Badge variant="secondary" className="text-sm md:text-base bg-amber-500 text-white">
+                  Coming Soon
                 </Badge>
               )}
               {activePromotions.length > 0 && !isOutOfStock && (

@@ -206,8 +206,8 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
           <div className="space-y-2 pt-4">
             <Label>Live Preview</Label>
             <div className="border rounded-lg p-2 bg-muted/50">
-              <Marquee pauseOnHover className="py-2 border-y-2 border-primary/20 bg-primary/10">
-                <div className="flex items-center gap-6 text-base font-semibold text-primary">
+              <Marquee pauseOnHover className="py-2 border-y-2 border-primary/20"> {/* Removed bg-primary/10 */}
+                <div className="flex items-center gap-4 text-base font-semibold text-primary px-4"> {/* Adjusted gap and added horizontal padding */}
                   <IconComponent className="h-5 w-5 text-primary" />
                   <span>{messageValue || "Your announcement message will appear here."}</span>
                 </div>

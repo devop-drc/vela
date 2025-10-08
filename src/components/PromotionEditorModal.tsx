@@ -79,10 +79,10 @@ interface PromotionEditorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
-  promotion: Promotion | null;
+  promotion: Promotion | null; // This can be null for new promotions
 }
 
-export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: PromotionEditorModalModalProps) => {
+export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: PromotionEditorModalProps) => {
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
   const [selectedProductNames, setSelectedProductNames] = useState<string[]>([]);
 
@@ -113,6 +113,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
         target_products: promotion.target_products || [],
       });
     } else {
+      // For new promotions (including 'rerun' copies), reset to defaults
       reset({
         name: "",
         type: 'discount', // Default to discount
@@ -160,9 +161,11 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
     };
 
     let error;
-    if (promotion) {
+    // Determine if it's an update or insert based on whether 'promotion' prop has an ID
+    // and if that ID corresponds to an existing record (for true updates)
+    if (promotion && promotion.id) { // If promotion prop has an ID, it's an update
       ({ error } = await supabase.from("promotions").update(payload).eq("id", promotion.id));
-    } else {
+    } else { // Otherwise, it's a new insert
       ({ error } = await supabase.from("promotions").insert(payload));
     }
 

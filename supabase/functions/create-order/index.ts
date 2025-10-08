@@ -63,22 +63,54 @@ serve(async (req) => {
 
     const orderId = newOrder.id;
 
-    // 3. Insert order items
-    const orderItemsToInsert = cartItems.map((item: any) => ({
-      order_id: orderId,
-      product_id: item.productId,
-      quantity: item.quantity,
-      price_at_purchase: item.price,
-    }));
+    // 3. Insert order items and update product inventory/status
+    const orderItemsToInsert = [];
+    for (const item of cartItems) {
+      orderItemsToInsert.push({
+        order_id: orderId,
+        product_id: item.productId,
+        quantity: item.quantity,
+        price_at_purchase: item.price,
+      });
+
+      // Fetch product to check pricing_type and current inventory
+      const { data: product, error: productFetchError } = await supabaseAdmin
+        .from('products')
+        .select('pricing_type, inventory')
+        .eq('id', item.productId)
+        .single();
+
+      if (productFetchError || !product) {
+        console.error(`Failed to fetch product ${item.productId} for inventory update:`, productFetchError);
+        // Continue with order, but log the inventory issue
+        continue;
+      }
+
+      if (product.pricing_type === 'one_time') {
+        const newInventory = product.inventory - item.quantity;
+        const updatePayload: { inventory: number; status?: string } = { inventory: newInventory };
+
+        if (newInventory <= 0) {
+          updatePayload.status = 'Out of Stock';
+        }
+
+        const { error: inventoryUpdateError } = await supabaseAdmin
+          .from('products')
+          .update(updatePayload)
+          .eq('id', item.productId);
+
+        if (inventoryUpdateError) {
+          console.error(`Failed to update inventory for product ${item.productId}:`, inventoryUpdateError);
+        }
+      }
+    }
 
     const { error: orderItemsInsertError } = await supabaseAdmin
       .from('order_items')
       .insert(orderItemsToInsert);
 
     if (orderItemsInsertError) {
-      // If order items fail, consider rolling back the order or marking it as problematic
       console.error(`Failed to insert order items for order ${orderId}:`, orderItemsInsertError);
-      // Optionally, update the order status to 'Problematic'
       await supabaseAdmin.from('orders').update({ status: 'Problematic', message: 'Failed to add items' }).eq('id', orderId);
       throw new Error(`Order created, but failed to add items: ${orderItemsInsertError.message}`);
     }

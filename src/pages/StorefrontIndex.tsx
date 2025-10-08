@@ -215,7 +215,7 @@ const StorefrontIndex = () => {
           >
             <Marquee pauseOnHover className="py-3 md:py-4 border-y-2 border-primary/20 bg-primary/10">
               {marqueeElements.map(element => (
-                <div key={element.id} className="flex items-center gap-6 md:gap-8 text-base md:text-lg font-semibold text-primary">
+                <div key={element.id} className="flex items-center gap-4 md:gap-6 text-base md:text-lg font-semibold text-primary px-4"> {/* Adjusted gap and added horizontal padding */}
                   {getIconComponent(element.icon_name)}
                   <span>{element.message}</span>
                 </div>
