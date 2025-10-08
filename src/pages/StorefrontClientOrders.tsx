@@ -44,7 +44,7 @@ interface OrderDetails {
 const LOCAL_STORAGE_EMAIL_KEY = 'storefront_customer_email';
 
 const StorefrontClientOrders = () => {
-  const { shopSlug: contextShopSlug, appearanceSettings } = useStorefront(); // Get shopSlug from context
+  const { shopDetails: contextShopSlug, appearanceSettings } = useStorefront(); // Get shopSlug from context
   const { shopSlug: urlShopSlug } = useParams<{ shopSlug: string }>(); // Get shopSlug from URL params
   const [searchParams] = useSearchParams();
   const [customerEmailInput, setCustomerEmailInput] = useState(() => {
@@ -141,7 +141,7 @@ const StorefrontClientOrders = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [customerEmailInput, orderIdInput, urlShopSlug]); // Depend on urlShopSlug
+  }, [customerEmailInput, orderIdInput, fetchOrders, searchParams, urlShopSlug]); // Depend on urlShopSlug
 
   useEffect(() => {
     if (customerEmailInput && (orderIdInput || searchParams.get('email')) && urlShopSlug) { // Only fetch if email is present and either orderId is present or email was in URL
@@ -247,6 +247,7 @@ const StorefrontClientOrders = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                       <p><span className="font-medium">Date:</span> {new Date(order.created_at).toLocaleDateString()}</p>
                       <p><span className="font-medium">Total:</span> {formatCurrency(order.total_amount, order.currency)}</p>
+                      <p><span className="font-medium">Payment:</span> <span className="capitalize">{order.payment_method.replace(/_/g, ' ')} ({order.payment_status})</span></p>
                     </div>
                     <Separator className="my-4" />
                     <h4 className="font-semibold text-base mb-3">Items:</h4>

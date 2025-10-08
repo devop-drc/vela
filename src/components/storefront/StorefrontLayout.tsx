@@ -82,19 +82,15 @@ const applyStorefrontSettingsToDOM = (settings: any, shopDetails: any) => {
     const setFavicon = (url: string | null) => {
       let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
       if (url) {
-        // Use weserv.nl for proxying and resizing if it's an external URL
-        const faviconUrl = url.startsWith('http') 
-          ? `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=32&h=32&fit=contain&mask=circle`
-          : url; // Use directly if local path
         if (link) {
-          link.href = faviconUrl;
+          link.href = url;
         } else {
           link = document.createElement('link');
           link.rel = 'icon';
-          link.href = faviconUrl;
+          link.href = url;
           document.head.appendChild(link);
         }
-        console.log("Favicon URL set:", faviconUrl); // Debugging
+        console.log("Favicon URL set:", url); // Debugging
       } else {
         // If no URL, remove existing favicon or set to a transparent one
         if (link) {

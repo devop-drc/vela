@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye, XCircle, CreditCard, MessageSquareWarning, Hash, Reply, Handshake } from "lucide-react"; // Import XCircle, CreditCard, MessageSquareWarning, Hash, Reply, Handshake
+import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye, XCircle, CreditCard, MessageSquareWarning, Hash, Reply, Handshake, MapPin } from "lucide-react"; // Import XCircle, CreditCard, MessageSquareWarning, Hash, Reply, Handshake, MapPin
 import { Separator } from "../ui/separator";
 import { ScrollArea } from "../ui/scroll-area";
 import { useStorefront } from "@/contexts/StorefrontContext";
@@ -49,6 +49,13 @@ interface OrderDetails {
   payment_method: string;
   payment_status: string;
   order_items: OrderItem[];
+  // Assuming shipping address details are stored in the order table or a related table
+  shipping_address?: string;
+  shipping_city?: string;
+  shipping_state?: string;
+  shipping_zip?: string;
+  shipping_country?: string;
+  order_notes?: string;
 }
 
 interface StorefrontOrderDetailModalProps {
@@ -240,6 +247,21 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
                 </div>
                 <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><CreditCard className="h-4 w-4 text-primary" /> Payment Method</div><p className="capitalize">{order.payment_method.replace(/_/g, ' ')}</p></div>
                 <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><CheckCircle className="h-4 w-4 text-primary" /> Payment Status</div><p className="capitalize">{order.payment_status}</p></div>
+              </div>
+              <Separator />
+              <div>
+                <h3 className="font-semibold mb-4 flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Shipping Details</h3>
+                <div className="space-y-2 text-sm text-muted-foreground p-3 border rounded-md bg-muted/50">
+                  <p><span className="font-medium">Address:</span> {order.shipping_address || 'N/A'}</p>
+                  <p><span className="font-medium">City:</span> {order.shipping_city || 'N/A'}</p>
+                  <p><span className="font-medium">State/Province:</span> {order.shipping_state || 'N/A'}</p>
+                  <p><span className="font-medium">Zip/Postal Code:</span> {order.shipping_zip || 'N/A'}</p>
+                  <p><span className="font-medium">Country:</span> {order.shipping_country || 'N/A'}</p>
+                  <p><span className="font-medium">Notes:</span> {order.order_notes || 'None'}</p>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Shipping address cannot be changed after an order is placed. Please contact support for urgent changes.
+                </p>
               </div>
               <Separator />
               <div>

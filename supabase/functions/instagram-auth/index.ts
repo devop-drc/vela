@@ -113,13 +113,41 @@ serve(async (req) => {
       }, { onConflict: 'user_id,provider' });
       if (upsertError) throw upsertError;
 
-      // Update or insert shop_details with Instagram info
+      let uploadedLogoUrl: string | null = null;
+      if (instagram_profile_picture_url) {
+        try {
+          const imageResponse = await fetch(instagram_profile_picture_url);
+          if (!imageResponse.ok) throw new Error(`Failed to fetch profile picture: ${imageResponse.statusText}`);
+          const imageBlob = await imageResponse.blob();
+          const fileName = `${userId}/profile_pic_${Date.now()}.jpg`;
+          const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+            .from('shop-assets')
+            .upload(fileName, imageBlob, {
+              contentType: imageResponse.headers.get('content-type') || 'image/jpeg',
+              upsert: true,
+            });
+
+          if (uploadError) throw uploadError;
+          
+          const { data: publicUrlData } = supabaseAdmin.storage.from('shop-assets').getPublicUrl(fileName);
+          uploadedLogoUrl = publicUrlData.publicUrl;
+        } catch (uploadErr: any) {
+          console.error("Error uploading profile picture to storage:", uploadErr.message);
+          // Fallback to original URL if upload fails
+          uploadedLogoUrl = instagram_profile_picture_url;
+        }
+      } else if (picture?.data?.url) {
+        // Fallback to Facebook profile picture if Instagram one is not available
+        uploadedLogoUrl = picture.data.url;
+      }
+
+      // Update or insert shop_details with Instagram info and uploaded URL
       const shopDetailsPayload = {
         business_id: (await supabaseAdmin.from('businesses').select('id').eq('user_id', userId).single()).data?.id,
         shop_name: instagram_shop_name || `${first_name}'s Shop`,
         slug: instagram_username ? instagram_username.toLowerCase().replace(/[^a-z0-9-]/g, '') : `${first_name.toLowerCase()}-shop`,
-        logo_url: instagram_profile_picture_url || picture?.data?.url,
-        favicon_url: instagram_profile_picture_url || picture?.data?.url,
+        logo_url: uploadedLogoUrl, // Use the uploaded URL
+        favicon_url: uploadedLogoUrl, // Use the uploaded URL for favicon
         contact_email: email,
         instagram_url: instagram_username ? `https://www.instagram.com/${instagram_username}` : null,
       };

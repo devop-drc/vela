@@ -4,10 +4,12 @@ import { showError } from '@/utils/toast';
 
 interface ShopDetails {
   id: string; // Add business ID here
+  userId: string; // Added user ID here
+  name: string;
   shop_name: string;
   slug: string; // Add slug here
-  logo_url: string;
-  favicon_url: string;
+  logo_url: string | null; // Can be null
+  favicon_url: string | null; // Can be null
   currency: string;
   headline?: string;
   about?: string;
@@ -85,10 +87,11 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
 
     const finalDetails: ShopDetails = {
       id: business.id, // Set the business ID here
+      userId: user.id, // Set the user ID here
       shop_name: dbDetails?.shop_name || igDetails?.shop_name || 'Your Shop',
       slug: dbDetails?.slug || generateSlug(dbDetails?.shop_name || igDetails?.shop_name || 'your-shop'), // Use existing slug or generate
-      logo_url: dbDetails?.logo_url || igDetails?.logo_url || '',
-      favicon_url: dbDetails?.favicon_url || igDetails?.favicon_url || '/favicon.ico',
+      logo_url: dbDetails?.logo_url || null, // Always pull from DB, which is now populated by storage
+      favicon_url: dbDetails?.favicon_url || null, // Always pull from DB, which is now populated by storage
       currency: dbDetails?.currency || 'USD',
       headline: dbDetails?.headline || '',
       about: dbDetails?.about || igDetails?.description || '',

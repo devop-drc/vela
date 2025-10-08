@@ -20,28 +20,30 @@ const DashboardLayout = () => {
     if (shopDetails) {
       document.title = `${title} | ${shopDetails.shop_name}`;
 
-      const setFavicon = (url: string) => {
+      const setFavicon = (url: string | null) => {
         let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-        if (link) {
-          link.href = url;
+        if (url) {
+          if (link) {
+            link.href = url;
+          } else {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            link.href = url;
+            document.head.appendChild(link);
+          }
         } else {
-          link = document.createElement('link');
-          link.rel = 'icon';
-          link.href = url;
-          document.head.appendChild(link);
+          // Fallback to default favicon if none is provided
+          if (link) link.href = '/favicon.ico';
+          else {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            link.href = '/favicon.ico';
+            document.head.appendChild(link);
+          }
         }
       };
 
-      if (shopDetails.favicon_url) {
-        // Use weserv.nl for proxying and resizing if it's an external URL
-        const faviconUrl = shopDetails.favicon_url.startsWith('http') 
-          ? `https://images.weserv.nl/?url=${encodeURIComponent(shopDetails.favicon_url)}&w=32&h=32&fit=contain&mask=circle`
-          : shopDetails.favicon_url; // Use directly if local path
-        setFavicon(faviconUrl);
-      } else {
-        // Fallback to default favicon if none is provided
-        setFavicon('/favicon.ico');
-      }
+      setFavicon(shopDetails.favicon_url);
     } else {
       document.title = title; // Fallback if shopDetails not loaded yet
       let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
