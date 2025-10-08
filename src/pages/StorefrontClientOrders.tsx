@@ -39,6 +39,12 @@ interface OrderDetails {
   payment_method: string;
   payment_status: string;
   order_items: OrderItem[];
+  shipping_address?: string;
+  shipping_city?: string;
+  shipping_state?: string;
+  shipping_zip?: string;
+  shipping_country?: string;
+  order_notes?: string;
 }
 
 const LOCAL_STORAGE_EMAIL_KEY = 'storefront_customer_email';
@@ -166,10 +172,6 @@ const StorefrontClientOrders = () => {
       case "Cancelled": return "bg-gray-500";
       default: return "bg-muted-foreground";
     }
-  };
-
-  const handleOrderUpdate = () => {
-    fetchOrders(); // Refetch orders after an update in the modal
   };
 
   return (

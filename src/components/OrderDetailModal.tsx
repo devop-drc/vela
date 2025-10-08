@@ -4,22 +4,56 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye, XCircle } from "lucide-react"; // Import XCircle
+import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye, XCircle, CreditCard, MessageSquareWarning, Hash, Reply, Handshake, MapPin } from "lucide-react"; // Import XCircle
 import { Separator } from "./ui/separator";
 import { ScrollArea } from "./ui/scroll-area";
 import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Label } from "./ui/label"; // Import Label
+import { Textarea } from "./ui/textarea"; // Import Textarea
+
+type OrderStatusType = 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic' | 'Cancelled';
+
+interface OrderItem {
+  quantity: number;
+  price_at_purchase: number;
+  products: {
+    name: string;
+    media_url: string;
+    currency: string;
+  };
+}
+
+interface Dispute {
+  id: string;
+  order_id: string;
+  customer_email: string;
+  reason: string;
+  message: string | null;
+  status: 'Open' | 'In Review' | 'Resolved' | 'Closed';
+  reply_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 type Order = {
   id: string;
   customer_name: string;
   customer_email: string;
-  status: 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic';
+  status: OrderStatusType;
   total_amount: number;
   created_at: string;
   currency: string;
+  payment_method: string;
+  payment_status: string;
+  shipping_address?: string;
+  shipping_city?: string;
+  shipping_state?: string;
+  shipping_zip?: string;
+  shipping_country?: string;
+  order_notes?: string;
 };
 
 interface OrderDetailModalProps {
@@ -31,17 +65,24 @@ interface OrderDetailModalProps {
 
 export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDetailModalProps) => {
   const { shopDetails, convertCurrency } = useShop();
-  const [items, setItems] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [items, setItems] = useState<OrderItem[]>([]);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [currentStatus, setCurrentStatus] = useState<Order['status']>('Pending');
+  const [currentStatus, setCurrentStatus] = useState<OrderStatusType>('Pending');
+  const [dispute, setDispute] = useState<Dispute | null>(null);
+  const [isLoadingDispute, setIsLoadingDispute] = useState(false);
+  const [replyMessage, setReplyMessage] = useState('');
 
   useEffect(() => {
     if (order) {
       setCurrentStatus(order.status);
-      const fetchOrderItems = async () => {
-        setIsLoading(true);
-        const { data, error } = await supabase
+      setReplyMessage(dispute?.reply_message || ''); // Initialize reply message
+      const fetchOrderData = async () => {
+        setIsLoadingItems(true);
+        setIsLoadingDispute(true);
+
+        // Fetch order items
+        const { data: itemsData, error: itemsError } = await supabase
           .from('order_items')
           .select(`
             quantity,
@@ -54,18 +95,37 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
           `)
           .eq('order_id', order.id);
 
-        if (error) {
+        if (itemsError) {
           showError("Failed to fetch order items.");
         } else {
-          setItems(data);
+          setItems(itemsData || []);
         }
-        setIsLoading(false);
-      };
-      fetchOrderItems();
-    }
-  }, [order]);
+        setIsLoadingItems(false);
 
-  const handleStatusUpdate = async (newStatus: Order['status']) => {
+        // Fetch dispute for this order
+        const { data: disputeData, error: disputeError } = await supabase
+          .from('order_disputes')
+          .select('*')
+          .eq('order_id', order.id)
+          .maybeSingle();
+        
+        if (disputeError && disputeError.code !== 'PGRST116') { // PGRST116 = no rows found
+          console.error("Error fetching dispute:", disputeError);
+        } else {
+          setDispute(disputeData || null);
+          setReplyMessage(disputeData?.reply_message || '');
+        }
+        setIsLoadingDispute(false);
+      };
+      fetchOrderData();
+    } else {
+      setItems([]);
+      setDispute(null);
+      setReplyMessage('');
+    }
+  }, [order, dispute?.reply_message]);
+
+  const handleStatusUpdate = async (newStatus: OrderStatusType) => {
     if (!order) return;
     setIsUpdating(true);
     const { error } = await supabase
@@ -83,9 +143,31 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
     setIsUpdating(false);
   };
 
+  const handleDisputeReply = async () => {
+    if (!dispute) return;
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase.from('order_disputes').update({
+        reply_message: replyMessage,
+        status: 'In Review', // Automatically set to In Review when a reply is sent
+      }).eq('id', dispute.id);
+
+      if (error) throw error;
+
+      showSuccess("Dispute reply sent!");
+      setDispute(prev => prev ? { ...prev, reply_message: replyMessage, status: 'In Review' } : null);
+      onUpdate();
+    } catch (err: any) {
+      console.error("Failed to send dispute reply:", err);
+      showError(`Failed to send dispute reply: ${err.message || "An unexpected error occurred."}`);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   if (!order) return null;
 
-  const getStatusColor = (status: Order['status']) => {
+  const getStatusColor = (status: OrderStatusType) => {
     switch (status) {
       case 'Fulfilled': return 'bg-emerald-500';
       case 'Given to Courier': return 'bg-blue-500';
@@ -93,17 +175,19 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
       case 'Order Seen': return 'bg-amber-500';
       case 'Pending': return 'bg-amber-500';
       case 'Problematic': return 'bg-destructive';
+      case 'Cancelled': return 'bg-gray-500';
       default: return 'bg-gray-500';
     }
   };
 
-  const statusOptions: { value: Order['status']; label: string; icon: React.ElementType }[] = [
+  const statusOptions: { value: OrderStatusType; label: string; icon: React.ElementType }[] = [
     { value: 'Pending', label: 'Pending', icon: Package },
     { value: 'Order Seen', label: 'Order Seen', icon: Eye },
     { value: 'Order Packaged', label: 'Order Packaged', icon: Box },
     { value: 'Given to Courier', label: 'Given to Courier', icon: Truck },
     { value: 'Fulfilled', label: 'Fulfilled', icon: CheckCircle },
     { value: 'Problematic', label: 'Problematic', icon: XCircle },
+    { value: 'Cancelled', label: 'Cancelled', icon: XCircle },
   ];
 
   return (
@@ -132,11 +216,25 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                   )}
                 </p>
               </div>
+              <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><CreditCard className="h-4 w-4" /> Payment Method</div><p className="capitalize">{order.payment_method.replace(/_/g, ' ')}</p></div>
+              <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><CheckCircle className="h-4 w-4" /> Payment Status</div><p className="capitalize">{order.payment_status}</p></div>
+            </div>
+            <Separator />
+            <div>
+              <h3 className="font-semibold mb-4 flex items-center gap-2"><MapPin className="h-5 w-5" /> Shipping Details</h3>
+              <div className="space-y-2 text-sm text-muted-foreground p-3 border rounded-md bg-muted/50">
+                <p><span className="font-medium">Address:</span> {order.shipping_address || 'N/A'}</p>
+                <p><span className="font-medium">City:</span> {order.shipping_city || 'N/A'}</p>
+                <p><span className="font-medium">State/Province:</span> {order.shipping_state || 'N/A'}</p>
+                <p><span className="font-medium">Zip/Postal Code:</span> {order.shipping_zip || 'N/A'}</p>
+                <p><span className="font-medium">Country:</span> {order.shipping_country || 'N/A'}</p>
+                <p><span className="font-medium">Notes:</span> {order.order_notes || 'None'}</p>
+              </div>
             </div>
             <Separator />
             <div>
               <h3 className="font-semibold mb-4 flex items-center gap-2"><Package className="h-5 w-5" /> Items Ordered</h3>
-              {isLoading ? <Loader2 className="animate-spin" /> : (
+              {isLoadingItems ? <Loader2 className="animate-spin" /> : (
                 <div className="space-y-4">
                   {items.map((item, index) => (
                     <div key={index} className="flex items-center gap-4">
@@ -151,6 +249,30 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                 </div>
               )}
             </div>
+            <Separator />
+            <div>
+              <h3 className="font-semibold mb-4 flex items-center gap-2"><MessageSquareWarning className="h-5 w-5" /> Client Dispute</h3>
+              {isLoadingDispute ? <Loader2 className="animate-spin" /> : dispute ? (
+                <div className="space-y-3 p-3 border rounded-md bg-muted/50">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium flex items-center gap-2"><Hash className="h-4 w-4" /> Dispute ID: {dispute.id.substring(0, 8)}</p>
+                    <Badge className={cn("text-white", getStatusColor(dispute.status))}>{dispute.status}</Badge>
+                  </div>
+                  <p className="text-sm"><span className="font-medium">Reason:</span> {dispute.reason}</p>
+                  {dispute.message && <p className="text-sm"><span className="font-medium">Customer's Message:</span> {dispute.message}</p>}
+                  <div className="space-y-2 mt-3">
+                    <Label htmlFor="replyMessage" className="flex items-center gap-2 text-sm"><Reply className="h-4 w-4" /> Your Reply</Label>
+                    <Textarea id="replyMessage" rows={3} value={replyMessage} onChange={(e) => setReplyMessage(e.target.value)} placeholder="Type your response to the customer here..." />
+                    <Button onClick={handleDisputeReply} disabled={isUpdating || !replyMessage.trim()} size="sm">
+                      {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Send Reply
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No dispute reported for this order.</p>
+              )}
+            </div>
           </div>
         </ScrollArea>
         <DialogFooter className="pt-4 flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
@@ -159,7 +281,7 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
             <Badge className={cn("text-white", getStatusColor(currentStatus))}>{currentStatus}</Badge>
           </div>
           <div className="flex gap-2">
-            <Select value={currentStatus} onValueChange={(value: Order['status']) => handleStatusUpdate(value)} disabled={isUpdating}>
+            <Select value={currentStatus} onValueChange={(value: OrderStatusType) => handleStatusUpdate(value)} disabled={isUpdating}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Change Status" />
               </SelectTrigger>

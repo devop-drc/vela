@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { DisputeDetailModal } from "@/components/DisputeDetailModal";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useSearchParams, useNavigate } from "react-router-dom"; // Import useNavigate and useSearchParams
 
 interface Dispute {
   id: string;
@@ -32,6 +33,8 @@ const Disputes = () => {
   const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [searchParams, setSearchParams] = useSearchParams(); // Initialize search params
+  const navigate = useNavigate();
 
   useEffect(() => {
     setTitle("Client Disputes");
@@ -81,13 +84,25 @@ const Disputes = () => {
       // (though the RLS policy should handle this on the server)
       const filteredData = data.filter(d => d.orders?.business_id === business.id);
       setDisputes(filteredData as Dispute[]);
+
+      // Check for disputeId in URL and open modal
+      const disputeIdFromUrl = searchParams.get('disputeId');
+      if (disputeIdFromUrl) {
+        const disputeToOpen = filteredData.find(d => d.id === disputeIdFromUrl);
+        if (disputeToOpen) {
+          setSelectedDispute(disputeToOpen);
+          // Clear the disputeId from URL after opening
+          searchParams.delete('disputeId');
+          setSearchParams(searchParams, { replace: true });
+        }
+      }
     }
     setIsLoading(false);
   };
 
   useEffect(() => {
     fetchDisputes();
-  }, [statusFilter]);
+  }, [statusFilter, searchParams]); // Re-fetch when statusFilter or searchParams change
 
   const handleUpdate = () => {
     fetchDisputes();

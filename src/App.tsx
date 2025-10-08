@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom"; // Import useNavigate
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import DashboardLayout from "./components/layout/DashboardLayout";
@@ -26,12 +26,116 @@ import StorefrontLayout from "./components/storefront/StorefrontLayout";
 import StorefrontIndex from "./pages/StorefrontIndex";
 import StorefrontProductDetail from "./pages/StorefrontProductDetail";
 import StorefrontAllProducts from "./pages/StorefrontAllProducts";
-import StorefrontClientOrders from "./pages/StorefrontClientOrders"; // Use this for all customer orders
+import StorefrontClientOrders from "./pages/StorefrontClientOrders";
 import Disputes from "./pages/Disputes";
 import Promotions from "./pages/Promotions";
-// import MarqueeSettings from "./pages/MarqueeSettings"; // Removed MarqueeSettings import
+import { useEffect } from "react"; // Import useEffect
+import { supabase } from "./integrations/supabase/client"; // Import supabase client
+import { toast } from "sonner"; // Import sonner toast
+import { MessageSquareWarning } from "lucide-react"; // Import icon
 
 const queryClient = new QueryClient();
+
+const AppContent = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let channel = supabase.channel('dispute-notifications');
+
+    const setupDisputeListener = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: business, error: businessError } = await supabase
+        .from('businesses')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (businessError || !business) {
+        console.error("Could not find business for dispute listener:", businessError);
+        return;
+      }
+
+      channel = supabase
+        .channel(`order_disputes:${business.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'order_disputes' },
+          (payload) => {
+            const newDispute = payload.new as any;
+            // Check if the dispute belongs to the current user's business
+            // This check is redundant if RLS is correctly applied, but good for safety
+            supabase.from('orders').select('business_id').eq('id', newDispute.order_id).single()
+              .then(({ data: orderData, error: orderError }) => {
+                if (orderError) {
+                  console.error("Error fetching order for dispute notification:", orderError);
+                  return;
+                }
+                if (orderData?.business_id === business.id) {
+                  toast.info(
+                    <div className="flex items-center gap-2">
+                      <MessageSquareWarning className="h-5 w-5 text-amber-500" />
+                      <span>New Client Dispute for Order #{newDispute.order_id.substring(0, 8)}</span>
+                    </div>,
+                    {
+                      description: newDispute.reason,
+                      action: {
+                        label: "View Report",
+                        onClick: () => navigate(`/disputes?disputeId=${newDispute.id}`),
+                      },
+                      duration: 10000, // Keep notification for 10 seconds
+                    }
+                  );
+                }
+              });
+          }
+        )
+        .subscribe();
+    };
+
+    setupDisputeListener();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [navigate]);
+
+  return (
+    <Routes>
+      {/* Public Storefront Routes */}
+      <Route path="/shop/:shopSlug" element={<StorefrontLayout />}>
+        <Route index element={<StorefrontIndex />} />
+        <Route path="products" element={<StorefrontAllProducts />} />
+        <Route path="product/:productId" element={<StorefrontProductDetail />} />
+        {/* Consolidated orders page for customers */}
+        <Route path="orders" element={<StorefrontClientOrders />} /> 
+      </Route>
+
+      {/* Existing Dashboard and Auth Routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/demo" element={<Demo />} />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route element={<OnboardingGuard />}>
+          <Route element={<DashboardLayout />}>
+            <Route path="/" element={<Index />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/keywords" element={<Keywords />} />
+            <Route path="/out-of-stock" element={<OutOfStock />} />
+            <Route path="/disputes" element={<Disputes />} />
+            <Route path="/promotions" element={<Promotions />} />
+          </Route>
+        </Route>
+      </Route>
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
 
 const App = () => (
   <AppearanceProvider>
@@ -44,37 +148,7 @@ const App = () => (
             <ShopProvider>
               <IntegrationProvider>
                 <SyncProvider>
-                  <Routes>
-                    {/* Public Storefront Routes */}
-                    <Route path="/shop/:shopSlug" element={<StorefrontLayout />}>
-                      <Route index element={<StorefrontIndex />} />
-                      <Route path="products" element={<StorefrontAllProducts />} />
-                      <Route path="product/:productId" element={<StorefrontProductDetail />} />
-                      {/* Consolidated orders page for customers */}
-                      <Route path="orders" element={<StorefrontClientOrders />} /> 
-                    </Route>
-
-                    {/* Existing Dashboard and Auth Routes */}
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/demo" element={<Demo />} />
-                    <Route element={<ProtectedRoute />}>
-                      <Route path="/onboarding" element={<Onboarding />} />
-                      <Route element={<OnboardingGuard />}>
-                        <Route element={<DashboardLayout />}>
-                          <Route path="/" element={<Index />} />
-                          <Route path="/products" element={<Products />} />
-                          <Route path="/orders" element={<Orders />} />
-                          <Route path="/settings" element={<Settings />} />
-                          <Route path="/keywords" element={<Keywords />} />
-                          <Route path="/out-of-stock" element={<OutOfStock />} />
-                          <Route path="/disputes" element={<Disputes />} />
-                          <Route path="/promotions" element={<Promotions />} />
-                          {/* <Route path="/marquee" element={<MarqueeSettings />} /> Removed route for marquee settings */}
-                        </Route>
-                      </Route>
-                    </Route>
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
+                  <AppContent /> {/* Wrap Routes in AppContent to use useNavigate */}
                   <IntegrationPrompt />
                 </SyncProvider>
               </IntegrationProvider>

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck, Lock, DollarSign } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
-import { cn } "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import { Separator } from "@/components/ui/separator";
@@ -187,7 +187,7 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
-      toast.success("Order placed successfully! Thank you for your purchase!", {
+      toast.success("Order placed successfully! Thank You for Your Purchase!", {
         description: `Your order total was ${formatCurrency(totalPrice, shopDetails?.currency)}.`,
         icon: <CheckCircle className="h-5 w-5 text-emerald-500" />,
       });

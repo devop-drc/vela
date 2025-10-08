@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { MediaItem } from "../MediaItem";
 import { ReportIssueModal } from "./ReportIssueModal";
 import { Textarea } from "../ui/textarea";
+import { Label } from "@/components/ui/label"; // Import Label
 
 type OrderStatusType = 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic' | 'Cancelled';
 
@@ -49,7 +50,6 @@ interface OrderDetails {
   payment_method: string;
   payment_status: string;
   order_items: OrderItem[];
-  // Assuming shipping address details are stored in the order table or a related table
   shipping_address?: string;
   shipping_city?: string;
   shipping_state?: string;
