@@ -150,7 +150,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                     </div>
                                   </Link>
-                                  <div className="flex-1 w-full sm:w-auto flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4 text-center sm:text-left">
+                                  <div className="flex-1 w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 text-center sm:text-left">
                                     <div className="flex-1">
                                       <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
                                         <h3 className="font-semibold text-base md:text-lg hover:underline">{item.name}</h3>
@@ -159,7 +159,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                         {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
                                       </p>
                                     </div>
-                                    <div className="flex items-center justify-center gap-3 md:gap-4">
+                                    <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 mt-3 sm:mt-0">
                                       <div className="flex items-center border rounded-md">
                                         <Button
                                           variant="ghost"
@@ -189,16 +189,18 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <p className="font-semibold text-base md:text-lg">
                                         {formatCurrency(item.price * item.quantity, shopDetails?.currency)}
                                       </p>
-                                      <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.productId)} className="text-destructive hover:text-destructive h-8 w-8">
-                                        <Trash2 className="h-4 w-4" />
-                                        <span className="sr-only">Remove {item.name}</span>
-                                      </Button>
+                                      <div className="flex items-center gap-2">
+                                        <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.productId)} className="text-destructive hover:text-destructive h-8 w-8">
+                                          <Trash2 className="h-4 w-4" />
+                                          <span className="sr-only">Remove {item.name}</span>
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => saveForLater(item)} className="text-sm">
+                                            <Bookmark className="mr-2 h-4 w-4" />
+                                            Save for Later
+                                        </Button>
+                                      </div>
                                     </div>
                                   </div>
-                                  <Button variant="ghost" size="sm" onClick={() => saveForLater(item)} className="flex-shrink-0 text-sm">
-                                      <Bookmark className="mr-2 h-4 w-4" />
-                                      Save for Later
-                                  </Button>
                                 </Card>
                               </motion.div>
                             ))}
@@ -228,7 +230,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                     </div>
                                   </Link>
-                                  <div className="flex-1 w-full sm:w-auto flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4 text-center sm:text-left">
+                                  <div className="flex-1 w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 text-center sm:text-left">
                                     <div className="flex-1">
                                       <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
                                         <h3 className="font-semibold text-base md:text-lg hover:underline">{item.name}</h3>
@@ -237,7 +239,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                         {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
                                       </p>
                                     </div>
-                                    <div className="flex items-center justify-center gap-3 md:gap-4">
+                                    <div className="flex items-center justify-center gap-3 md:gap-4 mt-3 sm:mt-0">
                                       <Button variant="outline" size="sm" onClick={() => moveToCart(item.productId)} className="text-sm">
                                           <MoveRight className="mr-2 h-4 w-4" />
                                           Move to Cart
