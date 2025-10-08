@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'; // Import cn for conditional classnames
 import { loadGoogleFont } from '@/lib/fontUtils'; // Import loadGoogleFont
 
 // Function to apply settings to the DOM, similar to AppearanceContext
-const applyStorefrontSettingsToDOM = (settings: any) => {
+const applyStorefrontSettingsToDOM = (settings: any, shopDetails: any) => {
   const root = document.documentElement;
   const effectiveSettings = { ...defaultSettings, ...settings }; // Merge with defaults
 
@@ -63,6 +63,51 @@ const applyStorefrontSettingsToDOM = (settings: any) => {
     saturate(${effectiveSettings.backgroundSaturation || 100}%)
     hue-rotate(${effectiveSettings.backgroundHue || 0}deg)
   `;
+
+  // Dynamically set page title and meta description
+  if (shopDetails) {
+    document.title = shopDetails.shop_name || "Storefront";
+    const metaDescriptionTag = document.querySelector('meta[name="description"]');
+    if (metaDescriptionTag) {
+      metaDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Welcome to ${shopDetails.shop_name}'s online store.`);
+    }
+    const ogTitleTag = document.querySelector('meta[property="og:title"]');
+    if (ogTitleTag) ogTitleTag.setAttribute('content', shopDetails.shop_name || "Storefront");
+    const ogDescriptionTag = document.querySelector('meta[property="og:description"]');
+    if (ogDescriptionTag) ogDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Welcome to ${shopDetails.shop_name}'s online store.`);
+    const ogImageTag = document.querySelector('meta[property="og:image"]');
+    if (ogImageTag) ogImageTag.setAttribute('content', shopDetails.logo_url || ''); // Ensure og:image is set
+
+    // Set favicon
+    const setFavicon = (url: string) => {
+      let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (link) {
+        link.href = url;
+      } else {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        link.href = url;
+        document.head.appendChild(link);
+      }
+    };
+
+    if (shopDetails.favicon_url) {
+      // Use weserv.nl for proxying and resizing if it's an external URL
+      const faviconUrl = shopDetails.favicon_url.startsWith('http') 
+        ? `https://images.weserv.nl/?url=${encodeURIComponent(shopDetails.favicon_url)}&w=32&h=32&fit=contain&mask=circle`
+        : shopDetails.favicon_url; // Use directly if local path
+      setFavicon(faviconUrl);
+    } else {
+      // Fallback to default favicon if none is provided
+      setFavicon('/favicon.ico');
+    }
+  } else {
+    document.title = "Storefront";
+    const metaDescriptionTag = document.querySelector('meta[name="description"]');
+    if (metaDescriptionTag) metaDescriptionTag.setAttribute('content', "Discover unique products from various shops.");
+    let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (link) link.href = '/favicon.ico';
+  }
 };
 
 const StorefrontLayoutContent = () => {
@@ -75,56 +120,11 @@ const StorefrontLayoutContent = () => {
   const footerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (appearanceSettings) {
-      applyStorefrontSettingsToDOM(appearanceSettings);
+    if (appearanceSettings || shopDetails) {
+      applyStorefrontSettingsToDOM(appearanceSettings, shopDetails);
     } else {
       // Apply default settings if none are found
-      applyStorefrontSettingsToDOM(defaultSettings);
-    }
-
-    // Dynamically set page title and meta description
-    if (shopDetails) {
-      document.title = shopDetails.shop_name || "Storefront";
-      const metaDescriptionTag = document.querySelector('meta[name="description"]');
-      if (metaDescriptionTag) {
-        metaDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Welcome to ${shopDetails.shop_name}'s online store.`);
-      }
-      const ogTitleTag = document.querySelector('meta[property="og:title"]');
-      if (ogTitleTag) ogTitleTag.setAttribute('content', shopDetails.shop_name || "Storefront");
-      const ogDescriptionTag = document.querySelector('meta[property="og:description"]');
-      if (ogDescriptionTag) ogDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Welcome to ${shopDetails.shop_name}'s online store.`);
-      const ogImageTag = document.querySelector('meta[property="og:image"]');
-      if (ogImageTag) ogImageTag.setAttribute('content', shopDetails.logo_url || ''); // Ensure og:image is set
-
-      // Set favicon
-      const setFavicon = (url: string) => {
-        let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-        if (link) {
-          link.href = url;
-        } else {
-          link = document.createElement('link');
-          link.rel = 'icon';
-          link.href = url;
-          document.head.appendChild(link);
-        }
-      };
-
-      if (shopDetails.favicon_url) {
-        // Use weserv.nl for proxying and resizing if it's an external URL
-        const faviconUrl = shopDetails.favicon_url.startsWith('http') 
-          ? `https://images.weserv.nl/?url=${encodeURIComponent(shopDetails.favicon_url)}&w=32&h=32&fit=contain&mask=circle`
-          : shopDetails.favicon_url; // Use directly if local path
-        setFavicon(faviconUrl);
-      } else {
-        // Fallback to default favicon if none is provided
-        setFavicon('/favicon.ico');
-      }
-    } else {
-      document.title = "Storefront";
-      const metaDescriptionTag = document.querySelector('meta[name="description"]');
-      if (metaDescriptionTag) metaDescriptionTag.setAttribute('content', "Discover unique products from various shops.");
-      let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-      if (link) link.href = '/favicon.ico';
+      applyStorefrontSettingsToDOM(defaultSettings, null);
     }
   }, [appearanceSettings, shopDetails]);
 

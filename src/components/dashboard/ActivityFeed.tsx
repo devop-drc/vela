@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Skeleton } from "../ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Banknote, Package, CheckCircle, XCircle, Archive } from "lucide-react";
@@ -147,11 +147,19 @@ export const ActivityFeed = () => {
   const handleActivityClick = async (activity: Activity) => {
     if (activity.type === 'product') {
       const { data, error } = await supabase.from('products').select('*').eq('id', activity.id.split('-')[0]).single();
-      if (error) { showError("Failed to load product details."); } else { setSelectedProduct(data); }
+      if (error) { 
+        showError("Failed to load product details."); 
+      } else { 
+        setSelectedProduct(data); 
+      }
     }
     if (activity.type === 'sale') {
       const { data, error } = await supabase.from('orders').select('*').eq('id', activity.id).single();
-      if (error) { showError("Failed to load order details."); } else { setSelectedOrder(data); }
+      if (error) { 
+        showError("Failed to load order details."); 
+      } else { 
+        setSelectedOrder(data); 
+      }
     }
   };
 

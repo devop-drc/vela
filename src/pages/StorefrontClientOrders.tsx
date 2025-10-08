@@ -40,10 +40,15 @@ interface OrderDetails {
   order_items: OrderItem[];
 }
 
+const LOCAL_STORAGE_EMAIL_KEY = 'storefront_customer_email';
+
 const StorefrontClientOrders = () => {
   const { shopSlug, appearanceSettings } = useStorefront();
   const [searchParams] = useSearchParams();
-  const [customerEmailInput, setCustomerEmailInput] = useState(searchParams.get('email') || "");
+  const [customerEmailInput, setCustomerEmailInput] = useState(() => {
+    // Initialize from local storage or URL param
+    return searchParams.get('email') || localStorage.getItem(LOCAL_STORAGE_EMAIL_KEY) || "";
+  });
   const [orderIdInput, setOrderIdInput] = useState(searchParams.get('orderId') || ""); // For direct order tracking
   const [orders, setOrders] = useState<OrderDetails[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -117,6 +122,8 @@ const StorefrontClientOrders = () => {
           setSelectedOrder(data[0] as OrderDetails);
           setIsOrderDetailModalOpen(true);
         }
+        // Save email to local storage on successful fetch
+        localStorage.setItem(LOCAL_STORAGE_EMAIL_KEY, customerEmailInput);
       } else {
         setOrders([]);
       }
@@ -130,10 +137,10 @@ const StorefrontClientOrders = () => {
   }, [customerEmailInput, orderIdInput, shopSlug]);
 
   useEffect(() => {
-    if (customerEmailInput && (orderIdInput || !searchAttempted)) { // Only fetch if email is present and either orderId is present or it's the initial load
+    if (customerEmailInput && (orderIdInput || searchParams.get('email'))) { // Only fetch if email is present and either orderId is present or email was in URL
       fetchOrders();
     }
-  }, [customerEmailInput, orderIdInput, fetchOrders, searchAttempted]);
+  }, [customerEmailInput, orderIdInput, fetchOrders, searchParams]);
 
   const getStatusColorClass = (status: OrderStatusType) => {
     switch (status) {
