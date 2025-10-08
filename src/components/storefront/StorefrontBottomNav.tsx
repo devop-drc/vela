@@ -44,7 +44,7 @@ export const StorefrontBottomNav = ({ onOpenCart }: StorefrontBottomNavProps) =>
             </NavLink>
           ))}
           <button
-            onClick={onOpenCart} {/* Corrected: Call onOpenCart */}
+            onClick={onOpenCart}
             className="flex flex-col items-center justify-center text-muted-foreground w-full h-full transition-colors text-xs relative"
           >
             <motion.span
