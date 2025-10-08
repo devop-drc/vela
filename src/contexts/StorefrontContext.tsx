@@ -156,6 +156,9 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
       if (invokeError) throw invokeError;
       if (data.error) throw new Error(data.error);
 
+      console.log("Fetched shopDetails from get-public-shop-data:", data.shopDetails); // Debug log
+      console.log("Fetched appearanceSettings from get-public-shop-data:", data.appearanceSettings); // Debug log
+
       setShopDetails({
         id: data.shopDetails.id,
         userId: data.shopDetails.user_id, // Set the user ID here

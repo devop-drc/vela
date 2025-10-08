@@ -79,29 +79,35 @@ const applyStorefrontSettingsToDOM = (settings: any, shopDetails: any) => {
     if (ogImageTag) ogImageTag.setAttribute('content', shopDetails.logo_url || ''); // Ensure og:image is set
 
     // Set favicon
-    const setFavicon = (url: string) => {
+    const setFavicon = (url: string | null) => {
       let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-      if (link) {
-        link.href = url;
+      if (url) {
+        // Use weserv.nl for proxying and resizing if it's an external URL
+        const faviconUrl = url.startsWith('http') 
+          ? `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=32&h=32&fit=contain&mask=circle`
+          : url; // Use directly if local path
+        if (link) {
+          link.href = faviconUrl;
+        } else {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          link.href = faviconUrl;
+          document.head.appendChild(link);
+        }
+        console.log("Favicon URL set:", faviconUrl); // Debugging
       } else {
-        link = document.createElement('link');
-        link.rel = 'icon';
-        link.href = url;
-        document.head.appendChild(link);
+        // If no URL, remove existing favicon or set to a transparent one
+        if (link) {
+          link.remove(); // Remove the link element entirely
+        }
+        console.log("Favicon removed or not set (no URL provided)."); // Debugging
       }
     };
 
     if (shopDetails.favicon_url) {
-      // Use weserv.nl for proxying and resizing if it's an external URL
-      const faviconUrl = shopDetails.favicon_url.startsWith('http') 
-        ? `https://images.weserv.nl/?url=${encodeURIComponent(shopDetails.favicon_url)}&w=32&h=32&fit=contain&mask=circle`
-        : shopDetails.favicon_url; // Use directly if local path
-      setFavicon(faviconUrl);
-      console.log("Favicon URL set:", faviconUrl); // Debugging
+      setFavicon(shopDetails.favicon_url);
     } else {
-      // Fallback to default favicon if none is provided
-      setFavicon('/favicon.ico');
-      console.log("Favicon URL set to default: /favicon.ico"); // Debugging
+      setFavicon(null); // Explicitly remove favicon if no URL is provided
     }
     console.log("Shop Logo URL for header/footer:", shopDetails.logo_url); // Debugging
   } else {
@@ -109,8 +115,8 @@ const applyStorefrontSettingsToDOM = (settings: any, shopDetails: any) => {
     const metaDescriptionTag = document.querySelector('meta[name="description"]');
     if (metaDescriptionTag) metaDescriptionTag.setAttribute('content', "Discover unique products from various shops.");
     let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-    if (link) link.href = '/favicon.ico';
-    console.log("Shop details not available, using default favicon and no logo."); // Debugging
+    if (link) link.remove(); // Remove default favicon if shopDetails not loaded
+    console.log("Shop details not available, removing favicon and no logo."); // Debugging
   }
 };
 

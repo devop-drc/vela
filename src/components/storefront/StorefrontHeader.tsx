@@ -106,7 +106,10 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
           <Link to={`/shop/${shopDetails.slug}`} className="flex items-center space-x-2">
             <Avatar className="h-7 w-7 md:h-8 md:w-8">
               <AvatarImage src={shopDetails.logo_url} alt={shopDetails.shop_name} />
-              <AvatarFallback className="text-sm md:text-base">{shopDetails.shop_name?.[0]}</AvatarFallback>
+              <AvatarFallback className={cn(
+                "text-sm md:text-base",
+                isPrimaryStyle ? "bg-primary-foreground text-primary" : "bg-muted text-muted-foreground"
+              )}>{shopDetails.shop_name?.[0]}</AvatarFallback>
             </Avatar>
             <span className="font-bold text-base md:text-lg">{shopDetails.shop_name}</span>
           </Link>
@@ -115,13 +118,34 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
         {/* Middle Section: Desktop Nav Links & Filters/Sort (conditional) */}
         <div className="flex-1 hidden lg:flex items-center justify-center space-x-4 px-4"> {/* Added flex-1, hidden on mobile */}
           {/* Desktop Navigation Links */}
-          <Link to={`/shop/${shopDetails.slug}`} className={cn(buttonVariants({ variant: "ghost" }), "text-sm md:text-base")}>
+          <Link 
+            to={`/shop/${shopDetails.slug}`} 
+            className={cn(
+              buttonVariants({ variant: "ghost" }), 
+              "text-sm md:text-base",
+              isPrimaryStyle && "text-primary-foreground hover:bg-primary-foreground/10"
+            )}
+          >
             Home
           </Link>
-          <Link to={`/shop/${shopDetails.slug}/products`} className={cn(buttonVariants({ variant: "ghost" }), "text-sm md:text-base")}>
+          <Link 
+            to={`/shop/${shopDetails.slug}/products`} 
+            className={cn(
+              buttonVariants({ variant: "ghost" }), 
+              "text-sm md:text-base",
+              isPrimaryStyle && "text-primary-foreground hover:bg-primary-foreground/10"
+            )}
+          >
             Products
           </Link>
-          <Link to={`/shop/${shopDetails.slug}/orders`} className={cn(buttonVariants({ variant: "ghost" }), "text-sm md:text-base")}>
+          <Link 
+            to={`/shop/${shopDetails.slug}/orders`} 
+            className={cn(
+              buttonVariants({ variant: "ghost" }), 
+              "text-sm md:text-base",
+              isPrimaryStyle && "text-primary-foreground hover:bg-primary-foreground/10"
+            )}
+          >
             My Orders
           </Link>
 
@@ -135,14 +159,26 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
                 transition={{ duration: 0.2 }}
                 className="flex items-center gap-2 overflow-hidden"
               >
-                <Button variant="outline" onClick={handleDesktopFilterToggle} className="flex-shrink-0 text-sm md:text-base h-9 md:h-10">
+                <Button 
+                  variant="outline" 
+                  onClick={handleDesktopFilterToggle} 
+                  className={cn(
+                    "flex-shrink-0 text-sm md:text-base h-9 md:h-10",
+                    isPrimaryStyle && "bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 hover:bg-primary-foreground/30"
+                  )}
+                >
                   <Filter className="mr-2 h-4 w-4" />
                   Filters
                 </Button>
                 {/* Sort Dropdown */}
                 <Select value={searchParams.get('sort') || "newest"} onValueChange={handleSortChange}>
-                  <SelectTrigger className="w-[180px] h-9 md:h-10 text-sm">
-                    <ArrowUpNarrowWide className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <SelectTrigger 
+                    className={cn(
+                      "w-[180px] h-9 md:h-10 text-sm",
+                      isPrimaryStyle && "bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 hover:bg-primary-foreground/30 data-[state=open]:bg-primary-foreground/30"
+                    )}
+                  >
+                    <ArrowUpNarrowWide className={cn("mr-2 h-4 w-4", isPrimaryStyle ? "text-primary-foreground" : "text-muted-foreground")} />
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
@@ -163,14 +199,16 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
         <nav className="flex items-center space-x-2 md:space-x-4 flex-shrink-0">
           {/* Desktop Search Input (moved here) */}
           <div className="relative hidden lg:flex items-center">
-            <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
+            <Search className={cn("absolute left-3 h-4 w-4", isPrimaryStyle ? "text-primary-foreground/70" : "text-muted-foreground")} />
             <Input
               type="search"
               name="searchQuery"
               placeholder="Search products..."
               className={cn(
                 "pl-9 w-48 lg:w-64 text-sm",
-                blurEnabled ? "bg-input/50" : "bg-input"
+                isPrimaryStyle 
+                  ? "bg-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/70 border-primary-foreground/30 focus-visible:ring-primary-foreground" 
+                  : (blurEnabled ? "bg-input/50" : "bg-input")
               )}
               value={localSearchTerm}
               onChange={handleSearchChange}
@@ -181,7 +219,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
           {isMobile && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className={isPrimaryStyle ? "text-primary-foreground hover:bg-primary-foreground/10" : ""}>
                   <Menu className="h-5 w-5" />
                   <span className="sr-only">Open navigation menu</span>
                 </Button>
@@ -212,7 +250,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
 
           {/* Mobile Search Toggle Button */}
           {isMobile && (
-            <Button variant="ghost" size="icon" onClick={() => setIsMobileSearchInputVisible(prev => !prev)}>
+            <Button variant="ghost" size="icon" onClick={() => setIsMobileSearchInputVisible(prev => !prev)} className={isPrimaryStyle ? "text-primary-foreground hover:bg-primary-foreground/10" : ""}>
               {isMobileSearchInputVisible ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
               <span className="sr-only">{isMobileSearchInputVisible ? "Close Search" : "Open Search"}</span>
             </Button>
@@ -220,7 +258,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
           
           {/* Mobile Filter Toggle Button (only on products page) */}
           {isMobile && isOnProductsPage && onToggleFilterSidebar && (
-            <Button variant="ghost" size="icon" onClick={onToggleFilterSidebar}>
+            <Button variant="ghost" size="icon" onClick={onToggleFilterSidebar} className={isPrimaryStyle ? "text-primary-foreground hover:bg-primary-foreground/10" : ""}>
               <Filter className="h-5 w-5" />
               <span className="sr-only">Open Filters</span>
             </Button>
@@ -231,7 +269,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
             variant="ghost"
             size="icon"
             onClick={onOpenCart}
-            className="relative"
+            className={cn("relative", isPrimaryStyle && "text-primary-foreground hover:bg-primary-foreground/10")}
           >
             <motion.span
               key={totalItems}
@@ -242,7 +280,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
             >
               <ShoppingCart className="h-5 w-5" /> {/* Changed to ShoppingCart */}
               {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary-foreground text-xs text-primary">
                   {totalItems}
                 </span>
               )}
@@ -259,24 +297,28 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
             transition={{ duration: 0.2 }}
             className={cn(
               "overflow-hidden border-t",
-              blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
+              isPrimaryStyle 
+                ? cn(blurEnabled ? "bg-primary/80 backdrop-blur-lg" : "bg-primary", "border-primary-foreground/20")
+                : cn(blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background")
             )}
           >
             <form onSubmit={handleMobileSearchSubmit} className="container py-3 flex items-center gap-2">
-              <Search className="h-5 w-5 text-muted-foreground" />
+              <Search className={cn("h-5 w-5", isPrimaryStyle ? "text-primary-foreground/70" : "text-muted-foreground")} />
               <Input
                 type="search"
                 name="searchQuery"
                 placeholder="Search products..."
                 className={cn(
                   "flex-1 text-sm",
-                  blurEnabled ? "bg-input/50" : "bg-input"
+                  isPrimaryStyle 
+                    ? "bg-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/70 border-primary-foreground/30 focus-visible:ring-primary-foreground" 
+                    : (blurEnabled ? "bg-input/50" : "bg-input")
                 )}
                 autoFocus
                 value={localSearchTerm}
                 onChange={(e) => setLocalSearchTerm(e.target.value)}
               />
-              <Button type="submit" className="text-sm">Search</Button>
+              <Button type="submit" className={isPrimaryStyle ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90" : ""}>Search</Button>
             </form>
           </motion.div>
         )}
