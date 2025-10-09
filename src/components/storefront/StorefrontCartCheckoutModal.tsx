@@ -21,7 +21,7 @@ interface StorefrontCartCheckoutModalProps {
 }
 
 export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartCheckoutModalProps) => {
-  const { cartItems, savedItems, totalItems, subtotal, shipping, total, updateQuantity, removeFromCart, clearCart, saveForLater, moveToCart, removeSavedItem } = useCart();
+  const { cartItems, savedItems, totalItems, subtotal, shipping, total, totalSaved, updateQuantity, removeFromCart, clearCart, saveForLater, moveToCart, removeSavedItem } = useCart();
   const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const { toast } = useToast();
   const [isCheckoutMode, setIsCheckoutMode] = useState(false);
@@ -139,7 +139,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                 transition={{ duration: 0.2 }}
                               >
                                 <Card className={cn(
-                                  "flex items-center p-3 md:p-4 gap-3 md:gap-4 shadow-md",
+                                  "flex items-start p-3 md:p-4 gap-3 md:gap-4 shadow-md",
                                   blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card"
                                 )}>
                                   <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
@@ -147,25 +147,25 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                     </div>
                                   </Link>
-                                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 items-center">
-                                    {/* Product Name & Options */}
-                                    <div className="flex flex-col justify-center">
-                                      <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
-                                        <h3 className="font-semibold text-base md:text-lg hover:underline leading-tight">{item.name}</h3>
-                                      </Link>
-                                      {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                                        <p className="text-xs text-muted-foreground mt-0.5">
-                                          {Object.entries(item.selectedOptions).map(([key, value]) => (
-                                            <span key={key} className="capitalize">
-                                              {key}: {Array.isArray(value) ? value.join(', ') : value}
-                                            </span>
-                                          )).join(' | ')}
-                                        </p>
-                                      )}
-                                    </div>
+                                  <div className="flex-1 flex flex-col gap-1 md:gap-2">
+                                    {/* Row 1: Product Name */}
+                                    <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
+                                      <h3 className="font-semibold text-base md:text-lg hover:underline leading-tight">{item.name}</h3>
+                                    </Link>
 
-                                    {/* Quantity, Price & Actions */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-4">
+                                    {/* Row 2: Chosen Options (if any) */}
+                                    {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                                      <p className="text-xs text-muted-foreground mt-0.5">
+                                        {Object.entries(item.selectedOptions).map(([key, value]) => (
+                                          <span key={key} className="capitalize">
+                                            {key}: {Array.isArray(value) ? value.join(', ') : value}
+                                          </span>
+                                        )).join(' | ')}
+                                      </p>
+                                    )}
+
+                                    {/* Row 3: Quantity, Price & Actions */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 mt-2">
                                       <div className="flex items-center border rounded-md h-9 flex-shrink-0">
                                         <motion.button
                                           type="button"
@@ -173,7 +173,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                           size="icon"
                                           onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                                           disabled={item.quantity <= 1}
-                                          className="h-full w-8 rounded-r-none"
+                                          className="h-full w-8 rounded-r-none flex items-center justify-center"
                                           whileHover={{ scale: 1.1 }}
                                           whileTap={{ scale: 0.9 }}
                                         >
@@ -191,7 +191,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                           variant="ghost"
                                           size="icon"
                                           onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                                          className="h-full w-8 rounded-l-none"
+                                          className="h-full w-8 rounded-l-none flex items-center justify-center"
                                           whileHover={{ scale: 1.1 }}
                                           whileTap={{ scale: 0.9 }}
                                         >
@@ -226,7 +226,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                           variant="ghost"
                                           size="icon"
                                           onClick={() => removeFromCart(item.productId)}
-                                          className="text-destructive hover:text-destructive h-9 w-9"
+                                          className="text-destructive hover:text-destructive h-9 w-9 rounded-full"
                                           whileHover={{ scale: 1.1 }}
                                           whileTap={{ scale: 0.9 }}
                                         >
@@ -257,7 +257,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                 transition={{ duration: 0.2 }}
                               >
                                 <Card className={cn(
-                                  "flex items-center p-3 md:p-4 gap-3 md:gap-4 shadow-md",
+                                  "flex items-start p-3 md:p-4 gap-3 md:gap-4 shadow-md",
                                   blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card"
                                 )}>
                                   <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
@@ -265,25 +265,25 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                     </div>
                                   </Link>
-                                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 items-center">
-                                    {/* Product Name & Options */}
-                                    <div className="flex flex-col justify-center">
-                                      <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
-                                        <h3 className="font-semibold text-base md:text-lg hover:underline leading-tight">{item.name}</h3>
-                                      </Link>
-                                      {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                                        <p className="text-xs text-muted-foreground mt-0.5">
-                                          {Object.entries(item.selectedOptions).map(([key, value]) => (
-                                            <span key={key} className="capitalize">
-                                              {key}: {Array.isArray(value) ? value.join(', ') : value}
-                                            </span>
-                                          )).join(' | ')}
-                                        </p>
-                                      )}
-                                    </div>
+                                  <div className="flex-1 flex flex-col gap-1 md:gap-2">
+                                    {/* Row 1: Product Name */}
+                                    <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
+                                      <h3 className="font-semibold text-base md:text-lg hover:underline leading-tight">{item.name}</h3>
+                                    </Link>
 
-                                    {/* Price & Actions */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-4">
+                                    {/* Row 2: Chosen Options (if any) */}
+                                    {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                                      <p className="text-xs text-muted-foreground mt-0.5">
+                                        {Object.entries(item.selectedOptions).map(([key, value]) => (
+                                          <span key={key} className="capitalize">
+                                            {key}: {Array.isArray(value) ? value.join(', ') : value}
+                                          </span>
+                                        )).join(' | ')}
+                                      </p>
+                                    )}
+
+                                    {/* Row 3: Price & Actions */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 md:gap-4 mt-2">
                                       <div className="flex flex-col items-end flex-shrink-0">
                                         {item.isDiscounted && (
                                           <p className="text-xs text-muted-foreground line-through">
@@ -311,7 +311,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                           variant="ghost"
                                           size="icon"
                                           onClick={() => removeSavedItem(item.productId)}
-                                          className="text-destructive hover:text-destructive h-9 w-9"
+                                          className="text-destructive hover:text-destructive h-9 w-9 rounded-full"
                                           whileHover={{ scale: 1.1 }}
                                           whileTap={{ scale: 0.9 }}
                                         >
@@ -341,6 +341,12 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                         <span>Shipping:</span>
                         <span className="font-semibold">{formatCurrency(shipping, shopDetails?.currency)}</span>
                       </div>
+                      {totalSaved > 0 && (
+                        <div className="flex justify-between text-sm md:text-base text-emerald-600">
+                          <span>You Saved:</span>
+                          <span className="font-semibold">{formatCurrency(totalSaved, shopDetails?.currency)}</span>
+                        </div>
+                      )}
                       <Separator />
                       <div className="flex justify-between text-lg md:text-xl font-bold pt-2">
                         <span>Total:</span>

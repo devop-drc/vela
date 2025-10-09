@@ -34,6 +34,7 @@ interface CartContextType {
   subtotal: number;
   shipping: number; // Placeholder for now
   total: number;
+  totalSaved: number; // New: Total amount saved due to discounts
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -41,7 +42,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const CART_STORAGE_KEY = 'storefront_cart';
 const SAVED_STORAGE_KEY = 'storefront_saved_for_later';
 
-export const CartProvider = ({ children }: { children: ReactNode }) => {
+export const CartProvider = ({ children }: { ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     if (typeof window !== 'undefined') {
       const savedCart = localStorage.getItem(CART_STORAGE_KEY);
@@ -151,6 +152,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const shipping = useMemo(() => (cartItems.length > 0 ? 5.00 : 0), [cartItems]); // Mock shipping
   const total = useMemo(() => subtotal + shipping, [subtotal, shipping]);
 
+  const totalSaved = useMemo(() => {
+    const savedInCart = cartItems.reduce((sum, item) => sum + (item.isDiscounted ? (item.originalPrice - item.price) * item.quantity : 0), 0);
+    const savedInSavedItems = savedItems.reduce((sum, item) => sum + (item.isDiscounted ? (item.originalPrice - item.price) : 0), 0);
+    return savedInCart + savedInSavedItems;
+  }, [cartItems, savedItems]);
+
   const contextValue: CartContextType = {
     cartItems,
     savedItems,
@@ -165,6 +172,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     subtotal,
     shipping,
     total,
+    totalSaved,
   };
 
   return (
