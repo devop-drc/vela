@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight, ArrowRight, User, Mail, MapPin, City, Globe, StickyNote, Calendar, Lock, DollarSign, XCircle } from "lucide-react";
+import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight, ArrowRight, User, Mail, MapPin, Globe, StickyNote, Calendar, Lock, DollarSign, XCircle } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
@@ -191,7 +191,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                           variant="ghost"
                                           size="icon"
                                           onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                                          disabled={item.quantity >= 99} {/* Cap quantity at 99 for UI */}
+                                          disabled={item.quantity >= 99}
                                           className="h-full w-8 rounded-l-none flex items-center justify-center"
                                           whileHover={{ scale: 1.1 }}
                                           whileTap={{ scale: 0.9 }}
