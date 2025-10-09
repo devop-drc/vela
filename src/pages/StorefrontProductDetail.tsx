@@ -6,7 +6,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Loader2, ShoppingCart, Minus, Plus, Home, ArrowLeft, Star, Truck, Sparkles, User, Mail, MapPin, Globe, StickyNote, Calendar, Lock, CreditCard, DollarSign } from "lucide-react";
+import { Loader2, ShoppingCart, Minus, Plus, Home, ArrowLeft, Star, Truck, Sparkles, User, Mail, MapPin, City, Globe, StickyNote, Calendar, Lock, CreditCard, DollarSign } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -155,16 +155,23 @@ const StorefrontProductDetail = () => {
       toast.error("This product is currently out of stock.");
       return;
     }
-    // In a real app, you'd pass selected variants here
+
+    const selectedOptions: { [key: string]: string | string[] } = {};
+    if (selectedColor) selectedOptions.color = selectedColor;
+    if (selectedSize) selectedOptions.size = selectedSize;
+    // Add other selected options here if they were part of the UI
+
     addToCart({
       productId: product.id,
-      name: product.name + (selectedColor ? ` (${selectedColor})` : '') + (selectedSize ? ` (${selectedSize})` : ''),
-      // Pass the converted price and shop's currency to cart
+      name: product.name,
       price: hasDiscount ? discountedPrice : originalDisplayPrice, // Use discounted price if applicable
+      originalPrice: originalDisplayPrice, // Pass original price
+      isDiscounted: hasDiscount, // Pass discount status
       currency: shopDetails.currency || 'USD',
       media_url: product.media_url,
       media_type: product.media_type,
       slug: shopDetails.slug,
+      selectedOptions: Object.keys(selectedOptions).length > 0 ? selectedOptions : undefined, // Pass selected options
     }, quantity);
   };
 
@@ -353,7 +360,7 @@ const StorefrontProductDetail = () => {
                   variant="ghost"
                   size="icon"
                   onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
-                  disabled={quantity <= 1 || isOutOfStock} // Disable if out of stock
+                  disabled={quantity <= 1}
                   className="h-8 w-8 md:h-9 md:w-9"
                 >
                   <Minus className="h-4 w-4" />
@@ -365,14 +372,13 @@ const StorefrontProductDetail = () => {
                   className="w-14 md:w-16 text-center border-y-0 border-x rounded-none focus-visible:ring-0 text-sm md:text-base"
                   min={1}
                   max={product.inventory || 1}
-                  disabled={isOutOfStock} // Disable if out of stock
                 />
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setQuantity(prev => Math.min(product.inventory || 1, prev + 1))}
-                  disabled={quantity >= (product.inventory || 1) || isOutOfStock} // Disable if out of stock
-                  className="h-8 w-8 md:h-9 md:w-9"
+                  disabled={quantity >= (product.inventory || 1)}
+                  className="h-8 w-8"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>

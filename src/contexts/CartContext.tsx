@@ -5,12 +5,15 @@ import { toast } from 'sonner';
 export interface CartItem {
   productId: string;
   name: string;
-  price: number; // This price should already be in the shop's display currency
+  price: number; // This is the *effective* price (could be discounted)
+  originalPrice: number; // New: The original price before discount
+  isDiscounted: boolean; // New: Flag if a discount was applied
   currency: string; // This currency should be the shop's display currency
   quantity: number;
   media_url: string;
   media_type: string | null;
   slug: string; // Add product slug for linking
+  selectedOptions?: { [key: string]: string | string[] }; // New: Store selected options
 }
 
 export interface SavedItem extends Omit<CartItem, 'quantity'> {
@@ -20,7 +23,7 @@ export interface SavedItem extends Omit<CartItem, 'quantity'> {
 interface CartContextType {
   cartItems: CartItem[];
   savedItems: SavedItem[]; // New state for saved items
-  addToCart: (item: Omit<CartItem, 'quantity'>, quantity: number) => void;
+  addToCart: (item: Omit<CartItem, 'quantity' | 'originalPrice' | 'isDiscounted' | 'selectedOptions'> & { originalPrice: number; isDiscounted: boolean; selectedOptions?: { [key: string]: string | string[] } }, quantity: number) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -69,7 +72,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [savedItems]);
 
-  const addToCart = useCallback((item: Omit<CartItem, 'quantity'>, quantity: number) => {
+  const addToCart = useCallback((item: Omit<CartItem, 'quantity' | 'originalPrice' | 'isDiscounted' | 'selectedOptions'> & { originalPrice: number; isDiscounted: boolean; selectedOptions?: { [key: string]: string | string[] } }, quantity: number) => {
     setCartItems(prevItems => {
       const existingItemIndex = prevItems.findIndex(cartItem => cartItem.productId === item.productId);
 
@@ -105,10 +108,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const saveForLater = useCallback((item: Omit<CartItem, 'quantity'>) => {
     setSavedItems(prevItems => {
       if (prevItems.some(savedItem => savedItem.productId === item.productId)) {
-        toast.info(`"${item.name}" is already saved for later.`);
+        toast.info(`"${item.name}" is already saved.`);
         return prevItems;
       }
-      toast.success(`"${item.name}" saved for later!`);
+      toast.success(`"${item.name}" saved!`);
       return [...prevItems, { ...item, savedAt: new Date().toISOString() }];
     });
     removeFromCart(item.productId); // Remove from cart when saving for later
@@ -118,7 +121,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setSavedItems(prevSavedItems => {
       const itemToMove = prevSavedItems.find(item => item.productId === productId);
       if (itemToMove) {
-        addToCart(itemToMove, 1); // Add to cart with quantity 1
+        // Re-add to cart, preserving originalPrice and isDiscounted
+        addToCart({
+          productId: itemToMove.productId,
+          name: itemToMove.name,
+          price: itemToMove.price,
+          originalPrice: itemToMove.originalPrice,
+          isDiscounted: itemToMove.isDiscounted,
+          currency: itemToMove.currency,
+          media_url: itemToMove.media_url,
+          media_type: itemToMove.media_type,
+          slug: itemToMove.slug,
+          selectedOptions: itemToMove.selectedOptions,
+        }, 1); // Add to cart with quantity 1
         toast.success(`"${itemToMove.name}" moved to cart!`);
         return prevSavedItems.filter(item => item.productId !== productId); // Remove from saved
       }

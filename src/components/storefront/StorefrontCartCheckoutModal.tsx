@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight, ArrowRight, User, Mail, MapPin, City, Globe, StickyNote, Calendar, Lock, DollarSign } from "lucide-react";
+import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight, ArrowRight, User, Mail, MapPin, City, Globe, StickyNote, Calendar, Lock, DollarSign, XCircle } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
@@ -20,7 +20,7 @@ interface StorefrontCartCheckoutModalProps {
   onClose: () => void;
 }
 
-export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartCheckoutModalModalProps) => {
+export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartCheckoutModalProps) => {
   const { cartItems, savedItems, totalItems, subtotal, shipping, total, updateQuantity, removeFromCart, clearCart, saveForLater, moveToCart, removeSavedItem } = useCart();
   const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const { toast } = useToast();
@@ -139,7 +139,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                 transition={{ duration: 0.2 }}
                               >
                                 <Card className={cn(
-                                  "flex items-start p-3 md:p-4 gap-3 md:gap-4 shadow-md",
+                                  "flex items-center p-3 md:p-4 gap-3 md:gap-4 shadow-md",
                                   blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card"
                                 )}>
                                   <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
@@ -147,27 +147,33 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                     </div>
                                   </Link>
-                                  <div className="flex-1 flex flex-col gap-1 md:gap-2">
-                                    {/* Top Row: Product Name & Individual Price */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 items-center">
+                                    {/* Product Name & Options */}
+                                    <div className="flex flex-col justify-center">
                                       <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
-                                        <h3 className="font-semibold text-base md:text-lg hover:underline">{item.name}</h3>
+                                        <h3 className="font-semibold text-base md:text-lg hover:underline leading-tight">{item.name}</h3>
                                       </Link>
-                                      <p className="text-muted-foreground text-sm sm:text-base flex-shrink-0">
-                                        {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
-                                      </p>
+                                      {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                          {Object.entries(item.selectedOptions).map(([key, value]) => (
+                                            <span key={key} className="capitalize">
+                                              {key}: {Array.isArray(value) ? value.join(', ') : value}
+                                            </span>
+                                          )).join(' | ')}
+                                        </p>
+                                      )}
                                     </div>
 
-                                    {/* Bottom Row: Quantity, Total Price, Actions */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 mt-2">
-                                      <div className="flex items-center border rounded-md flex-shrink-0">
+                                    {/* Quantity, Price & Actions */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-4">
+                                      <div className="flex items-center border rounded-md h-9 flex-shrink-0">
                                         <motion.button
                                           type="button"
                                           variant="ghost"
                                           size="icon"
                                           onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                                           disabled={item.quantity <= 1}
-                                          className="h-8 w-8"
+                                          className="h-full w-8 rounded-r-none"
                                           whileHover={{ scale: 1.1 }}
                                           whileTap={{ scale: 0.9 }}
                                         >
@@ -177,7 +183,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                           type="number"
                                           value={item.quantity}
                                           onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
-                                          className="w-14 md:w-16 text-center border-y-0 border-x rounded-none focus-visible:ring-0 text-sm"
+                                          className="w-14 text-center border-y-0 border-x focus-visible:ring-0 text-sm h-full rounded-none"
                                           min={1}
                                         />
                                         <motion.button
@@ -185,40 +191,47 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                           variant="ghost"
                                           size="icon"
                                           onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                                          className="h-8 w-8"
+                                          className="h-full w-8 rounded-l-none"
                                           whileHover={{ scale: 1.1 }}
                                           whileTap={{ scale: 0.9 }}
                                         >
                                           <Plus className="h-4 w-4" />
                                         </motion.button>
                                       </div>
-                                      <p className="font-semibold text-base md:text-lg flex-shrink-0">
-                                        {formatCurrency(item.price * item.quantity, shopDetails?.currency)}
-                                      </p>
+                                      
+                                      <div className="flex flex-col items-end flex-shrink-0">
+                                        {item.isDiscounted && (
+                                          <p className="text-xs text-muted-foreground line-through">
+                                            {formatCurrency(convertCurrency(item.originalPrice, item.currency), shopDetails?.currency)}
+                                          </p>
+                                        )}
+                                        <p className="font-semibold text-base md:text-lg">
+                                          {formatCurrency(convertCurrency(item.price * item.quantity, item.currency), shopDetails?.currency)}
+                                        </p>
+                                      </div>
+
                                       <div className="flex items-center gap-2 flex-shrink-0">
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => saveForLater(item)}
+                                          className="text-sm h-9"
+                                        >
+                                            <Bookmark className="mr-2 h-4 w-4" />
+                                            Save
+                                        </Button>
                                         <motion.button
                                           type="button"
                                           variant="ghost"
                                           size="icon"
                                           onClick={() => removeFromCart(item.productId)}
-                                          className="text-destructive hover:text-destructive h-8 w-8"
+                                          className="text-destructive hover:text-destructive h-9 w-9"
                                           whileHover={{ scale: 1.1 }}
                                           whileTap={{ scale: 0.9 }}
                                         >
-                                          <Trash2 className="h-4 w-4" />
+                                          <XCircle className="h-5 w-5" />
                                           <span className="sr-only">Remove {item.name}</span>
-                                        </motion.button>
-                                        <motion.button
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => saveForLater(item)}
-                                          className="text-sm"
-                                          whileHover={{ scale: 1.05 }}
-                                          whileTap={{ scale: 0.95 }}
-                                        >
-                                            <Bookmark className="mr-2 h-4 w-4" />
-                                            Save for Later
                                         </motion.button>
                                       </div>
                                     </div>
@@ -232,7 +245,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
 
                       {savedItems.length > 0 && (
                         <div className="space-y-4 mt-6 md:mt-8">
-                          <h2 className="text-lg md:text-xl font-bold font-heading">Saved for Later ({savedItems.length})</h2>
+                          <h2 className="text-lg md:text-xl font-bold font-heading">Saved ({savedItems.length})</h2>
                           <AnimatePresence>
                             {savedItems.map(item => (
                               <motion.div
@@ -244,7 +257,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                 transition={{ duration: 0.2 }}
                               >
                                 <Card className={cn(
-                                  "flex items-start p-3 md:p-4 gap-3 md:gap-4 shadow-md",
+                                  "flex items-center p-3 md:p-4 gap-3 md:gap-4 shadow-md",
                                   blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card"
                                 )}>
                                   <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
@@ -252,43 +265,60 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                     </div>
                                   </Link>
-                                  <div className="flex-1 flex flex-col gap-1 md:gap-2">
-                                    {/* Top Row: Product Name & Individual Price */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 items-center">
+                                    {/* Product Name & Options */}
+                                    <div className="flex flex-col justify-center">
                                       <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
-                                        <h3 className="font-semibold text-base md:text-lg hover:underline">{item.name}</h3>
+                                        <h3 className="font-semibold text-base md:text-lg hover:underline leading-tight">{item.name}</h3>
                                       </Link>
-                                      <p className="text-muted-foreground text-sm sm:text-base flex-shrink-0">
-                                        {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
-                                      </p>
+                                      {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                          {Object.entries(item.selectedOptions).map(([key, value]) => (
+                                            <span key={key} className="capitalize">
+                                              {key}: {Array.isArray(value) ? value.join(', ') : value}
+                                            </span>
+                                          )).join(' | ')}
+                                        </p>
+                                      )}
                                     </div>
 
-                                    {/* Bottom Row: Actions */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 md:gap-4 mt-2">
-                                      <motion.button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => moveToCart(item.productId)}
-                                        className="text-sm"
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                      >
-                                          <MoveRight className="mr-2 h-4 w-4" />
-                                          Move to Cart
-                                      </motion.button>
-                                      <motion.button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => removeSavedItem(item.productId)}
-                                        className="text-destructive hover:text-destructive h-8 w-8"
-                                        whileHover={{ scale: 1.1 }}
-                                        whileTap={{ scale: 0.9 }}
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                        <span className="sr-only">Remove {item.name}</span>
-                                      </motion.button>
+                                    {/* Price & Actions */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-4">
+                                      <div className="flex flex-col items-end flex-shrink-0">
+                                        {item.isDiscounted && (
+                                          <p className="text-xs text-muted-foreground line-through">
+                                            {formatCurrency(convertCurrency(item.originalPrice, item.currency), shopDetails?.currency)}
+                                          </p>
+                                        )}
+                                        <p className="font-semibold text-base md:text-lg">
+                                          {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
+                                        </p>
+                                      </div>
+
+                                      <div className="flex items-center gap-2 flex-shrink-0">
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => moveToCart(item.productId)}
+                                          className="text-sm h-9"
+                                        >
+                                            <MoveRight className="mr-2 h-4 w-4" />
+                                            Move to Cart
+                                        </Button>
+                                        <motion.button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => removeSavedItem(item.productId)}
+                                          className="text-destructive hover:text-destructive h-9 w-9"
+                                          whileHover={{ scale: 1.1 }}
+                                          whileTap={{ scale: 0.9 }}
+                                        >
+                                          <XCircle className="h-5 w-5" />
+                                          <span className="sr-only">Remove {item.name}</span>
+                                        </motion.button>
+                                      </div>
                                     </div>
                                   </div>
                                 </Card>
