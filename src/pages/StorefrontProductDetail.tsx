@@ -218,15 +218,15 @@ const StorefrontProductDetail = () => {
               <span>{product.category || 'Uncategorized'}</span>
               {product.details?.type && <span> &middot; {product.details.type}</span>}
             </p>
-            <h1 className="text-3xl md:text-5xl font-bold font-heading mb-2 md:mb-3 leading-tight flex items-center gap-2">
+            <h1 className="text-3xl md:text-5xl font-bold font-heading mb-2 md:mb-3 leading-tight flex flex-wrap items-center gap-2"> {/* Added flex-wrap */}
               {product.name}
               {isOutOfStock && (
-                <Badge variant="secondary" className="text-sm md:text-base bg-amber-500 text-white">
+                <Badge variant="secondary" className="text-sm md:text-base bg-amber-500 text-white flex-shrink-0"> {/* Added flex-shrink-0 */}
                   Coming Soon
                 </Badge>
               )}
               {activePromotions.length > 0 && !isOutOfStock && (
-                <div className="flex gap-1">
+                <div className="flex gap-1 flex-shrink-0"> {/* Added flex-shrink-0 */}
                   {activePromotions.map(promo => (
                     <Badge key={promo.id} className="bg-emerald-500 text-white text-sm md:text-base">
                       {getPromotionBadge(promo)}
@@ -241,7 +241,7 @@ const StorefrontProductDetail = () => {
                     <p className="text-base text-muted-foreground line-through">
                       {formatCurrency(originalDisplayPrice, shopDetails?.currency)}
                     </p>
-                    <p className="text-2xl md:text-3xl font-bold text-primary">
+                    <p className="text-2xl md:text-3xl font-bold text-emerald-600"> {/* Made discounted price green */}
                       {formatCurrency(discountedPrice, shopDetails?.currency)}
                       {product.pricing_type === 'subscription' && (
                           <span className="text-base md:text-lg font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>

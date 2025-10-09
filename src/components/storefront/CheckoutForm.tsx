@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck, Lock, DollarSign, Mail, Globe, StickyNote, Calendar, Truck } from "lucide-react";
+import { CheckCircle, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck, Lock, DollarSign, Mail, Globe, StickyNote, Calendar, Truck, City } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";

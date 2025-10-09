@@ -147,7 +147,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                     </div>
                                   </Link>
-                                  <div className="flex-1 flex flex-col gap-1 md:gap-2">
+                                  <div className="flex-1 flex flex-col">
                                     {/* Row 1: Product Name */}
                                     <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
                                       <h3 className="font-semibold text-base md:text-lg hover:underline leading-tight">{item.name}</h3>
@@ -155,7 +155,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
 
                                     {/* Row 2: Chosen Options (if any) */}
                                     {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                                      <p className="text-xs text-muted-foreground mt-0.5">
+                                      <p className="text-xs text-muted-foreground mt-1">
                                         {Object.entries(item.selectedOptions).map(([key, value]) => (
                                           <span key={key} className="capitalize">
                                             {key}: {Array.isArray(value) ? value.join(', ') : value}
@@ -191,6 +191,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                           variant="ghost"
                                           size="icon"
                                           onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                                          disabled={item.quantity >= 99} {/* Cap quantity at 99 for UI */}
                                           className="h-full w-8 rounded-l-none flex items-center justify-center"
                                           whileHover={{ scale: 1.1 }}
                                           whileTap={{ scale: 0.9 }}
@@ -205,7 +206,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                             {formatCurrency(convertCurrency(item.originalPrice, item.currency), shopDetails?.currency)}
                                           </p>
                                         )}
-                                        <p className="font-semibold text-base md:text-lg">
+                                        <p className={cn("font-semibold text-base md:text-lg", item.isDiscounted && "text-emerald-600")}>
                                           {formatCurrency(convertCurrency(item.price * item.quantity, item.currency), shopDetails?.currency)}
                                         </p>
                                       </div>
@@ -216,17 +217,17 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                           variant="outline"
                                           size="sm"
                                           onClick={() => saveForLater(item)}
-                                          className="text-sm h-9"
+                                          className="text-sm h-9 px-3"
                                         >
                                             <Bookmark className="mr-2 h-4 w-4" />
                                             Save
                                         </Button>
                                         <motion.button
                                           type="button"
-                                          variant="ghost"
+                                          variant="destructive"
                                           size="icon"
                                           onClick={() => removeFromCart(item.productId)}
-                                          className="text-destructive hover:text-destructive h-9 w-9 rounded-full"
+                                          className="h-9 w-9 rounded-full"
                                           whileHover={{ scale: 1.1 }}
                                           whileTap={{ scale: 0.9 }}
                                         >
@@ -265,7 +266,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                     </div>
                                   </Link>
-                                  <div className="flex-1 flex flex-col gap-1 md:gap-2">
+                                  <div className="flex-1 flex flex-col">
                                     {/* Row 1: Product Name */}
                                     <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
                                       <h3 className="font-semibold text-base md:text-lg hover:underline leading-tight">{item.name}</h3>
@@ -273,7 +274,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
 
                                     {/* Row 2: Chosen Options (if any) */}
                                     {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                                      <p className="text-xs text-muted-foreground mt-0.5">
+                                      <p className="text-xs text-muted-foreground mt-1">
                                         {Object.entries(item.selectedOptions).map(([key, value]) => (
                                           <span key={key} className="capitalize">
                                             {key}: {Array.isArray(value) ? value.join(', ') : value}
@@ -290,7 +291,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                             {formatCurrency(convertCurrency(item.originalPrice, item.currency), shopDetails?.currency)}
                                           </p>
                                         )}
-                                        <p className="font-semibold text-base md:text-lg">
+                                        <p className={cn("font-semibold text-base md:text-lg", item.isDiscounted && "text-emerald-600")}>
                                           {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
                                         </p>
                                       </div>
@@ -301,17 +302,17 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                           variant="outline"
                                           size="sm"
                                           onClick={() => moveToCart(item.productId)}
-                                          className="text-sm h-9"
+                                          className="text-sm h-9 px-3"
                                         >
                                             <MoveRight className="mr-2 h-4 w-4" />
                                             Move to Cart
                                         </Button>
                                         <motion.button
                                           type="button"
-                                          variant="ghost"
+                                          variant="destructive"
                                           size="icon"
                                           onClick={() => removeSavedItem(item.productId)}
-                                          className="text-destructive hover:text-destructive h-9 w-9 rounded-full"
+                                          className="h-9 w-9 rounded-full"
                                           whileHover={{ scale: 1.1 }}
                                           whileTap={{ scale: 0.9 }}
                                         >
