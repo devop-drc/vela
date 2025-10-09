@@ -12,6 +12,33 @@ const getSupabaseAdmin = () => createClient(
   { auth: { persistSession: false } }
 );
 
+// Helper function to check if a recurring event is active today
+const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatInterval: string | null): boolean => {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0); // Normalize 'now' to start of day
+
+  if (startDate && now < startDate) return false;
+  if (endDate && now > endDate) return false;
+
+  if (!repeatInterval) return true; // No repeat, just check start/end dates
+
+  const start = startDate ? new Date(startDate) : new Date(0); // Use epoch for null start
+  start.setHours(0, 0, 0, 0);
+
+  switch (repeatInterval) {
+    case 'daily':
+      return true;
+    case 'weekly':
+      return now.getDay() === start.getDay();
+    case 'monthly':
+      return now.getDate() === start.getDate();
+    case 'yearly':
+      return now.getMonth() === start.getMonth() && now.getDate() === start.getDate();
+    default:
+      return false;
+  }
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -108,16 +135,23 @@ serve(async (req) => {
       console.error("Error fetching promotions:", promotionsError);
     }
 
-    // Fetch active marquee elements for the business
-    const { data: marqueeElements, error: marqueeElementsError } = await supabaseAdmin
+    // Fetch active marquee elements for the business, applying new date and repeat logic
+    const { data: rawMarqueeElements, error: marqueeElementsError } = await supabaseAdmin
       .from('marquee_elements')
       .select('*')
       .eq('user_id', userId)
       .eq('is_active', true)
       .order('display_order', { ascending: true });
 
+    let activeMarqueeElements: any[] = [];
     if (marqueeElementsError) {
       console.error("Error fetching marquee elements:", marqueeElementsError);
+    } else if (rawMarqueeElements) {
+      activeMarqueeElements = rawMarqueeElements.filter(element => {
+        const startDate = element.start_date ? new Date(element.start_date) : null;
+        const endDate = element.end_date ? new Date(element.end_date) : null;
+        return isRecurringActive(startDate, endDate, element.repeat_interval);
+      });
     }
 
     return new Response(JSON.stringify({
@@ -145,7 +179,7 @@ serve(async (req) => {
       bestSellers: bestSellers || [],
       recommendedProducts: recommendedProducts || [],
       promotions: promotions || [], // Include promotions
-      marqueeElements: marqueeElements || [], // Include marquee elements
+      marqueeElements: activeMarqueeElements || [], // Include filtered marquee elements
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

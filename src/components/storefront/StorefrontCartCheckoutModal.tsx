@@ -147,13 +147,13 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                     </div>
                                   </Link>
-                                  <div className="flex-1 flex flex-col">
-                                    {/* Row 1: Product Name */}
+                                  <div className="flex-1 flex flex-col justify-between">
+                                    {/* Top Row: Product Name */}
                                     <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
                                       <h3 className="font-semibold text-base md:text-lg hover:underline leading-tight">{item.name}</h3>
                                     </Link>
 
-                                    {/* Row 2: Chosen Options (if any) */}
+                                    {/* Middle Row: Chosen Options (if any) */}
                                     {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
                                       <p className="text-xs text-muted-foreground mt-1">
                                         {Object.entries(item.selectedOptions).map(([key, value]) => (
@@ -164,8 +164,8 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       </p>
                                     )}
 
-                                    {/* Row 3: Quantity, Price & Actions */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 mt-2">
+                                    {/* Bottom Row: Quantity, Price & Actions */}
+                                    <div className="flex items-center justify-between gap-2 mt-2">
                                       <div className="flex items-center border rounded-md h-9 flex-shrink-0">
                                         <motion.button
                                           type="button"
@@ -200,9 +200,9 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                         </motion.button>
                                       </div>
                                       
-                                      <div className="flex flex-col items-end flex-shrink-0">
+                                      <div className="flex items-center gap-2 flex-shrink-0">
                                         {item.isDiscounted && (
-                                          <p className="text-xs text-muted-foreground line-through">
+                                          <p className="text-sm text-muted-foreground line-through">
                                             {formatCurrency(convertCurrency(item.originalPrice, item.currency), shopDetails?.currency)}
                                           </p>
                                         )}
@@ -227,7 +227,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                           variant="destructive"
                                           size="icon"
                                           onClick={() => removeFromCart(item.productId)}
-                                          className="h-9 w-9 rounded-full"
+                                          className="text-destructive hover:text-destructive h-9 w-9 rounded-full"
                                           whileHover={{ scale: 1.1 }}
                                           whileTap={{ scale: 0.9 }}
                                         >
@@ -266,13 +266,13 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                     </div>
                                   </Link>
-                                  <div className="flex-1 flex flex-col">
-                                    {/* Row 1: Product Name */}
+                                  <div className="flex-1 flex flex-col justify-between">
+                                    {/* Top Row: Product Name */}
                                     <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
                                       <h3 className="font-semibold text-base md:text-lg hover:underline leading-tight">{item.name}</h3>
                                     </Link>
 
-                                    {/* Row 2: Chosen Options (if any) */}
+                                    {/* Middle Row: Chosen Options (if any) */}
                                     {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
                                       <p className="text-xs text-muted-foreground mt-1">
                                         {Object.entries(item.selectedOptions).map(([key, value]) => (
@@ -283,11 +283,11 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       </p>
                                     )}
 
-                                    {/* Row 3: Price & Actions */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 md:gap-4 mt-2">
-                                      <div className="flex flex-col items-end flex-shrink-0">
+                                    {/* Bottom Row: Price & Actions */}
+                                    <div className="flex items-center justify-between gap-2 mt-2">
+                                      <div className="flex items-center gap-2 flex-shrink-0">
                                         {item.isDiscounted && (
-                                          <p className="text-xs text-muted-foreground line-through">
+                                          <p className="text-sm text-muted-foreground line-through">
                                             {formatCurrency(convertCurrency(item.originalPrice, item.currency), shopDetails?.currency)}
                                           </p>
                                         )}
@@ -302,17 +302,17 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                           variant="outline"
                                           size="sm"
                                           onClick={() => moveToCart(item.productId)}
-                                          className="text-sm h-9 px-3"
+                                          className="text-sm h-9"
                                         >
                                             <MoveRight className="mr-2 h-4 w-4" />
                                             Move to Cart
                                         </Button>
                                         <motion.button
                                           type="button"
-                                          variant="destructive"
+                                          variant="ghost"
                                           size="icon"
                                           onClick={() => removeSavedItem(item.productId)}
-                                          className="h-9 w-9 rounded-full"
+                                          className="text-destructive hover:text-destructive h-9 w-9 rounded-full"
                                           whileHover={{ scale: 1.1 }}
                                           whileTap={{ scale: 0.9 }}
                                         >

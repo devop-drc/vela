@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CalendarIcon, Loader2, Tag, Percent, DollarSign, MessageSquareText, Gift, Package, XCircle } from "lucide-react";
+import { CalendarIcon, Loader2, Tag, Percent, DollarSign, MessageSquareText, Gift, Package, XCircle, Repeat } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Calendar } from "@/components/ui/calendar";
@@ -22,12 +22,13 @@ import { Badge } from "./ui/badge";
 
 const promotionSchema = z.object({
   name: z.string().min(1, "Promotion name is required"),
-  type: z.enum(['discount', 'offer']), // Removed 'marquee_text'
+  type: z.enum(['discount', 'offer']),
   value: z.any(), // This will be dynamically validated
   start_date: z.date().optional().nullable(),
   end_date: z.date().optional().nullable(),
   is_active: z.boolean().default(true),
   target_products: z.array(z.string()).optional().nullable(),
+  repeat_interval: z.enum(['daily', 'weekly', 'monthly', 'yearly']).optional().nullable(), // New field
 }).superRefine((data, ctx) => {
   if (data.type === 'discount') {
     if (!data.value?.discountType) {
@@ -67,12 +68,13 @@ type PromotionFormData = z.infer<typeof promotionSchema>;
 interface Promotion {
   id: string;
   name: string;
-  type: 'discount' | 'offer'; // Removed 'marquee_text'
+  type: 'discount' | 'offer';
   value: any;
   start_date: string | null;
   end_date: string | null;
   is_active: boolean;
   target_products: string[] | null;
+  repeat_interval: 'daily' | 'weekly' | 'monthly' | 'yearly' | null; // New field
 }
 
 interface PromotionEditorModalProps {
@@ -93,6 +95,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
       is_active: true,
       value: {},
       target_products: [],
+      repeat_interval: null, // Default to no repeat
     }
   });
 
@@ -111,6 +114,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
         end_date: promotion.end_date ? new Date(promotion.end_date) : null,
         is_active: promotion.is_active,
         target_products: promotion.target_products || [],
+        repeat_interval: promotion.repeat_interval,
       });
     } else {
       // For new promotions (including 'rerun' copies), reset to defaults
@@ -122,6 +126,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
         end_date: null,
         is_active: true,
         target_products: [],
+        repeat_interval: null,
       });
     }
   }, [promotion, reset]);
@@ -161,18 +166,72 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
     };
 
     let error;
-    // Determine if it's an update or insert based on whether 'promotion' prop has an ID
-    // and if that ID corresponds to an existing record (for true updates)
+    let promotionId = promotion?.id;
+
     if (promotion && promotion.id) { // If promotion prop has an ID, it's an update
       ({ error } = await supabase.from("promotions").update(payload).eq("id", promotion.id));
     } else { // Otherwise, it's a new insert
-      ({ error } = await supabase.from("promotions").insert(payload));
+      const { data: newPromotion, error: insertError } = await supabase.from("promotions").insert(payload).select('id').single();
+      if (insertError) {
+        error = insertError;
+      } else {
+        promotionId = newPromotion?.id;
+      }
     }
 
     if (error) {
       showError(`Failed to save promotion: ${error.message}`);
     } else {
       showSuccess(`Promotion ${promotion ? 'updated' : 'added'} successfully!`);
+
+      // Automatically create/update a storefront announcement
+      if (promotionId) {
+        let announcementMessage = data.name;
+        if (data.type === 'discount') {
+          if (data.value?.discountType === 'percentage') announcementMessage = `${data.value.discountValue}% OFF - ${data.name}`;
+          if (data.value?.discountType === 'flat') announcementMessage = `${formatCurrency(data.value.discountValue, shopDetails?.currency || 'USD')} OFF - ${data.name}`;
+        } else if (data.type === 'offer' && data.value?.offerType === 'free_shipping') {
+          announcementMessage = `FREE SHIPPING - ${data.name}`;
+          if (data.value?.minOrderValue > 0) {
+            announcementMessage += ` (Min. ${formatCurrency(data.value.minOrderValue, shopDetails?.currency || 'USD')})`;
+          }
+        }
+
+        const announcementPayload = {
+          user_id: user.id,
+          message: announcementMessage,
+          icon_name: data.type === 'discount' ? 'Percent' : 'Gift', // Use appropriate icon
+          is_active: data.is_active,
+          display_order: 0, // Default order, can be adjusted manually later
+          start_date: payload.start_date,
+          end_date: payload.end_date,
+          repeat_interval: payload.repeat_interval,
+          // Link to the promotion if possible, e.g., via a custom field or message
+          // For now, we'll just create it.
+        };
+
+        // Check if an announcement already exists for this promotion (e.g., by name or a custom link field)
+        // For simplicity, we'll just insert a new one or update if a matching one exists by message.
+        const { data: existingAnnouncement, error: fetchAnnounceError } = await supabase
+          .from('marquee_elements')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('message', announcementMessage) // Simple matching for now
+          .maybeSingle();
+
+        if (fetchAnnounceError) {
+          console.error("Error checking for existing announcement:", fetchAnnounceError);
+        }
+
+        if (existingAnnouncement) {
+          await supabase.from('marquee_elements').update(announcementPayload).eq('id', existingAnnouncement.id);
+          showSuccess("Storefront announcement updated!");
+        } else {
+          await supabase.from('marquee_elements').insert(announcementPayload);
+          showSuccess("Storefront announcement created!");
+        }
+      }
+
       onSave();
     }
   };
@@ -376,6 +435,28 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                     )}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="repeat_interval" className="flex items-center gap-2"><Repeat className="h-4 w-4" /> Repeat (Optional)</Label>
+                <Controller
+                  name="repeat_interval"
+                  control={control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                      <SelectTrigger id="repeat_interval">
+                        <SelectValue placeholder="No repeat" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">No repeat</SelectItem>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
 
               <div className="flex items-center space-x-2">

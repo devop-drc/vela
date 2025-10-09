@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, MessageSquareText, CheckCircle, XCircle, ArrowUp, ArrowDown, Search } from "lucide-react";
+import { Loader2, Sparkles, MessageSquareText, CheckCircle, XCircle, ArrowUp, ArrowDown, Search, CalendarIcon, Repeat } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { StorefrontAnnouncement } from "@/types/storefront"; // Use new type
@@ -19,6 +19,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Marquee } from "@/components/ui/marquee"; // Import Marquee for preview
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 // List of common Lucide icons for selection
 const availableIcons: (keyof typeof LucideIcons)[] = [
@@ -40,6 +42,9 @@ const storefrontAnnouncementSchema = z.object({
   }),
   is_active: z.boolean().default(true),
   display_order: z.coerce.number().int().min(0, "Display order must be a non-negative integer").default(0),
+  start_date: z.date().optional().nullable(), // New field
+  end_date: z.date().optional().nullable(),   // New field
+  repeat_interval: z.enum(['daily', 'weekly', 'monthly', 'yearly']).optional().nullable(), // New field
 });
 
 type StorefrontAnnouncementFormData = z.infer<typeof storefrontAnnouncementSchema>;
@@ -58,9 +63,13 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
 
   useEffect(() => {
     if (element) {
-      reset(element);
+      reset({
+        ...element,
+        start_date: element.start_date ? new Date(element.start_date) : null,
+        end_date: element.end_date ? new Date(element.end_date) : null,
+      });
     } else {
-      reset({ message: "", icon_name: "Sparkles", is_active: true, display_order: 0 });
+      reset({ message: "", icon_name: "Sparkles", is_active: true, display_order: 0, start_date: null, end_date: null, repeat_interval: null });
     }
   }, [element, reset]);
 
@@ -71,7 +80,12 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
       return;
     }
 
-    const payload = { ...data, user_id: user.id };
+    const payload = {
+      ...data,
+      user_id: user.id,
+      start_date: data.start_date ? data.start_date.toISOString() : null,
+      end_date: data.end_date ? data.end_date.toISOString() : null,
+    };
     let error;
 
     if (element) {
@@ -185,6 +199,93 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
               <Input id="display_order" type="number" {...register("display_order", { valueAsNumber: true })} />
               {errors.display_order && <p className="text-sm text-destructive mt-1">{errors.display_order.message}</p>}
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="startDate">Start Date (Optional)</Label>
+              <Controller
+                name="start_date"
+                control={control}
+                render={({ field }) => (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={field.value || undefined}
+                        onSelect={field.onChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endDate">End Date (Optional)</Label>
+              <Controller
+                name="end_date"
+                control={control}
+                render={({ field }) => (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={field.value || undefined}
+                        onSelect={field.onChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="repeat_interval" className="flex items-center gap-2"><Repeat className="h-4 w-4" /> Repeat (Optional)</Label>
+            <Controller
+              name="repeat_interval"
+              control={control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value || ''}>
+                  <SelectTrigger id="repeat_interval">
+                    <SelectValue placeholder="No repeat" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No repeat</SelectItem>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
 
           <div className="flex items-center space-x-2">
