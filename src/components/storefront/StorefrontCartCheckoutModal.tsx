@@ -20,7 +20,7 @@ interface StorefrontCartCheckoutModalProps {
   onClose: () => void;
 }
 
-export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartCheckoutModalProps) => {
+export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartCheckoutModalModalProps) => {
   const { cartItems, savedItems, totalItems, subtotal, shipping, total, updateQuantity, removeFromCart, clearCart, saveForLater, moveToCart, removeSavedItem } = useCart();
   const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const { toast } = useToast();
@@ -68,10 +68,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
             )}
             {isOrderConfirmed ? "Order Confirmed!" : (isCheckoutMode ? "Checkout" : "Your Cart")}
           </DialogTitle>
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close cart</span>
-          </Button>
+          {/* Removed the duplicate X button here */}
         </DialogHeader>
 
         <AnimatePresence mode="wait">
