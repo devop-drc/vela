@@ -145,24 +145,19 @@ const StorefrontIndex = () => {
   // New condition for "under construction"
   if (allProducts.length === 0 && !isLoading && !error) {
     return (
-      <div className="container py-8 text-center text-muted-foreground">
-        <Card className={cn(
-          "max-w-2xl mx-auto p-8 md:p-12 shadow-lg",
-          blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card"
-        )}>
-          <Wrench className="h-20 w-20 md:h-24 md:w-24 text-primary mx-auto mb-6 md:mb-8" />
-          <h1 className="text-3xl md:text-4xl font-bold font-heading mb-4">Store Under Construction</h1>
-          <p className="text-base md:text-lg mb-6">
-            We're busy curating amazing products for you! Please check back soon.
-          </p>
-          {shopDetails.contact_email && (
-            <Button asChild variant="outline" className="text-base md:text-lg">
-              <a href={`mailto:${shopDetails.contact_email}`} className="flex items-center gap-2">
-                <Mail className="h-5 w-5" /> Contact Us
-              </a>
-            </Button>
-          )}
-        </Card>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] text-center text-muted-foreground p-8">
+        <Wrench className="h-24 w-24 md:h-32 md:w-32 text-primary mx-auto mb-8 md:mb-10" />
+        <h1 className="text-4xl md:text-5xl font-bold font-heading mb-4">Store Under Construction</h1>
+        <p className="text-lg md:text-xl max-w-2xl mx-auto mb-8">
+          We're busy curating amazing products for you! Our shop will be available soon.
+        </p>
+        {shopDetails.contact_email && (
+          <Button asChild variant="outline" size="lg" className="text-base md:text-lg">
+            <a href={`mailto:${shopDetails.contact_email}`} className="flex items-center gap-2">
+              <Mail className="h-5 w-5" /> Contact Us
+            </a>
+          </Button>
+        )}
       </div>
     );
   }
