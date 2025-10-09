@@ -207,14 +207,14 @@ const OutOfStock = () => {
                 onSelectOne={(id) => setSelectedProducts(prev => prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id])}
                 onEdit={(p) => setSelectedProduct(p as any)}
                 onDelete={(id) => { setSelectedProducts([id]); setBulkDeleteConfirm(true); }}
-                onStatusChange={() => {}} // Status change is now handled by the StockAdjustmentModal
+                showStatusDropdown={false} // Hide status dropdown on this page
               />
             )}
           </CardContent>
         </Card>
       </div>
       <AnimatePresence>
-        {selectedProducts.length > 0 || filteredAndSortedProducts.length > 0 && (
+        {selectedProducts.length > 0 && ( // Only show when products are selected
           <OutOfStockActionsToolbar
             selectedCount={selectedProducts.length}
             onClear={() => setSelectedProducts([])}

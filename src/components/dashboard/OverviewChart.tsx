@@ -22,7 +22,7 @@ export const OverviewChart = ({ data }: OverviewChartProps) => {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="rounded-lg border border-border bg-background/80 backdrop-blur-sm p-2 shadow-lg">
+        <div className="rounded-lg border border-border bg-background/80 backdrop-blur-[20px] p-2 shadow-lg">
           <p className="font-bold mb-2 text-foreground">{label}</p>
           {payload.map((pld: any) => (
             <div key={pld.dataKey} style={{ color: pld.stroke || pld.fill }} className="flex justify-between items-center gap-4">

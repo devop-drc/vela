@@ -32,10 +32,11 @@ interface ProductTableViewProps {
   onSelectOne: (productId: string) => void;
   onEdit: (product: Product) => void;
   onDelete: (productId: string) => void;
-  onStatusChange: (productId: string, newStatus: 'Active' | 'Draft' | 'Out of Stock') => void; // Updated status type
+  // Removed onStatusChange as it's no longer needed directly in the table
+  showStatusDropdown?: boolean; // New prop to control visibility
 }
 
-export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSelectOne, onEdit, onDelete, onStatusChange }: ProductTableViewProps) => {
+export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSelectOne, onEdit, onDelete, showStatusDropdown = true }: ProductTableViewProps) => {
   const { shopDetails, convertCurrency } = useShop();
 
   const getStockBadge = (inventory: number | null, pricingType: 'one_time' | 'subscription') => {
@@ -67,7 +68,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
           </TableHead>
           <TableHead className="w-[80px]">Image</TableHead>
           <TableHead>Name</TableHead>
-          <TableHead>Status</TableHead>
+          {showStatusDropdown && <TableHead>Status</TableHead>} {/* Conditionally render Status column */}
           <TableHead>Price</TableHead>
           <TableHead>Inventory</TableHead>
           <TableHead>Total Earned</TableHead> {/* New column */}
@@ -85,7 +86,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
               />
             </TableCell>
             {/* Make the rest of the row clickable for selection */}
-            <TableCell colSpan={6} className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+            <TableCell colSpan={showStatusDropdown ? 1 : 0} className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
               <div className="flex items-center gap-4">
                 <img src={product.media_url} alt={product.name} className="h-12 w-12 object-cover rounded-md" />
                 <div className="flex flex-col flex-1">
@@ -93,26 +94,37 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
                     {product.name}
                     {getStockBadge(product.inventory, product.pricing_type)}
                   </div>
-                  <ProductStatusDropdown 
-                    currentStatus={product.status} 
-                    onStatusChange={(newStatus) => onStatusChange(product.id, newStatus)} 
-                  />
+                  {/* Removed ProductStatusDropdown from here */}
                 </div>
-                <div className="flex-1 text-sm text-muted-foreground">
-                  {product.price != null ? (
-                    formatCurrency(convertCurrency(product.price, product.currency), shopDetails?.currency)
-                  ) : (
-                    <span className="text-muted-foreground">N/A</span>
-                  )}
-                </div>
-                <div className="flex-1 text-sm text-muted-foreground">
-                  {product.pricing_type === 'one_time' ? (product.inventory !== null ? product.inventory : 'N/A') : 'N/A'}
-                </div>
-                <div className="flex-1 text-sm font-medium"> {/* Display Total Earned */}
-                  {product.total_earned !== undefined && product.total_earned !== null
-                    ? formatCurrency(convertCurrency(product.total_earned, product.currency), shopDetails?.currency)
-                    : formatCurrency(0, shopDetails?.currency)}
-                </div>
+              </div>
+            </TableCell>
+            {showStatusDropdown && ( // Conditionally render Status cell
+              <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+                <ProductStatusDropdown 
+                  currentStatus={product.status} 
+                  onStatusChange={() => {}} // No-op as status change is handled elsewhere
+                />
+              </TableCell>
+            )}
+            <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+              <div className="flex-1 text-sm text-muted-foreground">
+                {product.price != null ? (
+                  formatCurrency(convertCurrency(product.price, product.currency), shopDetails?.currency)
+                ) : (
+                  <span className="text-muted-foreground">N/A</span>
+                )}
+              </div>
+            </TableCell>
+            <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+              <div className="flex-1 text-sm text-muted-foreground">
+                {product.pricing_type === 'one_time' ? (product.inventory !== null ? product.inventory : 'N/A') : 'N/A'}
+              </div>
+            </TableCell>
+            <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+              <div className="flex-1 text-sm font-medium"> {/* Display Total Earned */}
+                {product.total_earned !== undefined && product.total_earned !== null
+                  ? formatCurrency(convertCurrency(product.total_earned, product.currency), shopDetails?.currency)
+                  : formatCurrency(0, shopDetails?.currency)}
               </div>
             </TableCell>
             <TableCell className="text-right">
@@ -128,7 +140,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
           </TableRow>
         )) : (
           <TableRow>
-            <TableCell colSpan={8} className="h-24 text-center">
+            <TableCell colSpan={showStatusDropdown ? 8 : 7} className="h-24 text-center">
               No products found.
             </TableCell>
           </TableRow>

@@ -65,11 +65,11 @@ const Sidebar = () => {
       isPrimary
         ? cn(
             "text-primary-foreground border-primary-foreground/20",
-            blurEnabled ? "bg-primary/80 backdrop-blur-lg" : "bg-primary"
+            blurEnabled ? "bg-primary/80 backdrop-blur-[20px]" : "bg-primary"
           )
         : cn(
             "border-border",
-            blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
+            blurEnabled ? "bg-card/80 backdrop-blur-[20px]" : "bg-card"
           )
     )} style={{ '--sidebar-width': sidebarWidthClasses[settings.sidebarWidth || 'default'] } as React.CSSProperties}>
       <div className={cn(

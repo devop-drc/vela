@@ -334,7 +334,7 @@ export const StorefrontFilterSidebar = ({
           side="left" 
           className={cn(
             "w-full sm:max-w-xs p-0 flex flex-col h-full",
-            blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
+            blurEnabled ? "bg-card/80 backdrop-blur-[20px]" : "bg-card",
             isFloatingLayout && "rounded-none"
           )}
           style={{ borderRadius: isFloatingLayout ? '0' : borderRadius }}
@@ -353,7 +353,7 @@ export const StorefrontFilterSidebar = ({
       transition={{ duration: 0.2 }}
       className={cn(
         "flex-col flex-shrink-0 fixed z-30",
-        blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
+        blurEnabled ? "bg-card/80 backdrop-blur-[20px]" : "bg-card",
         isFloatingLayout ? "border rounded-lg" : "border-r"
       )}
       style={{

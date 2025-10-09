@@ -219,7 +219,7 @@ const StorefrontClientOrders = () => {
 
       <Card className={cn(
         "max-w-4xl mx-auto shadow-lg",
-        blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
+        blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card"
       )}>
         <CardHeader className="pb-4">
           <CardTitle className="text-xl md:text-2xl flex items-center gap-2">

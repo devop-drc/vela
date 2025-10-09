@@ -93,7 +93,7 @@
   .blur-enabled .tabs-list,
   .blur-enabled .table-row:hover,
   .blur-enabled [data-state=selected] {
-    @apply bg-card/70 backdrop-blur-lg;
+    @apply bg-card/70 backdrop-blur-[20px];
   }
 
   .blur-enabled .input,
@@ -123,7 +123,7 @@
 
 @layer utilities {
   .dialog-overlay {
-    @apply fixed inset-0 z-50 bg-black/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0;
+    @apply fixed inset-0 z-50 bg-black/80 backdrop-blur-[20px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0;
   }
   .sr-only {
     position: absolute;

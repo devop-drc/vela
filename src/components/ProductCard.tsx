@@ -100,7 +100,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
         <Checkbox
           checked={isSelected}
           onCheckedChange={() => onSelect(product.id)}
-          className="h-6 w-6 bg-white/80 backdrop-blur-sm border-gray-400 rounded-md"
+          className="h-6 w-6 bg-white/80 backdrop-blur-[20px] border-gray-400 rounded-md"
           aria-label={`Select ${product.name}`}
         />
       </div>

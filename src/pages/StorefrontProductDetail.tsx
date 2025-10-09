@@ -269,7 +269,7 @@ const StorefrontProductDetail = () => {
 
           {/* Variant Selection (Placeholder) */}
           {(colors.length > 0 || sizes.length > 0 || otherOptions.length > 0) && (
-            <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-md")}>
+            <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-md")}>
               <CardHeader><CardTitle className="text-lg md:text-xl">Options</CardTitle></CardHeader>
               <CardContent className="p-4 space-y-4">
                 {colors.length > 0 && (
@@ -328,7 +328,7 @@ const StorefrontProductDetail = () => {
 
           {/* Specifications */}
           {specifications.length > 0 && (
-            <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-md")}>
+            <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-md")}>
               <CardHeader><CardTitle className="text-lg md:text-xl">Specifications</CardTitle></CardHeader>
               <CardContent className="p-4 space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 md:gap-x-6 gap-y-3 md:gap-y-4">
@@ -396,7 +396,7 @@ const StorefrontProductDetail = () => {
           )}
 
           {/* Shipping & Returns (Placeholder) */}
-          <Card className={cn("shadow-md", blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
+          <Card className={cn("shadow-md", blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card")}>
             <CardContent className="p-4 flex items-center gap-4">
               <Truck className="h-6 w-6 text-primary flex-shrink-0" />
               <div>
@@ -413,7 +413,7 @@ const StorefrontProductDetail = () => {
       </div>
 
       {/* Customer Reviews Section (Placeholder) */}
-      <Card className={cn("mt-8 md:mt-12 shadow-md", blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card")}>
+      <Card className={cn("mt-8 md:mt-12 shadow-md", blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card")}>
         <CardHeader>
           <CardTitle className="text-xl md:text-2xl flex items-center gap-2">
             <Star className="h-6 w-6 text-amber-500" />

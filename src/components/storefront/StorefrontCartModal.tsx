@@ -31,7 +31,7 @@ export const StorefrontCartModal = ({ onClose, onProceedToCheckout }: Storefront
         {cartItems.length === 0 && savedItems.length === 0 ? (
           <div className={cn(
             "text-center py-12 shadow-lg",
-            blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
+            blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card"
           )}>
             <CardHeader className="flex flex-col items-center">
               <ShoppingCart className="h-16 w-16 text-muted-foreground mb-4" />
@@ -50,7 +50,7 @@ export const StorefrontCartModal = ({ onClose, onProceedToCheckout }: Storefront
                 {cartItems.map(item => (
                   <Card key={item.productId} className={cn(
                     "flex flex-col sm:flex-row items-center p-4 gap-4 shadow-md",
-                    blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
+                    blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card"
                   )}>
                     <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
                       <div className="h-24 w-24 rounded-md overflow-hidden bg-muted border">
@@ -115,7 +115,7 @@ export const StorefrontCartModal = ({ onClose, onProceedToCheckout }: Storefront
                 {savedItems.map(item => (
                   <Card key={item.productId} className={cn(
                     "flex flex-col sm:flex-row items-center p-4 gap-4 shadow-md",
-                    blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
+                    blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card"
                   )}>
                     <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
                       <div className="h-24 w-24 rounded-md overflow-hidden bg-muted border">

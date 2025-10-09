@@ -211,7 +211,7 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
               transition={{ duration: 0.2 }}
               className="flex-1 flex flex-col"
             >
-              <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg flex-1 flex flex-col")}>
+              <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-lg flex-1 flex flex-col")}>
                 <CardHeader className="flex-shrink-0">
                   <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><User className="h-5 w-5" /> Contact Information</CardTitle>
                   <CardDescription className="text-sm md:text-base">We'll use this to send you updates about your order.</CardDescription>
@@ -252,7 +252,7 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
               transition={{ duration: 0.2 }}
               className="flex-1 flex flex-col"
             >
-              <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg flex-1 flex flex-col")}>
+              <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-lg flex-1 flex flex-col")}>
                 <CardHeader className="flex-shrink-0">
                   <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><MapPin className="h-5 w-5" /> Shipping Information</CardTitle>
                   <CardDescription className="text-sm md:text-base">Where should we send your awesome products?</CardDescription>
@@ -318,7 +318,7 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
               transition={{ duration: 0.2 }}
               className="flex-1 flex flex-col"
             >
-              <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg flex-1 flex flex-col")}>
+              <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-lg flex-1 flex flex-col")}>
                 <CardHeader className="flex-shrink-0">
                   <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><CreditCard className="h-5 w-5" /> Payment Information</CardTitle>
                   <CardDescription className="text-sm md:text-base">Choose your preferred payment method.</CardDescription>

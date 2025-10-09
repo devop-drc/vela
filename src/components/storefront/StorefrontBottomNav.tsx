@@ -26,7 +26,7 @@ export const StorefrontBottomNav = ({ onOpenCart }: StorefrontBottomNavProps) =>
 
   return (
     <div className="fixed bottom-0 left-0 right-0 h-16 z-50 md:hidden">
-      <nav className="bg-background/80 backdrop-blur-lg border-t shadow-lg h-full">
+      <nav className="bg-background/80 backdrop-blur-[20px] border-t shadow-lg h-full">
         <div className="flex justify-around items-center h-full">
           {navItems.map((item) => (
             <NavLink

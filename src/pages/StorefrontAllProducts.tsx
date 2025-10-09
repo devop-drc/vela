@@ -364,7 +364,7 @@ const StorefrontAllProducts = () => {
           {isMobile && (
             <div className={cn(
               "sticky z-30 py-3 md:py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-6 md:mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4",
-              blurEnabled ? "bg-background/80 backdrop-blur-lg" : "bg-background"
+              blurEnabled ? "bg-background/80 backdrop-blur-[20px]" : "bg-background"
             )} style={{ borderRadius: borderRadius, top: stickyBarTop }}>
               <div className="flex items-center gap-2 w-full md:w-auto">
                 <Button variant="outline" onClick={onToggleFilterSidebar} className="w-full md:w-auto justify-start text-sm h-9">
@@ -407,7 +407,7 @@ const StorefrontAllProducts = () => {
               <p className="text-sm md:text-base mt-1 md:mt-2">
                 {hasActiveFilters
                   ? "No products match your current filters or search criteria."
-                  : "It looks like you don't have any active products yet."}
+                  : "It looks like this store doesn't have any products yet. Come back later! :)"}
               </p>
               {hasActiveFilters && (
                 <Button onClick={handleResetFilters} className="mt-4 text-sm md:text-base">
@@ -422,7 +422,7 @@ const StorefrontAllProducts = () => {
                 <div key={category}>
                   <h3 className={cn(
                     "text-2xl md:text-3xl font-bold font-heading mb-6 md:mb-8 inline-block px-3 py-1 md:px-4 md:py-2 rounded-md",
-                    blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card",
+                    blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card",
                     "bg-primary/10 text-primary border-primary/30",
                     "shadow-sm"
                   )}>

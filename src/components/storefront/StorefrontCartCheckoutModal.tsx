@@ -53,7 +53,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
       <DialogContent 
         className={cn(
           "sm:max-w-5xl h-[90vh] flex flex-col p-0",
-          blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card"
+          blurEnabled ? "bg-card/80 backdrop-blur-[20px]" : "bg-card"
         )}
       >
         <DialogHeader className="p-4 md:p-6 border-b flex-row items-center justify-between flex-shrink-0">
@@ -143,7 +143,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                               >
                                 <Card className={cn(
                                   "flex items-start p-3 md:p-4 gap-3 md:gap-4 shadow-md",
-                                  blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
+                                  blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card"
                                 )}>
                                   <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
                                     <div className="h-20 w-20 md:h-24 md:w-24 rounded-md overflow-hidden bg-muted border">
@@ -248,7 +248,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                               >
                                 <Card className={cn(
                                   "flex items-start p-3 md:p-4 gap-3 md:gap-4 shadow-md",
-                                  blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card"
+                                  blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card"
                                 )}>
                                   <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
                                     <div className="h-20 w-20 md:h-24 md:w-24 rounded-md overflow-hidden bg-muted border">

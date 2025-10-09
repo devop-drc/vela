@@ -142,6 +142,26 @@ const StorefrontIndex = () => {
     return <div className="container py-8 text-center text-muted-foreground text-base md:text-lg">Shop details not found.</div>;
   }
 
+  // New condition for "under construction"
+  if (allProducts.length === 0 && !isLoading && !error) {
+    return (
+      <div className="container py-8 text-center text-muted-foreground">
+        <h1 className="text-3xl md:text-4xl font-bold font-heading mb-4">Store Under Construction</h1>
+        <p className="text-base md:text-lg mb-6">
+          We're busy curating amazing products for you! Please check back soon.
+        </p>
+        {shopDetails.contact_email && (
+          <p className="text-sm md:text-base">
+            In the meantime, feel free to contact us at{' '}
+            <a href={`mailto:${shopDetails.contact_email}`} className="text-primary hover:underline">
+              {shopDetails.contact_email}
+            </a>
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1">
       <div className="container py-8">

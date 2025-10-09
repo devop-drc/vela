@@ -71,7 +71,7 @@ const Header = ({ title }: HeaderProps) => {
         ? "top-4 right-4 left-4 border rounded-lg"
         : "border-b", // Docked layout has border-b and expands
       isFloating && (headerLeftMarginClasses[settings.sidebarWidth || 'default']),
-      blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
+      blurEnabled ? "bg-card/80 backdrop-blur-[20px]" : "bg-card",
       !isFloating && "md:ml-[calc(var(--sidebar-width)+2rem)] md:pr-8" // Ensure full width for docked
     )} style={{ '--sidebar-width': settings.sidebarWidth === 'compact' ? '14rem' : settings.sidebarWidth === 'spacious' ? '18rem' : '16rem' } as React.CSSProperties}>
       <div className="flex items-center gap-4">

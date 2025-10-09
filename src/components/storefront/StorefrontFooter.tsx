@@ -18,7 +18,7 @@ export const StorefrontFooter = React.forwardRef<HTMLDivElement>((props, ref) =>
   return (
     <footer ref={ref} className={cn(
       "border-t py-8 md:py-12 text-muted-foreground",
-      blurEnabled ? "bg-card/80 backdrop-blur-lg" : "bg-card",
+      blurEnabled ? "bg-card/80 backdrop-blur-[20px]" : "bg-card",
       "shadow-inner"
     )}>
       <div className="container flex flex-col items-center justify-between gap-8 md:gap-10 md:flex-row">

@@ -20,7 +20,7 @@ const BottomNav = () => {
 
   return (
     <div className="md:hidden fixed bottom-4 left-4 right-4 h-16 z-50">
-      <nav className="bg-background/80 backdrop-blur-lg border rounded-2xl shadow-lg h-full">
+      <nav className="bg-background/80 backdrop-blur-[20px] border rounded-2xl shadow-lg h-full">
         <div className="flex justify-around items-center h-full">
           {navItems.map((item) => (
             <NavLink

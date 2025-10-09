@@ -16,7 +16,7 @@ export const OutOfStockActionsToolbar = ({ selectedCount, onClear, onAddStock, o
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed bottom-4 left-1/2 -translate-x-1/2 w-auto bg-background/80 backdrop-blur-lg border rounded-lg shadow-2xl z-40 p-2 flex items-center gap-2 md:gap-4"
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 w-auto bg-background/80 backdrop-blur-[20px] border rounded-lg shadow-2xl z-40 p-2 flex items-center gap-2 md:gap-4"
     >
       <p className="text-sm font-medium px-2">{selectedCount} selected</p>
       <Button variant="outline" size="sm" onClick={onAddStock} className="text-emerald-600 border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"><CheckCircle className="mr-2 h-4 w-4" />Add Stock</Button>

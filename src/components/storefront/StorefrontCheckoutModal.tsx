@@ -149,7 +149,7 @@ export const StorefrontCheckoutModal = ({ onClose, onBackToCart }: StorefrontChe
         <CheckoutProgress currentStep={currentStep} />
 
         <form id="checkout-form" onSubmit={handleSubmit} className="space-y-8">
-          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg")}>
+          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-lg")}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><User className="h-5 w-5" /> Contact Information</CardTitle>
               <CardDescription>We'll use this to send you updates about your order.</CardDescription>
@@ -172,7 +172,7 @@ export const StorefrontCheckoutModal = ({ onClose, onBackToCart }: StorefrontChe
             </CardContent>
           </Card>
 
-          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg")}>
+          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-lg")}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5" /> Shipping Information</CardTitle>
               <CardDescription>Where should we send your awesome products?</CardDescription>
@@ -203,7 +203,7 @@ export const StorefrontCheckoutModal = ({ onClose, onBackToCart }: StorefrontChe
             </CardContent>
           </Card>
 
-          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-lg" : "bg-card", "shadow-lg")}>
+          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-lg")}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" /> Payment Information</CardTitle>
               <CardDescription>Securely enter your payment details.</CardDescription>
