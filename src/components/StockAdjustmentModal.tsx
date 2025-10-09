@@ -85,11 +85,10 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
       id: p.id,
       inventory: p.inventory,
       status: p.inventory > 0 ? 'Active' : 'Out of Stock', // Set to Active if stock > 0, else Out of Stock
-      user_id: userId, // Explicitly include user_id for RLS
+      // Removed user_id from here. RLS policy will ensure the user owns the product.
     }));
 
     try {
-      // console.log("Attempting to upsert with userId:", userId, "and updates:", updates); // Debug log
       const { error } = await supabase.from('products').upsert(updates, { onConflict: 'id' }); // Explicitly specify onConflict
       if (error) throw error;
 
@@ -152,8 +151,8 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Stock
             </Button>
-          </DialogFooter>
-        </form>
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
