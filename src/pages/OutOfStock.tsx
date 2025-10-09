@@ -207,7 +207,7 @@ const OutOfStock = () => {
                 onSelectOne={(id) => setSelectedProducts(prev => prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id])}
                 onEdit={(p) => setSelectedProduct(p as any)}
                 onDelete={(id) => { setSelectedProducts([id]); setBulkDeleteConfirm(true); }}
-                showStatusDropdown={false} // Hide status dropdown on this page
+                showStatusColumn={true} // Show status column on this page
               />
             )}
           </CardContent>

@@ -32,11 +32,10 @@ interface ProductTableViewProps {
   onSelectOne: (productId: string) => void;
   onEdit: (product: Product) => void;
   onDelete: (productId: string) => void;
-  // Removed onStatusChange as it's no longer needed directly in the table
-  showStatusDropdown?: boolean; // New prop to control visibility
+  showStatusColumn?: boolean; // New prop to control visibility of the status column
 }
 
-export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSelectOne, onEdit, onDelete, showStatusDropdown = true }: ProductTableViewProps) => {
+export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSelectOne, onEdit, onDelete, showStatusColumn = true }: ProductTableViewProps) => {
   const { shopDetails, convertCurrency } = useShop();
 
   const getStockBadge = (inventory: number | null, pricingType: 'one_time' | 'subscription') => {
@@ -55,6 +54,15 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
     return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">Out of Stock</Badge>;
   };
 
+  const getStatusColor = (status: Product['status']) => {
+    switch (status) {
+      case 'Active': return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+      case 'Draft': return 'bg-amber-100 text-amber-800 border-amber-300';
+      case 'Out of Stock': return 'bg-slate-100 text-slate-800 border-slate-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
   return (
     <Table>
       <TableHeader>
@@ -68,42 +76,37 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
           </TableHead>
           <TableHead className="w-[80px]">Image</TableHead>
           <TableHead>Name</TableHead>
-          {showStatusDropdown && <TableHead>Status</TableHead>} {/* Conditionally render Status column */}
+          {showStatusColumn && <TableHead>Status</TableHead>} {/* Conditionally render Status column */}
           <TableHead>Price</TableHead>
           <TableHead>Inventory</TableHead>
-          <TableHead>Total Earned</TableHead> {/* New column */}
+          <TableHead>Total Earned</TableHead>
           <TableHead className="text-right w-[150px]">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {products.length > 0 ? products.map((product) => (
           <TableRow key={product.id} data-state={selectedProducts.includes(product.id) && "selected"} className="group">
-            <TableCell onClick={(e) => e.stopPropagation()}> {/* Prevent checkbox click from triggering row click */}
+            <TableCell onClick={(e) => e.stopPropagation()}>
               <Checkbox
                 checked={selectedProducts.includes(product.id)}
                 onCheckedChange={() => onSelectOne(product.id)}
                 aria-label={`Select row for ${product.name}`}
               />
             </TableCell>
-            {/* Make the rest of the row clickable for selection */}
-            <TableCell colSpan={showStatusDropdown ? 1 : 0} className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
-              <div className="flex items-center gap-4">
-                <img src={product.media_url} alt={product.name} className="h-12 w-12 object-cover rounded-md" />
-                <div className="flex flex-col flex-1">
-                  <div className="font-medium flex items-center gap-2">
-                    {product.name}
-                    {getStockBadge(product.inventory, product.pricing_type)}
-                  </div>
-                  {/* Removed ProductStatusDropdown from here */}
-                </div>
+            <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+              <img src={product.media_url} alt={product.name} className="h-12 w-12 object-cover rounded-md" />
+            </TableCell>
+            <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+              <div className="font-medium flex items-center gap-2">
+                {product.name}
+                {getStockBadge(product.inventory, product.pricing_type)}
               </div>
             </TableCell>
-            {showStatusDropdown && ( // Conditionally render Status cell
+            {showStatusColumn && ( // Conditionally render Status cell
               <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
-                <ProductStatusDropdown 
-                  currentStatus={product.status} 
-                  onStatusChange={() => {}} // No-op as status change is handled elsewhere
-                />
+                <Badge variant="outline" className={cn("font-normal", getStatusColor(product.status))}>
+                  {product.status}
+                </Badge>
               </TableCell>
             )}
             <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
@@ -121,7 +124,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
               </div>
             </TableCell>
             <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
-              <div className="flex-1 text-sm font-medium"> {/* Display Total Earned */}
+              <div className="flex-1 text-sm font-medium">
                 {product.total_earned !== undefined && product.total_earned !== null
                   ? formatCurrency(convertCurrency(product.total_earned, product.currency), shopDetails?.currency)
                   : formatCurrency(0, shopDetails?.currency)}
@@ -140,7 +143,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
           </TableRow>
         )) : (
           <TableRow>
-            <TableCell colSpan={showStatusDropdown ? 8 : 7} className="h-24 text-center">
+            <TableCell colSpan={8} className="h-24 text-center">
               No products found.
             </TableCell>
           </TableRow>

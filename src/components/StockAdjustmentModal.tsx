@@ -89,7 +89,8 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
     }));
 
     try {
-      const { error } = await supabase.from('products').upsert(updates);
+      // console.log("Attempting to upsert with userId:", userId, "and updates:", updates); // Debug log
+      const { error } = await supabase.from('products').upsert(updates, { onConflict: 'id' }); // Explicitly specify onConflict
       if (error) throw error;
 
       showSuccess(`Stock updated for ${updates.length} product(s)!`);
@@ -147,7 +148,7 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
           </ScrollArea>
           <DialogFooter className="flex-shrink-0 pt-4">
             <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !userId}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Stock
             </Button>

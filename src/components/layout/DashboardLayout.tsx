@@ -46,7 +46,7 @@ const DashboardLayout = () => {
       setFavicon(shopDetails.favicon_url);
     } else {
       document.title = title; // Fallback if shopDetails not loaded yet
-      let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
       if (link) link.href = '/favicon.ico';
     }
   }, [shopDetails, title]);

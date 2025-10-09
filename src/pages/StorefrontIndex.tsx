@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Gift, RefreshCw, Crown, Info, Package } from "lucide-react";
+import { ArrowRight, Sparkles, Gift, RefreshCw, Crown, Info, Package, Wrench, Mail } from "lucide-react"; // Added Wrench and Mail icons
 import { useState, useMemo, useRef, useEffect } from "react";
 import { getCategoryColor } from "@/lib/colorUtils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -146,18 +146,23 @@ const StorefrontIndex = () => {
   if (allProducts.length === 0 && !isLoading && !error) {
     return (
       <div className="container py-8 text-center text-muted-foreground">
-        <h1 className="text-3xl md:text-4xl font-bold font-heading mb-4">Store Under Construction</h1>
-        <p className="text-base md:text-lg mb-6">
-          We're busy curating amazing products for you! Please check back soon.
-        </p>
-        {shopDetails.contact_email && (
-          <p className="text-sm md:text-base">
-            In the meantime, feel free to contact us at{' '}
-            <a href={`mailto:${shopDetails.contact_email}`} className="text-primary hover:underline">
-              {shopDetails.contact_email}
-            </a>
+        <Card className={cn(
+          "max-w-2xl mx-auto p-8 md:p-12 shadow-lg",
+          blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card"
+        )}>
+          <Wrench className="h-20 w-20 md:h-24 md:w-24 text-primary mx-auto mb-6 md:mb-8" />
+          <h1 className="text-3xl md:text-4xl font-bold font-heading mb-4">Store Under Construction</h1>
+          <p className="text-base md:text-lg mb-6">
+            We're busy curating amazing products for you! Please check back soon.
           </p>
-        )}
+          {shopDetails.contact_email && (
+            <Button asChild variant="outline" className="text-base md:text-lg">
+              <a href={`mailto:${shopDetails.contact_email}`} className="flex items-center gap-2">
+                <Mail className="h-5 w-5" /> Contact Us
+              </a>
+            </Button>
+          )}
+        </Card>
       </div>
     );
   }
