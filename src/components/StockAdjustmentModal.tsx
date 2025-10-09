@@ -88,13 +88,18 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
     }));
 
     try {
-      // Use update instead of upsert, as these products are guaranteed to exist
-      const { error } = await supabase
-        .from('products')
-        .update(updates)
-        .in('id', updates.map(u => u.id)); // Specify which rows to update
-      
-      if (error) throw error;
+      const updatePromises = updates.map(async (updatePayload) => {
+        const { error: individualError } = await supabase
+          .from('products')
+          .update({
+            inventory: updatePayload.inventory,
+            status: updatePayload.status,
+          })
+          .eq('id', updatePayload.id);
+        if (individualError) throw individualError;
+      });
+
+      await Promise.all(updatePromises);
 
       showSuccess(`Stock updated for ${updates.length} product(s)!`);
       onSave();

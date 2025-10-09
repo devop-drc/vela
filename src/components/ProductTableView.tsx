@@ -66,12 +66,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
             />
           </TableHead>
           <TableHead className="w-[80px]">Image</TableHead>
-          <TableHead>Name</TableHead>
-          {showStatusColumn && <TableHead>Status</TableHead>}
-          <TableHead>Price</TableHead>
-          <TableHead>Inventory</TableHead>
-          <TableHead>Total Earned</TableHead>
-          <TableHead className="text-right w-[150px]">Actions</TableHead>
+          <TableHead>Name</TableHead>{showStatusColumn && <TableHead>Status</TableHead>}<TableHead>Price</TableHead><TableHead>Inventory</TableHead><TableHead>Total Earned</TableHead><TableHead className="text-right w-[150px]">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
