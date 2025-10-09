@@ -166,12 +166,14 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
 
   const convertCurrency = useCallback((amount: number | null | undefined, fromCurrency: string = 'ALL', toCurrency?: string) => {
     const numericAmount = amount ?? 0;
-    const targetCurrency = toCurrency || shopDetails?.currency || 'USD'; // Default to USD if shop currency not set
+    // Ensure targetCurrency is always a valid string, defaulting to shopDetails.currency or 'USD'
+    const targetCurrency = toCurrency || shopDetails?.currency || 'USD'; 
 
     console.log("convertCurrency: Initiating conversion.", { amount, fromCurrency, toCurrency, targetCurrency, shopDetails, exchangeRates });
 
-    if (!shopDetails || !exchangeRates || !targetCurrency) {
-      console.log("convertCurrency: Missing shopDetails, exchangeRates, or targetCurrency. Returning original amount.", { amount, fromCurrency, toCurrency, shopDetails, exchangeRates });
+    // Crucial: Ensure shopDetails and exchangeRates are available for conversion
+    if (!shopDetails || !exchangeRates) {
+      console.log("convertCurrency: Missing shopDetails or exchangeRates. Returning original amount.", { amount, fromCurrency, toCurrency, shopDetails, exchangeRates });
       return numericAmount;
     }
 
@@ -195,7 +197,7 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     
     console.log(`convertCurrency: Converting ${numericAmount} ${fromCurrency} to ${targetCurrency}. Rates: ${fromCurrency}=${fromRate}, ${targetCurrency}=${toRate}. Converted: ${convertedAmount.toFixed(2)}`);
     return Math.round(convertedAmount * 100) / 100;
-  }, [shopDetails, exchangeRates]);
+  }, [shopDetails, exchangeRates]); // Add shopDetails to dependencies
 
   return (
     <ShopContext.Provider value={{ shopDetails, isLoading, updateShopDetails, fetchShopDetails, exchangeRates, convertCurrency }}>

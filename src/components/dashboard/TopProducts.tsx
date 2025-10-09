@@ -41,7 +41,7 @@ export const TopProducts = () => {
     fetchTopProducts();
   }, []);
 
-  if (!shopDetails) return null;
+  if (!shopDetails) return <Skeleton className="h-full w-full" />; // Show skeleton if shopDetails not ready
 
   return (
     <Card>
@@ -62,7 +62,8 @@ export const TopProducts = () => {
                 <div className="flex-1">
                   <p className="font-medium truncate">{product.name}</p>
                   <p className="text-sm text-muted-foreground">
-                    {formatCurrency(convertCurrency(product.price, product.currency), shopDetails.currency)} &middot; {formatLargeNumber(product.total_sold)} sold
+                    {/* Convert product.price from its stored currency (product.currency) to shopDetails.currency */}
+                    {formatCurrency(convertCurrency(product.price, product.currency, shopDetails.currency), shopDetails.currency)} &middot; {formatLargeNumber(product.total_sold)} sold
                   </p>
                 </div>
               </div>

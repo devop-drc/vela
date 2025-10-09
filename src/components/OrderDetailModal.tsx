@@ -166,7 +166,7 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
     }
   };
 
-  if (!order) return null;
+  if (!order || !shopDetails) return null; // Ensure shopDetails is available
 
   const getStatusColor = (status: OrderStatusType) => {
     switch (status) {
@@ -209,10 +209,11 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground"><Banknote className="h-4 w-4" /> Total</div>
                 <p className="font-semibold">
-                  {formatCurrency(order.total_amount, order.currency)}
-                  {shopDetails?.currency && order.currency !== shopDetails.currency && (
+                  {/* Convert order.total_amount from its stored currency (order.currency) to shopDetails.currency */}
+                  {formatCurrency(convertCurrency(order.total_amount, order.currency, shopDetails.currency), shopDetails.currency)}
+                  {order.currency !== shopDetails.currency && (
                     <span className="text-sm font-normal text-muted-foreground ml-2">
-                      (~{formatCurrency(convertCurrency(order.total_amount), shopDetails.currency)})
+                      (~{formatCurrency(order.total_amount, order.currency)})
                     </span>
                   )}
                 </p>
@@ -245,7 +246,10 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                         <p className="font-medium">{item.products.name}</p>
                         <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                       </div>
-                      <p className="font-medium">{formatCurrency(item.price_at_purchase * item.quantity, order.currency)}</p>
+                      <p className="font-medium">
+                        {/* Convert item.price_at_purchase from its stored currency (item.products.currency) to shopDetails.currency */}
+                        {formatCurrency(convertCurrency(item.price_at_purchase * item.quantity, item.products.currency, shopDetails.currency), shopDetails.currency)}
+                      </p>
                     </div>
                   ))}
                 </div>

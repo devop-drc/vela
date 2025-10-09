@@ -54,6 +54,10 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
     return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">Out of Stock</Badge>;
   };
 
+  if (!shopDetails) {
+    return null; // Or a loading indicator
+  }
+
   return (
     <Table>
       <TableHeader>
@@ -108,10 +112,9 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
               <div className="flex-1 text-sm text-muted-foreground">
                 {product.price != null ? (
                   (() => {
-                    console.log("ProductTableView: Converting price for display. Stored price:", product.price, product.currency, "Shop currency:", shopDetails?.currency);
-                    const convertedPrice = convertCurrency(product.price, product.currency, shopDetails?.currency);
-                    console.log("ProductTableView: Converted display price:", convertedPrice);
-                    return formatCurrency(convertedPrice, shopDetails?.currency);
+                    // Convert product.price from its stored currency (product.currency) to shopDetails.currency
+                    const convertedPrice = convertCurrency(product.price, product.currency, shopDetails.currency);
+                    return formatCurrency(convertedPrice, shopDetails.currency);
                   })()
                 ) : (
                   <span className="text-muted-foreground">N/A</span>
@@ -126,8 +129,8 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
             <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
               <div className="flex-1 text-sm font-medium">
                 {product.total_earned !== undefined && product.total_earned !== null
-                  ? formatCurrency(convertCurrency(product.total_earned, product.currency), shopDetails?.currency)
-                  : formatCurrency(0, shopDetails?.currency)}
+                  ? formatCurrency(convertCurrency(product.total_earned, product.currency, shopDetails.currency), shopDetails.currency)
+                  : formatCurrency(0, shopDetails.currency)}
               </div>
             </TableCell>
             <TableCell className="text-right">

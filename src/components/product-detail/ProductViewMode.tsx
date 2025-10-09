@@ -32,12 +32,10 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     
     // Convert product price from its stored currency (now always ALL) to the shop's display currency
     const displayPrice = useMemo(() => {
-        if (product.price == null) return null;
-        console.log("ProductViewMode: Calculating display price. Stored price:", product.price, product.currency, "Shop currency:", shopDetails?.currency);
-        const converted = convertCurrency(product.price, product.currency, shopDetails?.currency);
-        console.log("ProductViewMode: Converted display price:", converted);
+        if (product.price == null || !shopDetails) return null; // Ensure shopDetails is available
+        const converted = convertCurrency(product.price, product.currency, shopDetails.currency);
         return converted;
-    }, [product.price, product.currency, convertCurrency, shopDetails?.currency]);
+    }, [product.price, product.currency, convertCurrency, shopDetails]); // Add shopDetails to dependencies
 
     useEffect(() => {
       const fetchAttributes = async () => {

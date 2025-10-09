@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +44,10 @@ const OrderTable = ({ orders, onSelectOrder }: { orders: Order[], onSelectOrder:
     }
   };
 
+  if (!shopDetails) {
+    return null; // Or a loading indicator
+  }
+
   return (
     <Table>
       <TableHeader>
@@ -68,10 +72,11 @@ const OrderTable = ({ orders, onSelectOrder }: { orders: Order[], onSelectOrder:
               </Badge>
             </TableCell>
             <TableCell className="text-right font-medium">
-              {formatCurrency(order.total_amount, order.currency)}
-              {shopDetails?.currency && order.currency !== shopDetails.currency && (
+              {/* Convert order.total_amount from its stored currency (order.currency) to shopDetails.currency */}
+              {formatCurrency(convertCurrency(order.total_amount, order.currency, shopDetails.currency), shopDetails.currency)}
+              {order.currency !== shopDetails.currency && (
                 <div className="text-xs font-normal text-muted-foreground">
-                  (~{formatCurrency(convertCurrency(order.total_amount), shopDetails.currency)})
+                  (~{formatCurrency(order.total_amount, order.currency)})
                 </div>
               )}
             </TableCell>
@@ -105,7 +110,7 @@ const Orders = () => {
 
   useEffect(() => { setTitle("Orders"); }, [setTitle]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     setIsLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setIsLoading(false); return; }
@@ -125,9 +130,9 @@ const Orders = () => {
     if (error) { showError("Failed to fetch orders."); } 
     else { setOrders(data as Order[]); }
     setIsLoading(false);
-  };
+  }, []);
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
@@ -147,11 +152,20 @@ const Orders = () => {
   }, [orders, activeTab, searchTerm, dateRange]);
 
   const stats = useMemo(() => {
-    const totalRevenue = filteredOrders.reduce((sum, order) => sum + order.total_amount, 0);
+    if (!shopDetails) { // Crucial check: wait for shopDetails to be available
+      return { totalRevenue: 0, orderCount: 0, aov: 0 };
+    }
+
+    const totalRevenue = filteredOrders.reduce((sum, order) => {
+      // Convert each order's total_amount from its stored currency (order.currency) to the shop's display currency
+      const convertedAmount = convertCurrency(order.total_amount, order.currency, shopDetails.currency);
+      return sum + convertedAmount;
+    }, 0);
+
     const orderCount = filteredOrders.length;
     const aov = orderCount > 0 ? totalRevenue / orderCount : 0;
     return { totalRevenue, orderCount, aov };
-  }, [filteredOrders]);
+  }, [filteredOrders, shopDetails, convertCurrency]); // Add shopDetails and convertCurrency to dependencies
 
   return (
     <>
@@ -171,11 +185,17 @@ const Orders = () => {
             <DateRangePicker date={dateRange} onDateChange={setDateRange} />
           </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          <StatCard title="Total Revenue" value={formatCurrency(convertCurrency(stats.totalRevenue), shopDetails?.currency)} icon={Banknote} />
-          <StatCard title="Orders" value={stats.orderCount.toLocaleString()} icon={ShoppingBag} />
-          <StatCard title="Avg. Order Value" value={formatCurrency(convertCurrency(stats.aov), shopDetails?.currency)} icon={FileBarChart} />
-        </div>
+        {isLoading || !shopDetails ? ( // Show skeleton if loading or shopDetails not ready
+          <div className="grid gap-4 md:grid-cols-3">
+            <Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" />
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-3">
+            <StatCard title="Total Revenue" value={formatCurrency(stats.totalRevenue, shopDetails.currency)} icon={Banknote} />
+            <StatCard title="Orders" value={stats.orderCount.toLocaleString()} icon={ShoppingBag} />
+            <StatCard title="Avg. Order Value" value={formatCurrency(stats.aov, shopDetails.currency)} icon={FileBarChart} />
+          </div>
+        )}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="All">All</TabsTrigger>
@@ -188,7 +208,7 @@ const Orders = () => {
           </TabsList>
           <Card className="mt-4">
             <CardContent className="p-0">
-              {isLoading ? (
+              {isLoading || !shopDetails ? ( // Also show skeleton for table if loading or shopDetails not ready
                 <div className="space-y-4 p-6">
                   <Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" />
                 </div>

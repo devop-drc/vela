@@ -67,9 +67,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
   // Convert price to display currency
   let displayPrice = product.price;
   if (product.price != null && shopDetails?.currency) {
-    console.log("ProductCard: Converting price for display. Stored price:", product.price, product.currency, "Shop currency:", shopDetails.currency);
     displayPrice = convertCurrency(product.price, product.currency, shopDetails.currency);
-    console.log("ProductCard: Converted display price:", displayPrice);
   }
 
   // Format the original price (which is now always ALL) with its currency for comparison if needed
@@ -176,14 +174,14 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
           </div>
 
           <div className="flex items-end justify-between pt-2">
-            {product.price != null ? (
+            {product.price != null && shopDetails ? ( // Ensure shopDetails is available
               <div className="flex flex-col">
                 <p className="font-semibold text-lg">
                   {displayPrice != null ? (
                     <>
                       {new Intl.NumberFormat('en-US', {
                         style: 'currency',
-                        currency: shopDetails?.currency || 'USD'
+                        currency: shopDetails.currency
                       }).format(displayPrice)}
                       {product.pricing_type === 'subscription' && (
                         <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
@@ -191,7 +189,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
                     </>
                   ) : 'N/A'}
                 </p>
-                {product.currency && product.currency !== shopDetails?.currency && (
+                {product.currency && product.currency !== shopDetails.currency && (
                   <span className="text-xs text-muted-foreground">
                     {originalPriceFormatted}
                   </span>

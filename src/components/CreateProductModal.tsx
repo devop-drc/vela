@@ -78,7 +78,8 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
     // Convert AI-suggested price (which might be in a different currency) to shop's display currency for form
     const aiSuggestedPrice = productData?.price?.value;
     const aiSuggestedCurrency = productData?.currency?.value;
-    const priceInDisplayCurrency = convertCurrency(aiSuggestedPrice, aiSuggestedCurrency, shopDetails?.currency);
+    // Ensure shopDetails is available before attempting conversion for defaultValues
+    const priceInDisplayCurrency = shopDetails ? convertCurrency(aiSuggestedPrice, aiSuggestedCurrency, shopDetails.currency) : aiSuggestedPrice;
     console.log("CreateProductModal: AI suggested price:", aiSuggestedPrice, aiSuggestedCurrency, "Converted to display currency:", priceInDisplayCurrency, shopDetails?.currency);
 
     reset({
