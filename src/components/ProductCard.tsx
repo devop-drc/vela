@@ -200,12 +200,6 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
                 Set Price
               </div>
             )}
-            {product.pricing_type === 'one_time' && (
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Package className="h-4 w-4" />
-                <span>{product.inventory} in stock</span>
-              </div>
-            )}
             <ProductStatusDropdown 
               currentStatus={product.status} 
               onStatusChange={(newStatus) => onStatusChange(product.id, newStatus)} 
