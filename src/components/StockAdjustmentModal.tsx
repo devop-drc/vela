@@ -101,7 +101,7 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
 
       await Promise.all(updatePromises);
 
-      showSuccess(`Stock updated for ${updates.length} product(s)!`);
+      showSuccess(`Stock updated for ${updates.length === 1 ? '1 product' : `${updates.length} products` }!`);
       onSave();
       onClose();
     } catch (err: any) {
