@@ -67,7 +67,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
           </TableHead>
           <TableHead className="w-[80px]">Image</TableHead>
           <TableHead>Name</TableHead>
-          {showStatusColumn && <TableHead>Status</TableHead>} {/* Conditionally render Status column */}
+          {showStatusColumn && <TableHead>Status</TableHead>}
           <TableHead>Price</TableHead>
           <TableHead>Inventory</TableHead>
           <TableHead>Total Earned</TableHead>
@@ -77,14 +77,13 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
       <TableBody>
         {products.length > 0 ? products.map((product) => (
           <TableRow key={product.id} data-state={selectedProducts.includes(product.id) && "selected"} className="group">
-            <TableCell onClick={(e) => e.stopPropagation()}> {/* Prevent checkbox click from triggering row click */}
+            <TableCell onClick={(e) => e.stopPropagation()}>
               <Checkbox
                 checked={selectedProducts.includes(product.id)}
                 onCheckedChange={() => onSelectOne(product.id)}
                 aria-label={`Select row for ${product.name}`}
               />
             </TableCell>
-            {/* Make the rest of the row clickable for selection */}
             <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
               <img src={product.media_url} alt={product.name} className="h-12 w-12 object-cover rounded-md" />
             </TableCell>
@@ -94,7 +93,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
                 {getStockBadge(product.inventory, product.pricing_type)}
               </div>
             </TableCell>
-            {showStatusColumn && ( // Conditionally render Status cell
+            {showStatusColumn && (
               <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
                 <Badge variant="outline" className={cn("font-normal", {
                   'bg-emerald-100 text-emerald-800 border-emerald-300': product.status === 'Active',
@@ -139,7 +138,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
           </TableRow>
         )) : (
           <TableRow>
-            <TableCell colSpan={showStatusColumn ? 8 : 7} className="h-24 text-center">
+            <TableCell colSpan={7} className="h-24 text-center">
               No products found.
             </TableCell>
           </TableRow>
