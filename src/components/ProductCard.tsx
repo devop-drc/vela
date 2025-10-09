@@ -63,16 +63,19 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
   };
 
   const { details, caption, currency } = product;
-  // Format the original price with its currency
-  const originalPriceFormatted = product.price != null && currency 
-    ? new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(product.price)
-    : '';
   
-  // Convert price to display currency if needed
+  // Convert price to display currency
   let displayPrice = product.price;
-  if (product.price != null && currency && shopDetails?.currency && currency !== shopDetails.currency) {
-    displayPrice = convertCurrency(product.price, product.currency);
+  if (product.price != null && shopDetails?.currency) {
+    console.log("ProductCard: Converting price for display. Stored price:", product.price, product.currency, "Shop currency:", shopDetails.currency);
+    displayPrice = convertCurrency(product.price, product.currency, shopDetails.currency);
+    console.log("ProductCard: Converted display price:", displayPrice);
   }
+
+  // Format the original price (which is now always USD) with its currency for comparison if needed
+  const originalPriceFormatted = product.price != null && product.currency 
+    ? new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)
+    : '';
 
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
   

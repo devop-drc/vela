@@ -66,7 +66,12 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
             />
           </TableHead>
           <TableHead className="w-[80px]">Image</TableHead>
-          <TableHead>Name</TableHead>{showStatusColumn && <TableHead>Status</TableHead>}<TableHead>Price</TableHead><TableHead>Inventory</TableHead><TableHead>Total Earned</TableHead><TableHead className="text-right w-[150px]">Actions</TableHead>
+          <TableHead>Name</TableHead>
+          {showStatusColumn && <TableHead>Status</TableHead>}
+          <TableHead>Price</TableHead>
+          <TableHead>Inventory</TableHead>
+          <TableHead>Total Earned</TableHead>
+          <TableHead className="text-right w-[150px]">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -102,7 +107,12 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
             <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
               <div className="flex-1 text-sm text-muted-foreground">
                 {product.price != null ? (
-                  formatCurrency(convertCurrency(product.price, product.currency), shopDetails?.currency)
+                  (() => {
+                    console.log("ProductTableView: Converting price for display. Stored price:", product.price, product.currency, "Shop currency:", shopDetails?.currency);
+                    const convertedPrice = convertCurrency(product.price, product.currency, shopDetails?.currency);
+                    console.log("ProductTableView: Converted display price:", convertedPrice);
+                    return formatCurrency(convertedPrice, shopDetails?.currency);
+                  })()
                 ) : (
                   <span className="text-muted-foreground">N/A</span>
                 )}

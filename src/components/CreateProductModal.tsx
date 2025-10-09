@@ -57,7 +57,7 @@ const AttributeInput = ({ control, fieldName, inputType }: any) => {
 };
 
 export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post }: CreateProductModalProps) => {
-  const { shopDetails } = useShop();
+  const { shopDetails, convertCurrency } = useShop();
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [typeOptions, setTypeOptions] = useState<string[]>([]);
   const [typeAttributes, setTypeAttributes] = useState<any[]>([]);
@@ -67,6 +67,7 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
   });
 
   useEffect(() => {
+    console.log("CreateProductModal: Initializing form with productData:", productData, "post:", post, "shopDetails:", shopDetails);
     const flattenedDetails: { [key: string]: any } = {};
     if (productData?.details) {
         for (const [key, valueObj] of Object.entries(productData.details as any)) {
@@ -74,18 +75,24 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
         }
     }
 
+    // Convert AI-suggested price (which might be in a different currency) to shop's display currency for form
+    const aiSuggestedPrice = productData?.price?.value;
+    const aiSuggestedCurrency = productData?.currency?.value;
+    const priceInDisplayCurrency = convertCurrency(aiSuggestedPrice, aiSuggestedCurrency, shopDetails?.currency);
+    console.log("CreateProductModal: AI suggested price:", aiSuggestedPrice, aiSuggestedCurrency, "Converted to display currency:", priceInDisplayCurrency, shopDetails?.currency);
+
     reset({
       name: productData?.name?.value || "",
       description: productData?.description?.value || post?.caption || "",
       category: productData?.category?.value || "Generic Product",
-      price: productData?.price?.value || 0,
-      currency: productData?.currency?.value || shopDetails?.currency || 'USD',
+      price: priceInDisplayCurrency || 0, // Use converted price for form
+      currency: shopDetails?.currency || 'USD', // Always use shop's currency for the form's currency selector
       inventory: 10,
       tags: productData?.tags?.value || [],
       pricing_type: 'one_time',
       details: flattenedDetails,
     });
-  }, [productData, post, shopDetails, reset]);
+  }, [productData, post, shopDetails, reset, convertCurrency]);
 
   const pricingType = useWatch({ control, name: "pricing_type" });
   const categoryValue = useWatch({ control, name: "category" });
@@ -122,6 +129,7 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
   }, [categoryValue, typeValue]);
 
   const onSubmit = async (data: ProductFormData) => {
+    console.log("CreateProductModal: Submitting form data:", data);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { showError("You must be logged in."); return; }
 
@@ -134,14 +142,20 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
         categoryRecord = newCat;
     }
 
+    // Convert price from form's display currency (shopDetails.currency) to USD for storage
+    const priceInUSD = convertCurrency(data.price, data.currency, 'USD');
+    console.log("CreateProductModal: Price in form's currency:", data.price, data.currency, "Converted to USD for storage:", priceInUSD);
+
     const { error } = await supabase.from('products').insert({
       business_id: business.id, name: data.name, caption: data.description, category: data.category,
-      price: data.price, currency: data.currency, inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
+      price: priceInUSD, // Store price in USD
+      currency: 'USD', // Store currency as USD
+      inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
       tags: data.tags, details: data.details, pricing_type: data.pricing_type, status: 'Draft',
       instagram_post_id: post.id, media_url: post.media_url, thumbnail_url: post.thumbnail_url, media_type: post.media_type,
     });
 
-    if (error) { showError(`Failed to create product: ${error.message}`); } 
+    if (error) { showError(`Failed to create product: ${error.message}`); console.error("CreateProductModal: Error creating product:", error); } 
     else { showSuccess("Product created successfully!"); onSave(); onClose(); }
   };
 
@@ -177,7 +191,7 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
               <div className="space-y-2"><Label>Pricing Model</Label><Controller name="pricing_type" control={control} render={({ field }) => (<RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4"><div className="flex items-center space-x-2"><RadioGroupItem value="one_time" id="one_time" /><Label htmlFor="one_time">One-time</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="subscription" id="subscription" /><Label htmlFor="subscription">Subscription</Label></div></RadioGroup>)} /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Price</Label><div className="flex items-center gap-2"><Input type="number" step="0.01" {...register("price")} className="flex-1" /><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
-                <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-2"><Label>Inventory</Label><Input type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}</AnimatePresence>
+                <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-2"><Label>Inventory</Label><Input type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
               </div>
               <Card>
                 <CardHeader><CardTitle className="text-base">Options (for Variants)</CardTitle></CardHeader>

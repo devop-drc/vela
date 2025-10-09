@@ -101,7 +101,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         try {
             const caption = getValues('caption');
             if (!caption) throw new Error("Please provide a description for the AI to analyze.");
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } = {} } = await supabase.auth.getUser(); // Destructure with default empty object
             if (!user) throw new Error("You must be logged in.");
             const { data: analysis, error } = await supabase.functions.invoke('ai-product-classifier', { body: { caption, user_id: user.id } });
             if (error) throw error;

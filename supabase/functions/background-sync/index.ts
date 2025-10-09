@@ -71,6 +71,34 @@ const getSupabaseAdmin = () => createClient(
 
 const toTitleCase = (str: string) => str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
+// Currency conversion helper (simplified for server-side, assumes rates are USD-based)
+const convertCurrencyServer = async (amount: number, fromCurrency: string, toCurrency: string = 'USD'): Promise<number> => {
+  if (fromCurrency === toCurrency) return amount;
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await supabaseAdmin.functions.invoke('exchange-rates');
+  if (error || data.error) {
+    console.error("Server-side currency conversion: Failed to fetch exchange rates.", error || data.error);
+    return amount; // Return original amount on error
+  }
+  const exchangeRates = data.rates;
+
+  const fromRate = exchangeRates[fromCurrency];
+  const toRate = exchangeRates[toCurrency];
+
+  if (!fromRate || !toRate) {
+    console.warn(`Server-side currency conversion: Missing exchange rate for conversion from ${fromCurrency} to ${toCurrency}.`);
+    return amount; // Return original amount if rates are missing
+  }
+
+  // Convert from source currency to USD, then from USD to target currency
+  const amountInUSD = amount / fromRate;
+  const convertedAmount = amountInUSD * toRate;
+  
+  return Math.round(convertedAmount * 100) / 100;
+};
+
+
 // Database Functions
 const upsertCategory = async (supabase: SupabaseClient, name: string, userId: string): Promise<string> => {
   const normalizedName = toTitleCase(name);
@@ -246,11 +274,18 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       // Default inventory to 0 if not provided by AI
       const inventory = productInfo.inventory ?? 0; 
 
+      // Convert AI-suggested price to USD for storage
+      let priceInUSD = productInfo.price ?? 0;
+      if (productInfo.price && productInfo.currency && productInfo.currency !== 'USD') {
+        priceInUSD = await convertCurrencyServer(productInfo.price, productInfo.currency, 'USD');
+        console.log(`Background Sync: Converted AI price ${productInfo.price} ${productInfo.currency} to ${priceInUSD} USD for storage.`);
+      }
+
       const productPayload: ProductPayload = {
         name: productInfo.productName,
         caption: productInfo.description,
-        price: productInfo.price,
-        currency: productInfo.currency,
+        price: priceInUSD, // Store price in USD
+        currency: 'USD', // Always store currency as USD
         tags: productInfo.tags,
         category: toTitleCase(categoryName || ''),
         details: details,

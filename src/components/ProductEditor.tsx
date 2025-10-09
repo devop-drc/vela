@@ -17,7 +17,7 @@ const productSchema = z.object({
   caption: z.string().optional(),
   category: z.string().min(1, "Category is required"),
   price: z.coerce.number().min(0, "Price must be a positive number"),
-  currency: z.string().optional(),
+  currency: z.string().min(3, "Currency code is required").max(3),
   inventory: z.coerce.number().int().min(0, "Inventory must be a positive integer").optional(),
   tags: z.array(z.string()).optional(),
   pricing_type: z.enum(['one_time', 'subscription']),
@@ -74,8 +74,10 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   });
   useEffect(() => {
     if (product && shopDetails) {
-      // Convert price from product.currency (stored in DB) to shopDetails.currency (display)
-      const priceInDisplayCurrency = convertCurrency(product.price, product.currency);
+      console.log("ProductEditor: Initializing form. Product from DB:", product, "Shop details:", shopDetails);
+      // Convert price from product.currency (stored in DB, now always USD) to shopDetails.currency (display)
+      const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
+      console.log("ProductEditor: Stored price:", product.price, product.currency, "Converted to display currency:", priceInDisplayCurrency, shopDetails.currency);
 
       form.reset({
         name: product.name || "",
@@ -93,14 +95,15 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
       setMediaItems(gallery);
     } else if (product) {
-      // Fallback if shopDetails not loaded yet, use product's original currency
+      console.log("ProductEditor: Initializing form (shopDetails not loaded). Product from DB:", product);
+      // Fallback if shopDetails not loaded yet, use product's original currency (which should be USD)
       form.reset({
         name: product.name || "",
         status: product.status || "Draft",
         caption: product.caption || "",
         category: product.category || "",
         price: product.price || 0,
-        currency: product.currency || 'USD',
+        currency: product.currency || 'USD', // Should be USD if standardized
         inventory: product.inventory || 0,
         tags: product.tags || [],
         pricing_type: product.pricing_type || 'one_time',
@@ -226,10 +229,12 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
 
   const handleSave = async (data: ProductFormData) => {
     setIsSubmitting(true);
+    console.log("ProductEditor: Saving product. Form data:", data);
     await logFeedback(product, data);
 
-    // Convert price from display currency (data.currency) to USD for storage
+    // Convert price from form's display currency (data.currency) to USD for storage
     const priceInUSD = convertCurrency(data.price, data.currency, 'USD'); // Explicitly convert to USD
+    console.log("ProductEditor: Price in form's currency:", data.price, data.currency, "Converted to USD for storage:", priceInUSD);
 
     const cleanedDetails: { [key: string]: any } = { type: data.details.type };
     if (typeAttributes) {
@@ -243,7 +248,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     const { error } = await supabase.from('products').update({
         name: data.name, status: data.status, caption: data.caption, category: data.category,
         price: priceInUSD, // Save price in USD
-        currency: data.currency, // Save the selected currency
+        currency: 'USD', // Always save currency as USD
         inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
         tags: data.tags, pricing_type: data.pricing_type,
         billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
@@ -253,7 +258,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
         thumbnail_url: mediaItems[0] || null,
       }).eq('id', product.id);
 
-    if (error) { showError(`Failed to update product: ${error.message}`); } 
+    if (error) { showError(`Failed to update product: ${error.message}`); console.error("ProductEditor: Error updating product:", error); } 
     else { showSuccess("Product updated successfully!"); onUpdate(); setIsEditing(false); }
     setIsSubmitting(false);
   };
