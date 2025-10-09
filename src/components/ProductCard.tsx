@@ -78,6 +78,22 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
   
   const detailsToDisplay = Object.entries(details || {}).filter(([key, value]) => key !== 'type' && value && (!Array.isArray(value) || value.length > 0));
 
+  const getStockBadge = (inventory: number | null) => {
+    if (product.pricing_type === 'subscription') {
+      return <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-300">Subscription</Badge>;
+    }
+    if (inventory === null) {
+      return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">N/A</Badge>;
+    }
+    if (inventory > 10) {
+      return <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-300">In Stock</Badge>;
+    }
+    if (inventory > 0 && inventory <= 10) {
+      return <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">Low Stock</Badge>;
+    }
+    return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">Out of Stock</Badge>;
+  };
+
   return (
     <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative h-full">
       <div className={cn("absolute top-3 right-3 z-20 transition-opacity", isSelectionModeActive ? "opacity-100" : "opacity-0 pointer-events-none")}>
@@ -127,8 +143,9 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
               {product.details?.type && <span> &middot; {product.details.type}</span>}
             </div>
 
-            <h3 className="font-semibold tracking-tight leading-snug">
+            <h3 className="font-semibold tracking-tight leading-snug flex items-center gap-2">
               {product.name}
+              {getStockBadge(product.inventory)}
             </h3>
 
             {(gridSize === 'md' || gridSize === 'lg') && caption && (

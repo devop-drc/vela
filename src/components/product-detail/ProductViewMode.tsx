@@ -29,7 +29,8 @@ const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
     const { shopDetails, convertCurrency } = useShop();
     const [attributes, setAttributes] = useState<any[]>([]);
-    const displayPrice = convertCurrency(product.price);
+    // The product.price here is already in the shop's display currency, set by ProductEditor
+    const displayPrice = product.price; 
 
     useEffect(() => {
       const fetchAttributes = async () => {

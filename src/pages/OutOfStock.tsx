@@ -14,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { OutOfStockActionsToolbar } from "@/components/OutOfStockActionsToolbar";
 import { AnimatePresence } from "framer-motion";
 import { showError, showSuccess } from "@/utils/toast";
+import { StockAdjustmentModal } from "@/components/StockAdjustmentModal"; // Import new modal
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 
@@ -32,6 +33,7 @@ interface Product {
   billing_interval: 'month' | 'year' | null;
   created_at: string;
   details: any;
+  media_type: string | null; // Added media_type
 }
 
 const OutOfStock = () => {
@@ -42,8 +44,9 @@ const OutOfStock = () => {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState("newest");
-  const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
+  const [isSaleModalOpen, setIsSaleModalOpen] = useState(false); // Keep for now, might be removed later
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false); // New state for stock modal
 
   useEffect(() => {
     setTitle("Out of Stock");
@@ -85,12 +88,6 @@ const OutOfStock = () => {
 
   const handleProductUpdate = useCallback(() => { fetchProducts(); }, [fetchProducts]);
 
-  const handleBulkStatusChange = async (status: 'Active' | 'Draft') => {
-    const { error } = await supabase.from('products').update({ status }).in('id', selectedProducts);
-    if (error) { showError(`Failed to update products: ${error.message}`); } 
-    else { showSuccess(`Successfully updated ${selectedProducts.length} products.`); setSelectedProducts([]); fetchProducts(); }
-  };
-
   const handleBulkDelete = async () => {
     const { error } = await supabase.from('products').delete().in('id', selectedProducts);
     if (error) { showError(`Failed to delete products: ${error.message}`); } 
@@ -109,10 +106,32 @@ const OutOfStock = () => {
     setIsSaleModalOpen(false);
   };
 
+  const handleOpenStockModal = () => {
+    setIsStockModalOpen(true);
+  };
+
+  const handleStockAdjustmentSave = () => {
+    fetchProducts(); // Re-fetch products to update status and inventory
+    setSelectedProducts([]); // Clear selection
+    setIsStockModalOpen(false);
+  };
+
+  const selectedProductsData = useMemo(() => {
+    return products.filter(p => selectedProducts.includes(p.id));
+  }, [products, selectedProducts]);
+
   return (
     <>
       <ProductEditor isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct as any} onUpdate={handleProductUpdate} />
       {isSaleModalOpen && <SaleModal isOpen={isSaleModalOpen} onClose={() => setIsSaleModalOpen(false)} onApply={handleApplySale} productCount={selectedProducts.length} />}
+      {isStockModalOpen && (
+        <StockAdjustmentModal
+          isOpen={isStockModalOpen}
+          onClose={() => setIsStockModalOpen(false)}
+          onSave={handleStockAdjustmentSave}
+          products={selectedProductsData}
+        />
+      )}
       <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {selectedProducts.length} products?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
 
       <div className="space-y-4">
@@ -152,7 +171,7 @@ const OutOfStock = () => {
                 onSelectOne={(id) => setSelectedProducts(prev => prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id])}
                 onEdit={(p) => setSelectedProduct(p as any)}
                 onDelete={(id) => { setSelectedProducts([id]); setBulkDeleteConfirm(true); }}
-                onStatusChange={() => {}}
+                onStatusChange={() => {}} // Status change is now handled by the StockAdjustmentModal
               />
             )}
           </CardContent>
@@ -163,9 +182,8 @@ const OutOfStock = () => {
           <OutOfStockActionsToolbar
             selectedCount={selectedProducts.length}
             onClear={() => setSelectedProducts([])}
-            onSetStatus={handleBulkStatusChange}
+            onAddStock={handleOpenStockModal} // Use new handler
             onDelete={() => setBulkDeleteConfirm(true)}
-            onAddSale={() => setIsSaleModalOpen(true)}
           />
         )}
       </AnimatePresence>

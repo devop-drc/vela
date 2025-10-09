@@ -46,6 +46,7 @@ interface ProductPayload {
   media_url: string;
   thumbnail_url?: string;
   media_type: string;
+  inventory?: number; // Added inventory to payload
 }
 
 const corsHeaders = {
@@ -242,6 +243,9 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         for (const attr of attributes) { details[attr.name] = attr.value; }
       }
 
+      // Default inventory to 0 if not provided by AI
+      const inventory = productInfo.inventory ?? 0; 
+
       const productPayload: ProductPayload = {
         name: productInfo.productName,
         caption: productInfo.description,
@@ -252,11 +256,12 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         details: details,
         business_id: business.id, 
         user_id: user.id, 
-        status: 'Draft',
+        status: inventory === 0 ? 'Out of Stock' : 'Draft', // Set status based on inventory
         instagram_post_id: post.id, 
         media_url: post.media_url, 
         thumbnail_url: post.thumbnail_url || post.media_url, 
         media_type: post.media_type,
+        inventory: inventory, // Include inventory in payload
       };
 
       const existingId = existingProductMap.get(post.id);
