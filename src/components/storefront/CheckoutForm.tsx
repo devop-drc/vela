@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck, Lock, DollarSign, Mail, Globe, StickyNote, Calendar } from "lucide-react";
+import { CheckCircle, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck, Lock, DollarSign, Mail, Globe, StickyNote, Calendar, Truck } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -17,8 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const CheckoutProgress = ({ currentStep }: { currentStep: number }) => {
   const steps = [
-    { name: "Contact", icon: User },
-    { name: "Shipping", icon: MapPin },
+    { name: "Contact & Shipping", icon: MapPin },
     { name: "Payment", icon: CreditCard },
   ];
 
@@ -53,7 +52,8 @@ interface CheckoutFormData {
   city: string;
   zip: string;
   country: string; // Added country
-  notes?: string;
+  notesForSeller?: string; // New field
+  notesForCourier?: string; // New field
   cardNumber?: string;
   cardName?: string;
   expiryDate?: string;
@@ -81,7 +81,8 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
   const [city, setCity] = useState('');
   const [zip, setZip] = useState('');
   const [country, setCountry] = useState('Albania'); // Default to Albania
-  const [notes, setNotes] = useState('');
+  const [notesForSeller, setNotesForSeller] = useState(''); // New state
+  const [notesForCourier, setNotesForCourier] = useState(''); // New state
   const [cardNumber, setCardNumber] = useState('');
   const [cardName, setCardName] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
@@ -92,7 +93,7 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
   const [localIsSubmitting, setLocalIsSubmitting] = useState(false); // Internal submitting state
 
   const validateStep = () => {
-    if (currentStep === 1) {
+    if (currentStep === 1) { // Contact & Shipping Step
       if (!firstName.trim()) { toast.error("First Name is required."); return false; }
       if (!lastName.trim()) { toast.error("Last Name is required."); return false; }
       if (!email.trim()) { toast.error("Email is required."); return false; }
@@ -100,12 +101,11 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
         toast.error("Please enter a valid email address.");
         return false;
       }
-    } else if (currentStep === 2) {
       if (!address.trim()) { toast.error("Shipping Address is required."); return false; }
       if (!city.trim()) { toast.error("City is required."); return false; }
       if (!zip.trim()) { toast.error("Zip/Postal Code is required."); return false; }
       if (!country.trim()) { toast.error("Country is required."); return false; }
-    } else if (currentStep === 3) {
+    } else if (currentStep === 2) { // Payment Step
       if (paymentMethod === 'card') {
         if (!cardNumber.trim()) { toast.error("Card Number is required."); return false; }
         if (!cardName.trim()) { toast.error("Name on Card is required."); return false; }
@@ -137,7 +137,7 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
       return;
     }
 
-    if (currentStep < 3) {
+    if (currentStep < 2) { // Only 2 steps now
       setCurrentStep(prev => prev + 1);
       return;
     }
@@ -150,7 +150,7 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
       return;
     }
 
-    const customerInfo = { firstName, lastName, email, address, city, zip, country, notes };
+    const customerInfo = { firstName, lastName, email };
     const orderItems = cartItems.map(item => ({
       productId: item.productId,
       name: item.name,
@@ -171,7 +171,8 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
           shippingCity: city,
           shippingZip: zip,
           shippingCountry: country,
-          orderNotes: notes,
+          shippingNotesSeller: notesForSeller, // New: Notes for seller
+          shippingNotesCourier: notesForCourier, // New: Notes for courier
         },
       });
 
@@ -213,29 +214,94 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
             >
               <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-lg flex-1 flex flex-col")}>
                 <CardHeader className="flex-shrink-0">
-                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><User className="h-5 w-5" /> Contact Information</CardTitle>
-                  <CardDescription className="text-sm md:text-base">We'll use this to send you updates about your order.</CardDescription>
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><User className="h-5 w-5" /> Contact & Shipping Information</CardTitle>
+                  <CardDescription className="text-sm md:text-base">Provide your contact details and where you'd like your order shipped.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4 flex-1 overflow-y-auto">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName" className="text-sm">First Name</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input id="firstName" placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="pl-10" />
+                <CardContent className="space-y-6 flex-1 overflow-y-auto">
+                    {/* Contact Information */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName" className="text-sm">First Name</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input id="firstName" placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="pl-10" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName" className="text-sm">Last Name</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input id="lastName" placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="pl-10" />
+                        </div>
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="email" className="text-sm">Email</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input id="email" type="email" placeholder="john.doe@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10" />
+                        </div>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName" className="text-sm">Last Name</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input id="lastName" placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="pl-10" />
+
+                    <Separator />
+
+                    {/* Shipping Information */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="address" className="text-sm">Shipping Address</Label>
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input id="address" placeholder="123 Main St" value={address} onChange={(e) => setAddress(e.target.value)} required className="pl-10" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="city" className="text-sm">City</Label>
+                        <div className="relative">
+                          <City className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input id="city" placeholder="Anytown" value={city} onChange={(e) => setCity(e.target.value)} required className="pl-10" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="zip" className="text-sm">Zip/Postal Code</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input id="zip" placeholder="90210" value={zip} onChange={(e) => setZip(e.target.value)} required className="pl-10" />
+                        </div>
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="country" className="text-sm">Country</Label>
+                        <div className="relative">
+                          <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Select value={country} onValueChange={setCountry}>
+                            <SelectTrigger id="country" className="pl-10">
+                              <SelectValue placeholder="Select country" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Albania">Albania</SelectItem>
+                              {/* Add other countries if needed in the future */}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="text-sm">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input id="email" type="email" placeholder="john.doe@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10" />
+
+                    <Separator />
+
+                    {/* Order Notes */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="notesForSeller" className="text-sm">Notes for Seller (Optional)</Label>
+                        <div className="relative">
+                          <StickyNote className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Textarea id="notesForSeller" rows={3} placeholder="e.g., Please gift wrap this item." value={notesForSeller} onChange={(e) => setNotesForSeller(e.target.value)} className="pl-10 pt-3" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="notesForCourier" className="text-sm">Notes for Courier (Optional)</Label>
+                        <div className="relative">
+                          <Truck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Textarea id="notesForCourier" rows={3} placeholder="e.g., Leave package with neighbor if not home." value={notesForCourier} onChange={(e) => setNotesForCourier(e.target.value)} className="pl-10 pt-3" />
+                        </div>
                       </div>
                     </div>
                 </CardContent>
@@ -254,101 +320,35 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
             >
               <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-lg flex-1 flex flex-col")}>
                 <CardHeader className="flex-shrink-0">
-                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><MapPin className="h-5 w-5" /> Shipping Information</CardTitle>
-                  <CardDescription className="text-sm md:text-base">Where should we send your awesome products?</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 flex-1 overflow-y-auto">
-                    <div className="space-y-2">
-                      <Label htmlFor="address" className="text-sm">Shipping Address</Label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input id="address" placeholder="123 Main St" value={address} onChange={(e) => setAddress(e.target.value)} required className="pl-10" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {/* Changed to 2 columns */}
-                      <div className="space-y-2">
-                        <Label htmlFor="city" className="text-sm">City</Label>
-                        <div className="relative">
-                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input id="city" placeholder="Anytown" value={city} onChange={(e) => setCity(e.target.value)} required className="pl-10" />
-                        </div>
-                      </div>
-                      {/* Removed State/Province field */}
-                      <div className="space-y-2">
-                        <Label htmlFor="zip" className="text-sm">Zip/Postal Code</Label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input id="zip" placeholder="90210" value={zip} onChange={(e) => setZip(e.target.value)} required className="pl-10" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="country" className="text-sm">Country</Label>
-                      <div className="relative">
-                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Select value={country} onValueChange={setCountry} disabled>
-                          <SelectTrigger id="country" className="pl-10">
-                            <SelectValue placeholder="Select country" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Albania">Albania</SelectItem>
-                            {/* Add other countries if needed in the future */}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="notes" className="text-sm">Order Notes (Optional)</Label>
-                      <div className="relative">
-                        <StickyNote className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Textarea id="notes" rows={3} placeholder="Leave a note for the seller..." value={notes} onChange={(e) => setNotes(e.target.value)} className="pl-10 pt-3" />
-                      </div>
-                    </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {currentStep === 3 && (
-            <motion.div
-              key="step3"
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              transition={{ duration: 0.2 }}
-              className="flex-1 flex flex-col"
-            >
-              <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-lg flex-1 flex flex-col")}>
-                <CardHeader className="flex-shrink-0">
                   <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><CreditCard className="h-5 w-5" /> Payment Information</CardTitle>
                   <CardDescription className="text-sm md:text-base">Choose your preferred payment method.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6 flex-1 overflow-y-auto">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                    <Label htmlFor="payment-card" className="flex items-center gap-2 cursor-pointer text-sm md:text-base">
-                      <input
-                        type="radio"
-                        id="payment-card"
-                        name="paymentMethod"
-                        value="card"
-                        checked={paymentMethod === 'card'}
-                        onChange={() => setPaymentMethod('card')}
-                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
-                      />
-                      <span>Debit/Credit Card / PayPal</span>
-                    </Label>
-                    <Label htmlFor="payment-cash" className="flex items-center gap-2 cursor-pointer text-sm md:text-base">
-                      <input
-                        type="radio"
-                        id="payment-cash"
-                        name="paymentMethod"
-                        value="cash_on_delivery"
-                        checked={paymentMethod === 'cash_on_delivery'}
-                        onChange={() => setPaymentMethod('cash_on_delivery')}
-                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
-                      />
-                      <span>Cash on Delivery</span>
-                    </Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Button
+                      type="button"
+                      variant={paymentMethod === 'card' ? 'default' : 'outline'}
+                      onClick={() => setPaymentMethod('card')}
+                      className={cn(
+                        "flex flex-col h-auto py-6 text-base",
+                        paymentMethod === 'card' ? "ring-2 ring-primary ring-offset-2" : ""
+                      )}
+                    >
+                      <CreditCard className="h-6 w-6 mb-2" />
+                      Debit/Credit Card
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={paymentMethod === 'cash_on_delivery' ? 'default' : 'outline'}
+                      onClick={() => setPaymentMethod('cash_on_delivery')}
+                      className={cn(
+                        "flex flex-col h-auto py-6 text-base",
+                        paymentMethod === 'cash_on_delivery' ? "ring-2 ring-primary ring-offset-2" : ""
+                      )}
+                    >
+                      <DollarSign className="h-6 w-6 mb-2" />
+                      Cash on Delivery
+                    </Button>
                   </div>
 
                   {paymentMethod === 'card' ? (
@@ -433,8 +433,8 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
             </>
           ) : (
             <>
-              {currentStep < 3 ? "Next Step" : "Place Order"}
-              {currentStep === 3 && <CheckCircle className="ml-2 h-4 w-4" />}
+              {currentStep < 2 ? "Next Step" : "Place Order"}
+              {currentStep === 2 && <CheckCircle className="ml-2 h-4 w-4" />}
             </>
           )}
         </Button>

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye, XCircle, CreditCard, MessageSquareWarning, Hash, Reply, Handshake, MapPin } from "lucide-react"; // Import XCircle, CreditCard, MessageSquareWarning, Hash, Reply, Handshake, MapPin
+import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye, XCircle, CreditCard, MessageSquareWarning, Hash, Reply, Handshake, MapPin, StickyNote } from "lucide-react"; // Import StickyNote
 import { Separator } from "../ui/separator";
 import { ScrollArea } from "../ui/scroll-area";
 import { useStorefront } from "@/contexts/StorefrontContext";
@@ -55,7 +55,8 @@ interface OrderDetails {
   shipping_state?: string;
   shipping_zip?: string;
   shipping_country?: string;
-  order_notes?: string;
+  shipping_notes_seller?: string; // New field
+  shipping_notes_courier?: string; // New field
 }
 
 interface StorefrontOrderDetailModalProps {
@@ -257,7 +258,8 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
                   <p><span className="font-medium">State/Province:</span> {order.shipping_state || 'N/A'}</p>
                   <p><span className="font-medium">Zip/Postal Code:</span> {order.shipping_zip || 'N/A'}</p>
                   <p><span className="font-medium">Country:</span> {order.shipping_country || 'N/A'}</p>
-                  <p><span className="font-medium">Notes:</span> {order.order_notes || 'None'}</p>
+                  {order.shipping_notes_seller && <p><span className="font-medium flex items-center gap-1"><StickyNote className="h-4 w-4" /> Notes for Seller:</span> {order.shipping_notes_seller}</p>}
+                  {order.shipping_notes_courier && <p><span className="font-medium flex items-center gap-1"><Truck className="h-4 w-4" /> Notes for Courier:</span> {order.shipping_notes_courier}</p>}
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
                   Shipping address cannot be changed after an order is placed. Please contact support for urgent changes.
@@ -287,14 +289,14 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
                 {isLoadingDispute ? <Loader2 className="animate-spin" /> : dispute ? (
                   <div className="space-y-3 p-3 border rounded-md bg-muted/50">
                     <div className="flex items-center justify-between">
-                      <p className="font-medium flex items-center gap-2"><Hash className="h-4 w-4 text-primary" /> Dispute ID: {dispute.id.substring(0, 8)}</p>
+                      <p className="font-medium flex items-center gap-2"><Hash className="h-4 w-4" /> Dispute ID: {dispute.id.substring(0, 8)}</p>
                       <Badge className={cn("text-white", getStatusColor(dispute.status))}>{dispute.status}</Badge>
                     </div>
                     <p className="text-sm"><span className="font-medium">Reason:</span> {dispute.reason}</p>
                     {dispute.message && <p className="text-sm"><span className="font-medium">Your Message:</span> {dispute.message}</p>}
                     {dispute.reply_message && (
                       <div className="space-y-2 mt-3">
-                        <Label className="flex items-center gap-2 text-sm"><Reply className="h-4 w-4 text-primary" /> Seller's Reply</Label>
+                        <Label className="flex items-center gap-2 text-sm"><Reply className="h-4 w-4" /> Seller's Reply</Label>
                         <p className="text-sm text-muted-foreground p-3 border rounded-md bg-background">{dispute.reply_message}</p>
                       </div>
                     )}

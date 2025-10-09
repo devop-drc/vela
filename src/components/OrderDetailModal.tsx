@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye, XCircle, CreditCard, MessageSquareWarning, Hash, Reply, Handshake, MapPin } from "lucide-react"; // Import XCircle
+import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye, XCircle, CreditCard, MessageSquareWarning, Hash, Reply, Handshake, MapPin, StickyNote } from "lucide-react"; // Import StickyNote
 import { Separator } from "./ui/separator";
 import { ScrollArea } from "./ui/scroll-area";
 import { useShop } from "@/contexts/ShopContext";
@@ -53,7 +53,8 @@ type Order = {
   shipping_state?: string;
   shipping_zip?: string;
   shipping_country?: string;
-  order_notes?: string;
+  shipping_notes_seller?: string; // New field
+  shipping_notes_courier?: string; // New field
 };
 
 interface OrderDetailModalProps {
@@ -228,7 +229,8 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                 <p><span className="font-medium">State/Province:</span> {order.shipping_state || 'N/A'}</p>
                 <p><span className="font-medium">Zip/Postal Code:</span> {order.shipping_zip || 'N/A'}</p>
                 <p><span className="font-medium">Country:</span> {order.shipping_country || 'N/A'}</p>
-                <p><span className="font-medium">Notes:</span> {order.order_notes || 'None'}</p>
+                {order.shipping_notes_seller && <p><span className="font-medium flex items-center gap-1"><StickyNote className="h-4 w-4" /> Notes for Seller:</span> {order.shipping_notes_seller}</p>}
+                {order.shipping_notes_courier && <p><span className="font-medium flex items-center gap-1"><Truck className="h-4 w-4" /> Notes for Courier:</span> {order.shipping_notes_courier}</p>}
               </div>
             </div>
             <Separator />
