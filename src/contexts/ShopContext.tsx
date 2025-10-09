@@ -101,7 +101,7 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
       slug: dbDetails?.slug || generateSlug(dbDetails?.shop_name || igDetails?.shop_name || 'your-shop'), // Use existing slug or generate
       logo_url: dbDetails?.logo_url || igDetails?.logo_url || null, // Prioritize DB, then IG
       favicon_url: dbDetails?.favicon_url || igDetails?.favicon_url || null, // Prioritize DB, then IG
-      currency: dbDetails?.currency || 'USD',
+      currency: dbDetails?.currency || 'USD', // Default to USD if not set
       headline: dbDetails?.headline || '',
       about: dbDetails?.about || igDetails?.description || '',
       contact_email: dbDetails?.contact_email || user.email || '',
@@ -164,9 +164,9 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const convertCurrency = useCallback((amount: number | null | undefined, fromCurrency: string = 'USD', toCurrency?: string) => {
+  const convertCurrency = useCallback((amount: number | null | undefined, fromCurrency: string = 'ALL', toCurrency?: string) => {
     const numericAmount = amount ?? 0;
-    const targetCurrency = toCurrency || shopDetails?.currency || 'USD';
+    const targetCurrency = toCurrency || shopDetails?.currency || 'USD'; // Default to USD if shop currency not set
 
     console.log("convertCurrency: Initiating conversion.", { amount, fromCurrency, toCurrency, targetCurrency, shopDetails, exchangeRates });
 
@@ -189,9 +189,9 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
       return numericAmount;
     }
 
-    // Convert from source currency to USD, then from USD to target currency
-    const amountInUSD = numericAmount / fromRate;
-    const convertedAmount = amountInUSD * toRate;
+    // Rates are ALL-based: rate[X] means 1 ALL = X of currency X
+    // To convert from A to B: amount_in_B = amount_in_A * (rate[B] / rate[A])
+    const convertedAmount = numericAmount * (toRate / fromRate);
     
     console.log(`convertCurrency: Converting ${numericAmount} ${fromCurrency} to ${targetCurrency}. Rates: ${fromCurrency}=${fromRate}, ${targetCurrency}=${toRate}. Converted: ${convertedAmount.toFixed(2)}`);
     return Math.round(convertedAmount * 100) / 100;

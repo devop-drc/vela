@@ -35,18 +35,20 @@ serve(async (req) => {
 
     if (cachedData && (new Date().getTime() - new Date(cachedData.last_fetched_at).getTime()) < CACHE_DURATION_MS) {
       // 2. Return cached data if it's fresh
+      console.log("Exchange Rate Function: Returning cached ALL-based rates.");
       return new Response(JSON.stringify({ rates: cachedData.rates, source: 'cache' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });
     }
 
-    // 3. Fetch new rates if cache is stale or non-existent
+    // 3. Fetch new rates from ExchangeRate-API (which uses USD as base)
     const API_KEY = Deno.env.get('EXCHANGE_RATE_API_KEY');
     if (!API_KEY) {
       throw new Error("Exchange Rate API key is not configured in Supabase secrets.");
     }
 
+    console.log("Exchange Rate Function: Fetching new USD-based rates from API.");
     const response = await fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/latest/USD`);
     if (!response.ok) {
       throw new Error(`Failed to fetch exchange rates. Status: ${response.status}`);
@@ -57,39 +59,51 @@ serve(async (req) => {
       throw new Error(`Exchange Rate API Error: ${data['error-type']}`);
     }
 
-    const newRates = data.conversion_rates;
+    const usdBasedRates = data.conversion_rates;
 
-    // Add a fallback for ALL (Albanian Lek) if not provided by the API
-    // Assuming 1 USD = 93.5 ALL as a reasonable approximation if not present
-    if (!newRates['ALL']) {
-      newRates['ALL'] = 93.5; 
-      console.log("Added fallback rate for ALL (Albanian Lek).");
+    // Ensure ALL is present, add fallback if needed
+    if (!usdBasedRates['ALL']) {
+      usdBasedRates['ALL'] = 93.5; // Fallback rate: 1 USD = 93.5 ALL
+      console.log("Exchange Rate Function: Added fallback rate for ALL (Albanian Lek) to USD-based rates.");
     }
 
-    // 4. Update the cache in the database
+    // 4. Convert USD-based rates to ALL-based rates
+    const allToUsdRate = 1 / usdBasedRates['ALL']; // 1 ALL = X USD
+    const allBasedRates: { [key: string]: number } = {};
+
+    for (const currencyCode in usdBasedRates) {
+      if (Object.prototype.hasOwnProperty.call(usdBasedRates, currencyCode)) {
+        // Rate from ALL to currencyCode = (Rate from USD to currencyCode) / (Rate from USD to ALL)
+        allBasedRates[currencyCode] = usdBasedRates[currencyCode] * allToUsdRate;
+      }
+    }
+    allBasedRates['ALL'] = 1; // 1 ALL = 1 ALL
+
+    console.log("Exchange Rate Function: Converted to ALL-based rates:", allBasedRates);
+
+    // 5. Update the cache in the database
     const { error: upsertError } = await supabaseAdmin
       .from('exchange_rates_cache')
       .upsert({
         id: 1,
-        rates: newRates,
+        rates: allBasedRates,
         last_fetched_at: new Date().toISOString(),
       });
 
     if (upsertError) {
-      // Log the error but still return the new rates to the user
-      console.error("Failed to update exchange rate cache:", upsertError);
+      console.error("Exchange Rate Function: Failed to update exchange rate cache:", upsertError);
     }
 
-    // 5. Return the newly fetched rates
-    return new Response(JSON.stringify({ rates: newRates, source: 'live' }), {
+    // 6. Return the newly fetched ALL-based rates
+    return new Response(JSON.stringify({ rates: allBasedRates, source: 'live' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
 
   } catch (error) {
-    console.error("Exchange Rate Function Error:", error.message);
+    console.error('Exchange Rate Function Error:', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 200,
+      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

@@ -142,14 +142,14 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
         categoryRecord = newCat;
     }
 
-    // Convert price from form's display currency (shopDetails.currency) to USD for storage
-    const priceInUSD = convertCurrency(data.price, data.currency, 'USD');
-    console.log("CreateProductModal: Price in form's currency:", data.price, data.currency, "Converted to USD for storage:", priceInUSD);
+    // Convert price from form's display currency (data.currency) to ALL for storage
+    const priceInALL = convertCurrency(data.price, data.currency, 'ALL');
+    console.log("CreateProductModal: Price in form's currency:", data.price, data.currency, "Converted to ALL for storage:", priceInALL);
 
     const { error } = await supabase.from('products').insert({
       business_id: business.id, name: data.name, caption: data.description, category: data.category,
-      price: priceInUSD, // Store price in USD
-      currency: 'USD', // Store currency as USD
+      price: priceInALL, // Store price in ALL
+      currency: 'ALL', // Store currency as ALL
       inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
       tags: data.tags, details: data.details, pricing_type: data.pricing_type, status: 'Draft',
       instagram_post_id: post.id, media_url: post.media_url, thumbnail_url: post.thumbnail_url, media_type: post.media_type,

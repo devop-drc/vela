@@ -30,7 +30,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     const { shopDetails, convertCurrency } = useShop();
     const [attributes, setAttributes] = useState<any[]>([]);
     
-    // Convert product price from its stored currency (now always USD) to the shop's display currency
+    // Convert product price from its stored currency (now always ALL) to the shop's display currency
     const displayPrice = useMemo(() => {
         if (product.price == null) return null;
         console.log("ProductViewMode: Calculating display price. Stored price:", product.price, product.currency, "Shop currency:", shopDetails?.currency);

@@ -72,7 +72,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
     console.log("ProductCard: Converted display price:", displayPrice);
   }
 
-  // Format the original price (which is now always USD) with its currency for comparison if needed
+  // Format the original price (which is now always ALL) with its currency for comparison if needed
   const originalPriceFormatted = product.price != null && product.currency 
     ? new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)
     : '';

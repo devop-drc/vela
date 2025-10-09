@@ -75,7 +75,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   useEffect(() => {
     if (product && shopDetails) {
       console.log("ProductEditor: Initializing form. Product from DB:", product, "Shop details:", shopDetails);
-      // Convert price from product.currency (stored in DB, now always USD) to shopDetails.currency (display)
+      // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
       const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
       console.log("ProductEditor: Stored price:", product.price, product.currency, "Converted to display currency:", priceInDisplayCurrency, shopDetails.currency);
 
@@ -96,14 +96,14 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       setMediaItems(gallery);
     } else if (product) {
       console.log("ProductEditor: Initializing form (shopDetails not loaded). Product from DB:", product);
-      // Fallback if shopDetails not loaded yet, use product's original currency (which should be USD)
+      // Fallback if shopDetails not loaded yet, use product's original currency (which should be ALL)
       form.reset({
         name: product.name || "",
         status: product.status || "Draft",
         caption: product.caption || "",
         category: product.category || "",
         price: product.price || 0,
-        currency: product.currency || 'USD', // Should be USD if standardized
+        currency: product.currency || 'ALL', // Should be ALL if standardized
         inventory: product.inventory || 0,
         tags: product.tags || [],
         pricing_type: product.pricing_type || 'one_time',
@@ -232,9 +232,9 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     console.log("ProductEditor: Saving product. Form data:", data);
     await logFeedback(product, data);
 
-    // Convert price from form's display currency (data.currency) to USD for storage
-    const priceInUSD = convertCurrency(data.price, data.currency, 'USD'); // Explicitly convert to USD
-    console.log("ProductEditor: Price in form's currency:", data.price, data.currency, "Converted to USD for storage:", priceInUSD);
+    // Convert price from form's display currency (data.currency) to ALL for storage
+    const priceInALL = convertCurrency(data.price, data.currency, 'ALL'); // Explicitly convert to ALL
+    console.log("ProductEditor: Price in form's currency:", data.price, data.currency, "Converted to ALL for storage:", priceInALL);
 
     const cleanedDetails: { [key: string]: any } = { type: data.details.type };
     if (typeAttributes) {
@@ -247,8 +247,8 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
 
     const { error } = await supabase.from('products').update({
         name: data.name, status: data.status, caption: data.caption, category: data.category,
-        price: priceInUSD, // Save price in USD
-        currency: 'USD', // Always save currency as USD
+        price: priceInALL, // Save price in ALL
+        currency: 'ALL', // Always save currency as ALL
         inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
         tags: data.tags, pricing_type: data.pricing_type,
         billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
