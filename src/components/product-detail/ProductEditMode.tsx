@@ -21,6 +21,7 @@ import { MediaItem } from "../MediaItem";
 import { toast } from "sonner";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { useShop } from "@/contexts/ShopContext"; // Import useShop
+import { formatCurrency } from "@/lib/formatters"; // Import formatCurrency
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },

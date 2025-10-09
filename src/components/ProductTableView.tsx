@@ -20,8 +20,13 @@ interface Product {
   billing_interval: 'month' | 'year' | null;
 }
 
+interface ProductWithSales extends Product {
+  total_earned?: number;
+  total_sold?: number;
+}
+
 interface ProductTableViewProps {
-  products: Product[];
+  products: ProductWithSales[];
   selectedProducts: string[];
   onSelectAll: (checked: boolean) => void;
   onSelectOne: (productId: string) => void;
@@ -65,6 +70,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
           <TableHead>Status</TableHead>
           <TableHead>Price</TableHead>
           <TableHead>Inventory</TableHead>
+          <TableHead>Total Earned</TableHead> {/* New column */}
           <TableHead className="text-right w-[150px]">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -79,10 +85,10 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
               />
             </TableCell>
             {/* Make the rest of the row clickable for selection */}
-            <TableCell colSpan={5} className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+            <TableCell colSpan={6} className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
               <div className="flex items-center gap-4">
                 <img src={product.media_url} alt={product.name} className="h-12 w-12 object-cover rounded-md" />
-                <div className="flex flex-col">
+                <div className="flex flex-col flex-1">
                   <div className="font-medium flex items-center gap-2">
                     {product.name}
                     {getStockBadge(product.inventory, product.pricing_type)}
@@ -91,6 +97,21 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
                     currentStatus={product.status} 
                     onStatusChange={(newStatus) => onStatusChange(product.id, newStatus)} 
                   />
+                </div>
+                <div className="flex-1 text-sm text-muted-foreground">
+                  {product.price != null ? (
+                    formatCurrency(convertCurrency(product.price, product.currency), shopDetails?.currency)
+                  ) : (
+                    <span className="text-muted-foreground">N/A</span>
+                  )}
+                </div>
+                <div className="flex-1 text-sm text-muted-foreground">
+                  {product.pricing_type === 'one_time' ? (product.inventory !== null ? product.inventory : 'N/A') : 'N/A'}
+                </div>
+                <div className="flex-1 text-sm font-medium"> {/* Display Total Earned */}
+                  {product.total_earned !== undefined && product.total_earned !== null
+                    ? formatCurrency(convertCurrency(product.total_earned, product.currency), shopDetails?.currency)
+                    : formatCurrency(0, shopDetails?.currency)}
                 </div>
               </div>
             </TableCell>
@@ -107,7 +128,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
           </TableRow>
         )) : (
           <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center">
+            <TableCell colSpan={8} className="h-24 text-center">
               No products found.
             </TableCell>
           </TableRow>

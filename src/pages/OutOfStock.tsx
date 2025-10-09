@@ -36,9 +36,14 @@ interface Product {
   media_type: string | null; // Added media_type
 }
 
+interface ProductWithSales extends Product {
+  total_earned?: number;
+  total_sold?: number;
+}
+
 const OutOfStock = () => {
   const { setTitle } = usePageTitle();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithSales[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
@@ -54,15 +59,43 @@ const OutOfStock = () => {
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .eq('status', 'Out of Stock');
+      .eq('status', 'Out of Stock')
+      .eq('user_id', user.id); // Ensure RLS is respected
 
     if (error) {
       showError("Could not fetch out of stock products.");
+      setProducts([]);
     } else {
-      setProducts(data as Product[]);
+      const fetchedProducts = data as Product[];
+      const productIds = fetchedProducts.map(p => p.id);
+
+      // Fetch sales summary for these products
+      const { data: salesSummary, error: salesError } = await supabase.rpc('get_products_sales_summary', { p_product_ids: productIds });
+
+      if (salesError) {
+        console.error("Error fetching sales summary:", salesError);
+        // Proceed without sales data if there's an error
+        setProducts(fetchedProducts);
+      } else {
+        const productsWithSales = fetchedProducts.map(p => {
+          const summary = salesSummary?.find((s: any) => s.product_id === p.id);
+          return {
+            ...p,
+            total_earned: summary?.total_earned || 0,
+            total_sold: summary?.total_sold || 0,
+          };
+        });
+        setProducts(productsWithSales);
+      }
     }
     setIsLoading(false);
   }, []);
@@ -116,9 +149,12 @@ const OutOfStock = () => {
     setIsStockModalOpen(false);
   };
 
-  const selectedProductsData = useMemo(() => {
-    return products.filter(p => selectedProducts.includes(p.id));
-  }, [products, selectedProducts]);
+  const productsForStockModal = useMemo(() => {
+    if (selectedProducts.length > 0) {
+      return products.filter(p => selectedProducts.includes(p.id));
+    }
+    return filteredAndSortedProducts; // If no products selected, apply to all filtered
+  }, [products, selectedProducts, filteredAndSortedProducts]);
 
   return (
     <>
@@ -129,7 +165,7 @@ const OutOfStock = () => {
           isOpen={isStockModalOpen}
           onClose={() => setIsStockModalOpen(false)}
           onSave={handleStockAdjustmentSave}
-          products={selectedProductsData}
+          products={productsForStockModal}
         />
       )}
       <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {selectedProducts.length} products?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
@@ -178,7 +214,7 @@ const OutOfStock = () => {
         </Card>
       </div>
       <AnimatePresence>
-        {selectedProducts.length > 0 && (
+        {selectedProducts.length > 0 || filteredAndSortedProducts.length > 0 && (
           <OutOfStockActionsToolbar
             selectedCount={selectedProducts.length}
             onClear={() => setSelectedProducts([])}

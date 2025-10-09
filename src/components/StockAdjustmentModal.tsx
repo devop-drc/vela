@@ -46,6 +46,15 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
   });
 
   const [batchStockValue, setBatchStockValue] = useState<string>('');
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    fetchUser();
+  }, []);
 
   useEffect(() => {
     reset({
@@ -67,10 +76,16 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
   };
 
   const onSubmit = async (data: StockFormData) => {
+    if (!userId) {
+      showError("User not authenticated.");
+      return;
+    }
+
     const updates = data.products.map(p => ({
       id: p.id,
       inventory: p.inventory,
       status: p.inventory > 0 ? 'Active' : 'Out of Stock', // Set to Active if stock > 0, else Out of Stock
+      user_id: userId, // Explicitly include user_id for RLS
     }));
 
     try {
