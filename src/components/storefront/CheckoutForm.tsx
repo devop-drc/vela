@@ -23,7 +23,7 @@ const CheckoutProgress = ({ currentStep }: { currentStep: number }) => {
   ];
 
   return (
-    <div className="flex justify-between items-center mb-8 flex-shrink-0"> {/* Added flex-shrink-0 */}
+    <div className="flex justify-between items-center mb-8 flex-shrink-0">
       {steps.map((step, index) => (
         <div key={step.name} className="flex flex-col items-center flex-1">
           <div className={cn(
@@ -52,9 +52,9 @@ interface CheckoutFormData {
   address: string;
   city: string;
   zip: string;
-  country: string; // Added country
-  notesForSeller?: string; // New field
-  notesForCourier?: string; // New field
+  country: string;
+  notesForSeller?: string;
+  notesForCourier?: string;
   cardNumber?: string;
   cardName?: string;
   expiryDate?: string;
@@ -63,7 +63,7 @@ interface CheckoutFormData {
 }
 
 interface CheckoutFormProps {
-  onOrderSuccess: (orderId: string) => void; // New prop for success callback
+  onOrderSuccess: (orderId: string) => void;
   onBackToCart: () => void;
   isSubmitting: boolean;
   totalPrice: number;
@@ -81,9 +81,9 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [zip, setZip] = useState('');
-  const [country, setCountry] = useState('Albania'); // Default to Albania
-  const [notesForSeller, setNotesForSeller] = useState(''); // New state
-  const [notesForCourier, setNotesForCourier] = useState(''); // New state
+  const [country, setCountry] = useState('Albania');
+  const [notesForSeller, setNotesForSeller] = useState('');
+  const [notesForCourier, setNotesForCourier] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [cardName, setCardName] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
@@ -91,10 +91,10 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash_on_delivery'>('card');
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [localIsSubmitting, setLocalIsSubmitting] = useState(false); // Internal submitting state
+  const [localIsSubmitting, setLocalIsSubmitting] = useState(false);
 
   const validateStep = () => {
-    if (currentStep === 1) { // Contact & Shipping Step
+    if (currentStep === 1) {
       if (!firstName.trim()) { toast.error("First Name is required."); return false; }
       if (!lastName.trim()) { toast.error("Last Name is required."); return false; }
       if (!email.trim()) { toast.error("Email is required."); return false; }
@@ -106,7 +106,7 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
       if (!city.trim()) { toast.error("City is required."); return false; }
       if (!zip.trim()) { toast.error("Zip/Postal Code is required."); return false; }
       if (!country.trim()) { toast.error("Country is required."); return false; }
-    } else if (currentStep === 2) { // Payment Step
+    } else if (currentStep === 2) {
       if (paymentMethod === 'card') {
         if (!cardNumber.trim()) { toast.error("Card Number is required."); return false; }
         if (!cardName.trim()) { toast.error("Name on Card is required."); return false; }
@@ -138,12 +138,12 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
       return;
     }
 
-    if (currentStep < 2) { // Only 2 steps now
+    if (currentStep < 2) {
       setCurrentStep(prev => prev + 1);
       return;
     }
 
-    setLocalIsSubmitting(true); // Set internal submitting state
+    setLocalIsSubmitting(true);
 
     if (!shopDetails?.slug || !shopDetails?.currency) {
       toast.error("Shop details are missing. Cannot place order.");
@@ -167,13 +167,13 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
           cartItems: orderItems,
           totalAmount: totalPrice,
           currency: shopDetails.currency,
-          paymentMethod: paymentMethod, // Pass the selected payment method
-          shippingAddress: address, // Pass shipping details
+          paymentMethod: paymentMethod,
+          shippingAddress: address,
           shippingCity: city,
           shippingZip: zip,
           shippingCountry: country,
-          shippingNotesSeller: notesForSeller, // New: Notes for seller
-          shippingNotesCourier: notesForCourier, // New: Notes for courier
+          shippingNotesSeller: notesForSeller,
+          shippingNotesCourier: notesForCourier,
         },
       });
 
@@ -186,8 +186,7 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
       });
       
       clearCart();
-      onOrderSuccess(data.order.id); // Call the success callback with order ID
-      // No redirect here, modal will handle closing
+      onOrderSuccess(data.order.id);
     } catch (err: any) {
       console.error("Order placement failed:", err);
       toast.error(`Failed to place order: ${err.message || "An unexpected error occurred."}`);
@@ -202,9 +201,9 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
         <CheckoutProgress currentStep={currentStep} />
       </div>
 
-      <form id="checkout-form" onSubmit={handleFormSubmit} className="flex-1 flex flex-col overflow-hidden"> {/* Ensure form is flex-1 and overflow-hidden */}
-        <ScrollArea className="flex-1 px-6 pb-6"> {/* Wrap content in ScrollArea */}
-          <div className="space-y-8 pt-6"> {/* Add space-y for cards and pt-6 for top padding */}
+      <form id="checkout-form" onSubmit={handleFormSubmit} className="flex-1 flex flex-col overflow-hidden">
+        <ScrollArea className="flex-1 px-6 pb-6">
+          <div className="space-y-8 pt-6">
             <AnimatePresence mode="wait">
               {currentStep === 1 && (
                 <motion.div
