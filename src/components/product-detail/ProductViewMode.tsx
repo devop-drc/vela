@@ -10,7 +10,7 @@ import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { MediaItem } from "../MediaItem";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react"; // Import useMemo
 import { supabase } from "@/integrations/supabase/client";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 
@@ -27,10 +27,14 @@ const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon
 );
 
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
-    const { shopDetails } = useShop();
+    const { shopDetails, convertCurrency } = useShop();
     const [attributes, setAttributes] = useState<any[]>([]);
-    // The product.price here is already in the shop's display currency, set by ProductEditor
-    const displayPrice = product.price; 
+    
+    // Convert product price from its stored currency to the shop's display currency
+    const displayPrice = useMemo(() => {
+        if (product.price == null) return null;
+        return convertCurrency(product.price, product.currency);
+    }, [product.price, product.currency, convertCurrency]);
 
     useEffect(() => {
       const fetchAttributes = async () => {

@@ -114,10 +114,20 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={cn("max-w-md flex flex-col", products.length > 1 ? "h-[90vh]" : "h-auto")}>
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle>Adjust Stock for {products.length} Product(s)</DialogTitle>
-          <DialogDescription>
-            Set the new inventory level for the selected product(s). Products with stock greater than 0 will be marked as 'Active'.
+        {products.length > 1 ? (
+            <DialogTitle>Adjust Stock for {products.length} Products</DialogTitle>
+          ) : (
+            <DialogTitle>Adjust Stock for 1 Product</DialogTitle>
+          )}
+          {products.length > 1 ? (
+            <DialogDescription>
+            Set the new inventory level for the selected products. When a product's stock is added, the product will be automatically set as active.
           </DialogDescription>
+          ) : (
+            <DialogDescription>
+            Set the new inventory level for the selected product. When a product's stock is added, the product will be automatically set as active.
+          </DialogDescription>
+          )}
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
           {products.length > 1 && (
