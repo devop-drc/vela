@@ -41,6 +41,7 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
          - \`"possibleValues"\`: Array of options if applicable
   8. **Description:** Create a compelling 2-3 sentence description highlighting key features and benefits
   9. **Tags:** Generate 3-5 relevant tags for search and categorization
+  10. **Subscription Details (if applicable):** If the product is a subscription, extract \`pricing_type\` as "subscription", \`billing_interval\` (e.g., "month", "year"), and \`interval_repetitions\` (number of intervals, e.g., 12 for a yearly subscription billed monthly for a year). Default \`interval_repetitions\` to 1 if not specified.
 
   **Currency Handling:**
   - If the caption includes "ALL", "Lek", or "Lekë", use "ALL" as currency
@@ -79,6 +80,7 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
     "price": 150000,
     "currency": "ALL",
     "tags": ["iphone", "smartphone", "apple", "pro", "5g"],
+    "pricing_type": "one_time",
     "attributes": [
       { "name": "storage", "value": "256GB", "inputType": "dropdown", "isOption": true, "possibleValues": ["128GB", "256GB", "512GB"] },
       { "name": "color", "value": ["Graphite", "Silver", "Gold", "Sierra Blue"], "inputType": "dropdown", "isOption": true },
@@ -90,6 +92,25 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
     ]
   }
   
+  **EXAMPLE JSON OUTPUT FOR SUBSCRIPTION:**
+  {
+    "isProductPost": true,
+    "productName": "Premium Coffee Subscription",
+    "description": "Receive freshly roasted coffee beans delivered to your door every month. Choose your blend and grind preference.",
+    "categoryName": "Food & Beverage",
+    "typeName": "Coffee Subscription",
+    "price": 25,
+    "currency": "USD",
+    "tags": ["coffee", "subscription", "gourmet"],
+    "pricing_type": "subscription",
+    "billing_interval": "month",
+    "interval_repetitions": 6,
+    "attributes": [
+      { "name": "blend", "value": ["Arabica", "Robusta", "Espresso"], "inputType": "dropdown", "isOption": true },
+      { "name": "grind", "value": ["Whole Bean", "Filter", "Espresso"], "inputType": "dropdown", "isOption": true }
+    ]
+  }
+
   **FOR NON-PRODUCT POSTS:**
   {
     "isProductPost": false

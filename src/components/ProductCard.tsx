@@ -29,6 +29,7 @@ interface Product {
   tags: string[];
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
+  interval_repetitions?: number | null; // New field
   details: {
     [key: string]: any;
   };
@@ -120,12 +121,12 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
           <CarouselContent onClick={handleCardClick}>
             {mediaItems.map((url, index) => (
               <CarouselItem key={index}>
-                <div className="aspect-square overflow-hidden bg-muted">
+                <div className="aspect-square overflow-hidden bg-muted w-full h-full">
                   <MediaItem 
                     src={url} 
                     alt={`${product.name} media ${index + 1}`} 
                     type={index === 0 ? product.media_type : null}
-                    className="transition-transform duration-300 group-hover:scale-105"
+                    className="transition-transform duration-300 group-hover:scale-105 object-cover"
                   />
                 </div>
               </CarouselItem>
@@ -185,6 +186,9 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
                       }).format(displayPrice)}
                       {product.pricing_type === 'subscription' && (
                         <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                      )}
+                      {product.pricing_type === 'subscription' && product.interval_repetitions && product.interval_repetitions > 1 && (
+                        <span className="text-sm font-light text-muted-foreground"> x {product.interval_repetitions}</span>
                       )}
                     </>
                   ) : 'N/A'}

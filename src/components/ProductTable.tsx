@@ -76,7 +76,17 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                   </TableCell>
                   <TableCell>
                     {product.price != null ? (
-                      formatCurrency(convertCurrency(product.price, product.currency), shopDetails?.currency)
+                      <>
+                        {formatCurrency(convertCurrency(product.price, product.currency), shopDetails?.currency)}
+                        {product.pricing_type === 'subscription' && (
+                          <span className="text-xs font-light text-muted-foreground">
+                            /{product.billing_interval === 'month' ? 'mo' : 'yr'}
+                            {product.interval_repetitions && product.interval_repetitions > 1 && (
+                              <span> x {product.interval_repetitions}</span>
+                            )}
+                          </span>
+                        )}
+                      </>
                     ) : (
                       <span className="text-muted-foreground">N/A</span>
                     )}

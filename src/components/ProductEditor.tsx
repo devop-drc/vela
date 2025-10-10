@@ -22,6 +22,7 @@ const productSchema = z.object({
   tags: z.array(z.string()).optional(),
   pricing_type: z.enum(['one_time', 'subscription']),
   billing_interval: z.enum(['month', 'year']).optional().nullable(),
+  interval_repetitions: z.coerce.number().int().min(1, "Repetitions must be at least 1").optional().nullable(), // New field
   details: z.any(),
 }).refine(data => {
     if (data.pricing_type === 'subscription' && !data.billing_interval) {
@@ -49,6 +50,7 @@ interface Product {
   category?: string;
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
+  interval_repetitions?: number | null; // New field
   details: any;
   currency: string | null;
   instagram_post_id?: string; // Added instagram_post_id
@@ -91,6 +93,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
         tags: Array.isArray(product.tags) ? product.tags : [],
         pricing_type: product.pricing_type || 'one_time',
         billing_interval: product.billing_interval,
+        interval_repetitions: product.interval_repetitions, // New field
         details: product.details || { type: 'generic' },
       });
       const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
@@ -109,6 +112,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
         tags: product.tags || [],
         pricing_type: product.pricing_type || 'one_time',
         billing_interval: product.billing_interval,
+        interval_repetitions: product.interval_repetitions, // New field
         details: product.details || { type: 'generic' },
       });
     } else {
@@ -191,7 +195,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     if (!user) return;
 
     const feedbackEntries = [];
-    const fieldsToCompare: (keyof ProductFormData)[] = ['name', 'caption', 'category', 'price', 'currency', 'inventory'];
+    const fieldsToCompare: (keyof ProductFormData)[] = ['name', 'caption', 'category', 'price', 'currency', 'inventory', 'interval_repetitions']; // Added interval_repetitions
 
     for (const field of fieldsToCompare) {
       const originalValue = String(originalProduct[field as keyof Product] ?? '');
@@ -253,6 +257,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
         inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
         tags: data.tags, pricing_type: data.pricing_type,
         billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
+        interval_repetitions: data.pricing_type === 'subscription' ? data.interval_repetitions : null, // New field
         details: cleanedDetails,
         media_gallery: mediaItems,
         media_url: mediaItems[0] || null,

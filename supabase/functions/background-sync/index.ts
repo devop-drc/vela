@@ -47,6 +47,9 @@ interface ProductPayload {
   thumbnail_url?: string;
   media_type: string;
   inventory?: number; // Added inventory to payload
+  billing_interval?: 'month' | 'year' | null; // Added billing_interval
+  pricing_type?: 'one_time' | 'subscription'; // Added pricing_type
+  interval_repetitions?: number | null; // New field
 }
 
 const corsHeaders = {
@@ -297,6 +300,9 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         thumbnail_url: post.thumbnail_url || post.media_url, 
         media_type: post.media_type,
         inventory: inventory, // Include inventory in payload
+        pricing_type: productInfo.pricing_type || 'one_time', // New field
+        billing_interval: productInfo.billing_interval || null, // New field
+        interval_repetitions: productInfo.interval_repetitions || null, // New field
       };
 
       const existingId = existingProductMap.get(post.id);

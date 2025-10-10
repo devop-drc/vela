@@ -173,6 +173,9 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                     {item.pricing_type === 'subscription' && (
                                       <p className="text-xs text-muted-foreground mt-1">
                                         Subscription: {item.billing_interval === 'month' ? 'Monthly' : 'Yearly'}
+                                        {item.intervalRepetitions && item.intervalRepetitions > 1 && (
+                                          <span> x {item.intervalRepetitions} intervals</span>
+                                        )}
                                       </p>
                                     )}
 
@@ -294,6 +297,9 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                     {item.pricing_type === 'subscription' && (
                                       <p className="text-xs text-muted-foreground mt-1">
                                         Subscription: {item.billing_interval === 'month' ? 'Monthly' : 'Yearly'}
+                                        {item.intervalRepetitions && item.intervalRepetitions > 1 && (
+                                          <span> x {item.intervalRepetitions} intervals</span>
+                                        )}
                                       </p>
                                     )}
 
@@ -322,7 +328,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                         </Button>
                                         <motion.button
                                           type="button"
-                                          variant="ghost"
+                                          variant="destructive"
                                           size="icon"
                                           onClick={() => removeSavedItem(item.productId)}
                                           className="text-destructive hover:text-destructive h-9 w-9 rounded-full"

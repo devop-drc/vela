@@ -44,6 +44,7 @@ interface Product {
   tags: string[];
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
+  interval_repetitions?: number | null; // New field
   created_at: string;
   details: any;
   instagram_post_id?: string; // Added instagram_post_id
@@ -131,7 +132,7 @@ const Products = () => {
       setHasDoneFullSync(!!businessData?.last_full_sync_at);
     }
 
-    const { data, error } = await supabase.from("products").select("*").eq('user_id', user.id).order('created_at', { ascending: false });
+    const { data, error } = await supabase.from("products").select("*, interval_repetitions").eq('user_id', user.id).order('created_at', { ascending: false }); // Added interval_repetitions
     
     if (error) {
       showError("Could not fetch your product catalog.");

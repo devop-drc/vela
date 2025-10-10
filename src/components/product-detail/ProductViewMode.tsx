@@ -102,7 +102,19 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div><Label className="text-sm">Price</Label><p className="font-semibold text-2xl">{product.pricing_type === 'subscription' ? `${formatCurrency(displayPrice, shopDetails?.currency)} / ${product.billing_interval}` : formatCurrency(displayPrice, shopDetails?.currency)}</p></div>
+                  <div>
+                    <Label className="text-sm">Price</Label>
+                    <p className="font-semibold text-2xl">
+                      {product.pricing_type === 'subscription' ? (
+                        <>
+                          {formatCurrency(displayPrice, shopDetails?.currency)} / {product.billing_interval}
+                          {product.interval_repetitions && product.interval_repetitions > 1 && (
+                            <span className="text-base font-light text-muted-foreground"> x {product.interval_repetitions} intervals</span>
+                          )}
+                        </>
+                      ) : formatCurrency(displayPrice, shopDetails?.currency)}
+                    </p>
+                  </div>
                   {product.pricing_type !== 'subscription' && (<div><Label className="text-sm">Inventory</Label><p className="font-semibold text-2xl">{product.inventory || 0}</p></div>)}
                 </div>
               </div>

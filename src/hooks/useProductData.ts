@@ -15,6 +15,7 @@ export interface Product {
   details: { [key: string]: any };
   pricing_type: 'one_time' | 'subscription'; // Added pricing_type
   billing_interval: 'month' | 'year' | null; // Added billing_interval
+  interval_repetitions?: number | null; // New field
   product_type: 'physical' | 'digital'; // Added product_type
 }
 
@@ -50,7 +51,7 @@ export const useProductData = (): UseProductDataResult => {
       }
 
       const [productsRes, categoriesRes, typesRes] = await Promise.all([
-        supabase.from("products").select("id, name, status, price, currency, media_url, created_at, category, tags, details, pricing_type, billing_interval, product_type").eq('user_id', user.id).order('created_at', { ascending: false }),
+        supabase.from("products").select("id, name, status, price, currency, media_url, created_at, category, tags, details, pricing_type, billing_interval, interval_repetitions, product_type").eq('user_id', user.id).order('created_at', { ascending: false }), // Added interval_repetitions
         supabase.from("categories").select("name").eq('user_id', user.id),
         supabase.from("types").select("name, attributes").eq('user_id', user.id),
       ]);

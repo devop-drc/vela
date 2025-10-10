@@ -17,6 +17,7 @@ export interface CartItem {
   pricing_type: 'one_time' | 'subscription'; // Added pricing_type
   product_type: 'physical' | 'digital'; // Added product_type
   billing_interval: 'month' | 'year' | null; // Added billing_interval
+  intervalRepetitions?: number | null; // New field
 }
 
 interface CartContextType {
@@ -75,7 +76,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Fetch product details to ensure we have the latest pricing_type and product_type
     const { data: productData, error } = await supabase
       .from('products')
-      .select('price, currency, pricing_type, product_type, billing_interval')
+      .select('price, currency, pricing_type, product_type, billing_interval, interval_repetitions') // Added interval_repetitions
       .eq('id', item.productId)
       .single();
 
@@ -103,6 +104,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           pricing_type: productData.pricing_type,
           product_type: productData.product_type,
           billing_interval: productData.billing_interval,
+          intervalRepetitions: productData.interval_repetitions, // New field
         };
         showSuccess(`${item.name} quantity updated in cart!`);
         return updatedItems;
@@ -119,6 +121,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             pricing_type: productData.pricing_type,
             product_type: productData.product_type,
             billing_interval: productData.billing_interval,
+            intervalRepetitions: productData.interval_repetitions, // New field
           },
         ];
       }
@@ -178,7 +181,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!shopDetails) return 0;
     return cartItems.reduce((sum, item) => {
       const convertedPrice = convertCurrency(item.price, item.currency, shopDetails.currency);
-      return sum + (convertedPrice * item.quantity);
+      const itemTotal = item.pricing_type === 'subscription' && item.intervalRepetitions
+        ? convertedPrice * item.quantity * item.intervalRepetitions
+        : convertedPrice * item.quantity;
+      return sum + itemTotal;
     }, 0);
   }, [cartItems, shopDetails, convertCurrency]);
 
@@ -196,7 +202,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return cartItems.reduce((sum, item) => {
       const convertedOriginalPrice = convertCurrency(item.originalPrice, item.currency, shopDetails.currency);
       const convertedCurrentPrice = convertCurrency(item.price, item.currency, shopDetails.currency);
-      return sum + ((convertedOriginalPrice - convertedCurrentPrice) * item.quantity);
+      const itemSaved = (convertedOriginalPrice - convertedCurrentPrice) * item.quantity;
+      return sum + itemSaved;
     }, 0);
   }, [cartItems, shopDetails, convertCurrency]);
 

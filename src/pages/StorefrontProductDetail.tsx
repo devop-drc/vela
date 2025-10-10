@@ -40,6 +40,7 @@ const StorefrontProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState<string | null>(null); // Placeholder for variant selection
   const [selectedSize, setSelectedSize] = useState<string | null>(null); // Placeholder for variant selection
+  const [intervalRepetitions, setIntervalRepetitions] = useState(1); // New state for subscription repetitions
 
   const [api, setApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -88,6 +89,12 @@ const StorefrontProductDetail = () => {
         currency: product.currency || shopDetails.currency || 'USD',
         shopSlug: shopDetails.slug,
       });
+      // Set default interval repetitions from product data if available
+      if (product.pricing_type === 'subscription' && product.interval_repetitions) {
+        setIntervalRepetitions(product.interval_repetitions);
+      } else {
+        setIntervalRepetitions(1);
+      }
     }
   }, [product, shopDetails?.slug, addRecentlyViewed]);
 
@@ -188,6 +195,7 @@ const StorefrontProductDetail = () => {
       pricing_type: product.pricing_type, // Pass pricing_type
       product_type: product.product_type, // Pass product_type
       billing_interval: product.billing_interval, // Pass billing_interval
+      intervalRepetitions: product.pricing_type === 'subscription' ? intervalRepetitions : null, // New field
     }, quantity);
   };
 
@@ -387,7 +395,7 @@ const StorefrontProductDetail = () => {
             </Card>
           )}
 
-          {/* Inventory & Add to Cart */}
+          {/* Quantity & Add to Cart */}
           {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && (
             <div className="flex items-center gap-4">
               <div className="flex items-center border rounded-md">
@@ -430,10 +438,28 @@ const StorefrontProductDetail = () => {
             </Button>
           )}
           {product.pricing_type === 'subscription' && (
-            <Button size="lg" className="w-full text-base md:text-lg" onClick={handleAddToCart} disabled={isOutOfStock}>
-              <ShoppingCart className="mr-2 h-5 w-5" />
-              Subscribe Now
-            </Button>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Label htmlFor="interval-repetitions" className="text-sm md:text-base flex-shrink-0">Repetitions:</Label>
+                <Input
+                  id="interval-repetitions"
+                  type="number"
+                  value={intervalRepetitions}
+                  onChange={(e) => setIntervalRepetitions(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-24 text-center text-sm md:text-base"
+                  min={1}
+                />
+                <Button size="lg" className="flex-1 text-base md:text-lg" onClick={handleAddToCart} disabled={isOutOfStock}>
+                  <ShoppingCart className="mr-2 h-5 w-5" />
+                  Subscribe Now
+                </Button>
+              </div>
+              {product.interval_repetitions && product.interval_repetitions > 1 && (
+                <p className="text-sm text-muted-foreground">
+                  This subscription is set for {product.interval_repetitions} intervals.
+                </p>
+              )}
+            </div>
           )}
 
           {/* Shipping & Returns (Placeholder) */}

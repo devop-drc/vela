@@ -29,11 +29,10 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
     return d;
   };
 
-  // Normalize start and end dates to the current year for comparison, if recurring
+  // If it's a recurring event, adjust start/end dates to the current year for comparison
   let effectiveStart = startDate ? new Date(startDate) : null;
   let effectiveEnd = endDate ? new Date(endDate) : null;
 
-  // If it's a recurring event, adjust start/end dates to the current year for comparison
   if (repeatInterval && repeatInterval !== 'none') {
     if (effectiveStart) effectiveStart = createDateInCurrentYear(effectiveStart);
     if (effectiveEnd) effectiveEnd = createDateInCurrentYear(effectiveEnd);
@@ -121,7 +120,7 @@ serve(async (req) => {
     // Fetch active products for the business with pagination
     const { data: products, error: productsError, count: totalProductsCount } = await supabaseAdmin
       .from('products')
-      .select('*', { count: 'exact' }) // Get exact count
+      .select('*, interval_repetitions', { count: 'exact' }) // MODIFIED: Added interval_repetitions
       .eq('business_id', businessId)
       .neq('status', 'Draft') // MODIFIED: Exclude 'Draft' products
       .range(offset, offset + limit - 1); // Apply range for pagination
@@ -139,7 +138,7 @@ serve(async (req) => {
     // Fetch recommended products (e.g., 4 random active products, excluding best sellers)
     const { data: allActiveProducts, error: allActiveProductsError } = await supabaseAdmin
       .from('products')
-      .select('*')
+      .select('*, interval_repetitions') // MODIFIED: Added interval_repetitions
       .eq('business_id', businessId)
       .eq('status', 'Active');
 
