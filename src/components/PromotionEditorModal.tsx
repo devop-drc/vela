@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CalendarIcon, Loader2, Tag, Percent, DollarSign, MessageSquareText, Gift, Package, XCircle, Repeat } from "lucide-react";
+import { CalendarIcon, Loader2, Tag, Percent, DollarSign, MessageSquareText, Gift, Package, XCircle, Repeat, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Calendar } from "@/components/ui/calendar";
@@ -20,6 +20,7 @@ import { ProductSelector } from "./ProductSelector";
 import { ScrollArea } from "./ui/scroll-area";
 import { Badge } from "./ui/badge";
 import { useShop } from "@/contexts/ShopContext"; // Import useShop
+import { formatCurrency } from "@/lib/formatters"; // Import formatCurrency
 
 const promotionSchema = z.object({
   name: z.string().min(1, "Promotion name is required"),
@@ -242,14 +243,14 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
-        <DialogHeader>
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle>{promotion ? "Edit Promotion" : "Create New Promotion"}</DialogTitle>
           <DialogDescription>
             Define your marketing campaigns, discounts, and special offers.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
-          <ScrollArea className="flex-1 pr-6">
+          <ScrollArea className="flex-1 px-6">
             <div className="space-y-6 py-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Promotion Name</Label>
@@ -478,7 +479,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
               </div>
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-4 px-6 flex-shrink-0">
             <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

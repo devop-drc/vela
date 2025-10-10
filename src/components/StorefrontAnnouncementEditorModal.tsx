@@ -121,205 +121,208 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-xl">
-        <DialogHeader>
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle>{element ? "Edit Storefront Announcement" : "Add New Storefront Announcement"}</DialogTitle>
           <DialogDescription>
             Create a scrolling message for your storefront.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="message">Message</Label>
-            <Textarea id="message" {...register("message")} placeholder="e.g., Flash Sale! Get 20% off all items this week!" rows={3} />
-            {errors.message && <p className="text-sm text-destructive mt-1">{errors.message.message}</p>}
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 flex flex-col overflow-hidden">
+          <ScrollArea className="flex-1 px-6">
+            <div className="space-y-6 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="message">Message</Label>
+                <Textarea id="message" {...register("message")} placeholder="e.g., Flash Sale! Get 20% off all items this week!" rows={3} />
+                {errors.message && <p className="text-sm text-destructive mt-1">{errors.message.message}</p>}
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="icon_name">Icon</Label>
-              <Controller
-                name="icon_name"
-                control={control}
-                render={({ field }) => (
-                  <Popover open={iconPickerOpen} onOpenChange={setIconPickerOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={iconPickerOpen}
-                        className="w-full justify-between"
-                      >
-                        <div className="flex items-center gap-2">
-                          <IconComponent className="h-4 w-4" />
-                          {field.value || "Select icon..."}
-                        </div>
-                        <Sparkles className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[300px] p-0">
-                      <Command>
-                        <CommandInput
-                          placeholder="Search icon..."
-                          value={iconSearchTerm}
-                          onValueChange={setIconSearchTerm}
-                        />
-                        <CommandList>
-                          <CommandEmpty>No icon found.</CommandEmpty>
-                          <CommandGroup>
-                            <ScrollArea className="h-[200px]">
-                              <div className="grid grid-cols-5 gap-2 p-2">
-                                {filteredIcons.map((iconName) => {
-                                  const Icon = (LucideIcons as any)[iconName];
-                                  return (
-                                    <CommandItem
-                                      key={iconName}
-                                      value={iconName}
-                                      onSelect={() => {
-                                        field.onChange(iconName);
-                                        setIconPickerOpen(false);
-                                        setIconSearchTerm('');
-                                      }}
-                                      className="flex flex-col items-center justify-center p-2 cursor-pointer hover:bg-accent rounded-md"
-                                    >
-                                      {Icon && <Icon className="h-5 w-5" />}
-                                      <span className="text-xs mt-1 truncate w-full text-center">{iconName}</span>
-                                    </CommandItem>
-                                  );
-                                })}
-                              </div>
-                            </ScrollArea>
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                )}
-              />
-              {errors.icon_name && <p className="text-sm text-destructive mt-1">{errors.icon_name.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="display_order">Display Order</Label>
-              <Input id="display_order" type="number" {...register("display_order", { valueAsNumber: true })} />
-              {errors.display_order && <p className="text-sm text-destructive mt-1">{errors.display_order.message}</p>}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date (Optional)</Label>
-              <Controller
-                name="start_date"
-                control={control}
-                render={({ field }) => (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={field.value || undefined}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                )}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endDate">End Date (Optional)</Label>
-              <Controller
-                name="end_date"
-                control={control}
-                render={({ field }) => (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={field.value || undefined}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                )}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="repeat_interval" className="flex items-center gap-2"><Repeat className="h-4 w-4" /> Repeat (Optional)</Label>
-            <Controller
-              name="repeat_interval"
-              control={control}
-              render={({ field }) => (
-                <Select onValueChange={(value) => field.onChange(value === '' ? 'none' : value)} value={field.value || 'none'}>
-                  <SelectTrigger id="repeat_interval">
-                    <SelectValue placeholder="No repeat" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No repeat</SelectItem>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="yearly">Yearly</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Controller
-              name="is_active"
-              control={control}
-              render={({ field }) => (
-                <Checkbox
-                  id="isActive"
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              )}
-            />
-            <Label htmlFor="isActive">Active</Label>
-          </div>
-
-          {/* Live Preview */}
-          <div className="space-y-2 pt-4">
-            <Label>Live Preview</Label>
-            <div className="border rounded-lg p-2 bg-muted/50">
-              <Marquee pauseOnHover className="py-2 border-y-2 border-primary/20">
-                <div className="flex items-center gap-4 text-base font-semibold text-primary px-4">
-                  <IconComponent className="h-5 w-5 text-primary" />
-                  <span>{messageValue || "Your announcement message will appear here."}</span>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="icon_name">Icon</Label>
+                  <Controller
+                    name="icon_name"
+                    control={control}
+                    render={({ field }) => (
+                      <Popover open={iconPickerOpen} onOpenChange={setIconPickerOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={iconPickerOpen}
+                            className="w-full justify-between"
+                          >
+                            <div className="flex items-center gap-2">
+                              <IconComponent className="h-4 w-4" />
+                              {field.value || "Select icon..."}
+                            </div>
+                            <Sparkles className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0">
+                          <Command>
+                            <CommandInput
+                              placeholder="Search icon..."
+                              value={iconSearchTerm}
+                              onValueChange={setIconSearchTerm}
+                            />
+                            <CommandList>
+                              <CommandEmpty>No icon found.</CommandEmpty>
+                              <CommandGroup>
+                                <ScrollArea className="h-[200px]">
+                                  <div className="grid grid-cols-5 gap-2 p-2">
+                                    {filteredIcons.map((iconName) => {
+                                      const Icon = (LucideIcons as any)[iconName];
+                                      return (
+                                        <CommandItem
+                                          key={iconName}
+                                          value={iconName}
+                                          onSelect={() => {
+                                            field.onChange(iconName);
+                                            setIconPickerOpen(false);
+                                            setIconSearchTerm('');
+                                          }}
+                                          className="flex flex-col items-center justify-center p-2 cursor-pointer hover:bg-accent rounded-md"
+                                        >
+                                          {Icon && <Icon className="h-5 w-5" />}
+                                          <span className="text-xs mt-1 truncate w-full text-center">{iconName}</span>
+                                        </CommandItem>
+                                      );
+                                    })}
+                                  </div>
+                                </ScrollArea>
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  />
+                  {errors.icon_name && <p className="text-sm text-destructive mt-1">{errors.icon_name.message}</p>}
                 </div>
-              </Marquee>
-            </div>
-          </div>
+                <div className="space-y-2">
+                  <Label htmlFor="display_order">Display Order</Label>
+                  <Input id="display_order" type="number" {...register("display_order", { valueAsNumber: true })} />
+                  {errors.display_order && <p className="text-sm text-destructive mt-1">{errors.display_order.message}</p>}
+                </div>
+              </div>
 
-          <DialogFooter>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Start Date (Optional)</Label>
+                  <Controller
+                    name="start_date"
+                    control={control}
+                    render={({ field }) => (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={field.value || undefined}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">End Date (Optional)</Label>
+                  <Controller
+                    name="end_date"
+                    control={control}
+                    render={({ field }) => (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={field.value || undefined}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="repeat_interval" className="flex items-center gap-2"><Repeat className="h-4 w-4" /> Repeat (Optional)</Label>
+                <Controller
+                  name="repeat_interval"
+                  control={control}
+                  render={({ field }) => (
+                    <Select onValueChange={(value) => field.onChange(value === '' ? 'none' : value)} value={field.value || 'none'}>
+                      <SelectTrigger id="repeat_interval">
+                        <SelectValue placeholder="No repeat" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No repeat</SelectItem>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Controller
+                  name="is_active"
+                  control={control}
+                  render={({ field }) => (
+                    <Checkbox
+                      id="isActive"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
+                <Label htmlFor="isActive">Active</Label>
+              </div>
+
+              {/* Live Preview */}
+              <div className="space-y-2 pt-4">
+                <Label>Live Preview</Label>
+                <div className="border rounded-lg p-2 bg-muted/50">
+                  <Marquee pauseOnHover className="py-2 border-y-2 border-primary/20">
+                    <div className="flex items-center gap-4 text-base font-semibold text-primary px-4">
+                      <IconComponent className="h-5 w-5 text-primary" />
+                      <span>{messageValue || "Your announcement message will appear here."}</span>
+                    </div>
+                  </Marquee>
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+          <DialogFooter className="pt-4 px-6 flex-shrink-0">
             <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
