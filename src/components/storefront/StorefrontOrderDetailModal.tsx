@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,7 @@ interface OrderItem {
   products: {
     name: string;
     media_url: string;
-  };
+  } | null; // Product can be null if deleted
 }
 
 interface Dispute {
@@ -310,21 +310,21 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><User className="h-4 w-4 text-primary" /> Customer</div><p>{order.customer_name}</p></div>
-                <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4 text-primary" /> Email</div><p>{order.customer_email}</p></div>
-                <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4 text-primary" /> Date</div><p>{new Date(order.created_at).toLocaleString()}</p></div>
+                <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4" /> Email</div><p>{order.customer_email}</p></div>
+                <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" /> Date</div><p>{new Date(order.created_at).toLocaleString()}</p></div>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><Banknote className="h-4 w-4 text-primary" /> Total</div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><Banknote className="h-4 w-4" /> Total</div>
                   <p className="font-semibold">
-                    {formatCurrency(order.total_amount, order.currency)}
+                    {formatCurrency(convertCurrency(order.total_amount, order.currency, shopDetails.currency), shopDetails.currency)}
                     {shopDetails?.currency && order.currency !== shopDetails.currency && (
                       <span className="text-sm font-normal text-muted-foreground ml-2">
-                        (~{formatCurrency(convertCurrency(order.total_amount), shopDetails.currency)})
+                        (~{formatCurrency(order.total_amount, order.currency)})
                       </span>
                     )}
                   </p>
                 </div>
-                <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><CreditCard className="h-4 w-4 text-primary" /> Payment Method</div><p className="capitalize">{order.payment_method.replace(/_/g, ' ')}</p></div>
-                <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><CheckCircle className="h-4 w-4 text-primary" /> Payment Status</div><p className="capitalize">{order.payment_status}</p></div>
+                <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><CreditCard className="h-4 w-4" /> Payment Method</div><p className="capitalize">{order.payment_method.replace(/_/g, ' ')}</p></div>
+                <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><CheckCircle className="h-4 w-4" /> Payment Status</div><p className="capitalize">{order.payment_status}</p></div>
               </div>
               <Separator />
               <div>
@@ -349,9 +349,13 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
                   <div className="space-y-4">
                     {items.map((item, index) => (
                       <div key={index} className="flex items-center gap-4">
-                        <MediaItem src={item.products.media_url} alt={item.products.name} className="h-16 w-16 rounded-md object-cover bg-muted" />
+                        <MediaItem 
+                          src={item.products?.media_url || '/placeholder.svg'} // Null check for products and media_url
+                          alt={item.products?.name || 'Deleted Product'} 
+                          className="h-16 w-16 rounded-md object-cover bg-muted" 
+                        />
                         <div className="flex-1">
-                          <p className="font-medium">{item.products.name}</p>
+                          <p className="font-medium">{item.products?.name || 'Deleted Product'}</p>
                           <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                         </div>
                         <p className="font-medium">

@@ -22,7 +22,7 @@ interface OrderItem {
   products: {
     name: string;
     media_url: string;
-  };
+  } | null; // Product can be null if deleted
 }
 
 interface Dispute {
@@ -246,9 +246,13 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                 <div className="space-y-4">
                   {items.map((item, index) => (
                     <div key={index} className="flex items-center gap-4">
-                      <img src={item.products.media_url} alt={item.products.name} className="h-16 w-16 rounded-md object-cover bg-muted" />
+                      <img 
+                        src={item.products?.media_url || '/placeholder.svg'} // Null check for products and media_url
+                        alt={item.products?.name || 'Deleted Product'} 
+                        className="h-16 w-16 rounded-md object-cover bg-muted" 
+                      />
                       <div className="flex-1">
-                        <p className="font-medium">{item.products.name}</p>
+                        <p className="font-medium">{item.products?.name || 'Deleted Product'}</p>
                         <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                       </div>
                       <p className="font-medium">

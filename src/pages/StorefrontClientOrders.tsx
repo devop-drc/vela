@@ -26,7 +26,7 @@ interface OrderItem {
     name: string;
     media_url: string;
     currency: string;
-  };
+  } | null; // Product can be null if deleted
 }
 
 interface OrderDetails {
