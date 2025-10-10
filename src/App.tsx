@@ -30,7 +30,8 @@ import { useEffect } from "react";
 import { supabase } from "./integrations/supabase/client";
 import { toast } from "sonner";
 import { MessageSquareWarning } from "lucide-react";
-import { PageTitleProvider } from "./contexts/PageTitleContext"; // Ensure PageTitleProvider is imported
+import { PageTitleProvider } from "./contexts/PageTitleContext";
+import { AppearanceProvider } from "./contexts/AppearanceContext"; // Added missing import
 
 const queryClient = new QueryClient();
 
