@@ -63,9 +63,8 @@ const checkoutSchema = z.object({
   customerPhone: z.string().optional(),
   shippingAddress: z.string().min(1, "Shipping address is required"),
   shippingCity: z.string().min(1, "City is required"),
-  shippingState: z.string().min(1, "State/Province is required"),
   shippingZip: z.string().min(1, "Zip/Postal Code is required"),
-  shippingCountry: z.string().min(1, "Country is required"),
+  shippingCountry: z.string().default("Albania"), // Default to Albania
   shippingNotesSeller: z.string().optional(),
   shippingNotesCourier: z.string().optional(),
   paymentMethod: z.enum(["credit_card", "cash_on_delivery"], {
@@ -109,9 +108,8 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
       customerPhone: "",
       shippingAddress: "",
       shippingCity: "",
-      shippingState: "",
       shippingZip: "",
-      shippingCountry: "",
+      shippingCountry: "Albania", // Set default country
       shippingNotesSeller: "",
       shippingNotesCourier: "",
       paymentMethod: hasDigitalSubscriptionProducts ? "credit_card" : undefined,
@@ -153,7 +151,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
     if (currentStep === 1) {
       isValid = await trigger(["customerFirstName", "customerLastName", "customerEmail", "customerPhone"]);
     } else if (currentStep === 2) {
-      isValid = await trigger(["shippingAddress", "shippingCity", "shippingState", "shippingZip", "shippingCountry", "shippingNotesSeller", "shippingNotesCourier"]);
+      isValid = await trigger(["shippingAddress", "shippingCity", "shippingZip", "shippingCountry", "shippingNotesSeller", "shippingNotesCourier"]);
     }
 
     if (isValid) {
@@ -191,7 +189,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
           payment_status: values.paymentMethod === 'cash_on_delivery' ? 'pending' : 'paid', // Assume credit card is paid immediately
           shipping_address: values.shippingAddress,
           shipping_city: values.shippingCity,
-          shipping_state: values.shippingState,
+          // shipping_state: values.shippingState, // Removed
           shipping_zip: values.shippingZip,
           shipping_country: values.shippingCountry,
           shipping_notes_seller: values.shippingNotesSeller,
@@ -332,7 +330,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
             >
               {isCheckoutMode ? (
                 <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
-                  <ScrollArea className="flex-1 p-4 md:p-6">
+                  <ScrollArea className="flex-1 p-4 md:p-6 h-full"> {/* Added h-full */}
                     <div className="space-y-6 max-w-2xl mx-auto">
                       <CheckoutProgress currentStep={currentStep} />
 
@@ -395,11 +393,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                     <Input id="shippingCity" {...register("shippingCity")} placeholder="Anytown" />
                                     {errors.shippingCity && <p className="text-sm text-destructive mt-1">{errors.shippingCity.message}</p>}
                                   </div>
-                                  <div className="space-y-2">
-                                    <Label htmlFor="shippingState">State/Province</Label>
-                                    <Input id="shippingState" {...register("shippingState")} placeholder="CA" />
-                                    {errors.shippingState && <p className="text-sm text-destructive mt-1">{errors.shippingState.message}</p>}
-                                  </div>
+                                  {/* Removed State/Province input */}
                                   <div className="space-y-2">
                                     <Label htmlFor="shippingZip">Zip/Postal Code</Label>
                                     <Input id="shippingZip" {...register("shippingZip")} placeholder="90210" />
@@ -407,7 +401,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                   </div>
                                   <div className="space-y-2">
                                     <Label htmlFor="shippingCountry">Country</Label>
-                                    <Input id="shippingCountry" {...register("shippingCountry")} placeholder="USA" />
+                                    <Input id="shippingCountry" {...register("shippingCountry")} defaultValue="Albania" disabled />
                                     {errors.shippingCountry && <p className="text-sm text-destructive mt-1">{errors.shippingCountry.message}</p>}
                                   </div>
                                 </div>
@@ -540,7 +534,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                 </form>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 flex-1 overflow-hidden">
-                  <ScrollArea className="lg:col-span-2 flex flex-col p-4 md:p-6 border-r">
+                  <ScrollArea className="lg:col-span-2 flex flex-col p-4 md:p-6 border-r h-full"> {/* Added h-full */}
                     <div className="space-y-6">
                       {cartItems.length > 0 && (
                         <div className="space-y-4">
