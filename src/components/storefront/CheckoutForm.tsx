@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const CheckoutProgress = ({ currentStep }: { currentStep: number }) => {
   const steps = [
@@ -225,21 +225,21 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
                             <Label htmlFor="firstName" className="text-sm">First Name</Label>
                             <div className="relative">
                               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input id="firstName" placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="pl-10" />
+                              <Input id="firstName" placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
                             </div>
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="lastName" className="text-sm">Last Name</Label>
                             <div className="relative">
                               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input id="lastName" placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="pl-10" />
+                              <Input id="lastName" placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
                             </div>
                           </div>
                           <div className="space-y-2 md:col-span-2">
                             <Label htmlFor="email" className="text-sm">Email</Label>
                             <div className="relative">
                               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input id="email" type="email" placeholder="john.doe@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10" />
+                              <Input id="email" type="email" placeholder="john.doe@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
                             </div>
                           </div>
                         </div>
@@ -252,21 +252,21 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
                             <Label htmlFor="address" className="text-sm">Shipping Address</Label>
                             <div className="relative">
                               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input id="address" placeholder="123 Main St" value={address} onChange={(e) => setAddress(e.target.value)} required className="pl-10" />
+                              <Input id="address" placeholder="123 Main St" value={address} onChange={(e) => setAddress(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
                             </div>
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="city" className="text-sm">City</Label>
                             <div className="relative">
                               <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input id="city" placeholder="Anytown" value={city} onChange={(e) => setCity(e.target.value)} required className="pl-10" />
+                              <Input id="city" placeholder="Anytown" value={city} onChange={(e) => setCity(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
                             </div>
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="zip" className="text-sm">Zip/Postal Code</Label>
                             <div className="relative">
                               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input id="zip" placeholder="90210" value={zip} onChange={(e) => setZip(e.target.value)} required className="pl-10" />
+                              <Input id="zip" placeholder="90210" value={zip} onChange={(e) => setZip(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
                             </div>
                           </div>
                           <div className="space-y-2 md:col-span-2">
@@ -274,7 +274,7 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
                             <div className="relative">
                               <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                               <Select value={country} onValueChange={setCountry}>
-                                <SelectTrigger id="country" className="pl-10">
+                                <SelectTrigger id="country" className="pl-10 h-10 px-3 py-2">
                                   <SelectValue placeholder="Select country" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -294,14 +294,14 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
                             <Label htmlFor="notesForSeller" className="text-sm">Notes for Seller (Optional)</Label>
                             <div className="relative">
                               <StickyNote className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Textarea id="notesForSeller" rows={3} placeholder="e.g., Please gift wrap this item." value={notesForSeller} onChange={(e) => setNotesForSeller(e.target.value)} className="pl-10 pt-3" />
+                              <Textarea id="notesForSeller" rows={3} placeholder="e.g., Please gift wrap this item." value={notesForSeller} onChange={(e) => setNotesForSeller(e.target.value)} className="pl-10 pt-3 h-auto min-h-[80px] px-3 py-2" />
                             </div>
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="notesForCourier" className="text-sm">Notes for Courier (Optional)</Label>
                             <div className="relative">
                               <Truck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Textarea id="notesForCourier" rows={3} placeholder="e.g., Leave package with neighbor if not home." value={notesForCourier} onChange={(e) => setNotesForCourier(e.target.value)} className="pl-10 pt-3" />
+                              <Textarea id="notesForCourier" rows={3} placeholder="e.g., Leave package with neighbor if not home." value={notesForCourier} onChange={(e) => setNotesForCourier(e.target.value)} className="pl-10 pt-3 h-auto min-h-[80px] px-3 py-2" />
                             </div>
                           </div>
                         </div>
@@ -358,14 +358,14 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
                               <Label htmlFor="cardNumber" className="text-sm">Card Number</Label>
                               <div className="relative">
                                 <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} required className="pl-10" />
+                                <Input id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
                               </div>
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="cardName" className="text-sm">Name on Card</Label>
                               <div className="relative">
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input id="cardName" placeholder="John Doe" value={cardName} onChange={(e) => setCardName(e.target.value)} required className="pl-10" />
+                                <Input id="cardName" placeholder="John Doe" value={cardName} onChange={(e) => setCardName(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
                               </div>
                             </div>
                           </div>
@@ -374,14 +374,14 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
                               <Label htmlFor="expiryDate" className="text-sm">Expiry Date</Label>
                               <div className="relative">
                                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input id="expiryDate" placeholder="MM/YY" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} required className="pl-10" />
+                                <Input id="expiryDate" placeholder="MM/YY" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
                               </div>
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="cvv" className="text-sm">CVV</Label>
                               <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input id="cvv" placeholder="123" type="password" maxLength={4} value={cvv} onChange={(e) => setCvv(e.target.value)} required className="pl-10" />
+                                <Input id="cvv" placeholder="123" type="password" maxLength={4} value={cvv} onChange={(e) => setCvv(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
                               </div>
                             </div>
                           </div>
