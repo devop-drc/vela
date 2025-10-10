@@ -22,7 +22,6 @@ interface OrderItem {
   products: {
     name: string;
     media_url: string;
-    // currency: string; // Removed as it's always ALL from DB
   };
 }
 
@@ -91,7 +90,6 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
             products (
               name,
               media_url
-              // currency is not needed here as all prices are stored in ALL
             )
           `)
           .eq('order_id', order.id);
