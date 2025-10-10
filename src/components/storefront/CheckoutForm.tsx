@@ -1,445 +1,345 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, ArrowLeft, CreditCard, MapPin, User, Loader2, Wallet, ShieldCheck, Lock, DollarSign, Mail, Globe, StickyNote, Calendar, Truck, Building2 } from "lucide-react";
-import { useStorefront } from "@/contexts/StorefrontContext";
-import { formatCurrency } from "@/lib/formatters";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
-import { useCart } from "@/contexts/CartContext";
-import { Separator } from "@/components/ui/separator";
-import { supabase } from "@/integrations/supabase/client";
-import { motion, AnimatePresence } from "framer-motion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, CreditCard, Banknote, Truck, User, Mail, MapPin, Phone, StickyNote, Info } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { supabase } from "@/integrations/supabase/client";
+import { useStorefront } from "@/contexts/StorefrontContext";
+import { useCart } from "@/contexts/CartContext";
+import { showError, showSuccess } from "@/utils/toast";
+import { formatCurrency } from "@/lib/formatters";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"; // Import RadioGroup and RadioGroupItem
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
-const CheckoutProgress = ({ currentStep }: { currentStep: number }) => {
-  const steps = [
-    { name: "Contact & Shipping", icon: MapPin },
-    { name: "Payment", icon: CreditCard },
-  ];
+const checkoutSchema = z.object({
+  customerName: z.string().min(1, "Name is required"),
+  customerEmail: z.string().email("Invalid email address"),
+  customerPhone: z.string().optional(),
+  shippingAddress: z.string().min(1, "Shipping address is required"),
+  shippingCity: z.string().min(1, "City is required"),
+  shippingState: z.string().min(1, "State/Province is required"),
+  shippingZip: z.string().min(1, "Zip/Postal Code is required"),
+  shippingCountry: z.string().min(1, "Country is required"),
+  shippingNotesSeller: z.string().optional(),
+  shippingNotesCourier: z.string().optional(),
+  paymentMethod: z.enum(["credit_card", "cash_on_delivery"], {
+    errorMap: () => ({ message: "Payment method is required" }),
+  }),
+  acceptTerms: z.boolean().refine(val => val === true, {
+    message: "You must accept the terms and conditions",
+  }),
+});
 
-  return (
-    <div className="flex justify-between items-center mb-8 flex-shrink-0">
-      {steps.map((step, index) => (
-        <div key={step.name} className="flex flex-col items-center flex-1">
-          <div className={cn(
-            "flex items-center justify-center h-10 w-10 rounded-full border-2",
-            index + 1 <= currentStep ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground text-muted-foreground",
-            index + 1 === currentStep && "ring-2 ring-primary ring-offset-2"
-          )}>
-            {index + 1 < currentStep ? <CheckCircle className="h-5 w-5" /> : <step.icon className="h-5 w-5" />}
-          </div>
-          <p className={cn(
-            "text-sm mt-2",
-            index + 1 <= currentStep ? "font-semibold text-foreground" : "text-muted-foreground"
-          )}>
-            {step.name}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-interface CheckoutFormData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  address: string;
-  city: string;
-  zip: string;
-  country: string;
-  notesForSeller?: string;
-  notesForCourier?: string;
-  cardNumber?: string;
-  cardName?: string;
-  expiryDate?: string;
-  cvv?: string;
-  paymentMethod: 'card' | 'cash_on_delivery';
-}
+type CheckoutFormValues = z.infer<typeof checkoutSchema>;
 
 interface CheckoutFormProps {
   onOrderSuccess: (orderId: string) => void;
   onBackToCart: () => void;
-  isSubmitting: boolean;
   totalPrice: number;
   currency: string;
 }
 
-export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, totalPrice, currency }: CheckoutFormProps) => {
-  const { shopDetails, appearanceSettings } = useStorefront();
-  const { cartItems, clearCart } = useCart();
-  const blurEnabled = appearanceSettings?.blurEnabled;
+export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderSuccess, onBackToCart, totalPrice, currency }) => {
+  const { shopDetails, convertCurrency } = useStorefront();
+  const { cartItems, clearCart, hasSubscriptionProducts, hasDigitalSubscriptionProducts } = useCart();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [zip, setZip] = useState('');
-  const [country, setCountry] = useState('Albania');
-  const [notesForSeller, setNotesForSeller] = useState('');
-  const [notesForCourier, setNotesForCourier] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardName, setCardName] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash_on_delivery'>('card');
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<CheckoutFormValues>({
+    resolver: zodResolver(checkoutSchema),
+    defaultValues: {
+      customerName: "",
+      customerEmail: "",
+      customerPhone: "",
+      shippingAddress: "",
+      shippingCity: "",
+      shippingState: "",
+      shippingZip: "",
+      shippingCountry: "",
+      shippingNotesSeller: "",
+      shippingNotesCourier: "",
+      paymentMethod: hasDigitalSubscriptionProducts ? "credit_card" : undefined, // Default to credit card if digital subscription
+      acceptTerms: false,
+    },
+  });
 
-  const [currentStep, setCurrentStep] = useState(1);
-  const [localIsSubmitting, setLocalIsSubmitting] = useState(false);
+  const paymentMethod = watch("paymentMethod");
 
-  const validateStep = () => {
-    if (currentStep === 1) {
-      if (!firstName.trim()) { toast.error("First Name is required."); return false; }
-      if (!lastName.trim()) { toast.error("Last Name is required."); return false; }
-      if (!email.trim()) { toast.error("Email is required."); return false; }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        toast.error("Please enter a valid email address.");
-        return false;
-      }
-      if (!address.trim()) { toast.error("Shipping Address is required."); return false; }
-      if (!city.trim()) { toast.error("City is required."); return false; }
-      if (!zip.trim()) { toast.error("Zip/Postal Code is required."); return false; }
-      if (!country.trim()) { toast.error("Country is required."); return false; }
-    } else if (currentStep === 2) {
-      if (paymentMethod === 'card') {
-        if (!cardNumber.trim()) { toast.error("Card Number is required."); return false; }
-        if (!cardName.trim()) { toast.error("Name on Card is required."); return false; }
-        if (!expiryDate.trim()) { toast.error("Expiry Date is required."); return false; }
-        if (!cvv.trim()) { toast.error("CVV is required."); return false; }
-        
-        if (!/^\d{13,19}$/.test(cardNumber.replace(/\s/g, ''))) {
-          toast.error("Please enter a valid card number (13-19 digits).");
-          return false;
-        }
-        if (!/^(0[1-9]|1[0-2])\/?([0-9]{2})$/.test(expiryDate)) {
-          toast.error("Please enter a valid expiry date (MM/YY).");
-          return false;
-        }
-        if (!/^\d{3,4}$/.test(cvv)) {
-          toast.error("Please enter a valid CVV (3-4 digits).");
-          return false;
-        }
-      }
+  // Set default payment method if digital subscription is present
+  useEffect(() => {
+    if (hasDigitalSubscriptionProducts) {
+      setValue("paymentMethod", "credit_card");
     }
-    return true;
-  };
+  }, [hasDigitalSubscriptionProducts, setValue]);
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const isValid = validateStep();
-    if (!isValid) {
+  const onSubmit = async (values: CheckoutFormValues) => {
+    setIsSubmitting(true);
+    if (!shopDetails) {
+      showError("Shop details not loaded. Cannot place order.");
+      setIsSubmitting(false);
       return;
     }
-
-    if (currentStep < 2) {
-      setCurrentStep(prev => prev + 1);
-      return;
-    }
-
-    setLocalIsSubmitting(true);
-
-    if (!shopDetails?.slug || !shopDetails?.currency) {
-      toast.error("Shop details are missing. Cannot place order.");
-      setLocalIsSubmitting(false);
-      return;
-    }
-
-    const customerInfo = { firstName, lastName, email };
-    const orderItems = cartItems.map(item => ({
-      productId: item.productId,
-      name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-    }));
 
     try {
-      const { data, error } = await supabase.functions.invoke('create-order', {
-        body: {
-          shopSlug: shopDetails.slug,
-          customerInfo,
-          cartItems: orderItems,
-          totalAmount: totalPrice,
-          currency: shopDetails.currency,
-          paymentMethod: paymentMethod,
-          shippingAddress: address,
-          shippingCity: city,
-          shippingZip: zip,
-          shippingCountry: country,
-          shippingNotesSeller: notesForSeller,
-          shippingNotesCourier: notesForCourier,
-        },
-      });
+      // 1. Create the order
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          business_id: shopDetails.business_id,
+          customer_name: values.customerName,
+          customer_email: values.customerEmail,
+          customer_phone: values.customerPhone,
+          total_amount: totalPrice, // totalPrice is already in shop's currency
+          currency: currency, // Use shop's currency
+          status: 'Pending',
+          payment_method: values.paymentMethod,
+          payment_status: values.paymentMethod === 'cash_on_delivery' ? 'pending' : 'paid', // Assume credit card is paid immediately
+          shipping_address: values.shippingAddress,
+          shipping_city: values.shippingCity,
+          shipping_state: values.shippingState,
+          shipping_zip: values.shippingZip,
+          shipping_country: values.shippingCountry,
+          shipping_notes_seller: values.shippingNotesSeller,
+          shipping_notes_courier: values.shippingNotesCourier,
+        })
+        .select('id')
+        .single();
 
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      if (orderError || !orderData) {
+        throw new Error(orderError?.message || "Failed to create order.");
+      }
 
-      toast.success("Order placed successfully! Thank You for Your Purchase!", {
-        description: `Your order total was ${formatCurrency(totalPrice, shopDetails?.currency)}.`,
-        icon: <CheckCircle className="h-5 w-5 text-emerald-500" />,
-      });
-      
+      const orderId = orderData.id;
+
+      // 2. Insert order items
+      const orderItemsToInsert = cartItems.map(item => ({
+        order_id: orderId,
+        product_id: item.productId,
+        quantity: item.quantity,
+        price_at_purchase: convertCurrency(item.price, item.currency, 'ALL'), // Store in ALL for consistency
+        selected_options: item.selectedOptions,
+      }));
+
+      const { error: orderItemsError } = await supabase
+        .from('order_items')
+        .insert(orderItemsToInsert);
+
+      if (orderItemsError) {
+        throw new Error(orderItemsError?.message || "Failed to add order items.");
+      }
+
+      // 3. Update product inventory for one-time physical products
+      for (const item of cartItems) {
+        if (item.pricing_type === 'one_time' && item.product_type === 'physical') {
+          const { data: product, error: productError } = await supabase
+            .from('products')
+            .select('inventory')
+            .eq('id', item.productId)
+            .single();
+
+          if (productError || !product) {
+            console.warn(`Could not fetch inventory for product ${item.productId}. Skipping inventory update.`);
+            continue;
+          }
+
+          const newInventory = (product.inventory || 0) - item.quantity;
+          const newStatus = newInventory <= 0 ? 'Out of Stock' : 'Active'; // Assuming 'Active' if > 0
+
+          const { error: updateError } = await supabase
+            .from('products')
+            .update({ inventory: newInventory, status: newStatus })
+            .eq('id', item.productId);
+
+          if (updateError) {
+            console.error(`Failed to update inventory for product ${item.productId}:`, updateError);
+          }
+        }
+      }
+
+      showSuccess("Order placed successfully!");
       clearCart();
-      onOrderSuccess(data.order.id);
+      onOrderSuccess(orderId);
     } catch (err: any) {
-      console.error("Order placement failed:", err);
-      toast.error(`Failed to place order: ${err.message || "An unexpected error occurred."}`);
+      console.error("Checkout error:", err);
+      showError(`Checkout failed: ${err.message || "An unexpected error occurred."}`);
     } finally {
-      setLocalIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-6 pt-6 flex-shrink-0">
-        <CheckoutProgress currentStep={currentStep} />
-      </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+      <ScrollArea className="flex-1 p-4 md:p-6">
+        <div className="space-y-6 max-w-2xl mx-auto">
+          {/* Customer Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><User className="h-5 w-5" /> Customer Information</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="customerName">Full Name</Label>
+                <Input id="customerName" {...register("customerName")} placeholder="John Doe" />
+                {errors.customerName && <p className="text-sm text-destructive">{errors.customerName.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="customerEmail">Email Address</Label>
+                <Input id="customerEmail" type="email" {...register("customerEmail")} placeholder="john.doe@example.com" />
+                {errors.customerEmail && <p className="text-sm text-destructive">{errors.customerEmail.message}</p>}
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="customerPhone">Phone Number (Optional)</Label>
+                <Input id="customerPhone" type="tel" {...register("customerPhone")} placeholder="+1 (555) 123-4567" />
+                {errors.customerPhone && <p className="text-sm text-destructive">{errors.customerPhone.message}</p>}
+              </div>
+            </CardContent>
+          </Card>
 
-      <form id="checkout-form" onSubmit={handleFormSubmit} className="flex-1 flex flex-col overflow-hidden">
-        <ScrollArea className="flex-1 px-6 pb-6">
-          <div className="space-y-8 pt-6">
-            <AnimatePresence mode="wait">
-              {currentStep === 1 && (
-                <motion.div
-                  key="step1"
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-lg")}>
-                    <CardHeader className="flex-shrink-0">
-                      <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><User className="h-5 w-5" /> Contact & Shipping Information</CardTitle>
-                      <CardDescription className="text-sm md:text-base">Provide your contact details and where you'd like your order shipped.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {/* Contact Information */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="firstName" className="text-sm">First Name</Label>
-                            <div className="relative">
-                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input id="firstName" placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="lastName" className="text-sm">Last Name</Label>
-                            <div className="relative">
-                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input id="lastName" placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
-                            </div>
-                          </div>
-                          <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor="email" className="text-sm">Email</Label>
-                            <div className="relative">
-                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input id="email" type="email" placeholder="john.doe@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
-                            </div>
-                          </div>
-                        </div>
+          {/* Shipping Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><MapPin className="h-5 w-5" /> Shipping Information</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="shippingAddress">Address</Label>
+                <Input id="shippingAddress" {...register("shippingAddress")} placeholder="123 Main St" />
+                {errors.shippingAddress && <p className="text-sm text-destructive">{errors.shippingAddress.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="shippingCity">City</Label>
+                <Input id="shippingCity" {...register("shippingCity")} placeholder="Anytown" />
+                {errors.shippingCity && <p className="text-sm text-destructive">{errors.shippingCity.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="shippingState">State/Province</Label>
+                <Input id="shippingState" {...register("shippingState")} placeholder="CA" />
+                {errors.shippingState && <p className="text-sm text-destructive">{errors.shippingState.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="shippingZip">Zip/Postal Code</Label>
+                <Input id="shippingZip" {...register("shippingZip")} placeholder="90210" />
+                {errors.shippingZip && <p className="text-sm text-destructive">{errors.shippingZip.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="shippingCountry">Country</Label>
+                <Input id="shippingCountry" {...register("shippingCountry")} placeholder="USA" />
+                {errors.shippingCountry && <p className="text-sm text-destructive">{errors.shippingCountry.message}</p>}
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="shippingNotesSeller" className="flex items-center gap-1"><StickyNote className="h-4 w-4" /> Notes for Seller (Optional)</Label>
+                <Textarea id="shippingNotesSeller" {...register("shippingNotesSeller")} placeholder="e.g., Gift wrapping, special instructions..." rows={2} />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="shippingNotesCourier" className="flex items-center gap-1"><Truck className="h-4 w-4" /> Notes for Courier (Optional)</Label>
+                <Textarea id="shippingNotesCourier" {...register("shippingNotesCourier")} placeholder="e.g., Leave at back door, call before delivery..." rows={2} />
+              </div>
+            </CardContent>
+          </Card>
 
-                        <Separator />
-
-                        {/* Shipping Information */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor="address" className="text-sm">Shipping Address</Label>
-                            <div className="relative">
-                              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input id="address" placeholder="123 Main St" value={address} onChange={(e) => setAddress(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="city" className="text-sm">City</Label>
-                            <div className="relative">
-                              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input id="city" placeholder="Anytown" value={city} onChange={(e) => setCity(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="zip" className="text-sm">Zip/Postal Code</Label>
-                            <div className="relative">
-                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input id="zip" placeholder="90210" value={zip} onChange={(e) => setZip(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
-                            </div>
-                          </div>
-                          <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor="country" className="text-sm">Country</Label>
-                            <div className="relative">
-                              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Select value={country} onValueChange={setCountry}>
-                                <SelectTrigger id="country" className="pl-10 h-10 px-3 py-2">
-                                  <SelectValue placeholder="Select country" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Albania">Albania</SelectItem>
-                                  {/* Add other countries if needed in the future */}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        </div>
-
-                        <Separator />
-
-                        {/* Order Notes */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="notesForSeller" className="text-sm">Notes for Seller (Optional)</Label>
-                            <div className="relative">
-                              <StickyNote className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Textarea id="notesForSeller" rows={3} placeholder="e.g., Please gift wrap this item." value={notesForSeller} onChange={(e) => setNotesForSeller(e.target.value)} className="pl-10 pt-3 h-auto min-h-[80px] px-3 py-2" />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="notesForCourier" className="text-sm">Notes for Courier (Optional)</Label>
-                            <div className="relative">
-                              <Truck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Textarea id="notesForCourier" rows={3} placeholder="e.g., Leave package with neighbor if not home." value={notesForCourier} onChange={(e) => setNotesForCourier(e.target.value)} className="pl-10 pt-3 h-auto min-h-[80px] px-3 py-2" />
-                            </div>
-                          </div>
-                        </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
+          {/* Payment Method */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><Banknote className="h-5 w-5" /> Payment Method</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {hasSubscriptionProducts && (
+                <div className="flex items-center gap-2 p-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md">
+                  <Info className="h-4 w-4 flex-shrink-0" />
+                  <span>This order includes subscription products. Your selected payment method will be charged {cartItems.filter(item => item.pricing_type === 'subscription').map(item => item.billing_interval === 'month' ? 'monthly' : 'yearly').join(', ')}.</span>
+                </div>
               )}
 
-              {currentStep === 2 && (
-                <motion.div
-                  key="step2"
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-lg")}>
-                    <CardHeader className="flex-shrink-0">
-                      <CardTitle className="flex items-center gap-2 text-lg md:text-xl"><CreditCard className="h-5 w-5" /> Payment Information</CardTitle>
-                      <CardDescription className="text-sm md:text-base">Choose your preferred payment method.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <RadioGroup value={paymentMethod} onValueChange={(value: 'card' | 'cash_on_delivery') => setPaymentMethod(value)} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Label
-                          htmlFor="payment-card"
-                          className={cn(
-                            "flex flex-col items-center justify-center h-auto py-6 text-base border rounded-md cursor-pointer",
-                            paymentMethod === 'card' ? "ring-2 ring-primary ring-offset-2 border-primary" : "border-input hover:border-primary/50"
-                          )}
-                        >
-                          <RadioGroupItem value="card" id="payment-card" className="sr-only" />
-                          <CreditCard className="h-6 w-6 mb-2" />
-                          Debit/Credit Card
-                        </Label>
-                        <Label
-                          htmlFor="payment-cash"
-                          className={cn(
-                            "flex flex-col items-center justify-center h-auto py-6 text-base border rounded-md cursor-pointer",
-                            paymentMethod === 'cash_on_delivery' ? "ring-2 ring-primary ring-offset-2 border-primary" : "border-input hover:border-primary/50"
-                          )}
-                        >
-                          <RadioGroupItem value="cash_on_delivery" id="payment-cash" className="sr-only" />
-                          <DollarSign className="h-6 w-6 mb-2" />
-                          Cash on Delivery
-                        </Label>
-                      </RadioGroup>
+              <div className="space-y-2">
+                <Label htmlFor="paymentMethod">Select Payment Method</Label>
+                <Select value={paymentMethod} onValueChange={(value: "credit_card" | "cash_on_delivery") => setValue("paymentMethod", value)}>
+                  <SelectTrigger id="paymentMethod">
+                    <SelectValue placeholder="Choose a payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="credit_card">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" /> Credit Card
+                      </div>
+                    </SelectItem>
+                    {!hasDigitalSubscriptionProducts && (
+                      <SelectItem value="cash_on_delivery">
+                        <div className="flex items-center gap-2">
+                          <Banknote className="h-4 w-4" /> Cash on Delivery
+                        </div>
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                {errors.paymentMethod && <p className="text-sm text-destructive">{errors.paymentMethod.message}</p>}
+              </div>
 
-                      {paymentMethod === 'card' ? (
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="cardNumber" className="text-sm">Card Number</Label>
-                              <div className="relative">
-                                <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="cardName" className="text-sm">Name on Card</Label>
-                              <div className="relative">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input id="cardName" placeholder="John Doe" value={cardName} onChange={(e) => setCardName(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="expiryDate" className="text-sm">Expiry Date</Label>
-                              <div className="relative">
-                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input id="expiryDate" placeholder="MM/YY" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="cvv" className="text-sm">CVV</Label>
-                              <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input id="cvv" placeholder="123" type="password" maxLength={4} value={cvv} onChange={(e) => setCvv(e.target.value)} required className="pl-10 h-10 px-3 py-2" />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="p-6 border rounded-lg bg-muted/50 text-muted-foreground text-center space-y-4 mt-6">
-                            <p className="font-medium text-base">Payment gateway integration coming soon!</p>
-                            <p className="text-sm mt-2">For now, this is a placeholder for card input and processing.</p>
-                            <Separator />
-                            <div className="flex items-center justify-center gap-4">
-                              <CreditCard className="h-8 w-8 text-muted-foreground" />
-                              <img src="https://upload.wikimedia.org/wikipedia/commons/b/b7/PayPal_Logo_Icon_2014.svg" alt="PayPal" className="h-8 w-8" />
-                              <img src="https://upload.wikimedia.org/wikipedia/commons/e/e5/Apple_Pay_logo.svg" alt="Apple Pay" className="h-8 w-8" />
-                              <Wallet className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="p-6 border rounded-lg bg-blue-50/50 text-blue-700 flex items-center gap-4">
-                          <DollarSign className="h-6 w-6 flex-shrink-0" />
-                          <div>
-                            <p className="font-semibold text-base">Pay with Cash on Delivery</p>
-                            <p className="text-sm">You will pay {formatCurrency(totalPrice, currency)} in cash when your order is delivered.</p>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
+              {paymentMethod === "credit_card" && (
+                <div className="space-y-4 p-4 border rounded-md bg-muted/50">
+                  <p className="text-sm text-muted-foreground">
+                    For demonstration purposes, credit card processing is simulated. In a real application, this would integrate with a payment gateway (e.g., Stripe).
+                  </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="cardNumber">Card Number</Label>
+                    <Input id="cardNumber" placeholder="**** **** **** 1234" disabled />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="expiryDate">Expiry Date</Label>
+                      <Input id="expiryDate" placeholder="MM/YY" disabled />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cvc">CVC</Label>
+                      <Input id="cvc" placeholder="123" disabled />
+                    </div>
+                  </div>
+                </div>
               )}
-            </AnimatePresence>
+            </CardContent>
+          </Card>
+
+          {/* Terms and Conditions */}
+          <div className="flex items-start space-x-2">
+            <Checkbox id="acceptTerms" checked={watch("acceptTerms")} onCheckedChange={(checked) => setValue("acceptTerms", !!checked)} />
+            <div className="grid gap-1.5 leading-none">
+              <Label htmlFor="acceptTerms" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                I agree to the <a href="#" className="underline">terms and conditions</a>
+              </Label>
+              {errors.acceptTerms && <p className="text-sm text-destructive">{errors.acceptTerms.message}</p>}
+            </div>
           </div>
-        </ScrollArea>
-      </form>
+        </div>
+      </ScrollArea>
 
-      <div className="p-6 border-t flex justify-between items-center flex-shrink-0">
-        {currentStep > 1 ? (
-          <Button type="button" variant="ghost" onClick={() => setCurrentStep(prev => prev - 1)} className="text-sm md:text-base">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-        ) : (
-          <Button type="button" variant="ghost" onClick={onBackToCart} className="text-sm md:text-base">
-            <ArrowLeft className="mr-2 h-4 w-4" />
+      {/* Footer with Total and Action Buttons */}
+      <div className="p-4 md:p-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4 flex-shrink-0">
+        <div className="flex items-center gap-2 text-lg md:text-xl font-bold">
+          <span>Total:</span>
+          <span>{formatCurrency(totalPrice, currency)}</span>
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={onBackToCart} disabled={isSubmitting} className="w-full sm:w-auto">
             Back to Cart
           </Button>
-        )}
-        <Button type="submit" form="checkout-form" disabled={localIsSubmitting || cartItems.length === 0} className="text-sm md:text-base">
-          {localIsSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Placing Order...
-            </>
-          ) : (
-            <>
-              {currentStep < 2 ? "Next Step" : "Place Order"}
-              {currentStep === 2 && <CheckCircle className="ml-2 h-4 w-4" />}
-            </>
-          )}
-        </Button>
+          <Button type="submit" disabled={isSubmitting || !watch("acceptTerms")} className="w-full sm:w-auto">
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Place Order
+          </Button>
+        </div>
       </div>
-    </div>
+    </form>
   );
 };

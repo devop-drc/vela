@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight, ArrowRight, User, Mail, MapPin, Globe, StickyNote, Calendar, Lock, DollarSign, XCircle } from "lucide-react";
+import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight, ArrowRight, User, Mail, MapPin, Globe, StickyNote, Calendar, Lock, DollarSign, XCircle, Info } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { CheckoutForm } from "./CheckoutForm";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface StorefrontCartCheckoutModalProps {
   isOpen: boolean;
@@ -21,26 +22,26 @@ interface StorefrontCartCheckoutModalProps {
 }
 
 export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartCheckoutModalProps) => {
-  const { cartItems, savedItems, totalItems, subtotal, shipping, total, totalSaved, updateQuantity, removeFromCart, clearCart, saveForLater, moveToCart, removeSavedItem } = useCart();
+  const { cartItems, savedItems, totalItems, subtotal, shipping, total, totalSaved, updateQuantity, removeFromCart, clearCart, saveForLater, moveToCart, removeSavedItem, hasSubscriptionProducts, hasDigitalSubscriptionProducts } = useCart();
   const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const { toast } = useToast();
   const [isCheckoutMode, setIsCheckoutMode] = useState(false);
-  const [isOrderConfirmed, setIsOrderConfirmed] = useState(false); // New state for order confirmation
-  const [confirmedOrderId, setConfirmedOrderId] = useState<string | null>(null); // Store order ID for confirmation message
+  const [isOrderConfirmed, setIsOrderConfirmed] = useState(false);
+  const [confirmedOrderId, setConfirmedOrderId] = useState<string | null>(null);
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
   useEffect(() => {
     if (!isOpen) {
-      setIsCheckoutMode(false); // Reset to cart view when modal closes
-      setIsOrderConfirmed(false); // Reset confirmation state
-      setConfirmedOrderId(null); // Clear confirmed order ID
+      setIsCheckoutMode(false);
+      setIsOrderConfirmed(false);
+      setConfirmedOrderId(null);
     }
   }, [isOpen]);
 
   const convertedTotalPrice = useMemo(() => {
     if (!shopDetails?.currency) return 0;
-    return total; // total is already in the shop's display currency from useCart
+    return total;
   }, [total, shopDetails?.currency]);
 
   const handleOrderSuccess = (orderId: string) => {
@@ -68,7 +69,10 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
             )}
             {isOrderConfirmed ? "Order Confirmed!" : (isCheckoutMode ? "Checkout" : "Your Cart")}
           </DialogTitle>
-          {/* Removed the duplicate X button here */}
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 md:h-9 md:w-9">
+            <X className="h-5 w-5" />
+            <span className="sr-only">Close</span>
+          </Button>
         </DialogHeader>
 
         <AnimatePresence mode="wait">
@@ -115,19 +119,24 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
             >
               {isCheckoutMode ? (
                 <CheckoutForm 
-                  onOrderSuccess={handleOrderSuccess} // Pass the new prop
+                  onOrderSuccess={handleOrderSuccess}
                   onBackToCart={() => setIsCheckoutMode(false)}
-                  isSubmitting={false} // isSubmitting is handled internally by CheckoutForm
                   totalPrice={convertedTotalPrice}
                   currency={shopDetails?.currency || 'USD'}
                 />
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 flex-1 overflow-hidden">
-                  <div className="lg:col-span-2 flex flex-col overflow-y-auto p-4 md:p-6 border-r">
+                  <ScrollArea className="lg:col-span-2 flex flex-col p-4 md:p-6 border-r">
                     <div className="space-y-6">
                       {cartItems.length > 0 && (
                         <div className="space-y-4">
                           <h2 className="text-lg md:text-xl font-bold font-heading">Items in Cart ({cartItems.length})</h2>
+                          {hasSubscriptionProducts && (
+                            <div className="flex items-center gap-2 p-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md">
+                              <Info className="h-4 w-4 flex-shrink-0" />
+                              <span>This cart includes subscription products.</span>
+                            </div>
+                          )}
                           <AnimatePresence>
                             {cartItems.map(item => (
                               <motion.div
@@ -148,12 +157,10 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                     </div>
                                   </Link>
                                   <div className="flex-1 flex flex-col justify-between">
-                                    {/* Top Row: Product Name */}
                                     <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
                                       <h3 className="font-semibold text-base md:text-lg hover:underline leading-tight">{item.name}</h3>
                                     </Link>
 
-                                    {/* Middle Row: Chosen Options (if any) */}
                                     {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
                                       <p className="text-xs text-muted-foreground mt-1">
                                         {Object.entries(item.selectedOptions).map(([key, value]) => (
@@ -163,8 +170,12 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                         )).join(' | ')}
                                       </p>
                                     )}
+                                    {item.pricing_type === 'subscription' && (
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        Subscription: {item.billing_interval === 'month' ? 'Monthly' : 'Yearly'}
+                                      </p>
+                                    )}
 
-                                    {/* Bottom Row: Quantity, Price & Actions */}
                                     <div className="flex items-center justify-between gap-2 mt-2">
                                       <div className="flex items-center border rounded-md h-9 flex-shrink-0">
                                         <motion.button
@@ -267,12 +278,10 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                     </div>
                                   </Link>
                                   <div className="flex-1 flex flex-col justify-between">
-                                    {/* Top Row: Product Name */}
                                     <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}>
                                       <h3 className="font-semibold text-base md:text-lg hover:underline leading-tight">{item.name}</h3>
                                     </Link>
 
-                                    {/* Middle Row: Chosen Options (if any) */}
                                     {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
                                       <p className="text-xs text-muted-foreground mt-1">
                                         {Object.entries(item.selectedOptions).map(([key, value]) => (
@@ -282,8 +291,12 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                         )).join(' | ')}
                                       </p>
                                     )}
+                                    {item.pricing_type === 'subscription' && (
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        Subscription: {item.billing_interval === 'month' ? 'Monthly' : 'Yearly'}
+                                      </p>
+                                    )}
 
-                                    {/* Bottom Row: Price & Actions */}
                                     <div className="flex items-center justify-between gap-2 mt-2">
                                       <div className="flex items-center gap-2 flex-shrink-0">
                                         {item.isDiscounted && (
@@ -329,7 +342,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                         </div>
                       )}
                     </div>
-                  </div>
+                  </ScrollArea>
 
                   <div className="lg:col-span-1 flex flex-col p-4 md:p-6 border-t lg:border-t-0">
                     <div className="space-y-4 flex-1">
@@ -368,7 +381,6 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
               )}
             </motion.div>
           ))}
-        </AnimatePresence>
         </DialogContent>
       </Dialog>
     );
