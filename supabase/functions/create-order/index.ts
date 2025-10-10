@@ -12,6 +12,33 @@ const getSupabaseAdmin = () => createClient(
   { auth: { persistSession: false } }
 );
 
+// Currency conversion helper (assumes rates are ALL-based)
+const convertCurrencyServer = async (amount: number, fromCurrency: string, toCurrency: string = 'ALL'): Promise<number> => {
+  if (fromCurrency === toCurrency) return amount;
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await supabaseAdmin.functions.invoke('exchange-rates');
+  if (error || data.error) {
+    console.error("Server-side currency conversion: Failed to fetch exchange rates.", error || data.error);
+    return amount; // Return original amount on error
+  }
+  const exchangeRates = data.rates;
+
+  const fromRate = exchangeRates[fromCurrency];
+  const toRate = exchangeRates[toCurrency];
+
+  if (!fromRate || !toRate) {
+    console.warn(`Server-side currency conversion: Missing exchange rate for conversion from ${fromCurrency} to ${toCurrency}.`);
+    return amount; // Return original amount if rates are missing
+  }
+
+  // Rates are ALL-based: rate[X] means 1 ALL = X of currency X
+  // To convert from A to B: amount_in_B = amount_in_A * (rate[B] / rate[A])
+  const convertedAmount = amount * (toRate / fromRate);
+  
+  return Math.round(convertedAmount * 100) / 100;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -41,6 +68,9 @@ serve(async (req) => {
     }
     const businessId = shopData.business_id;
 
+    // Convert totalAmount from client's display currency to ALL for storage
+    const totalAmountInALL = await convertCurrencyServer(totalAmount, currency, 'ALL');
+
     // 2. Insert the new order
     const { data: newOrder, error: orderInsertError } = await supabaseAdmin
       .from('orders')
@@ -49,8 +79,8 @@ serve(async (req) => {
         customer_name: `${customerInfo.firstName} ${customerInfo.lastName}`,
         customer_email: customerInfo.email,
         status: 'Pending', // Default order status for new orders
-        total_amount: totalAmount,
-        currency: currency,
+        total_amount: totalAmountInALL, // Store total in ALL
+        currency: 'ALL', // Always store order currency as ALL
         payment_method: paymentMethod, // New: Store selected payment method
         payment_status: paymentMethod === 'cash_on_delivery' ? 'pending' : 'processing', // New: Set initial payment status
         shipping_address: shippingAddress, // New: Store shipping details
@@ -72,11 +102,14 @@ serve(async (req) => {
     // 3. Insert order items and update product inventory/status
     const orderItemsToInsert = [];
     for (const item of cartItems) {
+      // Convert item.price from client's display currency to ALL for storage
+      const itemPriceInALL = await convertCurrencyServer(item.price, currency, 'ALL');
+
       orderItemsToInsert.push({
         order_id: orderId,
         product_id: item.productId,
         quantity: item.quantity,
-        price_at_purchase: item.price,
+        price_at_purchase: itemPriceInALL, // Store item price in ALL
       });
 
       // Fetch product to check pricing_type and current inventory
