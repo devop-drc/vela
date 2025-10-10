@@ -15,6 +15,7 @@ import { CheckoutForm, CheckoutFormValues } from "./CheckoutForm"; // Import Che
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { supabase } from "@/integrations/supabase/client";
 
 interface StorefrontCartCheckoutModalProps {
   isOpen: boolean;
@@ -387,7 +388,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                         )}
                                         <p className={cn("font-semibold text-base md:text-lg", item.isDiscounted && "text-emerald-600")}>
                                           {formatCurrency(convertCurrency(item.price * item.quantity, item.currency, shopDetails?.currency), shopDetails?.currency)}
-                                        </p>
+                                                                                  </p>
                                       </div>
 
                                       <div className="flex items-center gap-2 flex-shrink-0">

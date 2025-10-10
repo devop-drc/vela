@@ -47,7 +47,7 @@ interface ProductPayload {
   thumbnail_url?: string;
   media_type: string;
   inventory?: number; // Added inventory to payload
-  billing_interval?: 'month' | 'year' | null; // Added billing_interval
+  billing_interval?: 'month' | 'year' | null; // Added pricing_type
   pricing_type?: 'one_time' | 'subscription'; // Added pricing_type
   interval_repetitions?: number | null; // New field
 }
