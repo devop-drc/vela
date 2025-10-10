@@ -17,6 +17,7 @@ import {
   Settings,
   Share2,
   XCircle,
+  ShoppingCart as ShoppingCartIcon, // Import ShoppingCartIcon
 } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,7 +30,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Input } from "@/components/ui/input";
 import { debounce } from 'lodash';
 import { formatLargeNumber } from "@/lib/formatters";
-import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
+import { useIsMobile } from "@/hooks/use-mobile";
+import { motion } from "framer-motion";
 
 interface Product {
   id: string;
@@ -70,7 +72,7 @@ const StorefrontInstagramProfile = () => {
   const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, convertCurrency } = useStorefront();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const isMobile = useIsMobile(); // Use the hook here
+  const isMobile = useIsMobile();
 
   const {
     onToggleFilterSidebar,
@@ -97,7 +99,7 @@ const StorefrontInstagramProfile = () => {
   });
 
   const blurEnabled = appearanceSettings?.blurEnabled;
-  const isPrimaryStyle = appearanceSettings?.sidebarStyle === 'primary'; // Check sidebarStyle
+  const isPrimaryStyle = appearanceSettings?.sidebarStyle === 'primary';
 
   // Determine max price for the slider
   const maxPrice = useMemo(() => {
@@ -323,25 +325,6 @@ const StorefrontInstagramProfile = () => {
       />
 
       <div className="flex-1 transition-all duration-200" style={{ paddingLeft: !isMobile && isDesktopFilterSidebarOpen ? 'calc(20rem + 2rem)' : '0' }}>
-        {/* Instagram-like Header */}
-        <header className={cn(
-          "sticky top-0 z-30 flex items-center justify-between h-14 px-4 md:px-6 border-b",
-          blurEnabled ? "bg-background/80 backdrop-blur-[20px]" : "bg-background"
-        )}>
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg md:text-xl font-bold">{shopDetails.username || shopDetails.shop_name}</h1>
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <Plus className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </div>
-        </header>
-
         <main className="flex-1 p-4 md:p-6">
           {/* Profile Section */}
           <section className="flex flex-col items-center md:items-start mb-8 md:mb-10">

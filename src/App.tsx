@@ -24,7 +24,9 @@ import StorefrontIndex from "./pages/StorefrontIndex";
 import StorefrontProductDetail from "./pages/StorefrontProductDetail";
 import StorefrontAllProducts from "./pages/StorefrontAllProducts";
 import StorefrontClientOrders from "./pages/StorefrontClientOrders";
-import StorefrontInstagramProfile from "./pages/StorefrontInstagramProfile"; // Import new component
+import StorefrontInstagramProfile from "./pages/StorefrontInstagramProfile";
+import InstagramShopLayout from "./components/storefront/InstagramShopLayout"; // Import new layout
+import InstagramProductDetail from "./pages/InstagramProductDetail"; // Import new product detail
 import Promotions from "./pages/Promotions";
 import { useEffect } from "react";
 import { supabase } from "./integrations/supabase/client";
@@ -48,7 +50,7 @@ const AppContent = () => {
       const { data: business, error: businessError } = await supabase
         .from('businesses')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user.id', user.id)
         .single();
 
       if (businessError || !business) {
@@ -109,12 +111,11 @@ const AppContent = () => {
         <Route path="product/:productId" element={<StorefrontProductDetail />} />
         <Route path="orders" element={<StorefrontClientOrders />} /> 
       </Route>
-      {/* New Instagram Profile Storefront Route */}
-      <Route path="/instagramShop/:shopSlug" element={<StorefrontLayout />}>
+      {/* New Instagram Profile Storefront Routes */}
+      <Route path="/instagramShop/:shopSlug" element={<InstagramShopLayout />}>
         <Route index element={<StorefrontInstagramProfile />} />
-        <Route path="products" element={<StorefrontAllProducts />} /> {/* Keep products route for consistency */}
-        <Route path="product/:productId" element={<StorefrontProductDetail />} />
-        <Route path="orders" element={<StorefrontClientOrders />} />
+        <Route path="product/:productId" element={<InstagramProductDetail />} />
+        {/* Other routes like /products or /orders can be added here if needed for this layout */}
       </Route>
 
       {/* Auth Routes */}

@@ -41,6 +41,12 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
   const isPrimaryStyle = appearanceSettings?.sidebarStyle === 'primary'; // Check sidebarStyle
 
   const isOnProductsPage = location.pathname.includes('/products');
+  const isInstagramProfilePage = location.pathname.includes('/instagramShop'); // New check
+
+  // If on Instagram profile page, this header should not render
+  if (isInstagramProfilePage) {
+    return null;
+  }
 
   // Debounced function to update search params
   const debouncedSetSearchParam = useCallback(

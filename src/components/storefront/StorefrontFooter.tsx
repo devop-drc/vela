@@ -1,15 +1,21 @@
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
-import { useRecentlyViewed } from "@/contexts/RecentlyViewedContext"; // Import useRecentlyViewed
+import { Link, useLocation } from "react-router-dom"; // Import useLocation
+import { useRecentlyViewed } from "@/contexts/RecentlyViewedContext";
 import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "../MediaItem";
-import { Eye, Instagram, Mail } from "lucide-react"; // Only Instagram and Mail icons
+import { Eye, Instagram, Mail } from "lucide-react";
 import React from "react";
 
 export const StorefrontFooter = React.forwardRef<HTMLDivElement>((props, ref) => {
   const { shopDetails, appearanceSettings } = useStorefront();
-  const { recentlyViewed } = useRecentlyViewed(); // Use the new hook
+  const { recentlyViewed } = useRecentlyViewed();
+  const location = useLocation(); // Use useLocation hook
+
+  // If on Instagram profile page, this footer should not render
+  if (location.pathname.includes('/instagramShop')) {
+    return null;
+  }
 
   if (!shopDetails) return null;
 

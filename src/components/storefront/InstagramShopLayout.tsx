@@ -1,20 +1,18 @@
 "use client";
 
 import { useEffect, useState, useRef } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
-import { StorefrontHeader } from './StorefrontHeader';
-import { StorefrontFooter } from './StorefrontFooter';
-import { defaultSettings } from '@/contexts/AppearanceContext'; // Import default settings
+import { InstagramShopHeader } from './InstagramShopHeader'; // Custom header
+import { defaultSettings } from '@/contexts/AppearanceContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Toaster as Sonner } from "@/components/ui/sonner"; // Import Sonner
-import { CartProvider } from '@/contexts/CartContext'; // Import CartProvider
-import { RecentlyViewedProvider } from '@/contexts/RecentlyViewedContext'; // Import RecentlyViewedProvider
-import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile
-import { StorefrontCartModal } from './StorefrontCartModal'; // Import the new cart modal
-import { StorefrontBottomNav } from './StorefrontBottomNav'; // Import the new bottom nav
-import { cn } from '@/lib/utils'; // Import cn for conditional classnames
-import { loadGoogleFont } from '@/lib/fontUtils'; // Import loadGoogleFont
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { CartProvider } from '@/contexts/CartContext';
+import { RecentlyViewedProvider } from '@/contexts/RecentlyViewedContext';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { StorefrontCartModal } from './StorefrontCartModal';
+import { cn } from '@/lib/utils';
+import { loadGoogleFont } from '@/lib/fontUtils';
 
 // Function to apply settings to the DOM, similar to AppearanceContext
 const applyStorefrontSettingsToDOM = (settings: any, shopDetails: any) => {
@@ -145,76 +143,39 @@ const applyStorefrontSettingsToDOM = (settings: any, shopDetails: any) => {
   }
 };
 
-const StorefrontLayoutContent = () => {
+const InstagramShopLayoutContent = () => {
   const { shopDetails, appearanceSettings, isLoading, error, products } = useStorefront();
   const isMobile = useIsMobile();
-  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false); // State for mobile sidebar
-  const [isDesktopFilterSidebarOpen, setIsDesktopFilterSidebarOpen] = useState(false); // State for desktop sidebar
-  const [wasDesktopFilterSidebarExplicitlyOpened, setWasDesktopFilterSidebarExplicitlyOpened] = useState(false); // New state to track explicit user action
-  const [isCartModalOpen, setIsCartModalOpen] = useState(false); // State for cart modal
-  const footerRef = useRef<HTMLDivElement>(null);
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
+  const [isDesktopFilterSidebarOpen, setIsDesktopFilterSidebarOpen] = useState(false);
+  const [wasDesktopFilterSidebarExplicitlyOpened, setWasDesktopFilterSidebarExplicitlyOpened] = useState(false);
+  const [isCartModalOpen, setIsCartModalOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     if (appearanceSettings || shopDetails) {
       applyStorefrontSettingsToDOM(appearanceSettings, shopDetails);
     } else {
-      // Apply default settings if none are found
       applyStorefrontSettingsToDOM(defaultSettings, null);
     }
   }, [appearanceSettings, shopDetails]);
 
-  // Autohide/Autoshow desktop filter sidebar based on footer visibility
-  useEffect(() => {
-    if (isMobile || !footerRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(entry => {
-          const footerHeight = entry.boundingClientRect.height;
-          const intersectionRatio = entry.intersectionRect.height / footerHeight;
-          
-          // If footer overlaps by more than 20%, hide the sidebar
-          if (intersectionRatio > 0.2) {
-            setIsDesktopFilterSidebarOpen(false);
-          } else if (intersectionRatio <= 0.2 && window.location.pathname.includes('/products')) {
-            // If footer is mostly out of view and on products page, show sidebar,
-            // BUT ONLY IF IT WAS EXPLICITLY OPENED BEFORE
-            if (wasDesktopFilterSidebarExplicitlyOpened) {
-              setIsDesktopFilterSidebarOpen(true);
-            }
-          }
-        });
-      },
-      { threshold: [0, 0.2, 0.8, 1] } // Observe at different intersection ratios
-    );
-
-    observer.observe(footerRef.current);
-
-    return () => {
-      if (footerRef.current) {
-        observer.unobserve(footerRef.current);
-      }
-    };
-  }, [isMobile, footerRef, setIsDesktopFilterSidebarOpen, wasDesktopFilterSidebarExplicitlyOpened]); // Add new state to dependencies
-
   // Reset desktop filter sidebar state when navigating away from /products
   useEffect(() => {
-    if (!window.location.pathname.includes('/products')) {
+    if (!location.pathname.includes('/products')) {
       setIsDesktopFilterSidebarOpen(false);
-      setWasDesktopFilterSidebarExplicitlyOpened(false); // Reset explicit state too
+      setWasDesktopFilterSidebarExplicitlyOpened(false);
     } else {
-      // Only open if not mobile and on products page
-      if (!isMobile && wasDesktopFilterSidebarExplicitlyOpened) { // Only open if explicitly opened before
+      if (!isMobile && wasDesktopFilterSidebarExplicitlyOpened) {
         setIsDesktopFilterSidebarOpen(true);
       }
     }
-  }, [window.location.pathname, isMobile, wasDesktopFilterSidebarExplicitlyOpened]);
-
+  }, [location.pathname, isMobile, wasDesktopFilterSidebarExplicitlyOpened]);
 
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen">
-        <StorefrontHeader onOpenCart={() => setIsCartModalOpen(true)} isDesktopSidebarOpen={false} setIsDesktopFilterSidebarOpen={setIsDesktopFilterSidebarOpen} setWasDesktopFilterSidebarExplicitlyOpened={setWasDesktopFilterSidebarExplicitlyOpened} />
+        <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} isDesktopSidebarOpen={false} setIsDesktopFilterSidebarOpen={setIsDesktopFilterSidebarOpen} setWasDesktopFilterSidebarExplicitlyOpened={setWasDesktopFilterSidebarExplicitlyOpened} />
         <main className="flex-1 container py-8 mt-16">
           <Skeleton className="h-10 w-1/2 mb-6" />
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -227,7 +188,6 @@ const StorefrontLayoutContent = () => {
             ))}
           </div>
         </main>
-        <StorefrontFooter />
       </div>
     );
   }
@@ -243,46 +203,42 @@ const StorefrontLayoutContent = () => {
   }
 
   const headerHeight = '3.5rem'; // 56px for mobile, 64px for desktop
-  const floatingHeaderOffset = '1rem'; // 16px
-  const mainContentPaddingTop = appearanceSettings?.layoutStyle === 'floating' ? `calc(${headerHeight} + ${floatingHeaderOffset} + ${floatingHeaderOffset})` : headerHeight;
+  const mainContentPaddingTop = headerHeight; // No floating header for this layout
 
   return (
     <div className="flex flex-col min-h-screen">
       <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
-      <StorefrontHeader 
-        onToggleFilterSidebar={() => setIsFilterSidebarOpen(true)} 
+      <InstagramShopHeader
         onOpenCart={() => setIsCartModalOpen(true)}
         isDesktopSidebarOpen={isDesktopFilterSidebarOpen}
         setIsDesktopFilterSidebarOpen={setIsDesktopFilterSidebarOpen}
         setWasDesktopFilterSidebarExplicitlyOpened={setWasDesktopFilterSidebarExplicitlyOpened}
       />
-      <main className="flex-1 overflow-y-auto" style={{ paddingTop: mainContentPaddingTop, paddingBottom: isMobile ? '4rem' : '0' }}>
-        <Outlet context={{ 
-          onToggleFilterSidebar: () => setIsFilterSidebarOpen(true), 
-          isFilterSidebarOpen, 
-          setIsFilterSidebarOpen, 
+      <main className="flex-1 overflow-y-auto" style={{ paddingTop: mainContentPaddingTop }}>
+        <Outlet context={{
+          onToggleFilterSidebar: () => setIsFilterSidebarOpen(true),
+          isFilterSidebarOpen,
+          setIsFilterSidebarOpen,
           products,
           isDesktopFilterSidebarOpen,
           setIsDesktopFilterSidebarOpen,
           setWasDesktopFilterSidebarExplicitlyOpened,
         }} />
       </main>
-      <StorefrontFooter ref={footerRef} />
-      <StorefrontBottomNav onOpenCart={() => setIsCartModalOpen(true)} />
       <Sonner />
       <StorefrontCartModal isOpen={isCartModalOpen} onClose={() => setIsCartModalOpen(false)} />
     </div>
   );
 };
 
-const StorefrontLayout = () => (
+const InstagramShopLayout = () => (
   <StorefrontProvider>
     <CartProvider>
       <RecentlyViewedProvider>
-        <StorefrontLayoutContent />
+        <InstagramShopLayoutContent />
       </RecentlyViewedProvider>
     </CartProvider>
   </StorefrontProvider>
 );
 
-export default StorefrontLayout;
+export default InstagramShopLayout;
