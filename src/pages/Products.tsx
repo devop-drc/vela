@@ -46,6 +46,7 @@ interface Product {
   billing_interval: 'month' | 'year' | null;
   created_at: string;
   details: any;
+  instagram_post_id?: string; // Added instagram_post_id
 }
 
 const gridSizeClasses: { [key: string]: string } = {
@@ -105,42 +106,47 @@ const Products = () => {
     }
   }, [searchParams, setSearchParams]);
 
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      setIsLoading(false);
+      setProducts([]);
+      setHasDoneFullSync(null);
+      return;
+    }
+
+    // Fetch business details to check last_full_sync_at
+    const { data: businessData, error: businessError } = await supabase
+      .from('businesses')
+      .select('id, last_full_sync_at')
+      .eq('user_id', user.id)
+      .single();
+
+    if (businessError) {
+      console.error("Error fetching business data:", businessError);
+      setHasDoneFullSync(false); // Assume no full sync if business data can't be fetched
+    } else {
+      setHasDoneFullSync(!!businessData?.last_full_sync_at);
+    }
+
+    const { data, error } = await supabase.from("products").select("*").eq('user_id', user.id).order('created_at', { ascending: false });
+    
+    if (error) {
+      showError("Could not fetch your product catalog.");
+    } else if (data) {
+      setProducts(data as Product[]);
+    }
+    setIsLoading(false);
+  };
+
   useEffect(() => {
     let channel: RealtimeChannel | null = null;
 
-    const setup = async () => {
-      setIsLoading(true);
+    const setupRealtimeListener = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        setIsLoading(false);
-        setProducts([]);
-        setHasDoneFullSync(null);
-        return;
-      }
-
-      // Fetch business details to check last_full_sync_at
-      const { data: businessData, error: businessError } = await supabase
-        .from('businesses')
-        .select('id, last_full_sync_at')
-        .eq('user_id', user.id)
-        .single();
-
-      if (businessError) {
-        console.error("Error fetching business data:", businessError);
-        setHasDoneFullSync(false); // Assume no full sync if business data can't be fetched
-      } else {
-        setHasDoneFullSync(!!businessData?.last_full_sync_at);
-      }
-
-      const { data, error } = await supabase.from("products").select("*").eq('user_id', user.id).order('created_at', { ascending: false });
-      
-      if (error) {
-        showError("Could not fetch your product catalog.");
-      } else if (data) {
-        setProducts(data as Product[]);
-      }
-      setIsLoading(false);
+      if (!user) return;
 
       channel = supabase
         .channel(`products:${user.id}`)
@@ -153,7 +159,8 @@ const Products = () => {
         ).subscribe();
     };
 
-    setup();
+    fetchProducts(); // Initial fetch
+    setupRealtimeListener(); // Setup real-time listener
 
     return () => {
       if (channel) supabase.removeChannel(channel);
@@ -241,10 +248,37 @@ const Products = () => {
     else { showSuccess(`Successfully updated ${selectedProducts.length} products.`); setSelectedProducts([]); }
   };
   const handleBulkDelete = async () => {
-    const { error } = await supabase.from('products').delete().in('id', selectedProducts);
-    if (error) {
-      showError(`Failed to delete products: ${error.message}`);
+    const { data: productsToDelete, error: fetchError } = await supabase
+      .from('products')
+      .select('id, instagram_post_id')
+      .in('id', selectedProducts);
+
+    if (fetchError) {
+      showError(`Failed to fetch products for deletion: ${fetchError.message}`);
+      setBulkDeleteConfirm(false);
+      return;
+    }
+
+    const instagramPostIds = productsToDelete.map(p => p.instagram_post_id).filter(Boolean);
+
+    // Delete from AI analysis cache
+    if (instagramPostIds.length > 0) {
+      const { error: cacheError } = await supabase
+        .from('ai_analysis_cache')
+        .delete()
+        .in('instagram_post_id', instagramPostIds);
+      if (cacheError) {
+        console.error("Failed to delete AI analysis cache entries:", cacheError);
+        showError(`Failed to clear AI cache for some products: ${cacheError.message}`);
+      }
+    }
+
+    // Delete from products table
+    const { error: deleteError } = await supabase.from('products').delete().in('id', selectedProducts);
+    if (deleteError) {
+      showError(`Failed to delete products: ${deleteError.message}`);
     } else {
+      // Update local state immediately
       setProducts(prevProducts => prevProducts.filter(p => !selectedProducts.includes(p.id)));
       showSuccess(`Successfully deleted ${selectedProducts.length} products.`);
       setSelectedProducts([]);
@@ -270,7 +304,7 @@ const Products = () => {
   return (
     <>
       {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={() => {}} />}
-      <ProductEditor isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={() => {}} />
+      <ProductEditor isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={fetchProducts} />
       {isSaleModalOpen && <SaleModal isOpen={isSaleModalOpen} onClose={() => setIsSaleModalOpen(false)} onApply={handleApplySale} productCount={selectedProducts.length} />}
       <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {selectedProducts.length} products?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       

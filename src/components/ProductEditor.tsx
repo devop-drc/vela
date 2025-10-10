@@ -51,6 +51,7 @@ interface Product {
   billing_interval: 'month' | 'year' | null;
   details: any;
   currency: string | null;
+  instagram_post_id?: string; // Added instagram_post_id
 }
 
 interface ProductEditorProps {
@@ -265,6 +266,19 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
 
   const handleDelete = async () => {
     setIsSubmitting(true);
+    
+    // Delete from AI analysis cache if instagram_post_id exists
+    if (product.instagram_post_id) {
+      const { error: cacheError } = await supabase
+        .from('ai_analysis_cache')
+        .delete()
+        .eq('instagram_post_id', product.instagram_post_id);
+      if (cacheError) {
+        console.error("Failed to delete AI analysis cache entry:", cacheError);
+        showError(`Failed to clear AI cache: ${cacheError.message}`);
+      }
+    }
+
     const { error } = await supabase.from('products').delete().eq('id', product.id);
     if (error) { showError(`Failed to delete product: ${error.message}`); } 
     else { showSuccess("Product deleted."); onUpdate(); onClose(); }
@@ -291,6 +305,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
                 onCancel={() => setIsEditing(false)}
                 isSubmitting={isSubmitting}
                 isEditing={isEditing}
+                setMediaItems={setMediaItems} // Pass setMediaItems
               />
             ) : (
               <ProductViewMode

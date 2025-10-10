@@ -17,6 +17,8 @@ import { getAttributeIcon } from "@/lib/attributeIcons"; // Import attribute ico
 import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard"; // Import StorefrontProductCard
 import { StorefrontBreadcrumb } from "@/components/storefront/StorefrontBreadcrumb"; // Import StorefrontBreadcrumb
 import { useRecentlyViewed } from "@/contexts/RecentlyViewedContext"; // Import useRecentlyViewed
+import { type CarouselApi } from "@/components/ui/carousel"; // Import CarouselApi type
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // Import ScrollArea and ScrollBar
 
 const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
@@ -39,10 +41,21 @@ const StorefrontProductDetail = () => {
   const [selectedColor, setSelectedColor] = useState<string | null>(null); // Placeholder for variant selection
   const [selectedSize, setSelectedSize] = useState<string | null>(null); // Placeholder for variant selection
 
+  const [api, setApi] = useState<CarouselApi>();
+  const [currentSlide, setCurrentSlide] = useState(0);
+
   useEffect(() => {
     // Scroll to top when component mounts or productId changes
     window.scrollTo(0, 0);
   }, [productId]);
+
+  useEffect(() => {
+    if (!api) return;
+    setCurrentSlide(api.selectedScrollSnap());
+    api.on("select", () => {
+      setCurrentSlide(api.selectedScrollSnap());
+    });
+  }, [api]);
 
   if (isLoading) {
     return <div className="container py-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -172,6 +185,9 @@ const StorefrontProductDetail = () => {
       media_type: product.media_type,
       slug: shopDetails.slug,
       selectedOptions: Object.keys(selectedOptions).length > 0 ? selectedOptions : undefined, // Pass selected options
+      pricing_type: product.pricing_type, // Pass pricing_type
+      product_type: product.product_type, // Pass product_type
+      billing_interval: product.billing_interval, // Pass billing_interval
     }, quantity);
   };
 
@@ -192,7 +208,7 @@ const StorefrontProductDetail = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Product Media */}
         <div>
-          <Carousel className="w-full rounded-lg overflow-hidden border shadow-md">
+          <Carousel setApi={setApi} className="w-full rounded-lg overflow-hidden border shadow-md">
             <CarouselContent>
               {mediaItems.map((url: string, index: number) => (
                 <CarouselItem key={index}>
@@ -209,6 +225,25 @@ const StorefrontProductDetail = () => {
               </>
             )}
           </Carousel>
+          {mediaItems.length > 1 && (
+            <ScrollArea className="mt-4 pb-2">
+              <div className="flex gap-2">
+                {mediaItems.map((url: string, index: number) => (
+                  <button
+                    key={index}
+                    onClick={() => api?.scrollTo(index)}
+                    className={cn(
+                      "h-20 w-20 rounded-md overflow-hidden border-2 transition-all flex-shrink-0",
+                      index === currentSlide ? "border-primary" : "border-transparent hover:border-muted-foreground"
+                    )}
+                  >
+                    <MediaItem src={url} alt={`Thumbnail ${index + 1}`} className="object-cover h-full w-full" />
+                  </button>
+                ))}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          )}
         </div>
 
         {/* Product Details */}
@@ -378,7 +413,7 @@ const StorefrontProductDetail = () => {
                   size="icon"
                   onClick={() => setQuantity(prev => Math.min(product.inventory || 1, prev + 1))}
                   disabled={quantity >= (product.inventory || 1)}
-                  className="h-8 w-8"
+                  className="h-8 w-8 md:h-9 md:w-9"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
