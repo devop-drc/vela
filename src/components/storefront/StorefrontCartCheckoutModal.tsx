@@ -368,6 +368,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
               )}
             </motion.div>
           ))}
+        </AnimatePresence>
         </DialogContent>
       </Dialog>
     );

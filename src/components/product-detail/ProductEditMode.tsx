@@ -141,6 +141,11 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             <div className="p-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
                 <div className="md:col-span-4">
+                  {mediaItems.length > 0 && (
+                      <div className="relative aspect-square w-full rounded-lg overflow-hidden border mb-4">
+                          <MediaItem src={mediaItems[0]} alt="Main product media" className="object-cover" />
+                      </div>
+                  )}
                   <Reorder.Group axis="x" values={mediaItems} onReorder={setMediaItems} className="flex flex-wrap gap-2">
                     {mediaItems.map((url: string) => (
                       <Reorder.Item key={url} value={url} className="relative group">

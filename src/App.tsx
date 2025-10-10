@@ -47,7 +47,7 @@ const AppContent = () => {
       const { data: business, error: businessError } = await supabase
         .from('businesses')
         .select('id')
-        .eq('user.id', user.id) // Corrected filter to use user.id
+        .eq('user_id', user.id) // Corrected filter to use 'user_id'
         .single();
 
       if (businessError || !business) {

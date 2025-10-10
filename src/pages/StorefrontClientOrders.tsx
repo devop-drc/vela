@@ -317,10 +317,11 @@ const StorefrontClientOrders = () => {
                         </TableCell>
                         <TableCell>{new Date(order.updated_at).toLocaleString()}</TableCell> {/* New column cell */}
                         <TableCell className="text-right font-medium">
-                          {formatCurrency(order.total_amount, order.currency)}
-                          {contextShopDetails?.currency && order.currency !== contextShopDetails.currency && (
+                          {/* Display shop's currency first, then original currency */}
+                          {formatCurrency(convertCurrency(order.total_amount, order.currency, contextShopDetails.currency), contextShopDetails.currency)}
+                          {order.currency !== contextShopDetails.currency && (
                             <div className="text-xs font-normal text-muted-foreground">
-                              (~{formatCurrency(convertCurrency(order.total_amount, order.currency), contextShopDetails.currency)})
+                              (~{formatCurrency(order.total_amount, order.currency)})
                             </div>
                           )}
                         </TableCell>
