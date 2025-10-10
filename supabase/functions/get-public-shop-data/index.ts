@@ -31,7 +31,9 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
   if (!repeatInterval || repeatInterval === 'none') return true;
 
   // For recurring intervals, check if 'now' matches the recurrence pattern relative to 'start'
-  if (!start) return true; // If no start date, and repeat is set, assume always active within end date
+  // If start is null, and repeat is set, assume it's always active within the end date.
+  // This might need further refinement based on exact recurrence rules.
+  if (!start) return true; 
 
   switch (repeatInterval) {
     case 'daily':
@@ -41,6 +43,8 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
     case 'monthly':
       return now.getDate() === start.getDate();
     case 'yearly':
+      // For yearly, we want to check if the current month and day match the start month and day
+      // regardless of the year, but still within the overall start/end date range.
       return now.getMonth() === start.getMonth() && now.getDate() === start.getDate();
     default:
       return false;
