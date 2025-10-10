@@ -86,7 +86,7 @@ const Login = () => {
         provider: 'facebook',
         options: {
           redirectTo: `${window.location.origin}/`,
-          scopes: 'email,public_profile,instagram_basic,pages_show_list,instagram_manage_insights,instagram_content_publish,instagram_manage_comments,instagram_manage_messages,pages_read_engagement,pages_manage_posts,pages_manage_metadata', // Added more scopes
+          scopes: 'email,public_profile,instagram_basic',
           queryParams: {
             auth_type: 'rerequest',
             access_type: 'offline',

@@ -75,9 +75,19 @@ serve(async (req) => {
       if (!email) throw new Error("Could not retrieve email from Facebook. Please ensure your account has a verified email and you granted email permissions.");
 
       const igAccount = accounts?.data?.find((page: any) => page.instagram_business_account)?.instagram_business_account;
-      const instagram_username = igAccount?.username;
-      const instagram_profile_picture_url = igAccount?.profile_picture_url;
-      const instagram_shop_name = igAccount?.name;
+
+      // --- NEW: Explicit check for Instagram Business Account ---
+      if (!igAccount) {
+        const errorDescription = "No linked Instagram Business Account found. Please ensure your Instagram account is a Business or Creator account and is linked to the Facebook Page you selected. Also, ensure you grant all requested permissions during the Facebook login process.";
+        const redirectUrl = new URL(origin);
+        redirectUrl.searchParams.set('integration_error', errorDescription);
+        return Response.redirect(redirectUrl.toString(), 302);
+      }
+      // --- END NEW ---
+
+      const instagram_username = igAccount.username;
+      const instagram_profile_picture_url = igAccount.profile_picture_url;
+      const instagram_shop_name = igAccount.name;
 
       const supabaseAdmin = getSupabaseAdmin();
       let userId: string;
