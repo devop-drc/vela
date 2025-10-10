@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { CalendarIcon, Loader2, Tag, Percent, DollarSign, MessageSquareText, Gift, Package, XCircle, Repeat, Truck } from "lucide-react";
+import { CalendarIcon, Loader2, Percent, DollarSign, Gift, Package, XCircle, Repeat, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Calendar } from "@/components/ui/calendar";
@@ -19,19 +18,19 @@ import { cn } from "@/lib/utils";
 import { ProductSelector } from "./ProductSelector";
 import { ScrollArea } from "./ui/scroll-area";
 import { Badge } from "./ui/badge";
-import { useShop } from "@/contexts/ShopContext"; // Import useShop
-import { formatCurrency } from "@/lib/formatters"; // Import formatCurrency
-import { Switch } from "@/components/ui/switch"; // Import Switch for active toggle
+import { useShop } from "@/contexts/ShopContext";
+import { formatCurrency } from "@/lib/formatters";
+import { Switch } from "@/components/ui/switch";
 
 const promotionSchema = z.object({
   name: z.string().min(1, "Promotion name is required"),
   type: z.enum(['discount', 'offer']),
-  value: z.any(), // This will be dynamically validated
+  value: z.any(),
   start_date: z.date().optional().nullable(),
   end_date: z.date().optional().nullable(),
   is_active: z.boolean().default(true),
   target_products: z.array(z.string()).optional().nullable(),
-  repeat_interval: z.enum(['daily', 'weekly', 'monthly', 'yearly', 'none']).optional().nullable(), // New field
+  repeat_interval: z.enum(['daily', 'weekly', 'monthly', 'yearly', 'none']).optional().nullable(),
 }).superRefine((data, ctx) => {
   if (data.type === 'discount') {
     if (!data.value?.discountType) {
@@ -77,29 +76,29 @@ interface Promotion {
   end_date: string | null;
   is_active: boolean;
   target_products: string[] | null;
-  repeat_interval: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'none' | null; // New field
+  repeat_interval: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'none' | null;
 }
 
 interface PromotionEditorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
-  promotion: Promotion | null; // This can be null for new promotions
+  promotion: Promotion | null;
 }
 
 export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: PromotionEditorModalProps) => {
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
   const [selectedProductNames, setSelectedProductNames] = useState<string[]>([]);
-  const { shopDetails } = useShop(); // Use shopDetails for currency formatting
+  const { shopDetails } = useShop();
 
   const { register, handleSubmit, reset, control, watch, setValue, formState: { errors, isSubmitting } } = useForm<PromotionFormData>({
     resolver: zodResolver(promotionSchema),
     defaultValues: {
-      type: 'discount', // Default to discount
-      is_active: true, // Default to active
+      type: 'discount',
+      is_active: true,
       value: {},
       target_products: [],
-      repeat_interval: 'none', // Default to 'none'
+      repeat_interval: 'none',
     }
   });
 
@@ -118,19 +117,18 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
         end_date: promotion.end_date ? new Date(promotion.end_date) : null,
         is_active: promotion.is_active,
         target_products: promotion.target_products || [],
-        repeat_interval: promotion.repeat_interval || 'none', // Ensure 'none' if null
+        repeat_interval: promotion.repeat_interval || 'none',
       });
     } else {
-      // For new promotions (including 'rerun' copies), reset to defaults
       reset({
         name: "",
-        type: 'discount', // Default to discount
-        value: { discountType: "percentage", discountValue: 0 }, // Default value for discount
+        type: 'discount',
+        value: { discountType: "percentage", discountValue: 0 },
         start_date: null,
         end_date: null,
-        is_active: true, // Default to active for new promotions
+        is_active: true,
         target_products: [],
-        repeat_interval: 'none', // Default to 'none'
+        repeat_interval: 'none',
       });
     }
   }, [promotion, reset]);
@@ -167,15 +165,15 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
       user_id: user.id,
       start_date: data.start_date ? data.start_date.toISOString() : null,
       end_date: data.end_date ? data.end_date.toISOString() : null,
-      repeat_interval: data.repeat_interval === 'none' ? null : data.repeat_interval, // Convert 'none' to null for DB
+      repeat_interval: data.repeat_interval === 'none' ? null : data.repeat_interval,
     };
 
     let error;
     let promotionId = promotion?.id;
 
-    if (promotion && promotion.id) { // If promotion prop has an ID, it's an update
+    if (promotion && promotion.id) {
       ({ error } = await supabase.from("promotions").update(payload).eq("id", promotion.id));
-    } else { // Otherwise, it's a new insert
+    } else {
       const { data: newPromotion, error: insertError } = await supabase.from("promotions").insert(payload).select('id').single();
       if (insertError) {
         error = insertError;
@@ -189,7 +187,6 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
     } else {
       showSuccess(`Promotion ${promotion ? 'updated' : 'added'} successfully!`);
 
-      // Automatically create/update a storefront announcement
       if (promotionId) {
         let announcementMessage = data.name;
         if (data.type === 'discount') {
@@ -205,23 +202,19 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
         const announcementPayload = {
           user_id: user.id,
           message: announcementMessage,
-          icon_name: data.type === 'discount' ? 'Percent' : 'Gift', // Use appropriate icon
+          icon_name: data.type === 'discount' ? 'Percent' : 'Gift',
           is_active: data.is_active,
-          display_order: 0, // Default order, can be adjusted manually later
+          display_order: 0,
           start_date: payload.start_date,
           end_date: payload.end_date,
           repeat_interval: payload.repeat_interval,
-          // Link to the promotion if possible, e.g., via a custom field or message
-          // For now, we'll just create it.
         };
 
-        // Check if an announcement already exists for this promotion (e.g., by name or a custom link field)
-        // For simplicity, we'll just insert a new one or update if a matching one exists by message.
         const { data: existingAnnouncement, error: fetchAnnounceError } = await supabase
           .from('marquee_elements')
           .select('id')
           .eq('user_id', user.id)
-          .eq('message', announcementMessage) // Simple matching for now
+          .eq('message', announcementMessage)
           .maybeSingle();
 
         if (fetchAnnounceError) {
@@ -243,16 +236,16 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl h-[90vh] flex flex-col p-0"> {/* Reverted padding to p-0 */}
-        <DialogHeader className="p-6 pb-4"> {/* Added padding to header */}
+      <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle>{promotion ? "Edit Promotion" : "Create New Promotion"}</DialogTitle>
           <DialogDescription>
             Define your marketing campaigns, discounts, and special offers.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
-          <ScrollArea className="flex-1 px-6"> {/* Added horizontal padding to ScrollArea */}
-            <div className="space-y-6 py-4"> {/* Added vertical padding to content */}
+          <ScrollArea className="flex-1 px-6">
+            <div className="space-y-6 py-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Promotion Name</Label>
                 <Input id="name" {...register("name")} placeholder="e.g., Summer Sale, Free Shipping" className="h-10 px-3 py-2" />
@@ -267,12 +260,11 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                   render={({ field }) => (
                     <Select onValueChange={(value: PromotionFormData['type']) => {
                       field.onChange(value);
-                      // Reset value object when type changes
                       if (value === 'discount') setValue('value', { discountType: "percentage", discountValue: 0 });
                       else if (value === 'offer') setValue('value', { offerType: "free_shipping", minOrderValue: 0 });
                     }} value={field.value}>
                       <SelectTrigger id="type" className="h-10 px-3 py-2">
-                        <Percent className="mr-2 h-4 w-4" /> {/* Icon on left */}
+                        {field.value === 'discount' ? <Percent className="mr-2 h-4 w-4" /> : <Gift className="mr-2 h-4 w-4" />}
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -295,7 +287,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value}>
                           <SelectTrigger id="discountType" className="h-10 px-3 py-2">
-                            <Percent className="mr-2 h-4 w-4" /> {/* Icon on left */}
+                            {field.value === 'percentage' ? <Percent className="mr-2 h-4 w-4" /> : <DollarSign className="mr-2 h-4 w-4" />}
                             <SelectValue placeholder="Select discount type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -338,7 +330,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                     render={({ field }) => (
                       <Select onValueChange={field.onChange} value={field.value}>
                         <SelectTrigger id="offerType" className="h-10 px-3 py-2">
-                          <Gift className="mr-2 h-4 w-4" /> {/* Icon on left */}
+                          <Gift className="mr-2 h-4 w-4" />
                           <SelectValue placeholder="Select offer type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -483,7 +475,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                 />
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border p-4"> {/* Added border and padding */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                   <Label htmlFor="isActive" className="text-base">Active</Label>
                   <p className="text-sm text-muted-foreground">Enable or disable this promotion.</p>

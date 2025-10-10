@@ -15,7 +15,7 @@ import { Slider } from "@/components/ui/slider";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { motion, AnimatePresence } from "framer-motion";
 import { debounce } from 'lodash';
-import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Product {
   id: string;
@@ -34,7 +34,7 @@ interface FilterState {
   categories: string[];
   tags: string[];
   priceRange: [number, number];
-  [key: string]: string[] | [number, number]; // For dynamic attributes
+  [key: string]: string[] | [number, number];
 }
 
 interface ProductSelectorProps {
@@ -58,7 +58,7 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
     tags: [],
-    priceRange: [0, 1000], // Initial dummy value, will be updated by maxPrice
+    priceRange: [0, 1000],
   });
   const [localPriceRange, setLocalPriceRange] = useState<[number, number]>([0, 1000]);
 
@@ -91,7 +91,6 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
             if (!uniqueAttributes.has(attr.name)) {
               uniqueAttributes.set(attr.name, new Set<string>());
             }
-            // If the attribute has possibleValues, add them
             if (attr.possibleValues && Array.isArray(attr.possibleValues)) {
               attr.possibleValues.forEach((val: string) => uniqueAttributes.get(attr.name)?.add(val));
             }
@@ -100,7 +99,6 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
         setAllDetailsAttributes(Array.from(uniqueAttributes.entries()).map(([name, values]) => ({ name, values: Array.from(values).sort() })));
       }
 
-      // Extract all unique tags from products
       const uniqueTags = new Set<string>();
       productsRes.data?.forEach(p => p.tags?.forEach(tag => uniqueTags.add(tag)));
       setAllTags(Array.from(uniqueTags).sort());
@@ -124,7 +122,6 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
   }, [allProducts, convertCurrency]);
 
   useEffect(() => {
-    // Initialize priceRange with maxPrice once it's determined
     if (filters.priceRange[1] === 1000 && maxPrice !== 1000) {
       setFilters(prev => ({ ...prev, priceRange: [0, maxPrice] }));
       setLocalPriceRange([0, maxPrice]);
@@ -296,8 +293,8 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
         </Select>
       </div>
 
-      <ScrollArea className="flex-1"> {/* Wrap filter bar and table in ScrollArea */}
-        <div className="p-4 flex flex-wrap gap-2 flex-shrink-0"> {/* Removed border-b here */}
+      <ScrollArea className="flex-1">
+        <div className="p-4 border-b flex flex-wrap gap-2 flex-shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-9 px-3">
@@ -473,9 +470,9 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
             </TableBody>
           </Table>
         )}
-      </ScrollArea> {/* End ScrollArea */}
+      </ScrollArea>
 
-      <div className="p-4 border-t flex justify-between items-center flex-shrink-0"> {/* Added flex-shrink-0 */}
+      <div className="p-4 border-t flex justify-between items-center flex-shrink-0">
         <p className="text-sm text-muted-foreground">{currentSelection.length} products selected</p>
         <div className="flex gap-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>

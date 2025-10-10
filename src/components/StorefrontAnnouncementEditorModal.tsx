@@ -7,21 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, MessageSquareText, CheckCircle, XCircle, ArrowUp, ArrowDown, Search, CalendarIcon, Repeat } from "lucide-react";
+import { Loader2, Sparkles, MessageSquareText, CalendarIcon, Repeat } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { StorefrontAnnouncement } from "@/types/storefront"; // Use new type
-import * as LucideIcons from 'lucide-react'; // Import all Lucide icons
+import { StorefrontAnnouncement } from "@/types/storefront";
+import * as LucideIcons from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { Marquee } from "@/components/ui/marquee"; // Import Marquee for preview
+import { Marquee } from "@/components/ui/marquee";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { Switch } from "@/components/ui/switch"; // Import Switch for active toggle
+import { Switch } from "@/components/ui/switch";
 
 // List of common Lucide icons for selection
 const availableIcons: (keyof typeof LucideIcons)[] = [
@@ -43,9 +42,9 @@ const storefrontAnnouncementSchema = z.object({
   }),
   is_active: z.boolean().default(true),
   display_order: z.coerce.number().int().min(0, "Display order must be a non-negative integer").default(0),
-  start_date: z.date().optional().nullable(), // New field
-  end_date: z.date().optional().nullable(),   // New field
-  repeat_interval: z.enum(['daily', 'weekly', 'monthly', 'yearly', 'none']).optional().nullable(), // New field
+  start_date: z.date().optional().nullable(),
+  end_date: z.date().optional().nullable(),
+  repeat_interval: z.enum(['daily', 'weekly', 'monthly', 'yearly', 'none']).optional().nullable(),
 });
 
 type StorefrontAnnouncementFormData = z.infer<typeof storefrontAnnouncementSchema>;
@@ -57,10 +56,10 @@ interface StorefrontAnnouncementEditorModalProps {
   element: StorefrontAnnouncement | null;
 }
 
-export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, element }: StorefrontAnnouncementEditorModalProps) => {
+export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, element }: StorefrontAnnouncementEditorModalModalProps) => {
   const { register, handleSubmit, reset, control, watch, setValue, formState: { errors, isSubmitting } } = useForm<StorefrontAnnouncementFormData>({
     resolver: zodResolver(storefrontAnnouncementSchema),
-    defaultValues: { message: "", icon_name: "Sparkles", is_active: true, display_order: 0, start_date: null, end_date: null, repeat_interval: 'none' }, // Default to 'none'
+    defaultValues: { message: "", icon_name: "Sparkles", is_active: true, display_order: 0, start_date: null, end_date: null, repeat_interval: 'none' },
   });
 
   useEffect(() => {
@@ -69,10 +68,10 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
         ...element,
         start_date: element.start_date ? new Date(element.start_date) : null,
         end_date: element.end_date ? new Date(element.end_date) : null,
-        repeat_interval: element.repeat_interval || 'none', // Ensure 'none' if null
+        repeat_interval: element.repeat_interval || 'none',
       });
     } else {
-      reset({ message: "", icon_name: "Sparkles", is_active: true, display_order: 0, start_date: null, end_date: null, repeat_interval: 'none' }); // Default to active for new announcements
+      reset({ message: "", icon_name: "Sparkles", is_active: true, display_order: 0, start_date: null, end_date: null, repeat_interval: 'none' });
     }
   }, [element, reset]);
 
@@ -88,7 +87,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
       user_id: user.id,
       start_date: data.start_date ? data.start_date.toISOString() : null,
       end_date: data.end_date ? data.end_date.toISOString() : null,
-      repeat_interval: data.repeat_interval === 'none' ? null : data.repeat_interval, // Convert 'none' to null for DB
+      repeat_interval: data.repeat_interval === 'none' ? null : data.repeat_interval,
     };
     let error;
 
@@ -121,16 +120,16 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-xl h-[90vh] flex flex-col p-0"> {/* Reverted padding to p-0 */}
-        <DialogHeader className="p-6 pb-4"> {/* Added padding to header */}
+      <DialogContent className="max-w-xl h-[90vh] flex flex-col">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle>{element ? "Edit Storefront Announcement" : "Add New Storefront Announcement"}</DialogTitle>
           <DialogDescription>
             Create a scrolling message for your storefront.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 flex flex-col overflow-hidden">
-          <ScrollArea className="flex-1 px-6"> {/* Added horizontal padding to ScrollArea */}
-            <div className="space-y-6 py-4"> {/* Added vertical padding to content */}
+          <ScrollArea className="flex-1 px-6">
+            <div className="space-y-6 py-4">
               <div className="space-y-2">
                 <Label htmlFor="message">Message</Label>
                 <Textarea id="message" {...register("message")} placeholder="e.g., Flash Sale! Get 20% off all items this week!" rows={3} className="h-auto min-h-[80px] px-3 py-2" />
@@ -152,7 +151,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                             aria-expanded={iconPickerOpen}
                             className="w-full justify-between h-10 px-3 py-2"
                           >
-                            <div className="flex items-center gap-2"> {/* Ensure icon and text are in one line */}
+                            <div className="flex items-center gap-2">
                               <IconComponent className="h-4 w-4" />
                               {field.value || "Select icon..."}
                             </div>
@@ -294,7 +293,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                 />
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border p-4"> {/* Added border and padding */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                   <Label htmlFor="isActive" className="text-base">Active</Label>
                   <p className="text-sm text-muted-foreground">Enable or disable this announcement.</p>
