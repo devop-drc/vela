@@ -15,38 +15,30 @@ const getSupabaseAdmin = () => createClient(
 // Helper function to check if a recurring event is active today
 const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatInterval: string | null, elementId: string, message: string): boolean => {
   const now = new Date();
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date(now);
-  todayEnd.setHours(23, 59, 59, 999);
+  // Normalize 'now' to local midnight today for consistent comparison
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
   console.log(`[isRecurringActive - ${elementId}] Checking: '${message}'`);
-  console.log(`[isRecurringActive - ${elementId}] Current Date (normalized to day start): ${todayStart.toISOString()}`);
+  console.log(`[isRecurringActive - ${elementId}] Current Date (local day start): ${todayStart.toISOString()}`);
   console.log(`[isRecurringActive - ${elementId}] Raw Start Date: ${startDate?.toISOString() || 'null'}`);
   console.log(`[isRecurringActive - ${elementId}] Raw End Date: ${endDate?.toISOString() || 'null'}`);
   console.log(`[isRecurringActive - ${elementId}] Repeat Interval: ${repeatInterval || 'null'}`);
 
-  // Validate dates
-  const validStartDate = startDate && !isNaN(startDate.getTime()) ? startDate : null;
-  const validEndDate = endDate && !isNaN(endDate.getTime()) ? endDate : null;
+  // Validate and normalize dates from DB to local day start/end
+  const validStartDate = startDate && !isNaN(startDate.getTime()) ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) : null;
+  const validEndDate = endDate && !isNaN(endDate.getTime()) ? new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999) : null;
 
-  // Normalize validStartDate and validEndDate to start/end of their respective days for comparison
-  const normalizedValidStartDate = validStartDate ? new Date(validStartDate) : null;
-  if (normalizedValidStartDate) normalizedValidStartDate.setHours(0, 0, 0, 0);
+  console.log(`[isRecurringActive - ${elementId}] Normalized Valid Start Date (local day start): ${validStartDate?.toISOString() || 'null'}`);
+  console.log(`[isRecurringActive - ${elementId}] Normalized Valid End Date (local day end): ${validEndDate?.toISOString() || 'null'}`);
 
-  const normalizedValidEndDate = validEndDate ? new Date(validEndDate) : null;
-  if (normalizedValidEndDate) normalizedValidEndDate.setHours(23, 59, 59, 999);
-
-  console.log(`[isRecurringActive - ${elementId}] Normalized Valid Start Date: ${normalizedValidStartDate?.toISOString() || 'null'}`);
-  console.log(`[isRecurringActive - ${elementId}] Normalized Valid End Date: ${normalizedValidEndDate?.toISOString() || 'null'}`);
-
-  // 1. Check absolute start and end dates (using normalized 'today' for comparison)
-  if (normalizedValidStartDate && todayEnd < normalizedValidStartDate) { // If today has passed the start date
-    console.log(`[isRecurringActive - ${elementId}] Reason: Today (${todayStart.toISOString()}) is before normalized start date (${normalizedValidStartDate.toISOString()}).`);
+  // 1. Check absolute start and end dates
+  if (validStartDate && todayEnd.getTime() < validStartDate.getTime()) {
+    console.log(`[isRecurringActive - ${elementId}] Reason: Today (${todayStart.toISOString()}) is before normalized start date (${validStartDate.toISOString()}).`);
     return false;
   }
-  if (normalizedValidEndDate && todayStart > normalizedValidEndDate) { // If today is after the end date
-    console.log(`[isRecurringActive - ${elementId}] Reason: Today (${todayStart.toISOString()}) is after normalized end date (${normalizedValidEndDate.toISOString()}).`);
+  if (validEndDate && todayStart.getTime() > validEndDate.getTime()) {
+    console.log(`[isRecurringActive - ${elementId}] Reason: Today (${todayStart.toISOString()}) is after normalized end date (${validEndDate.toISOString()}).`);
     return false;
   }
 
@@ -58,13 +50,10 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
 
   // 3. Handle specific recurring intervals
   // If repeatInterval is set, validStartDate MUST be present to define the pattern.
-  if (!validStartDate) { // Use the original validStartDate for pattern matching
+  if (!validStartDate) { // Recurring requires a start date to define the pattern
     console.warn(`[isRecurringActive - ${elementId}] Reason: Recurring announcement has repeat_interval '${repeatInterval}' but no valid start_date. Skipping.`);
     return false;
   }
-
-  const referenceDateForRecurrence = new Date(validStartDate); // Use the actual start date as the reference for recurrence
-  referenceDateForRecurrence.setHours(0, 0, 0, 0); // Normalize for consistent day/month/year comparison
 
   let isActiveByRecurrence = false;
   switch (repeatInterval) {
@@ -72,19 +61,19 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
       isActiveByRecurrence = true; // Already passed absolute date checks
       break;
     case 'weekly':
-      isActiveByRecurrence = todayStart.getDay() === referenceDateForRecurrence.getDay();
+      isActiveByRecurrence = todayStart.getDay() === validStartDate.getDay();
       break;
     case 'monthly':
-      isActiveByRecurrence = todayStart.getDate() === referenceDateForRecurrence.getDate();
+      isActiveByRecurrence = todayStart.getDate() === validStartDate.getDate();
       break;
     case 'yearly':
-      isActiveByRecurrence = todayStart.getMonth() === referenceDateForRecurrence.getMonth() && todayStart.getDate() === referenceDateForRecurrence.getDate();
+      isActiveByRecurrence = todayStart.getMonth() === validStartDate.getMonth() && todayStart.getDate() === validStartDate.getDate();
       break;
     default:
       isActiveByRecurrence = false;
   }
 
-  console.log(`[isRecurringActive - ${elementId}] Recurrence Check for '${repeatInterval}': todayStart.getDay()=${todayStart.getDay()}, refDate.getDay()=${referenceDateForRecurrence.getDay()}, todayStart.getDate()=${todayStart.getDate()}, refDate.getDate()=${referenceDateForRecurrence.getDate()}, todayStart.getMonth()=${todayStart.getMonth()}, refDate.getMonth()=${referenceDateForRecurrence.getMonth()}`);
+  console.log(`[isRecurringActive - ${elementId}] Recurrence Check for '${repeatInterval}': todayStart.getDay()=${todayStart.getDay()}, validStartDate.getDay()=${validStartDate.getDay()}, todayStart.getDate()=${todayStart.getDate()}, validStartDate.getDate()=${validStartDate.getDate()}, todayStart.getMonth()=${todayStart.getMonth()}, validStartDate.getMonth()=${validStartDate.getMonth()}`);
   console.log(`[isRecurringActive - ${elementId}] Result: Active by recurrence: ${isActiveByRecurrence}`);
   return isActiveByRecurrence;
 };
@@ -113,11 +102,13 @@ serve(async (req) => {
       .single();
 
     if (shopDetailsError || !shopDetails || !shopDetails.businesses) {
+      console.error(`[get-public-shop-data] Error: Shop not found or inaccessible for slug: ${shopSlug}`, shopDetailsError);
       throw new Error("Shop not found or inaccessible.");
     }
 
     const businessId = shopDetails.businesses.id;
     const userId = shopDetails.businesses.user_id;
+    console.log(`[get-public-shop-data] Fetching data for shopSlug: ${shopSlug}, userId: ${userId}, businessId: ${businessId}`);
 
     // Fetch design settings for the business owner
     const { data: designSettings, error: designSettingsError } = await supabaseAdmin
@@ -127,6 +118,7 @@ serve(async (req) => {
       .single();
 
     if (designSettingsError && designSettingsError.code !== 'PGRST116') {
+      console.error(`[get-public-shop-data] Error fetching design settings for userId: ${userId}`, designSettingsError);
       throw designSettingsError;
     }
 
@@ -141,6 +133,7 @@ serve(async (req) => {
       .range(offset, offset + limit - 1); // Apply range for pagination
 
     if (productsError) {
+      console.error(`[get-public-shop-data] Error fetching products for businessId: ${businessId}`, productsError);
       throw productsError;
     }
 
@@ -197,7 +190,7 @@ serve(async (req) => {
     if (marqueeElementsError) {
       console.error("Error fetching marquee elements:", marqueeElementsError);
     } else if (rawMarqueeElements) {
-      console.log("Raw Marquee Elements fetched:", rawMarqueeElements.length); // DEBUG LOG
+      console.log(`[get-public-shop-data] Raw Marquee Elements fetched (${rawMarqueeElements.length} items):`, rawMarqueeElements); // DEBUG LOG: Show raw fetched elements
       activeMarqueeElements = rawMarqueeElements.filter(element => {
         const startDateObj = element.start_date ? new Date(element.start_date) : null;
         const endDateObj = element.end_date ? new Date(element.end_date) : null;
@@ -205,7 +198,7 @@ serve(async (req) => {
         console.log(`[get-public-shop-data] Final decision for Marquee Element '${element.message}' (ID: ${element.id}): isActive=${isActive}`); // DEBUG LOG
         return isActive;
       });
-      console.log("Active Marquee Elements after filtering:", activeMarqueeElements.length); // DEBUG LOG
+      console.log(`[get-public-shop-data] Active Marquee Elements after filtering (${activeMarqueeElements.length} items):`, activeMarqueeElements); // DEBUG LOG: Show filtered elements
     }
 
     return new Response(JSON.stringify({

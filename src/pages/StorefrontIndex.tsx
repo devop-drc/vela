@@ -71,7 +71,7 @@ const StorefrontIndex = () => {
   const recommendedProductsScrollRef = useDragToScroll<HTMLDivElement>();
 
   useEffect(() => {
-    console.log("StorefrontIndex: Marquee Elements received:", marqueeElements);
+    console.log("StorefrontIndex: Marquee Elements received from context:", marqueeElements); // NEW LOG
   }, [marqueeElements]);
 
   const newArrivals = useMemo(() => {
@@ -278,7 +278,7 @@ const StorefrontIndex = () => {
                         <h3 className="font-semibold text-base md:text-lg leading-tight mb-1 line-clamp-2">{category}</h3>
                         <Badge
                           variant="outline"
-                          className={cn("text-xs md:text-sm mb-2 bg-primary/10 text-primary border-primary/30")}
+                          className={cn("text-xs bg-primary/10 text-primary border-primary/30")}
                         >
                           {count} Products
                         </Badge>
