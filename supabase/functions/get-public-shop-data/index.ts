@@ -44,7 +44,7 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
     return false;
   }
 
-  // 2. If no repeat interval or 'none', and it passed the absolute date check, it's active
+  // 2. If no repeat interval or 'none', and it passed step 1, it's active
   if (!repeatInterval || repeatInterval === 'none') {
     console.log(`[isRecurringActive - ${elementId}] Result: Active (no repeat interval, within absolute dates).`);
     return true;
@@ -52,36 +52,61 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
 
   // 3. Handle specific recurring intervals
   // For recurring, a start date is essential to define the pattern.
-  if (!startDate) { // Use the original startDate for pattern matching
+  if (!startDate) {
     console.warn(`[isRecurringActive - ${elementId}] Reason: Recurring announcement has repeat_interval '${repeatInterval}' but no valid start_date. Skipping.`);
     return false;
   }
 
   let isActiveByRecurrence = false;
-  // Use UTC methods for consistency with normalized dates
-  const startUtcDay = startDate.getUTCDay(); // Day of week (0-6)
-  const startUtcMonth = startDate.getUTCMonth(); // Month (0-11)
-  const startUtcDayOfMonth = startDate.getUTCDate(); // Day of month (1-31)
+
+  // Extract month and day from startDate and endDate (relative to their own year)
+  const startMonth = startDate.getUTCMonth();
+  const startDay = startDate.getUTCDate();
+  const endMonth = endDate ? endDate.getUTCMonth() : startMonth; // If no end date, assume it's just the start day
+  const endDay = endDate ? endDate.getUTCDate() : startDay;
+
+  // Extract current month and day
+  const currentMonth = todayUtcStart.getUTCMonth();
+  const currentDay = todayUtcStart.getUTCDate();
 
   switch (repeatInterval) {
     case 'daily':
-      isActiveByRecurrence = true;
+      isActiveByRecurrence = true; // Already covered by absolute date range
       break;
     case 'weekly':
-      isActiveByRecurrence = todayUtcStart.getUTCDay() === startUtcDay;
+      // Check if today's day of week matches startDate's day of week
+      isActiveByRecurrence = todayUtcStart.getUTCDay() === startDate.getUTCDay();
       break;
     case 'monthly':
-      isActiveByRecurrence = todayUtcStart.getUTCDate() === startUtcDayOfMonth;
+      // Check if today's day of month falls within the recurring monthly window
+      if (startDay <= endDay) { // Normal range within a month (e.g., 1st to 15th)
+        isActiveByRecurrence = currentDay >= startDay && currentDay <= endDay;
+      } else { // Range crosses month boundary (e.g., 25th to 5th of next month)
+        // For monthly repeats, if startDay > endDay, it implies an invalid range for a single month.
+        // We'll consider it active if today is >= startDay OR <= endDay (crossing month boundary)
+        isActiveByRecurrence = currentDay >= startDay || currentDay <= endDay;
+        console.warn(`[isRecurringActive - ${elementId}] Monthly repeat has startDay (${startDay}) > endDay (${endDay}). Interpreting as range crossing month boundary.`);
+      }
       break;
     case 'yearly':
-      isActiveByRecurrence = todayUtcStart.getUTCMonth() === startUtcMonth && todayUtcStart.getUTCDate() === startUtcDayOfMonth;
+      // Check if today's month and day fall within the recurring yearly window
+      if (startMonth < endMonth) { // Normal range within a year (e.g., Jan 1 to Mar 15)
+        isActiveByRecurrence = (currentMonth > startMonth && currentMonth < endMonth) ||
+                               (currentMonth === startMonth && currentDay >= startDay) ||
+                               (currentMonth === endMonth && currentDay <= endDay);
+      } else if (startMonth > endMonth) { // Range crosses year boundary (e.g., Nov 15 to Feb 15)
+        isActiveByRecurrence = (currentMonth > startMonth || currentMonth < endMonth) ||
+                               (currentMonth === startMonth && currentDay >= startDay) ||
+                               (currentMonth === endMonth && currentDay <= endDay);
+      } else { // Same month (e.g., Oct 1 to Oct 15)
+        isActiveByRecurrence = currentMonth === startMonth && currentDay >= startDay && currentDay <= endDay;
+      }
       break;
     default:
       isActiveByRecurrence = false;
   }
 
-  console.log(`[isRecurringActive - ${elementId}] Recurrence Check for '${repeatInterval}': todayUtcStart.getUTCDay()=${todayUtcStart.getUTCDay()}, startUtcDay=${startUtcDay}, todayUtcStart.getUTCDate()=${todayUtcStart.getUTCDate()}, startUtcDayOfMonth=${startUtcDayOfMonth}, todayUtcStart.getUTCMonth()=${todayUtcStart.getUTCMonth()}, startUtcMonth=${startUtcMonth}`);
-  console.log(`[isRecurringActive - ${elementId}] Result: Active by recurrence: ${isActiveByRecurrence}`);
+  console.log(`[isRecurringActive - ${elementId}] Recurrence Check for '${repeatInterval}': Result: ${isActiveByRecurrence}`);
   return isActiveByRecurrence;
 };
 
