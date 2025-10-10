@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { Controller, useFieldArray } from "react-hook-form";
 import { DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { TagInput } from "@/components/TagInput";
-import { Loader2, XCircle, PlusCircle, CheckCircle, Archive, Sparkles, Move, Edit2, Package, Cloud } from "lucide-react"; // Added Package and Cloud icons
+import { Loader2, XCircle, PlusCircle, CheckCircle, Archive, Sparkles, Move, Edit2, Package, Cloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,10 +20,10 @@ import { currencies } from "@/lib/currencies";
 import { MediaItem } from "../MediaItem";
 import { toast } from "sonner";
 import { getAttributeIcon } from "@/lib/attributeIcons";
-import { useShop } from "@/contexts/ShopContext"; // Import useShop
-import { formatCurrency } from "@/lib/formatters"; // Import formatCurrency
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group"; // Import RadioGroup components
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../ui/carousel"; // Import Carousel components
+import { useShop } from "@/contexts/ShopContext";
+import { formatCurrency } from "@/lib/formatters";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../ui/carousel";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -47,7 +47,7 @@ const AttributeInput = ({ control, fieldName, inputType }: any) => {
 
 export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting }: any) => {
     const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
-    const { shopDetails } = useShop(); // Use shopDetails for currency
+    const { shopDetails } = useShop();
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
     const [typeOptions, setTypeOptions] = useState<string[]>([]);
     const [typeAttributes, setTypeAttributes] = useState<any[]>([]);
@@ -60,7 +60,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     const typeValue = watch("details.type");
     const statusValue = watch("status");
     const captionValue = watch("caption");
-    const productType = watch("product_type"); // Watch product_type
+    const productType = watch("product_type");
 
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const { ref: rhfRef, ...captionProps } = register("caption");
@@ -102,7 +102,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         try {
             const caption = getValues('caption');
             if (!caption) throw new Error("Please provide a description for the AI to analyze.");
-            const { data: { user } = {} } = await supabase.auth.getUser(); // Destructure with default empty object
+            const { data: { user } = {} } = await supabase.auth.getUser();
             if (!user) throw new Error("You must be logged in.");
             const { data: analysis, error } = await supabase.functions.invoke('ai-product-classifier', { body: { caption, user_id: user.id } });
             if (error) throw error;
@@ -134,6 +134,16 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     const options = typeAttributes.filter(attr => attr.isOption);
     const specifications = typeAttributes.filter(attr => !attr.isOption);
 
+    // Callback for reordering media items
+    const handleReorderMedia = useCallback((newOrder: string[]) => {
+      console.log("Attempting to reorder media:", newOrder);
+      if (typeof setMediaItems === 'function') {
+        setMediaItems(newOrder);
+      } else {
+        console.error("onReorder callback (setMediaItems) is NOT a function!");
+      }
+    }, [setMediaItems]);
+
     return (
       <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
@@ -161,11 +171,11 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                           )}
                       </Carousel>
                   )}
-                  <Reorder.Group axis="x" values={mediaItems} onReorder={setMediaItems} className="flex flex-wrap gap-2 overflow-x-auto pb-2">
+                  <Reorder.Group axis="x" values={mediaItems} onReorder={handleReorderMedia} className="flex flex-wrap gap-2 overflow-x-auto pb-2">
                     {mediaItems.map((url: string) => (
                       <Reorder.Item key={url} value={url} className="relative group cursor-grab active:cursor-grabbing">
                         <MediaItem src={url} alt="Thumbnail" className="h-16 w-16 rounded-md object-cover border" />
-                        <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleImageDelete(url); }}><XCircle className="h-4 w-4" /></Button>
+                        <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleImageDelete(url); }}><XCircle className="h-4 w-4" /></Button>
                       </Reorder.Item>
                     ))}
                   </Reorder.Group>
