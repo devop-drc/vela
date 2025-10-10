@@ -23,6 +23,7 @@ import { getAttributeIcon } from "@/lib/attributeIcons";
 import { useShop } from "@/contexts/ShopContext"; // Import useShop
 import { formatCurrency } from "@/lib/formatters"; // Import formatCurrency
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group"; // Import RadioGroup components
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../ui/carousel"; // Import Carousel components
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -142,13 +143,27 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
               <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
                 <div className="md:col-span-4">
                   {mediaItems.length > 0 && (
-                      <div className="relative aspect-square w-full rounded-lg overflow-hidden border mb-4">
-                          <MediaItem src={mediaItems[0]} alt="Main product media" className="object-cover" />
-                      </div>
+                      <Carousel className="w-full rounded-lg overflow-hidden border mb-4">
+                          <CarouselContent>
+                              {mediaItems.map((url: string, index: number) => (
+                                  <CarouselItem key={index}>
+                                      <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
+                                          <MediaItem src={url} alt={`${product.name} - media ${index + 1}`} type={index === 0 ? product.media_type : null} />
+                                      </div>
+                                  </CarouselItem>
+                              ))}
+                          </CarouselContent>
+                          {mediaItems.length > 1 && (
+                              <>
+                                  <CarouselPrevious className="left-2" />
+                                  <CarouselNext className="right-2" />
+                              </>
+                          )}
+                      </Carousel>
                   )}
-                  <Reorder.Group axis="x" values={mediaItems} onReorder={setMediaItems} className="flex flex-wrap gap-2">
+                  <Reorder.Group axis="x" values={mediaItems} onReorder={setMediaItems} className="flex flex-wrap gap-2 overflow-x-auto pb-2">
                     {mediaItems.map((url: string) => (
-                      <Reorder.Item key={url} value={url} className="relative group">
+                      <Reorder.Item key={url} value={url} className="relative group cursor-grab active:cursor-grabbing">
                         <MediaItem src={url} alt="Thumbnail" className="h-16 w-16 rounded-md object-cover border" />
                         <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleImageDelete(url); }}><XCircle className="h-4 w-4" /></Button>
                       </Reorder.Item>
