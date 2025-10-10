@@ -15,7 +15,7 @@ import { Loader2, ArrowLeft, User, Mail, Phone, MapPin, Building2, Globe, Sticky
 import { CartItem } from "@/contexts/CartContext"; // Import CartItem type
 import { ShopDetails, DesignSettings } from "@/contexts/StorefrontContext"; // Import types
 import { formatCurrency } from "@/lib/formatters";
-import { MediaItem } => "@/components/MediaItem";
+import { MediaItem } from "@/components/MediaItem";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
@@ -480,7 +480,33 @@ export const CheckoutForm = ({
             )}
           </div>
         </ScrollArea>
-        {/* The form's submit button is now handled by the DialogFooter in StorefrontCartModal */}
+        <div className="p-4 md:p-6 border-t flex-shrink-0">
+          {checkoutStep === 'contact-shipping' && (
+            <Button type="submit" className="w-full text-base md:text-lg" disabled={isSubmittingOrder || !isValid}>
+              Continue to Payment
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          )}
+          {checkoutStep === 'payment' && (
+            <Button type="submit" className="w-full text-base md:text-lg" disabled={isSubmittingOrder}>
+              {isSubmittingOrder ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Placing Order...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 h-5 w-5" />
+                  Place Order
+                </>
+              )}
+            </Button>
+          )}
+          <Button type="button" variant="ghost" className="w-full text-base md:text-lg mt-2" onClick={onBack}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+        </div>
       </form>
     </>
   );

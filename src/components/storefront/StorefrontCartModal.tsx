@@ -90,7 +90,12 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
     }
 
     setIsSubmittingOrder(true);
-    const toastId = toast.loading("Placing your order..."); // Capture toast ID
+    let toastId: string | number | undefined;
+    // Defer toast.loading to avoid render-phase update warning
+    setTimeout(() => {
+      toastId = toast.loading("Placing your order...");
+    }, 0);
+    
     try {
       const orderPayload = {
         shopSlug: shopDetails.slug,
@@ -125,13 +130,15 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
       if (invokeError) throw invokeError;
       if (responseData.error) throw new Error(responseData.error);
 
-      toast.success("Order placed successfully! Redirecting to your orders.", { id: toastId }); // Dismiss with ID
+      if (toastId) toast.success("Order placed successfully! Redirecting to your orders.", { id: toastId }); // Dismiss with ID
+      else showSuccess("Order placed successfully! Redirecting to your orders.");
       clearCart(); // Clear cart after successful order
       onClose(); // Close the modal
       navigate(`/shop/${shopDetails.slug}/orders?orderId=${responseData.order.id}`); // Redirect to client orders page with new order ID
     } catch (err: any) {
       console.error("Checkout failed:", err);
-      toast.error(`Failed to place order: ${err.message || "An unexpected error occurred."}`, { id: toastId }); // Dismiss with ID
+      if (toastId) toast.error(`Failed to place order: ${err.message || "An unexpected error occurred."}`, { id: toastId }); // Dismiss with ID
+      else showError(`Failed to place order: ${err.message || "An unexpected error occurred."}`);
     } finally {
       setIsSubmittingOrder(false);
     }
