@@ -15,61 +15,28 @@ const getSupabaseAdmin = () => createClient(
 // Helper function to check if a recurring event is active today
 const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatInterval: string | null): boolean => {
   const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth(); // 0-indexed
-  const currentDay = now.getDate();
 
-  // Helper to create a date in the current year with month/day from another date
-  const createDateInCurrentYear = (date: Date) => {
-    const d = new Date(currentYear, date.getMonth(), date.getDate());
-    // Handle cases where the original date is Feb 29 and current year is not leap year
-    if (d.getMonth() !== date.getMonth()) {
-      d.setDate(0); // Go to last day of previous month
-    }
-    return d;
-  };
+  // 1. Check absolute start and end dates
+  if (startDate && now < startDate) return false;
+  if (endDate && now > endDate) return false;
 
-  // Normalize start and end dates to the current year for comparison, if recurring
-  let effectiveStart = startDate ? new Date(startDate) : null;
-  let effectiveEnd = endDate ? new Date(endDate) : null;
-
-  // If it's a recurring event, adjust start/end dates to the current year for comparison
-  if (repeatInterval && repeatInterval !== 'none') {
-    if (effectiveStart) effectiveStart = createDateInCurrentYear(effectiveStart);
-    if (effectiveEnd) effectiveEnd = createDateInCurrentYear(effectiveEnd);
-
-    // Handle cross-year recurrence (e.g., Dec 15 - Jan 15)
-    if (effectiveStart && effectiveEnd && effectiveStart > effectiveEnd) {
-      // If start is in current year and end is in current year but earlier,
-      // it means the period spans across the year boundary.
-      // So, adjust effectiveEnd to be in the *next* year.
-      effectiveEnd.setFullYear(currentYear + 1);
-    }
-  }
-
-  // Now, perform the absolute date range check using the (potentially adjusted) effective dates
-  if (effectiveStart && now < effectiveStart) return false;
-  if (effectiveEnd && now > effectiveEnd) return false;
-
-  // If no repeat interval, or repeat is 'none', and it passed the absolute date check, it's active
+  // 2. If no repeat interval or 'none', and it passed the absolute date check, it's active
   if (!repeatInterval || repeatInterval === 'none') return true;
 
-  // For specific recurring intervals, apply additional logic
-  // At this point, we know 'now' is within the overall (potentially yearly adjusted) date range.
+  // 3. Handle specific recurring intervals
+  // At this point, 'now' is within the overall (absolute) start/end date range.
+  // Use originalStartDate for recurrence pattern matching. If null, it implies it's always active within the absolute range.
+  const originalStartDate = startDate ? new Date(startDate) : now; 
+
   switch (repeatInterval) {
     case 'daily':
-      return true; // Already within range, so daily is always active
+      return true; // Always active if within the overall date range
     case 'weekly':
-      // Check if today's day of the week matches the start date's day of the week
-      return now.getDay() === (startDate ? new Date(startDate).getDay() : now.getDay());
+      return now.getDay() === originalStartDate.getDay();
     case 'monthly':
-      // Check if today's day of the month matches the start date's day of the month
-      return now.getDate() === (startDate ? new Date(startDate).getDate() : now.getDate());
+      return now.getDate() === originalStartDate.getDate();
     case 'yearly':
-      // For yearly, we just need to ensure the month and day are within the original month/day range
-      // This is already covered by the effectiveStart/effectiveEnd logic if they were adjusted to current year.
-      // If it passed the effectiveStart/effectiveEnd check, it's active for yearly.
-      return true; 
+      return now.getMonth() === originalStartDate.getMonth() && now.getDate() === originalStartDate.getDate();
     default:
       return false;
   }
