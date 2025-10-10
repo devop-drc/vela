@@ -71,7 +71,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
         repeat_interval: element.repeat_interval || 'none', // Ensure 'none' if null
       });
     } else {
-      reset({ message: "", icon_name: "Sparkles", is_active: true, display_order: 0, start_date: null, end_date: null, repeat_interval: 'none' }); // Default to 'none'
+      reset({ message: "", icon_name: "Sparkles", is_active: true, display_order: 0, start_date: null, end_date: null, repeat_interval: 'none' }); // Default to active for new announcements
     }
   }, [element, reset]);
 

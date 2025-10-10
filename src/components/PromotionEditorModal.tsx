@@ -94,7 +94,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
     resolver: zodResolver(promotionSchema),
     defaultValues: {
       type: 'discount', // Default to discount
-      is_active: true,
+      is_active: true, // Default to active
       value: {},
       target_products: [],
       repeat_interval: 'none', // Default to 'none'
@@ -126,7 +126,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
         value: { discountType: "percentage", discountValue: 0 }, // Default value for discount
         start_date: null,
         end_date: null,
-        is_active: true,
+        is_active: true, // Default to active for new promotions
         target_products: [],
         repeat_interval: 'none', // Default to 'none'
       });

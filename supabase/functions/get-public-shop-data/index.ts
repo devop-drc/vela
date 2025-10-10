@@ -17,17 +17,25 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
   const now = new Date();
   now.setHours(0, 0, 0, 0); // Normalize 'now' to start of day
 
-  if (startDate && now < startDate) return false;
-  if (endDate && now > endDate) return false;
+  const start = startDate ? new Date(startDate) : null;
+  if (start) start.setHours(0, 0, 0, 0);
 
-  if (!repeatInterval || repeatInterval === 'none') return true; // No repeat, just check start/end dates
+  const end = endDate ? new Date(endDate) : null;
+  if (end) end.setHours(23, 59, 59, 999); // Normalize 'end' to end of day
 
-  const start = startDate ? new Date(startDate) : new Date(0); // Use epoch for null start
-  start.setHours(0, 0, 0, 0);
+  // First, check if the current date is within the overall start and end dates
+  if (start && now < start) return false;
+  if (end && now > end) return false;
+
+  // If no repeat interval, or repeat is 'none', and it's within the date range, it's active
+  if (!repeatInterval || repeatInterval === 'none') return true;
+
+  // For recurring intervals, check if 'now' matches the recurrence pattern relative to 'start'
+  if (!start) return true; // If no start date, and repeat is set, assume always active within end date
 
   switch (repeatInterval) {
     case 'daily':
-      return true;
+      return true; // Always active if within overall date range
     case 'weekly':
       return now.getDay() === start.getDay();
     case 'monthly':

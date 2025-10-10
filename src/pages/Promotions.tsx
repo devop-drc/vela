@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import * as LucideIcons from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Marquee } from "@/components/ui/marquee";
+import { Switch } from "@/components/ui/switch"; // Import Switch
 
 interface Promotion {
   id: string;
@@ -26,6 +27,7 @@ interface Promotion {
   end_date: string | null;
   is_active: boolean;
   target_products: string[] | null;
+  repeat_interval: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'none' | null;
 }
 
 const Promotions = () => {
@@ -105,6 +107,20 @@ const Promotions = () => {
     setIsPromotionEditorOpen(true);
   };
 
+  const handleTogglePromotionActive = async (promotionId: string, currentStatus: boolean) => {
+    const { error } = await supabase
+      .from('promotions')
+      .update({ is_active: !currentStatus })
+      .eq('id', promotionId);
+
+    if (error) {
+      showError(`Failed to update promotion status: ${error.message}`);
+    } else {
+      showSuccess(`Promotion status updated to ${!currentStatus ? 'active' : 'inactive'}.`);
+      setPromotions(prev => prev.map(p => p.id === promotionId ? { ...p, is_active: !currentStatus } : p));
+    }
+  };
+
   const getPromotionIcon = (type: Promotion['type']) => {
     switch (type) {
       case 'discount': return <Percent className="h-4 w-4" />;
@@ -140,6 +156,20 @@ const Promotions = () => {
   const handleAnnouncementDelete = (elementId: string) => {
     setItemToDelete({ id: elementId, type: 'announcement' });
     setIsDeleteConfirmOpen(true);
+  };
+
+  const handleToggleAnnouncementActive = async (elementId: string, currentStatus: boolean) => {
+    const { error } = await supabase
+      .from('marquee_elements')
+      .update({ is_active: !currentStatus })
+      .eq('id', elementId);
+
+    if (error) {
+      showError(`Failed to update announcement status: ${error.message}`);
+    } else {
+      showSuccess(`Announcement status updated to ${!currentStatus ? 'active' : 'inactive'}.`);
+      setStorefrontAnnouncements(prev => prev.map(e => e.id === elementId ? { ...e, is_active: !currentStatus } : e));
+    }
   };
 
   const getAnnouncementIconComponent = (iconName: string) => {
@@ -237,8 +267,8 @@ const Promotions = () => {
                     <TableHead>Name</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Details</TableHead>
-                    <TableHead>Active</TableHead>
                     <TableHead>Duration</TableHead>
+                    <TableHead className="w-[80px] text-center">Active</TableHead> {/* Centered */}
                     <TableHead className="text-right w-[150px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -256,13 +286,6 @@ const Promotions = () => {
                         <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
                           {getPromotionDetails(promo)}
                         </TableCell>
-                        <TableCell>
-                          {promo.is_active ? (
-                            <CheckCircle className="h-5 w-5 text-emerald-500" />
-                          ) : (
-                            <XCircle className="h-5 w-5 text-destructive" />
-                          )}
-                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {promo.start_date && promo.end_date ? (
                             <>
@@ -275,6 +298,13 @@ const Promotions = () => {
                           ) : (
                             'Always'
                           )}
+                        </TableCell>
+                        <TableCell className="text-center"> {/* Centered */}
+                          <Switch
+                            checked={promo.is_active}
+                            onCheckedChange={() => handleTogglePromotionActive(promo.id, promo.is_active)}
+                            aria-label={`Toggle ${promo.name} active status`}
+                          />
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -354,7 +384,7 @@ const Promotions = () => {
                     <TableHead className="w-[50px]">Order</TableHead>
                     <TableHead className="w-[50px]">Icon</TableHead>
                     <TableHead>Message</TableHead>
-                    <TableHead>Active</TableHead>
+                    <TableHead className="w-[80px] text-center">Active</TableHead> {/* Centered */}
                     <TableHead className="text-right w-[120px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -365,12 +395,12 @@ const Promotions = () => {
                         <TableCell>{element.display_order}</TableCell>
                         <TableCell>{getAnnouncementIconComponent(element.icon_name)}</TableCell>
                         <TableCell className="font-medium max-w-[300px] truncate">{element.message}</TableCell>
-                        <TableCell>
-                          {element.is_active ? (
-                            <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-300">Active</Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">Inactive</Badge>
-                          )}
+                        <TableCell className="text-center"> {/* Centered */}
+                          <Switch
+                            checked={element.is_active}
+                            onCheckedChange={() => handleToggleAnnouncementActive(element.id, element.is_active)}
+                            aria-label={`Toggle ${element.message} active status`}
+                          />
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
