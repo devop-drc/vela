@@ -29,6 +29,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Input } from "@/components/ui/input";
 import { debounce } from 'lodash';
 import { formatLargeNumber } from "@/lib/formatters";
+import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
 
 interface Product {
   id: string;
@@ -69,6 +70,7 @@ const StorefrontInstagramProfile = () => {
   const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, convertCurrency } = useStorefront();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const isMobile = useIsMobile(); // Use the hook here
 
   const {
     onToggleFilterSidebar,
