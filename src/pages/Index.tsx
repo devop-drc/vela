@@ -22,11 +22,16 @@ interface DashboardData {
   chartData: { name: string; revenue: number; clients: number; orders: number }[];
 }
 
-const useDashboardData = () => {
+const useDashboardData = (shopDetails: any, convertCurrency: (amount: number | null | undefined, fromCurrency?: string, toCurrency?: string) => number) => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
+    if (!shopDetails) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -44,7 +49,7 @@ const useDashboardData = () => {
     }
 
     const [ordersRes, productsRes] = await Promise.all([
-      supabase.from('orders').select('total_amount, customer_name, customer_email, created_at, id').eq('business_id', business.id).order('created_at', { ascending: false }),
+      supabase.from('orders').select('total_amount, customer_name, customer_email, created_at, id, status, currency, payment_status').eq('business_id', business.id).order('created_at', { ascending: false }),
       supabase.from('products').select('status').eq('business_id', business.id)
     ]);
 
@@ -54,26 +59,31 @@ const useDashboardData = () => {
       return;
     }
 
-    const orders = ordersRes.data || [];
+    const allOrders = ordersRes.data || [];
     const products = productsRes.data || [];
     
-    const totalRevenue = orders.reduce((acc, order) => acc + order.total_amount, 0);
-    const salesCount = orders.length;
+    // Filter for fulfilled and paid orders for revenue calculations
+    const fulfilledPaidOrders = allOrders.filter(order => 
+      order.status === 'Fulfilled' && order.payment_status === 'paid'
+    );
+
+    const totalRevenue = fulfilledPaidOrders.reduce((acc, order) => acc + convertCurrency(order.total_amount, order.currency, shopDetails.currency), 0);
+    const salesCount = fulfilledPaidOrders.length;
     const activeProducts = products.filter(p => p.status === 'Active').length;
-    const uniqueCustomers = new Set(orders.map(o => o.customer_email)).size;
+    const uniqueCustomers = new Set(fulfilledPaidOrders.map(o => o.customer_email)).size;
 
     const monthlyData: { [key: string]: { revenue: number; clients: Set<string>; orders: number } } = {};
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    orders.forEach(order => {
+    fulfilledPaidOrders.forEach(order => {
       const orderDate = new Date(order.created_at);
       if (orderDate > sixMonthsAgo) {
         const month = orderDate.toLocaleString('default', { month: 'short' });
         if (!monthlyData[month]) {
           monthlyData[month] = { revenue: 0, clients: new Set(), orders: 0 };
         }
-        monthlyData[month].revenue += order.total_amount;
+        monthlyData[month].revenue += convertCurrency(order.total_amount, order.currency, shopDetails.currency);
         monthlyData[month].clients.add(order.customer_email);
         monthlyData[month].orders += 1;
       }
@@ -94,25 +104,27 @@ const useDashboardData = () => {
 
     setData({ totalRevenue, salesCount, activeProducts, customers: uniqueCustomers, chartData });
     setIsLoading(false);
-  }, []);
+  }, [shopDetails, convertCurrency]); // Add shopDetails and convertCurrency to dependencies
+
+  useEffect(() => {
+    if (shopDetails) { // Only fetch data once shopDetails is available
+      fetchData();
+    }
+  }, [fetchData, shopDetails]); // Re-run when fetchData or shopDetails changes
 
   return { data, isLoading, fetchData };
 };
 
 const Index = () => {
   const { setTitle } = usePageTitle();
-  const { shopDetails, convertCurrency } = useShop();
+  const { shopDetails, isLoading: isShopLoading, convertCurrency } = useShop();
   const { activeJob } = useSync();
-  const { data, isLoading, fetchData } = useDashboardData();
+  const { data, isLoading: isDashboardDataLoading, fetchData } = useDashboardData(shopDetails, convertCurrency);
   const { runWithIntegrationCheck } = useIntegration(); // Use the integration context
 
   useEffect(() => {
     setTitle("Dashboard");
   }, [setTitle]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   useEffect(() => {
     if (activeJob?.status === 'completed') {
@@ -147,7 +159,7 @@ const Index = () => {
   }, [runWithIntegrationCheck]);
 
 
-  if (isLoading) {
+  if (isShopLoading || isDashboardDataLoading) { // Combine loading states
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-6">
@@ -174,7 +186,7 @@ const Index = () => {
           <TopProducts />
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard title="Total Revenue" value={formatCurrency(convertCurrency(data.totalRevenue), shopDetails?.currency)} icon={Banknote} description="All-time revenue" />
+          <StatCard title="Total Revenue" value={formatCurrency(data.totalRevenue, shopDetails?.currency)} icon={Banknote} description="All-time revenue" />
           <StatCard title="Sales" value={`+${data.salesCount}`} icon={CreditCard} description="All-time sales count" />
           <StatCard title="Active Products" value={data.activeProducts.toString()} icon={Package} description="Products available for sale" />
           <StatCard title="Total Customers" value={data.customers.toString()} icon={Users} description="Unique customers all-time" />
