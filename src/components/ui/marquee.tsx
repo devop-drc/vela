@@ -19,7 +19,7 @@ export const Marquee = ({
   children,
   vertical = false,
   speed = 50, // default speed in pixels per second
-  gap = "1rem",
+  gap = "5rem",
   ...props
 }: MarqueeProps) => {
   return (
@@ -34,8 +34,6 @@ export const Marquee = ({
       speed={speed}
       delay={0}
       play={true}
-      // Pass gap directly to FastMarquee, it handles internal spacing
-      // Remove explicit flex styles as FastMarquee manages its own internal layout
       style={{ '--gap': gap } as React.CSSProperties} // Keep --gap for potential custom styling of children if needed
       {...props}
     >

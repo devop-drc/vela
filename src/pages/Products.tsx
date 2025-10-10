@@ -82,7 +82,7 @@ const Products = () => {
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
-  const [hasDoneFullSync, setHasDoneFullSync] = useState<boolean | null>(null);
+  const [hasDoneFullSync, setHasDoneFullSync] = useState<boolean | null>(null); // State to track if a full sync has ever been done
 
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -119,8 +119,19 @@ const Products = () => {
         return;
       }
 
-      supabase.from('businesses').select('last_full_sync_at').eq('user_id', user.id).single()
-        .then(({ data }) => setHasDoneFullSync(!!data?.last_full_sync_at));
+      // Fetch business details to check last_full_sync_at
+      const { data: businessData, error: businessError } = await supabase
+        .from('businesses')
+        .select('id, last_full_sync_at')
+        .eq('user_id', user.id)
+        .single();
+
+      if (businessError) {
+        console.error("Error fetching business data:", businessError);
+        setHasDoneFullSync(false); // Assume no full sync if business data can't be fetched
+      } else {
+        setHasDoneFullSync(!!businessData?.last_full_sync_at);
+      }
 
       const { data, error } = await supabase.from("products").select("*").eq('user_id', user.id).order('created_at', { ascending: false });
       
@@ -166,7 +177,18 @@ const Products = () => {
         toast.dismiss('sync-initiating');
         if (error) throw error;
         if (data.error) throw new Error(data.error);
-        if (data.jobId) await startNewSync(data.jobId);
+        if (data.jobId) {
+          await startNewSync(data.jobId);
+          // If it was a full sync, update last_full_sync_at
+          if (syncType === 'full') {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              const { error: updateError } = await supabase.from('businesses').update({ last_full_sync_at: new Date().toISOString() }).eq('user_id', user.id);
+              if (updateError) console.error("Error updating last_full_sync_at:", updateError);
+              else setHasDoneFullSync(true);
+            }
+          }
+        }
       } catch (err: any) {
         toast.dismiss('sync-initiating');
         showError(err.message || `Failed to start ${syncType} sync.`);

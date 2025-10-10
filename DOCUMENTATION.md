@@ -9,13 +9,14 @@ InstaShopify is a modern web application designed to empower small businesses an
 **Core Purpose:** To bridge the gap between social media presence and online sales, enabling users to quickly monetize their visual content.
 
 **Key Highlights:**
-- **Instagram Integration:** Seamlessly connect to Instagram Business accounts to import posts.
-- **AI-Powered Product Creation:** Automatically analyze post captions to extract product details like name, description, price, category, and attributes.
-- **Comprehensive Product Management:** Edit, categorize, price, manage inventory, and set statuses for all products.
-- **Order Tracking:** Monitor sales, view order details, and update order statuses.
-- **Customizable Storefront:** Personalize the shop's appearance with themes, fonts, colors, and backgrounds.
-- **Realtime Updates:** Stay informed with live activity feeds and sync status.
-- **Secure & Scalable:** Built with Supabase for authentication, database, and serverless functions, ensuring security and performance.
+-   **Instagram Integration:** Seamlessly connect to Instagram Business accounts to import posts.
+-   **AI-Powered Product Creation:** Automatically analyze post captions to extract product details like name, description, price, category, and attributes.
+-   **Comprehensive Product Management:** Edit, categorize, price, manage inventory, and set statuses for all products.
+-   **Order Tracking:** Monitor sales, view order details, and update order statuses.
+-   **Client Order Management:** Customers can view their orders, confirm receipt, and report issues directly from the storefront.
+-   **Customizable Storefront:** Personalize the shop's appearance with themes, fonts, colors, and backgrounds.
+-   **Realtime Updates:** Stay informed with live activity feeds and sync status.
+-   **Secure & Scalable:** Built with Supabase for authentication, database, and serverless functions, ensuring security and performance.
 
 ## 2. Tech Stack
 
@@ -77,7 +78,7 @@ The application is structured into several distinct pages, each serving a specif
     -   Features an interactive `OverviewChart` displaying monthly revenue, new clients, and orders.
     -   Includes `ProfileStats` showing Instagram follower count, post count, and product count.
     -   Highlights `TopProducts` by sales volume.
-    -   Displays a `Live Activity` feed (`ActivityFeed` component) with real-time updates on new sales and product changes.
+    -   Displays a `Live Activity` feed (`ActivityFeed` component) with real-time updates on new sales, product changes, and client disputes.
     -   Offers `QuickActions` for common tasks like quick sync, restocking, checking orders, customizing appearance, and adding mock data.
 -   **`/products` (Products Page):**
     -   Displays a comprehensive list of all products.
@@ -131,9 +132,10 @@ This section highlights some of the crucial components that form the building bl
 -   **`BulkActionsToolbar.tsx`:** A floating toolbar that appears when products are selected, offering bulk actions like changing status, applying sales, or deleting.
 -   **`SaleModal.tsx`:** A modal for applying percentage or flat-amount discounts to selected products.
 -   **`OrderDetailModal.tsx`:** A modal displaying detailed information about a specific order, including customer details, items, total amount, and options to update its status.
+-   **`StorefrontOrderDetailModal.tsx`:** A client-facing modal for customers to view their order details, confirm receipt, and report issues. Includes options to cancel pending orders.
 -   **`StatCard.tsx`:** A reusable card component for displaying key performance indicators (KPIs) on the dashboard.
 -   **`OverviewChart.tsx`:** An interactive chart component for visualizing business trends.
--   **`ActivityFeed.tsx`:** Displays a real-time stream of recent sales and product updates.
+-   **`ActivityFeed.tsx`:** Displays a real-time stream of recent sales, product updates, and client disputes.
 -   **`QuickActions.tsx`:** Provides quick access buttons for common tasks on the dashboard.
 -   **`AppearancePanel.tsx`:** The main settings panel for customizing the app's visual theme.
 -   **`ThemeSelector.tsx`:** Allows users to pick from preset themes or manage custom saved themes.
@@ -155,10 +157,10 @@ Supabase is central to InstaShopify's functionality, handling authentication, da
     -   **`handle_new_user` function:** An automatic trigger that creates a `public.profiles` entry upon new user signup.
     -   **`Onboarding` page:** Guides new users to complete their profile and set a password.
 -   **Database Schema:**
-    -   **`public.businesses`:** Stores information about each user's business, linked to `auth.users`.
+    -   **`public.businesses`:** Stores information about each user's business, linked to `auth.users`. Includes `last_full_sync_at` to track full sync history.
     -   **`public.products`:** Stores product details (name, price, status, media, categories, tags, custom details), linked to `public.businesses` and `auth.users`.
-    -   **`public.orders`:** Stores customer order information (customer name, email, total, status), linked to `public.businesses`.
-    -   **`public.order_items`:** Details individual items within an order, linking to `public.orders` and `public.products`.
+    -   **`public.orders`:** Stores customer order information (customer name, email, total, status), linked to `public.businesses`. All monetary values are stored in `ALL` (Albanian Lek) for consistency.
+    -   **`public.order_items`:** Details individual items within an order, linking to `public.orders` and `public.products`. Item prices are stored in `ALL`.
     -   **`public.integrations`:** Stores access tokens and provider information for external services (e.g., Facebook/Instagram), linked to `auth.users`.
     -   **`public.categories`:** User-defined product categories.
     -   **`public.types`:** User-defined product types within categories, with associated attributes.
@@ -168,8 +170,9 @@ Supabase is central to InstaShopify's functionality, handling authentication, da
     -   **`public.shop_details`:** Stores customizable shop information (name, headline, currency, etc.).
     -   **`public.design_settings`:** Stores user-specific appearance customization settings.
     -   **`public.exchange_rates_cache`:** Caches currency exchange rates to reduce external API calls.
+    -   **`public.order_disputes`:** Stores records of customer-reported issues with orders.
 -   **Row Level Security (RLS):** Enabled on all tables to ensure users can only access and modify their own data, or data associated with their business.
--   **Realtime Subscriptions:** Used for `ActivityFeed`, `Products` page updates, and `SyncStatusWidget` to provide a dynamic and responsive user experience.
+-   **Realtime Subscriptions:** Used for `ActivityFeed`, `Products` page updates, `Orders` page updates, and `SyncStatusWidget` to provide a dynamic and responsive user experience.
 
 ## 7. Supabase Edge Functions
 
@@ -183,10 +186,13 @@ Edge Functions are used for server-side logic, particularly for interacting with
     -   Extract product name, description, price, currency, category, type, and attributes.
     -   Suggest appropriate input types for attributes.
 -   **`analyze-instagram-posts`:** Orchestrates the process of fetching Instagram posts and then sending each post's caption to `ai-product-classifier` for analysis. It also marks posts that have already been imported.
--   **`background-sync`:** Initiates and manages the background synchronization process. It fetches all Instagram posts, compares them with existing products, sends new/updated posts for AI analysis, and then upserts products into the database. It updates `sync_jobs` with progress and summary.
+-   **`background-sync`:** Initiates and manages the background synchronization process. It fetches all Instagram posts, compares them with existing products, sends new/updated posts for AI analysis, and then upserts products into the database. It updates `sync_jobs` with progress and summary. It supports `quick` (skips existing products) and `full` (re-analyzes all products) sync types.
 -   **`periodic-sync`:** A scheduled function (not directly invoked by the user UI) that iterates through all users with Facebook integrations and triggers a `background-sync` for each, ensuring product catalogs are regularly updated.
 -   **`exchange-rates`:** Fetches and caches currency exchange rates from an external API (ExchangeRate-API.com). It uses the `exchange_rates_cache` table to store rates for 24 hours, reducing API calls.
 -   **`seed-mock-data`:** Generates mock sales data (orders and order items) for a user's business, useful for testing and demo purposes.
+-   **`create-order`:** Handles the creation of new orders from the storefront, including inserting order details and items, and updating product inventory. All monetary values are converted to `ALL` before storage.
+-   **`cancel-order`:** Allows customers to cancel pending orders from the storefront. It verifies order ownership, updates order status to 'Cancelled', and restores inventory for one-time products.
+-   **`auto-fulfill-orders` (Conceptual):** A potential future scheduled function to automatically mark orders as 'Fulfilled' after a certain period (e.g., 7-14 days) if they are in 'Given to Courier' status and no dispute has been raised. This would require a scheduled job setup outside the application's direct codebase.
 
 ## 8. Contexts
 
@@ -197,5 +203,7 @@ React Context is used to manage global state and provide data and functions to v
 -   **`IntegrationContext.tsx`:** Manages the state of the Instagram integration prompt and provides a `runWithIntegrationCheck` function to ensure integration is active before performing certain actions.
 -   **`ShopContext.tsx`:** Manages global shop details (name, logo, currency, Instagram stats) and provides functions to fetch and update them. It also handles currency conversion using fetched exchange rates.
 -   **`SyncContext.tsx`:** Manages the state of the active background sync job, providing real-time updates and functions to dismiss or start new syncs.
+-   **`CartContext.tsx`:** Manages the client-side shopping cart, including adding/removing items, updating quantities, saving for later, and calculating totals.
+-   **`RecentlyViewedContext.tsx`:** Manages a list of recently viewed products for the storefront, stored locally.
 
 This documentation provides a thorough understanding of the InstaShopify application's architecture and functionality.

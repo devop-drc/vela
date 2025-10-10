@@ -14,6 +14,7 @@ import { MediaItem } from "../MediaItem";
 import { ReportIssueModal } from "./ReportIssueModal";
 import { Textarea } from "../ui/textarea";
 import { Label } from "@/components/ui/label"; // Import Label
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"; // Import AlertDialog
 
 type OrderStatusType = 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic' | 'Cancelled';
 
@@ -73,6 +74,8 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
   const [isReportIssueModalOpen, setIsReportIssueModalOpen] = useState(false);
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [isLoadingDispute, setIsLoadingDispute] = useState(false);
+  const [isConfirmReceiptAlertOpen, setIsConfirmReceiptAlertOpen] = useState(false); // State for confirm receipt alert
+  const [isCancelOrderAlertOpen, setIsCancelOrderAlertOpen] = useState(false); // State for cancel order alert
 
   useEffect(() => {
     if (order) {
@@ -135,12 +138,12 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
       showError(`Failed to confirm receipt: ${err.message || "An unexpected error occurred."}`);
     } finally {
       setIsUpdatingOrder(false);
+      setIsConfirmReceiptAlertOpen(false); // Close alert dialog
     }
   };
 
   const handleCancelOrder = async () => {
     if (!order || !shopDetails?.slug) return;
-    if (!window.confirm("Are you sure you want to cancel this order? This action cannot be undone.")) return;
 
     setIsUpdatingOrder(true);
     try {
@@ -163,6 +166,7 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
       showError(`Failed to cancel order: ${err.message || "An unexpected error occurred."}`);
     } finally {
       setIsUpdatingOrder(false);
+      setIsCancelOrderAlertOpen(false); // Close alert dialog
     }
   };
 
@@ -215,6 +219,43 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
           }}
         />
       )}
+
+      <AlertDialog open={isConfirmReceiptAlertOpen} onOpenChange={setIsConfirmReceiptAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Order Receipt?</AlertDialogTitle>
+            <AlertDialogDescription>
+              By confirming receipt, you are marking this order as **Fulfilled**. This action cannot be reversed.
+              Please ensure you have received all items in good condition.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUpdatingOrder}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmReceipt} disabled={isUpdatingOrder}>
+              {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm Receipt
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isCancelOrderAlertOpen} onOpenChange={setIsCancelOrderAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to cancel this order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. Your order will be marked as **Cancelled**, and if applicable, product inventory will be restored.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUpdatingOrder}>No, keep order</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancelOrder} disabled={isUpdatingOrder} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Yes, cancel order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-2xl">
@@ -315,14 +356,14 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
             </div>
             <div className="flex gap-2">
               {order.status === 'Given to Courier' && (
-                <Button onClick={handleConfirmReceipt} disabled={isUpdatingOrder}>
+                <Button onClick={() => setIsConfirmReceiptAlertOpen(true)} disabled={isUpdatingOrder}>
                   {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <Handshake className="mr-2 h-4 w-4" />
                   Confirm Receipt
                 </Button>
               )}
               {order.status === 'Pending' && (
-                <Button variant="destructive" onClick={handleCancelOrder} disabled={isUpdatingOrder}>
+                <Button variant="destructive" onClick={() => setIsCancelOrderAlertOpen(true)} disabled={isUpdatingOrder}>
                   {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <XCircle className="mr-2 h-4 w-4" />
                   Cancel Order
