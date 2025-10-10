@@ -47,7 +47,10 @@ serve(async (req) => {
   try {
     const { shopSlug, customerInfo, cartItems, totalAmount, currency, paymentMethod, shippingAddress, shippingCity, shippingZip, shippingCountry, shippingNotesSeller, shippingNotesCourier } = await req.json();
 
+    console.log("create-order: Received payload:", { shopSlug, customerInfo, cartItems, totalAmount, currency, paymentMethod, shippingAddress, shippingCity, shippingZip, shippingCountry, shippingNotesSeller, shippingNotesCourier });
+
     if (!shopSlug || !customerInfo || !cartItems || cartItems.length === 0 || !totalAmount || !currency || !paymentMethod) {
+      console.error("create-order: Missing required order details in payload.");
       return new Response(JSON.stringify({ error: "Missing required order details." }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -64,38 +67,46 @@ serve(async (req) => {
       .single();
 
     if (shopError || !shopData) {
+      console.error("create-order: Shop not found or inaccessible for slug:", shopSlug, "Error:", shopError);
       throw new Error("Shop not found or inaccessible.");
     }
     const businessId = shopData.business_id;
+    console.log("create-order: Found businessId:", businessId);
 
     // Convert totalAmount from client's display currency to ALL for storage
     const totalAmountInALL = await convertCurrencyServer(totalAmount, currency, 'ALL');
+    console.log(`create-order: Converted totalAmount from ${totalAmount} ${currency} to ${totalAmountInALL} ALL for storage.`);
 
     // 2. Insert the new order
+    const orderToInsert = {
+      business_id: businessId,
+      customer_name: `${customerInfo.firstName} ${customerInfo.lastName}`,
+      customer_email: customerInfo.email,
+      status: 'Pending', // Default order status for new orders
+      total_amount: totalAmountInALL, // Store total in ALL
+      currency: 'ALL', // Always store order currency as ALL
+      payment_method: paymentMethod, // New: Store selected payment method
+      payment_status: paymentMethod === 'cash_on_delivery' ? 'pending' : 'processing', // New: Set initial payment status
+      shipping_address: shippingAddress, // New: Store shipping details
+      shipping_city: shippingCity,
+      shipping_zip: shippingZip,
+      shipping_country: shippingCountry,
+      shipping_notes_seller: shippingNotesSeller, // New: Notes for seller
+      shipping_notes_courier: shippingNotesCourier, // New: Notes for courier
+    };
+    console.log("create-order: Attempting to insert order:", orderToInsert);
+
     const { data: newOrder, error: orderInsertError } = await supabaseAdmin
       .from('orders')
-      .insert({
-        business_id: businessId,
-        customer_name: `${customerInfo.firstName} ${customerInfo.lastName}`,
-        customer_email: customerInfo.email,
-        status: 'Pending', // Default order status for new orders
-        total_amount: totalAmountInALL, // Store total in ALL
-        currency: 'ALL', // Always store order currency as ALL
-        payment_method: paymentMethod, // New: Store selected payment method
-        payment_status: paymentMethod === 'cash_on_delivery' ? 'pending' : 'processing', // New: Set initial payment status
-        shipping_address: shippingAddress, // New: Store shipping details
-        shipping_city: shippingCity,
-        shipping_zip: shippingZip,
-        shipping_country: shippingCountry,
-        shipping_notes_seller: shippingNotesSeller, // New: Notes for seller
-        shipping_notes_courier: shippingNotesCourier, // New: Notes for courier
-      })
+      .insert(orderToInsert)
       .select('*') // Select all columns to return the full order object
       .single();
 
     if (orderInsertError || !newOrder) {
+      console.error("create-order: Failed to create order. Error:", orderInsertError);
       throw new Error(`Failed to create order: ${orderInsertError?.message || 'Unknown error'}`);
     }
+    console.log("create-order: Order created successfully with ID:", newOrder.id);
 
     const orderId = newOrder.id;
 
@@ -104,6 +115,7 @@ serve(async (req) => {
     for (const item of cartItems) {
       // Convert item.price from client's display currency to ALL for storage
       const itemPriceInALL = await convertCurrencyServer(item.price, currency, 'ALL');
+      console.log(`create-order: Converted item price ${item.price} ${currency} to ${itemPriceInALL} ALL for storage for product ${item.productId}.`);
 
       orderItemsToInsert.push({
         order_id: orderId,
@@ -120,10 +132,11 @@ serve(async (req) => {
         .single();
 
       if (productFetchError || !product) {
-        console.error(`Failed to fetch product ${item.productId} for inventory update:`, productFetchError);
+        console.error(`create-order: Failed to fetch product ${item.productId} for inventory update. Error:`, productFetchError);
         // Continue with order, but log the inventory issue
         continue;
       }
+      console.log(`create-order: Fetched product ${item.productId} details:`, product);
 
       if (product.pricing_type === 'one_time') {
         const newInventory = product.inventory - item.quantity;
@@ -132,6 +145,7 @@ serve(async (req) => {
         if (newInventory <= 0) {
           updatePayload.status = 'Out of Stock';
         }
+        console.log(`create-order: Updating inventory for product ${item.productId}. New inventory: ${newInventory}, Status: ${updatePayload.status || 'unchanged'}`);
 
         const { error: inventoryUpdateError } = await supabaseAdmin
           .from('products')
@@ -139,21 +153,23 @@ serve(async (req) => {
           .eq('id', item.productId);
         
         if (inventoryUpdateError) {
-          console.error(`Failed to update inventory for product ${item.productId}:`, inventoryUpdateError);
-          // Log error but don't block the cancellation
+          console.error(`create-order: Failed to update inventory for product ${item.productId}. Error:`, inventoryUpdateError);
+          // Log error but don't block the order creation
         }
       }
     }
+    console.log("create-order: Attempting to insert order items:", orderItemsToInsert);
 
     const { error: orderItemsInsertError } = await supabaseAdmin
       .from('order_items')
       .insert(orderItemsToInsert);
 
     if (orderItemsInsertError) {
-      console.error(`Failed to insert order items for order ${orderId}:`, orderItemsInsertError);
+      console.error(`create-order: Failed to insert order items for order ${orderId}. Error:`, orderItemsInsertError);
       await supabaseAdmin.from('orders').update({ status: 'Problematic', message: 'Failed to add items' }).eq('id', orderId);
       throw new Error(`Order created, but failed to add items: ${orderItemsInsertError.message}`);
     }
+    console.log("create-order: Order items inserted successfully.");
 
     return new Response(JSON.stringify({ message: "Order placed successfully!", order: newOrder }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -161,7 +177,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Create Order Function Error:', error.message);
+    console.error('create-order: Function Error (Catch Block):', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

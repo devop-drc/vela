@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight, ArrowRight, User, Mail, MapPin, Phone, StickyNote, Info, Wallet, ShieldCheck, Lock, Banknote, Hash, XCircle, Truck } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
@@ -90,6 +90,7 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
     }
 
     setIsSubmittingOrder(true);
+    const toastId = toast.loading("Placing your order..."); // Capture toast ID
     try {
       const orderPayload = {
         shopSlug: shopDetails.slug,
@@ -124,13 +125,13 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
       if (invokeError) throw invokeError;
       if (responseData.error) throw new Error(responseData.error);
 
-      showSuccess("Order placed successfully! Redirecting to your orders.");
+      toast.success("Order placed successfully! Redirecting to your orders.", { id: toastId }); // Dismiss with ID
       clearCart(); // Clear cart after successful order
       onClose(); // Close the modal
       navigate(`/shop/${shopDetails.slug}/orders?orderId=${responseData.order.id}`); // Redirect to client orders page with new order ID
     } catch (err: any) {
       console.error("Checkout failed:", err);
-      showError(`Failed to place order: ${err.message || "An unexpected error occurred."}`);
+      toast.error(`Failed to place order: ${err.message || "An unexpected error occurred."}`, { id: toastId }); // Dismiss with ID
     } finally {
       setIsSubmittingOrder(false);
     }
@@ -340,12 +341,6 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
                       {savedItems.length > 0 && (
                         <div className="space-y-4 mt-6 md:mt-8">
                           <h2 className="text-lg md:text-xl font-bold font-heading">Saved ({savedItems.length})</h2>
-                          {hasSubscriptionProducts && (
-                            <div className="flex items-center gap-2 p-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md">
-                              <Info className="h-4 w-4 flex-shrink-0" />
-                              <span>This cart includes subscription products. Cash on Delivery is not available.</span>
-                            </div>
-                          )}
                           <AnimatePresence>
                             {savedItems.map(item => (
                               <motion.div
@@ -454,7 +449,7 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
             )}
           </div>
 
-          {/* Right Column: Order Summary & Navigation Buttons */}
+          {/* Right Column: Order Summary */}
           <div className="lg:col-span-1 flex flex-col p-4 md:p-6 border-t lg:border-t-0 lg:border-l">
             <div className="space-y-4 flex-1">
               <h2 className="text-lg md:text-xl font-bold font-heading">Order Summary</h2>
@@ -480,41 +475,24 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
                 <span>{formatCurrency(total, shopDetails?.currency)}</span>
               </div>
             </div>
-            <div className="mt-6 flex-shrink-0">
-              {checkoutStep === 'cart' && (
-                <Button className="w-full text-base md:text-lg" onClick={handleProceedToCheckout} disabled={cartItems.length === 0}>
-                  Proceed to Checkout
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              )}
-              {checkoutStep === 'contact-shipping' && (
-                <Button form="checkout-form" type="submit" className="w-full text-base md:text-lg" disabled={isSubmittingOrder}>
-                  Continue to Payment
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              )}
-              {checkoutStep === 'payment' && (
-                <Button form="checkout-form" type="submit" className="w-full text-base md:text-lg" disabled={isSubmittingOrder}>
-                  {isSubmittingOrder ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Placing Order...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="mr-2 h-5 w-5" />
-                      Place Order
-                    </>
-                  )}
-                </Button>
-              )}
-              <Button variant="ghost" className="w-full text-base md:text-lg mt-2" onClick={onBack}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                {checkoutStep === 'cart' ? 'Continue Shopping' : 'Back'}
-              </Button>
-            </div>
+            {/* Buttons for navigation are now exclusively in CheckoutForm's footer */}
           </div>
         </div>
+        <DialogFooter className="p-4 md:p-6 border-t flex-shrink-0">
+          {/* This footer is for the modal itself, not for checkout navigation */}
+          {checkoutStep === 'cart' && (
+            <Button className="w-full text-base md:text-lg" onClick={handleProceedToCheckout} disabled={cartItems.length === 0}>
+              Proceed to Checkout
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
+          {checkoutStep !== 'cart' && (
+            <Button variant="ghost" className="w-full text-base md:text-lg mt-2" onClick={onBack}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
