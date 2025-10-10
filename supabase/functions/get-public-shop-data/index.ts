@@ -20,7 +20,7 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
   if (startDate && now < startDate) return false;
   if (endDate && now > endDate) return false;
 
-  if (!repeatInterval) return true; // No repeat, just check start/end dates
+  if (!repeatInterval || repeatInterval === 'none') return true; // No repeat, just check start/end dates
 
   const start = startDate ? new Date(startDate) : new Date(0); // Use epoch for null start
   start.setHours(0, 0, 0, 0);
@@ -87,7 +87,7 @@ serve(async (req) => {
       .from('products')
       .select('*', { count: 'exact' }) // Get exact count
       .eq('business_id', businessId)
-      .eq('status', 'Active')
+      // .eq('status', 'Active') // REMOVED: Show all products regardless of 'Active' status
       .range(offset, offset + limit - 1); // Apply range for pagination
 
     if (productsError) {
@@ -147,11 +147,15 @@ serve(async (req) => {
     if (marqueeElementsError) {
       console.error("Error fetching marquee elements:", marqueeElementsError);
     } else if (rawMarqueeElements) {
+      console.log("Raw Marquee Elements:", rawMarqueeElements); // DEBUG LOG
       activeMarqueeElements = rawMarqueeElements.filter(element => {
         const startDate = element.start_date ? new Date(element.start_date) : null;
         const endDate = element.end_date ? new Date(element.end_date) : null;
-        return isRecurringActive(startDate, endDate, element.repeat_interval);
+        const isActive = isRecurringActive(startDate, endDate, element.repeat_interval);
+        console.log(`Marquee Element '${element.message}' (ID: ${element.id}): isActive=${isActive}, startDate=${element.start_date}, endDate=${element.end_date}, repeatInterval=${element.repeat_interval}`); // DEBUG LOG
+        return isActive;
       });
+      console.log("Active Marquee Elements after filtering:", activeMarqueeElements); // DEBUG LOG
     }
 
     return new Response(JSON.stringify({

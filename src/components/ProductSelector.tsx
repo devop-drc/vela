@@ -15,6 +15,7 @@ import { Slider } from "@/components/ui/slider";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { motion, AnimatePresence } from "framer-motion";
 import { debounce } from 'lodash';
+import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea
 
 interface Product {
   id: string;
@@ -295,7 +296,7 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
         </Select>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <ScrollArea className="flex-1"> {/* Wrap filter bar and table in ScrollArea */}
         <div className="p-4 border-b flex flex-wrap gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -472,9 +473,9 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
             </TableBody>
           </Table>
         )}
-      </div>
+      </ScrollArea> {/* End ScrollArea */}
 
-      <div className="p-4 border-t flex justify-between items-center">
+      <div className="p-4 border-t flex justify-between items-center flex-shrink-0"> {/* Added flex-shrink-0 */}
         <p className="text-sm text-muted-foreground">{currentSelection.length} products selected</p>
         <div className="flex gap-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>

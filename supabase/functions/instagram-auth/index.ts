@@ -166,7 +166,20 @@ serve(async (req) => {
 
       const businessId = businessData.id;
 
-      // 7. Update or insert shop_details for the existing business
+      // 7. Update user profile with first_name, last_name, and avatar_url
+      const { error: profileUpdateError } = await supabaseAdmin.from('profiles').upsert({
+        id: userIdFromState,
+        first_name: first_name,
+        last_name: last_name,
+        avatar_url: uploadedLogoUrl, // Update avatar_url in profiles table
+        onboarding_complete: true,
+      }, { onConflict: 'id' });
+      if (profileUpdateError) {
+        console.error("Supabase DB: Error upserting profile with Facebook data:", profileUpdateError);
+        throw profileUpdateError;
+      }
+
+      // 8. Update or insert shop_details for the existing business
       const shopDetailsPayload = {
         business_id: businessId,
         shop_name: instagram_shop_name || `${first_name}'s Shop`,
@@ -187,7 +200,7 @@ serve(async (req) => {
       const { error: shopDetailsUpsertError } = await supabaseAdmin.from('shop_details').upsert(shopDetailsPayload, { onConflict: 'business_id' });
       if (shopDetailsUpsertError) console.error("Supabase DB: Error upserting shop details:", shopDetailsUpsertError);
 
-      // 8. Redirect back to the origin with a success message
+      // 9. Redirect back to the origin with a success message
       const redirectUrl = new URL(origin);
       redirectUrl.searchParams.set('integration_success', 'true');
       return Response.redirect(redirectUrl.toString(), 302);
