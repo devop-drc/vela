@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient } = 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,33 +13,79 @@ const getSupabaseAdmin = () => createClient(
 );
 
 // Helper function to check if a recurring event is active today
-const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatInterval: string | null): boolean => {
+const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatInterval: string | null, elementId: string, message: string): boolean => {
   const now = new Date();
+  now.setHours(0, 0, 0, 0); // Normalize 'now' to start of day for consistent comparison
 
-  // 1. Check absolute start and end dates
-  if (startDate && now < startDate) return false;
-  if (endDate && now > endDate) return false;
+  console.log(`[isRecurringActive - ${elementId}] Checking: '${message}'`);
+  console.log(`[isRecurringActive - ${elementId}] Current Date (normalized): ${now.toISOString()}`);
+  console.log(`[isRecurringActive - ${elementId}] Raw Start Date: ${startDate?.toISOString() || 'null'}`);
+  console.log(`[isRecurringActive - ${elementId}] Raw End Date: ${endDate?.toISOString() || 'null'}`);
+  console.log(`[isRecurringActive - ${elementId}] Repeat Interval: ${repeatInterval || 'null'}`);
+
+  // Validate dates
+  const validStartDate = startDate && !isNaN(startDate.getTime()) ? startDate : null;
+  const validEndDate = endDate && !isNaN(endDate.getTime()) ? endDate : null;
+
+  console.log(`[isRecurringActive - ${elementId}] Validated Start Date: ${validStartDate?.toISOString() || 'null'}`);
+  console.log(`[isRecurringActive - ${elementId}] Validated End Date: ${validEndDate?.toISOString() || 'null'}`);
+
+  // 1. Check absolute start and end dates (normalized to start of day)
+  if (validStartDate) {
+    const normalizedStartDate = new Date(validStartDate);
+    normalizedStartDate.setHours(0, 0, 0, 0);
+    if (now < normalizedStartDate) {
+      console.log(`[isRecurringActive - ${elementId}] Reason: Current date is before normalized start date.`);
+      return false;
+    }
+  }
+  if (validEndDate) {
+    const normalizedEndDate = new Date(validEndDate);
+    normalizedEndDate.setHours(23, 59, 59, 999); // End of day
+    if (now > normalizedEndDate) {
+      console.log(`[isRecurringActive - ${elementId}] Reason: Current date is after normalized end date.`);
+      return false;
+    }
+  }
 
   // 2. If no repeat interval or 'none', and it passed the absolute date check, it's active
-  if (!repeatInterval || repeatInterval === 'none') return true;
+  if (!repeatInterval || repeatInterval === 'none') {
+    console.log(`[isRecurringActive - ${elementId}] Result: Active (no repeat interval).`);
+    return true;
+  }
 
   // 3. Handle specific recurring intervals
-  // At this point, 'now' is within the overall (absolute) start/end date range.
-  // Use originalStartDate for recurrence pattern matching. If null, it implies it's always active within the absolute range.
-  const originalStartDate = startDate || now; // Use startDate if available, otherwise now for recurrence pattern
+  // If repeatInterval is set, validStartDate MUST be present to define the pattern.
+  // If validStartDate is null here, it's an invalid recurring configuration, so it should not be active.
+  if (!validStartDate) {
+    console.warn(`[isRecurringActive - ${elementId}] Reason: Recurring announcement has repeat_interval '${repeatInterval}' but no valid start_date. Skipping.`);
+    return false;
+  }
 
+  const referenceDate = new Date(validStartDate); // Use the actual start date as the reference for recurrence
+  referenceDate.setHours(0, 0, 0, 0);
+
+  let isActiveByRecurrence = false;
   switch (repeatInterval) {
     case 'daily':
-      return true; // Always active if within the overall date range
+      isActiveByRecurrence = true; // Already passed absolute date checks
+      break;
     case 'weekly':
-      return now.getDay() === originalStartDate.getDay();
+      isActiveByRecurrence = now.getDay() === referenceDate.getDay();
+      break;
     case 'monthly':
-      return now.getDate() === originalStartDate.getDate();
+      isActiveByRecurrence = now.getDate() === referenceDate.getDate();
+      break;
     case 'yearly':
-      return now.getMonth() === originalStartDate.getMonth() && now.getDate() === originalStartDate.getDate();
+      isActiveByRecurrence = now.getMonth() === referenceDate.getMonth() && now.getDate() === referenceDate.getDate();
+      break;
     default:
-      return false;
+      isActiveByRecurrence = false;
   }
+
+  console.log(`[isRecurringActive - ${elementId}] Recurrence Check for '${repeatInterval}': now.getDay()=${now.getDay()}, refDate.getDay()=${referenceDate.getDay()}, now.getDate()=${now.getDate()}, refDate.getDate()=${referenceDate.getDate()}, now.getMonth()=${now.getMonth()}, refDate.getMonth()=${referenceDate.getMonth()}`);
+  console.log(`[isRecurringActive - ${elementId}] Result: Active by recurrence: ${isActiveByRecurrence}`);
+  return isActiveByRecurrence;
 };
 
 serve(async (req) => {
@@ -150,15 +196,15 @@ serve(async (req) => {
     if (marqueeElementsError) {
       console.error("Error fetching marquee elements:", marqueeElementsError);
     } else if (rawMarqueeElements) {
-      console.log("Raw Marquee Elements:", rawMarqueeElements); // DEBUG LOG
+      console.log("Raw Marquee Elements fetched:", rawMarqueeElements.length); // DEBUG LOG
       activeMarqueeElements = rawMarqueeElements.filter(element => {
         const startDateObj = element.start_date ? new Date(element.start_date) : null;
         const endDateObj = element.end_date ? new Date(element.end_date) : null;
-        const isActive = isRecurringActive(startDateObj, endDateObj, element.repeat_interval);
-        console.log(`Marquee Element '${element.message}' (ID: ${element.id}): isActive=${isActive}, startDateRaw=${element.start_date}, endDateRaw=${element.end_date}, parsedStartDate=${startDateObj}, parsedEndDate=${endDateObj}, repeatInterval=${element.repeat_interval}`); // DEBUG LOG
+        const isActive = isRecurringActive(startDateObj, endDateObj, element.repeat_interval, element.id, element.message);
+        console.log(`[get-public-shop-data] Final decision for Marquee Element '${element.message}' (ID: ${element.id}): isActive=${isActive}`); // DEBUG LOG
         return isActive;
       });
-      console.log("Active Marquee Elements after filtering:", activeMarqueeElements); // DEBUG LOG
+      console.log("Active Marquee Elements after filtering:", activeMarqueeElements.length); // DEBUG LOG
     }
 
     return new Response(JSON.stringify({
