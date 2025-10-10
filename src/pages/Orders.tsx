@@ -25,7 +25,7 @@ type Order = {
   status: 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic';
   total_amount: number;
   created_at: string;
-  updated_at: string; // Added updated_at
+  updated_at: string;
   currency: string;
 };
 
@@ -57,7 +57,7 @@ const OrderTable = ({ orders, onSelectOrder }: { orders: Order[], onSelectOrder:
           <TableHead>Customer</TableHead>
           <TableHead>Date</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Last Status Change</TableHead> {/* New column header */}
+          <TableHead>Last Status Change</TableHead>
           <TableHead className="text-right">Total</TableHead>
           <TableHead className="w-[100px]"></TableHead>
         </TableRow>
@@ -73,9 +73,8 @@ const OrderTable = ({ orders, onSelectOrder }: { orders: Order[], onSelectOrder:
                 {order.status}
               </Badge>
             </TableCell>
-            <TableCell>{new Date(order.updated_at).toLocaleString()}</TableCell> {/* New column cell */}
+            <TableCell>{new Date(order.updated_at).toLocaleString()}</TableCell>
             <TableCell className="text-right font-medium">
-              {/* Convert order.total_amount from its stored currency (order.currency) to shopDetails.currency */}
               {formatCurrency(convertCurrency(order.total_amount, order.currency, shopDetails.currency), shopDetails.currency)}
               {order.currency !== shopDetails.currency && (
                 <div className="text-xs font-normal text-muted-foreground">
@@ -91,7 +90,7 @@ const OrderTable = ({ orders, onSelectOrder }: { orders: Order[], onSelectOrder:
           </TableRow>
         )) : (
           <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center"> {/* Updated colspan */}
+            <TableCell colSpan={7} className="h-24 text-center">
               No orders match your criteria.
             </TableCell>
           </TableRow>
@@ -128,7 +127,7 @@ const Orders = () => {
     }
 
     const { data, error } = await supabase
-      .from('orders').select('*, updated_at').eq('business_id', business.id).order('created_at', { ascending: false }); // Select updated_at
+      .from('orders').select('*, updated_at').eq('business_id', business.id).order('created_at', { ascending: false });
     
     if (error) { showError("Failed to fetch orders."); } 
     else { setOrders(data as Order[]); }
@@ -155,12 +154,11 @@ const Orders = () => {
   }, [orders, activeTab, searchTerm, dateRange]);
 
   const stats = useMemo(() => {
-    if (!shopDetails) { // Crucial check: wait for shopDetails to be available
+    if (!shopDetails) {
       return { totalRevenue: 0, orderCount: 0, aov: 0 };
     }
 
     const totalRevenue = filteredOrders.reduce((sum, order) => {
-      // Convert each order's total_amount from its stored currency (order.currency) to the shop's display currency
       const convertedAmount = convertCurrency(order.total_amount, order.currency, shopDetails.currency);
       return sum + convertedAmount;
     }, 0);
@@ -168,7 +166,7 @@ const Orders = () => {
     const orderCount = filteredOrders.length;
     const aov = orderCount > 0 ? totalRevenue / orderCount : 0;
     return { totalRevenue, orderCount, aov };
-  }, [filteredOrders, shopDetails, convertCurrency]); // Add shopDetails and convertCurrency to dependencies
+  }, [filteredOrders, shopDetails, convertCurrency]);
 
   return (
     <>
@@ -188,7 +186,7 @@ const Orders = () => {
             <DateRangePicker date={dateRange} onDateChange={setDateRange} />
           </div>
         </div>
-        {isLoading || !shopDetails ? ( // Show skeleton if loading or shopDetails not ready
+        {isLoading || !shopDetails ? (
           <div className="grid gap-4 md:grid-cols-3">
             <Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" />
           </div>
@@ -211,7 +209,7 @@ const Orders = () => {
           </TabsList>
           <Card className="mt-4">
             <CardContent className="p-0">
-              {isLoading || !shopDetails ? ( // Also show skeleton for table if loading or shopDetails not ready
+              {isLoading || !shopDetails ? (
                 <div className="space-y-4 p-6">
                   <Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" />
                 </div>

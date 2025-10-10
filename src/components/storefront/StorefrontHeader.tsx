@@ -105,7 +105,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
         <div className="flex items-center space-x-2 flex-shrink-0"> {/* Removed flex-1, added flex-shrink-0 */}
           <Link to={`/shop/${shopDetails.slug}`} className="flex items-center space-x-2">
             <Avatar className="h-7 w-7 md:h-8 md:w-8">
-              <AvatarImage src={shopDetails.favicon_url || undefined} alt={shopDetails.shop_name} />
+              <AvatarImage src={shopDetails.logo_url || undefined} alt={shopDetails.shop_name} />
               <AvatarFallback className={cn(
                 "text-sm md:text-base",
                 isPrimaryStyle ? "bg-primary-foreground text-primary" : "bg-muted text-muted-foreground"

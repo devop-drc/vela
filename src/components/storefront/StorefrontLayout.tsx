@@ -213,7 +213,7 @@ const StorefrontLayoutContent = () => {
     return (
       <div className="flex flex-col min-h-screen">
         <StorefrontHeader onOpenCart={() => setIsCartCheckoutModalOpen(true)} isDesktopSidebarOpen={false} setIsDesktopFilterSidebarOpen={setIsDesktopFilterSidebarOpen} setWasDesktopFilterSidebarExplicitlyOpened={setWasDesktopFilterSidebarExplicitlyOpened} />
-        <main className="flex-1 container py-8 mt-16"> {/* Added mt-16 to main for header */}
+        <main className="flex-1 container py-8 mt-16">
           <Skeleton className="h-10 w-1/2 mb-6" />
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -250,24 +250,23 @@ const StorefrontLayoutContent = () => {
       <StorefrontHeader 
         onToggleFilterSidebar={() => setIsFilterSidebarOpen(true)} 
         onOpenCart={() => setIsCartCheckoutModalOpen(true)}
-        isDesktopSidebarOpen={isDesktopFilterSidebarOpen} // Pass desktop sidebar state
-        setIsDesktopFilterSidebarOpen={setIsDesktopFilterSidebarOpen} // Pass setter for desktop sidebar
-        setWasDesktopFilterSidebarExplicitlyOpened={setWasDesktopFilterSidebarExplicitlyOpened} // Pass new setter
+        isDesktopSidebarOpen={isDesktopFilterSidebarOpen}
+        setIsDesktopFilterSidebarOpen={setIsDesktopFilterSidebarOpen}
+        setWasDesktopFilterSidebarExplicitlyOpened={setWasDesktopFilterSidebarExplicitlyOpened}
       />
-      <main className="flex-1 overflow-y-auto" style={{ paddingTop: mainContentPaddingTop, paddingBottom: isMobile ? '4rem' : '0' }}> {/* Add padding-bottom for mobile nav */}
+      <main className="flex-1 overflow-y-auto" style={{ paddingTop: mainContentPaddingTop, paddingBottom: isMobile ? '4rem' : '0' }}>
         <Outlet context={{ 
           onToggleFilterSidebar: () => setIsFilterSidebarOpen(true), 
           isFilterSidebarOpen, 
           setIsFilterSidebarOpen, 
           products,
-          // Pass desktop sidebar state to Outlet context as well
           isDesktopFilterSidebarOpen,
           setIsDesktopFilterSidebarOpen,
-          setWasDesktopFilterSidebarExplicitlyOpened, // Pass new setter to Outlet context
+          setWasDesktopFilterSidebarExplicitlyOpened,
         }} />
       </main>
       <StorefrontFooter ref={footerRef} />
-      <StorefrontBottomNav onOpenCart={() => setIsCartCheckoutModalOpen(true)} /> {/* Corrected: Pass onOpenCart prop */}
+      <StorefrontBottomNav onOpenCart={() => setIsCartCheckoutModalOpen(true)} />
       <Sonner />
       <StorefrontCartCheckoutModal isOpen={isCartCheckoutModalOpen} onClose={() => setIsCartCheckoutModalOpen(false)} />
     </div>
