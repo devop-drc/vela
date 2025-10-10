@@ -36,6 +36,7 @@ interface OrderDetails {
   status: OrderStatusType;
   total_amount: number;
   created_at: string;
+  updated_at: string; // Added updated_at
   currency: string;
   payment_method: string;
   payment_status: string;
@@ -130,6 +131,7 @@ const StorefrontClientOrders = () => {
           status,
           total_amount,
           created_at,
+          updated_at,
           currency,
           payment_method,
           payment_status,
@@ -297,6 +299,7 @@ const StorefrontClientOrders = () => {
                       <TableHead>Order ID</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Last Status Change</TableHead> {/* New column header */}
                       <TableHead className="text-right">Total</TableHead>
                       <TableHead className="w-[100px]"></TableHead>
                     </TableRow>
@@ -312,6 +315,7 @@ const StorefrontClientOrders = () => {
                             <span className="ml-1">{order.status}</span>
                           </Badge>
                         </TableCell>
+                        <TableCell>{new Date(order.updated_at).toLocaleString()}</TableCell> {/* New column cell */}
                         <TableCell className="text-right font-medium">
                           {formatCurrency(order.total_amount, order.currency)}
                           {contextShopDetails?.currency && order.currency !== contextShopDetails.currency && (

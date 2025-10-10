@@ -190,7 +190,7 @@ serve(async (req) => {
         headline: instagram_biography?.substring(0, 100) || null, // Use IG bio as initial headline
         about: instagram_biography || null, // Use IG bio as initial about
         contact_email: email,
-        instagram_url: instagram_username ? `https://www.instagram.com/${instagram_username}` : null,
+        instagram_url: instagram_username ? `https://www.instagram.com/${instagram_username}` : null, // Set instagram_url here
         followers_count: instagram_followers_count,
         media_count: instagram_media_count,
         website: instagram_website || null,
