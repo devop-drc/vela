@@ -15,8 +15,24 @@ serve(async (req) => {
   }
 
   let userAccessToken;
+  let userId; // To log which user is having issues
 
   try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('Instagram Posts Function Error: User not found or unauthorized.');
+      return new Response(JSON.stringify({ error: 'User not found or unauthorized.' }), {
+        status: 401, // Unauthorized
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    userId = user.id;
+
     const body = await req.json().catch(() => null);
 
     if (body?.user_access_token) {
@@ -24,32 +40,29 @@ serve(async (req) => {
       userAccessToken = body.user_access_token;
     } else {
       // Case 2: Called by a client, get token from the database
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-        { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-      );
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not found');
-
       const { data: integration, error: integrationError } = await supabase
         .from('integrations')
         .select('access_token')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('provider', 'facebook')
         .single();
 
       if (integrationError || !integration) {
-        return new Response(JSON.stringify({ posts: [] }), {
+        console.error(`Instagram integration not found for user ${userId}:`, integrationError);
+        return new Response(JSON.stringify({ error: "Instagram integration not found for this user. Please connect your account in the settings." }), {
+          status: 404, // Not Found
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
         });
       }
       userAccessToken = integration.access_token;
     }
 
     if (!FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
-        throw new Error("App secrets are not configured.");
+        console.error('Instagram Posts Function Error: App secrets are not configured.');
+        return new Response(JSON.stringify({ error: "App secrets are not configured." }), {
+          status: 500, // Internal Server Error
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
     }
     
     const appAccessToken = `${FACEBOOK_APP_ID}|${FACEBOOK_APP_SECRET}`;
@@ -58,14 +71,22 @@ serve(async (req) => {
     const debugData = await debugResponse.json();
 
     if (!debugData.data || !debugData.data.is_valid) {
-        throw new Error("Your Facebook connection is invalid or has expired. Please disconnect and reconnect in the settings.");
+        console.error(`Instagram Posts Function Error for user ${userId}: Invalid or expired Facebook connection.`, debugData);
+        return new Response(JSON.stringify({ error: "Your Facebook connection is invalid or has expired. Please disconnect and reconnect in the settings." }), {
+          status: 401, // Unauthorized
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
     }
     
     const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account,name&access_token=${userAccessToken}`;
     const pagesResponse = await fetch(pagesUrl);
     if (!pagesResponse.ok) {
         const errorData = await pagesResponse.json();
-        throw new Error('Failed to fetch Facebook pages. Please try reconnecting your account.');
+        console.error(`Instagram Posts Function Error for user ${userId}: Failed to fetch Facebook pages.`, errorData);
+        return new Response(JSON.stringify({ error: errorData.error?.message || 'Failed to fetch Facebook pages. Please try reconnecting your account.' }), {
+          status: pagesResponse.status, // Propagate Facebook API status
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
     }
     const pagesData = await pagesResponse.json();
 
@@ -73,7 +94,11 @@ serve(async (req) => {
     if (!igAccount) {
       const pageNames = pagesData.data.map((page: any) => page.name).join(', ');
       const detailedError = `We found the following Facebook Page(s): ${pageNames}. However, none of them have a linked Instagram Business Account that this app has permission to access. Please try disconnecting and reconnecting. During the Facebook login process, ensure you click "Edit Settings" and grant all requested permissions for both your Facebook Page and your Instagram account.`;
-      throw new Error(detailedError);
+      console.error(`Instagram Posts Function Error for user ${userId}: No linked Instagram Business Account.`, detailedError);
+      return new Response(JSON.stringify({ error: detailedError }), {
+        status: 404, // Not Found
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
     
     const igAccountId = igAccount.instagram_business_account.id;
@@ -88,6 +113,7 @@ serve(async (req) => {
         const mediaResponse = await fetch(mediaUrl);
         if (!mediaResponse.ok) {
             const errorData = await mediaResponse.json();
+            console.error(`Instagram Posts Function Error for user ${userId}: Failed to fetch media from Instagram.`, errorData);
             throw new Error(errorData.error.message || 'Failed to fetch media from Instagram.');
         }
 
@@ -105,9 +131,9 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Function Error:', error.message);
+    console.error(`Instagram Posts Function Error for user ${userId || 'unknown'}:`, error.message);
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 200,
+      status: 500, // Internal Server Error for unexpected errors
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
