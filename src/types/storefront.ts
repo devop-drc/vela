@@ -8,7 +8,7 @@ export interface StorefrontAnnouncement {
   display_order: number;
   start_date: string | null; // New: Start date for the announcement
   end_date: string | null;   // New: End date for the announcement
-  repeat_interval: 'daily' | 'weekly' | 'monthly' | 'yearly' | null; // New: Repeat interval
+  repeat_interval: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'none' | null; // New: Repeat interval
   created_at: string;
   updated_at: string;
 }

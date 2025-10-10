@@ -44,7 +44,7 @@ const storefrontAnnouncementSchema = z.object({
   display_order: z.coerce.number().int().min(0, "Display order must be a non-negative integer").default(0),
   start_date: z.date().optional().nullable(), // New field
   end_date: z.date().optional().nullable(),   // New field
-  repeat_interval: z.enum(['daily', 'weekly', 'monthly', 'yearly']).optional().nullable(), // New field
+  repeat_interval: z.enum(['daily', 'weekly', 'monthly', 'yearly', 'none']).optional().nullable(), // New field
 });
 
 type StorefrontAnnouncementFormData = z.infer<typeof storefrontAnnouncementSchema>;
@@ -59,6 +59,7 @@ interface StorefrontAnnouncementEditorModalProps {
 export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, element }: StorefrontAnnouncementEditorModalProps) => {
   const { register, handleSubmit, reset, control, watch, setValue, formState: { errors, isSubmitting } } = useForm<StorefrontAnnouncementFormData>({
     resolver: zodResolver(storefrontAnnouncementSchema),
+    defaultValues: { message: "", icon_name: "Sparkles", is_active: true, display_order: 0, start_date: null, end_date: null, repeat_interval: 'none' }, // Default to 'none'
   });
 
   useEffect(() => {
@@ -67,9 +68,10 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
         ...element,
         start_date: element.start_date ? new Date(element.start_date) : null,
         end_date: element.end_date ? new Date(element.end_date) : null,
+        repeat_interval: element.repeat_interval || 'none', // Ensure 'none' if null
       });
     } else {
-      reset({ message: "", icon_name: "Sparkles", is_active: true, display_order: 0, start_date: null, end_date: null, repeat_interval: null });
+      reset({ message: "", icon_name: "Sparkles", is_active: true, display_order: 0, start_date: null, end_date: null, repeat_interval: 'none' }); // Default to 'none'
     }
   }, [element, reset]);
 
@@ -85,6 +87,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
       user_id: user.id,
       start_date: data.start_date ? data.start_date.toISOString() : null,
       end_date: data.end_date ? data.end_date.toISOString() : null,
+      repeat_interval: data.repeat_interval === 'none' ? null : data.repeat_interval, // Convert 'none' to null for DB
     };
     let error;
 
@@ -272,12 +275,12 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
               name="repeat_interval"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value || ''}>
+                <Select onValueChange={(value) => field.onChange(value === '' ? 'none' : value)} value={field.value || 'none'}>
                   <SelectTrigger id="repeat_interval">
                     <SelectValue placeholder="No repeat" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No repeat</SelectItem>
+                    <SelectItem value="none">No repeat</SelectItem>
                     <SelectItem value="daily">Daily</SelectItem>
                     <SelectItem value="weekly">Weekly</SelectItem>
                     <SelectItem value="monthly">Monthly</SelectItem>
@@ -307,8 +310,8 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
           <div className="space-y-2 pt-4">
             <Label>Live Preview</Label>
             <div className="border rounded-lg p-2 bg-muted/50">
-              <Marquee pauseOnHover className="py-2 border-y-2 border-primary/20"> {/* Removed bg-primary/10 */}
-                <div className="flex items-center gap-4 text-base font-semibold text-primary px-4"> {/* Adjusted gap and added horizontal padding */}
+              <Marquee pauseOnHover className="py-2 border-y-2 border-primary/20">
+                <div className="flex items-center gap-4 text-base font-semibold text-primary px-4">
                   <IconComponent className="h-5 w-5 text-primary" />
                   <span>{messageValue || "Your announcement message will appear here."}</span>
                 </div>

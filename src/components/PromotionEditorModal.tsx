@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { ProductSelector } from "./ProductSelector";
 import { ScrollArea } from "./ui/scroll-area";
 import { Badge } from "./ui/badge";
+import { useShop } from "@/contexts/ShopContext"; // Import useShop
 
 const promotionSchema = z.object({
   name: z.string().min(1, "Promotion name is required"),
@@ -28,7 +29,7 @@ const promotionSchema = z.object({
   end_date: z.date().optional().nullable(),
   is_active: z.boolean().default(true),
   target_products: z.array(z.string()).optional().nullable(),
-  repeat_interval: z.enum(['daily', 'weekly', 'monthly', 'yearly']).optional().nullable(), // New field
+  repeat_interval: z.enum(['daily', 'weekly', 'monthly', 'yearly', 'none']).optional().nullable(), // New field
 }).superRefine((data, ctx) => {
   if (data.type === 'discount') {
     if (!data.value?.discountType) {
@@ -74,7 +75,7 @@ interface Promotion {
   end_date: string | null;
   is_active: boolean;
   target_products: string[] | null;
-  repeat_interval: 'daily' | 'weekly' | 'monthly' | 'yearly' | null; // New field
+  repeat_interval: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'none' | null; // New field
 }
 
 interface PromotionEditorModalProps {
@@ -87,6 +88,7 @@ interface PromotionEditorModalProps {
 export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: PromotionEditorModalProps) => {
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
   const [selectedProductNames, setSelectedProductNames] = useState<string[]>([]);
+  const { shopDetails } = useShop(); // Use shopDetails for currency formatting
 
   const { register, handleSubmit, reset, control, watch, setValue, formState: { errors, isSubmitting } } = useForm<PromotionFormData>({
     resolver: zodResolver(promotionSchema),
@@ -95,7 +97,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
       is_active: true,
       value: {},
       target_products: [],
-      repeat_interval: null, // Default to no repeat
+      repeat_interval: 'none', // Default to 'none'
     }
   });
 
@@ -114,7 +116,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
         end_date: promotion.end_date ? new Date(promotion.end_date) : null,
         is_active: promotion.is_active,
         target_products: promotion.target_products || [],
-        repeat_interval: promotion.repeat_interval,
+        repeat_interval: promotion.repeat_interval || 'none', // Ensure 'none' if null
       });
     } else {
       // For new promotions (including 'rerun' copies), reset to defaults
@@ -126,7 +128,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
         end_date: null,
         is_active: true,
         target_products: [],
-        repeat_interval: null,
+        repeat_interval: 'none', // Default to 'none'
       });
     }
   }, [promotion, reset]);
@@ -163,6 +165,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
       user_id: user.id,
       start_date: data.start_date ? data.start_date.toISOString() : null,
       end_date: data.end_date ? data.end_date.toISOString() : null,
+      repeat_interval: data.repeat_interval === 'none' ? null : data.repeat_interval, // Convert 'none' to null for DB
     };
 
     let error;
@@ -443,12 +446,12 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                   name="repeat_interval"
                   control={control}
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                    <Select onValueChange={(value) => field.onChange(value === '' ? 'none' : value)} value={field.value || 'none'}>
                       <SelectTrigger id="repeat_interval">
                         <SelectValue placeholder="No repeat" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No repeat</SelectItem>
+                        <SelectItem value="none">No repeat</SelectItem>
                         <SelectItem value="daily">Daily</SelectItem>
                         <SelectItem value="weekly">Weekly</SelectItem>
                         <SelectItem value="monthly">Monthly</SelectItem>
