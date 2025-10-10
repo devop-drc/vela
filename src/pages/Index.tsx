@@ -6,6 +6,7 @@ import { OverviewChart } from "@/components/dashboard/OverviewChart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { useShop } from "@/contexts/ShopContext";
+import { useSync } from "@/contexts/syncContext";
 import { formatCurrency } from "@/lib/formatters";
 import { ProfileStats } from "@/components/dashboard/ProfileStats";
 import { TopProducts } from "@/components/dashboard/TopProducts";

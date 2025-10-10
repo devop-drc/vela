@@ -356,7 +356,7 @@ export const CheckoutForm = ({
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="shippingCity" className="flex items-center gap-2"><City className="h-4 w-4" /> City</Label>
+                        <Label htmlFor="shippingCity" className="flex items-center gap-2"><Building2 className="h-4 w-4" /> City</Label>
                         <Input id="shippingCity" {...register("shippingCity")} />
                         {errors.shippingCity && <p className="text-sm text-destructive mt-1">{errors.shippingCity.message}</p>}
                       </div>

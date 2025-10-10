@@ -24,6 +24,7 @@ import StorefrontIndex from "./pages/StorefrontIndex";
 import StorefrontProductDetail from "./pages/StorefrontProductDetail";
 import StorefrontAllProducts from "./pages/StorefrontAllProducts";
 import StorefrontClientOrders from "./pages/StorefrontClientOrders";
+import StorefrontInstagramProfile from "./pages/StorefrontInstagramProfile"; // Import new component
 import Promotions from "./pages/Promotions";
 import { useEffect } from "react";
 import { supabase } from "./integrations/supabase/client";
@@ -107,6 +108,13 @@ const AppContent = () => {
         <Route path="products" element={<StorefrontAllProducts />} />
         <Route path="product/:productId" element={<StorefrontProductDetail />} />
         <Route path="orders" element={<StorefrontClientOrders />} /> 
+      </Route>
+      {/* New Instagram Profile Storefront Route */}
+      <Route path="/instagramShop/:shopSlug" element={<StorefrontLayout />}>
+        <Route index element={<StorefrontInstagramProfile />} />
+        <Route path="products" element={<StorefrontAllProducts />} /> {/* Keep products route for consistency */}
+        <Route path="product/:productId" element={<StorefrontProductDetail />} />
+        <Route path="orders" element={<StorefrontClientOrders />} />
       </Route>
 
       {/* Auth Routes */}
