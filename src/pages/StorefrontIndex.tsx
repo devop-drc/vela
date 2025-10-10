@@ -70,9 +70,7 @@ const StorefrontIndex = () => {
   const newArrivalsScrollRef = useDragToScroll<HTMLDivElement>();
   const recommendedProductsScrollRef = useDragToScroll<HTMLDivElement>();
 
-  useEffect(() => {
-    console.log("StorefrontIndex: Marquee Elements received from context:", marqueeElements); // NEW LOG
-  }, [marqueeElements]);
+  // Removed redundant console.log for marqueeElements here.
 
   const newArrivals = useMemo(() => {
     return allProducts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10);

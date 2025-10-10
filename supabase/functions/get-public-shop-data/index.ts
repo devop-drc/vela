@@ -15,30 +15,32 @@ const getSupabaseAdmin = () => createClient(
 // Helper function to check if a recurring event is active today
 const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatInterval: string | null, elementId: string, message: string): boolean => {
   const now = new Date();
-  // Normalize 'now' to local midnight today for consistent comparison
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  // Normalize 'now' to UTC midnight today for consistent comparison
+  const todayUtcStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const todayUtcEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
   console.log(`[isRecurringActive - ${elementId}] Checking: '${message}'`);
-  console.log(`[isRecurringActive - ${elementId}] Current Date (local day start): ${todayStart.toISOString()}`);
-  console.log(`[isRecurringActive - ${elementId}] Raw Start Date: ${startDate?.toISOString() || 'null'}`);
-  console.log(`[isRecurringActive - ${elementId}] Raw End Date: ${endDate?.toISOString() || 'null'}`);
+  console.log(`[isRecurringActive - ${elementId}] Current Time (UTC): ${now.toISOString()}`);
+  console.log(`[isRecurringActive - ${elementId}] Today UTC Start: ${todayUtcStart.toISOString()}`);
+  console.log(`[isRecurringActive - ${elementId}] Today UTC End: ${todayUtcEnd.toISOString()}`);
+  console.log(`[isRecurringActive - ${elementId}] Raw Start Date from DB: ${startDate?.toISOString() || 'null'}`);
+  console.log(`[isRecurringActive - ${elementId}] Raw End Date from DB: ${endDate?.toISOString() || 'null'}`);
   console.log(`[isRecurringActive - ${elementId}] Repeat Interval: ${repeatInterval || 'null'}`);
 
-  // Validate and normalize dates from DB to local day start/end
-  const validStartDate = startDate && !isNaN(startDate.getTime()) ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) : null;
-  const validEndDate = endDate && !isNaN(endDate.getTime()) ? new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999) : null;
+  // Normalize DB dates to UTC day start/end for comparison
+  const normalizedDbStartDate = startDate ? new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate())) : null;
+  const normalizedDbEndDate = endDate ? new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate(), 23, 59, 59, 999)) : null;
 
-  console.log(`[isRecurringActive - ${elementId}] Normalized Valid Start Date (local day start): ${validStartDate?.toISOString() || 'null'}`);
-  console.log(`[isRecurringActive - ${elementId}] Normalized Valid End Date (local day end): ${validEndDate?.toISOString() || 'null'}`);
+  console.log(`[isRecurringActive - ${elementId}] Normalized DB Start Date (UTC): ${normalizedDbStartDate?.toISOString() || 'null'}`);
+  console.log(`[isRecurringActive - ${elementId}] Normalized DB End Date (UTC): ${normalizedDbEndDate?.toISOString() || 'null'}`);
 
-  // 1. Check absolute start and end dates
-  if (validStartDate && todayEnd.getTime() < validStartDate.getTime()) {
-    console.log(`[isRecurringActive - ${elementId}] Reason: Today (${todayStart.toISOString()}) is before normalized start date (${validStartDate.toISOString()}).`);
+  // 1. Check absolute start and end dates (using UTC normalized dates)
+  if (normalizedDbStartDate && todayUtcEnd.getTime() < normalizedDbStartDate.getTime()) {
+    console.log(`[isRecurringActive - ${elementId}] Reason: Today is before normalized DB start date.`);
     return false;
   }
-  if (validEndDate && todayStart.getTime() > validEndDate.getTime()) {
-    console.log(`[isRecurringActive - ${elementId}] Reason: Today (${todayStart.toISOString()}) is after normalized end date (${validEndDate.toISOString()}).`);
+  if (normalizedDbEndDate && todayUtcStart.getTime() > normalizedDbEndDate.getTime()) {
+    console.log(`[isRecurringActive - ${elementId}] Reason: Today is after normalized DB end date.`);
     return false;
   }
 
@@ -49,31 +51,36 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
   }
 
   // 3. Handle specific recurring intervals
-  // If repeatInterval is set, validStartDate MUST be present to define the pattern.
-  if (!validStartDate) { // Recurring requires a start date to define the pattern
+  // For recurring, a start date is essential to define the pattern.
+  if (!startDate) { // Use the original startDate for pattern matching
     console.warn(`[isRecurringActive - ${elementId}] Reason: Recurring announcement has repeat_interval '${repeatInterval}' but no valid start_date. Skipping.`);
     return false;
   }
 
   let isActiveByRecurrence = false;
+  // Use UTC methods for consistency with normalized dates
+  const startUtcDay = startDate.getUTCDay(); // Day of week (0-6)
+  const startUtcMonth = startDate.getUTCMonth(); // Month (0-11)
+  const startUtcDayOfMonth = startDate.getUTCDate(); // Day of month (1-31)
+
   switch (repeatInterval) {
     case 'daily':
-      isActiveByRecurrence = true; // Already passed absolute date checks
+      isActiveByRecurrence = true;
       break;
     case 'weekly':
-      isActiveByRecurrence = todayStart.getDay() === validStartDate.getDay();
+      isActiveByRecurrence = todayUtcStart.getUTCDay() === startUtcDay;
       break;
     case 'monthly':
-      isActiveByRecurrence = todayStart.getDate() === validStartDate.getDate();
+      isActiveByRecurrence = todayUtcStart.getUTCDate() === startUtcDayOfMonth;
       break;
     case 'yearly':
-      isActiveByRecurrence = todayStart.getMonth() === validStartDate.getMonth() && todayStart.getDate() === validStartDate.getDate();
+      isActiveByRecurrence = todayUtcStart.getUTCMonth() === startUtcMonth && todayUtcStart.getUTCDate() === startUtcDayOfMonth;
       break;
     default:
       isActiveByRecurrence = false;
   }
 
-  console.log(`[isRecurringActive - ${elementId}] Recurrence Check for '${repeatInterval}': todayStart.getDay()=${todayStart.getDay()}, validStartDate.getDay()=${validStartDate.getDay()}, todayStart.getDate()=${todayStart.getDate()}, validStartDate.getDate()=${validStartDate.getDate()}, todayStart.getMonth()=${todayStart.getMonth()}, validStartDate.getMonth()=${validStartDate.getMonth()}`);
+  console.log(`[isRecurringActive - ${elementId}] Recurrence Check for '${repeatInterval}': todayUtcStart.getUTCDay()=${todayUtcStart.getUTCDay()}, startUtcDay=${startUtcDay}, todayUtcStart.getUTCDate()=${todayUtcStart.getUTCDate()}, startUtcDayOfMonth=${startUtcDayOfMonth}, todayUtcStart.getUTCMonth()=${todayUtcStart.getUTCMonth()}, startUtcMonth=${startUtcMonth}`);
   console.log(`[isRecurringActive - ${elementId}] Result: Active by recurrence: ${isActiveByRecurrence}`);
   return isActiveByRecurrence;
 };
