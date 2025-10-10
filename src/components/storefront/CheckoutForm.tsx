@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"; // Import RadioGroup and RadioGroupItem
 
 const CheckoutProgress = ({ currentStep }: { currentStep: number }) => {
   const steps = [
@@ -324,32 +325,30 @@ export const CheckoutForm = ({ onOrderSuccess, onBackToCart, isSubmitting, total
                       <CardDescription className="text-sm md:text-base">Choose your preferred payment method.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Button
-                          type="button"
-                          variant={paymentMethod === 'card' ? 'default' : 'outline'}
-                          onClick={() => setPaymentMethod('card')}
+                      <RadioGroup value={paymentMethod} onValueChange={(value: 'card' | 'cash_on_delivery') => setPaymentMethod(value)} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Label
+                          htmlFor="payment-card"
                           className={cn(
-                            "flex flex-col h-auto py-6 text-base",
-                            paymentMethod === 'card' ? "ring-2 ring-primary ring-offset-2" : ""
+                            "flex flex-col items-center justify-center h-auto py-6 text-base border rounded-md cursor-pointer",
+                            paymentMethod === 'card' ? "ring-2 ring-primary ring-offset-2 border-primary" : "border-input hover:border-primary/50"
                           )}
                         >
+                          <RadioGroupItem value="card" id="payment-card" className="sr-only" />
                           <CreditCard className="h-6 w-6 mb-2" />
                           Debit/Credit Card
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={paymentMethod === 'cash_on_delivery' ? 'default' : 'outline'}
-                          onClick={() => setPaymentMethod('cash_on_delivery')}
+                        </Label>
+                        <Label
+                          htmlFor="payment-cash"
                           className={cn(
-                            "flex flex-col h-auto py-6 text-base",
-                            paymentMethod === 'cash_on_delivery' ? "ring-2 ring-primary ring-offset-2" : ""
+                            "flex flex-col items-center justify-center h-auto py-6 text-base border rounded-md cursor-pointer",
+                            paymentMethod === 'cash_on_delivery' ? "ring-2 ring-primary ring-offset-2 border-primary" : "border-input hover:border-primary/50"
                           )}
                         >
+                          <RadioGroupItem value="cash_on_delivery" id="payment-cash" className="sr-only" />
                           <DollarSign className="h-6 w-6 mb-2" />
                           Cash on Delivery
-                        </Button>
-                      </div>
+                        </Label>
+                      </RadioGroup>
 
                       {paymentMethod === 'card' ? (
                         <div className="space-y-4">

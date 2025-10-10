@@ -296,105 +296,129 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
 
       {/* Filter Buttons Section - Fixed, but content wraps */}
       <div className="p-4 border-b flex flex-wrap gap-2 flex-shrink-0">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9 px-3">
-              <ListFilter className="mr-2 h-4 w-4" />
-              Categories ({filters.categories.length})
-              {filters.categories.length > 0 && <XCircle className="ml-2 h-3 w-3" onClick={(e) => { e.stopPropagation(); handleClearSection('categories'); }} />}
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 px-3">
+                <ListFilter className="mr-2 h-4 w-4" />
+                Categories ({filters.categories.length})
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {allCategories.map(category => (
+                <DropdownMenuCheckboxItem
+                  key={category}
+                  checked={filters.categories.includes(category)}
+                  onCheckedChange={() => handleToggleFilter('categories', category)}
+                >
+                  {category}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {filters.categories.length > 0 && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); handleClearSection('categories'); }}>
+              <XCircle className="h-4 w-4" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56">
-            <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {allCategories.map(category => (
-              <DropdownMenuCheckboxItem
-                key={category}
-                checked={filters.categories.includes(category)}
-                onCheckedChange={() => handleToggleFilter('categories', category)}
-              >
-                {category}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          )}
+        </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9 px-3">
-              <Tag className="mr-2 h-4 w-4" />
-              Tags ({filters.tags.length})
-              {filters.tags.length > 0 && <XCircle className="ml-2 h-3 w-3" onClick={(e) => { e.stopPropagation(); handleClearSection('tags'); }} />}
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 px-3">
+                <Tag className="mr-2 h-4 w-4" />
+                Tags ({filters.tags.length})
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              <DropdownMenuLabel>Filter by Tag</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {allTags.map(tag => (
+                <DropdownMenuCheckboxItem
+                  key={tag}
+                  checked={filters.tags.includes(tag)}
+                  onCheckedChange={() => handleToggleFilter('tags', tag)}
+                >
+                  {tag}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {filters.tags.length > 0 && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); handleClearSection('tags'); }}>
+              <XCircle className="h-4 w-4" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56">
-            <DropdownMenuLabel>Filter by Tag</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {allTags.map(tag => (
-              <DropdownMenuCheckboxItem
-                key={tag}
-                checked={filters.tags.includes(tag)}
-                onCheckedChange={() => handleToggleFilter('tags', tag)}
-              >
-                {tag}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          )}
+        </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9 px-3">
-              <DollarSign className="mr-2 h-4 w-4" />
-              Price Range
-              {(filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice) && <XCircle className="ml-2 h-3 w-3" onClick={(e) => { e.stopPropagation(); handleClearSection('priceRange'); }} />}
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 px-3">
+                <DollarSign className="mr-2 h-4 w-4" />
+                Price Range
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-64 p-4">
+              <DropdownMenuLabel>Filter by Price</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <Slider
+                min={0}
+                max={maxPrice}
+                step={1}
+                value={localPriceRange}
+                onValueChange={handlePriceRangeChange}
+                className="w-full my-4"
+              />
+              <div className="flex justify-between text-sm font-medium">
+                <span>{formatCurrency(localPriceRange[0], shopDetails?.currency)}</span>
+                <span>{formatCurrency(localPriceRange[1], shopDetails?.currency)}</span>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {(filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice) && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); handleClearSection('priceRange'); }}>
+              <XCircle className="h-4 w-4" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-64 p-4">
-            <DropdownMenuLabel>Filter by Price</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <Slider
-              min={0}
-              max={maxPrice}
-              step={1}
-              value={localPriceRange}
-              onValueChange={handlePriceRangeChange}
-              className="w-full my-4"
-            />
-            <div className="flex justify-between text-sm font-medium">
-              <span>{formatCurrency(localPriceRange[0], shopDetails?.currency)}</span>
-              <span>{formatCurrency(localPriceRange[1], shopDetails?.currency)}</span>
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          )}
+        </div>
 
         {allDetailsAttributes.map(attr => {
           const Icon = getAttributeIcon(attr.name);
           const filterKey = attr.name;
           const isFilterApplied = (filters[filterKey] as string[] || []).length > 0;
           return attr.values.length > 0 ? (
-            <DropdownMenu key={filterKey}>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 px-3">
-                  <Icon className="mr-2 h-4 w-4" />
-                  {attr.name.replace(/_/g, ' ')} ({isFilterApplied ? (filters[filterKey] as string[]).length : 0})
-                  {isFilterApplied && <XCircle className="ml-2 h-3 w-3" onClick={(e) => { e.stopPropagation(); handleClearSection(filterKey); }} />}
+            <div key={filterKey} className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 px-3">
+                    <Icon className="mr-2 h-4 w-4" />
+                    {attr.name.replace(/_/g, ' ')} ({isFilterApplied ? (filters[filterKey] as string[]).length : 0})
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56">
+                  <DropdownMenuLabel>Filter by {attr.name.replace(/_/g, ' ')}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {attr.values.map(value => (
+                    <DropdownMenuCheckboxItem
+                      key={value}
+                      checked={(filters[filterKey] as string[] || []).includes(value)}
+                      onCheckedChange={() => handleToggleFilter(filterKey, value)}
+                    >
+                      {value}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {isFilterApplied && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); handleClearSection(filterKey); }}>
+                  <XCircle className="h-4 w-4" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56">
-                <DropdownMenuLabel>Filter by {attr.name.replace(/_/g, ' ')}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {attr.values.map(value => (
-                  <DropdownMenuCheckboxItem
-                    key={value}
-                    checked={(filters[filterKey] as string[] || []).includes(value)}
-                    onCheckedChange={() => handleToggleFilter(filterKey, value)}
-                  >
-                    {value}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              )}
+            </div>
           ) : null;
         })}
 
