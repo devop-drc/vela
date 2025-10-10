@@ -44,6 +44,7 @@ type Order = {
   status: OrderStatusType;
   total_amount: number;
   created_at: string;
+  updated_at: string;
   currency: string;
   payment_method: string;
   payment_status: string;
@@ -72,11 +73,11 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [isLoadingDispute, setIsLoadingDispute] = useState(false);
   const [replyMessage, setReplyMessage] = useState('');
+  const [disputeStatus, setDisputeStatus] = useState<Dispute['status']>('Open');
 
   useEffect(() => {
     if (order) {
       setCurrentStatus(order.status);
-      setReplyMessage(dispute?.reply_message || ''); // Initialize reply message
       const fetchOrderData = async () => {
         setIsLoadingItems(true);
         setIsLoadingDispute(true);
@@ -113,6 +114,7 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
         } else {
           setDispute(disputeData || null);
           setReplyMessage(disputeData?.reply_message || '');
+          setDisputeStatus(disputeData?.status || 'Open');
         }
         setIsLoadingDispute(false);
       };
@@ -121,8 +123,9 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
       setItems([]);
       setDispute(null);
       setReplyMessage('');
+      setDisputeStatus('Open');
     }
-  }, [order, dispute?.reply_message]);
+  }, [order]);
 
   const handleStatusUpdate = async (newStatus: OrderStatusType) => {
     if (!order) return;
@@ -142,23 +145,23 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
     setIsUpdating(false);
   };
 
-  const handleDisputeReply = async () => {
+  const handleDisputeUpdate = async () => {
     if (!dispute) return;
     setIsUpdating(true);
     try {
       const { error } = await supabase.from('order_disputes').update({
         reply_message: replyMessage,
-        status: 'In Review', // Automatically set to In Review when a reply is sent
+        status: disputeStatus,
       }).eq('id', dispute.id);
 
       if (error) throw error;
 
-      showSuccess("Dispute reply sent!");
-      setDispute(prev => prev ? { ...prev, reply_message: replyMessage, status: 'In Review' } : null);
+      showSuccess("Dispute updated successfully!");
+      setDispute(prev => prev ? { ...prev, reply_message: replyMessage, status: disputeStatus } : null);
       onUpdate();
     } catch (err: any) {
-      console.error("Failed to send dispute reply:", err);
-      showError(`Failed to send dispute reply: ${err.message || "An unexpected error occurred."}`);
+      console.error("Failed to update dispute:", err);
+      showError(`Failed to update dispute: ${err.message || "An unexpected error occurred."}`);
     } finally {
       setIsUpdating(false);
     }
@@ -166,15 +169,19 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
 
   if (!order || !shopDetails) return null; // Ensure shopDetails is available
 
-  const getStatusColor = (status: OrderStatusType) => {
+  const getStatusColor = (status: OrderStatusType | Dispute['status']) => {
     switch (status) {
-      case 'Fulfilled': return 'bg-emerald-500';
-      case 'Given to Courier': return 'bg-blue-500';
-      case 'Order Packaged': return 'bg-blue-500';
-      case 'Order Seen': return 'bg-amber-500';
-      case 'Pending': return 'bg-amber-500';
+      case 'Fulfilled':
+      case 'Resolved': return 'bg-emerald-500';
+      case 'Given to Courier':
+      case 'Order Packaged':
+      case 'In Review': return 'bg-blue-500';
+      case 'Order Seen':
+      case 'Pending':
+      case 'Open': return 'bg-amber-500';
       case 'Problematic': return 'bg-destructive';
-      case 'Cancelled': return 'bg-gray-500';
+      case 'Cancelled':
+      case 'Closed': return 'bg-gray-500';
       default: return 'bg-gray-500';
     }
   };
@@ -267,11 +274,25 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                   <div className="space-y-2 mt-3">
                     <Label htmlFor="replyMessage" className="flex items-center gap-2 text-sm"><Reply className="h-4 w-4" /> Your Reply</Label>
                     <Textarea id="replyMessage" rows={3} value={replyMessage} onChange={(e) => setReplyMessage(e.target.value)} placeholder="Type your response to the customer here..." />
-                    <Button onClick={handleDisputeReply} disabled={isUpdating || !replyMessage.trim()} size="sm">
-                      {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Send Reply
-                    </Button>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="disputeStatus">Dispute Status</Label>
+                    <Select value={disputeStatus} onValueChange={(value: Dispute['status']) => setDisputeStatus(value)}>
+                      <SelectTrigger id="disputeStatus">
+                        <SelectValue placeholder="Change Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Open">Open</SelectItem>
+                        <SelectItem value="In Review">In Review</SelectItem>
+                        <SelectItem value="Resolved">Resolved</SelectItem>
+                        <SelectItem value="Closed">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={handleDisputeUpdate} disabled={isUpdating || !replyMessage.trim()} size="sm">
+                    {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Update Dispute
+                  </Button>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No dispute reported for this order.</p>

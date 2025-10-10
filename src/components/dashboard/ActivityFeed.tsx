@@ -78,7 +78,7 @@ const ActivityValue = ({ activity }: { activity: Activity }) => {
 export const ActivityFeed = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { shopDetails } = useShop();
+  const { shopDetails, convertCurrency } = useShop(); // Destructure convertCurrency
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [selectedDispute, setSelectedDispute] = useState<any | null>(null);
@@ -104,15 +104,16 @@ export const ActivityFeed = () => {
       ]);
 
       const orderActivities: Activity[] = (ordersRes.data || []).map(order => {
+        const convertedAmount = convertCurrency(order.total_amount, order.currency, shopDetails?.currency); // Convert here
         if (order.status === 'Fulfilled' && order.payment_status === 'paid') {
           return {
             id: order.id, type: 'sale', title: `New Sale`, description: `to ${order.customer_name}`,
-            value: formatCurrency(order.total_amount, order.currency), date: order.created_at, orderId: order.id,
+            value: formatCurrency(convertedAmount, shopDetails?.currency), date: order.created_at, orderId: order.id,
           };
         } else {
           return {
             id: order.id, type: 'new_order', title: `New Order`, description: `from ${order.customer_name}`,
-            value: formatCurrency(order.total_amount, order.currency), date: order.created_at, orderId: order.id,
+            value: formatCurrency(convertedAmount, shopDetails?.currency), date: order.created_at, orderId: order.id,
           };
         }
       });
@@ -165,20 +166,22 @@ export const ActivityFeed = () => {
       ordersChannel = supabase.channel('dashboard-orders-feed')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` }, (payload) => {
           const o = payload.new as any;
-          const newActivity: Activity = { id: o.id, type: 'new_order', title: 'New Order', description: `from ${o.customer_name}`, value: formatCurrency(o.total_amount, o.currency), date: o.created_at, orderId: o.id };
+          const convertedAmount = convertCurrency(o.total_amount, o.currency, shopDetails?.currency); // Convert here
+          const newActivity: Activity = { id: o.id, type: 'new_order', title: 'New Order', description: `from ${o.customer_name}`, value: formatCurrency(convertedAmount, shopDetails?.currency), date: o.created_at, orderId: o.id };
           if (isMounted) setActivities(prev => [newActivity, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20));
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` }, (payload) => {
           const oldO = payload.old as any;
           const newO = payload.new as any;
           if (oldO.status !== newO.status || oldO.payment_status !== newO.payment_status) {
+            const convertedAmount = convertCurrency(newO.total_amount, newO.currency, shopDetails?.currency); // Convert here
             if (newO.status === 'Fulfilled' && newO.payment_status === 'paid') {
               const newActivity: Activity = {
                 id: `${newO.id}-${payload.commit_timestamp}-fulfilled`,
                 type: 'sale', // Now it's a sale
                 title: `Sale Fulfilled`,
                 description: `Order #${newO.id.substring(0, 8)} by ${newO.customer_name}`,
-                value: formatCurrency(newO.total_amount, newO.currency),
+                value: formatCurrency(convertedAmount, shopDetails?.currency),
                 date: payload.commit_timestamp,
                 orderId: newO.id,
               };
@@ -223,7 +226,7 @@ export const ActivityFeed = () => {
     } else {
       setIsLoading(false);
     }
-  }, [shopDetails]);
+  }, [shopDetails, convertCurrency]); // Add convertCurrency to dependencies
 
   const handleActivityClick = async (activity: Activity) => {
     if (activity.type === 'product') {
@@ -234,20 +237,12 @@ export const ActivityFeed = () => {
         setSelectedProduct(data); 
       }
     }
-    if (activity.type === 'sale' || activity.type === 'new_order' || activity.type === 'order_fulfilled') { // Added new_order
+    if (activity.type === 'sale' || activity.type === 'new_order' || activity.type === 'order_fulfilled' || activity.type === 'dispute') { // Added dispute
       const { data, error } = await supabase.from('orders').select('*').eq('id', activity.orderId).single();
       if (error) { 
         showError("Failed to load order details."); 
       } else { 
         setSelectedOrder(data); 
-      }
-    }
-    if (activity.type === 'dispute') {
-      const { data, error } = await supabase.from('order_disputes').select('*').eq('id', activity.disputeId).single();
-      if (error) {
-        showError("Failed to load dispute details.");
-      } else {
-        setSelectedDispute(data);
       }
     }
   };
@@ -256,7 +251,6 @@ export const ActivityFeed = () => {
     <>
       {selectedProduct && <ProductEditor isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={() => {}} />}
       {selectedOrder && <OrderDetailModal isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} order={selectedOrder} onUpdate={() => {}} />}
-      {selectedDispute && <DisputeDetailModal isOpen={!!selectedDispute} onClose={() => setSelectedDispute(null)} dispute={selectedDispute} onUpdate={() => {}} />}
       <Card className="h-full">
         <CardHeader>
           <CardTitle>Live Activity</CardTitle>

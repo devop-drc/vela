@@ -33,7 +33,8 @@ export const ReportIssueModal = ({ isOpen, onClose, orderId, customerEmail, onIs
     }
 
     try {
-      const { error } = await supabase.from('order_disputes').insert({
+      // 1. Insert the dispute
+      const { error: disputeError } = await supabase.from('order_disputes').insert({
         order_id: orderId,
         customer_email: customerEmail,
         reason,
@@ -41,7 +42,15 @@ export const ReportIssueModal = ({ isOpen, onClose, orderId, customerEmail, onIs
         status: 'Open',
       });
 
-      if (error) throw error;
+      if (disputeError) throw disputeError;
+
+      // 2. Update the order status to 'Problematic'
+      const { error: orderUpdateError } = await supabase
+        .from('orders')
+        .update({ status: 'Problematic' })
+        .eq('id', orderId);
+
+      if (orderUpdateError) throw orderUpdateError;
 
       showSuccess("Issue reported successfully! We will get back to you soon.");
       onIssueReported();

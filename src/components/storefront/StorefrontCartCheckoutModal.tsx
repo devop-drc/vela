@@ -203,11 +203,11 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <div className="flex items-center gap-2 flex-shrink-0">
                                         {item.isDiscounted && (
                                           <p className="text-sm text-muted-foreground line-through">
-                                            {formatCurrency(convertCurrency(item.originalPrice, item.currency), shopDetails?.currency)}
+                                            {formatCurrency(convertCurrency(item.originalPrice, item.currency, shopDetails?.currency), shopDetails?.currency)}
                                           </p>
                                         )}
                                         <p className={cn("font-semibold text-base md:text-lg", item.isDiscounted && "text-emerald-600")}>
-                                          {formatCurrency(convertCurrency(item.price * item.quantity, item.currency), shopDetails?.currency)}
+                                          {formatCurrency(convertCurrency(item.price * item.quantity, item.currency, shopDetails?.currency), shopDetails?.currency)}
                                         </p>
                                       </div>
 
@@ -288,11 +288,11 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                       <div className="flex items-center gap-2 flex-shrink-0">
                                         {item.isDiscounted && (
                                           <p className="text-sm text-muted-foreground line-through">
-                                            {formatCurrency(convertCurrency(item.originalPrice, item.currency), shopDetails?.currency)}
+                                            {formatCurrency(convertCurrency(item.originalPrice, item.currency, shopDetails?.currency), shopDetails?.currency)}
                                           </p>
                                         )}
                                         <p className={cn("font-semibold text-base md:text-lg", item.isDiscounted && "text-emerald-600")}>
-                                          {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
+                                          {formatCurrency(convertCurrency(item.price, item.currency, shopDetails?.currency), shopDetails?.currency)}
                                         </p>
                                       </div>
 
@@ -368,8 +368,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
               )}
             </motion.div>
           ))}
-        </AnimatePresence>
-      </DialogContent>
-    </Dialog>
-  );
+        </DialogContent>
+      </Dialog>
+    );
 };

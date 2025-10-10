@@ -37,7 +37,7 @@ const Sidebar = () => {
       icon: Users,
       items: [
         { to: "/orders", icon: ShoppingBag, label: "Orders" },
-        { to: "/disputes", icon: MessageSquareWarning, label: "Disputes" },
+        // Removed Disputes link
       ]
     },
     {

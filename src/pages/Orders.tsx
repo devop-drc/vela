@@ -17,6 +17,7 @@ import { DateRange } from "react-day-picker";
 import { Input } from "@/components/ui/input";
 import { Search, Banknote, ShoppingBag, FileBarChart } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
+import { useSearchParams } from "react-router-dom"; // Import useSearchParams
 
 type Order = {
   id: string;
@@ -27,6 +28,15 @@ type Order = {
   created_at: string;
   updated_at: string;
   currency: string;
+  payment_method: string;
+  payment_status: string;
+  shipping_address?: string;
+  shipping_city?: string;
+  shipping_state?: string;
+  shipping_zip?: string;
+  shipping_country?: string;
+  shipping_notes_seller?: string;
+  shipping_notes_courier?: string;
 };
 
 const OrderTable = ({ orders, onSelectOrder }: { orders: Order[], onSelectOrder: (order: Order) => void }) => {
@@ -109,6 +119,7 @@ const Orders = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [searchParams, setSearchParams] = useSearchParams(); // Initialize search params
 
   useEffect(() => { setTitle("Orders"); }, [setTitle]);
 
@@ -135,6 +146,20 @@ const Orders = () => {
   }, []);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
+
+  // Effect to open OrderDetailModal if orderId is in URL
+  useEffect(() => {
+    const orderIdFromUrl = searchParams.get('orderId');
+    if (orderIdFromUrl && orders.length > 0) {
+      const orderToOpen = orders.find(order => order.id === orderIdFromUrl);
+      if (orderToOpen) {
+        setSelectedOrder(orderToOpen);
+        // Clear the orderId from URL after opening
+        searchParams.delete('orderId');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [orders, searchParams, setSearchParams]);
 
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {

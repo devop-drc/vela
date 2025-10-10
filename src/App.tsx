@@ -24,7 +24,6 @@ import StorefrontIndex from "./pages/StorefrontIndex";
 import StorefrontProductDetail from "./pages/StorefrontProductDetail";
 import StorefrontAllProducts from "./pages/StorefrontAllProducts";
 import StorefrontClientOrders from "./pages/StorefrontClientOrders";
-import Disputes from "./pages/Disputes";
 import Promotions from "./pages/Promotions";
 import { useEffect } from "react";
 import { supabase } from "./integrations/supabase/client";
@@ -48,7 +47,7 @@ const AppContent = () => {
       const { data: business, error: businessError } = await supabase
         .from('businesses')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user.id', user.id) // Corrected filter to use user.id
         .single();
 
       if (businessError || !business) {
@@ -80,8 +79,8 @@ const AppContent = () => {
                     {
                       description: newDispute.reason,
                       action: {
-                        label: "View Report",
-                        onClick: () => navigate(`/disputes?disputeId=${newDispute.id}`),
+                        label: "View complaint",
+                        onClick: () => navigate(`/orders?orderId=${newDispute.order_id}`), // Redirect to Orders page and open modal
                       },
                       duration: 10000, // Keep notification for 10 seconds
                     }
@@ -128,7 +127,7 @@ const AppContent = () => {
           <Route path="/settings" element={<Settings />} />
           <Route path="/keywords" element={<Keywords />} />
           <Route path="/out-of-stock" element={<OutOfStock />} />
-          <Route path="/disputes" element={<Disputes />} />
+          {/* Removed Disputes route */}
           <Route path="/promotions" element={<Promotions />} />
         </Route>
       </Route>
