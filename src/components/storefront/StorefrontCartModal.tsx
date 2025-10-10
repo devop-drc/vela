@@ -5,7 +5,7 @@ import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, 
 import { useCart } from "@/contexts/CartContext";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { MediaItem } from "@/components/MediaItem";
 import { cn } from "@/lib/utils";
@@ -24,15 +24,20 @@ interface StorefrontCartModalProps {
 export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProps) => {
   const { cartItems, savedItems, totalItems, subtotal, shipping, total, totalSaved, updateQuantity, removeFromCart, clearCart, saveForLater, moveToCart, removeSavedItem, hasSubscriptionProducts } = useCart();
   const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
   const handleProceedToCheckout = () => {
-    // For now, just show a toast and close the modal.
-    // In a future iteration, this would navigate to a dedicated checkout page or open a checkout form.
-    toast.info("Proceeding to checkout is not yet implemented in this demo.", {
-      description: "For now, you can continue shopping or clear your cart.",
-    });
+    if (!shopDetails?.slug) {
+      toast.error("Shop details not available.");
+      return;
+    }
+    if (cartItems.length === 0) {
+      toast.error("Your cart is empty. Please add items before checking out.");
+      return;
+    }
+    navigate(`/shop/${shopDetails.slug}/checkout`);
     onClose();
   };
 
@@ -79,7 +84,7 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
                     {hasSubscriptionProducts && (
                       <div className="flex items-center gap-2 p-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md">
                         <Info className="h-4 w-4 flex-shrink-0" />
-                        <span>This cart includes subscription products.</span>
+                        <span>This cart includes subscription products. Cash on Delivery is not available.</span>
                       </div>
                     )}
                     <AnimatePresence>

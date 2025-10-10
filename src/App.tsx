@@ -10,7 +10,7 @@ import Products from "./pages/Products";
 import Orders from "./pages/Orders";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
-import Register from "./pages/Register"; // Import the new Register page
+import Register from "./pages/Register";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
 import OutOfStock from "./pages/OutOfStock";
 import { IntegrationProvider } from "./contexts/IntegrationContext";
@@ -24,13 +24,14 @@ import StorefrontIndex from "./pages/StorefrontIndex";
 import StorefrontProductDetail from "./pages/StorefrontProductDetail";
 import StorefrontAllProducts from "./pages/StorefrontAllProducts";
 import StorefrontClientOrders from "./pages/StorefrontClientOrders";
+import StorefrontCheckout from "./pages/StorefrontCheckout"; // Import the new checkout page
 import Promotions from "./pages/Promotions";
 import { useEffect } from "react";
 import { supabase } from "./integrations/supabase/client";
 import { toast } from "sonner";
 import { MessageSquareWarning } from "lucide-react";
 import { PageTitleProvider } from "./contexts/PageTitleContext";
-import { AppearanceProvider } from "./contexts/AppearanceContext"; // Added missing import
+import { AppearanceProvider } from "./contexts/AppearanceContext";
 
 const queryClient = new QueryClient();
 
@@ -47,7 +48,7 @@ const AppContent = () => {
       const { data: business, error: businessError } = await supabase
         .from('businesses')
         .select('id')
-        .eq('user_id', user.id) // Corrected filter to use 'user_id'
+        .eq('user_id', user.id)
         .single();
 
       if (businessError || !business) {
@@ -62,8 +63,6 @@ const AppContent = () => {
           { event: 'INSERT', schema: 'public', table: 'order_disputes' },
           (payload) => {
             const newDispute = payload.new as any;
-            // Check if the dispute belongs to the current user's business
-            // This check is redundant if RLS is correctly applied, but good for safety
             supabase.from('orders').select('business_id').eq('id', newDispute.order_id).single()
               .then(({ data: orderData, error: orderError }) => {
                 if (orderError) {
@@ -80,9 +79,9 @@ const AppContent = () => {
                       description: newDispute.reason,
                       action: {
                         label: "View complaint",
-                        onClick: () => navigate(`/orders?orderId=${newDispute.order_id}`), // Redirect to Orders page and open modal
+                        onClick: () => navigate(`/orders?orderId=${newDispute.order_id}`),
                       },
-                      duration: 10000, // Keep notification for 10 seconds
+                      duration: 10000,
                     }
                   );
                 }
@@ -108,18 +107,17 @@ const AppContent = () => {
         <Route index element={<StorefrontIndex />} />
         <Route path="products" element={<StorefrontAllProducts />} />
         <Route path="product/:productId" element={<StorefrontProductDetail />} />
-        {/* Consolidated orders page for customers */}
         <Route path="orders" element={<StorefrontClientOrders />} /> 
+        <Route path="checkout" element={<StorefrontCheckout />} /> {/* Add checkout route */}
       </Route>
 
       {/* Auth Routes */}
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} /> {/* Add Register route */}
+      <Route path="/register" element={<Register />} />
       <Route path="/demo" element={<Demo />} />
       
       {/* Protected Dashboard Routes */}
       <Route element={<ProtectedRoute />}>
-        {/* Onboarding page and guard are removed */}
         <Route element={<DashboardLayout />}>
           <Route path="/" element={<Index />} />
           <Route path="/products" element={<Products />} />
@@ -127,7 +125,6 @@ const AppContent = () => {
           <Route path="/settings" element={<Settings />} />
           <Route path="/keywords" element={<Keywords />} />
           <Route path="/out-of-stock" element={<OutOfStock />} />
-          {/* Removed Disputes route */}
           <Route path="/promotions" element={<Promotions />} />
         </Route>
       </Route>

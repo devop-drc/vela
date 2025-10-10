@@ -14,9 +14,9 @@ export interface CartItem {
   media_type: 'image' | 'video';
   isDiscounted: boolean;
   selectedOptions?: { [key: string]: string | string[] };
-  pricing_type: 'one_time' | 'subscription'; // Added pricing_type
-  product_type: 'physical' | 'digital'; // Added product_type
-  billing_interval: 'month' | 'year' | null; // Added billing_interval
+  pricing_type: 'one_time' | 'subscription';
+  product_type: 'physical' | 'digital';
+  billing_interval: 'month' | 'year' | null;
 }
 
 interface CartContextType {
@@ -34,7 +34,7 @@ interface CartContextType {
   saveForLater: (item: CartItem) => void;
   moveToCart: (productId: string) => void;
   removeSavedItem: (productId: string) => void;
-  hasSubscriptionProducts: boolean; // New flag
+  hasSubscriptionProducts: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -73,22 +73,26 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // Fetch product details to ensure we have the latest pricing_type and product_type
-    const { data: productData, error } = await supabase
+    // Fetch product details to ensure we have the latest pricing_type, product_type, and billing_interval
+    // We are NOT using the price/currency from this fetch for the cart item, as `item.price` is already
+    // the converted display price from the product card/detail page.
+    const { data: productDbData, error } = await supabase
       .from('products')
-      .select('price, currency, pricing_type, product_type, billing_interval')
+      .select('pricing_type, product_type, billing_interval')
       .eq('id', item.productId)
       .single();
 
-    if (error || !productData) {
+    if (error || !productDbData) {
       setTimeout(() => showError("Failed to fetch product details for cart."), 0);
       console.error("Error fetching product for cart:", error);
       return;
     }
 
-    const currentPrice = productData.price;
-    const originalPrice = item.originalPrice || currentPrice; // Use originalPrice if provided, otherwise currentPrice
-    const isDiscounted = currentPrice < originalPrice;
+    // The `item` argument already contains the price and originalPrice in the shop's display currency,
+    // and item.currency is also the shop's display currency. We should use these directly.
+    const priceInDisplayCurrency = item.price;
+    const originalPriceInDisplayCurrency = item.originalPrice;
+    const isDiscounted = item.isDiscounted; // Trust the `isDiscounted` flag passed from the product card/detail
 
     setCartItems(prevItems => {
       const existingItemIndex = prevItems.findIndex(cartItem => cartItem.productId === item.productId);
@@ -98,12 +102,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updatedItems[existingItemIndex] = {
           ...updatedItems[existingItemIndex],
           quantity: updatedItems[existingItemIndex].quantity + quantity,
-          price: currentPrice, // Update price to latest from DB
-          originalPrice: originalPrice,
+          price: priceInDisplayCurrency, // Use the price from the `item` argument
+          originalPrice: originalPriceInDisplayCurrency, // Use the originalPrice from the `item` argument
           isDiscounted: isDiscounted,
-          pricing_type: productData.pricing_type,
-          product_type: productData.product_type,
-          billing_interval: productData.billing_interval,
+          pricing_type: productDbData.pricing_type, // Use from DB fetch
+          product_type: productDbData.product_type, // Use from DB fetch
+          billing_interval: productDbData.billing_interval, // Use from DB fetch
+          currency: shopDetails.currency, // Ensure currency is shop's display currency
         };
         setTimeout(() => showSuccess(`${item.name} quantity updated in cart!`), 0);
         return updatedItems;
@@ -112,14 +117,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [
           ...prevItems,
           {
-            ...item,
+            ...item, // Spread existing item properties (media_url, name, selectedOptions, etc.)
             quantity,
-            price: currentPrice, // Use latest price from DB
-            originalPrice: originalPrice,
+            price: priceInDisplayCurrency, // Use the price from the `item` argument
+            originalPrice: originalPriceInDisplayCurrency, // Use the originalPrice from the `item` argument
             isDiscounted: isDiscounted,
-            pricing_type: productData.pricing_type,
-            product_type: productData.product_type,
-            billing_interval: productData.billing_interval,
+            pricing_type: productDbData.pricing_type, // Use from DB fetch
+            product_type: productDbData.product_type, // Use from DB fetch
+            billing_interval: productDbData.billing_interval, // Use from DB fetch
+            currency: shopDetails.currency, // Ensure currency is shop's display currency
           },
         ];
       }
