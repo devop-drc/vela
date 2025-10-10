@@ -13,7 +13,7 @@ import { debounce } from 'lodash'; // Import debounce
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const DESKTOP_SIDEBAR_WIDTH = '20rem'; // 320px
+const DESKTOP_SIDEBAR_WIDTH = '20rem';
 
 interface StorefrontHeaderProps {
   onToggleFilterSidebar?: () => void;
