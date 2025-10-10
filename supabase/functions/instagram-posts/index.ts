@@ -15,7 +15,7 @@ serve(async (req) => {
   }
 
   let userAccessToken;
-  let userId; // To log which user is having issues
+  let userId;
 
   try {
     const supabase = createClient(
@@ -27,7 +27,7 @@ serve(async (req) => {
     if (!user) {
       console.error('Instagram Posts Function Error: User not found or unauthorized.');
       return new Response(JSON.stringify({ error: 'User not found or unauthorized.' }), {
-        status: 401, // Unauthorized
+        status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -35,11 +35,10 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => null);
 
+    // Determine access token source: from body (server-to-server) or DB (client-to-server)
     if (body?.user_access_token) {
-      // Case 1: Called by another function (like periodic-sync) with a token in the body
       userAccessToken = body.user_access_token;
     } else {
-      // Case 2: Called by a client, get token from the database
       const { data: integration, error: integrationError } = await supabase
         .from('integrations')
         .select('access_token')
@@ -50,7 +49,7 @@ serve(async (req) => {
       if (integrationError || !integration) {
         console.error(`Instagram integration not found for user ${userId}:`, integrationError);
         return new Response(JSON.stringify({ error: "Instagram integration not found for this user. Please connect your account in the settings." }), {
-          status: 404, // Not Found
+          status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
@@ -60,11 +59,12 @@ serve(async (req) => {
     if (!FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
         console.error('Instagram Posts Function Error: App secrets are not configured.');
         return new Response(JSON.stringify({ error: "App secrets are not configured." }), {
-          status: 500, // Internal Server Error
+          status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }
     
+    // 1. Debug user access token to ensure it's valid
     const appAccessToken = `${FACEBOOK_APP_ID}|${FACEBOOK_APP_SECRET}`;
     const debugUrl = `https://graph.facebook.com/debug_token?input_token=${userAccessToken}&access_token=${appAccessToken}`;
     const debugResponse = await fetch(debugUrl);
@@ -73,18 +73,19 @@ serve(async (req) => {
     if (!debugData.data || !debugData.data.is_valid) {
         console.error(`Instagram Posts Function Error for user ${userId}: Invalid or expired Facebook connection.`, debugData);
         return new Response(JSON.stringify({ error: "Your Facebook connection is invalid or has expired. Please disconnect and reconnect in the settings." }), {
-          status: 401, // Unauthorized
+          status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }
     
+    // 2. Fetch Facebook pages to find the linked Instagram Business Account
     const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account,name&access_token=${userAccessToken}`;
     const pagesResponse = await fetch(pagesUrl);
     if (!pagesResponse.ok) {
         const errorData = await pagesResponse.json();
         console.error(`Instagram Posts Function Error for user ${userId}: Failed to fetch Facebook pages.`, errorData);
         return new Response(JSON.stringify({ error: errorData.error?.message || 'Failed to fetch Facebook pages. Please try reconnecting your account.' }), {
-          status: pagesResponse.status, // Propagate Facebook API status
+          status: pagesResponse.status,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }
@@ -96,7 +97,7 @@ serve(async (req) => {
       const detailedError = `We found the following Facebook Page(s): ${pageNames}. However, none of them have a linked Instagram Business Account that this app has permission to access. Please try disconnecting and reconnecting. During the Facebook login process, ensure you click "Edit Settings" and grant all requested permissions for both your Facebook Page and your Instagram account.`;
       console.error(`Instagram Posts Function Error for user ${userId}: No linked Instagram Business Account.`, detailedError);
       return new Response(JSON.stringify({ error: detailedError }), {
-        status: 404, // Not Found
+        status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -106,8 +107,9 @@ serve(async (req) => {
     let allMedia: any[] = [];
     let mediaUrl: string | null = `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=${fields}&access_token=${userAccessToken}&limit=100`;
     let pageCount = 0;
-    const MAX_PAGES = 10; // Safety break to prevent infinite loops
+    const MAX_PAGES = 10; // Safety break to prevent overwhelming API
 
+    // 3. Fetch all media posts from Instagram Business Account
     while (mediaUrl && pageCount < MAX_PAGES) {
         pageCount++;
         const mediaResponse = await fetch(mediaUrl);
@@ -133,7 +135,7 @@ serve(async (req) => {
   } catch (error) {
     console.error(`Instagram Posts Function Error for user ${userId || 'unknown'}:`, error.message);
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 500, // Internal Server Error for unexpected errors
+      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

@@ -54,18 +54,21 @@ serve(async (req) => {
       const code = url.searchParams.get('code');
       if (!code) throw new Error('Authorization code not found in callback.');
 
+      // 1. Exchange short-lived token
       const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${FACEBOOK_APP_ID}&redirect_uri=${REDIRECT_URI}&client_secret=${FACEBOOK_APP_SECRET}&code=${code}`;
       const tokenResponse = await fetch(tokenUrl);
       const tokenData = await tokenResponse.json();
       if (!tokenResponse.ok) throw new Error(tokenData.error.message);
       const shortLivedToken = tokenData.access_token;
 
+      // 2. Exchange for long-lived token
       const longLivedTokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${FACEBOOK_APP_ID}&client_secret=${FACEBOOK_APP_SECRET}&fb_exchange_token=${shortLivedToken}`;
       const longLivedTokenResponse = await fetch(longLivedTokenUrl);
       const longLivedTokenData = await longLivedTokenResponse.json();
       if (!longLivedTokenResponse.ok) throw new Error(longLivedTokenData.error.message);
       const longLivedToken = longLivedTokenData.access_token;
 
+      // 3. Fetch user profile and linked Instagram Business Account
       const profileUrl = `https://graph.facebook.com/v19.0/me?fields=id,email,first_name,last_name,picture,accounts{instagram_business_account{username,profile_picture_url,name}}&access_token=${longLivedToken}`;
       const profileResponse = await fetch(profileUrl);
       const profileData = await profileResponse.json();
@@ -76,14 +79,13 @@ serve(async (req) => {
 
       const igAccount = accounts?.data?.find((page: any) => page.instagram_business_account)?.instagram_business_account;
 
-      // --- NEW: Explicit check for Instagram Business Account ---
+      // Crucial check: Ensure Instagram Business Account is linked
       if (!igAccount) {
         const errorDescription = "No linked Instagram Business Account found. Please ensure your Instagram account is a Business or Creator account and is linked to the Facebook Page you selected. Also, ensure you grant all requested permissions during the Facebook login process.";
         const redirectUrl = new URL(origin);
         redirectUrl.searchParams.set('integration_error', errorDescription);
         return Response.redirect(redirectUrl.toString(), 302);
       }
-      // --- END NEW ---
 
       const instagram_username = igAccount.username;
       const instagram_profile_picture_url = igAccount.profile_picture_url;
@@ -92,14 +94,14 @@ serve(async (req) => {
       const supabaseAdmin = getSupabaseAdmin();
       let userId: string;
 
-      // Correctly check for an existing user
+      // 4. Find or create user in Supabase auth
       const { data: users, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({ email: email });
       if (listUsersError) throw listUsersError;
 
       if (users && users.users.length > 0) {
         userId = users.users[0].id;
       } else {
-        const tempPassword = crypto.randomUUID();
+        const tempPassword = crypto.randomUUID(); // Generate a temporary password for new users
         const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
           email: email,
           password: tempPassword,
@@ -109,13 +111,14 @@ serve(async (req) => {
             last_name,
             avatar_url: picture?.data?.url,
             full_name: `${first_name} ${last_name || ''}`.trim(),
-            username: instagram_username, // Store Instagram username in user_metadata
+            username: instagram_username,
           }
         });
         if (createUserError) throw createUserError;
         userId = newUser.user.id;
       }
 
+      // 5. Upsert integration record
       const { error: upsertError } = await supabaseAdmin.from('integrations').upsert({
         user_id: userId,
         provider: 'facebook',
@@ -123,6 +126,7 @@ serve(async (req) => {
       }, { onConflict: 'user_id,provider' });
       if (upsertError) throw upsertError;
 
+      // 6. Upload Instagram profile picture to Supabase Storage
       let uploadedLogoUrl: string | null = null;
       if (instagram_profile_picture_url) {
         try {
@@ -143,25 +147,23 @@ serve(async (req) => {
           uploadedLogoUrl = publicUrlData.publicUrl;
         } catch (uploadErr: any) {
           console.error("Error uploading profile picture to storage:", uploadErr.message);
-          // Fallback to original URL if upload fails
-          uploadedLogoUrl = instagram_profile_picture_url;
+          uploadedLogoUrl = instagram_profile_picture_url; // Fallback to original URL if upload fails
         }
       } else if (picture?.data?.url) {
-        // Fallback to Facebook profile picture if Instagram one is not available
-        uploadedLogoUrl = picture.data.url;
+        uploadedLogoUrl = picture.data.url; // Fallback to Facebook profile picture
       }
 
-      // Ensure a business entry exists for the user
+      // 7. Ensure a business entry exists
       let { data: businessData, error: fetchBusinessError } = await supabaseAdmin
         .from('businesses')
         .select('id, name')
         .eq('user_id', userId)
         .single();
 
-      if (fetchBusinessError && fetchBusinessError.code === 'PGRST116') { // No business found, create one
+      if (fetchBusinessError && fetchBusinessError.code === 'PGRST116') {
         const { data: newBusiness, error: createBusinessError } = await supabaseAdmin
           .from('businesses')
-          .insert({ user_id: userId, name: `${first_name}'s Business` }) // Use first_name from profileData
+          .insert({ user_id: userId, name: `${first_name}'s Business` })
           .select('id, name')
           .single();
         if (createBusinessError) throw createBusinessError;
@@ -174,13 +176,13 @@ serve(async (req) => {
 
       const businessId = businessData.id;
 
-      // Update or insert shop_details with Instagram info and uploaded URL
+      // 8. Update or insert shop_details
       const shopDetailsPayload = {
         business_id: businessId,
         shop_name: instagram_shop_name || `${first_name}'s Shop`,
         slug: instagram_username ? instagram_username.toLowerCase().replace(/[^a-z0-9-]/g, '') : `${first_name.toLowerCase()}-shop`,
-        logo_url: uploadedLogoUrl, // Use the uploaded URL
-        favicon_url: uploadedLogoUrl, // Use the uploaded URL for favicon
+        logo_url: uploadedLogoUrl,
+        favicon_url: uploadedLogoUrl,
         contact_email: email,
         instagram_url: instagram_username ? `https://www.instagram.com/${instagram_username}` : null,
       };
@@ -188,7 +190,7 @@ serve(async (req) => {
       const { error: shopDetailsUpsertError } = await supabaseAdmin.from('shop_details').upsert(shopDetailsPayload, { onConflict: 'business_id' });
       if (shopDetailsUpsertError) console.error("Error upserting shop details:", shopDetailsUpsertError);
 
-
+      // 9. Generate magic link for seamless redirection
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
         email: email,
@@ -205,6 +207,7 @@ serve(async (req) => {
       return Response.redirect(errorUrl.toString(), 302);
     }
   } else {
+    // Initial OAuth redirect
     try {
       const origin = url.searchParams.get('origin');
       if (!origin) throw new Error('Missing origin parameter.');

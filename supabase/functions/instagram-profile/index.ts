@@ -12,44 +12,46 @@ serve(async (req) => {
   }
 
   try {
-    const { user_id } = await req.json(); // Expect user_id in the body
+    const { user_id } = await req.json();
     if (!user_id) {
       console.error('Instagram Profile Function Error: User ID is required.');
       return new Response(JSON.stringify({ error: 'User ID is required.' }), {
-        status: 400, // Bad Request
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', // Use service role key for admin access
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { persistSession: false } }
     );
 
+    // 1. Fetch user's Instagram access token from integrations table
     const { data: integration, error: integrationError } = await supabase
       .from('integrations')
       .select('access_token')
-      .eq('user_id', user_id) // Use the provided user_id
+      .eq('user_id', user_id)
       .eq('provider', 'facebook')
       .single();
 
     if (integrationError || !integration) {
       console.error(`Instagram integration not found for user ${user_id}:`, integrationError);
       return new Response(JSON.stringify({ error: "Instagram integration not found for this user. Please connect your account in the settings." }), {
-        status: 404, // Not Found
+        status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
     const userAccessToken = integration.access_token;
 
+    // 2. Fetch Facebook pages to find the linked Instagram Business Account
     const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account,name,picture{url}&access_token=${userAccessToken}`;
     const pagesResponse = await fetch(pagesUrl);
     if (!pagesResponse.ok) {
       const errorData = await pagesResponse.json();
       console.error(`Failed to fetch Facebook pages for user ${user_id}:`, errorData);
       return new Response(JSON.stringify({ error: errorData.error?.message || 'Failed to fetch Facebook pages.' }), {
-        status: pagesResponse.status, // Propagate Facebook API status
+        status: pagesResponse.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -59,37 +61,38 @@ serve(async (req) => {
     if (!igAccount) {
       console.warn(`No linked Instagram Business Account found for user ${user_id}.`);
       return new Response(JSON.stringify({ error: 'No linked Instagram Business Account found. Please ensure your Instagram account is a Business or Creator account and is linked to the Facebook Page you selected. Also, ensure you grant all requested permissions during the Facebook login process.' }), {
-        status: 404, // Not Found
+        status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
     
     const igAccountId = igAccount.instagram_business_account.id;
-    const fields = 'name,username,profile_picture_url,biography,followers_count,media_count,website'; // Added 'website' to fields
+    const fields = 'name,username,profile_picture_url,biography,followers_count,media_count,website';
     const igProfileUrl = `https://graph.facebook.com/v19.0/${igAccountId}?fields=${fields}&access_token=${userAccessToken}`;
     
+    // 3. Fetch Instagram Business Profile details
     const igProfileResponse = await fetch(igProfileUrl);
     if (!igProfileResponse.ok) {
       const errorData = await igProfileResponse.json();
       console.error(`Failed to fetch Instagram profile details for account ${igAccountId}:`, errorData);
       return new Response(JSON.stringify({ error: errorData.error?.message || 'Failed to fetch Instagram profile details.' }), {
-        status: igProfileResponse.status, // Propagate Instagram API status
+        status: igProfileResponse.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
     const igProfileData = await igProfileResponse.json();
 
-    console.log(`Instagram Profile Data for user ${user_id}:`, igProfileData); // Detailed log
+    console.log(`Instagram Profile Data for user ${user_id}:`, igProfileData);
 
     const shopData = {
       shop_name: igProfileData.name || igAccount.name,
       username: igProfileData.username,
       description: igProfileData.biography,
-      logo_url: igProfileData.profile_picture_url || null, // Ensure null if empty
-      favicon_url: igProfileData.profile_picture_url || null, // Ensure null if empty
+      logo_url: igProfileData.profile_picture_url || null,
+      favicon_url: igProfileData.profile_picture_url || null,
       followers_count: igProfileData.followers_count,
       media_count: igProfileData.media_count,
-      instagram_url: `https://www.instagram.com/${igProfileData.username}`, // Construct Instagram profile URL
+      instagram_url: `https://www.instagram.com/${igProfileData.username}`,
     };
 
     return new Response(JSON.stringify(shopData), {
@@ -100,7 +103,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Instagram Profile Function Error:', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 500, // Internal Server Error for unexpected errors
+      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
