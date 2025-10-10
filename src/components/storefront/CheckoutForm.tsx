@@ -39,11 +39,14 @@ const checkoutSchema = z.object({
   }),
 });
 
-type CheckoutFormValues = z.infer<typeof checkoutSchema>;
+export type CheckoutFormValues = z.infer<typeof checkoutSchema>;
 
 interface CheckoutFormProps {
-  onOrderSuccess: (orderId: string) => void;
-  onBackToCart: () => void;
+  currentStep: number;
+  onNextStep: () => Promise<void>;
+  onPreviousStep: () => void;
+  onSubmitForm: (values: CheckoutFormValues) => Promise<void>;
+  isSubmitting: boolean;
   totalPrice: number;
   currency: string;
 }
@@ -78,11 +81,9 @@ const CheckoutProgress = ({ currentStep }: { currentStep: number }) => {
   );
 };
 
-export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderSuccess, onBackToCart, totalPrice, currency }) => {
+export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onNextStep, onPreviousStep, onSubmitForm, isSubmitting, currentStep, totalPrice, currency }) => {
   const { shopDetails, appearanceSettings } = useStorefront();
   const { cartItems, clearCart, hasSubscriptionProducts, hasDigitalSubscriptionProducts } = useCart();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1); // 1: Contact, 2: Shipping, 3: Payment
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
@@ -120,127 +121,34 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderSuccess, onBa
     }
   }, [hasDigitalSubscriptionProducts, setValue]);
 
-  const handleNextStep = async () => {
-    let isValid = false;
+  // Expose trigger for parent to validate current step
+  const validateCurrentStep = async () => {
     if (currentStep === 1) {
-      isValid = await trigger(["customerName", "customerEmail", "customerPhone"]);
+      return await trigger(["customerName", "customerEmail", "customerPhone"]);
     } else if (currentStep === 2) {
-      isValid = await trigger(["shippingAddress", "shippingCity", "shippingState", "shippingZip", "shippingCountry", "shippingNotesSeller", "shippingNotesCourier"]);
+      return await trigger(["shippingAddress", "shippingCity", "shippingState", "shippingZip", "shippingCountry", "shippingNotesSeller", "shippingNotesCourier"]);
+    } else if (currentStep === 3) {
+      return await trigger(["paymentMethod", "acceptTerms"]);
     }
-
-    if (isValid) {
-      setCurrentStep(prev => prev + 1);
-    } else {
-      showError("Please fill in all required fields.");
-    }
+    return false;
   };
 
-  const handlePreviousStep = () => {
-    setCurrentStep(prev => prev - 1);
-  };
+  // Pass the form's handleSubmit to the parent, so parent can call it
+  const handleInternalSubmit = handleSubmit(onSubmitForm);
 
-  const onSubmit = async (values: CheckoutFormValues) => {
-    setIsSubmitting(true);
-    if (!shopDetails) {
-      showError("Shop details not loaded. Cannot place order.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      // 1. Create the order
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          business_id: shopDetails.id, // Use shopDetails.id which is business_id
-          customer_name: values.customerName,
-          customer_email: values.customerEmail,
-          customer_phone: values.customerPhone,
-          total_amount: totalPrice, // totalPrice is already in shop's currency
-          currency: currency, // Use shop's currency
-          status: 'Pending',
-          payment_method: values.paymentMethod,
-          payment_status: values.paymentMethod === 'cash_on_delivery' ? 'pending' : 'paid', // Assume credit card is paid immediately
-          shipping_address: values.shippingAddress,
-          shipping_city: values.shippingCity,
-          shipping_state: values.shippingState,
-          shipping_zip: values.shippingZip,
-          shipping_country: values.shippingCountry,
-          shipping_notes_seller: values.shippingNotesSeller,
-          shipping_notes_courier: values.shippingNotesCourier,
-        })
-        .select('id')
-        .single();
-
-      if (orderError || !orderData) {
-        throw new Error(orderError?.message || "Failed to create order.");
-      }
-
-      const orderId = orderData.id;
-
-      // 2. Insert order items
-      const orderItemsToInsert = cartItems.map(item => ({
-        order_id: orderId,
-        product_id: item.productId,
-        quantity: item.quantity,
-        price_at_purchase: convertCurrency(item.price, item.currency, 'ALL'), // Store in ALL for consistency
-        selected_options: item.selectedOptions,
-        interval_repetitions: item.intervalRepetitions, // New field
-      }));
-
-      const { error: orderItemsError } = await supabase
-        .from('order_items')
-        .insert(orderItemsToInsert);
-
-      if (orderItemsError) {
-        throw new Error(orderItemsError?.message || "Failed to add order items.");
-      }
-
-      // 3. Update product inventory for one-time physical products
-      for (const item of cartItems) {
-        if (item.pricing_type === 'one_time' && item.product_type === 'physical') {
-          const { data: product, error: productError } = await supabase
-            .from('products')
-            .select('inventory')
-            .eq('id', item.productId)
-            .single();
-
-          if (productError || !product) {
-            console.warn(`Could not fetch inventory for product ${item.productId}. Skipping inventory update.`);
-            continue;
-          }
-
-          const newInventory = (product.inventory || 0) - item.quantity;
-          const newStatus = newInventory <= 0 ? 'Out of Stock' : 'Active'; // Assuming 'Active' if > 0
-
-          const { error: updateError } = await supabase
-            .from('products')
-            .update({ inventory: newInventory, status: newStatus })
-            .eq('id', item.productId);
-
-          if (updateError) {
-            console.error(`Failed to update inventory for product ${item.productId}:`, updateError);
-          }
-        }
-      }
-
-      showSuccess("Order placed successfully!");
-      clearCart();
-      onOrderSuccess(orderId);
-    } catch (err: any) {
-      console.error("Checkout error:", err);
-      showError(`Checkout failed: ${err.message || "An unexpected error occurred."}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // Expose the validation function to the parent
+  React.useImperativeHandle(
+    { validateCurrentStep, handleInternalSubmit },
+    () => ({ validateCurrentStep, handleInternalSubmit }),
+    [validateCurrentStep, handleInternalSubmit]
+  );
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+    <div className="flex flex-col flex-1 overflow-hidden">
       <CheckoutProgress currentStep={currentStep} />
       
       <ScrollArea className="flex-1 px-4 md:px-6">
-        <div className="space-y-6 max-w-2xl mx-auto pb-4"> {/* Added pb-4 for scroll padding */}
+        <div className="space-y-6 max-w-2xl mx-auto pb-4">
           <AnimatePresence mode="wait">
             {currentStep === 1 && (
               <motion.div
@@ -409,33 +317,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderSuccess, onBa
           </AnimatePresence>
         </div>
       </ScrollArea>
-
-      {/* Footer with Total and Action Buttons */}
-      <div className="p-4 md:p-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4 flex-shrink-0">
-        <div className="flex items-center gap-2 text-lg md:text-xl font-bold">
-          <span>Total:</span>
-          <span>{formatCurrency(totalPrice, currency)}</span>
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          {currentStep > 1 && (
-            <Button variant="outline" onClick={handlePreviousStep} disabled={isSubmitting} className="w-full sm:w-auto">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Previous
-            </Button>
-          )}
-          {currentStep < 3 ? (
-            <Button type="button" onClick={handleNextStep} disabled={isSubmitting} className="w-full sm:w-auto">
-              Next Step
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          ) : (
-            <Button type="submit" disabled={isSubmitting || !watch("acceptTerms")} className="w-full sm:w-auto">
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Place Order
-            </Button>
-          )}
-        </div>
-      </div>
-    </form>
+    </div>
   );
 };
