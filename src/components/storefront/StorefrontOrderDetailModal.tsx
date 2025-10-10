@@ -23,7 +23,7 @@ interface OrderItem {
   products: {
     name: string;
     media_url: string;
-    currency: string;
+    // currency: string; // Removed as it's always ALL from DB
   };
 }
 
@@ -89,8 +89,8 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
             price_at_purchase,
             products (
               name,
-              media_url,
-              currency
+              media_url
+              // currency is not needed here as all prices are stored in ALL
             )
           `)
           .eq('order_id', order.id);
@@ -277,7 +277,10 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
                           <p className="font-medium">{item.products.name}</p>
                           <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                         </div>
-                        <p className="font-medium">{formatCurrency(item.price_at_purchase * item.quantity, order.currency)}</p>
+                        <p className="font-medium">
+                          {/* Convert item.price_at_purchase from its stored currency ('ALL') to shopDetails.currency */}
+                          {formatCurrency(convertCurrency(item.price_at_purchase * item.quantity, 'ALL', shopDetails.currency), shopDetails.currency)}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -293,16 +296,16 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
                       <Badge className={cn("text-white", getStatusColor(dispute.status))}>{dispute.status}</Badge>
                     </div>
                     <p className="text-sm"><span className="font-medium">Reason:</span> {dispute.reason}</p>
-                    {dispute.message && <p className="text-sm"><span className="font-medium">Your Message:</span> {dispute.message}</p>}
+                    {dispute.message && <p className="text-sm"><span className="font-medium">Customer's Message:</span> {dispute.message}</p>}
                     {dispute.reply_message && (
                       <div className="space-y-2 mt-3">
                         <Label className="flex items-center gap-2 text-sm"><Reply className="h-4 w-4" /> Seller's Reply</Label>
-                        <p className="text-sm text-muted-foreground p-3 border rounded-md bg-background">{dispute.reply_message}</p>
+                        <Textarea id="replyMessage" rows={3} value={dispute.reply_message} readOnly className="pl-10 pt-3 h-auto min-h-[80px] px-3 py-2" />
                       </div>
                     )}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No issue reported for this order.</p>
+                  <p className="text-sm text-muted-foreground">No dispute reported for this order.</p>
                 )}
               </div>
             </div>

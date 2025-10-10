@@ -13,6 +13,7 @@ import { TopProducts } from "@/components/dashboard/TopProducts";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { useIntegration } from "@/contexts/IntegrationContext"; // Import useIntegration
+import { RealtimeChannel } from "@supabase/supabase-js";
 
 interface DashboardData {
   totalRevenue: number;
@@ -107,9 +108,47 @@ const useDashboardData = (shopDetails: any, convertCurrency: (amount: number | n
   }, [shopDetails, convertCurrency]); // Add shopDetails and convertCurrency to dependencies
 
   useEffect(() => {
-    if (shopDetails) { // Only fetch data once shopDetails is available
+    let channel: RealtimeChannel | null = null;
+
+    const setupRealtimeListener = async () => {
+      if (!shopDetails) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: business, error: businessError } = await supabase
+        .from('businesses').select('id').eq('user_id', user.id).single();
+
+      if (businessError || !business) {
+        console.error("Could not find business for order listener:", businessError);
+        return;
+      }
+
+      channel = supabase
+        .channel(`dashboard-orders:${business.id}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` },
+          (payload) => {
+            // Trigger data refetch on any order change (insert, update, delete)
+            console.log("Realtime order update detected, refetching dashboard data:", payload);
+            fetchData();
+          }
+        )
+        .subscribe();
+    };
+
+    // Initial fetch and setup listener when shopDetails is available
+    if (shopDetails) {
       fetchData();
+      setupRealtimeListener();
     }
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, [fetchData, shopDetails]); // Re-run when fetchData or shopDetails changes
 
   return { data, isLoading, fetchData };

@@ -22,7 +22,7 @@ interface OrderItem {
   products: {
     name: string;
     media_url: string;
-    currency: string;
+    // currency: string; // Removed as it's always ALL from DB
   };
 }
 
@@ -90,8 +90,8 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
             price_at_purchase,
             products (
               name,
-              media_url,
-              currency
+              media_url
+              // currency is not needed here as all prices are stored in ALL
             )
           `)
           .eq('order_id', order.id);
@@ -247,8 +247,8 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                         <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                       </div>
                       <p className="font-medium">
-                        {/* Convert item.price_at_purchase from its stored currency (item.products.currency) to shopDetails.currency */}
-                        {formatCurrency(convertCurrency(item.price_at_purchase * item.quantity, item.products.currency, shopDetails.currency), shopDetails.currency)}
+                        {/* Convert item.price_at_purchase from its stored currency ('ALL') to shopDetails.currency */}
+                        {formatCurrency(convertCurrency(item.price_at_purchase * item.quantity, 'ALL', shopDetails.currency), shopDetails.currency)}
                       </p>
                     </div>
                   ))}
