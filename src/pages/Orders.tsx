@@ -25,6 +25,7 @@ type Order = {
   status: 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic';
   total_amount: number;
   created_at: string;
+  updated_at: string; // Added updated_at
   currency: string;
 };
 
@@ -56,6 +57,7 @@ const OrderTable = ({ orders, onSelectOrder }: { orders: Order[], onSelectOrder:
           <TableHead>Customer</TableHead>
           <TableHead>Date</TableHead>
           <TableHead>Status</TableHead>
+          <TableHead>Last Status Change</TableHead> {/* New column header */}
           <TableHead className="text-right">Total</TableHead>
           <TableHead className="w-[100px]"></TableHead>
         </TableRow>
@@ -71,6 +73,7 @@ const OrderTable = ({ orders, onSelectOrder }: { orders: Order[], onSelectOrder:
                 {order.status}
               </Badge>
             </TableCell>
+            <TableCell>{new Date(order.updated_at).toLocaleString()}</TableCell> {/* New column cell */}
             <TableCell className="text-right font-medium">
               {/* Convert order.total_amount from its stored currency (order.currency) to shopDetails.currency */}
               {formatCurrency(convertCurrency(order.total_amount, order.currency, shopDetails.currency), shopDetails.currency)}
@@ -88,7 +91,7 @@ const OrderTable = ({ orders, onSelectOrder }: { orders: Order[], onSelectOrder:
           </TableRow>
         )) : (
           <TableRow>
-            <TableCell colSpan={6} className="h-24 text-center">
+            <TableCell colSpan={7} className="h-24 text-center"> {/* Updated colspan */}
               No orders match your criteria.
             </TableCell>
           </TableRow>
@@ -125,8 +128,8 @@ const Orders = () => {
     }
 
     const { data, error } = await supabase
-      .from('orders').select('*').eq('business_id', business.id).order('created_at', { ascending: false });
-
+      .from('orders').select('*, updated_at').eq('business_id', business.id).order('created_at', { ascending: false }); // Select updated_at
+    
     if (error) { showError("Failed to fetch orders."); } 
     else { setOrders(data as Order[]); }
     setIsLoading(false);

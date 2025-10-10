@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { Marquee } from "@/components/ui/marquee";
+import Marquee from "react-fast-marquee"; // Import react-fast-marquee
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Switch } from "@/components/ui/switch";
@@ -318,7 +318,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
               <div className="space-y-2 pt-4">
                 <Label>Live Preview</Label>
                 <div className="border rounded-lg p-2 bg-muted/50">
-                  <Marquee pauseOnHover className="py-2 border-y-2 border-primary/20">
+                  <Marquee pauseOnHover className="py-2 border-y-2 border-primary/20 bg-primary/10">
                     <div className="flex items-center gap-4 text-base font-semibold text-primary px-4">
                       <IconComponent className="h-5 w-5 text-primary" />
                       <span>{messageValue || "Your announcement message will appear here."}</span>

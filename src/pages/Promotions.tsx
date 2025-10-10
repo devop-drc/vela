@@ -15,7 +15,7 @@ import { StorefrontAnnouncement } from "@/types/storefront";
 import { format } from "date-fns";
 import * as LucideIcons from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Marquee } from "@/components/ui/marquee";
+import Marquee from "react-fast-marquee"; // Import react-fast-marquee
 import { Switch } from "@/components/ui/switch"; // Import Switch
 
 interface Promotion {

@@ -75,18 +75,21 @@ const useDashboardData = (shopDetails: any, convertCurrency: (amount: number | n
 
     const monthlyData: { [key: string]: { revenue: number; clients: Set<string>; orders: number } } = {};
     const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5); // Adjusted to get data for the last 6 months including current
 
-    fulfilledPaidOrders.forEach(order => {
+    allOrders.forEach(order => { // Iterate over all orders, not just fulfilledPaidOrders, for chart data
       const orderDate = new Date(order.created_at);
       if (orderDate > sixMonthsAgo) {
         const month = orderDate.toLocaleString('default', { month: 'short' });
         if (!monthlyData[month]) {
           monthlyData[month] = { revenue: 0, clients: new Set(), orders: 0 };
         }
-        monthlyData[month].revenue += convertCurrency(order.total_amount, order.currency, shopDetails.currency);
-        monthlyData[month].clients.add(order.customer_email);
-        monthlyData[month].orders += 1;
+        // Only add to revenue and client count if fulfilled and paid
+        if (order.status === 'Fulfilled' && order.payment_status === 'paid') {
+          monthlyData[month].revenue += convertCurrency(order.total_amount, order.currency, shopDetails.currency);
+          monthlyData[month].clients.add(order.customer_email);
+        }
+        monthlyData[month].orders += 1; // Count all orders regardless of status for 'orders' metric
       }
     });
     
