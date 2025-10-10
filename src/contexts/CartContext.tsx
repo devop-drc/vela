@@ -69,7 +69,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addToCart = useCallback(async (item: Omit<CartItem, 'quantity' | 'isDiscounted'>, quantity: number = 1) => {
     if (!shopDetails) {
-      showError("Shop details not loaded. Cannot add to cart.");
+      setTimeout(() => showError("Shop details not loaded. Cannot add to cart."), 0);
       return;
     }
 
@@ -81,7 +81,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .single();
 
     if (error || !productData) {
-      showError("Failed to fetch product details for cart.");
+      setTimeout(() => showError("Failed to fetch product details for cart."), 0);
       console.error("Error fetching product for cart:", error);
       return;
     }
@@ -105,10 +105,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           product_type: productData.product_type,
           billing_interval: productData.billing_interval,
         };
-        showSuccess(`${item.name} quantity updated in cart!`);
+        setTimeout(() => showSuccess(`${item.name} quantity updated in cart!`), 0);
         return updatedItems;
       } else {
-        showSuccess(`${item.name} added to cart!`);
+        setTimeout(() => showSuccess(`${item.name} added to cart!`), 0);
         return [
           ...prevItems,
           {
@@ -137,19 +137,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeFromCart = useCallback((productId: string) => {
     setCartItems(prevItems => prevItems.filter(item => item.productId !== productId));
-    showSuccess("Item removed from cart.");
+    setTimeout(() => showSuccess("Item removed from cart."), 0);
   }, []);
 
   const clearCart = useCallback(() => {
     setCartItems([]);
-    showSuccess("Cart cleared.");
+    setTimeout(() => showSuccess("Cart cleared."), 0);
   }, []);
 
   const saveForLater = useCallback((item: CartItem) => {
     setCartItems(prevItems => prevItems.filter(cartItem => cartItem.productId !== item.productId));
     setSavedItems(prevItems => {
       if (!prevItems.some(savedItem => savedItem.productId === item.productId)) {
-        showSuccess(`${item.name} saved for later.`);
+        setTimeout(() => showSuccess(`${item.name} saved for later.`), 0);
         return [...prevItems, item];
       }
       return prevItems;
@@ -161,7 +161,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const itemToMove = prevItems.find(item => item.productId === productId);
       if (itemToMove) {
         addToCart(itemToMove, itemToMove.quantity);
-        showSuccess(`${itemToMove.name} moved to cart.`);
+        setTimeout(() => showSuccess(`${itemToMove.name} moved to cart.`), 0);
         return prevItems.filter(item => item.productId !== productId);
       }
       return prevItems;
@@ -170,7 +170,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeSavedItem = useCallback((productId: string) => {
     setSavedItems(prevItems => prevItems.filter(item => item.productId !== productId));
-    showSuccess("Saved item removed.");
+    setTimeout(() => showSuccess("Saved item removed."), 0);
   }, []);
 
   const totalItems = useMemo(() => cartItems.reduce((sum, item) => sum + item.quantity, 0), [cartItems]);
