@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ArrowLeft, User, Mail, Phone, MapPin, Building2, Globe, StickyNote, CreditCard, Banknote, ShieldCheck, Truck, Package, CheckCircle, PlusCircle, Save } from "lucide-react";
+import { Loader2, ArrowLeft, User, Mail, Phone, MapPin, Building2, Globe, StickyNote, CreditCard, Banknote, ShieldCheck, Truck, Package, CheckCircle, PlusCircle, Save, ArrowRight, Info } from "lucide-react";
 import { CartItem } from "@/contexts/CartContext"; // Import CartItem type
 import { ShopDetails, DesignSettings } from "@/contexts/StorefrontContext"; // Import types
 import { formatCurrency } from "@/lib/formatters";
@@ -21,6 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { motion} from "framer-motion";
 
 const checkoutSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -276,7 +277,7 @@ export const CheckoutForm = ({
       </Dialog>
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
-        <ScrollArea className="flex-1 p-4 md:p-6 pr-6">
+        <ScrollArea className="flex-1 p-4 md:p-6 pr-6 max-h-full">
           <div className="space-y-6">
             {user && savedAddresses.length > 0 && (
               <Card className={cn("shadow-lg", blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card")}>

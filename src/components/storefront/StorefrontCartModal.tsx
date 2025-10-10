@@ -449,7 +449,7 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
                 checkoutStep={checkoutStep}
                 setCheckoutStep={setCheckoutStep}
                 onContinue={handleProceedToPayment}
-                onBack={onBack} {/* Pass the defined onBack function */}
+                onBack={onBack}
               />
             )}
           </div>
