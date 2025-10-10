@@ -25,7 +25,7 @@ serve(async (req) => {
     );
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      console.error('Instagram Posts Function Error: User not found or unauthorized.');
+      console.error('Instagram Posts Function Error: User not found or unauthorized from client request.');
       return new Response(JSON.stringify({ error: 'User not found or unauthorized.' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -35,9 +35,10 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => null);
 
-    // Determine access token source: from body (server-to-server) or DB (client-to-server)
+    // Determine access token source: from body (server-to-server call) or DB (client-to-server call)
     if (body?.user_access_token) {
       userAccessToken = body.user_access_token;
+      console.log(`Instagram Posts Function: Using access token from request body for user ${userId}.`);
     } else {
       const { data: integration, error: integrationError } = await supabase
         .from('integrations')
@@ -47,18 +48,19 @@ serve(async (req) => {
         .single();
 
       if (integrationError || !integration) {
-        console.error(`Instagram integration not found for user ${userId}:`, integrationError);
+        console.error(`Instagram integration not found for user ${userId}:`, integrationError?.message || 'No integration record.');
         return new Response(JSON.stringify({ error: "Instagram integration not found for this user. Please connect your account in the settings." }), {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       userAccessToken = integration.access_token;
+      console.log(`Instagram Posts Function: Using access token from DB for user ${userId}.`);
     }
 
     if (!FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
-        console.error('Instagram Posts Function Error: App secrets are not configured.');
-        return new Response(JSON.stringify({ error: "App secrets are not configured." }), {
+        console.error('Instagram Posts Function Error: FACEBOOK_APP_ID or FACEBOOK_APP_SECRET is not configured in Supabase secrets.');
+        return new Response(JSON.stringify({ error: "Server configuration error: Facebook App ID or Secret is missing." }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -71,7 +73,7 @@ serve(async (req) => {
     const debugData = await debugResponse.json();
 
     if (!debugData.data || !debugData.data.is_valid) {
-        console.error(`Instagram Posts Function Error for user ${userId}: Invalid or expired Facebook connection.`, debugData);
+        console.error(`Instagram Posts Function Error for user ${userId}: Invalid or expired Facebook connection. Debug data:`, debugData);
         return new Response(JSON.stringify({ error: "Your Facebook connection is invalid or has expired. Please disconnect and reconnect in the settings." }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -83,7 +85,7 @@ serve(async (req) => {
     const pagesResponse = await fetch(pagesUrl);
     if (!pagesResponse.ok) {
         const errorData = await pagesResponse.json();
-        console.error(`Instagram Posts Function Error for user ${userId}: Failed to fetch Facebook pages.`, errorData);
+        console.error(`Instagram Posts Function Error for user ${userId}: Failed to fetch Facebook pages. Error:`, errorData.error?.message || errorData);
         return new Response(JSON.stringify({ error: errorData.error?.message || 'Failed to fetch Facebook pages. Please try reconnecting your account.' }), {
           status: pagesResponse.status,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -95,7 +97,7 @@ serve(async (req) => {
     if (!igAccount) {
       const pageNames = pagesData.data.map((page: any) => page.name).join(', ');
       const detailedError = `We found the following Facebook Page(s): ${pageNames}. However, none of them have a linked Instagram Business Account that this app has permission to access. Please try disconnecting and reconnecting. During the Facebook login process, ensure you click "Edit Settings" and grant all requested permissions for both your Facebook Page and your Instagram account.`;
-      console.error(`Instagram Posts Function Error for user ${userId}: No linked Instagram Business Account.`, detailedError);
+      console.error(`Instagram Posts Function Error for user ${userId}: No linked Instagram Business Account. Detailed error:`, detailedError);
       return new Response(JSON.stringify({ error: detailedError }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -115,8 +117,8 @@ serve(async (req) => {
         const mediaResponse = await fetch(mediaUrl);
         if (!mediaResponse.ok) {
             const errorData = await mediaResponse.json();
-            console.error(`Instagram Posts Function Error for user ${userId}: Failed to fetch media from Instagram.`, errorData);
-            throw new Error(errorData.error.message || 'Failed to fetch media from Instagram.');
+            console.error(`Instagram Posts Function Error for user ${userId}: Failed to fetch media from Instagram. Error:`, errorData.error?.message || errorData);
+            throw new Error(errorData.error?.message || 'Failed to fetch media from Instagram.');
         }
 
         const pageData = await mediaResponse.json();
@@ -127,13 +129,15 @@ serve(async (req) => {
         mediaUrl = pageData.paging?.next || null;
     }
 
+    console.log(`Instagram Posts fetched for user ${userId}: ${allMedia.length} posts.`);
+
     return new Response(JSON.stringify({ posts: allMedia }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
 
   } catch (error) {
-    console.error(`Instagram Posts Function Error for user ${userId || 'unknown'}:`, error.message);
+    console.error(`Instagram Posts Function (Catch Block) Error for user ${userId || 'unknown'}:`, error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

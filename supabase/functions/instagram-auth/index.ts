@@ -24,7 +24,8 @@ serve(async (req) => {
   }
 
   if (!FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
-    return new Response(JSON.stringify({ error: "Facebook App ID or Secret is not configured." }), {
+    console.error("FACEBOOK_APP_ID or FACEBOOK_APP_SECRET is not configured in Supabase secrets.");
+    return new Response(JSON.stringify({ error: "Server configuration error: Facebook App ID or Secret is missing." }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -46,6 +47,7 @@ serve(async (req) => {
       const error = url.searchParams.get('error');
       if (error) {
         const errorDescription = url.searchParams.get('error_description') || 'Permissions were denied.';
+        console.error(`Facebook OAuth Callback Error: ${errorDescription}`);
         const redirectUrl = new URL(origin);
         redirectUrl.searchParams.set('integration_error', errorDescription);
         return Response.redirect(redirectUrl.toString(), 302);
@@ -58,30 +60,40 @@ serve(async (req) => {
       const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${FACEBOOK_APP_ID}&redirect_uri=${REDIRECT_URI}&client_secret=${FACEBOOK_APP_SECRET}&code=${code}`;
       const tokenResponse = await fetch(tokenUrl);
       const tokenData = await tokenResponse.json();
-      if (!tokenResponse.ok) throw new Error(tokenData.error.message);
+      if (!tokenResponse.ok) {
+        console.error("Failed to exchange short-lived token:", tokenData.error?.message || tokenData);
+        throw new Error(tokenData.error?.message || 'Failed to exchange short-lived token.');
+      }
       const shortLivedToken = tokenData.access_token;
 
       // 2. Exchange for long-lived token
       const longLivedTokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${FACEBOOK_APP_ID}&client_secret=${FACEBOOK_APP_SECRET}&fb_exchange_token=${shortLivedToken}`;
       const longLivedTokenResponse = await fetch(longLivedTokenUrl);
       const longLivedTokenData = await longLivedTokenResponse.json();
-      if (!longLivedTokenResponse.ok) throw new Error(longLivedTokenData.error.message);
+      if (!longLivedTokenResponse.ok) {
+        console.error("Failed to exchange for long-lived token:", longLivedTokenData.error?.message || longLivedTokenData);
+        throw new Error(longLivedTokenData.error?.message || 'Failed to exchange for long-lived token.');
+      }
       const longLivedToken = longLivedTokenData.access_token;
 
       // 3. Fetch user profile and linked Instagram Business Account
-      const profileUrl = `https://graph.facebook.com/v19.0/me?fields=id,email,first_name,last_name,picture,accounts{instagram_business_account{username,profile_picture_url,name}}&access_token=${longLivedToken}`;
+      // Requesting more fields to ensure we get all necessary info for user_metadata and shop_details
+      const profileUrl = `https://graph.facebook.com/v19.0/me?fields=id,email,first_name,last_name,picture,accounts{instagram_business_account{id,username,profile_picture_url,name,biography,followers_count,media_count,website}}&access_token=${longLivedToken}`;
       const profileResponse = await fetch(profileUrl);
       const profileData = await profileResponse.json();
-      if (!profileResponse.ok) throw new Error(profileData.error.message);
+      if (!profileResponse.ok) {
+        console.error("Failed to fetch Facebook user profile:", profileData.error?.message || profileData);
+        throw new Error(profileData.error?.message || 'Failed to fetch Facebook user profile.');
+      }
       
       const { email, first_name, last_name, picture, accounts } = profileData;
       if (!email) throw new Error("Could not retrieve email from Facebook. Please ensure your account has a verified email and you granted email permissions.");
 
       const igAccount = accounts?.data?.find((page: any) => page.instagram_business_account)?.instagram_business_account;
 
-      // Crucial check: Ensure Instagram Business Account is linked
       if (!igAccount) {
         const errorDescription = "No linked Instagram Business Account found. Please ensure your Instagram account is a Business or Creator account and is linked to the Facebook Page you selected. Also, ensure you grant all requested permissions during the Facebook login process.";
+        console.error(`Instagram Auth Error for user ${email}: ${errorDescription}`);
         const redirectUrl = new URL(origin);
         redirectUrl.searchParams.set('integration_error', errorDescription);
         return Response.redirect(redirectUrl.toString(), 302);
@@ -90,16 +102,35 @@ serve(async (req) => {
       const instagram_username = igAccount.username;
       const instagram_profile_picture_url = igAccount.profile_picture_url;
       const instagram_shop_name = igAccount.name;
+      const instagram_biography = igAccount.biography;
+      const instagram_followers_count = igAccount.followers_count;
+      const instagram_media_count = igAccount.media_count;
+      const instagram_website = igAccount.website;
+
 
       const supabaseAdmin = getSupabaseAdmin();
       let userId: string;
 
       // 4. Find or create user in Supabase auth
       const { data: users, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({ email: email });
-      if (listUsersError) throw listUsersError;
+      if (listUsersError) {
+        console.error("Supabase Admin: Error listing users:", listUsersError);
+        throw listUsersError;
+      }
 
       if (users && users.users.length > 0) {
         userId = users.users[0].id;
+        // Update existing user's metadata if necessary
+        const { error: updateUserError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+          user_metadata: {
+            first_name,
+            last_name,
+            avatar_url: picture?.data?.url,
+            full_name: `${first_name} ${last_name || ''}`.trim(),
+            username: instagram_username, // Ensure Instagram username is in metadata
+          }
+        });
+        if (updateUserError) console.error("Supabase Admin: Error updating user metadata:", updateUserError);
       } else {
         const tempPassword = crypto.randomUUID(); // Generate a temporary password for new users
         const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
@@ -111,10 +142,13 @@ serve(async (req) => {
             last_name,
             avatar_url: picture?.data?.url,
             full_name: `${first_name} ${last_name || ''}`.trim(),
-            username: instagram_username,
+            username: instagram_username, // Ensure Instagram username is in metadata
           }
         });
-        if (createUserError) throw createUserError;
+        if (createUserError) {
+          console.error("Supabase Admin: Error creating new user:", createUserError);
+          throw createUserError;
+        }
         userId = newUser.user.id;
       }
 
@@ -124,7 +158,10 @@ serve(async (req) => {
         provider: 'facebook',
         access_token: longLivedToken,
       }, { onConflict: 'user_id,provider' });
-      if (upsertError) throw upsertError;
+      if (upsertError) {
+        console.error("Supabase DB: Error upserting integration:", upsertError);
+        throw upsertError;
+      }
 
       // 6. Upload Instagram profile picture to Supabase Storage
       let uploadedLogoUrl: string | null = null;
@@ -166,9 +203,13 @@ serve(async (req) => {
           .insert({ user_id: userId, name: `${first_name}'s Business` })
           .select('id, name')
           .single();
-        if (createBusinessError) throw createBusinessError;
+        if (createBusinessError) {
+          console.error("Supabase DB: Error creating new business:", createBusinessError);
+          throw createBusinessError;
+        }
         businessData = newBusiness;
       } else if (fetchBusinessError) {
+        console.error("Supabase DB: Error fetching business:", fetchBusinessError);
         throw fetchBusinessError;
       }
 
@@ -183,12 +224,19 @@ serve(async (req) => {
         slug: instagram_username ? instagram_username.toLowerCase().replace(/[^a-z0-9-]/g, '') : `${first_name.toLowerCase()}-shop`,
         logo_url: uploadedLogoUrl,
         favicon_url: uploadedLogoUrl,
+        currency: 'USD', // Default currency, user can change in settings
+        headline: instagram_biography?.substring(0, 100) || null, // Use IG bio as initial headline
+        about: instagram_biography || null, // Use IG bio as initial about
         contact_email: email,
         instagram_url: instagram_username ? `https://www.instagram.com/${instagram_username}` : null,
+        followers_count: instagram_followers_count,
+        media_count: instagram_media_count,
+        website: instagram_website || null,
+        username: instagram_username,
       };
 
       const { error: shopDetailsUpsertError } = await supabaseAdmin.from('shop_details').upsert(shopDetailsPayload, { onConflict: 'business_id' });
-      if (shopDetailsUpsertError) console.error("Error upserting shop details:", shopDetailsUpsertError);
+      if (shopDetailsUpsertError) console.error("Supabase DB: Error upserting shop details:", shopDetailsUpsertError);
 
       // 9. Generate magic link for seamless redirection
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
@@ -196,12 +244,15 @@ serve(async (req) => {
         email: email,
         options: { redirectTo: `${origin}?integration_success=true` }
       });
-      if (linkError) throw linkError;
+      if (linkError) {
+        console.error("Supabase Auth Admin: Error generating magic link:", linkError);
+        throw linkError;
+      }
 
       return Response.redirect(linkData.properties.action_link, 302);
 
     } catch (error) {
-      console.error('OAuth Callback Error:', error.message);
+      console.error('OAuth Callback Error (Catch Block):', error.message);
       const errorUrl = new URL(origin);
       errorUrl.searchParams.set('integration_error', error.message);
       return Response.redirect(errorUrl.toString(), 302);
@@ -214,17 +265,19 @@ serve(async (req) => {
 
       const statePayload = JSON.stringify({ origin });
       const encodedState = btoa(statePayload);
-      const scopes = 'public_profile,email,pages_show_list,instagram_basic,pages_read_engagement';
+      // Ensure these scopes match or are a subset of what's requested in Login.tsx
+      const scopes = 'public_profile,email,pages_show_list,instagram_basic,instagram_manage_insights,instagram_manage_comments,instagram_content_publish,pages_read_engagement,pages_manage_posts,pages_manage_metadata';
       
       const authUrl = new URL('https://www.facebook.com/v19.0/dialog/oauth');
       authUrl.searchParams.set('client_id', FACEBOOK_APP_ID);
       authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
       authUrl.searchParams.set('scope', scopes);
       authUrl.searchParams.set('state', encodedState);
-      authUrl.searchParams.set('auth_type', 'rerequest');
+      authUrl.searchParams.set('auth_type', 'rerequest'); // Always re-request permissions
       
       return Response.redirect(authUrl.toString(), 302);
     } catch (error) {
+      console.error('Initial OAuth Redirect Error:', error.message);
       return new Response(JSON.stringify({ error: error.message }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
