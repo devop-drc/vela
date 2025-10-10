@@ -67,16 +67,14 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
     setCheckoutStep('contact-shipping');
   };
 
-  const handleBackToCart = () => {
-    setCheckoutStep('cart');
-  };
-
-  const handleBackToContactShipping = () => {
-    setCheckoutStep('contact-shipping');
-  };
-
-  const handleProceedToPayment = () => {
-    setCheckoutStep('payment');
+  const handleBack = () => {
+    if (checkoutStep === 'payment') {
+      setCheckoutStep('contact-shipping');
+    } else if (checkoutStep === 'contact-shipping') {
+      setCheckoutStep('cart');
+    } else {
+      onClose(); // If on cart step, close the modal
+    }
   };
 
   const handlePlaceOrder = async (data: CheckoutFormData) => {
@@ -154,30 +152,12 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
   };
 
   const getHeaderBackButton = () => {
-    if (checkoutStep === 'cart') {
-      return (
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 md:h-9 md:w-9">
-          <X className="h-5 w-5" />
-          <span className="sr-only">Close</span>
-        </Button>
-      );
-    } else {
-      return (
-        <Button variant="ghost" size="icon" onClick={checkoutStep === 'payment' ? handleBackToContactShipping : handleBackToCart} className="h-8 w-8 md:h-9 md:w-9">
-          <ArrowLeft className="h-5 w-5" />
-          <span className="sr-only">Back</span>
-        </Button>
-      );
-    }
-  };
-
-  // Define onBack function for the CheckoutForm component
-  const onBack = () => {
-    if (checkoutStep === 'payment') {
-      setCheckoutStep('contact-shipping');
-    } else if (checkoutStep === 'contact-shipping') {
-      setCheckoutStep('cart');
-    }
+    return (
+      <Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 md:h-9 md:w-9">
+        <X className="h-5 w-5" />
+        <span className="sr-only">Close</span>
+      </Button>
+    );
   };
 
   return (
@@ -437,7 +417,7 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
               </>
             ) : (
               <CheckoutForm
-                onBackToCart={handleBackToCart}
+                onBackToCart={handleBack} // Use the modal's handleBack
                 onPlaceOrder={handlePlaceOrder}
                 isSubmittingOrder={isSubmittingOrder}
                 cartItems={cartItems}
@@ -450,8 +430,7 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
                 hasSubscriptionProducts={hasSubscriptionProducts}
                 checkoutStep={checkoutStep}
                 setCheckoutStep={setCheckoutStep}
-                onContinue={handleProceedToPayment}
-                onBack={onBack}
+                onContinue={() => setCheckoutStep('payment')} // Move to payment step
               />
             )}
           </div>
@@ -482,19 +461,38 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
                 <span>{formatCurrency(total, shopDetails?.currency)}</span>
               </div>
             </div>
-            {/* Buttons for navigation are now exclusively in CheckoutForm's footer */}
           </div>
         </div>
         <DialogFooter className="p-4 md:p-6 border-t flex-shrink-0">
-          {/* This footer is for the modal itself, not for checkout navigation */}
           {checkoutStep === 'cart' && (
             <Button className="w-full text-base md:text-lg" onClick={handleProceedToCheckout} disabled={cartItems.length === 0}>
               Proceed to Checkout
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           )}
+          {checkoutStep === 'contact-shipping' && (
+            <Button type="submit" form="checkout-form" className="w-full text-base md:text-lg" disabled={isSubmittingOrder}>
+              Continue to Payment
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          )}
+          {checkoutStep === 'payment' && (
+            <Button type="submit" form="checkout-form" className="w-full text-base md:text-lg" disabled={isSubmittingOrder}>
+              {isSubmittingOrder ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Placing Order...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 h-5 w-5" />
+                  Place Order
+                </>
+              )}
+            </Button>
+          )}
           {checkoutStep !== 'cart' && (
-            <Button variant="ghost" className="w-full text-base md:text-lg mt-2" onClick={onBack}>
+            <Button variant="ghost" className="w-full text-base md:text-lg mt-2" onClick={handleBack}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>

@@ -84,7 +84,6 @@ interface CheckoutFormProps {
   checkoutStep: 'contact-shipping' | 'payment'; // Current step
   setCheckoutStep: (step: 'contact-shipping' | 'payment') => void; // Function to change step
   onContinue: () => void; // New prop for continue button
-  onBack: () => void; // New prop for back button
 }
 
 export const CheckoutForm = ({
@@ -102,7 +101,6 @@ export const CheckoutForm = ({
   checkoutStep,
   setCheckoutStep,
   onContinue,
-  onBack,
 }: CheckoutFormProps) => {
   const blurEnabled = appearanceSettings?.blurEnabled;
   const [user, setUser] = useState<any>(null);
@@ -480,33 +478,7 @@ export const CheckoutForm = ({
             )}
           </div>
         </ScrollArea>
-        <div className="p-4 md:p-6 border-t flex-shrink-0">
-          {checkoutStep === 'contact-shipping' && (
-            <Button type="submit" className="w-full text-base md:text-lg" disabled={isSubmittingOrder || !isValid}>
-              Continue to Payment
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          )}
-          {checkoutStep === 'payment' && (
-            <Button type="submit" className="w-full text-base md:text-lg" disabled={isSubmittingOrder}>
-              {isSubmittingOrder ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Placing Order...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="mr-2 h-5 w-5" />
-                  Place Order
-                </>
-              )}
-            </Button>
-          )}
-          <Button type="button" variant="ghost" className="w-full text-base md:text-lg mt-2" onClick={onBack}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-        </div>
+        {/* The form's submit button is now handled by the DialogFooter in StorefrontCartModal */}
       </form>
     </>
   );
