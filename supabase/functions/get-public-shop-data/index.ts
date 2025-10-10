@@ -87,7 +87,7 @@ serve(async (req) => {
       .from('products')
       .select('*', { count: 'exact' }) // Get exact count
       .eq('business_id', businessId)
-      // .eq('status', 'Active') // REMOVED: Show all products regardless of 'Active' status
+      .neq('status', 'Draft') // MODIFIED: Exclude 'Draft' products
       .range(offset, offset + limit - 1); // Apply range for pagination
 
     if (productsError) {

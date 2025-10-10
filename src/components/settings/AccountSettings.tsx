@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Facebook, ExternalLink, Languages, Bell, Trash2, User, Mail, Phone } from 'lucide-react'; // Added Phone icon
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { IntegrationSettings } from './IntegrationSettings';
+import { useSearchParams } from 'react-router-dom'; // Import useSearchParams
 
 const PreferenceRow = ({ id, title, description, defaultChecked = false }: { id: string, title: string, description: string, defaultChecked?: boolean }) => (
   <div className="flex items-center justify-between p-3 border rounded-lg">
@@ -27,37 +28,39 @@ export const AccountSettings = () => {
   const [profile, setProfile] = useState<any | null>(null); // State for user profile
   const [isLoading, setIsLoading] = useState(true);
   const [facebookId, setFacebookId] = useState<string | null>(null);
+  const [searchParams] = useSearchParams(); // Get search params
+
+  const fetchUserAndProfile = async () => {
+    setIsLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    setUser(user);
+
+    if (user) {
+      // Fetch profile data
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, avatar_url, phone_number') // Added phone_number
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error fetching profile:", profileError);
+      } else {
+        setProfile(profileData);
+      }
+
+      // Check for Facebook identity
+      const facebookIdentity = user.identities?.find(i => i.provider === 'facebook');
+      if (facebookIdentity) {
+        setFacebookId(facebookIdentity.id);
+      }
+    }
+    setIsLoading(false);
+  };
 
   useEffect(() => {
-    const fetchUserAndProfile = async () => {
-      setIsLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-
-      if (user) {
-        // Fetch profile data
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('first_name, last_name, avatar_url, phone_number') // Added phone_number
-          .eq('id', user.id)
-          .single();
-
-        if (profileError) {
-          console.error("Error fetching profile:", profileError);
-        } else {
-          setProfile(profileData);
-        }
-
-        // Check for Facebook identity
-        const facebookIdentity = user.identities?.find(i => i.provider === 'facebook');
-        if (facebookIdentity) {
-          setFacebookId(facebookIdentity.id);
-        }
-      }
-      setIsLoading(false);
-    };
     fetchUserAndProfile();
-  }, []);
+  }, [searchParams.get('integration_success')]); // Re-fetch when integration_success param changes
 
   if (isLoading) {
     return (
