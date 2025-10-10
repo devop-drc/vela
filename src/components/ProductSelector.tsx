@@ -258,18 +258,18 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 p-4 border-b">
+      <div className="flex items-center gap-2 p-4 border-b flex-shrink-0">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search products..."
-            className="pl-10"
+            className="pl-10 h-10 px-3 py-2"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-[150px] h-10 px-3 py-2">
             <ListFilter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -281,7 +281,7 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
           </SelectContent>
         </Select>
         <Select value={sortOption} onValueChange={setSortOption}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[180px] h-10 px-3 py-2">
             <ArrowUpNarrowWide className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
@@ -297,10 +297,10 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
       </div>
 
       <ScrollArea className="flex-1"> {/* Wrap filter bar and table in ScrollArea */}
-        <div className="p-4 border-b flex flex-wrap gap-2">
+        <div className="p-4 border-b flex flex-wrap gap-2 flex-shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="h-9 px-3">
                 <ListFilter className="mr-2 h-4 w-4" />
                 Categories ({filters.categories.length})
                 {filters.categories.length > 0 && <XCircle className="ml-2 h-3 w-3" onClick={(e) => { e.stopPropagation(); handleClearSection('categories'); }} />}
@@ -323,7 +323,7 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="h-9 px-3">
                 <Tag className="mr-2 h-4 w-4" />
                 Tags ({filters.tags.length})
                 {filters.tags.length > 0 && <XCircle className="ml-2 h-3 w-3" onClick={(e) => { e.stopPropagation(); handleClearSection('tags'); }} />}
@@ -346,7 +346,7 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="h-9 px-3">
                 <DollarSign className="mr-2 h-4 w-4" />
                 Price Range
                 {(filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice) && <XCircle className="ml-2 h-3 w-3" onClick={(e) => { e.stopPropagation(); handleClearSection('priceRange'); }} />}
@@ -377,7 +377,7 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
             return attr.values.length > 0 ? (
               <DropdownMenu key={filterKey}>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="h-9 px-3">
                     <Icon className="mr-2 h-4 w-4" />
                     {attr.name.replace(/_/g, ' ')} ({isFilterApplied ? (filters[filterKey] as string[]).length : 0})
                     {isFilterApplied && <XCircle className="ml-2 h-3 w-3" onClick={(e) => { e.stopPropagation(); handleClearSection(filterKey); }} />}
@@ -401,7 +401,7 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
           })}
 
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={handleResetAllFilters} className="text-destructive hover:text-destructive">
+            <Button variant="ghost" size="sm" onClick={handleResetAllFilters} className="text-destructive hover:text-destructive h-9 px-3">
               <XCircle className="mr-2 h-4 w-4" />
               Clear All Filters
             </Button>

@@ -347,7 +347,6 @@ const Promotions = () => {
             Add Announcement
           </Button>
         </div>
-        {/* Marquee Live Preview */}
         {storefrontAnnouncements.filter(e => e.is_active).length > 0 && (
           <div className="space-y-2 pt-4">
             <h3 className="font-semibold text-lg flex items-center gap-2"><Megaphone className="h-5 w-5" /> Live Preview</h3>

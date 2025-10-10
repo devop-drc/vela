@@ -254,7 +254,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
             <div className="space-y-6 py-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Promotion Name</Label>
-                <Input id="name" {...register("name")} placeholder="e.g., Summer Sale, Free Shipping" />
+                <Input id="name" {...register("name")} placeholder="e.g., Summer Sale, Free Shipping" className="h-10 px-3 py-2" />
                 {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
               </div>
 
@@ -270,7 +270,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                       if (value === 'discount') setValue('value', { discountType: "percentage", discountValue: 0 });
                       else if (value === 'offer') setValue('value', { offerType: "free_shipping", minOrderValue: 0 });
                     }} value={field.value}>
-                      <SelectTrigger id="type">
+                      <SelectTrigger id="type" className="h-10 px-3 py-2">
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -292,7 +292,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                       control={control}
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger id="discountType">
+                          <SelectTrigger id="discountType" className="h-10 px-3 py-2">
                             <SelectValue placeholder="Select discount type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -306,13 +306,21 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="discountValue">Discount Value</Label>
-                    <Input
-                      id="discountValue"
-                      type="number"
-                      step="0.01"
-                      {...register("value.discountValue", { valueAsNumber: true })}
-                      placeholder={discountType === 'percentage' ? "e.g., 15" : "e.g., 10.00"}
-                    />
+                    <div className="relative">
+                      {discountType === 'flat' && shopDetails?.currency && (
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                          {shopDetails.currency === 'USD' ? '$' : shopDetails.currency === 'EUR' ? '€' : shopDetails.currency}
+                        </span>
+                      )}
+                      <Input
+                        id="discountValue"
+                        type="number"
+                        step="0.01"
+                        {...register("value.discountValue", { valueAsNumber: true })}
+                        placeholder={discountType === 'percentage' ? "e.g., 15" : "e.g., 10.00"}
+                        className={cn("h-10 px-3 py-2", discountType === 'flat' && "pl-8")}
+                      />
+                    </div>
                     {errors.value?.discountValue && <p className="text-sm text-destructive mt-1">{errors.value.discountValue.message}</p>}
                   </div>
                 </div>
@@ -326,7 +334,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                     control={control}
                     render={({ field }) => (
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger id="offerType">
+                        <SelectTrigger id="offerType" className="h-10 px-3 py-2">
                           <SelectValue placeholder="Select offer type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -341,13 +349,21 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                   {offerType === 'free_shipping' && (
                     <div className="space-y-2 mt-4">
                       <Label htmlFor="minOrderValue">Minimum Order Value for Free Shipping</Label>
-                      <Input
-                        id="minOrderValue"
-                        type="number"
-                        step="0.01"
-                        {...register("value.minOrderValue", { valueAsNumber: true })}
-                        placeholder="e.g., 50.00"
-                      />
+                      <div className="relative">
+                        {shopDetails?.currency && (
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                            {shopDetails.currency === 'USD' ? '$' : shopDetails.currency === 'EUR' ? '€' : shopDetails.currency}
+                          </span>
+                        )}
+                        <Input
+                          id="minOrderValue"
+                          type="number"
+                          step="0.01"
+                          {...register("value.minOrderValue", { valueAsNumber: true })}
+                          placeholder="e.g., 50.00"
+                          className="h-10 px-3 py-2 pl-8"
+                        />
+                      </div>
                       {errors.value?.minOrderValue && <p className="text-sm text-destructive mt-1">{errors.value.minOrderValue.message}</p>}
                     </div>
                   )}
@@ -358,7 +374,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                 <div className="space-y-4 border p-4 rounded-lg">
                   <h3 className="font-semibold text-base flex items-center gap-2"><Package className="h-4 w-4" /> Target Products</h3>
                   <p className="text-sm text-muted-foreground">Select specific products this promotion applies to. Leave empty to apply to all products.</p>
-                  <Button type="button" variant="outline" onClick={() => setIsProductSelectorOpen(true)}>
+                  <Button type="button" variant="outline" onClick={() => setIsProductSelectorOpen(true)} className="h-10 px-4 py-2">
                     Select Products ({targetProducts?.length || 0})
                   </Button>
                   {selectedProductNames.length > 0 && (
@@ -388,7 +404,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full justify-start text-left font-normal",
+                              "w-full justify-start text-left font-normal h-10 px-3 py-2",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -419,7 +435,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full justify-start text-left font-normal",
+                              "w-full justify-start text-left font-normal h-10 px-3 py-2",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -448,7 +464,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                   control={control}
                   render={({ field }) => (
                     <Select onValueChange={(value) => field.onChange(value === '' ? 'none' : value)} value={field.value || 'none'}>
-                      <SelectTrigger id="repeat_interval">
+                      <SelectTrigger id="repeat_interval" className="h-10 px-3 py-2">
                         <SelectValue placeholder="No repeat" />
                       </SelectTrigger>
                       <SelectContent>

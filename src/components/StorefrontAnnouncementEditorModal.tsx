@@ -132,7 +132,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
             <div className="space-y-6 py-4">
               <div className="space-y-2">
                 <Label htmlFor="message">Message</Label>
-                <Textarea id="message" {...register("message")} placeholder="e.g., Flash Sale! Get 20% off all items this week!" rows={3} />
+                <Textarea id="message" {...register("message")} placeholder="e.g., Flash Sale! Get 20% off all items this week!" rows={3} className="h-auto min-h-[80px] px-3 py-2" />
                 {errors.message && <p className="text-sm text-destructive mt-1">{errors.message.message}</p>}
               </div>
 
@@ -149,7 +149,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                             variant="outline"
                             role="combobox"
                             aria-expanded={iconPickerOpen}
-                            className="w-full justify-between"
+                            className="w-full justify-between h-10 px-3 py-2"
                           >
                             <div className="flex items-center gap-2">
                               <IconComponent className="h-4 w-4" />
@@ -201,7 +201,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="display_order">Display Order</Label>
-                  <Input id="display_order" type="number" {...register("display_order", { valueAsNumber: true })} />
+                  <Input id="display_order" type="number" {...register("display_order", { valueAsNumber: true })} className="h-10 px-3 py-2" />
                   {errors.display_order && <p className="text-sm text-destructive mt-1">{errors.display_order.message}</p>}
                 </div>
               </div>
@@ -218,7 +218,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full justify-start text-left font-normal",
+                              "w-full justify-start text-left font-normal h-10 px-3 py-2",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -249,7 +249,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full justify-start text-left font-normal",
+                              "w-full justify-start text-left font-normal h-10 px-3 py-2",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -278,7 +278,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                   control={control}
                   render={({ field }) => (
                     <Select onValueChange={(value) => field.onChange(value === '' ? 'none' : value)} value={field.value || 'none'}>
-                      <SelectTrigger id="repeat_interval">
+                      <SelectTrigger id="repeat_interval" className="h-10 px-3 py-2">
                         <SelectValue placeholder="No repeat" />
                       </SelectTrigger>
                       <SelectContent>
