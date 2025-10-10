@@ -24,7 +24,6 @@ import StorefrontIndex from "./pages/StorefrontIndex";
 import StorefrontProductDetail from "./pages/StorefrontProductDetail";
 import StorefrontAllProducts from "./pages/StorefrontAllProducts";
 import StorefrontClientOrders from "./pages/StorefrontClientOrders";
-import StorefrontCheckout from "./pages/StorefrontCheckout"; // Import the new checkout page
 import Promotions from "./pages/Promotions";
 import { useEffect } from "react";
 import { supabase } from "./integrations/supabase/client";
@@ -108,7 +107,6 @@ const AppContent = () => {
         <Route path="products" element={<StorefrontAllProducts />} />
         <Route path="product/:productId" element={<StorefrontProductDetail />} />
         <Route path="orders" element={<StorefrontClientOrders />} /> 
-        <Route path="checkout" element={<StorefrontCheckout />} /> {/* Add checkout route */}
       </Route>
 
       {/* Auth Routes */}
