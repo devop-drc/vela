@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { Marquee } from "@/components/ui/marquee"; // Import Marquee for preview
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { Switch } from "@/components/ui/switch"; // Import Switch for active toggle
 
 // List of common Lucide icons for selection
 const availableIcons: (keyof typeof LucideIcons)[] = [
@@ -120,16 +121,16 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader className="p-6 pb-4">
+      <DialogContent className="max-w-xl h-[90vh] flex flex-col p-0"> {/* Reverted padding to p-0 */}
+        <DialogHeader className="p-6 pb-4"> {/* Added padding to header */}
           <DialogTitle>{element ? "Edit Storefront Announcement" : "Add New Storefront Announcement"}</DialogTitle>
           <DialogDescription>
             Create a scrolling message for your storefront.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 flex flex-col overflow-hidden">
-          <ScrollArea className="flex-1 px-6">
-            <div className="space-y-6 py-4">
+          <ScrollArea className="flex-1 px-6"> {/* Added horizontal padding to ScrollArea */}
+            <div className="space-y-6 py-4"> {/* Added vertical padding to content */}
               <div className="space-y-2">
                 <Label htmlFor="message">Message</Label>
                 <Textarea id="message" {...register("message")} placeholder="e.g., Flash Sale! Get 20% off all items this week!" rows={3} className="h-auto min-h-[80px] px-3 py-2" />
@@ -151,7 +152,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                             aria-expanded={iconPickerOpen}
                             className="w-full justify-between h-10 px-3 py-2"
                           >
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2"> {/* Ensure icon and text are in one line */}
                               <IconComponent className="h-4 w-4" />
                               {field.value || "Select icon..."}
                             </div>
@@ -293,19 +294,22 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                 />
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center justify-between rounded-lg border p-4"> {/* Added border and padding */}
+                <div className="space-y-0.5">
+                  <Label htmlFor="isActive" className="text-base">Active</Label>
+                  <p className="text-sm text-muted-foreground">Enable or disable this announcement.</p>
+                </div>
                 <Controller
                   name="is_active"
                   control={control}
                   render={({ field }) => (
-                    <Checkbox
+                    <Switch
                       id="isActive"
                       checked={field.value}
                       onCheckedChange={field.onChange}
                     />
                   )}
                 />
-                <Label htmlFor="isActive">Active</Label>
               </div>
 
               {/* Live Preview */}

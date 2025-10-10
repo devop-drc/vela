@@ -21,6 +21,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Badge } from "./ui/badge";
 import { useShop } from "@/contexts/ShopContext"; // Import useShop
 import { formatCurrency } from "@/lib/formatters"; // Import formatCurrency
+import { Switch } from "@/components/ui/switch"; // Import Switch for active toggle
 
 const promotionSchema = z.object({
   name: z.string().min(1, "Promotion name is required"),
@@ -242,16 +243,16 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
-        <DialogHeader className="p-6 pb-4">
+      <DialogContent className="max-w-2xl h-[90vh] flex flex-col p-0"> {/* Reverted padding to p-0 */}
+        <DialogHeader className="p-6 pb-4"> {/* Added padding to header */}
           <DialogTitle>{promotion ? "Edit Promotion" : "Create New Promotion"}</DialogTitle>
           <DialogDescription>
             Define your marketing campaigns, discounts, and special offers.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
-          <ScrollArea className="flex-1 px-6">
-            <div className="space-y-6 py-4">
+          <ScrollArea className="flex-1 px-6"> {/* Added horizontal padding to ScrollArea */}
+            <div className="space-y-6 py-4"> {/* Added vertical padding to content */}
               <div className="space-y-2">
                 <Label htmlFor="name">Promotion Name</Label>
                 <Input id="name" {...register("name")} placeholder="e.g., Summer Sale, Free Shipping" className="h-10 px-3 py-2" />
@@ -271,6 +272,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                       else if (value === 'offer') setValue('value', { offerType: "free_shipping", minOrderValue: 0 });
                     }} value={field.value}>
                       <SelectTrigger id="type" className="h-10 px-3 py-2">
+                        <Percent className="mr-2 h-4 w-4" /> {/* Icon on left */}
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -293,6 +295,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value}>
                           <SelectTrigger id="discountType" className="h-10 px-3 py-2">
+                            <Percent className="mr-2 h-4 w-4" /> {/* Icon on left */}
                             <SelectValue placeholder="Select discount type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -335,6 +338,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                     render={({ field }) => (
                       <Select onValueChange={field.onChange} value={field.value}>
                         <SelectTrigger id="offerType" className="h-10 px-3 py-2">
+                          <Gift className="mr-2 h-4 w-4" /> {/* Icon on left */}
                           <SelectValue placeholder="Select offer type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -479,19 +483,22 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                 />
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center justify-between rounded-lg border p-4"> {/* Added border and padding */}
+                <div className="space-y-0.5">
+                  <Label htmlFor="isActive" className="text-base">Active</Label>
+                  <p className="text-sm text-muted-foreground">Enable or disable this promotion.</p>
+                </div>
                 <Controller
                   name="is_active"
                   control={control}
                   render={({ field }) => (
-                    <Checkbox
+                    <Switch
                       id="isActive"
                       checked={field.value}
                       onCheckedChange={field.onChange}
                     />
                   )}
                 />
-                <Label htmlFor="isActive">Active</Label>
               </div>
             </div>
           </ScrollArea>

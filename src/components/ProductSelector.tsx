@@ -297,7 +297,7 @@ export const ProductSelector = ({ selectedProductIds, onSelectionChange, onClose
       </div>
 
       <ScrollArea className="flex-1"> {/* Wrap filter bar and table in ScrollArea */}
-        <div className="p-4 border-b flex flex-wrap gap-2 flex-shrink-0">
+        <div className="p-4 flex flex-wrap gap-2 flex-shrink-0"> {/* Removed border-b here */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-9 px-3">
