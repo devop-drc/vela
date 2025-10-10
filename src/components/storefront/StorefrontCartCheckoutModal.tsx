@@ -41,6 +41,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
 
   const convertedTotalPrice = useMemo(() => {
     if (!shopDetails?.currency) return 0;
+    // The `total` from useCart is already in the shop's display currency
     return total;
   }, [total, shopDetails?.currency]);
 

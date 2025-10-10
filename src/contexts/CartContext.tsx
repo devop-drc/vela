@@ -180,6 +180,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const subtotal = useMemo(() => {
     if (!shopDetails) return 0;
     return cartItems.reduce((sum, item) => {
+      // Convert item price from its stored currency (item.currency) to shop's display currency (shopDetails.currency)
       const convertedPrice = convertCurrency(item.price, item.currency, shopDetails.currency);
       const itemTotal = item.pricing_type === 'subscription' && item.intervalRepetitions
         ? convertedPrice * item.quantity * item.intervalRepetitions
@@ -192,6 +193,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Placeholder for shipping calculation
     // For now, a flat rate or free shipping if subtotal is high enough
     if (!shopDetails) return 0;
+    // Convert fixed shipping cost (e.g., $5 USD) to shop's display currency
     return subtotal > 100 ? 0 : convertCurrency(5, 'USD', shopDetails.currency); // Example: $5 shipping, converted
   }, [subtotal, shopDetails, convertCurrency]);
 
@@ -200,6 +202,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const totalSaved = useMemo(() => {
     if (!shopDetails) return 0;
     return cartItems.reduce((sum, item) => {
+      // Convert original and current prices to shop's display currency for accurate saving calculation
       const convertedOriginalPrice = convertCurrency(item.originalPrice, item.currency, shopDetails.currency);
       const convertedCurrentPrice = convertCurrency(item.price, item.currency, shopDetails.currency);
       const itemSaved = (convertedOriginalPrice - convertedCurrentPrice) * item.quantity;

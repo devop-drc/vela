@@ -81,7 +81,10 @@ serve(async (req) => {
 
   try {
     const { shopSlug, page = 1, limit = 12 } = await req.json(); // Add page and limit parameters
+    console.log(`[get-public-shop-data] Received request for shopSlug: ${shopSlug}, page: ${page}, limit: ${limit}`);
+
     if (!shopSlug) {
+      console.error("[get-public-shop-data] Missing shopSlug in request body.");
       return new Response(JSON.stringify({ error: "Missing shopSlug" }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -91,6 +94,7 @@ serve(async (req) => {
     const supabaseAdmin = getSupabaseAdmin();
 
     // Fetch shop details first to get the business_id and user_id
+    console.log(`[get-public-shop-data] Fetching shop details for slug: ${shopSlug}`);
     const { data: shopDetails, error: shopDetailsError } = await supabaseAdmin
       .from('shop_details')
       .select('*, businesses(id, user_id, name)') // Also fetch related business info
@@ -98,13 +102,16 @@ serve(async (req) => {
       .single();
 
     if (shopDetailsError || !shopDetails || !shopDetails.businesses) {
+      console.error(`[get-public-shop-data] Shop not found or inaccessible for slug: ${shopSlug}. Error: ${shopDetailsError?.message}`);
       throw new Error("Shop not found or inaccessible.");
     }
+    console.log(`[get-public-shop-data] Shop details fetched: ${JSON.stringify(shopDetails)}`);
 
     const businessId = shopDetails.businesses.id;
     const userId = shopDetails.businesses.user_id;
 
     // Fetch design settings for the business owner
+    console.log(`[get-public-shop-data] Fetching design settings for user: ${userId}`);
     const { data: designSettings, error: designSettingsError } = await supabaseAdmin
       .from('design_settings')
       .select('settings')
@@ -112,12 +119,15 @@ serve(async (req) => {
       .single();
 
     if (designSettingsError && designSettingsError.code !== 'PGRST116') {
+      console.error(`[get-public-shop-data] Error fetching design settings for user ${userId}. Error: ${designSettingsError?.message}`);
       throw designSettingsError;
     }
+    console.log(`[get-public-shop-data] Design settings fetched: ${JSON.stringify(designSettings?.settings)}`);
 
     const offset = (page - 1) * limit;
 
     // Fetch active products for the business with pagination
+    console.log(`[get-public-shop-data] Fetching products for business: ${businessId}, offset: ${offset}, limit: ${limit}`);
     const { data: products, error: productsError, count: totalProductsCount } = await supabaseAdmin
       .from('products')
       .select('*, interval_repetitions', { count: 'exact' }) // MODIFIED: Added interval_repetitions
@@ -126,16 +136,21 @@ serve(async (req) => {
       .range(offset, offset + limit - 1); // Apply range for pagination
 
     if (productsError) {
+      console.error(`[get-public-shop-data] Error fetching products for business ${businessId}. Error: ${productsError?.message}`);
       throw productsError;
     }
+    console.log(`[get-public-shop-data] Products fetched: ${products?.length} (Total: ${totalProductsCount})`);
 
     // Fetch best sellers (top 5 products by total sales)
+    console.log(`[get-public-shop-data] Fetching best sellers for business: ${businessId}`);
     const { data: bestSellers, error: bestSellersError } = await supabaseAdmin.rpc('get_top_products', { p_business_id: businessId });
     if (bestSellersError) {
-      console.error("Error fetching best sellers:", bestSellersError);
+      console.error(`[get-public-shop-data] Error fetching best sellers for business ${businessId}. Error: ${bestSellersError?.message}`);
     }
+    console.log(`[get-public-shop-data] Best sellers fetched: ${bestSellers?.length}`);
 
     // Fetch recommended products (e.g., 4 random active products, excluding best sellers)
+    console.log(`[get-public-shop-data] Fetching all active products for recommendations for business: ${businessId}`);
     const { data: allActiveProducts, error: allActiveProductsError } = await supabaseAdmin
       .from('products')
       .select('*, interval_repetitions') // MODIFIED: Added interval_repetitions
@@ -144,7 +159,7 @@ serve(async (req) => {
 
     let recommendedProducts: any[] = [];
     if (allActiveProductsError) {
-      console.error("Error fetching all active products for recommendations:", allActiveProductsError);
+      console.error(`[get-public-shop-data] Error fetching all active products for recommendations for business ${businessId}. Error: ${allActiveProductsError?.message}`);
     } else if (allActiveProducts) {
       const bestSellerIds = new Set((bestSellers || []).map((p: any) => p.product_id));
       const availableForRecommendation = allActiveProducts.filter(p => !bestSellerIds.has(p.id));
@@ -156,8 +171,10 @@ serve(async (req) => {
       }
       recommendedProducts = availableForRecommendation.slice(0, 4);
     }
+    console.log(`[get-public-shop-data] Recommended products fetched: ${recommendedProducts?.length}`);
 
     // Fetch active promotions for the business
+    console.log(`[get-public-shop-data] Fetching promotions for user: ${userId}`);
     const { data: promotions, error: promotionsError } = await supabaseAdmin
       .from('promotions')
       .select('*')
@@ -167,10 +184,12 @@ serve(async (req) => {
       .or(`end_date.is.null,end_date.gte.${new Date().toISOString()}`);
 
     if (promotionsError) {
-      console.error("Error fetching promotions:", promotionsError);
+      console.error(`[get-public-shop-data] Error fetching promotions for user ${userId}. Error: ${promotionsError?.message}`);
     }
+    console.log(`[get-public-shop-data] Promotions fetched: ${promotions?.length}`);
 
     // Fetch active marquee elements for the business, only filtering by is_active in SQL
+    console.log(`[get-public-shop-data] Fetching marquee elements for user: ${userId}`);
     const { data: rawMarqueeElements, error: marqueeElementsError } = await supabaseAdmin
       .from('marquee_elements')
       .select('*')
@@ -180,18 +199,16 @@ serve(async (req) => {
 
     let activeMarqueeElements: any[] = [];
     if (marqueeElementsError) {
-      console.error("Error fetching marquee elements:", marqueeElementsError);
+      console.error(`[get-public-shop-data] Error fetching marquee elements for user ${userId}. Error: ${marqueeElementsError?.message}`);
     } else if (rawMarqueeElements) {
-      console.log("Raw Marquee Elements:", rawMarqueeElements); // DEBUG LOG
       activeMarqueeElements = rawMarqueeElements.filter(element => {
         const startDate = element.start_date ? new Date(element.start_date) : null;
         const endDate = element.end_date ? new Date(element.end_date) : null;
         const isActive = isRecurringActive(startDate, endDate, element.repeat_interval);
-        console.log(`Marquee Element '${element.message}' (ID: ${element.id}): isActive=${isActive}, startDate=${element.start_date}, endDate=${element.end_date}, repeatInterval=${element.repeat_interval}`); // DEBUG LOG
         return isActive;
       });
-      console.log("Active Marquee Elements after filtering:", activeMarqueeElements); // DEBUG LOG
     }
+    console.log(`[get-public-shop-data] Active marquee elements fetched: ${activeMarqueeElements?.length}`);
 
     return new Response(JSON.stringify({
       shopDetails: {
@@ -225,7 +242,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('get-public-shop-data Function Error:', error.message);
+    console.error('[get-public-shop-data] Function Error (Catch Block):', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

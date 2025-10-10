@@ -306,11 +306,12 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       };
 
       const existingId = existingProductMap.get(post.id);
-      if (existingId) {
+      if (existingId !== undefined) { // Only assign ID if it's an existing product
         productPayload.id = existingId;
         summary.updated++;
         summary.updated_items.push(productPayload);
       } else {
+        // For new products, do NOT set productPayload.id, let DB generate it
         summary.created++;
         summary.created_items.push(productPayload);
       }
