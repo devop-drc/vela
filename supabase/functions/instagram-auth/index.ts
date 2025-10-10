@@ -36,12 +36,19 @@ serve(async (req) => {
 
   if (isCallback) {
     let origin = '/';
+    let userIdFromState: string | undefined;
+
     try {
       const encodedState = url.searchParams.get('state');
       if (encodedState) {
         const statePayload = atob(encodedState);
-        const { origin: stateOrigin } = JSON.parse(statePayload);
+        const { origin: stateOrigin, userId } = JSON.parse(statePayload);
         if (stateOrigin) origin = stateOrigin;
+        if (userId) userIdFromState = userId;
+      }
+
+      if (!userIdFromState) {
+        throw new Error("User ID not found in OAuth state. Please ensure you are logged in before connecting Instagram.");
       }
 
       const error = url.searchParams.get('error');
@@ -77,7 +84,6 @@ serve(async (req) => {
       const longLivedToken = longLivedTokenData.access_token;
 
       // 3. Fetch user profile and linked Instagram Business Account
-      // Requesting more fields to ensure we get all necessary info for user_metadata and shop_details
       const profileUrl = `https://graph.facebook.com/v19.0/me?fields=id,email,first_name,last_name,picture,accounts{instagram_business_account{id,username,profile_picture_url,name,biography,followers_count,media_count,website}}&access_token=${longLivedToken}`;
       const profileResponse = await fetch(profileUrl);
       const profileData = await profileResponse.json();
@@ -87,7 +93,6 @@ serve(async (req) => {
       }
       
       const { email, first_name, last_name, picture, accounts } = profileData;
-      if (!email) throw new Error("Could not retrieve email from Facebook. Please ensure your account has a verified email and you granted email permissions.");
 
       const igAccount = accounts?.data?.find((page: any) => page.instagram_business_account)?.instagram_business_account;
 
@@ -107,54 +112,11 @@ serve(async (req) => {
       const instagram_media_count = igAccount.media_count;
       const instagram_website = igAccount.website;
 
-
       const supabaseAdmin = getSupabaseAdmin();
-      let userId: string;
 
-      // 4. Find or create user in Supabase auth
-      const { data: users, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({ email: email });
-      if (listUsersError) {
-        console.error("Supabase Admin: Error listing users:", listUsersError);
-        throw listUsersError;
-      }
-
-      if (users && users.users.length > 0) {
-        userId = users.users[0].id;
-        // Update existing user's metadata if necessary
-        const { error: updateUserError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-          user_metadata: {
-            first_name,
-            last_name,
-            avatar_url: picture?.data?.url,
-            full_name: `${first_name} ${last_name || ''}`.trim(),
-            username: instagram_username, // Ensure Instagram username is in metadata
-          }
-        });
-        if (updateUserError) console.error("Supabase Admin: Error updating user metadata:", updateUserError);
-      } else {
-        const tempPassword = crypto.randomUUID(); // Generate a temporary password for new users
-        const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-          email: email,
-          password: tempPassword,
-          email_confirm: true,
-          user_metadata: {
-            first_name,
-            last_name,
-            avatar_url: picture?.data?.url,
-            full_name: `${first_name} ${last_name || ''}`.trim(),
-            username: instagram_username, // Ensure Instagram username is in metadata
-          }
-        });
-        if (createUserError) {
-          console.error("Supabase Admin: Error creating new user:", createUserError);
-          throw createUserError;
-        }
-        userId = newUser.user.id;
-      }
-
-      // 5. Upsert integration record
+      // 4. Upsert integration record for the existing user
       const { error: upsertError } = await supabaseAdmin.from('integrations').upsert({
-        user_id: userId,
+        user_id: userIdFromState,
         provider: 'facebook',
         access_token: longLivedToken,
       }, { onConflict: 'user_id,provider' });
@@ -163,14 +125,14 @@ serve(async (req) => {
         throw upsertError;
       }
 
-      // 6. Upload Instagram profile picture to Supabase Storage
+      // 5. Upload Instagram profile picture to Supabase Storage
       let uploadedLogoUrl: string | null = null;
       if (instagram_profile_picture_url) {
         try {
           const imageResponse = await fetch(instagram_profile_picture_url);
           if (!imageResponse.ok) throw new Error(`Failed to fetch profile picture: ${imageResponse.statusText}`);
           const imageBlob = await imageResponse.blob();
-          const fileName = `${userId}/profile_pic_${Date.now()}.jpg`;
+          const fileName = `${userIdFromState}/profile_pic_${Date.now()}.jpg`;
           const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
             .from('shop-assets')
             .upload(fileName, imageBlob, {
@@ -190,34 +152,21 @@ serve(async (req) => {
         uploadedLogoUrl = picture.data.url; // Fallback to Facebook profile picture
       }
 
-      // 7. Ensure a business entry exists
-      let { data: businessData, error: fetchBusinessError } = await supabaseAdmin
+      // 6. Get the business ID for the existing user
+      const { data: businessData, error: fetchBusinessError } = await supabaseAdmin
         .from('businesses')
-        .select('id, name')
-        .eq('user_id', userId)
+        .select('id')
+        .eq('user_id', userIdFromState)
         .single();
 
-      if (fetchBusinessError && fetchBusinessError.code === 'PGRST116') {
-        const { data: newBusiness, error: createBusinessError } = await supabaseAdmin
-          .from('businesses')
-          .insert({ user_id: userId, name: `${first_name}'s Business` })
-          .select('id, name')
-          .single();
-        if (createBusinessError) {
-          console.error("Supabase DB: Error creating new business:", createBusinessError);
-          throw createBusinessError;
-        }
-        businessData = newBusiness;
-      } else if (fetchBusinessError) {
-        console.error("Supabase DB: Error fetching business:", fetchBusinessError);
-        throw fetchBusinessError;
+      if (fetchBusinessError || !businessData) {
+        console.error("Supabase DB: Error fetching business for existing user:", fetchBusinessError);
+        throw new Error("Could not find business profile for the logged-in user.");
       }
-
-      if (!businessData) throw new Error("Failed to get or create business for user.");
 
       const businessId = businessData.id;
 
-      // 8. Update or insert shop_details
+      // 7. Update or insert shop_details for the existing business
       const shopDetailsPayload = {
         business_id: businessId,
         shop_name: instagram_shop_name || `${first_name}'s Shop`,
@@ -238,18 +187,10 @@ serve(async (req) => {
       const { error: shopDetailsUpsertError } = await supabaseAdmin.from('shop_details').upsert(shopDetailsPayload, { onConflict: 'business_id' });
       if (shopDetailsUpsertError) console.error("Supabase DB: Error upserting shop details:", shopDetailsUpsertError);
 
-      // 9. Generate magic link for seamless redirection
-      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'magiclink',
-        email: email,
-        options: { redirectTo: `${origin}?integration_success=true` }
-      });
-      if (linkError) {
-        console.error("Supabase Auth Admin: Error generating magic link:", linkError);
-        throw linkError;
-      }
-
-      return Response.redirect(linkData.properties.action_link, 302);
+      // 8. Redirect back to the origin with a success message
+      const redirectUrl = new URL(origin);
+      redirectUrl.searchParams.set('integration_success', 'true');
+      return Response.redirect(redirectUrl.toString(), 302);
 
     } catch (error) {
       console.error('OAuth Callback Error (Catch Block):', error.message);
@@ -261,9 +202,10 @@ serve(async (req) => {
     // Initial OAuth redirect
     try {
       const origin = url.searchParams.get('origin');
-      if (!origin) throw new Error('Missing origin parameter.');
+      const userId = url.searchParams.get('userId'); // Get userId from the initial request
+      if (!origin || !userId) throw new Error('Missing origin or userId parameter.');
 
-      const statePayload = JSON.stringify({ origin });
+      const statePayload = JSON.stringify({ origin, userId }); // Include userId in state
       const encodedState = btoa(statePayload);
       // Ensure these scopes match or are a subset of what's requested in Login.tsx
       const scopes = 'public_profile,email,pages_show_list,instagram_basic,instagram_manage_insights,instagram_manage_comments,instagram_content_publish,pages_read_engagement,pages_manage_posts,pages_manage_metadata';

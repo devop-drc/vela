@@ -2,6 +2,9 @@ import { useIntegration } from '@/contexts/IntegrationContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, UserCircle, Mail, FileText } from "lucide-react";
+import { supabase } from '@/integrations/supabase/client'; // Import supabase client
+import { useState, useEffect } from 'react'; // Import useState and useEffect
+import { showError } from '@/utils/toast'; // Import showError
 
 const permissions = [
   {
@@ -23,11 +26,25 @@ const permissions = [
 
 export const IntegrationPrompt = () => {
   const { isPromptOpen, closePrompt } = useIntegration();
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    fetchUser();
+  }, []);
 
   const handleConnect = () => {
+    if (!userId) {
+      showError("User not authenticated. Please log in first.");
+      return;
+    }
     closePrompt();
-    const origin = `${window.location.origin}/settings`;
-    window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?origin=${encodeURIComponent(origin)}`;
+    const origin = `${window.location.origin}/`; // Redirect back to dashboard
+    // Pass the current user's ID to the Instagram auth function
+    window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?origin=${encodeURIComponent(origin)}&userId=${userId}`;
   };
 
   return (
@@ -59,7 +76,7 @@ export const IntegrationPrompt = () => {
           </p>
         </div>
         <DialogFooter>
-          <Button onClick={handleConnect} className="w-full" size="lg">
+          <Button onClick={handleConnect} className="w-full" size="lg" disabled={!userId}>
             <ShieldCheck className="mr-2 h-5 w-5" />
             Securely Connect with Facebook
           </Button>

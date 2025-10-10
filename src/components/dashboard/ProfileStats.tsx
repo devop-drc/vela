@@ -10,15 +10,31 @@ import { supabase } from "@/integrations/supabase/client";
 export const ProfileStats = () => {
   const { shopDetails, isLoading, fetchShopDetails } = useShop();
   const [productCount, setProductCount] = useState<number | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null); // State for user profile
 
   useEffect(() => {
-    const fetchProductCount = async () => {
+    const fetchProductCountAndProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Fetch product count
       const { count } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
       setProductCount(count);
+
+      // Fetch user profile for first/last name
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error fetching user profile:", profileError);
+      } else {
+        setUserProfile(profileData);
+      }
     };
-    fetchProductCount();
+    fetchProductCountAndProfile();
   }, []);
 
   if (isLoading) {
@@ -41,7 +57,18 @@ export const ProfileStats = () => {
           </Avatar>
           <div>
             <h3 className="text-lg font-semibold">{shopDetails?.shop_name}</h3>
-            <p className="text-sm text-muted-foreground">Synced from Instagram</p>
+            {userProfile && (
+              <p className="text-sm text-muted-foreground">
+                {userProfile.first_name} {userProfile.last_name}
+              </p>
+            )}
+            {shopDetails?.instagram_url && (
+              <p className="text-sm text-muted-foreground">
+                <a href={shopDetails.instagram_url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                  @{shopDetails.username}
+                </a>
+              </p>
+            )}
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4 text-center">

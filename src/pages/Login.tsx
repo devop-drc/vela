@@ -1,10 +1,26 @@
+"use client";
+
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Facebook, Instagram, ExternalLink, CheckCircle, AlertCircle } from "lucide-react";
+import { ShoppingBag, Facebook, Instagram, ExternalLink, CheckCircle, AlertCircle, Mail, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Link, useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Loader2 } from 'lucide-react';
+
+const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
 
 const INSTAGRAM_SETUP_GUIDE_URL = 'https://help.instagram.com/502981923235522';
 
@@ -85,64 +101,77 @@ const Login = () => {
   const [showSetupGuide, setShowSetupGuide] = useState(false);
   const navigate = useNavigate();
 
-  const handleFacebookLogin = async () => {
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = async (data: LoginFormData) => {
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'facebook',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-          // Request all necessary scopes for Instagram Business integration
-          scopes: 'email,public_profile,pages_show_list,instagram_basic,instagram_manage_insights,instagram_manage_comments,instagram_content_publish,pages_read_engagement,pages_manage_posts,pages_manage_metadata',
-          queryParams: {
-            auth_type: 'rerequest', // Ensure permissions are re-requested if previously denied
-            access_type: 'offline',
-          },
-        },
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
       });
 
       if (error) {
-        // If the error indicates a permission issue, show the setup guide
-        if (error.message.includes('permission') || error.message.includes('scope') || error.message.includes('access')) {
-          showError(`Login failed due to missing permissions. Please review the setup guide.`);
-          setShowSetupGuide(true);
-        } else {
-          showError(`Login failed: ${error.message}`);
-        }
-      } else {
-        // Supabase will handle the redirect to /onboarding or / after successful auth
-        showSuccess('Redirecting to complete login...');
+        throw error;
       }
-    } catch (error) {
+
+      showSuccess('Login successful! Redirecting to dashboard...');
+      navigate('/');
+    } catch (error: any) {
       console.error('Login error:', error);
-      showError('An unexpected error occurred. Please try again.');
+      showError(`Login failed: ${error.message}`);
     }
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
       <InstagramSetupGuide open={showSetupGuide} onOpenChange={setShowSetupGuide} />
-      <div className="w-full max-w-md p-8 space-y-8 text-center">
-        <div className="flex justify-center items-center gap-4 mb-4">
-          <ShoppingBag className="h-10 w-10 text-primary" />
-          <h1 className="text-4xl font-bold font-heading">Your InstaShop</h1>
-        </div>
-        <p className="text-muted-foreground">
-          Create your account and start selling by connecting your Instagram Business profile.
-        </p>
-        <div className="space-y-2">
-          <Button onClick={handleFacebookLogin} size="lg" className="w-full">
-            <Facebook className="mr-2 h-5 w-5" />
-            Connect with Facebook
-          </Button>
-          <Button asChild variant="link" className="text-muted-foreground">
-            <Link to="/demo">See what the app is like</Link>
-          </Button>
-          <Button variant="link" onClick={() => setShowSetupGuide(true)} className="w-full text-sm text-primary">
-            <Instagram className="mr-2 h-4 w-4" />
-            Instagram Setup Guide
-          </Button>
-        </div>
-      </div>
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="flex justify-center items-center gap-2 mb-2">
+            <ShoppingBag className="h-8 w-8 text-primary" />
+            <CardTitle className="text-3xl font-bold">Login</CardTitle>
+          </div>
+          <CardDescription>Sign in to your InstaShopify account.</CardDescription>
+        </CardHeader>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input id="email" type="email" {...register('email')} className="pl-10" />
+              </div>
+              {errors.email && <p className="text-sm text-destructive mt-1">{errors.email.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input id="password" type="password" {...register('password')} className="pl-10" />
+              </div>
+              {errors.password && <p className="text-sm text-destructive mt-1">{errors.password.message}</p>}
+            </div>
+          </CardContent>
+          <CardFooter className="flex-col">
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Login
+            </Button>
+            <p className="text-sm text-muted-foreground mt-4">
+              Don't have an account?{" "}
+              <Link to="/register" className="text-primary hover:underline">
+                Register
+              </Link>
+            </p>
+            <Button variant="link" onClick={() => setShowSetupGuide(true)} className="w-full text-sm text-primary">
+              <Instagram className="mr-2 h-4 w-4" />
+              Instagram Setup Guide
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
     </div>
   );
 };

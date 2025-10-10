@@ -37,8 +37,13 @@ export const IntegrationSettings = () => {
   }, []);
 
   const handleConnect = () => {
+    if (!user) {
+      showError("You must be logged in to connect Instagram.");
+      return;
+    }
     const origin = `${window.location.origin}/settings`;
-    window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?origin=${encodeURIComponent(origin)}`;
+    // Pass the current user's ID to the Instagram auth function
+    window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?origin=${encodeURIComponent(origin)}&userId=${user.id}`;
   };
 
   const handleDisconnect = async () => {

@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User } from '@supabase/supabase-js';
+import { User as SupabaseUser } from '@supabase/supabase-js'; // Renamed to avoid conflict with Lucide User icon
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Facebook, ExternalLink, Languages, Bell, Trash2 } from 'lucide-react';
+import { Facebook, ExternalLink, Languages, Bell, Trash2, User, Mail, Phone } from 'lucide-react'; // Added Phone icon
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { IntegrationSettings } from './IntegrationSettings';
 
@@ -23,16 +23,32 @@ const PreferenceRow = ({ id, title, description, defaultChecked = false }: { id:
 );
 
 export const AccountSettings = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [profile, setProfile] = useState<any | null>(null); // State for user profile
   const [isLoading, setIsLoading] = useState(true);
   const [facebookId, setFacebookId] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchUserAndProfile = async () => {
       setIsLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+
       if (user) {
+        // Fetch profile data
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, avatar_url, phone_number') // Added phone_number
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error("Error fetching profile:", profileError);
+        } else {
+          setProfile(profileData);
+        }
+
+        // Check for Facebook identity
         const facebookIdentity = user.identities?.find(i => i.provider === 'facebook');
         if (facebookIdentity) {
           setFacebookId(facebookIdentity.id);
@@ -40,7 +56,7 @@ export const AccountSettings = () => {
       }
       setIsLoading(false);
     };
-    fetchUser();
+    fetchUserAndProfile();
   }, []);
 
   if (isLoading) {
@@ -59,43 +75,49 @@ export const AccountSettings = () => {
         <Card>
           <CardHeader>
             <CardTitle>Profile</CardTitle>
-            <CardDescription>This is your personal information, synced from your connected social account.</CardDescription>
+            <CardDescription>This is your personal information.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <Alert>
-              <Facebook className="h-4 w-4" />
-              <AlertTitle>Synced from Facebook</AlertTitle>
-              <AlertDescription className="flex items-center justify-between">
-                To update your profile details, please make the changes directly on your Facebook account.
-                {facebookId && (
-                  <Button asChild variant="outline" size="sm">
-                    <a href={`https://facebook.com/${facebookId}`} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      View on Facebook
-                    </a>
-                  </Button>
-                )}
-              </AlertDescription>
-            </Alert>
+            {facebookId && (
+              <Alert>
+                <Facebook className="h-4 w-4" />
+                <AlertTitle>Synced from Facebook</AlertTitle>
+                <AlertDescription className="flex items-center justify-between">
+                  Some profile details might be synced from your connected Facebook account.
+                  {facebookId && (
+                    <Button asChild variant="outline" size="sm">
+                      <a href={`https://facebook.com/${facebookId}`} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        View on Facebook
+                      </a>
+                    </Button>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="flex items-center gap-4 pt-2">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={user?.user_metadata.avatar_url} alt="User avatar" />
-                <AvatarFallback>{user?.user_metadata.first_name?.[0]?.toUpperCase()}</AvatarFallback>
+                <AvatarImage src={profile?.avatar_url || user?.user_metadata.avatar_url || undefined} alt="User avatar" />
+                <AvatarFallback>{profile?.first_name?.[0]?.toUpperCase() || user?.user_metadata.first_name?.[0]?.toUpperCase() || <User className="h-10 w-10" />}</AvatarFallback>
               </Avatar>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
                 <div className="space-y-1">
-                  <Label>First Name</Label>
-                  <p className="text-lg font-medium">{user?.user_metadata.first_name || 'Not set'}</p>
+                  <Label className="flex items-center gap-2"><User className="h-4 w-4" /> First Name</Label>
+                  <p className="text-lg font-medium">{profile?.first_name || 'Not set'}</p>
                 </div>
                 <div className="space-y-1">
-                  <Label>Last Name</Label>
-                  <p className="text-lg font-medium">{user?.user_metadata.last_name || 'Not set'}</p>
+                  <Label className="flex items-center gap-2"><User className="h-4 w-4" /> Last Name</Label>
+                  <p className="text-lg font-medium">{profile?.last_name || 'Not set'}</p>
                 </div>
               </div>
             </div>
             <div className="space-y-1">
-              <Label>Email Address</Label>
+              <Label className="flex items-center gap-2"><Mail className="h-4 w-4" /> Email Address</Label>
               <p className="text-lg font-medium">{user?.email}</p>
+            </div>
+            <div className="space-y-1">
+              <Label className="flex items-center gap-2"><Phone className="h-4 w-4" /> Phone Number</Label>
+              <p className="text-lg font-medium">{profile?.phone_number || 'Not set'}</p>
             </div>
           </CardContent>
         </Card>

@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom"; // Import useNavigate
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import DashboardLayout from "./components/layout/DashboardLayout";
@@ -10,11 +10,8 @@ import Products from "./pages/Products";
 import Orders from "./pages/Orders";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
-import Onboarding from "./pages/Onboarding";
+import Register from "./pages/Register"; // Import the new Register page
 import ProtectedRoute from "./components/layout/ProtectedRoute";
-import OnboardingGuard from "./components/layout/OnboardingGuard";
-import { AppearanceProvider } from "./contexts/AppearanceContext";
-import { PageTitleProvider } from "./contexts/PageTitleContext";
 import OutOfStock from "./pages/OutOfStock";
 import { IntegrationProvider } from "./contexts/IntegrationContext";
 import { IntegrationPrompt } from "./components/layout/IntegrationPrompt";
@@ -29,10 +26,11 @@ import StorefrontAllProducts from "./pages/StorefrontAllProducts";
 import StorefrontClientOrders from "./pages/StorefrontClientOrders";
 import Disputes from "./pages/Disputes";
 import Promotions from "./pages/Promotions";
-import { useEffect } from "react"; // Import useEffect
-import { supabase } from "./integrations/supabase/client"; // Import supabase client
-import { toast } from "sonner"; // Import sonner toast
-import { MessageSquareWarning } from "lucide-react"; // Import icon
+import { useEffect } from "react";
+import { supabase } from "./integrations/supabase/client";
+import { toast } from "sonner";
+import { MessageSquareWarning } from "lucide-react";
+import { PageTitleProvider } from "./contexts/PageTitleContext"; // Ensure PageTitleProvider is imported
 
 const queryClient = new QueryClient();
 
@@ -114,22 +112,23 @@ const AppContent = () => {
         <Route path="orders" element={<StorefrontClientOrders />} /> 
       </Route>
 
-      {/* Existing Dashboard and Auth Routes */}
+      {/* Auth Routes */}
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} /> {/* Add Register route */}
       <Route path="/demo" element={<Demo />} />
+      
+      {/* Protected Dashboard Routes */}
       <Route element={<ProtectedRoute />}>
-        <Route path="/onboarding" element={<Onboarding />} />
-        <Route element={<OnboardingGuard />}>
-          <Route element={<DashboardLayout />}>
-            <Route path="/" element={<Index />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/keywords" element={<Keywords />} />
-            <Route path="/out-of-stock" element={<OutOfStock />} />
-            <Route path="/disputes" element={<Disputes />} />
-            <Route path="/promotions" element={<Promotions />} />
-          </Route>
+        {/* Onboarding page and guard are removed */}
+        <Route element={<DashboardLayout />}>
+          <Route path="/" element={<Index />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/keywords" element={<Keywords />} />
+          <Route path="/out-of-stock" element={<OutOfStock />} />
+          <Route path="/disputes" element={<Disputes />} />
+          <Route path="/promotions" element={<Promotions />} />
         </Route>
       </Route>
       <Route path="*" element={<NotFound />} />
@@ -148,7 +147,7 @@ const App = () => (
             <ShopProvider>
               <IntegrationProvider>
                 <SyncProvider>
-                  <AppContent /> {/* Wrap Routes in AppContent to use useNavigate */}
+                  <AppContent />
                   <IntegrationPrompt />
                 </SyncProvider>
               </IntegrationProvider>

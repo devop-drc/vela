@@ -76,7 +76,7 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const { data: business, error: businessError } = await supabase
-      .from('businesses').select('id').eq('user_id', user.id).single();
+      .from('businesses').select('id, name').eq('user_id', user.id).single(); // Fetch business name too
     if (businessError || !business) {
       console.error("ShopContext: Could not find your business:", businessError);
       setIsLoading(false);
@@ -88,17 +88,27 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
       console.error("ShopContext: Error fetching shop details from DB:", dbDetailsError);
     }
 
-    const { data: igDetails, error: igError } = await supabase.functions.invoke('instagram-profile', { body: { user_id: user.id } });
-    if (igError || igDetails.error) {
-      console.error("ShopContext: Failed to fetch Instagram details:", igError || igDetails.error);
+    // Attempt to fetch Instagram details only if an integration exists
+    let igDetails: any = null;
+    const { data: integration } = await supabase.from('integrations').select('id').eq('user_id', user.id).eq('provider', 'facebook').maybeSingle();
+    if (integration) {
+      const { data: fetchedIgDetails, error: igError } = await supabase.functions.invoke('instagram-profile', { body: { user_id: user.id } });
+      if (igError || fetchedIgDetails.error) {
+        console.error("ShopContext: Failed to fetch Instagram details:", igError || fetchedIgDetails.error);
+      } else {
+        igDetails = fetchedIgDetails;
+      }
     }
+
+    const defaultShopName = `${user.user_metadata?.first_name || 'Your'} Shop`;
+    const defaultSlug = generateSlug(user.user_metadata?.first_name || 'your-shop');
 
     const finalDetails: ShopDetails = {
       id: business.id, // Set the business ID here
       userId: user.id, // Set the user ID here
-      name: dbDetails?.name || business.name, // Prioritize DB name, then business name
-      shop_name: dbDetails?.shop_name || igDetails?.shop_name || 'Your Shop',
-      slug: dbDetails?.slug || generateSlug(dbDetails?.shop_name || igDetails?.shop_name || 'your-shop'), // Use existing slug or generate
+      name: business.name, // Business name from the join
+      shop_name: dbDetails?.shop_name || igDetails?.shop_name || defaultShopName,
+      slug: dbDetails?.slug || generateSlug(dbDetails?.shop_name || igDetails?.shop_name || defaultShopName), // Use existing slug or generate
       logo_url: dbDetails?.logo_url || igDetails?.logo_url || null, // Prioritize DB, then IG
       favicon_url: dbDetails?.favicon_url || igDetails?.favicon_url || null, // Prioritize DB, then IG
       currency: dbDetails?.currency || 'USD', // Default to USD if not set

@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react"; // Import Loader2
 
 const ProtectedRoute = () => {
   const navigate = useNavigate();
@@ -31,7 +32,11 @@ const ProtectedRoute = () => {
   }, [navigate]);
 
   if (!isInitialized) {
-    return null; // Or a loading spinner
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return <Outlet />;

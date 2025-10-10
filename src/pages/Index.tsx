@@ -6,12 +6,13 @@ import { OverviewChart } from "@/components/dashboard/OverviewChart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { useShop } from "@/contexts/ShopContext";
-import { useSync } from "@/contexts/syncContext";
+import { useSync } from "@/contexts/SyncContext";
 import { formatCurrency } from "@/lib/formatters";
 import { ProfileStats } from "@/components/dashboard/ProfileStats";
 import { TopProducts } from "@/components/dashboard/TopProducts";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { QuickActions } from "@/components/dashboard/QuickActions";
+import { useIntegration } from "@/contexts/IntegrationContext"; // Import useIntegration
 
 interface DashboardData {
   totalRevenue: number;
@@ -103,6 +104,7 @@ const Index = () => {
   const { shopDetails, convertCurrency } = useShop();
   const { activeJob } = useSync();
   const { data, isLoading, fetchData } = useDashboardData();
+  const { runWithIntegrationCheck } = useIntegration(); // Use the integration context
 
   useEffect(() => {
     setTitle("Dashboard");
@@ -117,6 +119,33 @@ const Index = () => {
       fetchData();
     }
   }, [activeJob?.status, fetchData]);
+
+  // Check for Instagram integration on mount and show prompt if missing
+  useEffect(() => {
+    const checkIntegrationStatus = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: integration, error } = await supabase
+        .from('integrations')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('provider', 'facebook')
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Error checking integration status:", error);
+        return;
+      }
+
+      if (!integration) {
+        // If no integration, trigger the prompt
+        runWithIntegrationCheck(() => {}); // Pass an empty function, the prompt will handle the redirect
+      }
+    };
+    checkIntegrationStatus();
+  }, [runWithIntegrationCheck]);
+
 
   if (isLoading) {
     return (
