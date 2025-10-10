@@ -163,6 +163,15 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
     }
   };
 
+  // Define onBack function for the CheckoutForm component
+  const onBack = () => {
+    if (checkoutStep === 'payment') {
+      setCheckoutStep('contact-shipping');
+    } else if (checkoutStep === 'contact-shipping') {
+      setCheckoutStep('cart');
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
@@ -331,6 +340,12 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
                       {savedItems.length > 0 && (
                         <div className="space-y-4 mt-6 md:mt-8">
                           <h2 className="text-lg md:text-xl font-bold font-heading">Saved ({savedItems.length})</h2>
+                          {hasSubscriptionProducts && (
+                            <div className="flex items-center gap-2 p-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md">
+                              <Info className="h-4 w-4 flex-shrink-0" />
+                              <span>This cart includes subscription products. Cash on Delivery is not available.</span>
+                            </div>
+                          )}
                           <AnimatePresence>
                             {savedItems.map(item => (
                               <motion.div
@@ -434,7 +449,7 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
                 checkoutStep={checkoutStep}
                 setCheckoutStep={setCheckoutStep}
                 onContinue={handleProceedToPayment}
-                onBack={checkoutStep === 'payment' ? handleBackToContactShipping : handleBackToCart}
+                onBack={onBack} {/* Pass the defined onBack function */}
               />
             )}
           </div>
