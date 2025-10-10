@@ -52,30 +52,30 @@ const Register = () => {
       if (authData.user) {
         const userId = authData.user.id;
 
-        // 2. Create a profile entry
-        const { error: profileError } = await supabase.from('profiles').insert({
+        // 2. Create a profile entry (or update if it somehow exists)
+        const { error: profileError } = await supabase.from('profiles').upsert({
           id: userId,
           first_name: data.firstName,
           last_name: data.lastName,
           onboarding_complete: true, // Onboarding is complete as details are provided here
-        });
+        }, { onConflict: 'id' }); // Conflict on 'id' (which is user_id)
         if (profileError) throw profileError;
 
-        // 3. Create a business entry
-        const { data: businessData, error: businessError } = await supabase.from('businesses').insert({
+        // 3. Create a business entry (or update if it somehow exists)
+        const { data: businessData, error: businessError } = await supabase.from('businesses').upsert({
           user_id: userId,
           name: `${data.firstName}'s Business`,
-        }).select('id').single();
+        }, { onConflict: 'user_id' }).select('id').single(); // Conflict on 'user_id'
         if (businessError) throw businessError;
 
-        // 4. Create a default shop_details entry
-        const { error: shopDetailsError } = await supabase.from('shop_details').insert({
+        // 4. Create a default shop_details entry (or update if it somehow exists)
+        const { error: shopDetailsError } = await supabase.from('shop_details').upsert({
           business_id: businessData.id,
           shop_name: `${data.firstName}'s Shop`,
           slug: `${data.firstName.toLowerCase()}-shop`,
           currency: 'USD',
           contact_email: data.email,
-        });
+        }, { onConflict: 'business_id' }); // Conflict on 'business_id'
         if (shopDetailsError) throw shopDetailsError;
 
         showSuccess('Registration successful! Welcome to InstaShopify.');
