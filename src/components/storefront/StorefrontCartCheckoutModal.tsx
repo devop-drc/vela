@@ -29,6 +29,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
   const [isOrderConfirmed, setIsOrderConfirmed] = useState(false);
   const [confirmedOrderId, setConfirmedOrderId] = useState<string | null>(null);
   const [currentCheckoutStep, setCurrentCheckoutStep] = useState(1); // 1: Contact, 2: Shipping, 3: Payment
+  const [isSubmitting, setIsSubmitting] = useState(false); // Define isSubmitting state here
   const checkoutFormRef = useRef<{ validateCurrentStep: () => Promise<boolean>; handleInternalSubmit: () => Promise<void> }>(null);
 
   const blurEnabled = appearanceSettings?.blurEnabled;
@@ -39,6 +40,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
       setIsOrderConfirmed(false);
       setConfirmedOrderId(null);
       setCurrentCheckoutStep(1); // Reset step when modal closes
+      setIsSubmitting(false); // Reset submitting state
     }
   }, [isOpen]);
 
@@ -93,6 +95,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
     if (checkoutFormRef.current) {
       const isValid = await checkoutFormRef.current.validateCurrentStep();
       if (isValid) {
+        setIsSubmitting(true); // Set submitting state
         await checkoutFormRef.current.handleInternalSubmit();
       } else {
         toast({
@@ -101,6 +104,113 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
           variant: "destructive",
         });
       }
+    }
+  };
+
+  const onSubmitCheckoutForm = async (values: CheckoutFormValues) => {
+    if (!shopDetails) {
+      toast({
+        title: "Shop details not loaded.",
+        description: "Cannot place order. Please try again later.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      // 1. Create the order
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          business_id: shopDetails.id, // Use shopDetails.id which is business_id
+          customer_name: values.customerName,
+          customer_email: values.customerEmail,
+          customer_phone: values.customerPhone,
+          total_amount: convertedTotalPrice, // totalPrice is already in shop's currency
+          currency: shopDetails.currency, // Use shop's currency
+          status: 'Pending',
+          payment_method: values.paymentMethod,
+          payment_status: values.paymentMethod === 'cash_on_delivery' ? 'pending' : 'paid', // Assume credit card is paid immediately
+          shipping_address: values.shippingAddress,
+          shipping_city: values.shippingCity,
+          shipping_state: values.shippingState,
+          shipping_zip: values.shippingZip,
+          shipping_country: values.shippingCountry,
+          shipping_notes_seller: values.shippingNotesSeller,
+          shipping_notes_courier: values.shippingNotesCourier,
+        })
+        .select('id')
+        .single();
+
+      if (orderError || !orderData) {
+        throw new Error(orderError?.message || "Failed to create order.");
+      }
+
+      const orderId = orderData.id;
+
+      // 2. Insert order items
+      const orderItemsToInsert = cartItems.map(item => ({
+        order_id: orderId,
+        product_id: item.productId,
+        quantity: item.quantity,
+        price_at_purchase: convertCurrency(item.price, item.currency, 'ALL'), // Store in ALL for consistency
+        selected_options: item.selectedOptions,
+        interval_repetitions: item.intervalRepetitions, // New field
+      }));
+
+      const { error: orderItemsError } = await supabase
+        .from('order_items')
+        .insert(orderItemsToInsert);
+
+      if (orderItemsError) {
+        throw new Error(orderItemsError?.message || "Failed to add order items.");
+      }
+
+      // 3. Update product inventory for one-time physical products
+      for (const item of cartItems) {
+        if (item.pricing_type === 'one_time' && item.product_type === 'physical') {
+          const { data: product, error: productError } = await supabase
+            .from('products')
+            .select('inventory')
+            .eq('id', item.productId)
+            .single();
+
+          if (productError || !product) {
+            console.warn(`Could not fetch inventory for product ${item.productId}. Skipping inventory update.`);
+            continue;
+          }
+
+          const newInventory = (product.inventory || 0) - item.quantity;
+          const newStatus = newInventory <= 0 ? 'Out of Stock' : 'Active'; // Assuming 'Active' if > 0
+
+          const { error: updateError } = await supabase
+            .from('products')
+            .update({ inventory: newInventory, status: newStatus })
+            .eq('id', item.productId);
+
+          if (updateError) {
+            console.error(`Failed to update inventory for product ${item.productId}:`, updateError);
+          }
+        }
+      }
+
+      toast({
+        title: "Order placed successfully!",
+        description: `Your order total was ${formatCurrency(convertedTotalPrice, shopDetails?.currency)}.`,
+        variant: "success",
+      });
+      clearCart();
+      handleOrderSuccess(orderId);
+    } catch (err: any) {
+      console.error("Checkout error:", err);
+      toast({
+        title: "Checkout failed!",
+        description: err.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -176,106 +286,8 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                 <CheckoutForm 
                   ref={checkoutFormRef}
                   currentStep={currentCheckoutStep}
-                  onNextStep={handleNextStep}
-                  onPreviousStep={handlePreviousStep}
-                  onSubmitForm={async (values) => {
-                    // This is the actual submission logic, called by handlePlaceOrder
-                    // from the modal's footer
-                    if (!shopDetails) {
-                      showError("Shop details not loaded. Cannot place order.");
-                      return;
-                    }
-                
-                    try {
-                      // 1. Create the order
-                      const { data: orderData, error: orderError } = await supabase
-                        .from('orders')
-                        .insert({
-                          business_id: shopDetails.id, // Use shopDetails.id which is business_id
-                          customer_name: values.customerName,
-                          customer_email: values.customerEmail,
-                          customer_phone: values.customerPhone,
-                          total_amount: convertedTotalPrice, // totalPrice is already in shop's currency
-                          currency: shopDetails.currency, // Use shop's currency
-                          status: 'Pending',
-                          payment_method: values.paymentMethod,
-                          payment_status: values.paymentMethod === 'cash_on_delivery' ? 'pending' : 'paid', // Assume credit card is paid immediately
-                          shipping_address: values.shippingAddress,
-                          shipping_city: values.shippingCity,
-                          shipping_state: values.shippingState,
-                          shipping_zip: values.shippingZip,
-                          shipping_country: values.shippingCountry,
-                          shipping_notes_seller: values.shippingNotesSeller,
-                          shipping_notes_courier: values.shippingNotesCourier,
-                        })
-                        .select('id')
-                        .single();
-                
-                      if (orderError || !orderData) {
-                        throw new Error(orderError?.message || "Failed to create order.");
-                      }
-                
-                      const orderId = orderData.id;
-                
-                      // 2. Insert order items
-                      const orderItemsToInsert = cartItems.map(item => ({
-                        order_id: orderId,
-                        product_id: item.productId,
-                        quantity: item.quantity,
-                        price_at_purchase: convertCurrency(item.price, item.currency, 'ALL'), // Store in ALL for consistency
-                        selected_options: item.selectedOptions,
-                        interval_repetitions: item.intervalRepetitions, // New field
-                      }));
-                
-                      const { error: orderItemsError } = await supabase
-                        .from('order_items')
-                        .insert(orderItemsToInsert);
-                
-                      if (orderItemsError) {
-                        throw new Error(orderItemsError?.message || "Failed to add order items.");
-                      }
-                
-                      // 3. Update product inventory for one-time physical products
-                      for (const item of cartItems) {
-                        if (item.pricing_type === 'one_time' && item.product_type === 'physical') {
-                          const { data: product, error: productError } = await supabase
-                            .from('products')
-                            .select('inventory')
-                            .eq('id', item.productId)
-                            .single();
-                
-                          if (productError || !product) {
-                            console.warn(`Could not fetch inventory for product ${item.productId}. Skipping inventory update.`);
-                            continue;
-                          }
-                
-                          const newInventory = (product.inventory || 0) - item.quantity;
-                          const newStatus = newInventory <= 0 ? 'Out of Stock' : 'Active'; // Assuming 'Active' if > 0
-                
-                          const { error: updateError } = await supabase
-                            .from('products')
-                            .update({ inventory: newInventory, status: newStatus })
-                            .eq('id', item.productId);
-                
-                          if (updateError) {
-                            console.error(`Failed to update inventory for product ${item.productId}:`, updateError);
-                          }
-                        }
-                      }
-                
-                      showSuccess("Order placed successfully!");
-                      clearCart();
-                      handleOrderSuccess(orderId);
-                    } catch (err: any) {
-                      console.error("Checkout error:", err);
-                      showError(`Checkout failed: ${err.message || "An unexpected error occurred."}`);
-                    } finally {
-                      // This is handled by the parent modal's isSubmitting state
-                    }
-                  }}
+                  onSubmitForm={onSubmitCheckoutForm}
                   isSubmitting={isSubmitting}
-                  totalPrice={convertedTotalPrice}
-                  currency={shopDetails?.currency || 'USD'}
                 />
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 flex-1 overflow-hidden">
