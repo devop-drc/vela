@@ -141,9 +141,32 @@ serve(async (req) => {
         uploadedLogoUrl = picture.data.url;
       }
 
+      // Ensure a business entry exists for the user
+      let { data: businessData, error: fetchBusinessError } = await supabaseAdmin
+        .from('businesses')
+        .select('id, name')
+        .eq('user_id', userId)
+        .single();
+
+      if (fetchBusinessError && fetchBusinessError.code === 'PGRST116') { // No business found, create one
+        const { data: newBusiness, error: createBusinessError } = await supabaseAdmin
+          .from('businesses')
+          .insert({ user_id: userId, name: `${first_name}'s Business` }) // Use first_name from profileData
+          .select('id, name')
+          .single();
+        if (createBusinessError) throw createBusinessError;
+        businessData = newBusiness;
+      } else if (fetchBusinessError) {
+        throw fetchBusinessError;
+      }
+
+      if (!businessData) throw new Error("Failed to get or create business for user.");
+
+      const businessId = businessData.id;
+
       // Update or insert shop_details with Instagram info and uploaded URL
       const shopDetailsPayload = {
-        business_id: (await supabaseAdmin.from('businesses').select('id').eq('user_id', userId).single()).data?.id,
+        business_id: businessId,
         shop_name: instagram_shop_name || `${first_name}'s Shop`,
         slug: instagram_username ? instagram_username.toLowerCase().replace(/[^a-z0-9-]/g, '') : `${first_name.toLowerCase()}-shop`,
         logo_url: uploadedLogoUrl, // Use the uploaded URL

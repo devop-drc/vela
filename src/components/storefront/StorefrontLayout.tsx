@@ -117,9 +117,13 @@ const applyStorefrontSettingsToDOM = (settings: any, shopDetails: any) => {
           document.head.appendChild(link);
         }
       } else {
-        // If no URL, remove existing favicon or set to a transparent one
-        if (link) {
-          link.remove(); // Remove the link element entirely
+        // Fallback to default favicon if none is provided
+        if (link) link.href = '/favicon.ico';
+        else {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          link.href = '/favicon.ico';
+          document.head.appendChild(link);
         }
       }
     };
@@ -129,6 +133,7 @@ const applyStorefrontSettingsToDOM = (settings: any, shopDetails: any) => {
     } else {
       setFavicon(null); // Explicitly remove favicon if no URL is provided
     }
+    
   } else {
     document.title = "Storefront";
     let metaDescriptionTag = document.querySelector('meta[name="description"]');
