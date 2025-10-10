@@ -27,7 +27,6 @@ interface Product {
   tags: string[];
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
-  interval_repetitions?: number | null; // New field
   details: any;
   product_type: 'physical' | 'digital'; // Added product_type
 }
@@ -231,9 +230,6 @@ export const StorefrontProductCard = ({
                     {product.pricing_type === 'subscription' && (
                       <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                     )}
-                    {product.pricing_type === 'subscription' && product.interval_repetitions && product.interval_repetitions > 1 && (
-                      <span className="text-sm font-light text-muted-foreground"> x {product.interval_repetitions}</span>
-                    )}
                   </p>
                 </div>
               ) : (
@@ -241,9 +237,6 @@ export const StorefrontProductCard = ({
                   {originalDisplayPrice != null ? formatCurrency(originalDisplayPrice, effectiveShopDetails?.currency) : 'N/A'}
                   {product.pricing_type === 'subscription' && (
                     <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
-                  )}
-                  {product.pricing_type === 'subscription' && product.interval_repetitions && product.interval_repetitions > 1 && (
-                    <span className="text-sm font-light text-muted-foreground"> x {product.interval_repetitions}</span>
                   )}
                 </p>
               )}

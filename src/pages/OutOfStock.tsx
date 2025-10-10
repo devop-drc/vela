@@ -31,7 +31,6 @@ interface Product {
   tags: string[];
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
-  interval_repetitions?: number | null; // New field
   created_at: string;
   details: any;
   media_type: string | null; // Added media_type
@@ -68,7 +67,7 @@ const OutOfStock = () => {
 
     const { data, error } = await supabase
       .from("products")
-      .select("*, interval_repetitions") // Added interval_repetitions
+      .select("*")
       .eq('status', 'Out of Stock')
       .eq('user_id', user.id); // Ensure RLS is respected
 

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import React, { useState, useEffect, useMemo } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight, ArrowRight, User, Mail, MapPin, Globe, StickyNote, Calendar, Lock, DollarSign, XCircle, Info } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
@@ -11,11 +11,10 @@ import { MediaItem } from "@/components/MediaItem";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { CheckoutForm, CheckoutFormValues } from "./CheckoutForm"; // Import CheckoutForm and its values
+import { CheckoutForm } from "./CheckoutForm";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
 
 interface StorefrontCartCheckoutModalProps {
   isOpen: boolean;
@@ -29,9 +28,6 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
   const [isCheckoutMode, setIsCheckoutMode] = useState(false);
   const [isOrderConfirmed, setIsOrderConfirmed] = useState(false);
   const [confirmedOrderId, setConfirmedOrderId] = useState<string | null>(null);
-  const [currentCheckoutStep, setCurrentCheckoutStep] = useState(1); // 1: Contact, 2: Shipping, 3: Payment
-  const [isSubmitting, setIsSubmitting] = useState(false); // Define isSubmitting state here
-  const checkoutFormRef = useRef<{ validateCurrentStep: () => Promise<boolean>; handleInternalSubmit: () => Promise<void> }>(null);
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
@@ -40,8 +36,6 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
       setIsCheckoutMode(false);
       setIsOrderConfirmed(false);
       setConfirmedOrderId(null);
-      setCurrentCheckoutStep(1); // Reset step when modal closes
-      setIsSubmitting(false); // Reset submitting state
     }
   }, [isOpen]);
 
@@ -55,166 +49,6 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
     setConfirmedOrderId(orderId);
   };
 
-  const handleProceedToCheckout = () => {
-    if (cartItems.length === 0) {
-      toast({
-        title: "Your cart is empty!",
-        description: "Please add items to your cart before proceeding to checkout.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setIsCheckoutMode(true);
-    setCurrentCheckoutStep(1); // Start at the first step
-  };
-
-  const handleBackToCart = () => {
-    setIsCheckoutMode(false);
-    setCurrentCheckoutStep(1); // Reset step when going back to cart
-  };
-
-  const handleNextStep = async () => {
-    if (checkoutFormRef.current) {
-      const isValid = await checkoutFormRef.current.validateCurrentStep();
-      if (isValid) {
-        setCurrentCheckoutStep(prev => prev + 1);
-      } else {
-        toast({
-          title: "Please complete the current step",
-          description: "Some required fields are missing or invalid.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  const handlePreviousStep = () => {
-    setCurrentCheckoutStep(prev => prev - 1);
-  };
-
-  const handlePlaceOrder = async () => {
-    if (checkoutFormRef.current) {
-      const isValid = await checkoutFormRef.current.validateCurrentStep();
-      if (isValid) {
-        setIsSubmitting(true); // Set submitting state
-        await checkoutFormRef.current.handleInternalSubmit();
-      } else {
-        toast({
-          title: "Please complete the current step",
-          description: "Some required fields are missing or invalid.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  const onSubmitCheckoutForm = async (values: CheckoutFormValues) => {
-    if (!shopDetails) {
-      toast({
-        title: "Shop details not loaded.",
-        description: "Cannot place order. Please try again later.",
-        variant: "destructive",
-      });
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      // 1. Create the order
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          business_id: shopDetails.id, // Use shopDetails.id which is business_id
-          customer_name: values.customerName,
-          customer_email: values.customerEmail,
-          customer_phone: values.customerPhone,
-          total_amount: convertedTotalPrice, // totalPrice is already in shop's currency
-          currency: shopDetails.currency, // Use shop's currency
-          status: 'Pending',
-          payment_method: values.paymentMethod,
-          payment_status: values.paymentMethod === 'cash_on_delivery' ? 'pending' : 'paid', // Assume credit card is paid immediately
-          shipping_address: values.shippingAddress,
-          shipping_city: values.shippingCity,
-          shipping_state: values.shippingState,
-          shipping_zip: values.shippingZip,
-          shipping_country: values.shippingCountry,
-          shipping_notes_seller: values.shippingNotesSeller,
-          shipping_notes_courier: values.shippingNotesCourier,
-        })
-        .select('id')
-        .single();
-
-      if (orderError || !orderData) {
-        throw new Error(orderError?.message || "Failed to create order.");
-      }
-
-      const orderId = orderData.id;
-
-      // 2. Insert order items
-      const orderItemsToInsert = cartItems.map(item => ({
-        order_id: orderId,
-        product_id: item.productId,
-        quantity: item.quantity,
-        price_at_purchase: convertCurrency(item.price, item.currency, 'ALL'), // Store in ALL for consistency
-        selected_options: item.selectedOptions,
-        interval_repetitions: item.intervalRepetitions, // New field
-      }));
-
-      const { error: orderItemsError } = await supabase
-        .from('order_items')
-        .insert(orderItemsToInsert);
-
-      if (orderItemsError) {
-        throw new Error(orderItemsError?.message || "Failed to add order items.");
-      }
-
-      // 3. Update product inventory for one-time physical products
-      for (const item of cartItems) {
-        if (item.pricing_type === 'one_time' && item.product_type === 'physical') {
-          const { data: product, error: productError } = await supabase
-            .from('products')
-            .select('inventory')
-            .eq('id', item.productId)
-            .single();
-
-          if (productError || !product) {
-            console.warn(`Could not fetch inventory for product ${item.productId}. Skipping inventory update.`);
-            continue;
-          }
-
-          const newInventory = (product.inventory || 0) - item.quantity;
-          const newStatus = newInventory <= 0 ? 'Out of Stock' : 'Active'; // Assuming 'Active' if > 0
-
-          const { error: updateError } = await supabase
-            .from('products')
-            .update({ inventory: newInventory, status: newStatus })
-            .eq('id', item.productId);
-
-          if (updateError) {
-            console.error(`Failed to update inventory for product ${item.productId}:`, updateError);
-          }
-        }
-      }
-
-      toast({
-        title: "Order placed successfully!",
-        description: `Your order total was ${formatCurrency(convertedTotalPrice, shopDetails?.currency)}.`,
-        variant: "success",
-      });
-      clearCart();
-      handleOrderSuccess(orderId);
-    } catch (err: any) {
-      console.error("Checkout error:", err);
-      toast({
-        title: "Checkout failed!",
-        description: err.message || "An unexpected error occurred.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
@@ -226,7 +60,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
         <DialogHeader className="p-4 md:p-6 border-b flex-row items-center justify-between flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl md:text-2xl font-bold">
             {isCheckoutMode && !isOrderConfirmed ? (
-              <Button variant="ghost" size="icon" onClick={handleBackToCart} className="mr-2 h-8 w-8 md:h-9 md:w-9">
+              <Button variant="ghost" size="icon" onClick={() => setIsCheckoutMode(false)} className="mr-2 h-8 w-8 md:h-9 md:w-9">
                 <ArrowLeft className="h-5 w-5" />
                 <span className="sr-only">Back to Cart</span>
               </Button>
@@ -285,10 +119,10 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
             >
               {isCheckoutMode ? (
                 <CheckoutForm 
-                  ref={checkoutFormRef}
-                  currentStep={currentCheckoutStep}
-                  onSubmitForm={onSubmitCheckoutForm}
-                  isSubmitting={isSubmitting}
+                  onOrderSuccess={handleOrderSuccess}
+                  onBackToCart={() => setIsCheckoutMode(false)}
+                  totalPrice={convertedTotalPrice}
+                  currency={shopDetails?.currency || 'USD'}
                 />
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 flex-1 overflow-hidden">
@@ -339,9 +173,6 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                     {item.pricing_type === 'subscription' && (
                                       <p className="text-xs text-muted-foreground mt-1">
                                         Subscription: {item.billing_interval === 'month' ? 'Monthly' : 'Yearly'}
-                                        {item.intervalRepetitions && item.intervalRepetitions > 1 && (
-                                          <span> x {item.intervalRepetitions} intervals</span>
-                                        )}
                                       </p>
                                     )}
 
@@ -388,7 +219,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                         )}
                                         <p className={cn("font-semibold text-base md:text-lg", item.isDiscounted && "text-emerald-600")}>
                                           {formatCurrency(convertCurrency(item.price * item.quantity, item.currency, shopDetails?.currency), shopDetails?.currency)}
-                                                                                  </p>
+                                        </p>
                                       </div>
 
                                       <div className="flex items-center gap-2 flex-shrink-0">
@@ -463,9 +294,6 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                     {item.pricing_type === 'subscription' && (
                                       <p className="text-xs text-muted-foreground mt-1">
                                         Subscription: {item.billing_interval === 'month' ? 'Monthly' : 'Yearly'}
-                                        {item.intervalRepetitions && item.intervalRepetitions > 1 && (
-                                          <span> x {item.intervalRepetitions} intervals</span>
-                                        )}
                                       </p>
                                     )}
 
@@ -494,7 +322,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                                         </Button>
                                         <motion.button
                                           type="button"
-                                          variant="destructive"
+                                          variant="ghost"
                                           size="icon"
                                           onClick={() => removeSavedItem(item.productId)}
                                           className="text-destructive hover:text-destructive h-9 w-9 rounded-full"
@@ -540,7 +368,7 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
                       </div>
                     </div>
                     <div className="mt-6 flex-shrink-0">
-                      <Button className="w-full text-base md:text-lg" onClick={handleProceedToCheckout} disabled={cartItems.length === 0}>
+                      <Button className="w-full text-base md:text-lg" onClick={() => setIsCheckoutMode(true)} disabled={cartItems.length === 0}>
                         Proceed to Checkout
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
@@ -553,41 +381,8 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
               )}
             </motion.div>
           ))}
-        </AnimatePresence>
-
-        {/* Dialog Footer for action buttons */}
-        {!isOrderConfirmed && (
-          <DialogFooter className="p-4 md:p-6 border-t flex-shrink-0">
-            {isCheckoutMode ? (
-              <div className="flex justify-between items-center w-full">
-                <Button variant="outline" onClick={handlePreviousStep} disabled={currentCheckoutStep === 1 || isSubmitting}>
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Previous
-                </Button>
-                {currentCheckoutStep < 3 ? (
-                  <Button onClick={handleNextStep} disabled={isSubmitting}>
-                    Next Step
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button onClick={handlePlaceOrder} disabled={isSubmitting || !checkoutFormRef.current?.getValues('acceptTerms')}>
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Place Order
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="flex justify-between items-center w-full">
-                <Button variant="ghost" onClick={onClose}>Continue Shopping</Button>
-                <Button onClick={handleProceedToCheckout} disabled={cartItems.length === 0}>
-                  Proceed to Checkout
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </DialogFooter>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
+          </AnimatePresence>
+        </DialogContent>
+      </Dialog>
+    );
 };

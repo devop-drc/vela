@@ -163,10 +163,12 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                                   </CarouselItem>
                               ))}
                           </CarouselContent>
-                          {mediaItems.length > 1 && <>
-                            <CarouselPrevious className="left-2" />
-                            <CarouselNext className="right-2" />
-                          </>}
+                          {mediaItems.length > 1 && (
+                              <>
+                                  <CarouselPrevious className="left-2" />
+                                  <CarouselNext className="right-2" />
+                              </>
+                          )}
                       </Carousel>
                   )}
                   <Reorder.Group axis="x" values={mediaItems} onReorder={handleReorderMedia} className="flex flex-wrap gap-2 overflow-x-auto pb-2">
@@ -220,13 +222,6 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                         <div className="space-y-1 col-span-2"><Label htmlFor="price" className="text-xs">Price</Label><div className="flex items-center gap-2"><Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" /><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
                         <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
                     </div>
-                    {pricingType === 'subscription' && (
-                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1 pt-2">
-                        <Label htmlFor="interval_repetitions" className="text-xs">Number of Intervals (e.g., 12 for 1 year of monthly)</Label>
-                        <Input id="interval_repetitions" type="number" {...register("interval_repetitions", { valueAsNumber: true })} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" min={1} />
-                        {errors.interval_repetitions && <p className="text-sm text-destructive mt-1">{errors.interval_repetitions.message}</p>}
-                      </motion.div>
-                    )}
                   </div>
                 </div>
               </div>

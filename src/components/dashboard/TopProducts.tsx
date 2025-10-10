@@ -13,9 +13,6 @@ interface TopProduct {
   total_sold: number;
   price: number | null;
   currency: string | null;
-  pricing_type: 'one_time' | 'subscription'; // New field
-  billing_interval: 'month' | 'year' | null; // New field
-  interval_repetitions?: number | null; // New field
 }
 
 export const TopProducts = () => {
@@ -66,16 +63,7 @@ export const TopProducts = () => {
                   <p className="font-medium truncate">{product.name}</p>
                   <p className="text-sm text-muted-foreground">
                     {/* Convert product.price from its stored currency (product.currency) to shopDetails.currency */}
-                    {formatCurrency(convertCurrency(product.price, product.currency, shopDetails.currency), shopDetails.currency)}
-                    {product.pricing_type === 'subscription' && (
-                      <span className="text-xs font-light text-muted-foreground">
-                        /{product.billing_interval === 'month' ? 'mo' : 'yr'}
-                        {product.interval_repetitions && product.interval_repetitions > 1 && (
-                          <span> x {product.interval_repetitions}</span>
-                        )}
-                      </span>
-                    )}
-                    &middot; {formatLargeNumber(product.total_sold)} sold
+                    {formatCurrency(convertCurrency(product.price, product.currency, shopDetails.currency), shopDetails.currency)} &middot; {formatLargeNumber(product.total_sold)} sold
                   </p>
                 </div>
               </div>

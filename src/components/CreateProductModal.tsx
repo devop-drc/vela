@@ -29,17 +29,7 @@ const productSchema = z.object({
   inventory: z.coerce.number().int().min(0, "Inventory must be a positive integer").optional(),
   tags: z.array(z.string()).optional(),
   pricing_type: z.enum(['one_time', 'subscription']),
-  billing_interval: z.enum(['month', 'year']).optional().nullable(),
-  interval_repetitions: z.coerce.number().int().min(1, "Repetitions must be at least 1").optional().nullable(), // New field
   details: z.any(),
-}).refine(data => {
-    if (data.pricing_type === 'subscription' && !data.billing_interval) {
-        return false;
-    }
-    return true;
-}, {
-    message: "Interval is required for subscriptions.",
-    path: ["billing_interval"],
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -101,8 +91,6 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
       inventory: 10,
       tags: productData?.tags?.value || [],
       pricing_type: 'one_time',
-      billing_interval: null,
-      interval_repetitions: 1, // New field
       details: flattenedDetails,
     });
   }, [productData, post, shopDetails, reset, convertCurrency]);
@@ -165,8 +153,6 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
       currency: 'ALL', // Store currency as ALL
       inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
       tags: data.tags, details: data.details, pricing_type: data.pricing_type, status: 'Draft',
-      billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
-      interval_repetitions: data.pricing_type === 'subscription' ? data.interval_repetitions : null, // New field
       instagram_post_id: post.id, media_url: post.media_url, thumbnail_url: post.thumbnail_url, media_type: post.media_type,
     });
 
@@ -208,13 +194,6 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
                 <div className="space-y-2"><Label>Price</Label><div className="flex items-center gap-2"><Input type="number" step="0.01" {...register("price")} className="flex-1" /><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
                 <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-2"><Label>Inventory</Label><Input type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
               </div>
-              {pricingType === 'subscription' && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1 pt-2">
-                  <Label htmlFor="interval_repetitions" className="text-xs">Number of Intervals (e.g., 12 for 1 year of monthly)</Label>
-                  <Input id="interval_repetitions" type="number" {...register("interval_repetitions", { valueAsNumber: true })} min={1} />
-                  {errors.interval_repetitions && <p className="text-sm text-destructive mt-1">{errors.interval_repetitions.message}</p>}
-                </motion.div>
-              )}
               <Card>
                 <CardHeader><CardTitle className="text-base">Options (for Variants)</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -13,35 +13,37 @@ const getSupabaseAdmin = () => createClient(
 );
 
 // Helper function to check if a recurring event is active today
-const isRecurringActive = (startDate: string | null, endDate: string | null, repeatInterval: string | null): boolean => {
+const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatInterval: string | null): boolean => {
   const now = new Date();
   const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-indexed
+  const currentDay = now.getDate();
 
-  let effectiveStart: Date | null = null;
-  let effectiveEnd: Date | null = null;
-
-  try {
-    if (startDate) effectiveStart = new Date(startDate);
-    if (endDate) effectiveEnd = new Date(endDate);
-  } catch (e) {
-    console.error("Error parsing date in isRecurringActive:", e);
-    return false; // If dates are invalid, it's not active
-  }
-
-  // Adjust dates to current year for recurrence logic if applicable
-  if (repeatInterval && repeatInterval !== 'none') {
-    if (effectiveStart) {
-      effectiveStart.setFullYear(currentYear);
-      // If start date is in the future of the current year, but was in the past of the original year,
-      // it means it's a recurring event that already passed this year.
-      // This logic might need more refinement for complex recurring patterns.
+  // Helper to create a date in the current year with month/day from another date
+  const createDateInCurrentYear = (date: Date) => {
+    const d = new Date(currentYear, date.getMonth(), date.getDate());
+    // Handle cases where the original date is Feb 29 and current year is not leap year
+    if (d.getMonth() !== date.getMonth()) {
+      d.setDate(0); // Go to last day of previous month
     }
-    if (effectiveEnd) {
-      effectiveEnd.setFullYear(currentYear);
-      // Handle cross-year recurrence (e.g., Dec 15 - Jan 15)
-      if (effectiveStart && effectiveEnd && effectiveStart > effectiveEnd) {
-        effectiveEnd.setFullYear(currentYear + 1);
-      }
+    return d;
+  };
+
+  // Normalize start and end dates to the current year for comparison, if recurring
+  let effectiveStart = startDate ? new Date(startDate) : null;
+  let effectiveEnd = endDate ? new Date(endDate) : null;
+
+  // If it's a recurring event, adjust start/end dates to the current year for comparison
+  if (repeatInterval && repeatInterval !== 'none') {
+    if (effectiveStart) effectiveStart = createDateInCurrentYear(effectiveStart);
+    if (effectiveEnd) effectiveEnd = createDateInCurrentYear(effectiveEnd);
+
+    // Handle cross-year recurrence (e.g., Dec 15 - Jan 15)
+    if (effectiveStart && effectiveEnd && effectiveStart > effectiveEnd) {
+      // If start is in current year and end is in current year but earlier,
+      // it means the period spans across the year boundary.
+      // So, adjust effectiveEnd to be in the *next* year.
+      effectiveEnd.setFullYear(currentYear + 1);
     }
   }
 
@@ -53,16 +55,21 @@ const isRecurringActive = (startDate: string | null, endDate: string | null, rep
   if (!repeatInterval || repeatInterval === 'none') return true;
 
   // For specific recurring intervals, apply additional logic
+  // At this point, we know 'now' is within the overall (potentially yearly adjusted) date range.
   switch (repeatInterval) {
     case 'daily':
-      return true;
+      return true; // Already within range, so daily is always active
     case 'weekly':
-      return now.getDay() === (effectiveStart ? effectiveStart.getDay() : now.getDay());
+      // Check if today's day of the week matches the start date's day of the week
+      return now.getDay() === (startDate ? new Date(startDate).getDay() : now.getDay());
     case 'monthly':
-      return now.getDate() === (effectiveStart ? effectiveStart.getDate() : now.getDate());
+      // Check if today's day of the month matches the start date's day of the month
+      return now.getDate() === (startDate ? new Date(startDate).getDate() : now.getDate());
     case 'yearly':
-      return (now.getMonth() === (effectiveStart ? effectiveStart.getMonth() : now.getMonth())) &&
-             (now.getDate() === (effectiveStart ? effectiveStart.getDate() : now.getDate()));
+      // For yearly, we just need to ensure the month and day are within the original month/day range
+      // This is already covered by the effectiveStart/effectiveEnd logic if they were adjusted to current year.
+      // If it passed the effectiveStart/effectiveEnd check, it's active for yearly.
+      return true; 
     default:
       return false;
   }
@@ -74,11 +81,8 @@ serve(async (req) => {
   }
 
   try {
-    const { shopSlug, page = 1, limit = 12 } = await req.json();
-    console.log(`[get-public-shop-data] Received request for shopSlug: ${shopSlug}, page: ${page}, limit: ${limit}`);
-
+    const { shopSlug, page = 1, limit = 12 } = await req.json(); // Add page and limit parameters
     if (!shopSlug) {
-      console.error("[get-public-shop-data] Missing shopSlug in request body.");
       return new Response(JSON.stringify({ error: "Missing shopSlug" }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -88,24 +92,20 @@ serve(async (req) => {
     const supabaseAdmin = getSupabaseAdmin();
 
     // Fetch shop details first to get the business_id and user_id
-    console.log(`[get-public-shop-data] Fetching shop details for slug: ${shopSlug}`);
     const { data: shopDetails, error: shopDetailsError } = await supabaseAdmin
       .from('shop_details')
-      .select('*, businesses(id, user_id, name)')
+      .select('*, businesses(id, user_id, name)') // Also fetch related business info
       .eq('slug', shopSlug)
       .single();
 
     if (shopDetailsError || !shopDetails || !shopDetails.businesses) {
-      console.error(`[get-public-shop-data] Shop not found or inaccessible for slug: ${shopSlug}. Error: ${shopDetailsError?.message}`);
       throw new Error("Shop not found or inaccessible.");
     }
-    console.log(`[get-public-shop-data] Shop details fetched: ${JSON.stringify(shopDetails)}`);
 
     const businessId = shopDetails.businesses.id;
     const userId = shopDetails.businesses.user_id;
 
     // Fetch design settings for the business owner
-    console.log(`[get-public-shop-data] Fetching design settings for user: ${userId}`);
     const { data: designSettings, error: designSettingsError } = await supabaseAdmin
       .from('design_settings')
       .select('settings')
@@ -113,48 +113,39 @@ serve(async (req) => {
       .single();
 
     if (designSettingsError && designSettingsError.code !== 'PGRST116') {
-      console.error(`[get-public-shop-data] Error fetching design settings for user ${userId}. Error: ${designSettingsError?.message}`);
-      // Do not throw, just log and proceed with null settings
+      throw designSettingsError;
     }
-    console.log(`[get-public-shop-data] Design settings fetched: ${JSON.stringify(designSettings?.settings)}`);
 
     const offset = (page - 1) * limit;
 
     // Fetch active products for the business with pagination
-    console.log(`[get-public-shop-data] Fetching products for business: ${businessId}, offset: ${offset}, limit: ${limit}`);
     const { data: products, error: productsError, count: totalProductsCount } = await supabaseAdmin
       .from('products')
-      .select('*, interval_repetitions', { count: 'exact' })
+      .select('*', { count: 'exact' }) // Get exact count
       .eq('business_id', businessId)
-      .neq('status', 'Draft')
-      .range(offset, offset + limit - 1);
+      .neq('status', 'Draft') // MODIFIED: Exclude 'Draft' products
+      .range(offset, offset + limit - 1); // Apply range for pagination
 
     if (productsError) {
-      console.error(`[get-public-shop-data] Error fetching products for business ${businessId}. Error: ${productsError?.message}`);
       throw productsError;
     }
-    console.log(`[get-public-shop-data] Products fetched: ${products?.length} (Total: ${totalProductsCount})`);
 
     // Fetch best sellers (top 5 products by total sales)
-    console.log(`[get-public-shop-data] Fetching best sellers for business: ${businessId}`);
     const { data: bestSellers, error: bestSellersError } = await supabaseAdmin.rpc('get_top_products', { p_business_id: businessId });
     if (bestSellersError) {
-      console.error(`[get-public-shop-data] Error fetching best sellers for business ${businessId}. Error: ${bestSellersError?.message}`);
-      // Do not throw, just log and proceed with empty array
+      console.error("Error fetching best sellers:", bestSellersError);
     }
-    console.log(`[get-public-shop-data] Best sellers fetched: ${bestSellers?.length}`);
 
     // Fetch recommended products (e.g., 4 random active products, excluding best sellers)
-    console.log(`[get-public-shop-data] Fetching all active products for recommendations for business: ${businessId}`);
     const { data: allActiveProducts, error: allActiveProductsError } = await supabaseAdmin
       .from('products')
-      .select('*, interval_repetitions')
+      .select('*')
       .eq('business_id', businessId)
       .eq('status', 'Active');
 
     let recommendedProducts: any[] = [];
     if (allActiveProductsError) {
-      console.error(`[get-public-shop-data] Error fetching all active products for recommendations for business ${businessId}. Error: ${allActiveProductsError?.message}`);
+      console.error("Error fetching all active products for recommendations:", allActiveProductsError);
     } else if (allActiveProducts) {
       const bestSellerIds = new Set((bestSellers || []).map((p: any) => p.product_id));
       const availableForRecommendation = allActiveProducts.filter(p => !bestSellerIds.has(p.id));
@@ -166,10 +157,8 @@ serve(async (req) => {
       }
       recommendedProducts = availableForRecommendation.slice(0, 4);
     }
-    console.log(`[get-public-shop-data] Recommended products fetched: ${recommendedProducts?.length}`);
 
     // Fetch active promotions for the business
-    console.log(`[get-public-shop-data] Fetching promotions for user: ${userId}`);
     const { data: promotions, error: promotionsError } = await supabaseAdmin
       .from('promotions')
       .select('*')
@@ -179,12 +168,10 @@ serve(async (req) => {
       .or(`end_date.is.null,end_date.gte.${new Date().toISOString()}`);
 
     if (promotionsError) {
-      console.error(`[get-public-shop-data] Error fetching promotions for user ${userId}. Error: ${promotionsError?.message}`);
+      console.error("Error fetching promotions:", promotionsError);
     }
-    console.log(`[get-public-shop-data] Promotions fetched: ${promotions?.length}`);
 
     // Fetch active marquee elements for the business, only filtering by is_active in SQL
-    console.log(`[get-public-shop-data] Fetching marquee elements for user: ${userId}`);
     const { data: rawMarqueeElements, error: marqueeElementsError } = await supabaseAdmin
       .from('marquee_elements')
       .select('*')
@@ -194,20 +181,24 @@ serve(async (req) => {
 
     let activeMarqueeElements: any[] = [];
     if (marqueeElementsError) {
-      console.error(`[get-public-shop-data] Error fetching marquee elements for user ${userId}. Error: ${marqueeElementsError?.message}`);
+      console.error("Error fetching marquee elements:", marqueeElementsError);
     } else if (rawMarqueeElements) {
+      console.log("Raw Marquee Elements:", rawMarqueeElements); // DEBUG LOG
       activeMarqueeElements = rawMarqueeElements.filter(element => {
-        const isActive = isRecurringActive(element.start_date, element.end_date, element.repeat_interval);
+        const startDate = element.start_date ? new Date(element.start_date) : null;
+        const endDate = element.end_date ? new Date(element.end_date) : null;
+        const isActive = isRecurringActive(startDate, endDate, element.repeat_interval);
+        console.log(`Marquee Element '${element.message}' (ID: ${element.id}): isActive=${isActive}, startDate=${element.start_date}, endDate=${element.end_date}, repeatInterval=${element.repeat_interval}`); // DEBUG LOG
         return isActive;
       });
+      console.log("Active Marquee Elements after filtering:", activeMarqueeElements); // DEBUG LOG
     }
-    console.log(`[get-public-shop-data] Active marquee elements fetched: ${activeMarqueeElements?.length}`);
 
     return new Response(JSON.stringify({
       shopDetails: {
         id: businessId,
-        user_id: userId,
-        name: shopDetails.businesses.name,
+        user_id: userId, // Include user_id here
+        name: shopDetails.businesses.name, // Business name from the join
         shop_name: shopDetails.shop_name,
         slug: shopDetails.slug,
         logo_url: shopDetails.logo_url,
@@ -218,24 +209,24 @@ serve(async (req) => {
         contact_email: shopDetails.contact_email,
         followers_count: shopDetails.followers_count,
         media_count: shopDetails.media_count,
-        instagram_url: shopDetails.instagram_url || null,
-        username: shopDetails.username || null,
+        instagram_url: shopDetails.instagram_url || null, // Use instagram_url from shop_details
+        username: shopDetails.username || null, // Use username from shop_details
       },
       appearanceSettings: designSettings?.settings || null,
       products: products || [],
-      totalProductsCount: totalProductsCount || 0,
-      hasMore: (offset + (products?.length || 0)) < (totalProductsCount || 0),
+      totalProductsCount: totalProductsCount || 0, // Return total count
+      hasMore: (offset + (products?.length || 0)) < (totalProductsCount || 0), // Calculate hasMore
       bestSellers: bestSellers || [],
       recommendedProducts: recommendedProducts || [],
-      promotions: promotions || [],
-      marqueeElements: activeMarqueeElements || [],
+      promotions: promotions || [], // Include promotions
+      marqueeElements: activeMarqueeElements || [], // Include filtered marquee elements
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
 
   } catch (error) {
-    console.error('[get-public-shop-data] Function Error (Catch Block):', error.message);
+    console.error('get-public-shop-data Function Error:', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

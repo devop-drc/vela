@@ -18,7 +18,6 @@ interface Product {
   media_url: string;
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
-  interval_repetitions?: number | null; // New field
 }
 
 interface ProductWithSales extends Product {
@@ -115,19 +114,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
                   (() => {
                     // Convert product.price from its stored currency (product.currency) to shopDetails.currency
                     const convertedPrice = convertCurrency(product.price, product.currency, shopDetails.currency);
-                    return (
-                      <>
-                        {formatCurrency(convertedPrice, shopDetails.currency)}
-                        {product.pricing_type === 'subscription' && (
-                          <span className="text-xs font-light text-muted-foreground">
-                            /{product.billing_interval === 'month' ? 'mo' : 'yr'}
-                            {product.interval_repetitions && product.interval_repetitions > 1 && (
-                              <span> x {product.interval_repetitions}</span>
-                            )}
-                          </span>
-                        )}
-                      </>
-                    );
+                    return formatCurrency(convertedPrice, shopDetails.currency);
                   })()
                 ) : (
                   <span className="text-muted-foreground">N/A</span>

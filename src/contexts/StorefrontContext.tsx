@@ -38,7 +38,6 @@ interface Product {
   tags: string[];
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
-  interval_repetitions?: number | null; // New field
   details: any;
   created_at: string; // Add created_at for sorting
 }
@@ -213,40 +212,36 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
     fetchStorefrontData(1); // Initial fetch on mount or shopSlug change
   }, [fetchStorefrontData]);
 
-  const convertCurrency = useCallback((amount: number | null | undefined, fromCurrency?: string, toCurrency?: string) => {
+  const convertCurrency = useCallback((amount: number | null | undefined, fromCurrency?: string) => {
     const numericAmount = amount ?? 0;
-    // Ensure targetCurrency is always a valid string, defaulting to shopDetails.currency or 'USD'
-    const targetCurrency = toCurrency || shopDetails?.currency || 'USD'; 
-
-    console.log("convertCurrency: Initiating conversion.", { amount, fromCurrency, toCurrency, targetCurrency, shopDetails, exchangeRates });
-
-    // Crucial: Ensure shopDetails and exchangeRates are available for conversion
-    if (!shopDetails || !exchangeRates) {
-      console.log("convertCurrency: Missing shopDetails or exchangeRates. Returning original amount.", { amount, fromCurrency, toCurrency, shopDetails, exchangeRates });
+    if (!shopDetails || !exchangeRates || !shopDetails.currency) {
       return numericAmount;
     }
 
-    // If source and target currencies are the same, no conversion needed
-    if (fromCurrency === targetCurrency) {
-      console.log("convertCurrency: Source and target currencies are the same. Returning original amount.", { amount, fromCurrency, toCurrency, convertedAmount: numericAmount });
+    // If no fromCurrency is provided or it's the same as the shop's currency, return as is
+    if (!fromCurrency || fromCurrency === shopDetails.currency) {
       return numericAmount;
     }
 
+    // Get the rate for the source currency (from ALL to fromCurrency)
     const fromRate = exchangeRates[fromCurrency];
-    const toRate = exchangeRates[targetCurrency];
+    // Get the rate for the target currency (from ALL to shop's currency)
+    const toRate = exchangeRates[shopDetails.currency];
 
+    // If either rate is missing, return the original amount
     if (!fromRate || !toRate) {
-      console.warn(`convertCurrency: Missing exchange rate for conversion from ${fromCurrency} to ${targetCurrency}. Returning original amount.`, { amount, fromCurrency, toCurrency, exchangeRates });
+      console.warn(`Missing exchange rate for conversion from ${fromCurrency} to ${shopDetails.currency}`);
       return numericAmount;
     }
 
-    // Rates are ALL-based: rate[X] means 1 ALL = X of currency X
-    // To convert from A to B: amount_in_B = amount_in_A * (rate[B] / rate[A])
-    const convertedAmount = numericAmount * (toRate / fromRate);
+    // Convert from source currency to ALL, then to target currency
+    // rate = (ALL/toCurrency) / (ALL/fromCurrency) = fromCurrency/toCurrency
+    const rate = toRate / fromRate;
+    const convertedAmount = numericAmount * rate;
     
-    console.log(`convertCurrency: Converting ${numericAmount} ${fromCurrency} to ${targetCurrency}. Rates: ${fromCurrency}=${fromRate}, ${targetCurrency}=${toRate}. Converted: ${convertedAmount.toFixed(2)}`);
+    // Round to 2 decimal places for display
     return Math.round(convertedAmount * 100) / 100;
-  }, [shopDetails, exchangeRates]); // Add shopDetails to dependencies
+  }, [shopDetails, exchangeRates]);
 
   const contextValue: StorefrontContextType = {
     shopDetails,
