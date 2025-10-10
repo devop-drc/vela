@@ -74,7 +74,8 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
   const [isReportIssueModalOpen, setIsReportIssueModalOpen] = useState(false);
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [isLoadingDispute, setIsLoadingDispute] = useState(false);
-  const [isConfirmReceiptAlertOpen, setIsConfirmReceiptAlertOpen] = useState(false); // State for confirm receipt alert
+  const [isConfirmReceiptAlertOpen, setIsConfirmReceiptAlertOpen] = useState(false); // State for confirm receipt alert (card)
+  const [isMarkCompletedAlertOpen, setIsMarkCompletedAlertOpen] = useState(false); // State for mark completed (cash)
   const [isCancelOrderAlertOpen, setIsCancelOrderAlertOpen] = useState(false); // State for cancel order alert
 
   useEffect(() => {
@@ -139,6 +140,24 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
     } finally {
       setIsUpdatingOrder(false);
       setIsConfirmReceiptAlertOpen(false); // Close alert dialog
+    }
+  };
+
+  const handleMarkCompletedAndPaid = async () => {
+    if (!order) return;
+    setIsUpdatingOrder(true);
+    try {
+      const { error } = await supabase.from('orders').update({ status: 'Fulfilled', payment_status: 'paid' }).eq('id', order.id);
+      if (error) throw error;
+      showSuccess("Order marked as completed and paid! Thank you.");
+      onOrderUpdate();
+      onClose();
+    } catch (err: any) {
+      console.error("Failed to mark order as completed and paid:", err);
+      showError(`Failed to mark order as completed and paid: ${err.message || "An unexpected error occurred."}`);
+    } finally {
+      setIsUpdatingOrder(false);
+      setIsMarkCompletedAlertOpen(false);
     }
   };
 
@@ -234,6 +253,25 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
             <AlertDialogAction onClick={handleConfirmReceipt} disabled={isUpdatingOrder}>
               {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirm Receipt
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isMarkCompletedAlertOpen} onOpenChange={setIsMarkCompletedAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark Order as Completed & Paid?</AlertDialogTitle>
+            <AlertDialogDescription>
+              By confirming, you are marking this Cash on Delivery order as **Fulfilled** and **Paid**. This action cannot be reversed.
+              Please ensure payment has been collected and all items received.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUpdatingOrder}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleMarkCompletedAndPaid} disabled={isUpdatingOrder}>
+              {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Mark Completed & Paid
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -355,7 +393,14 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
               <Badge className={cn("text-white", getStatusColor(order.status))}>{order.status}</Badge>
             </div>
             <div className="flex gap-2">
-              {order.status === 'Given to Courier' && (
+              {order.payment_method === 'cash_on_delivery' && order.status !== 'Fulfilled' && order.status !== 'Cancelled' && (
+                <Button onClick={() => setIsMarkCompletedAlertOpen(true)} disabled={isUpdatingOrder}>
+                  {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Mark as Completed & Paid
+                </Button>
+              )}
+              {order.payment_method === 'card' && order.status === 'Given to Courier' && (
                 <Button onClick={() => setIsConfirmReceiptAlertOpen(true)} disabled={isUpdatingOrder}>
                   {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <Handshake className="mr-2 h-4 w-4" />
