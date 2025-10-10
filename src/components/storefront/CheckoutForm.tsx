@@ -129,7 +129,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderSuccess, onBa
         order_id: orderId,
         product_id: item.productId,
         quantity: item.quantity,
-        price_at_purchase: convertCurrency(item.price, item.currency, 'ALL'), // Store in ALL for consistency
+        price_at_purchase: convertCurrency(item.price, item.currency, 'ALL'),
         selected_options: item.selectedOptions,
       }));
 

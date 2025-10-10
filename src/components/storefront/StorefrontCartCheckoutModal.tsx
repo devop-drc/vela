@@ -69,10 +69,6 @@ export const StorefrontCartCheckoutModal = ({ isOpen, onClose }: StorefrontCartC
             )}
             {isOrderConfirmed ? "Order Confirmed!" : (isCheckoutMode ? "Checkout" : "Your Cart")}
           </DialogTitle>
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 md:h-9 md:w-9">
-            <X className="h-5 w-5" />
-            <span className="sr-only">Close</span>
-          </Button>
         </DialogHeader>
 
         <AnimatePresence mode="wait">

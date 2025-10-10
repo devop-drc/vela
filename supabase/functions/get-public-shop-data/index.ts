@@ -26,7 +26,7 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
   // 3. Handle specific recurring intervals
   // At this point, 'now' is within the overall (absolute) start/end date range.
   // Use originalStartDate for recurrence pattern matching. If null, it implies it's always active within the absolute range.
-  const originalStartDate = startDate ? new Date(startDate) : now; 
+  const originalStartDate = startDate || now; // Use startDate if available, otherwise now for recurrence pattern
 
   switch (repeatInterval) {
     case 'daily':
@@ -152,10 +152,10 @@ serve(async (req) => {
     } else if (rawMarqueeElements) {
       console.log("Raw Marquee Elements:", rawMarqueeElements); // DEBUG LOG
       activeMarqueeElements = rawMarqueeElements.filter(element => {
-        const startDate = element.start_date ? new Date(element.start_date) : null;
-        const endDate = element.end_date ? new Date(element.end_date) : null;
-        const isActive = isRecurringActive(startDate, endDate, element.repeat_interval);
-        console.log(`Marquee Element '${element.message}' (ID: ${element.id}): isActive=${isActive}, startDate=${element.start_date}, endDate=${element.end_date}, repeatInterval=${element.repeat_interval}`); // DEBUG LOG
+        const startDateObj = element.start_date ? new Date(element.start_date) : null;
+        const endDateObj = element.end_date ? new Date(element.end_date) : null;
+        const isActive = isRecurringActive(startDateObj, endDateObj, element.repeat_interval);
+        console.log(`Marquee Element '${element.message}' (ID: ${element.id}): isActive=${isActive}, startDateRaw=${element.start_date}, endDateRaw=${element.end_date}, parsedStartDate=${startDateObj}, parsedEndDate=${endDateObj}, repeatInterval=${element.repeat_interval}`); // DEBUG LOG
         return isActive;
       });
       console.log("Active Marquee Elements after filtering:", activeMarqueeElements); // DEBUG LOG

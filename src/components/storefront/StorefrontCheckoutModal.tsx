@@ -15,9 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 import { CheckoutForm } from "./CheckoutForm"; // Import the new CheckoutForm
-
-// You might need to install these if they are not already available
-// import { SiVisa, SiMastercard, SiAmericanexpress, SiDiscover } from "react-icons/si"; // Example for card logos
+import { SiVisa, SiMastercard, SiAmericanexpress, SiDiscover } from "react-icons/si";
 
 const CheckoutProgress = ({ currentStep }: { currentStep: number }) => {
   const steps = [
@@ -140,12 +138,12 @@ export const StorefrontCheckoutModal = ({ onClose, onBackToCart }: StorefrontChe
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <CardHeader className="pb-4 px-6"> {/* Added horizontal padding */}
+    <div className="flex flex-col h-fit">
+      <CardHeader className="pb-4 px-6">
         <CardTitle className="text-2xl font-bold font-heading">Checkout</CardTitle>
         <DialogDescription>Complete your purchase by providing your details.</DialogDescription>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto px-6"> {/* Added horizontal padding */}
+      <CardContent className="h-[100px]">
         <CheckoutProgress currentStep={currentStep} />
 
         <form id="checkout-form" onSubmit={handleSubmit} className="space-y-8">
@@ -240,14 +238,12 @@ export const StorefrontCheckoutModal = ({ onClose, onBackToCart }: StorefrontChe
                 <Separator />
                 <div className="flex items-center justify-center gap-4">
                   <CreditCard className="h-8 w-8 text-muted-foreground" />
-                  {/* Placeholder for PayPal and Apple Pay icons */}
                   <img src="https://upload.wikimedia.org/wikipedia/commons/b/b7/PayPal_Logo_Icon_2014.svg" alt="PayPal" className="h-8 w-8" />
                   <img src="https://upload.wikimedia.org/wikipedia/commons/e/e5/Apple_Pay_logo.svg" alt="Apple Pay" className="h-8 w-8" />
-                  {/* Example of other payment icons, you might need to install react-icons/si for these */}
-                  {/* <SiVisa className="h-8 w-8 text-muted-foreground" />
+                  <SiVisa className="h-8 w-8 text-muted-foreground" />
                   <SiMastercard className="h-8 w-8 text-muted-foreground" />
                   <SiAmericanexpress className="h-8 w-8 text-muted-foreground" />
-                  <SiDiscover className="h-8 w-8 text-muted-foreground" /> */}
+                  <SiDiscover className="h-8 w-8 text-muted-foreground" />
                   <Wallet className="h-8 w-8 text-muted-foreground" />
                 </div>
               </div>
@@ -260,6 +256,7 @@ export const StorefrontCheckoutModal = ({ onClose, onBackToCart }: StorefrontChe
           </Card>
         </form>
       </CardContent>
+      <CardFooter>
       <div className="p-6 border-t flex justify-between items-center">
         <Button type="button" variant="ghost" onClick={onBackToCart}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -279,6 +276,7 @@ export const StorefrontCheckoutModal = ({ onClose, onBackToCart }: StorefrontChe
           )}
         </Button>
       </div>
+      </CardFooter>
     </div>
   );
 };
