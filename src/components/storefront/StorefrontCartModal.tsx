@@ -28,7 +28,7 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
   const { cartItems, savedItems, totalItems, subtotal, shipping, total, totalSaved, updateQuantity, removeFromCart, clearCart, saveForLater, moveToCart, removeSavedItem, hasSubscriptionProducts } = useCart();
   const { shopDetails, appearanceSettings, convertCurrency } = useStorefront();
   const navigate = useNavigate();
-  const [checkoutStep, setCheckoutStep] = useState<'cart' | 'checkout'>('cart');
+  const [checkoutStep, setCheckoutStep] = useState<'cart' | 'contact-shipping' | 'payment'>('cart');
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
 
   const blurEnabled = appearanceSettings?.blurEnabled;
@@ -64,7 +64,19 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
       toast.error("Your cart is empty. Please add items before checking out.");
       return;
     }
-    setCheckoutStep('checkout');
+    setCheckoutStep('contact-shipping');
+  };
+
+  const handleBackToCart = () => {
+    setCheckoutStep('cart');
+  };
+
+  const handleBackToContactShipping = () => {
+    setCheckoutStep('contact-shipping');
+  };
+
+  const handleProceedToPayment = () => {
+    setCheckoutStep('payment');
   };
 
   const handlePlaceOrder = async (data: CheckoutFormData) => {
@@ -98,7 +110,7 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
         paymentMethod: data.paymentMethod,
         shippingAddress: data.shippingAddress,
         shippingCity: data.shippingCity,
-        shippingState: data.shippingState,
+        shippingState: data.shippingState, // Still pass, even if not in UI
         shippingZip: data.shippingZip,
         shippingCountry: data.shippingCountry,
         shippingNotesSeller: data.shippingNotesSeller,
@@ -124,6 +136,33 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
     }
   };
 
+  const getDialogTitle = () => {
+    switch (checkoutStep) {
+      case 'cart': return "Your Cart";
+      case 'contact-shipping': return "Checkout";
+      case 'payment': return "Checkout";
+      default: return "Your Cart";
+    }
+  };
+
+  const getHeaderBackButton = () => {
+    if (checkoutStep === 'cart') {
+      return (
+        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 md:h-9 md:w-9">
+          <X className="h-5 w-5" />
+          <span className="sr-only">Close</span>
+        </Button>
+      );
+    } else {
+      return (
+        <Button variant="ghost" size="icon" onClick={checkoutStep === 'payment' ? handleBackToContactShipping : handleBackToCart} className="h-8 w-8 md:h-9 md:w-9">
+          <ArrowLeft className="h-5 w-5" />
+          <span className="sr-only">Back</span>
+        </Button>
+      );
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
@@ -132,22 +171,19 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
           blurEnabled ? "bg-card/80 backdrop-blur-[20px]" : "bg-card"
         )}
       >
-        {/* Left Column: Cart Items or Checkout Form */}
+        <DialogHeader className="p-4 md:p-6 border-b flex-row items-center justify-between flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-xl md:text-2xl font-bold">
+            <ShoppingBag className="h-6 w-6 md:h-7 md:w-7" />
+            {getDialogTitle()}
+          </DialogTitle>
+          {getHeaderBackButton()}
+        </DialogHeader>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 flex-1 overflow-hidden">
+          {/* Left Column: Cart Items or Checkout Form */}
           <div className="lg:col-span-2 flex flex-col h-full">
             {checkoutStep === 'cart' ? (
               <>
-                <DialogHeader className="p-4 md:p-6 border-b flex-row items-center justify-between flex-shrink-0">
-                  <DialogTitle className="flex items-center gap-2 text-xl md:text-2xl font-bold">
-                    <ShoppingBag className="h-6 w-6 md:h-7 md:w-7" />
-                    Your Cart
-                  </DialogTitle>
-                  <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 md:h-9 md:w-9">
-                    <X className="h-5 w-5" />
-                    <span className="sr-only">Close</span>
-                  </Button>
-                </DialogHeader>
-
                 {cartItems.length === 0 && savedItems.length === 0 ? (
                   <motion.div
                     key="empty-cart"
@@ -381,21 +417,10 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
                     </div>
                   </ScrollArea>
                 )}
-                {cartItems.length > 0 && (
-                  <div className="p-4 md:p-6 border-t flex-shrink-0">
-                    <Button className="w-full text-base md:text-lg" onClick={handleProceedToCheckout} disabled={cartItems.length === 0}>
-                      Proceed to Checkout
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" className="w-full text-base md:text-lg mt-2" onClick={onClose}>
-                      Continue Shopping
-                    </Button>
-                  </div>
-                )}
               </>
             ) : (
               <CheckoutForm
-                onBackToCart={() => setCheckoutStep('cart')}
+                onBackToCart={handleBackToCart}
                 onPlaceOrder={handlePlaceOrder}
                 isSubmittingOrder={isSubmittingOrder}
                 cartItems={cartItems}
@@ -406,11 +431,15 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
                 appearanceSettings={appearanceSettings}
                 convertCurrency={convertCurrency}
                 hasSubscriptionProducts={hasSubscriptionProducts}
+                checkoutStep={checkoutStep}
+                setCheckoutStep={setCheckoutStep}
+                onContinue={handleProceedToPayment}
+                onBack={checkoutStep === 'payment' ? handleBackToContactShipping : handleBackToCart}
               />
             )}
           </div>
 
-          {/* Right Column: Order Summary (always visible) */}
+          {/* Right Column: Order Summary & Navigation Buttons */}
           <div className="lg:col-span-1 flex flex-col p-4 md:p-6 border-t lg:border-t-0 lg:border-l">
             <div className="space-y-4 flex-1">
               <h2 className="text-lg md:text-xl font-bold font-heading">Order Summary</h2>
@@ -435,6 +464,39 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
                 <span>Total:</span>
                 <span>{formatCurrency(total, shopDetails?.currency)}</span>
               </div>
+            </div>
+            <div className="mt-6 flex-shrink-0">
+              {checkoutStep === 'cart' && (
+                <Button className="w-full text-base md:text-lg" onClick={handleProceedToCheckout} disabled={cartItems.length === 0}>
+                  Proceed to Checkout
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+              {checkoutStep === 'contact-shipping' && (
+                <Button form="checkout-form" type="submit" className="w-full text-base md:text-lg" disabled={isSubmittingOrder}>
+                  Continue to Payment
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+              {checkoutStep === 'payment' && (
+                <Button form="checkout-form" type="submit" className="w-full text-base md:text-lg" disabled={isSubmittingOrder}>
+                  {isSubmittingOrder ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Placing Order...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-2 h-5 w-5" />
+                      Place Order
+                    </>
+                  )}
+                </Button>
+              )}
+              <Button variant="ghost" className="w-full text-base md:text-lg mt-2" onClick={onBack}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                {checkoutStep === 'cart' ? 'Continue Shopping' : 'Back'}
+              </Button>
             </div>
           </div>
         </div>
