@@ -183,6 +183,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         setRecommendedProducts(data.recommendedProducts || []); // Set recommended products
         setPromotions(data.promotions || []); // Set promotions
         setMarqueeElements(data.marqueeElements || []); // Set marquee elements
+        console.log("StorefrontContext: Marquee elements received from Edge Function:", data.marqueeElements); // NEW LOG
       } else {
         setProducts(prevProducts => [...prevProducts, ...data.products]);
       }

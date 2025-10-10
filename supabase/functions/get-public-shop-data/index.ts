@@ -15,10 +15,13 @@ const getSupabaseAdmin = () => createClient(
 // Helper function to check if a recurring event is active today
 const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatInterval: string | null, elementId: string, message: string): boolean => {
   const now = new Date();
-  now.setHours(0, 0, 0, 0); // Normalize 'now' to start of day for consistent comparison
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(now);
+  todayEnd.setHours(23, 59, 59, 999);
 
   console.log(`[isRecurringActive - ${elementId}] Checking: '${message}'`);
-  console.log(`[isRecurringActive - ${elementId}] Current Date (normalized): ${now.toISOString()}`);
+  console.log(`[isRecurringActive - ${elementId}] Current Date (normalized to day start): ${todayStart.toISOString()}`);
   console.log(`[isRecurringActive - ${elementId}] Raw Start Date: ${startDate?.toISOString() || 'null'}`);
   console.log(`[isRecurringActive - ${elementId}] Raw End Date: ${endDate?.toISOString() || 'null'}`);
   console.log(`[isRecurringActive - ${elementId}] Repeat Interval: ${repeatInterval || 'null'}`);
@@ -27,43 +30,41 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
   const validStartDate = startDate && !isNaN(startDate.getTime()) ? startDate : null;
   const validEndDate = endDate && !isNaN(endDate.getTime()) ? endDate : null;
 
-  console.log(`[isRecurringActive - ${elementId}] Validated Start Date: ${validStartDate?.toISOString() || 'null'}`);
-  console.log(`[isRecurringActive - ${elementId}] Validated End Date: ${validEndDate?.toISOString() || 'null'}`);
+  // Normalize validStartDate and validEndDate to start/end of their respective days for comparison
+  const normalizedValidStartDate = validStartDate ? new Date(validStartDate) : null;
+  if (normalizedValidStartDate) normalizedValidStartDate.setHours(0, 0, 0, 0);
 
-  // 1. Check absolute start and end dates (normalized to start of day)
-  if (validStartDate) {
-    const normalizedStartDate = new Date(validStartDate);
-    normalizedStartDate.setHours(0, 0, 0, 0);
-    if (now < normalizedStartDate) {
-      console.log(`[isRecurringActive - ${elementId}] Reason: Current date is before normalized start date.`);
-      return false;
-    }
+  const normalizedValidEndDate = validEndDate ? new Date(validEndDate) : null;
+  if (normalizedValidEndDate) normalizedValidEndDate.setHours(23, 59, 59, 999);
+
+  console.log(`[isRecurringActive - ${elementId}] Normalized Valid Start Date: ${normalizedValidStartDate?.toISOString() || 'null'}`);
+  console.log(`[isRecurringActive - ${elementId}] Normalized Valid End Date: ${normalizedValidEndDate?.toISOString() || 'null'}`);
+
+  // 1. Check absolute start and end dates (using normalized 'today' for comparison)
+  if (normalizedValidStartDate && todayEnd < normalizedValidStartDate) { // If today has passed the start date
+    console.log(`[isRecurringActive - ${elementId}] Reason: Today (${todayStart.toISOString()}) is before normalized start date (${normalizedValidStartDate.toISOString()}).`);
+    return false;
   }
-  if (validEndDate) {
-    const normalizedEndDate = new Date(validEndDate);
-    normalizedEndDate.setHours(23, 59, 59, 999); // End of day
-    if (now > normalizedEndDate) {
-      console.log(`[isRecurringActive - ${elementId}] Reason: Current date is after normalized end date.`);
-      return false;
-    }
+  if (normalizedValidEndDate && todayStart > normalizedValidEndDate) { // If today is after the end date
+    console.log(`[isRecurringActive - ${elementId}] Reason: Today (${todayStart.toISOString()}) is after normalized end date (${normalizedValidEndDate.toISOString()}).`);
+    return false;
   }
 
   // 2. If no repeat interval or 'none', and it passed the absolute date check, it's active
   if (!repeatInterval || repeatInterval === 'none') {
-    console.log(`[isRecurringActive - ${elementId}] Result: Active (no repeat interval).`);
+    console.log(`[isRecurringActive - ${elementId}] Result: Active (no repeat interval, within absolute dates).`);
     return true;
   }
 
   // 3. Handle specific recurring intervals
   // If repeatInterval is set, validStartDate MUST be present to define the pattern.
-  // If validStartDate is null here, it's an invalid recurring configuration, so it should not be active.
-  if (!validStartDate) {
+  if (!validStartDate) { // Use the original validStartDate for pattern matching
     console.warn(`[isRecurringActive - ${elementId}] Reason: Recurring announcement has repeat_interval '${repeatInterval}' but no valid start_date. Skipping.`);
     return false;
   }
 
-  const referenceDate = new Date(validStartDate); // Use the actual start date as the reference for recurrence
-  referenceDate.setHours(0, 0, 0, 0);
+  const referenceDateForRecurrence = new Date(validStartDate); // Use the actual start date as the reference for recurrence
+  referenceDateForRecurrence.setHours(0, 0, 0, 0); // Normalize for consistent day/month/year comparison
 
   let isActiveByRecurrence = false;
   switch (repeatInterval) {
@@ -71,19 +72,19 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
       isActiveByRecurrence = true; // Already passed absolute date checks
       break;
     case 'weekly':
-      isActiveByRecurrence = now.getDay() === referenceDate.getDay();
+      isActiveByRecurrence = todayStart.getDay() === referenceDateForRecurrence.getDay();
       break;
     case 'monthly':
-      isActiveByRecurrence = now.getDate() === referenceDate.getDate();
+      isActiveByRecurrence = todayStart.getDate() === referenceDateForRecurrence.getDate();
       break;
     case 'yearly':
-      isActiveByRecurrence = now.getMonth() === referenceDate.getMonth() && now.getDate() === referenceDate.getDate();
+      isActiveByRecurrence = todayStart.getMonth() === referenceDateForRecurrence.getMonth() && todayStart.getDate() === referenceDateForRecurrence.getDate();
       break;
     default:
       isActiveByRecurrence = false;
   }
 
-  console.log(`[isRecurringActive - ${elementId}] Recurrence Check for '${repeatInterval}': now.getDay()=${now.getDay()}, refDate.getDay()=${referenceDate.getDay()}, now.getDate()=${now.getDate()}, refDate.getDate()=${referenceDate.getDate()}, now.getMonth()=${now.getMonth()}, refDate.getMonth()=${referenceDate.getMonth()}`);
+  console.log(`[isRecurringActive - ${elementId}] Recurrence Check for '${repeatInterval}': todayStart.getDay()=${todayStart.getDay()}, refDate.getDay()=${referenceDateForRecurrence.getDay()}, todayStart.getDate()=${todayStart.getDate()}, refDate.getDate()=${referenceDateForRecurrence.getDate()}, todayStart.getMonth()=${todayStart.getMonth()}, refDate.getMonth()=${referenceDateForRecurrence.getMonth()}`);
   console.log(`[isRecurringActive - ${elementId}] Result: Active by recurrence: ${isActiveByRecurrence}`);
   return isActiveByRecurrence;
 };
