@@ -9,7 +9,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner"; // Import Sonner
 import { CartProvider } from '@/contexts/CartContext'; // Import CartProvider
 import { RecentlyViewedProvider } from '@/contexts/RecentlyViewedContext'; // Import RecentlyViewedProvider
 import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile
-import { StorefrontCartCheckoutModal } from './StorefrontCartCheckoutModal'; // Import the new modal
+import { StorefrontCartModal } from './StorefrontCartModal'; // Import the new cart modal
 import { StorefrontBottomNav } from './StorefrontBottomNav'; // Import the new bottom nav
 import { cn } from '@/lib/utils'; // Import cn for conditional classnames
 import { loadGoogleFont } from '@/lib/fontUtils'; // Import loadGoogleFont
@@ -149,7 +149,7 @@ const StorefrontLayoutContent = () => {
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false); // State for mobile sidebar
   const [isDesktopFilterSidebarOpen, setIsDesktopFilterSidebarOpen] = useState(false); // State for desktop sidebar
   const [wasDesktopFilterSidebarExplicitlyOpened, setWasDesktopFilterSidebarExplicitlyOpened] = useState(false); // New state to track explicit user action
-  const [isCartCheckoutModalOpen, setIsCartCheckoutModalOpen] = useState(false); // State for cart/checkout modal
+  const [isCartModalOpen, setIsCartModalOpen] = useState(false); // State for cart modal
   const footerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -212,7 +212,7 @@ const StorefrontLayoutContent = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen">
-        <StorefrontHeader onOpenCart={() => setIsCartCheckoutModalOpen(true)} isDesktopSidebarOpen={false} setIsDesktopFilterSidebarOpen={setIsDesktopFilterSidebarOpen} setWasDesktopFilterSidebarExplicitlyOpened={setWasDesktopFilterSidebarExplicitlyOpened} />
+        <StorefrontHeader onOpenCart={() => setIsCartModalOpen(true)} isDesktopSidebarOpen={false} setIsDesktopFilterSidebarOpen={setIsDesktopFilterSidebarOpen} setWasDesktopFilterSidebarExplicitlyOpened={setWasDesktopFilterSidebarExplicitlyOpened} />
         <main className="flex-1 container py-8 mt-16">
           <Skeleton className="h-10 w-1/2 mb-6" />
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -249,7 +249,7 @@ const StorefrontLayoutContent = () => {
       <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
       <StorefrontHeader 
         onToggleFilterSidebar={() => setIsFilterSidebarOpen(true)} 
-        onOpenCart={() => setIsCartCheckoutModalOpen(true)}
+        onOpenCart={() => setIsCartModalOpen(true)}
         isDesktopSidebarOpen={isDesktopFilterSidebarOpen}
         setIsDesktopFilterSidebarOpen={setIsDesktopFilterSidebarOpen}
         setWasDesktopFilterSidebarExplicitlyOpened={setWasDesktopFilterSidebarExplicitlyOpened}
@@ -266,9 +266,9 @@ const StorefrontLayoutContent = () => {
         }} />
       </main>
       <StorefrontFooter ref={footerRef} />
-      <StorefrontBottomNav onOpenCart={() => setIsCartCheckoutModalOpen(true)} />
+      <StorefrontBottomNav onOpenCart={() => setIsCartModalOpen(true)} />
       <Sonner />
-      <StorefrontCartCheckoutModal isOpen={isCartCheckoutModalOpen} onClose={() => setIsCartCheckoutModalOpen(false)} />
+      <StorefrontCartModal isOpen={isCartModalOpen} onClose={() => setIsCartModalOpen(false)} />
     </div>
   );
 };

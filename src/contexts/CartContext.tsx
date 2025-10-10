@@ -35,10 +35,11 @@ interface CartContextType {
   moveToCart: (productId: string) => void;
   removeSavedItem: (productId: string) => void;
   hasSubscriptionProducts: boolean; // New flag
-  hasDigitalSubscriptionProducts: boolean; // New flag
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+
+const FREE_SHIPPING_THRESHOLD = 50; // Define free shipping threshold in USD
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -183,10 +184,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [cartItems, shopDetails, convertCurrency]);
 
   const shipping = useMemo(() => {
-    // Placeholder for shipping calculation
-    // For now, a flat rate or free shipping if subtotal is high enough
     if (!shopDetails) return 0;
-    return subtotal > 100 ? 0 : convertCurrency(5, 'USD', shopDetails.currency); // Example: $5 shipping, converted
+    const convertedThreshold = convertCurrency(FREE_SHIPPING_THRESHOLD, 'USD', shopDetails.currency);
+    return subtotal >= convertedThreshold ? 0 : convertCurrency(5, 'USD', shopDetails.currency); // Example: $5 shipping, converted
   }, [subtotal, shopDetails, convertCurrency]);
 
   const total = useMemo(() => subtotal + shipping, [subtotal, shipping]);
@@ -202,10 +202,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const hasSubscriptionProducts = useMemo(() => {
     return cartItems.some(item => item.pricing_type === 'subscription');
-  }, [cartItems]);
-
-  const hasDigitalSubscriptionProducts = useMemo(() => {
-    return cartItems.some(item => item.pricing_type === 'subscription' && item.product_type === 'digital');
   }, [cartItems]);
 
   return (
@@ -226,7 +222,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         moveToCart,
         removeSavedItem,
         hasSubscriptionProducts,
-        hasDigitalSubscriptionProducts,
       }}
     >
       {children}
