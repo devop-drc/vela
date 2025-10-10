@@ -17,6 +17,8 @@ import { getAttributeIcon } from "@/lib/attributeIcons"; // Import attribute ico
 import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard"; // Import StorefrontProductCard
 import { StorefrontBreadcrumb } from "@/components/storefront/StorefrontBreadcrumb"; // Import StorefrontBreadcrumb
 import { useRecentlyViewed } from "@/contexts/RecentlyViewedContext"; // Import useRecentlyViewed
+import { type CarouselApi } from "@/components/ui/carousel"; // Import CarouselApi type
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // Import ScrollArea and ScrollBar
 
 const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
@@ -39,10 +41,21 @@ const StorefrontProductDetail = () => {
   const [selectedColor, setSelectedColor] = useState<string | null>(null); // Placeholder for variant selection
   const [selectedSize, setSelectedSize] = useState<string | null>(null); // Placeholder for variant selection
 
+  const [api, setApi] = useState<CarouselApi>();
+  const [currentSlide, setCurrentSlide] = useState(0);
+
   useEffect(() => {
     // Scroll to top when component mounts or productId changes
     window.scrollTo(0, 0);
   }, [productId]);
+
+  useEffect(() => {
+    if (!api) return;
+    setCurrentSlide(api.selectedScrollSnap());
+    api.on("select", () => {
+      setCurrentSlide(api.selectedScrollSnap());
+    });
+  }, [api]);
 
   if (isLoading) {
     return <div className="container py-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -155,16 +168,26 @@ const StorefrontProductDetail = () => {
       toast.error("This product is currently out of stock.");
       return;
     }
-    // In a real app, you'd pass selected variants here
+
+    const selectedOptions: { [key: string]: string | string[] } = {};
+    if (selectedColor) selectedOptions.color = selectedColor;
+    if (selectedSize) selectedOptions.size = selectedSize;
+    // Add other selected options here if they were part of the UI
+
     addToCart({
       productId: product.id,
-      name: product.name + (selectedColor ? ` (${selectedColor})` : '') + (selectedSize ? ` (${selectedSize})` : ''),
-      // Pass the converted price and shop's currency to cart
+      name: product.name,
       price: hasDiscount ? discountedPrice : originalDisplayPrice, // Use discounted price if applicable
+      originalPrice: originalDisplayPrice, // Pass original price
+      isDiscounted: hasDiscount, // Pass discount status
       currency: shopDetails.currency || 'USD',
       media_url: product.media_url,
       media_type: product.media_type,
       slug: shopDetails.slug,
+      selectedOptions: Object.keys(selectedOptions).length > 0 ? selectedOptions : undefined, // Pass selected options
+      pricing_type: product.pricing_type, // Pass pricing_type
+      product_type: product.product_type, // Pass product_type
+      billing_interval: product.billing_interval, // Pass billing_interval
     }, quantity);
   };
 
@@ -185,7 +208,7 @@ const StorefrontProductDetail = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Product Media */}
         <div>
-          <Carousel className="w-full rounded-lg overflow-hidden border shadow-md">
+          <Carousel setApi={setApi} className="w-full rounded-lg overflow-hidden border shadow-md">
             <CarouselContent>
               {mediaItems.map((url: string, index: number) => (
                 <CarouselItem key={index}>
@@ -202,6 +225,25 @@ const StorefrontProductDetail = () => {
               </>
             )}
           </Carousel>
+          {mediaItems.length > 1 && (
+            <ScrollArea className="mt-4 pb-2">
+              <div className="flex gap-2">
+                {mediaItems.map((url: string, index: number) => (
+                  <button
+                    key={index}
+                    onClick={() => api?.scrollTo(index)}
+                    className={cn(
+                      "h-20 w-20 rounded-md overflow-hidden border-2 transition-all flex-shrink-0",
+                      index === currentSlide ? "border-primary" : "border-transparent hover:border-muted-foreground"
+                    )}
+                  >
+                    <MediaItem src={url} alt={`Thumbnail ${index + 1}`} className="object-cover h-full w-full" />
+                  </button>
+                ))}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          )}
         </div>
 
         {/* Product Details */}
@@ -211,15 +253,15 @@ const StorefrontProductDetail = () => {
               <span>{product.category || 'Uncategorized'}</span>
               {product.details?.type && <span> &middot; {product.details.type}</span>}
             </p>
-            <h1 className="text-3xl md:text-5xl font-bold font-heading mb-2 md:mb-3 leading-tight flex items-center gap-2">
+            <h1 className="text-3xl md:text-5xl font-bold font-heading mb-2 md:mb-3 leading-tight flex flex-wrap items-center gap-2"> {/* Added flex-wrap */}
               {product.name}
               {isOutOfStock && (
-                <Badge variant="secondary" className="text-sm md:text-base bg-amber-500 text-white">
+                <Badge variant="secondary" className="text-sm md:text-base bg-amber-500 text-white flex-shrink-0"> {/* Added flex-shrink-0 */}
                   Coming Soon
                 </Badge>
               )}
               {activePromotions.length > 0 && !isOutOfStock && (
-                <div className="flex gap-1">
+                <div className="flex gap-1 flex-shrink-0"> {/* Added flex-shrink-0 */}
                   {activePromotions.map(promo => (
                     <Badge key={promo.id} className="bg-emerald-500 text-white text-sm md:text-base">
                       {getPromotionBadge(promo)}
@@ -234,7 +276,7 @@ const StorefrontProductDetail = () => {
                     <p className="text-base text-muted-foreground line-through">
                       {formatCurrency(originalDisplayPrice, shopDetails?.currency)}
                     </p>
-                    <p className="text-2xl md:text-3xl font-bold text-primary">
+                    <p className="text-2xl md:text-3xl font-bold text-emerald-600"> {/* Made discounted price green */}
                       {formatCurrency(discountedPrice, shopDetails?.currency)}
                       {product.pricing_type === 'subscription' && (
                           <span className="text-base md:text-lg font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>

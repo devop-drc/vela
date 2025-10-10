@@ -9,6 +9,7 @@ import { useStorefront, ShopDetails as StorefrontShopDetails, DesignSettings as 
 import { useShop } from "@/contexts/ShopContext"; // Import useShop for dashboard context
 import { useAppearance } from "@/contexts/AppearanceContext"; // Import useAppearance for dashboard context
 import { Percent, Gift } from "lucide-react";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"; // Import Carousel components
 
 interface Product {
   id: string;
@@ -27,6 +28,7 @@ interface Product {
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
   details: any;
+  product_type: 'physical' | 'digital'; // Added product_type
 }
 
 interface StorefrontProductCardProps {
@@ -139,6 +141,8 @@ export const StorefrontProductCard = ({
     return null;
   }
 
+  const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
+
   return (
     <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }} className={className}>
       <Link
@@ -152,14 +156,32 @@ export const StorefrontProductCard = ({
           isOutOfStock && "opacity-80" // Apply opacity for out of stock
         )}>
           <CardContent className="p-0 relative">
-            <div className="aspect-square w-full overflow-hidden bg-muted">
-              <MediaItem
-                src={product.media_url}
-                alt={product.name}
-                type={product.media_type}
-                className={cn("object-cover transition-transform duration-300 group-hover:scale-105", isOutOfStock && "grayscale")}
-              />
-            </div>
+            <Carousel
+              className="w-full group/carousel"
+              onMouseDown={(e) => e.stopPropagation()} // Prevent link click on drag
+              onTouchStart={(e) => e.stopPropagation()} // Prevent link click on drag
+            >
+              <CarouselContent onClick={(e) => e.stopPropagation()}> {/* Prevent link click on content */}
+                {mediaItems.map((url: string, index: number) => (
+                  <CarouselItem key={index}>
+                    <div className="aspect-square w-full overflow-hidden bg-muted">
+                      <MediaItem
+                        src={url}
+                        alt={product.name}
+                        type={product.media_type}
+                        className={cn("object-cover transition-transform duration-300 group-hover:scale-105", isOutOfStock && "grayscale")}
+                      />
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              {mediaItems.length > 1 && (
+                <>
+                  <CarouselPrevious onClick={(e) => e.stopPropagation()} className="left-2 opacity-0 group-hover/carousel:opacity-100" />
+                  <CarouselNext onClick={(e) => e.stopPropagation()} className="right-2 opacity-0 group-hover/carousel:opacity-100" />
+                </>
+              )}
+            </Carousel>
             {isOutOfStock && (
               <Badge variant="secondary" className="absolute top-2 left-2 text-xs md:text-sm bg-amber-500 text-white">
                 Coming Soon
