@@ -4,12 +4,18 @@ import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency } from "@/lib/formatters";
 import { useState } from "react";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
+import { DateRangePicker } from "../ui/DateRangePicker"; // Import DateRangePicker
+import { DateRange } from "react-day-picker"; // Import DateRange type
+import { Button } from "../ui/button"; // Import Button
+import { subMonths } from "date-fns"; // Import subMonths
 
 interface OverviewChartProps {
   data: { name: string; revenue: number; clients: number; orders: number }[];
+  dateRange: DateRange | undefined;
+  setDateRange: (range: DateRange | undefined) => void;
 }
 
-export const OverviewChart = ({ data }: OverviewChartProps) => {
+export const OverviewChart = ({ data, dateRange, setDateRange }: OverviewChartProps) => {
   const { shopDetails, convertCurrency } = useShop();
   const [visibleData, setVisibleData] = useState(['revenue', 'clients', 'orders']);
 
@@ -17,6 +23,21 @@ export const OverviewChart = ({ data }: OverviewChartProps) => {
     if (value.length) {
       setVisibleData(value);
     }
+  };
+
+  const handleSetDateRange = (range: DateRange | undefined) => {
+    setDateRange(range);
+  };
+
+  const handleAllTime = () => {
+    setDateRange(undefined);
+  };
+
+  const handleLast6Months = () => {
+    setDateRange({
+      from: subMonths(new Date(), 5),
+      to: new Date(),
+    });
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -46,18 +67,23 @@ export const OverviewChart = ({ data }: OverviewChartProps) => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             <CardTitle>Business Overview</CardTitle>
-            <CardDescription>Revenue, new clients, and orders over the last 6 months.</CardDescription>
+            <CardDescription>Revenue, new clients, and orders over time.</CardDescription>
           </div>
-          <ToggleGroup type="multiple" variant="outline" size="sm" value={visibleData} onValueChange={handleToggle}>
-            <ToggleGroupItem value="revenue" aria-label="Toggle revenue">Revenue</ToggleGroupItem>
-            <ToggleGroupItem value="clients" aria-label="Toggle clients">Clients</ToggleGroupItem>
-            <ToggleGroupItem value="orders" aria-label="Toggle orders">Orders</ToggleGroupItem>
-          </ToggleGroup>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleLast6Months}>Last 6 Months</Button>
+            <Button variant="outline" size="sm" onClick={handleAllTime}>All Time</Button>
+            <DateRangePicker date={dateRange} onDateChange={handleSetDateRange} />
+            <ToggleGroup type="multiple" variant="outline" size="sm" value={visibleData} onValueChange={handleToggle}>
+              <ToggleGroupItem value="revenue" aria-label="Toggle revenue">Revenue</ToggleGroupItem>
+              <ToggleGroupItem value="clients" aria-label="Toggle clients">Clients</ToggleGroupItem>
+              <ToggleGroupItem value="orders" aria-label="Toggle orders">Orders</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pl-2">
         <ResponsiveContainer width="100%" height={350}>
-          <ComposedChart data={data.map(d => ({ ...d, revenue: convertCurrency(d.revenue) }))}>
+          <ComposedChart data={data}> {/* Removed redundant convertCurrency here */}
             <defs>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>

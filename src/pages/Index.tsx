@@ -14,6 +14,8 @@ import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { useIntegration } from "@/contexts/IntegrationContext"; // Import useIntegration
 import { RealtimeChannel } from "@supabase/supabase-js";
+import { DateRange } from "react-day-picker"; // Import DateRange type
+import { subMonths } from "date-fns"; // Import subMonths
 
 interface DashboardData {
   totalRevenue: number;
@@ -23,7 +25,11 @@ interface DashboardData {
   chartData: { name: string; revenue: number; clients: number; orders: number }[];
 }
 
-const useDashboardData = (shopDetails: any, convertCurrency: (amount: number | null | undefined, fromCurrency?: string, toCurrency?: string) => number) => {
+const useDashboardData = (
+  shopDetails: any,
+  convertCurrency: (amount: number | null | undefined, fromCurrency?: string, toCurrency?: string) => number,
+  dateRange: DateRange | undefined
+) => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -41,7 +47,7 @@ const useDashboardData = (shopDetails: any, convertCurrency: (amount: number | n
     }
 
     const { data: business, error: businessError } = await supabase
-      .from('businesses').select('id').eq('user_id', user.id).single(); // Corrected from 'user.id' to 'user_id'
+      .from('businesses').select('id').eq('user_id', user.id).single();
 
     if (businessError || !business) {
       console.error("Could not fetch business:", businessError);
@@ -49,8 +55,20 @@ const useDashboardData = (shopDetails: any, convertCurrency: (amount: number | n
       return;
     }
 
+    let ordersQuery = supabase.from('orders').select('total_amount, customer_name, customer_email, created_at, id, status, currency, payment_status').eq('business_id', business.id);
+
+    if (dateRange?.from) {
+      ordersQuery = ordersQuery.gte('created_at', dateRange.from.toISOString());
+    }
+    if (dateRange?.to) {
+      // Set end of day for 'to' date to include all orders on that day
+      const endOfDay = new Date(dateRange.to);
+      endOfDay.setHours(23, 59, 59, 999);
+      ordersQuery = ordersQuery.lte('created_at', endOfDay.toISOString());
+    }
+
     const [ordersRes, productsRes] = await Promise.all([
-      supabase.from('orders').select('total_amount, customer_name, customer_email, created_at, id, status, currency, payment_status').eq('business_id', business.id).order('created_at', { ascending: false }),
+      ordersQuery.order('created_at', { ascending: false }),
       supabase.from('products').select('status').eq('business_id', business.id)
     ]);
 
@@ -74,41 +92,39 @@ const useDashboardData = (shopDetails: any, convertCurrency: (amount: number | n
     const uniqueCustomers = new Set(fulfilledPaidOrders.map(o => o.customer_email)).size;
 
     const monthlyData: { [key: string]: { revenue: number; clients: Set<string>; orders: number } } = {};
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5); // Adjusted to get data for the last 6 months including current
-
-    allOrders.forEach(order => { // Iterate over all orders, not just fulfilledPaidOrders, for chart data
+    
+    allOrders.forEach(order => {
       const orderDate = new Date(order.created_at);
-      if (orderDate > sixMonthsAgo) {
-        const month = orderDate.toLocaleString('default', { month: 'short' });
-        if (!monthlyData[month]) {
-          monthlyData[month] = { revenue: 0, clients: new Set(), orders: 0 };
-        }
-        // Only add to revenue and client count if fulfilled and paid
-        if (order.status === 'Fulfilled' && order.payment_status === 'paid') {
-          monthlyData[month].revenue += convertCurrency(order.total_amount, order.currency, shopDetails.currency);
-          monthlyData[month].clients.add(order.customer_email);
-        }
-        monthlyData[month].orders += 1; // Count all orders regardless of status for 'orders' metric
+      const monthKey = orderDate.toLocaleString('default', { month: 'short', year: '2-digit' }); // e.g., "Oct 23"
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { revenue: 0, clients: new Set(), orders: 0 };
       }
+      if (order.status === 'Fulfilled' && order.payment_status === 'paid') {
+        monthlyData[monthKey].revenue += convertCurrency(order.total_amount, order.currency, shopDetails.currency);
+        monthlyData[monthKey].clients.add(order.customer_email);
+      }
+      monthlyData[monthKey].orders += 1;
     });
     
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const currentMonth = new Date().getMonth();
-    const chartData = Array.from({ length: 6 }, (_, i) => {
-      const monthIndex = (currentMonth - 5 + i + 12) % 12;
-      const monthName = monthNames[monthIndex];
-      return { 
-        name: monthName, 
-        revenue: monthlyData[monthName]?.revenue || 0,
-        clients: monthlyData[monthName]?.clients.size || 0,
-        orders: monthlyData[monthName]?.orders || 0,
-      };
+    // Generate chart data for all months within the fetched range, or last 6 months if no range
+    const sortedMonthKeys = Object.keys(monthlyData).sort((a, b) => {
+      const [monthA, yearA] = a.split(' ');
+      const [monthB, yearB] = b.split(' ');
+      const dateA = new Date(`${monthA} 1, 20${yearA}`);
+      const dateB = new Date(`${monthB} 1, 20${yearB}`);
+      return dateA.getTime() - dateB.getTime();
     });
+
+    const chartData = sortedMonthKeys.map(monthKey => ({
+      name: monthKey,
+      revenue: monthlyData[monthKey]?.revenue || 0,
+      clients: monthlyData[monthKey]?.clients.size || 0,
+      orders: monthlyData[monthKey]?.orders || 0,
+    }));
 
     setData({ totalRevenue, salesCount, activeProducts, customers: uniqueCustomers, chartData });
     setIsLoading(false);
-  }, [shopDetails, convertCurrency]); // Add shopDetails and convertCurrency to dependencies
+  }, [shopDetails, convertCurrency, dateRange]);
 
   useEffect(() => {
     let channel: RealtimeChannel | null = null;
@@ -133,7 +149,6 @@ const useDashboardData = (shopDetails: any, convertCurrency: (amount: number | n
           'postgres_changes',
           { event: '*', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` },
           (payload) => {
-            // Trigger data refetch on any order change (insert, update, delete)
             console.log("Realtime order update detected, refetching dashboard data:", payload);
             fetchData();
           }
@@ -141,7 +156,6 @@ const useDashboardData = (shopDetails: any, convertCurrency: (amount: number | n
         .subscribe();
     };
 
-    // Initial fetch and setup listener when shopDetails is available
     if (shopDetails) {
       fetchData();
       setupRealtimeListener();
@@ -152,7 +166,7 @@ const useDashboardData = (shopDetails: any, convertCurrency: (amount: number | n
         supabase.removeChannel(channel);
       }
     };
-  }, [fetchData, shopDetails]); // Re-run when fetchData or shopDetails changes
+  }, [fetchData, shopDetails]);
 
   return { data, isLoading, fetchData };
 };
@@ -161,8 +175,12 @@ const Index = () => {
   const { setTitle } = usePageTitle();
   const { shopDetails, isLoading: isShopLoading, convertCurrency } = useShop();
   const { activeJob } = useSync();
-  const { data, isLoading: isDashboardDataLoading, fetchData } = useDashboardData(shopDetails, convertCurrency);
-  const { runWithIntegrationCheck } = useIntegration(); // Use the integration context
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: subMonths(new Date(), 5),
+    to: new Date(),
+  });
+  const { data, isLoading: isDashboardDataLoading, fetchData } = useDashboardData(shopDetails, convertCurrency, dateRange);
+  const { runWithIntegrationCheck } = useIntegration();
 
   useEffect(() => {
     setTitle("Dashboard");
@@ -174,7 +192,6 @@ const Index = () => {
     }
   }, [activeJob?.status, fetchData]);
 
-  // Check for Instagram integration on mount and show prompt if missing
   useEffect(() => {
     const checkIntegrationStatus = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -193,15 +210,14 @@ const Index = () => {
       }
 
       if (!integration) {
-        // If no integration, trigger the prompt
-        runWithIntegrationCheck(() => {}); // Pass an empty function, the prompt will handle the redirect
+        runWithIntegrationCheck(() => {});
       }
     };
     checkIntegrationStatus();
   }, [runWithIntegrationCheck]);
 
 
-  if (isShopLoading || isDashboardDataLoading) { // Combine loading states
+  if (isShopLoading || isDashboardDataLoading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-6">
@@ -233,7 +249,7 @@ const Index = () => {
           <StatCard title="Active Products" value={data.activeProducts.toString()} icon={Package} description="Products available for sale" />
           <StatCard title="Total Customers" value={data.customers.toString()} icon={Users} description="Unique customers all-time" />
         </div>
-        <OverviewChart data={data.chartData} />
+        <OverviewChart data={data.chartData} dateRange={dateRange} setDateRange={setDateRange} />
       </div>
       <div className="lg:col-span-1 lg:sticky lg:top-0 space-y-6">
         <ActivityFeed />
