@@ -41,7 +41,7 @@ const useDashboardData = (shopDetails: any, convertCurrency: (amount: number | n
     }
 
     const { data: business, error: businessError } = await supabase
-      .from('businesses').select('id').eq('user_id', user.id).single();
+      .from('businesses').select('id').eq('user_id', user.id).single(); // Corrected from 'user.id' to 'user_id'
 
     if (businessError || !business) {
       console.error("Could not fetch business:", businessError);

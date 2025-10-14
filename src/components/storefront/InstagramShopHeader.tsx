@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from "react";
 import { Link, useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
-import { ShoppingBag, ArrowLeft, Plus, Menu, ShoppingCart as ShoppingCartIcon } from "lucide-react";
+import { ShoppingBag, ArrowLeft, Plus, Menu, ShoppingCart as ShoppingCartIcon, ChevronDown } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";

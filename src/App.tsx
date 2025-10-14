@@ -50,7 +50,7 @@ const AppContent = () => {
       const { data: business, error: businessError } = await supabase
         .from('businesses')
         .select('id')
-        .eq('user.id', user.id)
+        .eq('user_id', user.id) // Corrected from 'user.id' to 'user_id'
         .single();
 
       if (businessError || !business) {

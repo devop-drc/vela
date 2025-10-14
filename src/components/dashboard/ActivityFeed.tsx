@@ -18,7 +18,7 @@ import { DisputeDetailModal } from "../DisputeDetailModal"; // Import DisputeDet
 
 type Activity = {
   id: string;
-  type: 'sale' | 'product' | 'dispute' | 'new_order' | 'order_fulfilled'; // Added new_order
+  type: 'sale' | 'product' | 'dispute' | 'new_order' | 'order_fulfilled' | 'order_status_update'; // Added order_status_update
   title: string;
   description: string;
   value: string | number;
@@ -32,6 +32,8 @@ const ActivityIcon = ({ activity }: { activity: Activity }) => {
   switch (activity.type) {
     case 'sale': return <Banknote className="h-5 w-5" />;
     case 'new_order': return <ShoppingBag className="h-5 w-5" />; // Icon for new orders
+    case 'order_fulfilled': return <Handshake className="h-5 w-5" />;
+    case 'order_status_update': return <Package className="h-5 w-5" />; // Generic icon for status update
     case 'product':
       if (activity.title === 'Status Updated') {
         const status = activity.value as string;
@@ -41,7 +43,6 @@ const ActivityIcon = ({ activity }: { activity: Activity }) => {
       }
       return <Package className="h-5 w-5" />;
     case 'dispute': return <MessageSquareWarning className="h-5 w-5" />;
-    case 'order_fulfilled': return <Handshake className="h-5 w-5" />;
     default: return <Package className="h-5 w-5" />;
   }
 };
@@ -51,12 +52,19 @@ const ActivityValue = ({ activity }: { activity: Activity }) => {
     return <p className="font-semibold text-sm">{activity.value}</p>;
   }
   
-  if (activity.type === 'product') {
+  if (activity.type === 'product' || activity.type === 'order_status_update') { // Apply to product and order status updates
     const status = activity.value as string;
     const statusConfig: { [key: string]: string } = {
       'Active': 'bg-emerald-100 text-emerald-800',
       'Draft': 'bg-amber-100 text-amber-800',
       'Out of Stock': 'bg-slate-100 text-slate-800',
+      'Pending': 'bg-amber-100 text-amber-800',
+      'Order Seen': 'bg-blue-100 text-blue-800',
+      'Order Packaged': 'bg-blue-100 text-blue-800',
+      'Given to Courier': 'bg-blue-100 text-blue-800',
+      'Fulfilled': 'bg-emerald-100 text-emerald-800',
+      'Problematic': 'bg-destructive/10 text-destructive',
+      'Cancelled': 'bg-gray-100 text-gray-800',
     };
 
     if (statusConfig[status]) {
@@ -66,10 +74,6 @@ const ActivityValue = ({ activity }: { activity: Activity }) => {
 
   if (activity.type === 'dispute') {
     return <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">New</Badge>;
-  }
-
-  if (activity.type === 'order_fulfilled') {
-    return <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-300">Fulfilled</Badge>;
   }
 
   return <p className="font-semibold text-sm">{activity.value}</p>;
@@ -173,33 +177,35 @@ export const ActivityFeed = () => {
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` }, (payload) => {
           const oldO = payload.old as any;
           const newO = payload.new as any;
-          if (oldO.status !== newO.status || oldO.payment_status !== newO.payment_status) {
-            const convertedAmount = convertCurrency(newO.total_amount, newO.currency, shopDetails?.currency); // Convert here
-            if (newO.status === 'Fulfilled' && newO.payment_status === 'paid') {
-              const newActivity: Activity = {
-                id: `${newO.id}-${payload.commit_timestamp}-fulfilled`,
-                type: 'sale', // Now it's a sale
-                title: `Sale Fulfilled`,
-                description: `Order #${newO.id.substring(0, 8)} by ${newO.customer_name}`,
-                value: formatCurrency(convertedAmount, shopDetails?.currency),
-                date: payload.commit_timestamp,
-                orderId: newO.id,
-              };
-              if (isMounted) setActivities(prev => [newActivity, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20));
-            } else if (newO.status === 'Fulfilled' && newO.payment_status !== 'paid') {
-              // If fulfilled but not paid, it's still an order fulfilled, but not a 'sale' yet
-              const newActivity: Activity = {
-                id: `${newO.id}-${payload.commit_timestamp}-fulfilled-unpaid`,
-                type: 'order_fulfilled',
-                title: `Order Fulfilled (Unpaid)`,
-                description: `Order #${newO.id.substring(0, 8)} by ${newO.customer_name}`,
-                value: 'Fulfilled',
-                date: payload.commit_timestamp,
-                orderId: newO.id,
-              };
-              if (isMounted) setActivities(prev => [newActivity, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20));
-            }
-            // You can add other status updates here if needed, but they won't be 'sale' type
+          
+          const convertedAmount = convertCurrency(newO.total_amount, newO.currency, shopDetails?.currency); // Convert here
+
+          // Check for status change
+          if (oldO.status !== newO.status) {
+            const newActivity: Activity = {
+              id: `${newO.id}-${payload.commit_timestamp}-status-update`,
+              type: 'order_status_update',
+              title: `Order Status Updated`,
+              description: `Order #${newO.id.substring(0, 8)} to ${newO.status}`,
+              value: newO.status,
+              date: payload.commit_timestamp,
+              orderId: newO.id,
+            };
+            if (isMounted) setActivities(prev => [newActivity, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20));
+          }
+
+          // Check for fulfilled and paid (sale)
+          if (newO.status === 'Fulfilled' && newO.payment_status === 'paid' && (oldO.status !== 'Fulfilled' || oldO.payment_status !== 'paid')) {
+            const newActivity: Activity = {
+              id: `${newO.id}-${payload.commit_timestamp}-sale`,
+              type: 'sale',
+              title: `Sale Fulfilled`,
+              description: `Order #${newO.id.substring(0, 8)} by ${newO.customer_name}`,
+              value: formatCurrency(convertedAmount, shopDetails?.currency),
+              date: payload.commit_timestamp,
+              orderId: newO.id,
+            };
+            if (isMounted) setActivities(prev => [newActivity, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20));
           }
         })
         .subscribe();
@@ -237,7 +243,7 @@ export const ActivityFeed = () => {
         setSelectedProduct(data); 
       }
     }
-    if (activity.type === 'sale' || activity.type === 'new_order' || activity.type === 'order_fulfilled' || activity.type === 'dispute') { // Added dispute
+    if (activity.type === 'sale' || activity.type === 'new_order' || activity.type === 'order_fulfilled' || activity.type === 'dispute' || activity.type === 'order_status_update') { // Added order_status_update
       const { data, error } = await supabase.from('orders').select('*').eq('id', activity.orderId).single();
       if (error) { 
         showError("Failed to load order details."); 
@@ -277,6 +283,7 @@ export const ActivityFeed = () => {
                         activity.type === 'new_order' ? 'bg-blue-500/5' : // New order background
                         activity.type === 'dispute' ? 'bg-amber-500/5' :
                         activity.type === 'order_fulfilled' ? 'bg-emerald-500/5' :
+                        activity.type === 'order_status_update' ? 'bg-purple-500/5' : // New status update background
                         'bg-blue-500/5'
                       )}
                     >
@@ -287,6 +294,7 @@ export const ActivityFeed = () => {
                           activity.type === 'new_order' ? 'bg-blue-100 text-blue-600' : // New order icon background
                           activity.type === 'dispute' ? 'bg-amber-100 text-amber-600' :
                           activity.type === 'order_fulfilled' ? 'bg-emerald-100 text-emerald-600' :
+                          activity.type === 'order_status_update' ? 'bg-purple-100 text-purple-600' : // New status update icon background
                           'bg-blue-100 text-blue-600'
                         )}>
                           <ActivityIcon activity={activity} />
