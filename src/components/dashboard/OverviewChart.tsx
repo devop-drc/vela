@@ -13,10 +13,12 @@ interface OverviewChartProps {
   data: { name: string; revenue: number; clients: number; orders: number }[];
   dateRange: DateRange | undefined;
   setDateRange: (range: DateRange | undefined) => void;
+  granularity: 'day' | 'month'; // New prop for granularity
+  setGranularity: (granularity: 'day' | 'month') => void; // New prop to set granularity
 }
 
-export const OverviewChart = ({ data, dateRange, setDateRange }: OverviewChartProps) => {
-  const { shopDetails, convertCurrency } = useShop();
+export const OverviewChart = ({ data, dateRange, setDateRange, granularity, setGranularity }: OverviewChartProps) => {
+  const { shopDetails } = useShop(); // Removed convertCurrency as it's handled in useDashboardData
   const [visibleData, setVisibleData] = useState(['revenue', 'clients', 'orders']);
 
   const handleToggle = (value: string[]) => {
@@ -61,6 +63,16 @@ export const OverviewChart = ({ data, dateRange, setDateRange }: OverviewChartPr
     return null;
   };
 
+  const xAxisTickFormatter = (value: string) => {
+    if (granularity === 'month') {
+      // Assuming format like "Oct 23"
+      return value;
+    } else { // 'day'
+      // Assuming format like "Oct 1"
+      return value;
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -73,6 +85,10 @@ export const OverviewChart = ({ data, dateRange, setDateRange }: OverviewChartPr
             <Button variant="outline" size="sm" onClick={handleLast6Months}>Last 6 Months</Button>
             <Button variant="outline" size="sm" onClick={handleAllTime}>All Time</Button>
             <DateRangePicker date={dateRange} onDateChange={handleSetDateRange} />
+            <ToggleGroup type="single" variant="outline" size="sm" value={granularity} onValueChange={(value: 'day' | 'month') => setGranularity(value)}>
+              <ToggleGroupItem value="month" aria-label="By Month">By Month</ToggleGroupItem>
+              <ToggleGroupItem value="day" aria-label="By Day">By Day</ToggleGroupItem>
+            </ToggleGroup>
             <ToggleGroup type="multiple" variant="outline" size="sm" value={visibleData} onValueChange={handleToggle}>
               <ToggleGroupItem value="revenue" aria-label="Toggle revenue">Revenue</ToggleGroupItem>
               <ToggleGroupItem value="clients" aria-label="Toggle clients">Clients</ToggleGroupItem>
@@ -83,7 +99,7 @@ export const OverviewChart = ({ data, dateRange, setDateRange }: OverviewChartPr
       </CardHeader>
       <CardContent className="pl-2">
         <ResponsiveContainer width="100%" height={350}>
-          <ComposedChart data={data}> {/* Removed redundant convertCurrency here */}
+          <ComposedChart data={data}>
             <defs>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
@@ -99,7 +115,7 @@ export const OverviewChart = ({ data, dateRange, setDateRange }: OverviewChartPr
               </linearGradient>
             </defs>
             <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+            <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={xAxisTickFormatter} />
             <YAxis yAxisId="left" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value, shopDetails?.currency).replace(/(\.00|,\d*)/g, '')} />
             <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--accent))' }} />

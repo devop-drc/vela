@@ -15,7 +15,7 @@ import { QuickActions } from "@/components/dashboard/QuickActions";
 import { useIntegration } from "@/contexts/IntegrationContext"; // Import useIntegration
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { DateRange } from "react-day-picker"; // Import DateRange type
-import { subMonths } from "date-fns"; // Import subMonths
+import { subMonths, startOfMonth, endOfMonth, addDays, startOfDay, endOfDay } from "date-fns"; // Import date-fns utilities
 
 interface DashboardData {
   totalRevenue: number;
@@ -28,7 +28,8 @@ interface DashboardData {
 const useDashboardData = (
   shopDetails: any,
   convertCurrency: (amount: number | null | undefined, fromCurrency?: string, toCurrency?: string) => number,
-  dateRange: DateRange | undefined
+  dateRange: DateRange | undefined,
+  granularity: 'day' | 'month' // New parameter
 ) => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,13 +59,10 @@ const useDashboardData = (
     let ordersQuery = supabase.from('orders').select('total_amount, customer_name, customer_email, created_at, id, status, currency, payment_status').eq('business_id', business.id);
 
     if (dateRange?.from) {
-      ordersQuery = ordersQuery.gte('created_at', dateRange.from.toISOString());
+      ordersQuery = ordersQuery.gte('created_at', startOfDay(dateRange.from).toISOString());
     }
     if (dateRange?.to) {
-      // Set end of day for 'to' date to include all orders on that day
-      const endOfDay = new Date(dateRange.to);
-      endOfDay.setHours(23, 59, 59, 999);
-      ordersQuery = ordersQuery.lte('created_at', endOfDay.toISOString());
+      ordersQuery = ordersQuery.lte('created_at', endOfDay(dateRange.to).toISOString());
     }
 
     const [ordersRes, productsRes] = await Promise.all([
@@ -91,40 +89,75 @@ const useDashboardData = (
     const activeProducts = products.filter(p => p.status === 'Active').length;
     const uniqueCustomers = new Set(fulfilledPaidOrders.map(o => o.customer_email)).size;
 
-    const monthlyData: { [key: string]: { revenue: number; clients: Set<string>; orders: number } } = {};
-    
+    const aggregatedData: { [key: string]: { revenue: number; clients: Set<string>; orders: number } } = {};
+
+    // Determine the full range of dates to display on the chart
+    let chartStartDate: Date;
+    let chartEndDate: Date;
+
+    if (dateRange?.from && dateRange?.to) {
+      chartStartDate = startOfDay(dateRange.from);
+      chartEndDate = endOfDay(dateRange.to);
+    } else if (allOrders.length > 0) {
+      // If no specific date range, use the range of available orders
+      const sortedOrders = [...allOrders].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      chartStartDate = startOfDay(new Date(sortedOrders[0].created_at));
+      chartEndDate = endOfDay(new Date(sortedOrders[sortedOrders.length - 1].created_at));
+    } else {
+      // Default to last 6 months if no orders and no date range
+      chartEndDate = endOfDay(new Date());
+      chartStartDate = startOfMonth(subMonths(chartEndDate, 5));
+    }
+
     allOrders.forEach(order => {
       const orderDate = new Date(order.created_at);
-      const monthKey = orderDate.toLocaleString('default', { month: 'short', year: '2-digit' }); // e.g., "Oct 23"
-      if (!monthlyData[monthKey]) {
-        monthlyData[monthKey] = { revenue: 0, clients: new Set(), orders: 0 };
+      let key: string;
+
+      if (granularity === 'month') {
+        key = orderDate.toLocaleString('default', { month: 'short', year: '2-digit' });
+      } else { // 'day'
+        key = orderDate.toLocaleString('default', { month: 'short', day: 'numeric' });
+      }
+
+      if (!aggregatedData[key]) {
+        aggregatedData[key] = { revenue: 0, clients: new Set(), orders: 0 };
       }
       if (order.status === 'Fulfilled' && order.payment_status === 'paid') {
-        monthlyData[monthKey].revenue += convertCurrency(order.total_amount, order.currency, shopDetails.currency);
-        monthlyData[monthKey].clients.add(order.customer_email);
+        aggregatedData[key].revenue += convertCurrency(order.total_amount, order.currency, shopDetails.currency);
+        aggregatedData[key].clients.add(order.customer_email);
       }
-      monthlyData[monthKey].orders += 1;
-    });
-    
-    // Generate chart data for all months within the fetched range, or last 6 months if no range
-    const sortedMonthKeys = Object.keys(monthlyData).sort((a, b) => {
-      const [monthA, yearA] = a.split(' ');
-      const [monthB, yearB] = b.split(' ');
-      const dateA = new Date(`${monthA} 1, 20${yearA}`);
-      const dateB = new Date(`${monthB} 1, 20${yearB}`);
-      return dateA.getTime() - dateB.getTime();
+      aggregatedData[key].orders += 1;
     });
 
-    const chartData = sortedMonthKeys.map(monthKey => ({
-      name: monthKey,
-      revenue: monthlyData[monthKey]?.revenue || 0,
-      clients: monthlyData[monthKey]?.clients.size || 0,
-      orders: monthlyData[monthKey]?.orders || 0,
-    }));
+    const chartData: { name: string; revenue: number; clients: number; orders: number }[] = [];
+    let currentDate = new Date(chartStartDate);
+
+    while (currentDate <= chartEndDate) {
+      let key: string;
+      if (granularity === 'month') {
+        key = currentDate.toLocaleString('default', { month: 'short', year: '2-digit' });
+        chartData.push({
+          name: key,
+          revenue: aggregatedData[key]?.revenue || 0,
+          clients: aggregatedData[key]?.clients.size || 0,
+          orders: aggregatedData[key]?.orders || 0,
+        });
+        currentDate = startOfMonth(addDays(endOfMonth(currentDate), 1)); // Move to the start of the next month
+      } else { // 'day'
+        key = currentDate.toLocaleString('default', { month: 'short', day: 'numeric' });
+        chartData.push({
+          name: key,
+          revenue: aggregatedData[key]?.revenue || 0,
+          clients: aggregatedData[key]?.clients.size || 0,
+          orders: aggregatedData[key]?.orders || 0,
+        });
+        currentDate = addDays(currentDate, 1); // Move to the next day
+      }
+    }
 
     setData({ totalRevenue, salesCount, activeProducts, customers: uniqueCustomers, chartData });
     setIsLoading(false);
-  }, [shopDetails, convertCurrency, dateRange]);
+  }, [shopDetails, convertCurrency, dateRange, granularity]); // Add granularity to dependencies
 
   useEffect(() => {
     let channel: RealtimeChannel | null = null;
@@ -179,7 +212,8 @@ const Index = () => {
     from: subMonths(new Date(), 5),
     to: new Date(),
   });
-  const { data, isLoading: isDashboardDataLoading, fetchData } = useDashboardData(shopDetails, convertCurrency, dateRange);
+  const [granularity, setGranularity] = useState<'day' | 'month'>('month'); // New state for granularity
+  const { data, isLoading: isDashboardDataLoading, fetchData } = useDashboardData(shopDetails, convertCurrency, dateRange, granularity); // Pass granularity
   const { runWithIntegrationCheck } = useIntegration();
 
   useEffect(() => {
@@ -249,7 +283,7 @@ const Index = () => {
           <StatCard title="Active Products" value={data.activeProducts.toString()} icon={Package} description="Products available for sale" />
           <StatCard title="Total Customers" value={data.customers.toString()} icon={Users} description="Unique customers all-time" />
         </div>
-        <OverviewChart data={data.chartData} dateRange={dateRange} setDateRange={setDateRange} />
+        <OverviewChart data={data.chartData} dateRange={dateRange} setDateRange={setDateRange} granularity={granularity} setGranularity={setGranularity} />
       </div>
       <div className="lg:col-span-1 lg:sticky lg:top-0 space-y-6">
         <ActivityFeed />
