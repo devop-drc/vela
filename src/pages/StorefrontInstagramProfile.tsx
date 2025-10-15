@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useCallback, useEffect } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Link as LinkIcon,
   Package,
@@ -13,18 +13,21 @@ import {
   ArrowUpNarrowWide,
   LayoutGrid,
   List,
+  XCircle,
 } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard";
+import { InstagramProductCard } from "@/components/storefront/InstagramProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatLargeNumber } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import { Marquee } from "@/components/ui/marquee";
 import * as LucideIcons from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { InstagramFilterDrawer } from "@/components/storefront/InstagramFilterDrawer"; // Import the new filter drawer
+import { debounce } from 'lodash';
 
 interface Product {
   id: string;
@@ -45,6 +48,13 @@ interface Product {
   created_at: string;
 }
 
+interface FilterState {
+  categories: string[];
+  tags: string[];
+  priceRange: [number, number];
+  [key: string]: string[] | [number, number];
+}
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -55,18 +65,126 @@ const containerVariants = {
 
 const getIconComponent = (iconName: keyof typeof LucideIcons) => {
   const Icon = LucideIcons[iconName];
-  return Icon ? <Icon className="h-5 w-5 text-primary" /> : <Sparkles className="h-5 w-5 text-primary" />;
+  return Icon ? <Icon className="h-5 w-5 text-red-500" /> : <Sparkles className="h-5 w-5 text-red-500" />;
 };
 
 const StorefrontInstagramProfile = () => {
   const { shopSlug } = useParams<{ shopSlug: string }>();
-  const { shopDetails, products: allProducts, isLoading, error, convertCurrency, marqueeElements } = useStorefront();
+  const { shopDetails, products: allProducts, isLoading, error, convertCurrency, marqueeElements, promotions } = useStorefront();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [sortOption, setSortOption] = useState("newest"); // Added sort option state
+  const [sortOption, setSortOption] = useState(searchParams.get('sort') || "newest");
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    categories: searchParams.getAll('category') || [],
+    tags: searchParams.getAll('tag') || [],
+    priceRange: [0, 1000], // Initial dummy value, will be updated by maxPrice
+  });
+
+  const maxPrice = useMemo(() => {
+    let currentMax = 0;
+    allProducts.forEach(p => {
+      if (p.price !== null) {
+        const convertedPrice = convertCurrency(p.price, p.currency);
+        if (convertedPrice > currentMax) {
+          currentMax = convertedPrice;
+        }
+      }
+    });
+    return Math.ceil(currentMax / 10) * 10 || 100;
+  }, [allProducts, convertCurrency]);
+
+  useEffect(() => {
+    if (filters.priceRange[1] === 1000 && maxPrice !== 1000) {
+      setFilters(prev => ({ ...prev, priceRange: [0, maxPrice] }));
+    }
+  }, [maxPrice, filters.priceRange]);
+
+  useEffect(() => {
+    const urlCategories = searchParams.getAll('category');
+    const urlTags = searchParams.getAll('tag');
+    const urlSort = searchParams.get('sort');
+
+    setFilters(prev => {
+      const newFilters = { ...prev };
+      if (JSON.stringify(urlCategories) !== JSON.stringify(prev.categories)) {
+        newFilters.categories = urlCategories;
+      }
+      if (JSON.stringify(urlTags) !== JSON.stringify(prev.tags)) {
+        newFilters.tags = urlTags;
+      }
+      return newFilters;
+    });
+
+    if (urlSort !== null && urlSort !== sortOption) {
+      setSortOption(urlSort);
+    } else if (urlSort === null && sortOption !== 'newest') {
+      setSortOption('newest');
+    }
+  }, [searchParams, sortOption]);
+
+  const handleFilterChange = useCallback((newFilters: FilterState) => {
+    setFilters(newFilters);
+    const newSearchParams = new URLSearchParams();
+    if (sortOption !== 'newest') newSearchParams.set('sort', sortOption);
+    newFilters.categories.forEach(cat => newSearchParams.append('category', cat));
+    newFilters.tags.forEach(tag => newSearchParams.append('tag', tag));
+    setSearchParams(newSearchParams, { replace: true });
+  }, [sortOption, setSearchParams]);
+
+  const handleResetFilters = useCallback(() => {
+    setSortOption("newest");
+    setFilters({
+      categories: [],
+      tags: [],
+      priceRange: [0, maxPrice],
+    });
+    setSearchParams({}, { replace: true });
+  }, [maxPrice, setSearchParams]);
+
+  const handleSortChange = (value: string) => {
+    setSortOption(value);
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (value !== 'newest') {
+      newSearchParams.set('sort', value);
+    } else {
+      newSearchParams.delete('sort');
+    }
+    setSearchParams(newSearchParams, { replace: true });
+  };
 
   const filteredAndSortedProducts = useMemo(() => {
-    return allProducts.sort((a, b) => {
+    let filtered = allProducts;
+
+    if (filters.categories.length > 0) {
+      filtered = filtered.filter(p => p.category && filters.categories.includes(p.category));
+    }
+
+    if (filters.tags.length > 0) {
+      filtered = filtered.filter(p => p.tags?.some(tag => filters.tags.includes(tag)));
+    }
+
+    filtered = filtered.filter(p => {
+      const price = convertCurrency(p.price, p.currency);
+      return price >= filters.priceRange[0] && price <= filters.priceRange[1];
+    });
+
+    for (const key in filters) {
+      if (key !== 'categories' && key !== 'tags' && key !== 'priceRange' && Array.isArray(filters[key]) && (filters[key] as string[]).length > 0) {
+        const selectedValues = filters[key] as string[];
+        filtered = filtered.filter(p => {
+          const productDetailValue = p.details?.[key];
+          if (!productDetailValue) return false;
+          if (Array.isArray(productDetailValue)) {
+            return productDetailValue.some(val => selectedValues.includes(String(val)));
+          }
+          return selectedValues.includes(String(productDetailValue));
+        });
+      }
+    }
+
+    return filtered.sort((a, b) => {
       const priceA = convertCurrency(a.price, a.currency);
       const priceB = convertCurrency(b.price, b.currency);
 
@@ -80,7 +198,11 @@ const StorefrontInstagramProfile = () => {
         default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
-  }, [allProducts, sortOption, convertCurrency]);
+  }, [allProducts, sortOption, filters, convertCurrency]);
+
+  const hasActiveFilters = useMemo(() => {
+    return filters.categories.length > 0 || filters.tags.length > 0 || filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice;
+  }, [filters, maxPrice]);
 
   if (isLoading) {
     return (
@@ -119,6 +241,15 @@ const StorefrontInstagramProfile = () => {
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
+      <InstagramFilterDrawer
+        isOpen={isFilterDrawerOpen}
+        onClose={() => setIsFilterDrawerOpen(false)}
+        products={allProducts}
+        currentFilters={filters}
+        onFilterChange={handleFilterChange}
+        onResetFilters={handleResetFilters}
+      />
+
       <main className="flex-1">
         {/* Profile Section */}
         <section className="flex flex-col items-center md:items-start mb-8 md:mb-10 px-4">
@@ -175,11 +306,11 @@ const StorefrontInstagramProfile = () => {
 
         {/* Filter and Sort Bar */}
         <div className="flex items-center justify-around border-t border-b border-gray-200 py-2 mb-6">
-          <Button variant="ghost" size="sm" className="text-gray-800 hover:bg-gray-100">
+          <Button variant="ghost" size="sm" onClick={() => setIsFilterDrawerOpen(true)} className="text-gray-800 hover:bg-gray-100">
             <Filter className="mr-2 h-4 w-4" />
-            Filter
+            Filter {hasActiveFilters && <span className="ml-1 text-xs text-red-500">(Active)</span>}
           </Button>
-          <Select value={sortOption} onValueChange={setSortOption}>
+          <Select value={sortOption} onValueChange={handleSortChange}>
             <SelectTrigger className="w-[140px] h-9 text-sm border-none shadow-none bg-transparent text-gray-800 hover:bg-gray-100">
               <ArrowUpNarrowWide className="mr-2 h-4 w-4" />
               <SelectValue placeholder="Sort by" />
@@ -204,8 +335,16 @@ const StorefrontInstagramProfile = () => {
             <div className="text-center py-16 text-gray-600 border-2 border-dashed rounded-lg mx-4">
               <h3 className="text-xl md:text-2xl font-semibold">No Products Found</h3>
               <p className="text-sm md:text-base mt-1 md:mt-2">
-                It looks like this store doesn't have any products yet.
+                {hasActiveFilters
+                  ? "No products match your current filters or search criteria."
+                  : "It looks like this store doesn't have any products yet."}
               </p>
+              {hasActiveFilters && (
+                <Button onClick={handleResetFilters} className="mt-4 text-sm md:text-base bg-red-500 hover:bg-red-600 text-white">
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Clear All Filters
+                </Button>
+              )}
             </div>
           ) : (
             <motion.div
@@ -215,14 +354,14 @@ const StorefrontInstagramProfile = () => {
               className="grid grid-cols-3 gap-1"
             >
               {filteredAndSortedProducts.map((product) => (
-                <StorefrontProductCard
+                <InstagramProductCard
                   key={product.id}
                   product={product}
                   shopSlug={shopDetails.slug}
                   className="aspect-square"
                   externalShopDetails={shopDetails}
                   externalConvertCurrency={convertCurrency}
-                  isInstagramStyle={true}
+                  externalPromotions={promotions}
                 />
               ))}
             </motion.div>
