@@ -10,7 +10,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { CartProvider } from '@/contexts/CartContext';
 import { RecentlyViewedProvider } from '@/contexts/RecentlyViewedContext';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { StorefrontCartModal } from './StorefrontCartModal';
+import { InstagramCartDrawer } from './InstagramCartDrawer'; // Import InstagramCartDrawer
 import { cn } from '@/lib/utils';
 import { loadGoogleFont } from '@/lib/fontUtils';
 import { InstagramFloatingCart } from './InstagramFloatingCart'; // Import new floating cart
@@ -165,7 +165,7 @@ const InstagramShopLayoutContent = () => {
         <Outlet />
       </main>
       <Sonner />
-      <StorefrontCartModal isOpen={isCartModalOpen} onClose={() => setIsCartModalOpen(false)} />
+      <InstagramCartDrawer isOpen={isCartModalOpen} onClose={() => setIsCartModalOpen(false)} />
       <InstagramFloatingCart onOpenCart={() => setIsCartModalOpen(true)} />
     </div>
   );
