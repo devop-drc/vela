@@ -235,6 +235,7 @@ export const StorefrontProductCard = ({
               )}
             </div>
           </div>
+          </Card>
         </Link>
       </motion.div>
   );

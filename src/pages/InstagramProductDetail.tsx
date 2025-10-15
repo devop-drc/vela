@@ -18,6 +18,7 @@ import { useCart } from "@/contexts/CartContext";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { type CarouselApi } from "@/components/ui/carousel";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { InstagramBreadcrumb } from "@/components/storefront/InstagramBreadcrumb"; // Import InstagramBreadcrumb
 
 const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
@@ -169,6 +170,7 @@ const InstagramProductDetail = () => {
   return (
     <div className="flex flex-col min-h-screen bg-white text-black">
       <main className="flex-1">
+        <InstagramBreadcrumb /> {/* Use InstagramBreadcrumb here */}
         {/* Product Media */}
         <div>
           <Carousel setApi={setApi} className="w-full">
@@ -368,7 +370,7 @@ const InstagramProductDetail = () => {
         </Button>
         {product.pricing_type === 'one_time' && !isOutOfStock && (
           <Button size="lg" className="flex-1 text-base md:text-lg border-blue-500 text-blue-500 hover:bg-blue-50 rounded-md" onClick={() => toast.info("Buy Now functionality coming soon!")}>
-            <ShoppingCart className="mr-2 h-5 w-5" /> {/* Changed to ShoppingCart icon */}
+            <ShoppingCart className="mr-2 h-5 w-5" />
             Buy
           </Button>
         )}

@@ -313,6 +313,7 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
                                         </motion.button>
                                       </div>
                                     </div>
+                                    </div>
                                   </Card>
                                 </motion.div>
                             ))}

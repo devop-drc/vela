@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { InstagramCheckoutForm, CheckoutFormData } from "./InstagramCheckoutForm";
+import { InstagramCheckoutForm, CheckoutFormData } from "./InstagramCheckoutForm"; // Import InstagramCheckoutForm
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 
@@ -400,6 +400,62 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
             />
           )}
         </div>
+        <SheetFooter className="p-4 border-t border-gray-200 flex-shrink-0">
+          <div className="flex flex-col w-full space-y-2">
+            <div className="flex justify-between text-sm text-gray-800">
+              <span>Subtotal ({totalItems} items):</span>
+              <span className="font-semibold">{formatCurrency(subtotal, shopDetails?.currency)}</span>
+            </div>
+            <div className="flex justify-between text-sm text-gray-800">
+              <span>Shipping:</span>
+              <span className={cn("font-semibold", shipping === 0 && "text-green-600")}>
+                {shipping === 0 ? "FREE" : formatCurrency(shipping, shopDetails?.currency)}
+              </span>
+            </div>
+            {totalSaved > 0 && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span>You Saved:</span>
+                <span className="font-semibold">{formatCurrency(totalSaved, shopDetails?.currency)}</span>
+              </div>
+            )}
+            <Separator className="my-2" />
+            <div className="flex justify-between text-lg font-bold pt-2 text-gray-800">
+              <span>Total:</span>
+              <span>{formatCurrency(total, shopDetails?.currency)}</span>
+            </div>
+            {checkoutStep === 'cart' && (
+              <Button className="w-full text-base bg-red-500 hover:bg-red-600 text-white mt-4" onClick={handleProceedToCheckout} disabled={cartItems.length === 0}>
+                Proceed to Checkout
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+            {checkoutStep === 'contact-shipping' && (
+              <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-red-500 hover:bg-red-600 text-white mt-4" disabled={isSubmittingOrder}>
+                Continue to Payment
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            )}
+            {checkoutStep === 'payment' && (
+              <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-red-500 hover:bg-red-600 text-white mt-4" disabled={isSubmittingOrder}>
+                {isSubmittingOrder ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Placing Order...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="mr-2 h-5 w-5" />
+                    Place Order
+                  </>
+                )}
+              </Button>
+            )}
+            <Button variant="ghost" className="w-full text-base text-gray-800 hover:bg-gray-100 mt-2" onClick={handleBack}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+          </div>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );
