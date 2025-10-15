@@ -151,7 +151,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
         </SheetHeader>
 
         <div className="flex-1 overflow-hidden">
-          {(checkoutStep === 'cart') && (
+          {(checkoutStep === 'cart') ? (
             <>
               {cartItems.length === 0 && savedItems.length === 0 ? (
                 <motion.div
@@ -189,13 +189,13 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                               exit={{ opacity: 0, x: -100 }}
                               transition={{ duration: 0.2 }}
                             >
-                              <Card className="flex items-start p-3 gap-3 shadow-sm border border-gray-200 bg-white">
+                              <Card className="flex flex-col sm:flex-row items-start sm:items-center p-3 gap-3 sm:gap-4 shadow-sm border border-gray-200 bg-white">
                                 <Link to={`/instagramShop/${shopSlug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
                                   <div className="h-20 w-20 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
                                     <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                   </div>
                                 </Link>
-                                <div className="flex-1 flex flex-col justify-between">
+                                <div className="flex-1 flex flex-col justify-between w-full sm:w-auto">
                                   <Link to={`/instagramShop/${shopSlug}/product/${item.productId}`} onClick={onClose}>
                                     <h3 className="font-semibold text-base hover:underline leading-tight text-gray-800">{item.name}</h3>
                                   </Link>
@@ -215,7 +215,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                     </p>
                                   )}
 
-                                  <div className="flex items-center justify-between gap-2 mt-2">
+                                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-2 w-full">
                                     <div className="flex items-center border border-gray-300 rounded-md h-9 flex-shrink-0">
                                       <motion.button
                                         type="button"
@@ -261,13 +261,13 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                       </p>
                                     </div>
 
-                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
                                       <Button
                                         type="button"
                                         variant="outline"
                                         size="sm"
                                         onClick={() => saveForLater(item)}
-                                        className="text-sm h-9 px-3 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                                        className="flex-1 sm:flex-none text-sm h-9 px-3 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
                                       >
                                           <Bookmark className="mr-2 h-4 w-4" />
                                           Save
@@ -277,7 +277,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                         variant="destructive"
                                         size="icon"
                                         onClick={() => removeFromCart(item.productId)}
-                                        className="text-red-500 hover:text-red-600 h-9 w-9 rounded-full bg-red-50 hover:bg-red-100"
+                                        className="flex-shrink-0 text-red-500 hover:text-red-600 h-9 w-9 rounded-full bg-red-50 hover:bg-red-100"
                                         whileHover={{ scale: 1.1 }}
                                         whileTap={{ scale: 0.9 }}
                                       >
@@ -286,9 +286,9 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                       </motion.button>
                                     </div>
                                   </div>
-                                  </div>
-                                </Card>
-                              </motion.div>
+                                </div>
+                              </Card>
+                            </motion.div>
                           ))}
                         </AnimatePresence>
                       </div>
@@ -307,13 +307,13 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                               exit={{ opacity: 0, x: -100 }}
                               transition={{ duration: 0.2 }}
                             >
-                              <Card className="flex items-start p-3 gap-3 shadow-sm border border-gray-200 bg-white">
+                              <Card className="flex flex-col sm:flex-row items-start sm:items-center p-3 gap-3 sm:gap-4 shadow-sm border border-gray-200 bg-white">
                                 <Link to={`/instagramShop/${shopSlug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
                                   <div className="h-20 w-20 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
                                     <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                   </div>
                                 </Link>
-                                <div className="flex-1 flex flex-col justify-between">
+                                <div className="flex-1 flex flex-col justify-between w-full sm:w-auto">
                                   <Link to={`/instagramShop/${shopSlug}/product/${item.productId}`} onClick={onClose}>
                                     <h3 className="font-semibold text-base hover:underline leading-tight text-gray-800">{item.name}</h3>
                                   </Link>
@@ -333,7 +333,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                     </p>
                                   )}
 
-                                  <div className="flex items-center justify-between gap-2 mt-2">
+                                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-2 w-full">
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                       {item.isDiscounted && (
                                         <p className="text-sm text-gray-500 line-through">
@@ -345,13 +345,13 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                       </p>
                                     </div>
 
-                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
                                       <Button
                                         type="button"
                                         variant="outline"
                                         size="sm"
                                         onClick={() => moveToCart(item.productId)}
-                                        className="text-sm h-9 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                                        className="flex-1 sm:flex-none text-sm h-9 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
                                       >
                                           <MoveRight className="mr-2 h-4 w-4" />
                                           Move to Cart
@@ -361,7 +361,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                         variant="destructive"
                                         size="icon"
                                         onClick={() => removeSavedItem(item.productId)}
-                                        className="text-red-500 hover:text-red-600 h-9 w-9 rounded-full bg-red-50 hover:bg-red-100"
+                                        className="flex-shrink-0 text-red-500 hover:text-red-600 h-9 w-9 rounded-full bg-red-50 hover:bg-red-100"
                                         whileHover={{ scale: 1.1 }}
                                         whileTap={{ scale: 0.9 }}
                                       >

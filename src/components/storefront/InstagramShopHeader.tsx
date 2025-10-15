@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
-import { ShoppingBag, ArrowLeft, ChevronDown } from "lucide-react";
+import { ShoppingBag, ArrowLeft, ChevronDown, Truck } from "lucide-react"; // Import Truck icon
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,10 @@ import { motion } from "framer-motion";
 
 interface InstagramShopHeaderProps {
   onOpenCart: () => void;
+  onOpenMyOrders: () => void; // New prop for opening My Orders drawer
 }
 
-export const InstagramShopHeader = ({ onOpenCart }: InstagramShopHeaderProps) => {
+export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramShopHeaderProps) => {
   const { shopDetails } = useStorefront();
   const { totalItems } = useCart();
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
@@ -64,8 +65,17 @@ export const InstagramShopHeader = ({ onOpenCart }: InstagramShopHeaderProps) =>
           </div>
         )}
 
-        {/* Right Section: Shopping Cart */}
+        {/* Right Section: Shopping Cart and My Orders */}
         <nav className="flex items-center space-x-2 flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onOpenMyOrders} // Button to open My Orders drawer
+            className="relative text-gray-800 hover:bg-gray-100"
+          >
+            <Truck className="h-5 w-5" />
+            <span className="sr-only">My Orders</span>
+          </Button>
           <Button
             variant="ghost"
             size="icon"

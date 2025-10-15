@@ -14,6 +14,7 @@ import { InstagramCartDrawer } from './InstagramCartDrawer'; // Import Instagram
 import { cn } from '@/lib/utils';
 import { loadGoogleFont } from '@/lib/fontUtils';
 import { InstagramFloatingCart } from './InstagramFloatingCart'; // Import new floating cart
+import { InstagramMyOrdersDrawer } from './InstagramMyOrdersDrawer'; // Import InstagramMyOrdersDrawer
 
 // Function to apply fixed Instagram-like settings to the DOM
 const applyInstagramShopSettingsToDOM = () => {
@@ -58,6 +59,7 @@ const InstagramShopLayoutContent = () => {
   const { shopDetails, isLoading, error } = useStorefront(); // Removed appearanceSettings as it's ignored here
   const isMobile = useIsMobile();
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
+  const [isMyOrdersDrawerOpen, setIsMyOrdersDrawerOpen] = useState(false); // New state for My Orders drawer
 
   useEffect(() => {
     applyInstagramShopSettingsToDOM();
@@ -125,7 +127,7 @@ const InstagramShopLayoutContent = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen bg-white text-black">
-        <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} />
+        <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} />
         <main className="flex-1 container py-4 mt-14">
           <div className="flex flex-col items-center mb-8">
             <Skeleton className="h-24 w-24 rounded-full mb-4" />
@@ -160,12 +162,13 @@ const InstagramShopLayoutContent = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-white text-black">
-      <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} />
+      <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} />
       <main className="flex-1 overflow-y-auto pt-14"> {/* Adjusted padding-top to account for fixed header */}
         <Outlet />
       </main>
       <Sonner />
       <InstagramCartDrawer isOpen={isCartModalOpen} onClose={() => setIsCartModalOpen(false)} />
+      <InstagramMyOrdersDrawer isOpen={isMyOrdersDrawerOpen} onClose={() => setIsMyOrdersDrawerOpen(false)} /> {/* Render My Orders drawer */}
       <InstagramFloatingCart onOpenCart={() => setIsCartModalOpen(true)} />
     </div>
   );
