@@ -151,7 +151,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
         </SheetHeader>
 
         <div className="flex-1 overflow-hidden">
-          {checkoutStep === 'cart' ? (
+          {(checkoutStep === 'cart') ? (
             <>
               {cartItems.length === 0 && savedItems.length === 0 ? (
                 <motion.div
@@ -285,6 +285,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                         <span className="sr-only">Remove {item.name}</span>
                                       </motion.button>
                                     </div>
+                                  </div>
                                   </div>
                                 </Card>
                               </motion.div>
