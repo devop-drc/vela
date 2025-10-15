@@ -15,7 +15,6 @@ export const StorefrontBreadcrumb = () => {
 
   const breadcrumbs: BreadcrumbItem[] = [];
 
-  // Always start with the shop's home page
   breadcrumbs.push({ label: shopDetails?.shop_name || 'Shop', path: `/shop/${shopSlug}` });
 
   const pathSegments = location.pathname.split('/').filter(segment => segment && segment !== 'shop' && segment !== shopSlug);
@@ -26,15 +25,12 @@ export const StorefrontBreadcrumb = () => {
       currentPathAccumulator += `/${segment}`;
       breadcrumbs.push({ label: 'Products', path: currentPathAccumulator });
     } else if (segment === 'product' && pathSegments[index + 1] === productId) {
-      // This is the '/product' segment before the actual product ID.
-      // We want to ensure 'Products' is in the breadcrumb before the product name.
       const productsPath = `/shop/${shopSlug}/products`;
       if (!breadcrumbs.some(b => b.path === productsPath)) {
         breadcrumbs.push({ label: 'Products', path: productsPath });
       }
-      // Do not add '/product' as a separate breadcrumb item.
     } else if (segment === productId && productId) {
-      currentPathAccumulator += `/product/${segment}`; // Build the full product path
+      currentPathAccumulator += `/product/${segment}`;
       const product = products.find(p => p.id === productId);
       breadcrumbs.push({ label: product?.name || 'Product Detail', path: currentPathAccumulator });
     } else {

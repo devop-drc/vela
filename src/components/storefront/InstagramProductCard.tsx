@@ -5,10 +5,7 @@ import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useStorefront, ShopDetails as StorefrontShopDetails, DesignSettings as StorefrontDesignSettings, Promotion as StorefrontPromotion } from "@/contexts/StorefrontContext";
-import { useShop } from "@/contexts/ShopContext";
-import { useAppearance } from "@/contexts/AppearanceContext";
-import { Percent, Gift } from "lucide-react";
+import { ShopDetails as StorefrontShopDetails, Promotion as StorefrontPromotion } from "@/contexts/StorefrontContext";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 interface Product {
@@ -31,14 +28,13 @@ interface Product {
   product_type: 'physical' | 'digital';
 }
 
-interface StorefrontProductCardProps {
+interface InstagramProductCardProps {
   product: Product;
   shopSlug: string;
   className?: string;
-  externalShopDetails?: StorefrontShopDetails | null;
-  externalAppearanceSettings?: StorefrontDesignSettings | null;
-  externalConvertCurrency?: (amount: number | null | undefined, fromCurrency?: string) => number;
-  externalPromotions?: StorefrontPromotion[];
+  externalShopDetails: StorefrontShopDetails | null;
+  externalConvertCurrency: (amount: number | null | undefined, fromCurrency?: string) => number;
+  externalPromotions: StorefrontPromotion[];
 }
 
 const itemVariants = {
@@ -46,38 +42,17 @@ const itemVariants = {
   visible: { y: 0, opacity: 1 },
 };
 
-export const StorefrontProductCard = ({
+export const InstagramProductCard = ({
   product,
   shopSlug,
   className,
   externalShopDetails,
-  externalAppearanceSettings,
   externalConvertCurrency,
   externalPromotions,
-}: StorefrontProductCardProps) => {
-  let contextShopDetails: StorefrontShopDetails | null = null;
-  let contextAppearanceSettings: StorefrontDesignSettings | null = null;
-  let contextConvertCurrency: ((amount: number | null | undefined, fromCurrency?: string) => number) | undefined = undefined;
-  let contextPromotions: StorefrontPromotion[] | undefined = undefined;
-
-  try {
-    const storefrontContext = useStorefront();
-    contextShopDetails = storefrontContext.shopDetails;
-    contextAppearanceSettings = storefrontContext.appearanceSettings;
-    contextConvertCurrency = storefrontContext.convertCurrency;
-    contextPromotions = storefrontContext.promotions;
-  } catch (e) {
-  }
-
-  const { shopDetails: adminShopDetails, convertCurrency: adminConvertCurrency } = useShop();
-  const { settings: adminAppearanceSettings } = useAppearance();
-
-  const effectiveShopDetails = externalShopDetails || contextShopDetails || adminShopDetails;
-  const effectiveConvertCurrency = externalConvertCurrency || contextConvertCurrency || adminConvertCurrency;
-  const effectiveAppearanceSettings = externalAppearanceSettings || contextAppearanceSettings || adminAppearanceSettings;
-  const effectivePromotions = externalPromotions || contextPromotions || [];
-
-  const blurEnabled = effectiveAppearanceSettings?.blurEnabled;
+}: InstagramProductCardProps) => {
+  const effectiveShopDetails = externalShopDetails;
+  const effectiveConvertCurrency = externalConvertCurrency;
+  const effectivePromotions = externalPromotions || [];
 
   const originalDisplayPrice = effectiveConvertCurrency ? effectiveConvertCurrency(product.price, product.currency) : product.price;
 
@@ -137,15 +112,14 @@ export const StorefrontProductCard = ({
   return (
     <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }} className={className}>
       <Link
-        to={`/shop/${effectiveShopDetails.slug}/product/${product.id}`}
+        to={`/instagramShop/${effectiveShopDetails.slug}/product/${product.id}`}
       >
         <Card className={cn(
           "group h-full flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
-          "border border-input/50 hover:border-primary/70 shadow-sm hover:shadow-lg",
-          (blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card"),
+          "border-none rounded-none shadow-none bg-white",
           isOutOfStock && "opacity-80"
         )}>
-          <CardContent className={cn("p-0 relative")}>
+          <CardContent className={cn("p-0 relative", "pb-0")}>
             <Carousel
               className="w-full group/carousel"
               onMouseDown={(e) => e.stopPropagation()}
@@ -154,7 +128,7 @@ export const StorefrontProductCard = ({
               <CarouselContent onClick={(e) => e.stopPropagation()}>
                 {mediaItems.map((url: string, index: number) => (
                   <CarouselItem key={index}>
-                    <div className="aspect-square w-full overflow-hidden bg-muted">
+                    <div className="aspect-square w-full overflow-hidden bg-gray-100">
                       <MediaItem
                         src={url}
                         alt={product.name}
@@ -182,7 +156,7 @@ export const StorefrontProductCard = ({
                 {activePromotions.map(promo => (
                   <Badge key={promo.id} className={cn(
                     "text-white text-xs md:text-sm",
-                    "bg-emerald-500"
+                    "bg-green-500"
                   )}>
                     {getPromotionBadge(promo)}
                   </Badge>
@@ -190,52 +164,8 @@ export const StorefrontProductCard = ({
               </div>
             )}
           </CardContent>
-          <div className="p-3 md:p-4 flex-1 flex flex-col justify-between">
-            <div>
-              <h3 className="font-semibold text-base md:text-lg leading-tight mb-1 line-clamp-2">{product.name}</h3>
-              {(product.category || product.details?.type) && (
-                <div className="flex items-center gap-1 mb-2">
-                  {product.category && (
-                    <Badge
-                      variant="outline"
-                      className={cn("text-xs bg-primary/10 text-primary border-primary/30")}
-                    >
-                      {product.category}
-                    </Badge>
-                  )}
-                  {product.details?.type && (
-                    <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
-                      {product.details.type}
-                    </Badge>
-                  )}
-                </div>
-              )}
-              <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">{product.caption}</p>
-            </div>
-            <div className="mt-3 md:mt-4">
-              {hasDiscount && originalDisplayPrice !== null ? (
-                <div className="flex items-baseline gap-2">
-                  <p className="text-sm text-muted-foreground line-through">
-                    {formatCurrency(originalDisplayPrice, effectiveShopDetails?.currency)}
-                  </p>
-                  <p className="text-lg md:text-xl font-bold text-primary">
-                    {formatCurrency(discountedPrice, effectiveShopDetails?.currency)}
-                    {product.pricing_type === 'subscription' && (
-                      <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
-                    )}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-lg md:text-xl font-bold text-primary">
-                  {originalDisplayPrice != null ? formatCurrency(originalDisplayPrice, effectiveShopDetails?.currency) : 'N/A'}
-                  {product.pricing_type === 'subscription' && (
-                    <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
-                  )}
-                </p>
-              )}
-            </div>
-          </div>
-        </Link>
-      </motion.div>
+        </Card>
+      </Link>
+    </motion.div>
   );
 };

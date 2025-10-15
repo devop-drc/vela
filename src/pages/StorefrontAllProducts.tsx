@@ -19,7 +19,7 @@ import { StorefrontFilterSidebar } from "@/components/storefront/StorefrontFilte
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StorefrontBreadcrumb } from "@/components/storefront/StorefrontBreadcrumb";
-import { debounce } from 'lodash'; // Import debounce
+import { debounce } from 'lodash';
 
 interface Product {
   id: string;
@@ -44,7 +44,7 @@ interface FilterState {
   categories: string[];
   tags: string[];
   priceRange: [number, number];
-  [key: string]: string[] | [number, number]; // For dynamic attributes
+  [key: string]: string[] | [number, number];
 }
 
 const containerVariants = {
@@ -55,20 +55,20 @@ const containerVariants = {
   },
 };
 
-const DESKTOP_SIDEBAR_WIDTH = '20rem'; // 320px
+const DESKTOP_SIDEBAR_WIDTH = '20rem';
 
 const StorefrontAllProducts = () => {
   const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, hasMoreProducts, fetchMoreProducts, isLoadingMore, convertCurrency } = useStorefront();
   const isMobile = useIsMobile();
-  const { 
-    onToggleFilterSidebar, 
-    isFilterSidebarOpen, 
-    setIsFilterSidebarOpen, 
-    isDesktopFilterSidebarOpen, // New context prop
-    setIsDesktopFilterSidebarOpen, // New context prop
-  } = useOutletContext<{ 
-    onToggleFilterSidebar: () => void; 
-    isFilterSidebarOpen: boolean; 
+  const {
+    onToggleFilterSidebar,
+    isFilterSidebarOpen,
+    setIsFilterSidebarOpen,
+    isDesktopFilterSidebarOpen,
+    setIsDesktopFilterSidebarOpen,
+  } = useOutletContext<{
+    onToggleFilterSidebar: () => void;
+    isFilterSidebarOpen: boolean;
     setIsFilterSidebarOpen: (open: boolean) => void;
     isDesktopFilterSidebarOpen: boolean;
     setIsDesktopFilterSidebarOpen: (open: boolean) => void;
@@ -80,7 +80,7 @@ const StorefrontAllProducts = () => {
   const [filters, setFilters] = useState<FilterState>({
     categories: searchParams.getAll('category') || [],
     tags: searchParams.getAll('tag') || [],
-    priceRange: [0, 1000], // Default max price, will be updated by maxPrice from useMemo
+    priceRange: [0, 1000],
   });
   
   const blurEnabled = appearanceSettings?.blurEnabled;
@@ -88,7 +88,6 @@ const StorefrontAllProducts = () => {
   const isFloatingLayout = appearanceSettings?.layoutStyle === 'floating';
   const observerTarget = useRef<HTMLDivElement>(null);
 
-  // Determine max price for the slider
   const maxPrice = useMemo(() => {
     let currentMax = 0;
     allProducts.forEach(p => {
@@ -99,12 +98,11 @@ const StorefrontAllProducts = () => {
         }
       }
     });
-    return Math.ceil(currentMax / 10) * 10 || 100; // Round up to nearest 10, or 100 if no products
+    return Math.ceil(currentMax / 10) * 10 || 100;
   }, [allProducts, convertCurrency]);
 
   useEffect(() => {
-    // Initialize priceRange with maxPrice once it's determined
-    if (filters.priceRange[1] === 1000 && maxPrice !== 1000) { // Only update if default and maxPrice is different
+    if (filters.priceRange[1] === 1000 && maxPrice !== 1000) {
       setFilters(prev => ({ ...prev, priceRange: [0, maxPrice] }));
     }
   }, [maxPrice, filters.priceRange]);
@@ -163,13 +161,11 @@ const StorefrontAllProducts = () => {
 
   const handleFilterChange = (newFilters: FilterState) => {
     setFilters(newFilters);
-    // Update URL search params based on new filters
     const newSearchParams = new URLSearchParams();
     if (searchTerm) newSearchParams.set('search', searchTerm);
     if (sortOption !== 'newest') newSearchParams.set('sort', sortOption);
     newFilters.categories.forEach(cat => newSearchParams.append('category', cat));
     newFilters.tags.forEach(tag => newSearchParams.append('tag', tag));
-    // Price range and other dynamic attributes can also be added if needed
     setSearchParams(newSearchParams, { replace: true });
   };
 
@@ -181,12 +177,12 @@ const StorefrontAllProducts = () => {
       tags: [],
       priceRange: [0, maxPrice],
     });
-    setSearchParams({}, { replace: true }); // Clear all search params
+    setSearchParams({}, { replace: true });
   };
 
   const debouncedSetSearchTerm = useCallback(
     debounce((query: string) => {
-      setSearchTerm(query); // Update local state immediately for responsive input
+      setSearchTerm(query);
       const newSearchParams = new URLSearchParams(searchParams);
       if (query) {
         newSearchParams.set('search', query);
@@ -200,7 +196,7 @@ const StorefrontAllProducts = () => {
 
   const handleLocalSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
-    debouncedSetSearchTerm(query); // Debounce the actual search param update
+    debouncedSetSearchTerm(query);
   };
 
   const handleSortChange = (value: string) => {
@@ -233,7 +229,6 @@ const StorefrontAllProducts = () => {
       filtered = filtered.filter(p => p.tags?.some(tag => filters.tags.includes(tag)));
     }
 
-    // Apply price range filter using converted prices
     filtered = filtered.filter(p => {
       const price = convertCurrency(p.price, p.currency);
       return price >= filters.priceRange[0] && price <= filters.priceRange[1];
@@ -282,18 +277,16 @@ const StorefrontAllProducts = () => {
 
   const hasActiveFilters = searchTerm || sortOption !== 'newest' || filters.categories.length > 0 || filters.tags.length > 0 || filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice;
 
-  const headerHeight = '3.5rem'; // 56px for mobile, 64px for desktop
-  const floatingHeaderOffset = '1rem'; // 16px
+  const headerHeight = '3.5rem';
+  const floatingHeaderOffset = '1rem';
 
-  // Calculate dynamic padding for main content
   const mainContentPaddingLeft = !isMobile && isDesktopFilterSidebarOpen
-    ? `calc(${DESKTOP_SIDEBAR_WIDTH} + 2rem)` // Sidebar width + gap
+    ? `calc(${DESKTOP_SIDEBAR_WIDTH} + 2rem)`
     : '0';
 
-  // Calculate top position for sticky elements (like the filter/sort bar)
-  const stickyBarTop = isFloatingLayout 
-    ? `calc(${headerHeight} + ${floatingHeaderOffset} + ${floatingHeaderOffset})` 
-    : `calc(${headerHeight} + 1rem)`; // 1rem for some spacing below header
+  const stickyBarTop = isFloatingLayout
+    ? `calc(${headerHeight} + ${floatingHeaderOffset} + ${floatingHeaderOffset})`
+    : `calc(${headerHeight} + 1rem)`;
 
   if (isLoading && allProducts.length === 0) {
     return (
@@ -360,7 +353,6 @@ const StorefrontAllProducts = () => {
         <div className="container py-6 md:py-8">
           <StorefrontBreadcrumb />
 
-          {/* Filter and Sort Bar (Mobile only, Desktop controls are in Header) */}
           {isMobile && (
             <div className={cn(
               "sticky z-30 py-3 md:py-4 -mx-4 px-4 md:-mx-6 md:px-6 mb-6 md:mb-8 border-b border-t shadow-md flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4",

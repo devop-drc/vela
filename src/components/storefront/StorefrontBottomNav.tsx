@@ -1,4 +1,4 @@
-import { NavLink, useParams, useLocation } from "react-router-dom"; // Import useLocation
+import { NavLink, useParams, useLocation } from "react-router-dom";
 import { Home, Package, ShoppingBag, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -8,20 +8,19 @@ import { motion } from "framer-motion";
 const navItems = [
   { to: "/", icon: Home, label: "Home" },
   { to: "/products", icon: Package, label: "Products" },
-  { to: "/orders", icon: Truck, label: "My Orders" }, // Changed to My Orders
+  { to: "/orders", icon: Truck, label: "My Orders" },
 ];
 
 interface StorefrontBottomNavProps {
-  onOpenCart: () => void; // Add onOpenCart prop
+  onOpenCart: () => void;
 }
 
 export const StorefrontBottomNav = ({ onOpenCart }: StorefrontBottomNavProps) => {
   const isMobile = useIsMobile();
   const { shopSlug } = useParams<{ shopSlug: string }>();
   const { totalItems } = useCart();
-  const location = useLocation(); // Use useLocation hook
+  const location = useLocation();
 
-  // If on Instagram profile page, this bottom nav should not render
   if (location.pathname.includes('/instagramShop')) {
     return null;
   }

@@ -1,6 +1,6 @@
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { cn } from "@/lib/utils";
-import { Link, useLocation } from "react-router-dom"; // Import useLocation
+import { Link, useLocation } from "react-router-dom";
 import { useRecentlyViewed } from "@/contexts/RecentlyViewedContext";
 import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "../MediaItem";
@@ -10,9 +10,8 @@ import React from "react";
 export const StorefrontFooter = React.forwardRef<HTMLDivElement>((props, ref) => {
   const { shopDetails, appearanceSettings } = useStorefront();
   const { recentlyViewed } = useRecentlyViewed();
-  const location = useLocation(); // Use useLocation hook
+  const location = useLocation();
 
-  // If on Instagram profile page, this footer should not render
   if (location.pathname.includes('/instagramShop')) {
     return null;
   }

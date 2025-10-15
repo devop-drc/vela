@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
-import { ShoppingBag, Filter, Search, X, Menu, Home, Package, Truck, ArrowUpNarrowWide, ShoppingCart as ShoppingCartIcon } from "lucide-react"; // Renamed ShoppingCart to ShoppingCartIcon
+import { ShoppingBag, Filter, Search, X, Menu, Home, Package, Truck, ArrowUpNarrowWide, ShoppingCart as ShoppingCartIcon } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "../ui/input";
-import { debounce } from 'lodash'; // Import debounce
+import { debounce } from 'lodash';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -18,9 +18,9 @@ const DESKTOP_SIDEBAR_WIDTH = '20rem';
 interface StorefrontHeaderProps {
   onToggleFilterSidebar?: () => void;
   onOpenCart: () => void;
-  isDesktopSidebarOpen: boolean; // New prop
-  setIsDesktopFilterSidebarOpen: (open: boolean) => void; // New prop to control desktop sidebar
-  setWasDesktopFilterSidebarExplicitlyOpened: (open: boolean) => void; // New prop to track explicit user action
+  isDesktopSidebarOpen: boolean;
+  setIsDesktopFilterSidebarOpen: (open: boolean) => void;
+  setWasDesktopFilterSidebarExplicitlyOpened: (open: boolean) => void;
 }
 
 export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopSidebarOpen, setIsDesktopFilterSidebarOpen, setWasDesktopFilterSidebarExplicitlyOpened }: StorefrontHeaderProps) => {
@@ -38,17 +38,15 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
   const blurEnabled = appearanceSettings?.blurEnabled;
   const borderRadius = appearanceSettings?.['--radius'] || '0.5rem';
   const isFloatingLayout = appearanceSettings?.layoutStyle === 'floating';
-  const isPrimaryStyle = appearanceSettings?.sidebarStyle === 'primary'; // Check sidebarStyle
+  const isPrimaryStyle = appearanceSettings?.sidebarStyle === 'primary';
 
   const isOnProductsPage = location.pathname.includes('/products');
-  const isInstagramProfilePage = location.pathname.includes('/instagramShop'); // New check
+  const isInstagramProfilePage = location.pathname.includes('/instagramShop');
 
-  // If on Instagram profile page, this header should not render
   if (isInstagramProfilePage) {
     return null;
   }
 
-  // Debounced function to update search params
   const debouncedSetSearchParam = useCallback(
     debounce((query: string) => {
       if (query) {
@@ -57,7 +55,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
         searchParams.delete('search');
       }
       navigate(`/shop/${shopDetails.slug}/products?${searchParams.toString()}`);
-    }, 300), // 300ms debounce
+    }, 300),
     [shopDetails.slug, navigate, searchParams]
   );
 
@@ -80,12 +78,11 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
 
   const handleDesktopFilterToggle = () => {
     setIsDesktopFilterSidebarOpen(prev => {
-      setWasDesktopFilterSidebarExplicitlyOpened(!prev); // Update explicit state
+      setWasDesktopFilterSidebarExplicitlyOpened(!prev);
       return !prev;
     });
   };
 
-  // Dynamic styles for desktop header when sidebar is open
   const desktopHeaderStyle: React.CSSProperties = {};
   if (!isMobile && isDesktopSidebarOpen && isOnProductsPage) {
     desktopHeaderStyle.left = DESKTOP_SIDEBAR_WIDTH;
@@ -94,21 +91,21 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
 
   return (
     <header className={cn(
-      "fixed top-0 left-0 right-0 z-40 transition-all duration-200", // Always fixed
-      isFloatingLayout ? "md:top-4 md:left-4 md:right-4" : "" // Adjust position for floating on desktop
-    )} style={desktopHeaderStyle}> {/* Apply dynamic style here */}
+      "fixed top-0 left-0 right-0 z-40 transition-all duration-200",
+      isFloatingLayout ? "md:top-4 md:left-4 md:right-4" : ""
+    )} style={desktopHeaderStyle}>
       <div className={cn(
-        "container flex h-14 md:h-16 items-center justify-between", // Restored justify-between
+        "container flex h-14 md:h-16 items-center justify-between",
         isFloatingLayout
-          ? "rounded-lg shadow-md" // Floating style
-          : "shadow-sm", // Docked style, removed border-b
-        isPrimaryStyle // Apply primary style if selected in admin
+          ? "rounded-lg shadow-md"
+          : "shadow-sm",
+        isPrimaryStyle
           ? cn(blurEnabled ? "bg-primary/80 backdrop-blur-[20px]" : "bg-primary", "text-primary-foreground")
           : cn(blurEnabled ? "bg-card/80 backdrop-blur-[20px]" : "bg-card", "text-foreground")
       )} style={{ borderRadius: isFloatingLayout ? borderRadius : '0' }}>
 
         {/* Left Section: Logo + Name */}
-        <div className="flex items-center space-x-2 flex-shrink-0"> {/* Removed flex-1, added flex-shrink-0 */}
+        <div className="flex items-center space-x-2 flex-shrink-0">
           <Link to={`/shop/${shopDetails.slug}`} className="flex items-center space-x-2">
             <Avatar className="h-7 w-7 md:h-8 md:w-8">
               <AvatarImage src={shopDetails.logo_url || undefined} alt={shopDetails.shop_name} />
@@ -122,32 +119,31 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
         </div>
 
         {/* Middle Section: Desktop Nav Links & Filters/Sort (conditional) */}
-        <div className="flex-1 hidden lg:flex items-center justify-center space-x-4 px-4"> {/* Added flex-1, hidden on mobile */}
-          {/* Desktop Navigation Links */}
-          <Link 
-            to={`/shop/${shopDetails.slug}`} 
+        <div className="flex-1 hidden lg:flex items-center justify-center space-x-4 px-4">
+          <Link
+            to={`/shop/${shopDetails.slug}`}
             className={cn(
-              buttonVariants({ variant: "ghost" }), 
+              buttonVariants({ variant: "ghost" }),
               "text-sm md:text-base",
               isPrimaryStyle && "text-primary-foreground hover:bg-primary-foreground/10"
             )}
           >
             Home
           </Link>
-          <Link 
-            to={`/shop/${shopDetails.slug}/products`} 
+          <Link
+            to={`/shop/${shopDetails.slug}/products`}
             className={cn(
-              buttonVariants({ variant: "ghost" }), 
+              buttonVariants({ variant: "ghost" }),
               "text-sm md:text-base",
               isPrimaryStyle && "text-primary-foreground hover:bg-primary-foreground/10"
             )}
           >
             Products
           </Link>
-          <Link 
-            to={`/shop/${shopDetails.slug}/orders`} 
+          <Link
+            to={`/shop/${shopDetails.slug}/orders`}
             className={cn(
-              buttonVariants({ variant: "ghost" }), 
+              buttonVariants({ variant: "ghost" }),
               "text-sm md:text-base",
               isPrimaryStyle && "text-primary-foreground hover:bg-primary-foreground/10"
             )}
@@ -155,7 +151,6 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
             My Orders
           </Link>
 
-          {/* Filters + Sort (Desktop only, on products page) */}
           <AnimatePresence>
             {!isMobile && isOnProductsPage && (
               <motion.div
@@ -165,9 +160,9 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
                 transition={{ duration: 0.2 }}
                 className="flex items-center gap-2 overflow-hidden"
               >
-                <Button 
-                  variant="outline" 
-                  onClick={handleDesktopFilterToggle} 
+                <Button
+                  variant="outline"
+                  onClick={handleDesktopFilterToggle}
                   className={cn(
                     "flex-shrink-0 text-sm md:text-base h-9 md:h-10",
                     isPrimaryStyle && "bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 hover:bg-primary-foreground/30"
@@ -176,9 +171,8 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
                   <Filter className="mr-2 h-4 w-4" />
                   Filters
                 </Button>
-                {/* Sort Dropdown */}
                 <Select value={searchParams.get('sort') || "newest"} onValueChange={handleSortChange}>
-                  <SelectTrigger 
+                  <SelectTrigger
                     className={cn(
                       "w-[180px] h-9 md:h-10 text-sm",
                       isPrimaryStyle && "bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 hover:bg-primary-foreground/30 data-[state=open]:bg-primary-foreground/30"
@@ -203,7 +197,6 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
 
         {/* Right Section: Search + Cart + Mobile Toggles */}
         <nav className="flex items-center space-x-2 md:space-x-4 flex-shrink-0">
-          {/* Desktop Search Input (moved here) */}
           <div className="relative hidden lg:flex items-center">
             <Search className={cn("absolute left-3 h-4 w-4", isPrimaryStyle ? "text-primary-foreground/70" : "text-muted-foreground")} />
             <Input
@@ -212,8 +205,8 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
               placeholder="Search products..."
               className={cn(
                 "pl-9 w-48 lg:w-64 text-sm",
-                isPrimaryStyle 
-                  ? "bg-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/70 border-primary-foreground/30 focus-visible:ring-primary-foreground" 
+                isPrimaryStyle
+                  ? "bg-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/70 border-primary-foreground/30 focus-visible:ring-primary-foreground"
                   : (blurEnabled ? "bg-input/50" : "bg-input")
               )}
               value={localSearchTerm}
@@ -221,7 +214,6 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
             />
           </div>
 
-          {/* Mobile Dropdown Menu */}
           {isMobile && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -254,7 +246,6 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
             </DropdownMenu>
           )}
 
-          {/* Mobile Search Toggle Button */}
           {isMobile && (
             <Button variant="ghost" size="icon" onClick={() => setIsMobileSearchInputVisible(prev => !prev)} className={isPrimaryStyle ? "text-primary-foreground hover:bg-primary-foreground/10" : ""}>
               {isMobileSearchInputVisible ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
@@ -262,7 +253,6 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
             </Button>
           )}
           
-          {/* Mobile Filter Toggle Button (only on products page) */}
           {isMobile && isOnProductsPage && onToggleFilterSidebar && (
             <Button variant="ghost" size="icon" onClick={onToggleFilterSidebar} className={isPrimaryStyle ? "text-primary-foreground hover:bg-primary-foreground/10" : ""}>
               <Filter className="h-5 w-5" />
@@ -270,7 +260,6 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
             </Button>
           )}
 
-          {/* Cart Button (always visible) */}
           <Button
             variant="ghost"
             size="icon"
@@ -286,7 +275,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
             >
               <ShoppingBag className="h-5 w-5" />
               {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary-foreground text-xs text-primary">
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
                   {totalItems}
                 </span>
               )}
@@ -303,7 +292,7 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
             transition={{ duration: 0.2 }}
             className={cn(
               "overflow-hidden border-t",
-              isPrimaryStyle 
+              isPrimaryStyle
                 ? cn(blurEnabled ? "bg-primary/80 backdrop-blur-[20px]" : "bg-primary", "border-primary-foreground/20")
                 : cn(blurEnabled ? "bg-background/80 backdrop-blur-[20px]" : "bg-background")
             )}
@@ -316,8 +305,8 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
                 placeholder="Search products..."
                 className={cn(
                   "flex-1 text-sm",
-                  isPrimaryStyle 
-                    ? "bg-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/70 border-primary-foreground/30 focus-visible:ring-primary-foreground" 
+                  isPrimaryStyle
+                    ? "bg-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/70 border-primary-foreground/30 focus-visible:ring-primary-foreground"
                     : (blurEnabled ? "bg-input/50" : "bg-input")
                 )}
                 autoFocus

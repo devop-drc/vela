@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
+import { cn } from "@/lib/utils";
 
-interface ReportIssueModalProps {
+interface InstagramReportIssueModalProps {
   isOpen: boolean;
   onClose: () => void;
   orderId: string;
@@ -17,7 +18,7 @@ interface ReportIssueModalProps {
   onIssueReported: () => void;
 }
 
-export const ReportIssueModal = ({ isOpen, onClose, orderId, customerEmail, onIssueReported }: ReportIssueModalProps) => {
+export const InstagramReportIssueModal = ({ isOpen, onClose, orderId, customerEmail, onIssueReported }: InstagramReportIssueModalProps) => {
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,21 +64,21 @@ export const ReportIssueModal = ({ isOpen, onClose, orderId, customerEmail, onIs
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Report an Issue with Order #{orderId.substring(0, 8)}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-md bg-white text-black rounded-lg">
+        <DialogHeader className="border-b border-gray-200 pb-4">
+          <DialogTitle className="text-xl font-bold text-gray-800">Report an Issue with Order #{orderId.substring(0, 8)}</DialogTitle>
+          <DialogDescription className="text-sm text-gray-500">
             Please tell us what went wrong with your order. We'll review it and get back to you.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="reason">Reason for Issue</Label>
+            <Label htmlFor="reason" className="text-sm text-gray-700">Reason for Issue</Label>
             <Select value={reason} onValueChange={setReason}>
-              <SelectTrigger id="reason">
+              <SelectTrigger id="reason" className="border-gray-300 bg-gray-50 text-gray-800">
                 <SelectValue placeholder="Select a reason" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white text-gray-800">
                 <SelectItem value="Delivery Late">Delivery Late</SelectItem>
                 <SelectItem value="Product Missing">Product Missing</SelectItem>
                 <SelectItem value="Product Damaged">Product Damaged</SelectItem>
@@ -87,12 +88,12 @@ export const ReportIssueModal = ({ isOpen, onClose, orderId, customerEmail, onIs
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="message">Your Message (Optional)</Label>
-            <Textarea id="message" rows={4} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Provide more details about the issue..." />
+            <Label htmlFor="message" className="text-sm text-gray-700">Your Message (Optional)</Label>
+            <Textarea id="message" rows={4} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Provide more details about the issue..." className="border-gray-300 bg-gray-50 text-gray-800" />
           </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting || !reason}>
+          <DialogFooter className="border-t border-gray-200 pt-4">
+            <Button type="button" variant="ghost" onClick={onClose} className="text-gray-800 hover:bg-gray-100">Cancel</Button>
+            <Button type="submit" disabled={isSubmitting || !reason} className="bg-red-500 hover:bg-red-600 text-white">
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Submit Report
             </Button>

@@ -13,17 +13,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
-import { getAttributeIcon } from "@/lib/attributeIcons"; // Import attribute icons
-import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard"; // Import StorefrontProductCard
-import { StorefrontBreadcrumb } from "@/components/storefront/StorefrontBreadcrumb"; // Import StorefrontBreadcrumb
-import { useRecentlyViewed } from "@/contexts/RecentlyViewedContext"; // Import useRecentlyViewed
-import { type CarouselApi } from "@/components/ui/carousel"; // Import CarouselApi type
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // Import ScrollArea and ScrollBar
+import { getAttributeIcon } from "@/lib/attributeIcons";
+import { StorefrontProductCard } from "@/components/storefront/StorefrontProductCard";
+import { StorefrontBreadcrumb } from "@/components/storefront/StorefrontBreadcrumb";
+import { useRecentlyViewed } from "@/contexts/RecentlyViewedContext";
+import { type CarouselApi } from "@/components/ui/carousel";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
         <Label className="text-xs md:text-sm text-muted-foreground flex items-center gap-1">
-          <Icon className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" /> {/* Changed to text-primary */}
+          <Icon className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" />
           {label}
         </Label>
         <div className="font-medium flex flex-wrap items-center gap-1 text-sm md:text-base pt-1">
@@ -36,16 +36,15 @@ const StorefrontProductDetail = () => {
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
   const { shopDetails, products, isLoading, error, appearanceSettings, convertCurrency, promotions } = useStorefront();
   const { addToCart } = useCart();
-  const { addRecentlyViewed } = useRecentlyViewed(); // Use the new hook
+  const { addRecentlyViewed } = useRecentlyViewed();
   const [quantity, setQuantity] = useState(1);
-  const [selectedColor, setSelectedColor] = useState<string | null>(null); // Placeholder for variant selection
-  const [selectedSize, setSelectedSize] = useState<string | null>(null); // Placeholder for variant selection
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
   const [api, setApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
-    // Scroll to top when component mounts or productId changes
     window.scrollTo(0, 0);
   }, [productId]);
 
@@ -109,7 +108,6 @@ const StorefrontProductDetail = () => {
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
   const blurEnabled = appearanceSettings?.blurEnabled;
 
-  // Convert product price to shop's display currency
   const originalDisplayPrice = convertCurrency(product.price, product.currency);
 
   const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && product.inventory <= 0);
@@ -126,7 +124,7 @@ const StorefrontProductDetail = () => {
     if (promo.target_products && promo.target_products.length > 0) {
       return promo.target_products.includes(product.id);
     }
-    return true; // Applies to all products if target_products is empty
+    return true;
   });
 
   let discountedPrice = originalDisplayPrice;
@@ -172,33 +170,31 @@ const StorefrontProductDetail = () => {
     const selectedOptions: { [key: string]: string | string[] } = {};
     if (selectedColor) selectedOptions.color = selectedColor;
     if (selectedSize) selectedOptions.size = selectedSize;
-    // Add other selected options here if they were part of the UI
 
     addToCart({
       productId: product.id,
       name: product.name,
-      price: hasDiscount ? discountedPrice : originalDisplayPrice, // Use discounted price if applicable
-      originalPrice: originalDisplayPrice, // Pass original price
-      isDiscounted: hasDiscount, // Pass discount status
+      price: hasDiscount ? discountedPrice : originalDisplayPrice,
+      originalPrice: originalDisplayPrice,
+      isDiscounted: hasDiscount,
       currency: shopDetails.currency || 'USD',
       media_url: product.media_url,
       media_type: product.media_type,
       slug: shopDetails.slug,
-      selectedOptions: Object.keys(selectedOptions).length > 0 ? selectedOptions : undefined, // Pass selected options
-      pricing_type: product.pricing_type, // Pass pricing_type
-      product_type: product.product_type, // Pass product_type
-      billing_interval: product.billing_interval, // Pass billing_interval
+      selectedOptions: Object.keys(selectedOptions).length > 0 ? selectedOptions : undefined,
+      pricing_type: product.pricing_type,
+      product_type: product.product_type,
+      billing_interval: product.billing_interval,
     }, quantity);
   };
 
   const allDetails = Object.entries(product.details || {}).filter(([key, value]) => key !== 'type' && value && (!Array.isArray(value) || value.length > 0));
   const colors = allDetails.find(([key]) => key === 'color')?.[1] as string[] || [];
   const sizes = allDetails.find(([key]) => key === 'size')?.[1] as string[] || [];
-  const otherOptions = allDetails.filter(([key]) => ['material'].includes(key)); // Example other options
-  const specifications = allDetails.filter(([key]) => !['color', 'size', 'material', 'type'].includes(key)); // Example specs
+  const otherOptions = allDetails.filter(([key]) => ['material'].includes(key));
+  const specifications = allDetails.filter(([key]) => !['color', 'size', 'material', 'type'].includes(key));
 
   const relatedProducts = useMemo(() => {
-    // Filter out the current product and take up to 4 other products
     return products.filter(p => p.id !== product.id).slice(0, 4);
   }, [products, product.id]);
 
@@ -213,7 +209,7 @@ const StorefrontProductDetail = () => {
               {mediaItems.map((url: string, index: number) => (
                 <CarouselItem key={index}>
                   <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
-                    <MediaItem src={url} alt={`${product.name} - image ${index + 1}`} className={cn(isOutOfStock && "grayscale")} /> {/* Apply grayscale here */}
+                    <MediaItem src={url} alt={`${product.name} - image ${index + 1}`} className={cn(isOutOfStock && "grayscale")} />
                   </div>
                 </CarouselItem>
               ))}
@@ -253,15 +249,15 @@ const StorefrontProductDetail = () => {
               <span>{product.category || 'Uncategorized'}</span>
               {product.details?.type && <span> &middot; {product.details.type}</span>}
             </p>
-            <h1 className="text-3xl md:text-5xl font-bold font-heading mb-2 md:mb-3 leading-tight flex flex-wrap items-center gap-2"> {/* Added flex-wrap */}
+            <h1 className="text-3xl md:text-5xl font-bold font-heading mb-2 md:mb-3 leading-tight flex flex-wrap items-center gap-2">
               {product.name}
               {isOutOfStock && (
-                <Badge variant="secondary" className="text-sm md:text-base bg-amber-500 text-white flex-shrink-0"> {/* Added flex-shrink-0 */}
+                <Badge variant="secondary" className="text-sm md:text-base bg-amber-500 text-white flex-shrink-0">
                   Coming Soon
                 </Badge>
               )}
               {activePromotions.length > 0 && !isOutOfStock && (
-                <div className="flex gap-1 flex-shrink-0"> {/* Added flex-shrink-0 */}
+                <div className="flex gap-1 flex-shrink-0">
                   {activePromotions.map(promo => (
                     <Badge key={promo.id} className="bg-emerald-500 text-white text-sm md:text-base">
                       {getPromotionBadge(promo)}
@@ -276,7 +272,7 @@ const StorefrontProductDetail = () => {
                     <p className="text-base text-muted-foreground line-through">
                       {formatCurrency(originalDisplayPrice, shopDetails?.currency)}
                     </p>
-                    <p className="text-2xl md:text-3xl font-bold text-emerald-600"> {/* Made discounted price green */}
+                    <p className="text-2xl md:text-3xl font-bold text-emerald-600">
                       {formatCurrency(discountedPrice, shopDetails?.currency)}
                       {product.pricing_type === 'subscription' && (
                           <span className="text-base md:text-lg font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
@@ -291,7 +287,6 @@ const StorefrontProductDetail = () => {
                     )}
                   </p>
                 )}
-                {/* Placeholder for star ratings */}
                 <div className="flex items-center text-amber-500">
                     {[...Array(5)].map((_, i) => (
                         <Star key={i} className={cn("h-4 w-4 md:h-5 md:w-5", i < 4 ? "fill-amber-500" : "fill-muted stroke-muted-foreground")} />
@@ -309,7 +304,6 @@ const StorefrontProductDetail = () => {
             </div>
           )}
 
-          {/* Variant Selection (Placeholder) */}
           {(colors.length > 0 || sizes.length > 0 || otherOptions.length > 0) && (
             <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-md")}>
               <CardHeader><CardTitle className="text-lg md:text-xl">Options</CardTitle></CardHeader>
@@ -368,7 +362,6 @@ const StorefrontProductDetail = () => {
             </Card>
           )}
 
-          {/* Specifications */}
           {specifications.length > 0 && (
             <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-md")}>
               <CardHeader><CardTitle className="text-lg md:text-xl">Specifications</CardTitle></CardHeader>
@@ -387,7 +380,6 @@ const StorefrontProductDetail = () => {
             </Card>
           )}
 
-          {/* Inventory & Add to Cart */}
           {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && (
             <div className="flex items-center gap-4">
               <div className="flex items-center border rounded-md">
@@ -436,7 +428,6 @@ const StorefrontProductDetail = () => {
             </Button>
           )}
 
-          {/* Shipping & Returns (Placeholder) */}
           <Card className={cn("shadow-md", blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card")}>
             <CardContent className="p-4 flex items-center gap-4">
               <Truck className="h-6 w-6 text-primary flex-shrink-0" />
@@ -453,7 +444,6 @@ const StorefrontProductDetail = () => {
         </div>
       </div>
 
-      {/* Customer Reviews Section (Placeholder) */}
       <Card className={cn("mt-8 md:mt-12 shadow-md", blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card")}>
         <CardHeader>
           <CardTitle className="text-xl md:text-2xl flex items-center gap-2">
@@ -475,7 +465,6 @@ const StorefrontProductDetail = () => {
             <Button variant="outline" className="text-sm md:text-base">Write a Review</Button>
           </div>
           <div className="space-y-4">
-            {/* Example Review 1 */}
             <div className="border-b pb-4">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex text-amber-500">
@@ -488,7 +477,6 @@ const StorefrontProductDetail = () => {
               <p className="text-sm text-muted-foreground mb-2">"I absolutely love this product. The quality is fantastic and it arrived so quickly. Highly recommend!"</p>
               <p className="text-xs text-muted-foreground">— Jane Doe, 2 days ago</p>
             </div>
-            {/* Example Review 2 */}
             <div className="border-b pb-4">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex text-amber-500">
@@ -506,7 +494,6 @@ const StorefrontProductDetail = () => {
         </CardContent>
       </Card>
 
-      {/* You might also like section */}
       {relatedProducts.length > 0 && (
         <div className="mt-8 md:mt-12">
           <h2 className="text-2xl md:text-3xl font-bold font-heading mb-6 md:mb-8 text-center">You might also like</h2>

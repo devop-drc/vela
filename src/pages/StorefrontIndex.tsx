@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Gift, RefreshCw, Crown, Info, Package, Wrench, Mail } from "lucide-react"; // Added Wrench and Mail icons
+import { ArrowRight, Sparkles, Gift, RefreshCw, Crown, Info, Package, Wrench, Mail } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { getCategoryColor } from "@/lib/colorUtils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,9 +18,9 @@ import { Marquee } from "@/components/ui/marquee";
 import { getCategoryIcon } from "@/lib/categoryIcons";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
-import * as LucideIcons from 'lucide-react'; // Import all Lucide icons
-import { StorefrontAnnouncement } from "@/types/storefront"; // Import new type
-import { useDragToScroll } from "@/hooks/use-drag-to-scroll"; // Import useDragToScroll hook
+import * as LucideIcons from 'lucide-react';
+import { StorefrontAnnouncement } from "@/types/storefront";
+import { useDragToScroll } from "@/hooks/use-drag-to-scroll";
 
 interface Product {
   id: string;
@@ -65,12 +65,9 @@ const StorefrontIndex = () => {
   const { shopDetails, products: allProducts, isLoading, error, appearanceSettings, bestSellers, recommendedProducts, marqueeElements, promotions } = useStorefront();
   const productsSectionRef = useRef<HTMLDivElement>(null);
 
-  // Drag-to-scroll refs
   const bestSellersScrollRef = useDragToScroll<HTMLDivElement>();
   const newArrivalsScrollRef = useDragToScroll<HTMLDivElement>();
   const recommendedProductsScrollRef = useDragToScroll<HTMLDivElement>();
-
-  // Removed redundant console.log for marqueeElements here.
 
   const newArrivals = useMemo(() => {
     return allProducts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10);
@@ -98,12 +95,11 @@ const StorefrontIndex = () => {
 
     if (appearanceSettings?.heroBackgroundMediaUrl) {
       style.backgroundImage = `url(${appearanceSettings.heroBackgroundMediaUrl})`;
-      style.backgroundSize = 'cover'; // Always cover for hero background media
+      style.backgroundSize = 'cover';
       style.backgroundPosition = 'center';
       style.backgroundRepeat = 'no-repeat';
       style.backgroundColor = 'transparent';
     } else {
-      // Fallback to primary color if no specific hero background is set
       style.backgroundImage = 'none';
       style.backgroundColor = `hsl(${appearanceSettings?.primary || '220 10% 15%'})`;
     }
@@ -112,8 +108,8 @@ const StorefrontIndex = () => {
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
-  const getIconComponent = (iconName: keyof typeof LucideIcons) => { // Use keyof typeof LucideIcons
-    const Icon = LucideIcons[iconName]; // Access directly
+  const getIconComponent = (iconName: keyof typeof LucideIcons) => {
+    const Icon = LucideIcons[iconName];
     return Icon ? <Icon className="h-5 w-5 md:h-6 md:w-6 text-primary" /> : <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-primary" />;
   };
 
@@ -144,7 +140,6 @@ const StorefrontIndex = () => {
     return <div className="container py-8 text-center text-muted-foreground text-base md:text-lg">Shop details not found.</div>;
   }
 
-  // New condition for "under construction"
   if (allProducts.length === 0 && !isLoading && !error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] text-center text-muted-foreground p-8">
@@ -189,11 +184,9 @@ const StorefrontIndex = () => {
               src={appearanceSettings.heroBackgroundMediaUrl}
             />
           )}
-          {/* Overlay for text readability */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
           
-          {/* Content Wrapper */}
-          <div 
+          <div
             className={cn(
               "relative z-10 text-primary-foreground max-w-4xl mx-auto p-8 md:p-16 h-full w-full flex flex-col items-center justify-center",
             )}
@@ -237,7 +230,7 @@ const StorefrontIndex = () => {
           >
             <Marquee pauseOnHover className="py-3 md:py-4 border-y-2 border-primary/20 bg-primary/10">
               {marqueeElements.map(element => (
-                <div key={element.id} className="flex items-center gap-4 md:gap-6 text-base md:text-lg font-semibold text-primary px-4"> {/* Adjusted gap and added horizontal padding */}
+                <div key={element.id} className="flex items-center gap-4 md:gap-6 text-base md:text-lg font-semibold text-primary px-4">
                   {getIconComponent(element.icon_name)}
                   <span>{element.message}</span>
                 </div>
@@ -304,15 +297,12 @@ const StorefrontIndex = () => {
             <ScrollArea className="w-full whitespace-nowrap pb-4">
               <div ref={bestSellersScrollRef} className="flex w-max space-x-6 md:space-x-8 p-4">
                 {bestSellers.map((product) => {
-                  // --- DEBUGGING BEST SELLERS ---
-                  console.log(`Best Seller Product ID: ${product.product_id}`);
-                  // --- END DEBUGGING ---
                   return (
-                    <StorefrontProductCard 
-                      key={product.product_id} 
-                      product={{ ...product, id: product.product_id }} // Map product_id to id
-                      shopSlug={shopDetails.slug} 
-                      className="w-[240px] md:w-[280px] flex-shrink-0" 
+                    <StorefrontProductCard
+                      key={product.product_id}
+                      product={{ ...product, id: product.product_id }}
+                      shopSlug={shopDetails.slug}
+                      className="w-[240px] md:w-[280px] flex-shrink-0"
                       externalShopDetails={shopDetails}
                       externalAppearanceSettings={appearanceSettings}
                       externalPromotions={promotions}
@@ -347,11 +337,11 @@ const StorefrontIndex = () => {
             <ScrollArea className="w-full whitespace-nowrap pb-4">
               <div ref={newArrivalsScrollRef} className="flex w-max space-x-6 md:space-x-8 p-4">
                 {newArrivals.map((product) => (
-                  <StorefrontProductCard 
-                    key={product.id} 
-                    product={product} 
-                    shopSlug={shopDetails.slug} 
-                    className="w-[240px] md:w-[280px] flex-shrink-0" 
+                  <StorefrontProductCard
+                    key={product.id}
+                    product={product}
+                    shopSlug={shopDetails.slug}
+                    className="w-[240px] md:w-[280px] flex-shrink-0"
                     externalShopDetails={shopDetails}
                     externalAppearanceSettings={appearanceSettings}
                     externalPromotions={promotions}
@@ -385,11 +375,11 @@ const StorefrontIndex = () => {
             <ScrollArea className="w-full whitespace-nowrap pb-4">
               <div ref={recommendedProductsScrollRef} className="flex w-max space-x-6 md:space-x-8 p-4">
                 {recommendedProducts.map((product) => (
-                  <StorefrontProductCard 
-                    key={product.id} 
-                    product={product} 
-                    shopSlug={shopDetails.slug} 
-                    className="w-[240px] md:w-[280px] flex-shrink-0" 
+                  <StorefrontProductCard
+                    key={product.id}
+                    product={product}
+                    shopSlug={shopDetails.slug}
+                    className="w-[240px] md:w-[280px] flex-shrink-0"
                     externalShopDetails={shopDetails}
                     externalAppearanceSettings={appearanceSettings}
                     externalPromotions={promotions}
@@ -416,8 +406,8 @@ const StorefrontIndex = () => {
           className="text-center mt-12 md:mt-16"
           ref={productsSectionRef}
         >
-          <Link 
-            to={`/shop/${shopDetails.slug}/products`} 
+          <Link
+            to={`/shop/${shopDetails.slug}/products`}
             onClick={() => window.scrollTo(0, 0)}
             className={cn(buttonVariants({ size: "lg" }), "text-base md:text-lg px-6 py-4 md:px-8 md:py-6 shadow-xl hover:scale-105 transition-transform")}
           >

@@ -5,7 +5,7 @@ import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, 
 import { useCart } from "@/contexts/CartContext";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
-import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { MediaItem } from "@/components/MediaItem";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { CheckoutForm, CheckoutFormData } from "./CheckoutForm"; // Import CheckoutForm
+import { CheckoutForm, CheckoutFormData } from "./CheckoutForm";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 
@@ -33,14 +33,12 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
 
   const blurEnabled = appearanceSettings?.blurEnabled;
 
-  // Reset checkout step when modal opens/closes
   useEffect(() => {
     if (isOpen) {
       setCheckoutStep('cart');
     }
   }, [isOpen]);
 
-  // Currency Debugging Logs
   useEffect(() => {
     if (isOpen && cartItems.length > 0) {
       console.log("--- Cart Modal Currency Debugging ---");
@@ -73,7 +71,7 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
     } else if (checkoutStep === 'contact-shipping') {
       setCheckoutStep('cart');
     } else {
-      onClose(); // If on cart step, close the modal
+      onClose();
     }
   };
 
@@ -89,7 +87,6 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
 
     setIsSubmittingOrder(true);
     let toastId: string | number | undefined;
-    // Defer toast.loading to avoid render-phase update warning
     setTimeout(() => {
       toastId = toast.loading("Placing your order...");
     }, 0);
@@ -106,15 +103,15 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
         cartItems: cartItems.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
-          price: item.price, // This price is already in shopDetails.currency
-          currency: item.currency, // This is already shopDetails.currency
+          price: item.price,
+          currency: item.currency,
         })),
-        totalAmount: total, // This total is already in shopDetails.currency
-        currency: shopDetails.currency, // This is shopDetails.currency
+        totalAmount: total,
+        currency: shopDetails.currency,
         paymentMethod: data.paymentMethod,
         shippingAddress: data.shippingAddress,
         shippingCity: data.shippingCity,
-        shippingState: data.shippingState, // Still pass, even if not in UI
+        shippingState: data.shippingState,
         shippingZip: data.shippingZip,
         shippingCountry: data.shippingCountry,
         shippingNotesSeller: data.shippingNotesSeller,
@@ -128,14 +125,14 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
       if (invokeError) throw invokeError;
       if (responseData.error) throw new Error(responseData.error);
 
-      if (toastId) toast.success("Order placed successfully! Redirecting to your orders.", { id: toastId }); // Dismiss with ID
+      if (toastId) toast.success("Order placed successfully! Redirecting to your orders.", { id: toastId });
       else showSuccess("Order placed successfully! Redirecting to your orders.");
-      clearCart(); // Clear cart after successful order
-      onClose(); // Close the modal
-      navigate(`/shop/${shopDetails.slug}/orders?orderId=${responseData.order.id}`); // Redirect to client orders page with new order ID
+      clearCart();
+      onClose();
+      navigate(`/shop/${shopDetails.slug}/orders?orderId=${responseData.order.id}`);
     } catch (err: any) {
       console.error("Checkout failed:", err);
-      if (toastId) toast.error(`Failed to place order: ${err.message || "An unexpected error occurred."}`, { id: toastId }); // Dismiss with ID
+      if (toastId) toast.error(`Failed to place order: ${err.message || "An unexpected error occurred."}`, { id: toastId });
       else showError(`Failed to place order: ${err.message || "An unexpected error occurred."}`);
     } finally {
       setIsSubmittingOrder(false);
@@ -162,7 +159,7 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent 
+      <DialogContent
         className={cn(
           "sm:max-w-5xl h-[90vh] flex flex-col p-0",
           blurEnabled ? "bg-card/80 backdrop-blur-[20px]" : "bg-card"
@@ -177,7 +174,6 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 flex-1 overflow-hidden">
-          {/* Left Column: Cart Items or Checkout Form */}
           <div className="lg:col-span-2 flex flex-col h-full">
             {checkoutStep === 'cart' ? (
               <>
@@ -317,9 +313,8 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
                                         </motion.button>
                                       </div>
                                     </div>
-                                  </div>
-                                </Card>
-                              </motion.div>
+                                  </Card>
+                                </motion.div>
                             ))}
                           </AnimatePresence>
                         </div>
@@ -417,7 +412,7 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
               </>
             ) : (
               <CheckoutForm
-                onBackToCart={handleBack} // Use the modal's handleBack
+                onBackToCart={handleBack}
                 onPlaceOrder={handlePlaceOrder}
                 isSubmittingOrder={isSubmittingOrder}
                 cartItems={cartItems}
@@ -430,12 +425,11 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
                 hasSubscriptionProducts={hasSubscriptionProducts}
                 checkoutStep={checkoutStep}
                 setCheckoutStep={setCheckoutStep}
-                onContinue={() => setCheckoutStep('payment')} // Move to payment step
+                onContinue={() => setCheckoutStep('payment')}
               />
             )}
           </div>
 
-          {/* Right Column: Order Summary */}
           <div className="lg:col-span-1 flex flex-col p-4 md:p-6 border-t lg:border-t-0 lg:border-l">
             <div className="space-y-4 flex-1">
               <h2 className="text-lg md:text-xl font-bold font-heading">Order Summary</h2>

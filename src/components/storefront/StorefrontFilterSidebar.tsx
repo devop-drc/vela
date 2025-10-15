@@ -97,7 +97,6 @@ export const StorefrontFilterSidebar = ({
   const handleClearSection = (filterKey: keyof FilterState) => {
     setLocalFilters(prev => {
       const updatedFilters = { ...prev, [filterKey]: filterKey === 'priceRange' ? [0, maxPrice] : [] };
-      onFilterChange(updatedFilters);
       if (filterKey === 'priceRange') {
         setLocalPriceRange([0, maxPrice]);
       }
@@ -301,16 +300,17 @@ export const StorefrontFilterSidebar = ({
 
           {uniqueDetailsAttributes.map(attr => {
             const Icon = getAttributeIcon(attr.name);
+            const filterKey = attr.name;
             return attr.values.length > 0 ? (
-              <FilterSection key={attr.name} title={attr.name.replace(/_/g, ' ')} icon={Icon} filterKey={attr.name}>
+              <FilterSection key={attr.name} title={attr.name.replace(/_/g, ' ')} icon={Icon} filterKey={filterKey}>
                 <div className="flex flex-wrap gap-2">
                   {attr.values.map(value => (
                     <Button
                       key={value}
-                      variant={(localFilters[attr.name] as string[] || []).includes(value) ? "default" : "outline"}
+                      variant={(localFilters[filterKey] as string[] || []).includes(value) ? "default" : "outline"}
                       size="sm"
-                      onClick={() => handleToggleFilter(attr.name, value)}
-                      className={cn("text-sm", (localFilters[attr.name] as string[] || []).includes(value) && "ring-2 ring-primary ring-offset-2")}
+                      onClick={() => handleToggleFilter(filterKey, value)}
+                      className={cn("text-sm", (localFilters[filterKey] as string[] || []).includes(value) && "ring-2 ring-primary ring-offset-2")}
                     >
                       {value}
                     </Button>
@@ -330,8 +330,8 @@ export const StorefrontFilterSidebar = ({
   if (isMobile) {
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent 
-          side="left" 
+        <SheetContent
+          side="left"
           className={cn(
             "w-full sm:max-w-xs p-0 flex flex-col h-full",
             blurEnabled ? "bg-card/80 backdrop-blur-[20px]" : "bg-card",

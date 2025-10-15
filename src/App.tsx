@@ -25,8 +25,8 @@ import StorefrontProductDetail from "./pages/StorefrontProductDetail";
 import StorefrontAllProducts from "./pages/StorefrontAllProducts";
 import StorefrontClientOrders from "./pages/StorefrontClientOrders";
 import StorefrontInstagramProfile from "./pages/StorefrontInstagramProfile";
-import InstagramShopLayout from "./components/storefront/InstagramShopLayout"; // Import new layout
-import InstagramProductDetail from "./pages/InstagramProductDetail"; // Import new product detail
+import InstagramShopLayout from "./components/storefront/InstagramShopLayout";
+import InstagramProductDetail from "./pages/InstagramProductDetail";
 import Promotions from "./pages/Promotions";
 import { useEffect } from "react";
 import { supabase } from "./integrations/supabase/client";
@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { MessageSquareWarning } from "lucide-react";
 import { PageTitleProvider } from "./contexts/PageTitleContext";
 import { AppearanceProvider } from "./contexts/AppearanceContext";
+import { StorefrontCartModal } from "./components/storefront/StorefrontCartModal"; // Ensure this is imported for /shop routes
 
 const queryClient = new QueryClient();
 
@@ -50,7 +51,7 @@ const AppContent = () => {
       const { data: business, error: businessError } = await supabase
         .from('businesses')
         .select('id')
-        .eq('user_id', user.id) // Corrected from 'user.id' to 'user_id'
+        .eq('user_id', user.id)
         .single();
 
       if (businessError || !business) {
@@ -109,13 +110,13 @@ const AppContent = () => {
         <Route index element={<StorefrontIndex />} />
         <Route path="products" element={<StorefrontAllProducts />} />
         <Route path="product/:productId" element={<StorefrontProductDetail />} />
-        <Route path="orders" element={<StorefrontClientOrders />} /> 
+        <Route path="orders" element={<StorefrontClientOrders />} />
+        <Route path="cart" element={<StorefrontCartModal isOpen={true} onClose={() => navigate(-1)} />} /> {/* Added cart route */}
       </Route>
       {/* New Instagram Profile Storefront Routes */}
       <Route path="/instagramShop/:shopSlug" element={<InstagramShopLayout />}>
         <Route index element={<StorefrontInstagramProfile />} />
         <Route path="product/:productId" element={<InstagramProductDetail />} />
-        {/* Other routes like /products or /orders can be added here if needed for this layout */}
       </Route>
 
       {/* Auth Routes */}

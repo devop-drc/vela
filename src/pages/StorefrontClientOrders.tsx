@@ -36,7 +36,7 @@ interface OrderDetails {
   status: OrderStatusType;
   total_amount: number;
   created_at: string;
-  updated_at: string; // Added updated_at
+  updated_at: string;
   currency: string;
   payment_method: string;
   payment_status: string;
@@ -190,7 +190,7 @@ const StorefrontClientOrders = () => {
   }, [customerEmailInput, orderIdInput, fetchOrders, searchParams, urlShopSlug]);
 
   const handleOrderUpdate = useCallback(() => {
-    fetchOrders(); // Re-fetch orders after an update in the modal
+    fetchOrders();
   }, [fetchOrders]);
 
   const filteredOrders = useMemo(() => {
@@ -299,7 +299,7 @@ const StorefrontClientOrders = () => {
                       <TableHead>Order ID</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Last Status Change</TableHead> {/* New column header */}
+                      <TableHead>Last Status Change</TableHead>
                       <TableHead className="text-right">Total</TableHead>
                       <TableHead className="w-[100px]"></TableHead>
                     </TableRow>
@@ -315,9 +315,8 @@ const StorefrontClientOrders = () => {
                             <span className="ml-1">{order.status}</span>
                           </Badge>
                         </TableCell>
-                        <TableCell>{new Date(order.updated_at).toLocaleString()}</TableCell> {/* New column cell */}
+                        <TableCell>{new Date(order.updated_at).toLocaleString()}</TableCell>
                         <TableCell className="text-right font-medium">
-                          {/* Display shop's currency first, then original currency */}
                           {formatCurrency(convertCurrency(order.total_amount, order.currency, contextShopDetails.currency), contextShopDetails.currency)}
                           {order.currency !== contextShopDetails.currency && (
                             <div className="text-xs font-normal text-muted-foreground">

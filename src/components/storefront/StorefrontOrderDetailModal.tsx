@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye, XCircle, CreditCard, MessageSquareWarning, Hash, Reply, Handshake, MapPin, StickyNote } from "lucide-react"; // Import StickyNote
+import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye, XCircle, CreditCard, MessageSquareWarning, Hash, Reply, Handshake, MapPin, StickyNote } from "lucide-react";
 import { Separator } from "../ui/separator";
 import { ScrollArea } from "../ui/scroll-area";
 import { useStorefront } from "@/contexts/StorefrontContext";
@@ -13,8 +13,8 @@ import { cn } from "@/lib/utils";
 import { MediaItem } from "../MediaItem";
 import { ReportIssueModal } from "./ReportIssueModal";
 import { Textarea } from "../ui/textarea";
-import { Label } from "@/components/ui/label"; // Import Label
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"; // Import AlertDialog
+import { Label } from "@/components/ui/label";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 type OrderStatusType = 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic' | 'Cancelled';
 
@@ -55,15 +55,15 @@ interface OrderDetails {
   shipping_state?: string;
   shipping_zip?: string;
   shipping_country?: string;
-  shipping_notes_seller?: string; // New field
-  shipping_notes_courier?: string; // New field
+  shipping_notes_seller?: string;
+  shipping_notes_courier?: string;
 }
 
 interface StorefrontOrderDetailModalProps {
   order: OrderDetails | null;
   isOpen: boolean;
   onClose: () => void;
-  onOrderUpdate: () => void; // Callback for when order status changes
+  onOrderUpdate: () => void;
 }
 
 export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdate }: StorefrontOrderDetailModalProps) => {
@@ -74,9 +74,9 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
   const [isReportIssueModalOpen, setIsReportIssueModalOpen] = useState(false);
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [isLoadingDispute, setIsLoadingDispute] = useState(false);
-  const [isConfirmReceiptAlertOpen, setIsConfirmReceiptAlertOpen] = useState(false); // State for confirm receipt alert (card)
-  const [isMarkCompletedAlertOpen, setIsMarkCompletedAlertOpen] = useState(false); // State for mark completed (cash)
-  const [isCancelOrderAlertOpen, setIsCancelOrderAlertOpen] = useState(false); // State for cancel order alert
+  const [isConfirmReceiptAlertOpen, setIsConfirmReceiptAlertOpen] = useState(false);
+  const [isMarkCompletedAlertOpen, setIsMarkCompletedAlertOpen] = useState(false);
+  const [isCancelOrderAlertOpen, setIsCancelOrderAlertOpen] = useState(false);
 
   useEffect(() => {
     if (order) {
@@ -84,7 +84,6 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
         setIsLoadingItems(true);
         setIsLoadingDispute(true);
         
-        // Fetch order items
         const { data: itemsData, error: itemsError } = await supabase
           .from('order_items')
           .select(`
@@ -104,14 +103,13 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
         }
         setIsLoadingItems(false);
 
-        // Fetch dispute for this order
         const { data: disputeData, error: disputeError } = await supabase
           .from('order_disputes')
           .select('*')
           .eq('order_id', order.id)
           .maybeSingle();
         
-        if (disputeError && disputeError.code !== 'PGRST116') { // PGRST116 = no rows found
+        if (disputeError && disputeError.code !== 'PGRST116') {
           console.error("Error fetching dispute:", disputeError);
         } else {
           setDispute(disputeData || null);
@@ -132,14 +130,14 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
       const { error } = await supabase.from('orders').update({ status: 'Fulfilled' }).eq('id', order.id);
       if (error) throw error;
       showSuccess("Order receipt confirmed! Thank you.");
-      onOrderUpdate(); // Notify parent to refetch/update order list
+      onOrderUpdate();
       onClose();
     } catch (err: any) {
       console.error("Failed to confirm receipt:", err);
       showError(`Failed to confirm receipt: ${err.message || "An unexpected error occurred."}`);
     } finally {
       setIsUpdatingOrder(false);
-      setIsConfirmReceiptAlertOpen(false); // Close alert dialog
+      setIsConfirmReceiptAlertOpen(false);
     }
   };
 
@@ -178,14 +176,14 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
       if (data.error) throw new Error(data.error);
 
       showSuccess("Order cancelled successfully.");
-      onOrderUpdate(); // Notify parent to refetch/update order list
+      onOrderUpdate();
       onClose();
     } catch (err: any) {
       console.error("Failed to cancel order:", err);
       showError(`Failed to cancel order: ${err.message || "An unexpected error occurred."}`);
     } finally {
       setIsUpdatingOrder(false);
-      setIsCancelOrderAlertOpen(false); // Close alert dialog
+      setIsCancelOrderAlertOpen(false);
     }
   };
 
@@ -227,7 +225,6 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
           customerEmail={order.customer_email}
           onIssueReported={() => {
             setIsReportIssueModalOpen(false);
-            // Refetch dispute status after reporting
             setIsLoadingDispute(true);
             supabase.from('order_disputes').select('*').eq('order_id', order.id).maybeSingle()
               .then(({ data, error }) => {
@@ -355,7 +352,6 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
                           <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                         </div>
                         <p className="font-medium">
-                          {/* Convert item.price_at_purchase from its stored currency ('ALL') to shopDetails.currency */}
                           {formatCurrency(convertCurrency(item.price_at_purchase * item.quantity, 'ALL', shopDetails.currency), shopDetails.currency)}
                         </p>
                       </div>

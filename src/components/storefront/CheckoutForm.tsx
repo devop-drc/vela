@@ -12,8 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, ArrowLeft, User, Mail, Phone, MapPin, Building2, Globe, StickyNote, CreditCard, Banknote, ShieldCheck, Truck, Package, CheckCircle, PlusCircle, Save, ArrowRight, Info } from "lucide-react";
-import { CartItem } from "@/contexts/CartContext"; // Import CartItem type
-import { ShopDetails, DesignSettings } from "@/contexts/StorefrontContext"; // Import types
+import { CartItem } from "@/contexts/CartContext";
+import { ShopDetails, DesignSettings } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
 import { cn } from "@/lib/utils";
@@ -35,14 +35,14 @@ const checkoutSchema = z.object({
   shippingNotesSeller: z.string().optional(),
   shippingNotesCourier: z.string().optional(),
   paymentMethod: z.enum(["card", "cash_on_delivery"], { message: "Payment method is required" }),
-  saveAddress: z.boolean().optional(), // New field for saving address
-  addressLabel: z.string().optional(), // New field for address label
+  saveAddress: z.boolean().optional(),
+  addressLabel: z.string().optional(),
 });
 
 export type CheckoutFormData = z.infer<typeof checkoutSchema>;
 
 const countries = [
-  { code: "AL", name: "Albania" }, // Default to Albania
+  { code: "AL", name: "Albania" },
   { code: "US", name: "United States" },
   { code: "CA", name: "Canada" },
   { code: "GB", name: "United Kingdom" },
@@ -51,7 +51,6 @@ const countries = [
   { code: "IT", name: "Italy" },
   { code: "ES", name: "Spain" },
   { code: "AU", name: "Australia" },
-  // Add more countries as needed
 ];
 
 interface CustomerAddress {
@@ -81,9 +80,9 @@ interface CheckoutFormProps {
   appearanceSettings: DesignSettings | null;
   convertCurrency: (amount: number | null | undefined, fromCurrency?: string) => number;
   hasSubscriptionProducts: boolean;
-  checkoutStep: 'contact-shipping' | 'payment'; // Current step
-  setCheckoutStep: (step: 'contact-shipping' | 'payment') => void; // Function to change step
-  onContinue: () => void; // New prop for continue button
+  checkoutStep: 'contact-shipping' | 'payment';
+  setCheckoutStep: (step: 'contact-shipping' | 'payment') => void;
+  onContinue: () => void;
 }
 
 export const CheckoutForm = ({
@@ -119,7 +118,7 @@ export const CheckoutForm = ({
       shippingAddress: "",
       shippingCity: "",
       shippingZip: "",
-      shippingCountry: "AL", // Default country to Albania
+      shippingCountry: "AL",
       shippingNotesSeller: "",
       shippingNotesCourier: "",
       paymentMethod: "cash_on_delivery",
@@ -145,7 +144,7 @@ export const CheckoutForm = ({
           if (defaultAddress) {
             setSelectedAddressId(defaultAddress.id);
             fillFormWithAddress(defaultAddress);
-            setCheckoutStep('payment'); // Skip to payment if default address exists
+            setCheckoutStep('payment');
           }
         }
       }
@@ -163,10 +162,10 @@ export const CheckoutForm = ({
       shippingCity: address.city,
       shippingZip: address.zip_code,
       shippingCountry: address.country,
-      shippingNotesSeller: watch('shippingNotesSeller'), // Keep existing notes if any
-      shippingNotesCourier: watch('shippingNotesCourier'), // Keep existing notes if any
-      paymentMethod: watch('paymentMethod'), // Keep existing payment method
-      saveAddress: false, // Don't prompt to save an already saved address
+      shippingNotesSeller: watch('shippingNotesSeller'),
+      shippingNotesCourier: watch('shippingNotesCourier'),
+      paymentMethod: watch('paymentMethod'),
+      saveAddress: false,
       addressLabel: address.label,
     });
   }, [reset, watch]);
@@ -179,11 +178,10 @@ export const CheckoutForm = ({
         setCheckoutStep('payment');
       }
     } else {
-      // If 'new' is selected or no address, clear relevant fields
       reset({
         firstName: "", lastName: "", email: "", phone: "",
         shippingAddress: "", shippingCity: "", shippingZip: "",
-        shippingCountry: "AL", // Reset to default Albania
+        shippingCountry: "AL",
         shippingNotesSeller: "", shippingNotesCourier: "",
         paymentMethod: watch('paymentMethod'),
         saveAddress: false,
@@ -203,7 +201,7 @@ export const CheckoutForm = ({
       return;
     }
 
-    const formData = watch(); // Get current form data
+    const formData = watch();
     const payload = {
       user_id: user.id,
       label: newAddressLabel.trim(),
@@ -213,10 +211,10 @@ export const CheckoutForm = ({
       phone: formData.phone,
       address: formData.shippingAddress,
       city: formData.shippingCity,
-      state: "", // State is removed from UI, so save as empty
+      state: "",
       zip_code: formData.shippingZip,
       country: formData.shippingCountry,
-      is_default: savedAddresses.length === 0, // First saved address is default
+      is_default: savedAddresses.length === 0,
     };
 
     const { data, error } = await supabase.from('customer_addresses').insert(payload).select('*').single();
@@ -228,18 +226,17 @@ export const CheckoutForm = ({
       setSelectedAddressId(data.id);
       setIsSaveAddressModalOpen(false);
       setNewAddressLabel('');
-      setValue('saveAddress', false); // Uncheck save address after saving
+      setValue('saveAddress', false);
     }
   };
 
   const onSubmit = async (data: CheckoutFormData) => {
     if (checkoutStep === 'contact-shipping') {
-      onContinue(); // Move to next step
+      onContinue();
     } else {
-      // This is the final step, place the order
       if (data.saveAddress && user) {
         setIsSaveAddressModalOpen(true);
-        return; // Pause submission to ask for label
+        return;
       }
       await onPlaceOrder(data);
     }
@@ -372,7 +369,7 @@ export const CheckoutForm = ({
                         name="shippingCountry"
                         control={control}
                         render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value} disabled> {/* Disabled */}
+                          <Select onValueChange={field.onChange} value={field.value} disabled>
                             <SelectTrigger id="shippingCountry">
                               <SelectValue placeholder="Select country" />
                             </SelectTrigger>
@@ -478,7 +475,6 @@ export const CheckoutForm = ({
             )}
           </div>
         </ScrollArea>
-        {/* The form's submit button is now handled by the DialogFooter in StorefrontCartModal */}
       </form>
     </>
   );
