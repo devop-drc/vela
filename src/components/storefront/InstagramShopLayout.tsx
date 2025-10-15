@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import { InstagramShopHeader } from './InstagramShopHeader'; // Custom header
 import { defaultSettings } from '@/contexts/AppearanceContext';
@@ -13,178 +13,134 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { StorefrontCartModal } from './StorefrontCartModal';
 import { cn } from '@/lib/utils';
 import { loadGoogleFont } from '@/lib/fontUtils';
+import { InstagramFloatingCart } from './InstagramFloatingCart'; // Import new floating cart
 
-// Function to apply settings to the DOM, similar to AppearanceContext
-const applyStorefrontSettingsToDOM = (settings: any, shopDetails: any) => {
+// Function to apply fixed Instagram-like settings to the DOM
+const applyInstagramShopSettingsToDOM = () => {
   const root = document.documentElement;
-  const effectiveSettings = { ...defaultSettings, ...settings }; // Merge with defaults
 
-  for (const [key, value] of Object.entries(effectiveSettings)) {
+  // Reset any custom properties from AppearanceContext
+  for (const key of Object.keys(defaultSettings)) {
     if (key.startsWith('--')) {
-      root.style.setProperty(key, value as string);
+      root.style.removeProperty(key);
     }
   }
-  if (effectiveSettings.fontSans) {
-    root.style.setProperty('--font-sans', `'${effectiveSettings.fontSans}', sans-serif`);
-    loadGoogleFont(effectiveSettings.fontSans); // Load font for storefront
-  }
-  if (effectiveSettings.fontHeading) {
-    root.style.setProperty('--font-heading', `'${effectiveSettings.fontHeading}', sans-serif`);
-    loadGoogleFont(effectiveSettings.fontHeading); // Load font for storefront
-  }
+  root.style.removeProperty('--font-sans');
+  root.style.removeProperty('--font-heading');
+  root.classList.remove('blur-enabled');
 
-  if (effectiveSettings.blurEnabled) {
-    root.classList.add('blur-enabled');
-  } else {
-    root.classList.remove('blur-enabled');
-  }
+  // Apply fixed Instagram-like styles
+  root.style.setProperty('--background', '0 0% 100%'); // White background
+  root.style.setProperty('--foreground', '0 0% 10%'); // Near-black text
+  root.style.setProperty('--primary', '210 90% 50%'); // Instagram blue-ish
+  root.style.setProperty('--primary-foreground', '0 0% 100%'); // White text
+  root.style.setProperty('--muted', '0 0% 95%'); // Light gray for muted elements
+  root.style.setProperty('--muted-foreground', '0 0% 45%'); // Darker gray for muted text
+  root.style.setProperty('--border', '0 0% 85%'); // Light gray border
+  root.style.setProperty('--card', '0 0% 100%'); // White card background
+  root.style.setProperty('--input', '0 0% 90%'); // Light gray input background
+  root.style.setProperty('--radius', '0.5rem'); // Slightly rounded corners
 
+  // Use system fonts for Instagram-like feel
+  root.style.setProperty('--font-sans', 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif');
+  root.style.setProperty('--font-heading', 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif');
+
+  // Ensure no background overlay for InstagramShop
   const bgOverlay = document.getElementById('background-overlay');
-  if (!bgOverlay) return;
-
-  if (effectiveSettings.backgroundImageUrl) {
-    bgOverlay.style.backgroundImage = `url(${effectiveSettings.backgroundImageUrl})`;
-    bgOverlay.style.backgroundColor = 'transparent';
-    bgOverlay.style.backgroundSize = effectiveSettings.backgroundSize || 'cover';
-    bgOverlay.style.backgroundRepeat = effectiveSettings.backgroundRepeat || 'no-repeat';
-    bgOverlay.style.backgroundPosition = 'center';
-  } else if (effectiveSettings.solidBackgroundColor) {
-    bgOverlay.style.backgroundImage = 'none';
-    bgOverlay.style.backgroundColor = `hsl(${effectiveSettings.solidBackgroundColor})`;
-  } else {
-    // Fallback to transparent if no specific background is set
+  if (bgOverlay) {
     bgOverlay.style.backgroundImage = 'none';
     bgOverlay.style.backgroundColor = 'transparent';
-  }
-  
-  bgOverlay.style.filter = `
-    brightness(${effectiveSettings.backgroundBrightness || 100}%)
-    contrast(${effectiveSettings.backgroundContrast || 100}%)
-    saturate(${effectiveSettings.backgroundSaturation || 100}%)
-    hue-rotate(${effectiveSettings.backgroundHue || 0}deg)
-  `;
-
-  // Dynamically set page title and meta description
-  if (shopDetails) {
-    document.title = shopDetails.shop_name || "Storefront";
-
-    // Update meta description
-    let metaDescriptionTag = document.querySelector('meta[name="description"]');
-    if (!metaDescriptionTag) {
-      metaDescriptionTag = document.createElement('meta');
-      metaDescriptionTag.name = 'description';
-      document.head.appendChild(metaDescriptionTag);
-    }
-    metaDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Welcome to ${shopDetails.shop_name}'s online store.`);
-
-    // Update Open Graph title
-    let ogTitleTag = document.querySelector('meta[property="og:title"]');
-    if (!ogTitleTag) {
-      ogTitleTag = document.createElement('meta');
-      ogTitleTag.setAttribute('property', 'og:title');
-      document.head.appendChild(ogTitleTag);
-    }
-    ogTitleTag.setAttribute('content', shopDetails.shop_name || "Storefront");
-
-    // Update Open Graph description
-    let ogDescriptionTag = document.querySelector('meta[property="og:description"]');
-    if (!ogDescriptionTag) {
-      ogDescriptionTag = document.createElement('meta');
-      ogDescriptionTag.setAttribute('property', 'og:description');
-      document.head.appendChild(ogDescriptionTag);
-    }
-    ogDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Welcome to ${shopDetails.shop_name}'s online store.`);
-
-    // Update Open Graph image
-    let ogImageTag = document.querySelector('meta[property="og:image"]');
-    if (!ogImageTag) {
-      ogImageTag = document.createElement('meta');
-      ogImageTag.setAttribute('property', 'og:image');
-      document.head.appendChild(ogImageTag);
-    }
-    ogImageTag.setAttribute('content', shopDetails.logo_url || '');
-
-    // Set favicon
-    const setFavicon = (url: string | null) => {
-      let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-      if (url) {
-        if (link) {
-          link.href = url;
-        } else {
-          link = document.createElement('link');
-          link.rel = 'icon';
-          link.href = url;
-          document.head.appendChild(link);
-        }
-      } else {
-        // Fallback to default favicon if none is provided
-        if (link) link.href = '/favicon.ico';
-        else {
-          link = document.createElement('link');
-          link.rel = 'icon';
-          link.href = '/favicon.ico';
-          document.head.appendChild(link);
-        }
-      }
-    };
-
-    if (shopDetails.favicon_url) {
-      setFavicon(shopDetails.favicon_url);
-    } else {
-      setFavicon(null); // Explicitly remove favicon if no URL is provided
-    }
-    
-  } else {
-    document.title = "Storefront";
-    let metaDescriptionTag = document.querySelector('meta[name="description"]');
-    if (metaDescriptionTag) metaDescriptionTag.setAttribute('content', "Discover unique products from various shops.");
-    let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-    if (link) link.remove(); // Remove default favicon if shopDetails not loaded
+    bgOverlay.style.filter = 'none';
   }
 };
 
 const InstagramShopLayoutContent = () => {
-  const { shopDetails, appearanceSettings, isLoading, error, products } = useStorefront();
+  const { shopDetails, isLoading, error } = useStorefront(); // Removed appearanceSettings as it's ignored here
   const isMobile = useIsMobile();
-  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
-  const [isDesktopFilterSidebarOpen, setIsDesktopFilterSidebarOpen] = useState(false);
-  const [wasDesktopFilterSidebarExplicitlyOpened, setWasDesktopFilterSidebarExplicitlyOpened] = useState(false);
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
-  const location = useLocation();
 
   useEffect(() => {
-    if (appearanceSettings || shopDetails) {
-      applyStorefrontSettingsToDOM(appearanceSettings, shopDetails);
-    } else {
-      applyStorefrontSettingsToDOM(defaultSettings, null);
-    }
-  }, [appearanceSettings, shopDetails]);
-
-  // Reset desktop filter sidebar state when navigating away from /products
-  useEffect(() => {
-    if (!location.pathname.includes('/products')) {
-      setIsDesktopFilterSidebarOpen(false);
-      setWasDesktopFilterSidebarExplicitlyOpened(false);
-    } else {
-      if (!isMobile && wasDesktopFilterSidebarExplicitlyOpened) {
-        setIsDesktopFilterSidebarOpen(true);
+    applyInstagramShopSettingsToDOM();
+    // Clean up styles when component unmounts or path changes away from instagramShop
+    return () => {
+      const root = document.documentElement;
+      for (const key of Object.keys(defaultSettings)) {
+        if (key.startsWith('--')) {
+          root.style.removeProperty(key);
+        }
       }
+      root.style.removeProperty('--font-sans');
+      root.style.removeProperty('--font-heading');
+      root.classList.remove('blur-enabled');
+      // Re-apply default settings or main app settings if needed elsewhere
+    };
+  }, []);
+
+  // Dynamically set page title and meta description
+  useEffect(() => {
+    if (shopDetails) {
+      document.title = shopDetails.username ? `@${shopDetails.username}` : shopDetails.shop_name || "Instagram Shop";
+      // Update meta description (simplified for Instagram-like context)
+      let metaDescriptionTag = document.querySelector('meta[name="description"]');
+      if (!metaDescriptionTag) {
+        metaDescriptionTag = document.createElement('meta');
+        metaDescriptionTag.name = 'description';
+        document.head.appendChild(metaDescriptionTag);
+      }
+      metaDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Shop the Instagram feed of ${shopDetails.shop_name}.`);
+
+      // Set favicon
+      const setFavicon = (url: string | null) => {
+        let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+        if (url) {
+          if (link) {
+            link.href = url;
+          } else {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            link.href = url;
+            document.head.appendChild(link);
+          }
+        } else {
+          if (link) link.href = '/favicon.ico';
+          else {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            link.href = '/favicon.ico';
+            document.head.appendChild(link);
+          }
+        }
+      };
+      setFavicon(shopDetails.favicon_url || shopDetails.logo_url); // Use logo as favicon
+    } else {
+      document.title = "Instagram Shop";
+      let metaDescriptionTag = document.querySelector('meta[name="description"]');
+      if (metaDescriptionTag) metaDescriptionTag.setAttribute('content', "Discover unique products from various shops.");
+      let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (link) link.remove();
     }
-  }, [location.pathname, isMobile, wasDesktopFilterSidebarExplicitlyOpened]);
+  }, [shopDetails]);
+
 
   if (isLoading) {
     return (
-      <div className="flex flex-col min-h-screen">
-        <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} isDesktopSidebarOpen={false} setIsDesktopFilterSidebarOpen={setIsDesktopFilterSidebarOpen} setWasDesktopFilterSidebarExplicitlyOpened={setWasDesktopFilterSidebarExplicitlyOpened} />
-        <main className="flex-1 container py-8 mt-16">
-          <Skeleton className="h-10 w-1/2 mb-6" />
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="aspect-square w-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
+      <div className="flex flex-col min-h-screen bg-white text-black">
+        <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} />
+        <main className="flex-1 container py-4 mt-14">
+          <div className="flex flex-col items-center mb-8">
+            <Skeleton className="h-24 w-24 rounded-full mb-4" />
+            <Skeleton className="h-6 w-48 mb-2" />
+            <div className="flex gap-4 mb-4">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+            <Skeleton className="h-4 w-64 mb-2" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <div className="grid grid-cols-3 gap-1 w-full max-w-md">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <Skeleton key={i} className="aspect-square w-full" />
             ))}
           </div>
         </main>
@@ -194,39 +150,23 @@ const InstagramShopLayoutContent = () => {
 
   if (error) {
     return (
-      <div className="flex flex-col min-h-screen items-center justify-center text-center p-8">
-        <h1 className="text-xl md:text-2xl font-bold text-destructive">Error Loading Storefront</h1>
-        <p className="text-sm md:text-base text-muted-foreground mt-2">{error}</p>
-        <p className="text-xs md:text-sm text-muted-foreground mt-4">Please check the URL or contact support.</p>
+      <div className="flex flex-col min-h-screen items-center justify-center text-center p-8 bg-white text-black">
+        <h1 className="text-xl md:text-2xl font-bold text-red-600">Error Loading Instagram Shop</h1>
+        <p className="text-sm md:text-base text-gray-600 mt-2">{error}</p>
+        <p className="text-xs md:text-sm text-gray-500 mt-4">Please check the URL or contact support.</p>
       </div>
     );
   }
 
-  const headerHeight = '3.5rem'; // 56px for mobile, 64px for desktop
-  const mainContentPaddingTop = headerHeight; // No floating header for this layout
-
   return (
-    <div className="flex flex-col min-h-screen">
-      <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
-      <InstagramShopHeader
-        onOpenCart={() => setIsCartModalOpen(true)}
-        isDesktopSidebarOpen={isDesktopFilterSidebarOpen}
-        setIsDesktopFilterSidebarOpen={setIsDesktopFilterSidebarOpen}
-        setWasDesktopFilterSidebarExplicitlyOpened={setWasDesktopFilterSidebarExplicitlyOpened}
-      />
-      <main className="flex-1 overflow-y-auto" style={{ paddingTop: mainContentPaddingTop }}>
-        <Outlet context={{
-          onToggleFilterSidebar: () => setIsFilterSidebarOpen(true),
-          isFilterSidebarOpen,
-          setIsFilterSidebarOpen,
-          products,
-          isDesktopFilterSidebarOpen,
-          setIsDesktopFilterSidebarOpen,
-          setWasDesktopFilterSidebarExplicitlyOpened,
-        }} />
+    <div className="flex flex-col min-h-screen bg-white text-black">
+      <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} />
+      <main className="flex-1 overflow-y-auto pt-14"> {/* Adjusted padding-top to account for fixed header */}
+        <Outlet />
       </main>
       <Sonner />
       <StorefrontCartModal isOpen={isCartModalOpen} onClose={() => setIsCartModalOpen(false)} />
+      <InstagramFloatingCart onOpenCart={() => setIsCartModalOpen(true)} />
     </div>
   );
 };

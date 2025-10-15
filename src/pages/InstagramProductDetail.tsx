@@ -21,8 +21,8 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
-        <Label className="text-xs md:text-sm text-muted-foreground flex items-center gap-1">
-          <Icon className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" />
+        <Label className="text-xs md:text-sm text-gray-500 flex items-center gap-1">
+          <Icon className="h-3 w-3 md:h-3.5 md:w-3.5 text-gray-800" /> {/* Changed to text-gray-800 */}
           {label}
         </Label>
         <div className="font-medium flex flex-wrap items-center gap-1 text-sm md:text-base pt-1">
@@ -33,7 +33,7 @@ const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon
 
 const InstagramProductDetail = () => {
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
-  const { shopDetails, products, isLoading, error, appearanceSettings, convertCurrency, promotions } = useStorefront();
+  const { shopDetails, products, isLoading, error, convertCurrency, promotions } = useStorefront(); // Removed appearanceSettings as it's ignored here
   const { addToCart } = useCart();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
@@ -59,7 +59,7 @@ const InstagramProductDetail = () => {
 
   if (error) {
     return (
-      <div className="container py-8 text-center text-destructive">
+      <div className="container py-8 text-center text-red-600">
         <h1 className="text-xl md:text-2xl font-bold">Error Loading Product</h1>
         <p className="mt-2 text-sm md:text-base">{error}</p>
         <Button asChild className="mt-4 text-sm md:text-base">
@@ -76,7 +76,7 @@ const InstagramProductDetail = () => {
 
   if (!product) {
     return (
-      <div className="container py-8 text-center text-muted-foreground">
+      <div className="container py-8 text-center text-gray-600">
         <h1 className="text-xl md:text-2xl font-bold">Product Not Found</h1>
         <p className="mt-2 text-sm md:text-base">The product you are looking for does not exist or is no longer available.</p>
         <Button asChild className="mt-4 text-sm md:text-base">
@@ -90,7 +90,7 @@ const InstagramProductDetail = () => {
   }
 
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
-  const blurEnabled = appearanceSettings?.blurEnabled;
+  // Removed blurEnabled as it's ignored here
 
   const originalDisplayPrice = convertCurrency(product.price, product.currency);
 
@@ -167,7 +167,7 @@ const InstagramProductDetail = () => {
   const specifications = allDetails.filter(([key]) => !['color', 'size', 'material', 'type'].includes(key));
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
+    <div className="flex flex-col min-h-screen bg-white text-black">
       <main className="flex-1">
         {/* Product Media */}
         <div>
@@ -175,7 +175,7 @@ const InstagramProductDetail = () => {
             <CarouselContent>
               {mediaItems.map((url: string, index: number) => (
                 <CarouselItem key={index}>
-                  <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
+                  <div className="relative aspect-square w-full bg-gray-100 flex items-center justify-center">
                     <MediaItem src={url} alt={`${product.name} - image ${index + 1}`} className={cn(isOutOfStock && "grayscale")} />
                   </div>
                 </CarouselItem>
@@ -197,7 +197,7 @@ const InstagramProductDetail = () => {
                     onClick={() => api?.scrollTo(index)}
                     className={cn(
                       "h-16 w-16 rounded-md overflow-hidden border-2 transition-all flex-shrink-0",
-                      index === currentSlide ? "border-primary" : "border-transparent hover:border-muted-foreground"
+                      index === currentSlide ? "border-blue-500" : "border-transparent hover:border-gray-300"
                     )}
                   >
                     <MediaItem src={url} alt={`Thumbnail ${index + 1}`} className="object-cover h-full w-full" />
@@ -209,14 +209,14 @@ const InstagramProductDetail = () => {
           )}
         </div>
 
-        {/* Engagement Icons (Simplified) */}
-        <div className="flex items-center justify-between px-4 py-3 border-b">
+        {/* Engagement Icons */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon"><Heart className="h-6 w-6" /></Button>
-            <Button variant="ghost" size="icon"><MessageCircle className="h-6 w-6" /></Button>
-            <Button variant="ghost" size="icon"><Send className="h-6 w-6" /></Button>
+            <Button variant="ghost" size="icon" className="text-gray-800 hover:bg-gray-100"><Heart className="h-6 w-6" /></Button>
+            <Button variant="ghost" size="icon" className="text-gray-800 hover:bg-gray-100"><MessageCircle className="h-6 w-6" /></Button>
+            <Button variant="ghost" size="icon" className="text-gray-800 hover:bg-gray-100"><Send className="h-6 w-6" /></Button>
           </div>
-          <Button variant="ghost" size="icon"><Bookmark className="h-6 w-6" /></Button>
+          <Button variant="ghost" size="icon" className="text-gray-800 hover:bg-gray-100"><Bookmark className="h-6 w-6" /></Button>
         </div>
 
         {/* Product Details */}
@@ -225,28 +225,28 @@ const InstagramProductDetail = () => {
           <div className="flex items-center gap-3">
             {hasDiscount && originalDisplayPrice !== null ? (
               <div className="flex items-baseline gap-2">
-                <p className="text-base text-muted-foreground line-through">
+                <p className="text-base text-gray-500 line-through">
                   {formatCurrency(originalDisplayPrice, shopDetails?.currency)}
                 </p>
-                <p className="text-2xl md:text-3xl font-bold text-emerald-600">
+                <p className="text-2xl md:text-3xl font-bold text-green-600">
                   {formatCurrency(discountedPrice, shopDetails?.currency)}
                   {product.pricing_type === 'subscription' && (
-                      <span className="text-base md:text-lg font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                      <span className="text-base md:text-lg font-light text-gray-500">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                   )}
                 </p>
               </div>
             ) : (
-              <p className="text-2xl md:text-3xl font-bold text-primary">
+              <p className="text-2xl md:text-3xl font-bold text-gray-800">
                 {originalDisplayPrice != null ? formatCurrency(originalDisplayPrice, shopDetails?.currency) : 'N/A'}
                 {product.pricing_type === 'subscription' && (
-                    <span className="text-base md:text-lg font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                    <span className="text-base md:text-lg font-light text-gray-500">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                 )}
               </p>
             )}
           </div>
 
           {/* Caption */}
-          <p className="text-sm md:text-base text-foreground leading-relaxed">
+          <p className="text-sm md:text-base text-gray-800 leading-relaxed">
             <span className="font-semibold">{shopDetails?.username || shopDetails?.shop_name}</span>{" "}
             {product.caption || "No description provided."}
           </p>
@@ -254,24 +254,24 @@ const InstagramProductDetail = () => {
           {/* Tags */}
           {product.tags && product.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {product.tags.map((tag: string) => <Badge key={tag} variant="outline" className="text-xs md:text-sm bg-primary/10 text-primary border-primary/30">{tag}</Badge>)}
+              {product.tags.map((tag: string) => <Badge key={tag} variant="outline" className="text-xs md:text-sm bg-gray-100 text-gray-700 border-gray-300">{tag}</Badge>)}
             </div>
           )}
 
           {/* Options & Specifications */}
           {(colors.length > 0 || sizes.length > 0 || otherOptions.length > 0 || specifications.length > 0) && (
-            <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-md")}>
-              <CardHeader><CardTitle className="text-lg md:text-xl">Product Details</CardTitle></CardHeader>
+            <Card className="shadow-md bg-white border border-gray-200">
+              <CardHeader><CardTitle className="text-lg md:text-xl text-gray-800">Product Details</CardTitle></CardHeader>
               <CardContent className="p-4 space-y-4">
                 {colors.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-sm">Color</Label>
+                    <Label className="text-sm text-gray-700">Color</Label>
                     <div className="flex flex-wrap gap-2">
                       {colors.map(color => (
                         <Button
                           key={color}
                           variant="outline" // Simplified for now, no selection state
-                          className="capitalize text-sm md:text-base"
+                          className="capitalize text-sm md:text-base border-gray-300 bg-gray-50 text-gray-800 hover:bg-gray-100"
                         >
                           {color}
                         </Button>
@@ -281,13 +281,13 @@ const InstagramProductDetail = () => {
                 )}
                 {sizes.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-sm">Size</Label>
+                    <Label className="text-sm text-gray-700">Size</Label>
                     <div className="flex flex-wrap gap-2">
                       {sizes.map(size => (
                         <Button
                           key={size}
                           variant="outline" // Simplified for now, no selection state
-                          className="text-sm md:text-base"
+                          className="text-sm md:text-base border-gray-300 bg-gray-50 text-gray-800 hover:bg-gray-100"
                         >
                           {size}
                         </Button>
@@ -302,9 +302,9 @@ const InstagramProductDetail = () => {
                       return (
                         <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
                           {Array.isArray(value) ? (
-                            value.map(item => <Badge key={item} variant="outline" className="text-xs md:text-sm bg-primary/10 text-primary border-primary/30">{item}</Badge>)
+                            value.map(item => <Badge key={item} variant="outline" className="text-xs md:text-sm bg-gray-100 text-gray-700 border-gray-300">{item}</Badge>)
                           ) : (
-                            <p className="text-sm md:text-base">{String(value)}</p>
+                            <p className="text-sm md:text-base text-gray-800">{String(value)}</p>
                           )}
                         </DetailDisplayRow>
                       );
@@ -318,15 +318,15 @@ const InstagramProductDetail = () => {
       </main>
 
       {/* Bottom Action Bar */}
-      <div className="sticky bottom-0 left-0 right-0 z-30 p-4 border-t bg-background shadow-lg flex items-center gap-4">
+      <div className="sticky bottom-0 left-0 right-0 z-30 p-4 border-t border-gray-200 bg-white shadow-lg flex items-center gap-4">
         {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && (
-          <div className="flex items-center border rounded-md">
+          <div className="flex items-center border border-gray-300 rounded-md">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
               disabled={quantity <= 1}
-              className="h-8 w-8"
+              className="h-8 w-8 text-gray-800 hover:bg-gray-100"
             >
               <Minus className="h-4 w-4" />
             </Button>
@@ -334,7 +334,7 @@ const InstagramProductDetail = () => {
               type="number"
               value={quantity}
               onChange={(e) => setQuantity(Math.max(1, Math.min(product.inventory || 1, parseInt(e.target.value) || 1)))}
-              className="w-14 text-center border-y-0 border-x rounded-none focus-visible:ring-0 text-sm"
+              className="w-14 text-center border-y-0 border-x border-gray-300 focus-visible:ring-0 text-sm bg-white"
               min={1}
               max={product.inventory || 1}
             />
@@ -343,18 +343,18 @@ const InstagramProductDetail = () => {
               size="icon"
               onClick={() => setQuantity(prev => Math.min(product.inventory || 1, prev + 1))}
               disabled={quantity >= (product.inventory || 1)}
-              className="h-8 w-8"
+              className="h-8 w-8 text-gray-800 hover:bg-gray-100"
             >
               <Plus className="h-4 w-4" />
             </Button>
           </div>
         )}
-        <Button size="lg" className="flex-1 text-base md:text-lg" onClick={handleAddToCart} disabled={isOutOfStock}>
+        <Button size="lg" className="flex-1 text-base md:text-lg bg-blue-500 hover:bg-blue-600 text-white" onClick={handleAddToCart} disabled={isOutOfStock}>
           <ShoppingCart className="mr-2 h-5 w-5" />
           {isOutOfStock ? "Out of Stock" : (product.pricing_type === 'subscription' ? "Subscribe Now" : "Add to Cart")}
         </Button>
         {product.pricing_type === 'one_time' && !isOutOfStock && (
-          <Button size="lg" variant="outline" className="flex-1 text-base md:text-lg">
+          <Button size="lg" variant="outline" className="flex-1 text-base md:text-lg border-blue-500 text-blue-500 hover:bg-blue-50" onClick={() => toast.info("Buy Now functionality coming soon!")}>
             <DollarSign className="mr-2 h-5 w-5" />
             Buy Now
           </Button>

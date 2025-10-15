@@ -40,6 +40,7 @@ interface StorefrontProductCardProps {
   externalAppearanceSettings?: StorefrontDesignSettings | null;
   externalConvertCurrency?: (amount: number | null | undefined, fromCurrency?: string) => number;
   externalPromotions?: StorefrontPromotion[];
+  isInstagramStyle?: boolean; // New prop for Instagram-specific styling
 }
 
 const itemVariants = {
@@ -55,6 +56,7 @@ export const StorefrontProductCard = ({
   externalAppearanceSettings,
   externalConvertCurrency,
   externalPromotions,
+  isInstagramStyle = false, // Default to false
 }: StorefrontProductCardProps) => {
   // Attempt to get context values from StorefrontProvider, but don't throw if context is undefined
   let contextShopDetails: StorefrontShopDetails | null = null;
@@ -146,13 +148,14 @@ export const StorefrontProductCard = ({
   return (
     <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }} className={className}>
       <Link
-        to={`/shop/${effectiveShopDetails.slug}/product/${product.id}`}
+        to={isInstagramStyle ? `/instagramShop/${effectiveShopDetails.slug}/product/${product.id}` : `/shop/${effectiveShopDetails.slug}/product/${product.id}`}
       >
         <Card className={cn(
           "group h-full flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
-          "border border-input/50 hover:border-primary/70",
-          "shadow-sm hover:shadow-lg",
-          blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card",
+          isInstagramStyle
+            ? "border-none rounded-none shadow-none bg-white" // Instagram style: no border, no shadow, white background
+            : "border border-input/50 hover:border-primary/70 shadow-sm hover:shadow-lg",
+          isInstagramStyle ? "bg-white" : (blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card"),
           isOutOfStock && "opacity-80" // Apply opacity for out of stock
         )}>
           <CardContent className="p-0 relative">
@@ -197,51 +200,53 @@ export const StorefrontProductCard = ({
               </div>
             )}
           </CardContent>
-          <div className="p-3 md:p-4 flex-1 flex flex-col justify-between">
-            <div>
-              <h3 className="font-semibold text-base md:text-lg leading-tight mb-1 line-clamp-2">{product.name}</h3>
-              {(product.category || product.details?.type) && (
-                <div className="flex items-center gap-1 mb-2">
-                  {product.category && (
-                    <Badge
-                      variant="outline"
-                      className={cn("text-xs bg-primary/10 text-primary border-primary/30")}
-                    >
-                      {product.category}
-                    </Badge>
-                  )}
-                  {product.details?.type && (
-                    <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
-                      {product.details.type}
-                    </Badge>
-                  )}
-                </div>
-              )}
-              <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">{product.caption}</p>
-            </div>
-            <div className="mt-3 md:mt-4">
-              {hasDiscount && originalDisplayPrice !== null ? (
-                <div className="flex items-baseline gap-2">
-                  <p className="text-sm text-muted-foreground line-through">
-                    {formatCurrency(originalDisplayPrice, effectiveShopDetails?.currency)}
-                  </p>
+          {!isInstagramStyle && ( // Only show text details if not Instagram style
+            <div className="p-3 md:p-4 flex-1 flex flex-col justify-between">
+              <div>
+                <h3 className="font-semibold text-base md:text-lg leading-tight mb-1 line-clamp-2">{product.name}</h3>
+                {(product.category || product.details?.type) && (
+                  <div className="flex items-center gap-1 mb-2">
+                    {product.category && (
+                      <Badge
+                        variant="outline"
+                        className={cn("text-xs bg-primary/10 text-primary border-primary/30")}
+                      >
+                        {product.category}
+                      </Badge>
+                    )}
+                    {product.details?.type && (
+                      <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
+                        {product.details.type}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+                <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">{product.caption}</p>
+              </div>
+              <div className="mt-3 md:mt-4">
+                {hasDiscount && originalDisplayPrice !== null ? (
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-sm text-muted-foreground line-through">
+                      {formatCurrency(originalDisplayPrice, effectiveShopDetails?.currency)}
+                    </p>
+                    <p className="text-lg md:text-xl font-bold text-primary">
+                      {formatCurrency(discountedPrice, effectiveShopDetails?.currency)}
+                      {product.pricing_type === 'subscription' && (
+                        <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                      )}
+                    </p>
+                  </div>
+                ) : (
                   <p className="text-lg md:text-xl font-bold text-primary">
-                    {formatCurrency(discountedPrice, effectiveShopDetails?.currency)}
+                    {originalDisplayPrice != null ? formatCurrency(originalDisplayPrice, effectiveShopDetails?.currency) : 'N/A'}
                     {product.pricing_type === 'subscription' && (
                       <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                     )}
                   </p>
-                </div>
-              ) : (
-                <p className="text-lg md:text-xl font-bold text-primary">
-                  {originalDisplayPrice != null ? formatCurrency(originalDisplayPrice, effectiveShopDetails?.currency) : 'N/A'}
-                  {product.pricing_type === 'subscription' && (
-                    <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
-                  )}
-                </p>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </Card>
       </Link>
     </motion.div>

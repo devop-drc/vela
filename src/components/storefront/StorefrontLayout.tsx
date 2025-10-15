@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import { StorefrontHeader } from './StorefrontHeader';
 import { StorefrontFooter } from './StorefrontFooter';
@@ -153,6 +153,12 @@ const StorefrontLayoutContent = () => {
   const [wasDesktopFilterSidebarExplicitlyOpened, setWasDesktopFilterSidebarExplicitlyOpened] = useState(false); // New state to track explicit user action
   const [isCartModalOpen, setIsCartModalOpen] = useState(false); // State for cart modal
   const footerRef = useRef<HTMLDivElement>(null);
+  const location = useLocation(); // Get current location
+
+  // Do not render this layout if on an InstagramShop path
+  if (location.pathname.includes('/instagramShop')) {
+    return null;
+  }
 
   useEffect(() => {
     if (appearanceSettings || shopDetails) {
