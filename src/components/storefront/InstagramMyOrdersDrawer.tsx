@@ -198,14 +198,14 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose }: InstagramMyOrdersDr
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent side="bottom" className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl"
           // Hide default Vaul handle and add snap points
-          handle={false}
+          // handle={false} // Removed to allow Vaul's default handle
           snapPoints={[0.1, 0.5, 0.9]} // Example snap points: 10%, 50%, 90% of viewport height
           initialSnap={0.9} // Start fully open
         >
-          {/* Custom Handle */}
-          <div className="flex justify-center pt-3 pb-2">
+          {/* Removed custom handle div to use Vaul's default handle */}
+          {/* <div className="flex justify-center pt-3 pb-2">
             <div className="h-1.5 w-16 rounded-full bg-gray-300" />
-          </div>
+          </div> */}
 
           <SheetHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
             <SheetTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
