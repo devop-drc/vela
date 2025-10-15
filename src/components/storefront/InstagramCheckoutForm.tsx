@@ -17,7 +17,7 @@ import { Loader2, ArrowLeft, User, Mail, Phone, MapPin, Building2, Globe, Sticky
 import { CartItem } from "@/contexts/CartContext";
 import { ShopDetails } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
-import { MediaItem } from "@/components/MediaItem";
+import { MediaItem } "@/components/MediaItem";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
