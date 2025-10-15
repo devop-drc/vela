@@ -15,7 +15,7 @@ interface InstagramShopHeaderProps {
 }
 
 export const InstagramShopHeader = ({ onOpenCart }: InstagramShopHeaderProps) => {
-  const { shopDetails } = useStorefront(); // Removed appearanceSettings as it's ignored here
+  const { shopDetails } = useStorefront();
   const { totalItems } = useCart();
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
   const navigate = useNavigate();
@@ -39,7 +39,7 @@ export const InstagramShopHeader = ({ onOpenCart }: InstagramShopHeaderProps) =>
       "sticky top-0 left-0 right-0 z-40 transition-all duration-200",
       "bg-white border-b border-gray-200 text-gray-800 shadow-sm" // Fixed Instagram-like styles
     )}>
-      <div className="container flex h-14 items-center justify-between px-4"> {/* Fixed height and padding */}
+      <div className="container flex h-14 items-center justify-between px-4">
 
         {/* Left Section: Back Button or Shop Name */}
         <div className="flex items-center space-x-2 flex-shrink-0">
@@ -55,6 +55,14 @@ export const InstagramShopHeader = ({ onOpenCart }: InstagramShopHeaderProps) =>
             </div>
           )}
         </div>
+
+        {/* Middle Section: Title for Product Detail Page */}
+        {isProductDetailPage && (
+          <div className="flex flex-col items-center justify-center flex-1 min-w-0">
+            <h2 className="text-base font-semibold truncate">Products</h2>
+            <p className="text-xs text-muted-foreground truncate">{shopDetails.username || shopDetails.shop_name}</p>
+          </div>
+        )}
 
         {/* Right Section: Shopping Cart */}
         <nav className="flex items-center space-x-2 flex-shrink-0">

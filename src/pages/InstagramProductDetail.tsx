@@ -22,7 +22,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
         <Label className="text-xs md:text-sm text-gray-500 flex items-center gap-1">
-          <Icon className="h-3 w-3 md:h-3.5 md:w-3.5 text-gray-800" /> {/* Changed to text-gray-800 */}
+          <Icon className="h-3 w-3 md:h-3.5 md:w-3.5 text-gray-800" />
           {label}
         </Label>
         <div className="font-medium flex flex-wrap items-center gap-1 text-sm md:text-base pt-1">
@@ -33,10 +33,12 @@ const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon
 
 const InstagramProductDetail = () => {
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
-  const { shopDetails, products, isLoading, error, convertCurrency, promotions } = useStorefront(); // Removed appearanceSettings as it's ignored here
+  const { shopDetails, products, isLoading, error, convertCurrency, promotions } = useStorefront();
   const { addToCart } = useCart();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
   const [api, setApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -90,7 +92,6 @@ const InstagramProductDetail = () => {
   }
 
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
-  // Removed blurEnabled as it's ignored here
 
   const originalDisplayPrice = convertCurrency(product.price, product.currency);
 
@@ -139,9 +140,8 @@ const InstagramProductDetail = () => {
     }
 
     const selectedOptions: { [key: string]: string | string[] } = {};
-    // Placeholder for variant selection logic if implemented
-    // if (selectedColor) selectedOptions.color = selectedColor;
-    // if (selectedSize) selectedOptions.size = selectedSize;
+    if (selectedColor) selectedOptions.color = selectedColor;
+    if (selectedSize) selectedOptions.size = selectedSize;
 
     addToCart({
       productId: product.id,
@@ -222,9 +222,9 @@ const InstagramProductDetail = () => {
         {/* Product Details */}
         <div className="p-4 space-y-4">
           {/* Price and Discount */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-baseline gap-3">
             {hasDiscount && originalDisplayPrice !== null ? (
-              <div className="flex items-baseline gap-2">
+              <>
                 <p className="text-base text-gray-500 line-through">
                   {formatCurrency(originalDisplayPrice, shopDetails?.currency)}
                 </p>
@@ -234,7 +234,10 @@ const InstagramProductDetail = () => {
                       <span className="text-base md:text-lg font-light text-gray-500">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                   )}
                 </p>
-              </div>
+                <Badge className="bg-green-500 text-white text-sm font-semibold px-2 py-1 rounded-md">
+                  -{(100 - (discountedPrice / originalDisplayPrice) * 100).toFixed(0)}% Off
+                </Badge>
+              </>
             ) : (
               <p className="text-2xl md:text-3xl font-bold text-gray-800">
                 {originalDisplayPrice != null ? formatCurrency(originalDisplayPrice, shopDetails?.currency) : 'N/A'}
@@ -260,20 +263,26 @@ const InstagramProductDetail = () => {
 
           {/* Options & Specifications */}
           {(colors.length > 0 || sizes.length > 0 || otherOptions.length > 0 || specifications.length > 0) && (
-            <Card className="shadow-md bg-white border border-gray-200">
-              <CardHeader><CardTitle className="text-lg md:text-xl text-gray-800">Product Details</CardTitle></CardHeader>
-              <CardContent className="p-4 space-y-4">
+            <Card className="shadow-none bg-white border-none">
+              <CardHeader className="px-0 pt-0 pb-2"><CardTitle className="text-lg md:text-xl text-gray-800">Options</CardTitle></CardHeader>
+              <CardContent className="p-0 space-y-4">
                 {colors.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-sm text-gray-700">Color</Label>
+                    <Label className="text-sm text-gray-700">Colors</Label>
                     <div className="flex flex-wrap gap-2">
                       {colors.map(color => (
                         <Button
                           key={color}
-                          variant="outline" // Simplified for now, no selection state
-                          className="capitalize text-sm md:text-base border-gray-300 bg-gray-50 text-gray-800 hover:bg-gray-100"
+                          variant="outline"
+                          onClick={() => setSelectedColor(color)}
+                          className={cn(
+                            "capitalize text-sm md:text-base h-9 w-9 rounded-full p-0 border-2",
+                            selectedColor === color ? "border-blue-500" : "border-gray-300",
+                            "hover:border-blue-500"
+                          )}
+                          style={{ backgroundColor: color.toLowerCase() }}
                         >
-                          {color}
+                          <span className="sr-only">{color}</span>
                         </Button>
                       ))}
                     </div>
@@ -281,13 +290,17 @@ const InstagramProductDetail = () => {
                 )}
                 {sizes.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-sm text-gray-700">Size</Label>
+                    <Label className="text-sm text-gray-700">Sizes</Label>
                     <div className="flex flex-wrap gap-2">
                       {sizes.map(size => (
                         <Button
                           key={size}
-                          variant="outline" // Simplified for now, no selection state
-                          className="text-sm md:text-base border-gray-300 bg-gray-50 text-gray-800 hover:bg-gray-100"
+                          variant={selectedSize === size ? "default" : "outline"}
+                          onClick={() => setSelectedSize(size)}
+                          className={cn(
+                            "text-sm md:text-base border-gray-300 bg-gray-50 text-gray-800 hover:bg-gray-100",
+                            selectedSize === size && "bg-blue-500 text-white hover:bg-blue-600 border-blue-500"
+                          )}
                         >
                           {size}
                         </Button>
@@ -349,14 +362,14 @@ const InstagramProductDetail = () => {
             </Button>
           </div>
         )}
-        <Button size="lg" className="flex-1 text-base md:text-lg bg-blue-500 hover:bg-blue-600 text-white" onClick={handleAddToCart} disabled={isOutOfStock}>
+        <Button size="lg" className="flex-1 text-base md:text-lg bg-blue-500 hover:bg-blue-600 text-white rounded-md" onClick={handleAddToCart} disabled={isOutOfStock}>
           <ShoppingCart className="mr-2 h-5 w-5" />
-          {isOutOfStock ? "Out of Stock" : (product.pricing_type === 'subscription' ? "Subscribe Now" : "Add to Cart")}
+          {isOutOfStock ? "Out of Stock" : (product.pricing_type === 'subscription' ? "Subscribe Now" : "Add to cart")}
         </Button>
         {product.pricing_type === 'one_time' && !isOutOfStock && (
-          <Button size="lg" variant="outline" className="flex-1 text-base md:text-lg border-blue-500 text-blue-500 hover:bg-blue-50" onClick={() => toast.info("Buy Now functionality coming soon!")}>
-            <DollarSign className="mr-2 h-5 w-5" />
-            Buy Now
+          <Button size="lg" className="flex-1 text-base md:text-lg border-blue-500 text-blue-500 hover:bg-blue-50 rounded-md" onClick={() => toast.info("Buy Now functionality coming soon!")}>
+            <ShoppingCart className="mr-2 h-5 w-5" /> {/* Changed to ShoppingCart icon */}
+            Buy
           </Button>
         )}
       </div>

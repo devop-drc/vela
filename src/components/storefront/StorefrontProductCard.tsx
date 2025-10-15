@@ -153,18 +153,18 @@ export const StorefrontProductCard = ({
         <Card className={cn(
           "group h-full flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
           isInstagramStyle
-            ? "border-none rounded-none shadow-none bg-white" // Instagram style: no border, no shadow, white background
+            ? "border-none rounded-none shadow-none bg-white"
             : "border border-input/50 hover:border-primary/70 shadow-sm hover:shadow-lg",
           isInstagramStyle ? "bg-white" : (blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card"),
-          isOutOfStock && "opacity-80" // Apply opacity for out of stock
+          isOutOfStock && "opacity-80"
         )}>
-          <CardContent className="p-0 relative">
+          <CardContent className={cn("p-0 relative", isInstagramStyle && "pb-0")}>
             <Carousel
               className="w-full group/carousel"
-              onMouseDown={(e) => e.stopPropagation()} // Prevent link click on drag
-              onTouchStart={(e) => e.stopPropagation()} // Prevent link click on drag
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
             >
-              <CarouselContent onClick={(e) => e.stopPropagation()}> {/* Prevent link click on content */}
+              <CarouselContent onClick={(e) => e.stopPropagation()}>
                 {mediaItems.map((url: string, index: number) => (
                   <CarouselItem key={index}>
                     <div className="aspect-square w-full overflow-hidden bg-muted">
@@ -193,14 +193,17 @@ export const StorefrontProductCard = ({
             {activePromotions.length > 0 && !isOutOfStock && (
               <div className="absolute top-2 right-2 flex flex-col gap-1">
                 {activePromotions.map(promo => (
-                  <Badge key={promo.id} className="bg-emerald-500 text-white text-xs md:text-sm">
+                  <Badge key={promo.id} className={cn(
+                    "text-white text-xs md:text-sm",
+                    isInstagramStyle ? "bg-green-500" : "bg-emerald-500" // Instagram green for discount
+                  )}>
                     {getPromotionBadge(promo)}
                   </Badge>
                 ))}
               </div>
             )}
           </CardContent>
-          {!isInstagramStyle && ( // Only show text details if not Instagram style
+          {!isInstagramStyle && (
             <div className="p-3 md:p-4 flex-1 flex flex-col justify-between">
               <div>
                 <h3 className="font-semibold text-base md:text-lg leading-tight mb-1 line-clamp-2">{product.name}</h3>
