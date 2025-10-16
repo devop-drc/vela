@@ -323,9 +323,10 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
           {/* Quantity & Add to Cart / Buy Now - Responsive */}
           {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && (
             <div className="flex flex-col gap-3 pt-3">
-              {/* Counter above buttons on smaller screens */}
-              <div className="flex items-center justify-center sm:justify-start">
-                <div className="flex items-center border border-gray-300 rounded-md">
+              {/* Counter and Buttons on one line for all screens */}
+              <div className="flex items-center justify-between gap-2 w-full">
+                {/* Quantity Counter */}
+                <div className="flex items-center border border-gray-300 rounded-md flex-shrink-0">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -353,71 +354,36 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
-              </div>
 
-              {/* Buttons */}
-              <div className="flex gap-2 w-full">
-                {/* Circular Add to Cart on smaller screens */}
-                <Button
-                  size="icon" // Changed to icon size
-                  className={cn(
-                    "flex-1 text-base bg-red-500 hover:bg-red-600 text-white rounded-full h-10 w-10", // Circular button
-                    "sm:hidden max-[380px]:hidden" // Hide on sm and larger, and on very small screens
-                  )}
-                  onClick={handleAddToCart}
-                  disabled={isOutOfStock}
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  <span className="sr-only">Add to cart</span>
-                </Button>
+                {/* Buttons for larger screens (>= 380px) */}
+                <div className="hidden max-[380px]:hidden flex-1 flex items-center justify-end gap-2">
+                  <Button
+                    size="lg"
+                    className="flex-1 text-base bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+                    disabled={isOutOfStock}
+                  >
+                    Buy Now <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon" // Circular icon button
+                    className="h-10 w-10 text-base bg-red-500 hover:bg-red-600 text-white rounded-full flex-shrink-0"
+                    onClick={handleAddToCart}
+                    disabled={isOutOfStock}
+                  >
+                    <ShoppingCart className="h-5 w-5" />
+                    <span className="sr-only">Add to cart</span>
+                  </Button>
+                </div>
 
-                {/* Dropdown for Add to Cart / Buy Now on smallest screens */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="lg"
-                      className={cn(
-                        "flex-1 text-base bg-red-500 hover:bg-red-600 text-white rounded-md",
-                        "hidden max-[380px]:flex" // Show only on very small screens
-                      )}
-                      disabled={isOutOfStock}
-                    >
-                      <ShoppingCart className="mr-2 h-5 w-5" />
-                      Add to cart <ChevronDown className="ml-2 h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={handleAddToCart} disabled={isOutOfStock}>
-                      <ShoppingCart className="mr-2 h-4 w-4" /> Add to Cart
-                    </DropdownMenuItem>
-                    <DropdownMenuItem disabled={isOutOfStock}>
-                      <ArrowRight className="mr-2 h-4 w-4" /> Buy Now
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Default Add to Cart / Buy Now on larger mobile/tablet screens */}
+                {/* Single large button for smallest screens (< 380px) */}
                 <Button
                   size="lg"
-                  className={cn(
-                    "flex-1 text-base bg-red-500 hover:bg-red-600 text-white rounded-md",
-                    "hidden sm:flex max-[380px]:hidden" // Show on sm and larger, hide on very small
-                  )}
+                  className="flex-1 text-base bg-red-500 hover:bg-red-600 text-white rounded-md max-[380px]:flex hidden" // Show only on smallest screens
                   onClick={handleAddToCart}
                   disabled={isOutOfStock}
                 >
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   {isOutOfStock ? "Out of Stock" : (product.pricing_type === 'subscription' ? "Subscribe Now" : "Add to cart")}
-                </Button>
-                <Button
-                  size="lg"
-                  className={cn(
-                    "flex-1 text-base bg-blue-600 hover:bg-blue-700 text-white rounded-md",
-                    "hidden sm:flex max-[380px]:hidden" // Show on sm and larger, hide on very small
-                  )}
-                  disabled={isOutOfStock}
-                >
-                  Buy Now <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </div>
