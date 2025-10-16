@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { InstagramCheckoutForm, CheckoutFormData, CustomerAddress } from "./InstagramCheckoutForm"; // Import InstagramCheckoutForm and CustomerAddress type
+import { InstagramCheckoutForm, CheckoutFormData, CustomerAddress, LOCAL_STORAGE_ADDRESSES_KEY } from "./InstagramCheckoutForm"; // Import LOCAL_STORAGE_ADDRESSES_KEY
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { InstagramProductQuickViewModal } from "./InstagramProductQuickViewModal"; // Import new modal

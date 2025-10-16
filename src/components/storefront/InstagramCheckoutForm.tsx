@@ -59,7 +59,7 @@ export interface CustomerAddress {
   is_default: boolean;
 }
 
-const LOCAL_STORAGE_ADDRESSES_KEY = 'instagram_saved_addresses';
+export const LOCAL_STORAGE_ADDRESSES_KEY = 'instagram_saved_addresses'; // Export this constant
 
 const countries = [
   { code: "AL", name: "Albania" },

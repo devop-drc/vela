@@ -253,7 +253,7 @@ const InstagramProfilePage = () => {
         onResetFilters={handleResetFilters}
       />
 
-      <main className="flex-1">
+      <main className="flex-1" style={{ paddingTop: 'var(--instagram-header-height)', paddingBottom: 'var(--instagram-bottom-nav-height)' }}>
         {/* Profile Section */}
         <section className="flex flex-col items-center mb-8 md:mb-10 px-4 pt-4">
           <div className="flex items-center w-full max-w-md md:max-w-none md:justify-start gap-4 md:gap-8 mb-4">

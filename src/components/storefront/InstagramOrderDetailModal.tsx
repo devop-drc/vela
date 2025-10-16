@@ -303,7 +303,7 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
       </AlertDialog>
 
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl bg-white text-black rounded-lg h-[90vh] flex flex-col">
+        <DialogContent className="max-w-2xl bg-white text-black rounded-lg h-[90vh] flex flex-col" aria-describedby="instagram-order-detail-description">
           <DialogHeader className="p-4 border-b border-gray-200 pb-4 flex-shrink-0">
             <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
               {getStatusIcon(order.status)}
@@ -313,6 +313,9 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
               Details for your order placed on {new Date(order.created_at).toLocaleDateString()}.
             </DialogDescription>
           </DialogHeader>
+          <span id="instagram-order-detail-description" className="sr-only">
+            This modal displays the details of your order, including customer information, shipping details, items ordered, and any reported issues.
+          </span>
           <ScrollArea className="flex-1 pr-4 md:pr-6">
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
