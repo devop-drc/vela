@@ -362,7 +362,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
           {/* Quantity & Add to Cart / Buy Now - Responsive */}
           {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && (
-            <div className="flex items-center gap-2 pt-3">
+            <div className="flex flex-col sm:flex-row items-center gap-2 pt-3">
               {/* Quantity Counter */}
               <div className="flex items-center border border-gray-300 rounded-md flex-shrink-0">
                 <Button
@@ -402,26 +402,27 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                     ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                     : "bg-primary hover:bg-primary/90 text-primary-foreground"
                 )}
-                onClick={handleBuyNow} // Call handleBuyNow
+                onClick={handleBuyNow}
                 disabled={isOutOfStock}
               >
                 Buy Now <Banknote className="ml-2 h-4 w-4" />
               </Button>
 
-              {/* Add to Cart Button (circular, icon only) */}
+              {/* Add to Cart Button */}
               <Button
-                size="icon"
+                size="lg"
                 className={cn(
-                  "h-10 w-10 text-base rounded-full flex-shrink-0 border",
+                  "flex-1 text-base rounded-md sm:w-auto sm:flex-none", // Make it full width on small screens, auto on sm+
                   hasDiscount
-                    ? "border-emerald-600 text-emerald-600 hover:bg-emerald-50"
-                    : "border-primary text-primary hover:bg-primary/5"
+                    ? "border-emerald-600 text-emerald-600 hover:bg-emerald-50 bg-transparent"
+                    : "border-primary text-primary hover:bg-primary/5 bg-transparent"
                 )}
+                variant="outline"
                 onClick={handleAddToCart}
                 disabled={isOutOfStock}
               >
-                <ShoppingBag className="h-5 w-5" />
-                <span className="sr-only">Add to cart</span>
+                <ShoppingBag className="mr-2 h-5 w-5" />
+                Add to cart
               </Button>
             </div>
           )}

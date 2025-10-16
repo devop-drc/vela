@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useCart } from "@/contexts/CartContext";
 import { motion } from "framer-motion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
 
 interface InstagramShopHeaderProps {
   onOpenCart: () => void;
@@ -18,7 +19,7 @@ interface InstagramShopHeaderProps {
   onOpenMyOrders?: () => void; // Optional for profile page
 }
 
-export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, onOpenMyOrders }: InstagramShopHeaderHeaderProps) => {
+export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, onOpenMyOrders }: InstagramShopHeaderProps) => {
   const { shopDetails } = useStorefront();
   const { totalItems } = useCart();
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
@@ -107,24 +108,34 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, onOpenMyOr
           </div>
           {/* Row 2: Filter and Sort */}
           <div className="container flex items-center justify-center gap-2 py-2 px-4 border-t border-gray-200">
-            <Button variant="outline" size="sm" onClick={onOpenFilterDrawer} className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-lg">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenFilterDrawer}
+              className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
+            >
               <Filter className="mr-2 h-4 w-4" />
               Filter
             </Button>
-            <Select value={searchParams.get('sort') || "newest"} onValueChange={handleSortChange}>
-              <SelectTrigger className="flex-1 h-9 text-sm border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 rounded-lg">
-                <ArrowUpNarrowWide className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Sort" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest" className="text-sm">Newest</SelectItem>
-                <SelectItem value="oldest" className="text-sm">Oldest</SelectItem>
-                <SelectItem value="price-asc" className="text-sm">Price: Low to High</SelectItem>
-                <SelectItem value="price-desc" className="text-sm">Price: High to Low</SelectItem>
-                <SelectItem value="name-asc" className="text-sm">Name: A-Z</SelectItem>
-                <SelectItem value="name-desc" className="text-sm">Name: Z-A</SelectItem>
-              </SelectContent>
-            </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
+                >
+                  Sort <ArrowUpNarrowWide className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleSortChange("newest")} className="text-sm">Newest</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("oldest")} className="text-sm">Oldest</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("price-asc")} className="text-sm">Price: Low to High</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("price-desc")} className="text-sm">Price: High to Low</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("name-asc")} className="text-sm">Name: A-Z</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("name-desc")} className="text-sm">Name: Z-A</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       )}

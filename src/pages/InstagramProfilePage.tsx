@@ -30,6 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { InstagramFilterDrawer } from "@/components/storefront/InstagramFilterDrawer";
 import { debounce } from 'lodash';
 import { InstagramShopHeader } from "@/components/storefront/InstagramShopHeader"; // Import the updated header
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
 
 interface Product {
   id: string;
@@ -310,24 +311,34 @@ const InstagramProfilePage = () => {
         {/* Filter, Sort, and Grid Icon for Profile Page */}
         <div className="flex flex-col items-center justify-center py-2 mb-6 px-4">
           <div className="flex items-center justify-center gap-2 w-full max-w-md mb-2">
-            <Button variant="outline" size="sm" onClick={() => setIsFilterDrawerOpen(true)} className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-lg" style={{ borderRadius: '10px' }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsFilterDrawerOpen(true)}
+              className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
+            >
               <Filter className="mr-2 h-4 w-4" />
               Filter {hasActiveFilters && <span className="ml-1 text-xs text-red-500">(Active)</span>}
             </Button>
-            <Select value={sortOption} onValueChange={handleSortChange}>
-              <SelectTrigger className="flex-1 h-9 text-sm border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 rounded-lg" style={{ borderRadius: '10px' }}>
-                <ArrowUpNarrowWide className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Sort" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest" className="text-sm">Newest</SelectItem>
-                <SelectItem value="oldest" className="text-sm">Oldest</SelectItem>
-                <SelectItem value="price-asc" className="text-sm">Price: Low to High</SelectItem>
-                <SelectItem value="price-desc" className="text-sm">Price: High to Low</SelectItem>
-                <SelectItem value="name-asc" className="text-sm">Name: A-Z</SelectItem>
-                <SelectItem value="name-desc" className="text-sm">Name: Z-A</SelectItem>
-              </SelectContent>
-            </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
+                >
+                  Sort <ArrowUpNarrowWide className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleSortChange("newest")} className="text-sm">Newest</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("oldest")} className="text-sm">Oldest</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("price-asc")} className="text-sm">Price: Low to High</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("price-desc")} className="text-sm">Price: High to Low</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("name-asc")} className="text-sm">Name: A-Z</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("name-desc")} className="text-sm">Name: Z-A</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div className="flex items-center justify-center w-full max-w-md">
             <span className="p-2 rounded-md text-gray-800">

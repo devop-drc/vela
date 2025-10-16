@@ -268,8 +268,6 @@ const InstagramProductsFeedPage = () => {
       />
 
       <main className="flex-1 pt-0"> {/* Removed padding-top as header now handles it */}
-        {/* Removed Marquee, Filter/Sort, and Grid Icon */}
-
         {/* Product Grid */}
         <section className="mt-0"> {/* Removed margin-top */}
           {filteredAndSortedProducts.length === 0 ? (
