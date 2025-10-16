@@ -324,6 +324,7 @@ const Products = () => {
     return { 'All Products': filteredAndSortedProducts };
   }, [filteredAndSortedProducts, grouping]);
 
+  console.log("Products.tsx: filteredAndSortedProducts for rendering:", filteredAndSortedProducts); // NEW LOG
 
   return (
     <>
