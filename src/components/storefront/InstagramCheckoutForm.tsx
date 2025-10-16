@@ -138,27 +138,29 @@ export const InstagramCheckoutForm = ({
 
   // Effect to reset form when checkout step changes
   useEffect(() => {
-    if (checkoutStep === 'contact-shipping') {
-      // If a saved address is selected, fill the form
-      if (selectedAddressId !== 'new') {
-        const address = savedAddresses.find(addr => addr.id === selectedAddressId);
-        if (address) {
-          fillFormWithAddress(address);
-        }
-      } else {
-        // Otherwise, clear the form for a new address
-        reset({
-          firstName: "", lastName: "", email: "", phone: "",
-          shippingAddress: "", shippingCity: "", shippingZip: "",
-          shippingCountry: "AL",
-          shippingNotesSeller: "", shippingNotesCourier: "",
-          paymentMethod: watch('paymentMethod'), // Keep current payment method
-          saveAddress: false,
-          addressLabel: "",
-        });
+    console.log("CheckoutForm: selectedAddressId changed to", selectedAddressId);
+    if (selectedAddressId !== 'new') {
+      const address = savedAddresses.find(addr => addr.id === selectedAddressId);
+      if (address) {
+        fillFormWithAddress(address);
+        setCheckoutStep('payment'); // Go directly to payment for existing address
+        console.log("CheckoutForm: Existing address selected, setting checkoutStep to 'payment'");
       }
+    } else {
+      // Otherwise, clear the form for a new address
+      reset({
+        firstName: "", lastName: "", email: "", phone: "",
+        shippingAddress: "", shippingCity: "", shippingZip: "",
+        shippingCountry: "AL",
+        shippingNotesSeller: "", shippingNotesCourier: "",
+        paymentMethod: watch('paymentMethod'), // Keep current payment method
+        saveAddress: false,
+        addressLabel: "",
+      });
+      setCheckoutStep('contact-shipping'); // Show contact-shipping for new address
+      console.log("CheckoutForm: New address selected, setting checkoutStep to 'contact-shipping'");
     }
-  }, [checkoutStep, selectedAddressId, savedAddresses, reset, watch]);
+  }, [selectedAddressId, savedAddresses, reset, fillFormWithAddress, setCheckoutStep, watch]);
 
   const fillFormWithAddress = useCallback((address: CustomerAddress) => {
     setValue('firstName', address.first_name);
@@ -266,19 +268,19 @@ export const InstagramCheckoutForm = ({
                     <SelectTrigger className="border-gray-300 bg-gray-50 text-gray-800">
                       <SelectValue placeholder="Select an address" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white text-gray-800">
+                    <SelectContent className="bg-white text-gray-800 w-[--radix-select-trigger-width] max-w-[calc(100vw-2rem)] sm:max-w-xs md:max-w-sm"> {/* Added responsive max-width */}
                       <SelectItem value="new" className="py-2">
                         <div className="flex flex-col items-start w-full">
                           <span className="font-medium text-gray-800 text-sm">New Address</span>
-                          <span className="text-xs text-gray-500 text-wrap break-words max-w-full">Enter details below</span>
+                          <span className="text-xs text-gray-500 text-wrap break-words max-w-full min-w-0">Enter details below</span> {/* Added min-w-0 */}
                         </div>
                       </SelectItem>
                       <Separator className="bg-gray-200" />
                       {savedAddresses.map(address => (
-                        <SelectItem key={address.id} value={address.id} className="py-2">
+                        <SelectItem key={address.id} value={address.id} className="py-2 overflow-hidden"> {/* Added overflow-hidden */}
                           <div className="flex flex-col items-start w-full">
                             <span className="font-medium text-gray-800 text-sm">{address.label}</span>
-                            <span className="text-xs text-gray-500 text-wrap break-words max-w-full">
+                            <span className="text-xs text-gray-500 text-wrap break-words max-w-full min-w-0"> {/* Added min-w-0 */}
                               {address.address}, {address.city}, {address.zip_code}, {address.country}
                             </span>
                           </div>
@@ -290,8 +292,9 @@ export const InstagramCheckoutForm = ({
               </Card>
             )}
 
-            {checkoutStep === 'contact-shipping' && selectedAddressId === 'new' && (
+            {checkoutStep === 'contact-shipping' && (
               <motion.div
+                key="contact-shipping-form" // Added key for AnimatePresence
                 initial={{ opacity: 0, x: 50 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -50 }}
@@ -402,6 +405,7 @@ export const InstagramCheckoutForm = ({
 
             {checkoutStep === 'payment' && (
               <motion.div
+                key="payment-form" // Added key for AnimatePresence
                 initial={{ opacity: 0, x: 50 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -50 }}
@@ -463,9 +467,9 @@ export const InstagramCheckoutForm = ({
                 </CardContent>
               </Card>
             </motion.div>
-          )}
-        </div>
-      </ScrollArea>
+            )}
+          </div>
+        </ScrollArea>
     </form>
     </>
   );
