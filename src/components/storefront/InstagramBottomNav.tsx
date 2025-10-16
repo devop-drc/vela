@@ -35,20 +35,18 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
       <nav className="bg-white text-gray-800 border-t border-gray-200 shadow-lg h-14 w-full max-w-md rounded-t-xl">
         <div className="flex justify-around items-center h-full">
           {/* My Orders Button */}
-          <DrawerTrigger asChild>
-            <button
-              onClick={onOpenMyOrders}
-              className="flex flex-col items-center justify-center text-gray-800 w-full h-full transition-colors text-xs relative hover:bg-gray-50"
-            >
-              <ShoppingBag className="h-6 w-6" />
-              <span className="font-semibold mt-1">My Orders</span>
-              {myOrdersCount > 0 && (
-                <span className="absolute top-1 right-1/2 translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white font-bold">
-                  {myOrdersCount}
-                </span>
-              )}
-            </button>
-          </DrawerTrigger>
+          <button
+            onClick={onOpenMyOrders}
+            className="flex flex-col items-center justify-center text-gray-800 w-full h-full transition-colors text-xs relative hover:bg-gray-50"
+          >
+            <ShoppingBag className="h-6 w-6" />
+            <span className="font-semibold mt-1">My Orders</span>
+            {myOrdersCount > 0 && (
+              <span className="absolute top-1 right-1/2 translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white font-bold">
+                {myOrdersCount}
+              </span>
+            )}
+          </button>
 
           {/* Cart Button */}
           <button
