@@ -27,7 +27,7 @@ import { motion } from "framer-motion";
 import { Marquee } from "@/components/ui/marquee";
 import * as LucideIcons from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { InstagramFilterDrawer } from "@/components/storefront/InstagramFilterDrawer";
+// import { InstagramFilterDrawer } from "@/components/storefront/InstagramFilterDrawer"; // Removed import
 import { debounce } from 'lodash';
 import { InstagramShopHeader } from "@/components/storefront/InstagramShopHeader"; // Import the updated header
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
@@ -78,7 +78,7 @@ const InstagramProfilePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [sortOption, setSortOption] = useState(searchParams.get('sort') || "newest");
-  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  // const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false); // Removed state
   const [filters, setFilters] = useState<FilterState>({
     categories: searchParams.getAll('category') || [],
     tags: searchParams.getAll('tag') || [],
@@ -244,14 +244,7 @@ const InstagramProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
-      <InstagramFilterDrawer
-        isOpen={isFilterDrawerOpen}
-        onClose={() => setIsFilterDrawerOpen(false)}
-        products={allProducts}
-        currentFilters={filters}
-        onFilterChange={handleFilterChange}
-        onResetFilters={handleResetFilters}
-      />
+      {/* InstagramFilterDrawer is now rendered in InstagramShopLayout */}
 
       <main className="flex-1" style={{ paddingTop: 'var(--instagram-header-height)', paddingBottom: 'var(--instagram-bottom-nav-height)' }}>
         {/* Profile Section */}
@@ -314,7 +307,11 @@ const InstagramProfilePage = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsFilterDrawerOpen(true)}
+              onClick={() => {
+                console.log("Filter button clicked");
+                // setIsFilterDrawerOpen(true); // Removed direct state update
+                navigate(`/instagramShop/${shopSlug}/products?filter=true`); // Navigate to products feed with filter param
+              }}
               className="flex-1 text-gray-800 bg-gray-50 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
             >
               <Filter className="mr-2 h-4 w-4" />

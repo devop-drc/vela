@@ -27,7 +27,7 @@ import { motion } from "framer-motion";
 import { Marquee } from "@/components/ui/marquee";
 import * as LucideIcons from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { InstagramFilterDrawer } from "@/components/storefront/InstagramFilterDrawer";
+// import { InstagramFilterDrawer } from "@/components/storefront/InstagramFilterDrawer"; // Removed import
 import { debounce } from 'lodash';
 import { InstagramShopHeader } from "@/components/storefront/InstagramShopHeader"; // Import the updated header
 
@@ -77,7 +77,7 @@ const InstagramProductsFeedPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [sortOption, setSortOption] = useState(searchParams.get('sort') || "newest");
-  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  // const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false); // Removed state
   const [filters, setFilters] = useState<FilterState>({
     categories: searchParams.getAll('category') || [],
     tags: searchParams.getAll('tag') || [],
@@ -258,14 +258,7 @@ const InstagramProductsFeedPage = () => {
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
-      <InstagramFilterDrawer
-        isOpen={isFilterDrawerOpen}
-        onClose={() => setIsFilterDrawerOpen(false)}
-        products={allProducts}
-        currentFilters={filters}
-        onFilterChange={handleFilterChange}
-        onResetFilters={handleResetFilters}
-      />
+      {/* InstagramFilterDrawer is now rendered in InstagramShopLayout */}
 
       <main className="flex-1 pt-0"> {/* Removed padding-top as header now handles it */}
         {/* Product Grid */}

@@ -14,12 +14,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 interface InstagramShopHeaderProps {
   onOpenCart: () => void;
-  onOpenFilterDrawer?: () => void; // Optional for products feed page
-  isFilterDrawerOpen?: boolean; // Optional for products feed page
+  onOpenFilterDrawer: () => void; // Now required
+  isProductsFeedPage: boolean; // New prop to indicate if it's the products feed page
   onOpenMyOrders?: () => void; // Optional for profile page
 }
 
-export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, onOpenMyOrders }: InstagramShopHeaderProps) => {
+export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, isProductsFeedPage, onOpenMyOrders }: InstagramShopHeaderProps) => {
   const { shopDetails } = useStorefront();
   const { totalItems } = useCart();
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
@@ -29,7 +29,6 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, onOpenMyOr
 
   if (!shopDetails) return null;
 
-  const isProductsFeedPage = location.pathname.includes('/products');
   const isProfilePage = !isProductsFeedPage && !productId; // Profile page is default if not products feed or product detail
 
   const handleBack = () => {
@@ -104,7 +103,7 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, onOpenMyOr
             <Button
               variant="outline"
               size="sm"
-              onClick={onOpenFilterDrawer}
+              onClick={onOpenFilterDrawer} // This will now correctly trigger the drawer in the layout
               className="flex-1 bg-gray-50 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
             >
               <Filter className="mr-2 h-4 w-4" />

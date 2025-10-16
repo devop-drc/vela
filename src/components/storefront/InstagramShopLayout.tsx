@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from 'react';
-import { Outlet, useSearchParams } from 'react-router-dom'; // Import useSearchParams
+import { Outlet, useSearchParams, useLocation } from 'react-router-dom'; // Import useSearchParams and useLocation
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import { InstagramShopHeader } from './InstagramShopHeader'; // Custom header
 import { defaultSettings } from '@/contexts/AppearanceContext';
@@ -17,6 +17,7 @@ import { InstagramMyOrdersDrawer } from './InstagramMyOrdersDrawer'; // Import I
 import { supabase } from '@/integrations/supabase/client'; // Import supabase for order count
 import { Drawer } from '@/components/ui/drawer'; // Import Drawer.Root
 import { InstagramBottomNav } from './InstagramBottomNav'; // Import new bottom nav
+import { InstagramFilterDrawer } from './InstagramFilterDrawer'; // Import InstagramFilterDrawer
 
 // Function to apply fixed Instagram-like settings to the DOM
 const applyInstagramShopSettingsToDOM = () => {
@@ -58,12 +59,16 @@ const applyInstagramShopSettingsToDOM = () => {
 };
 
 const InstagramShopLayoutContent = () => {
-  const { shopDetails, isLoading, error } = useStorefront(); // Removed appearanceSettings as it's ignored here
+  const { shopDetails, products: allProducts, isLoading, error, convertCurrency } = useStorefront(); // Removed appearanceSettings as it's ignored here
   const isMobile = useIsMobile();
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
   const [isMyOrdersDrawerOpen, setIsMyOrdersDrawerOpen] = useState(false); // New state for My Orders drawer
   const [myOrdersCount, setMyOrdersCount] = useState(0); // State for My Orders count
   const [searchParams, setSearchParams] = useSearchParams(); // Initialize useSearchParams
+  const location = useLocation(); // Use useLocation to get current path
+
+  // New state for filter drawer
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   // New state for initial order ID to pass to the drawer
   const [initialOrderIdForDrawer, setInitialOrderIdForDrawer] = useState<string | null>(null);
@@ -182,10 +187,60 @@ const InstagramShopLayoutContent = () => {
     return () => window.removeEventListener('resize', setAppHeight);
   }, []);
 
+  // Determine if current route is the products feed page
+  const isProductsFeedPage = location.pathname.includes('/products');
+
+  // Memoize maxPrice for filter drawer
+  const maxPrice = useMemo(() => {
+    let currentMax = 0;
+    allProducts.forEach(p => {
+      if (p.price !== null) {
+        const convertedPrice = convertCurrency(p.price, p.currency);
+        if (convertedPrice > currentMax) {
+          currentMax = convertedPrice;
+        }
+      }
+    });
+    return Math.ceil(currentMax / 10) * 10 || 100;
+  }, [allProducts, convertCurrency]);
+
+  // Memoize filter state for the drawer
+  const [filters, setFilters] = useState({
+    categories: searchParams.getAll('category') || [],
+    tags: searchParams.getAll('tag') || [],
+    priceRange: [0, maxPrice],
+  });
+
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, priceRange: [0, maxPrice] }));
+  }, [maxPrice]);
+
+  const handleFilterChange = useCallback((newFilters: typeof filters) => {
+    setFilters(newFilters);
+    const newSearchParams = new URLSearchParams();
+    const sortOption = searchParams.get('sort') || "newest";
+    if (sortOption !== 'newest') newSearchParams.set('sort', sortOption);
+    newFilters.categories.forEach(cat => newSearchParams.append('category', cat));
+    newFilters.tags.forEach(tag => newSearchParams.append('tag', tag));
+    // Price range is handled internally by the drawer and passed to the products feed page via URL
+    // For now, we'll just update the local state. The products feed page will read from URL.
+    setSearchParams(newSearchParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const handleResetFilters = useCallback(() => {
+    setFilters({
+      categories: [],
+      tags: [],
+      priceRange: [0, maxPrice],
+    });
+    setSearchParams({}, { replace: true });
+  }, [maxPrice, setSearchParams]);
+
+
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen bg-white text-black" style={{ height: 'var(--app-height)' }}>
-        <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} isProfilePage={true} />
+        <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} isProductsFeedPage={isProductsFeedPage} onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)} />
         <main className="flex-1 container py-4 mt-14">
           <div className="flex flex-col items-center mb-8">
             <Skeleton className="h-24 w-24 rounded-full mb-4" />
@@ -226,7 +281,12 @@ const InstagramShopLayoutContent = () => {
           --instagram-bottom-nav-height: ${BOTTOM_NAV_HEIGHT};
         }
       `}</style>
-      <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} isProfilePage={true} />
+      <InstagramShopHeader
+        onOpenCart={() => setIsCartModalOpen(true)}
+        onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)}
+        isProductsFeedPage={isProductsFeedPage}
+        onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)} // Pass the setter
+      />
       <main className="flex-1 overflow-y-auto" style={{ paddingTop: 'var(--instagram-header-height)', paddingBottom: 'var(--instagram-bottom-nav-height)' }}>
         <Outlet />
       </main>
@@ -242,6 +302,16 @@ const InstagramShopLayoutContent = () => {
           onOrderOpened={() => setInitialOrderIdForDrawer(null)} // Clear after order is opened
         />
       </Drawer>
+
+      {/* Instagram Filter Drawer */}
+      <InstagramFilterDrawer
+        isOpen={isFilterDrawerOpen}
+        onClose={() => setIsFilterDrawerOpen(false)}
+        products={allProducts}
+        currentFilters={filters}
+        onFilterChange={handleFilterChange}
+        onResetFilters={handleResetFilters}
+      />
 
       {/* New Instagram Bottom Nav */}
       <InstagramBottomNav onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} myOrdersCount={myOrdersCount} />
