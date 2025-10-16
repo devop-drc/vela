@@ -170,7 +170,7 @@ const InstagramProductDetail = () => {
   return (
     <div className="flex flex-col min-h-screen bg-white text-black">
       <main className="flex-1">
-        <InstagramBreadcrumb /> {/* Use InstagramBreadcrumb here */}
+        <InstagramBreadcrumb />
         {/* Product Media */}
         <div>
           <Carousel setApi={setApi} className="w-full">
@@ -199,7 +199,7 @@ const InstagramProductDetail = () => {
                     onClick={() => api?.scrollTo(index)}
                     className={cn(
                       "h-16 w-16 rounded-md overflow-hidden border-2 transition-all flex-shrink-0",
-                      index === currentSlide ? "border-blue-500" : "border-transparent hover:border-gray-300"
+                      index === currentSlide ? "border-red-500" : "border-gray-300 hover:border-gray-400" // Changed hover color
                     )}
                   >
                     <MediaItem src={url} alt={`Thumbnail ${index + 1}`} className="object-cover h-full w-full" />
@@ -279,8 +279,8 @@ const InstagramProductDetail = () => {
                           onClick={() => setSelectedColor(color)}
                           className={cn(
                             "capitalize text-sm md:text-base h-9 w-9 rounded-full p-0 border-2",
-                            selectedColor === color ? "border-blue-500" : "border-gray-300",
-                            "hover:border-blue-500"
+                            selectedColor === color ? "border-red-500" : "border-gray-300", // Changed selected border to red
+                            "hover:border-red-500" // Changed hover border to red
                           )}
                           style={{ backgroundColor: color.toLowerCase() }}
                         >
@@ -301,7 +301,7 @@ const InstagramProductDetail = () => {
                           onClick={() => setSelectedSize(size)}
                           className={cn(
                             "text-sm md:text-base border-gray-300 bg-gray-50 text-gray-800 hover:bg-gray-100",
-                            selectedSize === size && "bg-blue-500 text-white hover:bg-blue-600 border-blue-500"
+                            selectedSize === size && "bg-red-500 text-white hover:bg-red-600 border-red-500" // Changed selected to red
                           )}
                         >
                           {size}
@@ -364,16 +364,11 @@ const InstagramProductDetail = () => {
             </Button>
           </div>
         )}
-        <Button size="lg" className="flex-1 text-base md:text-lg bg-blue-500 hover:bg-blue-600 text-white rounded-md" onClick={handleAddToCart} disabled={isOutOfStock}>
+        <Button size="lg" className="flex-1 text-base md:text-lg bg-red-500 hover:bg-red-600 text-white rounded-md" onClick={handleAddToCart} disabled={isOutOfStock}>
           <ShoppingCart className="mr-2 h-5 w-5" />
           {isOutOfStock ? "Out of Stock" : (product.pricing_type === 'subscription' ? "Subscribe Now" : "Add to cart")}
         </Button>
-        {product.pricing_type === 'one_time' && !isOutOfStock && (
-          <Button size="lg" className="flex-1 text-base md:text-lg border-blue-500 text-blue-500 hover:bg-blue-50 rounded-md" onClick={() => toast.info("Buy Now functionality coming soon!")}>
-            <ShoppingCart className="mr-2 h-5 w-5" />
-            Buy
-          </Button>
-        )}
+        {/* Removed Buy Now button */}
       </div>
     </div>
   );

@@ -15,7 +15,7 @@ interface InstagramShopHeaderProps {
   onOpenMyOrders: () => void; // New prop for opening My Orders drawer
 }
 
-export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramShopHeaderHeaderProps) => {
+export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramShopHeaderProps) => {
   const { shopDetails } = useStorefront();
   const { totalItems } = useCart();
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
@@ -51,8 +51,8 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramSho
             </Button>
           ) : (
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold">InstaShop</h1> {/* Changed title to InstaShop */}
-              {/* <ChevronDown className="h-4 w-4 text-gray-500" /> Removed dropdown icon */}
+              <h1 className="text-lg font-bold">{shopDetails.username || shopDetails.shop_name}</h1> {/* Changed title to username */}
+              {/* Removed ChevronDown icon */}
             </div>
           )}
         </div>
