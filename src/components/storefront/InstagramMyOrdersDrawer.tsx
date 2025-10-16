@@ -195,11 +195,9 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose }: InstagramMyOrdersDr
         />
       )}
 
-      <Drawer open={isOpen} onOpenChange={onClose} shouldScaleBackground>
+      <Drawer open={isOpen} onOpenChange={onClose} shouldScaleBackground snapPoints={[0.1, 0.5, 0.9]} initialSnap={0.1}>
         <DrawerContent
           className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl"
-          snapPoints={[0.1, 0.5, 0.9]}
-          initialSnap={0.1}
         >
           <DrawerHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
             <DrawerTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
@@ -254,37 +252,39 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose }: InstagramMyOrdersDr
                 orders.length > 0 ? (
                   <div className="mt-6 space-y-4">
                     <h2 className="text-lg font-bold text-gray-800">Your Orders ({orders.length})</h2>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Order ID</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Total</TableHead>
-                          <TableHead className="w-[60px]"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {orders.map(order => (
-                          <TableRow key={order.id} onClick={() => { setSelectedOrder(order); setIsOrderDetailModalOpen(true); }} className="cursor-pointer hover:bg-gray-100">
-                            <TableCell className="font-medium text-gray-800">#{order.id.substring(0, 8)}</TableCell>
-                            <TableCell className="text-gray-700">{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                            <TableCell>
-                              <Badge className={cn("font-normal", getStatusColorClass(order.status))}>
-                                {getStatusIcon(order.status)}
-                                <span className="ml-1">{order.status}</span>
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right font-medium text-gray-800">
-                              {formatCurrency(convertCurrency(order.total_amount, order.currency, shopDetails?.currency), shopDetails?.currency)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="sm" className="text-gray-800 hover:bg-gray-100">View</Button>
-                            </TableCell>
+                    <ScrollArea className="w-full whitespace-nowrap"> {/* Added ScrollArea for horizontal overflow */}
+                      <Table className="min-w-full"> {/* Ensure table takes full width */}
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs md:text-sm">Order ID</TableHead>
+                            <TableHead className="text-xs md:text-sm">Date</TableHead>
+                            <TableHead className="text-xs md:text-sm">Status</TableHead>
+                            <TableHead className="text-right text-xs md:text-sm">Total</TableHead>
+                            <TableHead className="w-[60px] text-xs md:text-sm"></TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {orders.map(order => (
+                            <TableRow key={order.id} onClick={() => { setSelectedOrder(order); setIsOrderDetailModalOpen(true); }} className="cursor-pointer hover:bg-gray-100">
+                              <TableCell className="font-medium text-gray-800 text-sm md:text-base">#{order.id.substring(0, 8)}</TableCell>
+                              <TableCell className="text-gray-700 text-sm md:text-base">{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                              <TableCell>
+                                <Badge className={cn("font-normal text-xs md:text-sm", getStatusColorClass(order.status))}>
+                                  {getStatusIcon(order.status)}
+                                  <span className="ml-1">{order.status}</span>
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right font-medium text-gray-800 text-sm md:text-base">
+                                {formatCurrency(convertCurrency(order.total_amount, order.currency, shopDetails?.currency), shopDetails?.currency)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button variant="ghost" size="sm" className="text-gray-800 hover:bg-gray-100">View</Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
                   </div>
                 ) : (
                   <div className="mt-6 p-4 border rounded-lg bg-gray-50 text-center space-y-3 text-gray-600">

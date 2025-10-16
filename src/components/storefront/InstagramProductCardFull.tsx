@@ -202,7 +202,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
         {/* Product Header */}
         <div className="flex items-center gap-3 px-4 py-2">
           <div className="h-8 w-8 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-            <MediaItem src={shopDetails?.logo_url || undefined} alt={shopDetails?.shop_name || "Shop"} className="object-cover" />
+            <MediaItem src={shopDetails?.logo_url || undefined} alt={shopDetails?.shop_name || "Shop"} className={cn("object-cover", isOutOfStock && "grayscale")} />
           </div>
           <div>
             <p className="font-semibold text-sm text-gray-800 leading-tight">{product.name}</p> {/* Product Name */}
@@ -256,15 +256,20 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                 <p className="text-base text-gray-500 line-through">
                   {formatCurrency(originalDisplayPrice, shopDetails?.currency)}
                 </p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className={cn("text-2xl font-bold", isOutOfStock && "text-gray-500")}>
                   {formatCurrency(discountedPrice, shopDetails?.currency)}
                   {product.pricing_type === 'subscription' && (
                       <span className="text-base font-light text-gray-500">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                   )}
                 </p>
-                <Badge className="bg-green-500 text-white text-sm font-semibold px-2 py-1 rounded-md">
-                  {getPromotionBadge(activePromotions[0])}
-                </Badge>
+                  <Badge className={cn("bg-green-500 text-white text-sm font-semibold px-2 py-1 rounded-md", isOutOfStock && "bg-gray-500")}>
+                    {getPromotionBadge(activePromotions[0])}
+                  </Badge>
+                {product.pricing_type === 'one_time' && (product.inventory === null || product.inventory <= 0) && (
+                  <Badge className="bg-gray-500 text-white text-sm font-semibold px-2 py-1 rounded-md">
+                    Out of Stock
+                  </Badge>
+                )}
               </>
             ) : (
               <p className="text-2xl font-bold text-gray-800">
@@ -408,7 +413,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                   onClick={handleBuyNow}
                   disabled={isOutOfStock}
                 >
-                  Buy <CreditCard className="ml-2 h-4 w-4" />
+                  <CreditCard className="mr-2 h-6 w-6" /> Buy
                 </Button>
 
                 {/* Add to Cart Button */}
@@ -422,7 +427,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                   onClick={handleAddToCart}
                   disabled={isOutOfStock}
                 >
-                  <ShoppingBag className="mr-2 h-5 w-5" />
+                  <ShoppingBag className="mr-2 h-6 w-6" />
                   Add to cart
                 </Button>
               </div>

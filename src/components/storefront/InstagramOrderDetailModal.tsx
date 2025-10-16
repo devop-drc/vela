@@ -313,14 +313,14 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
               Details for your order placed on {new Date(order.created_at).toLocaleDateString()}.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh] pr-6">
+          <ScrollArea className="max-h-[60vh] pr-4 md:pr-6"> {/* Adjusted padding for scroll area */}
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-gray-500"><User className="h-4 w-4 text-red-500" /> Customer</div><p className="text-gray-800">{order.customer_name}</p></div>
-                <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-gray-500"><Mail className="h-4 w-4 text-red-500" /> Email</div><p className="text-gray-800">{order.customer_email}</p></div>
-                <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-gray-500"><Calendar className="h-4 w-4 text-red-500" /> Date</div><p className="text-gray-800">{new Date(order.created_at).toLocaleString()}</p></div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-500"><Banknote className="h-4 w-4 text-red-500" /> Total</div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><User className="h-4 w-4 text-red-500" /> Customer</div><p className="text-gray-800">{order.customer_name}</p></div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><Mail className="h-4 w-4 text-red-500" /> Email</div><p className="text-gray-800">{order.customer_email}</p></div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><Calendar className="h-4 w-4 text-red-500" /> Date</div><p className="text-gray-800">{new Date(order.created_at).toLocaleString()}</p></div>
+                <div className="space-y-2 text-sm md:text-base">
+                  <div className="flex items-center gap-2 text-gray-500"><Banknote className="h-4 w-4 text-red-500" /> Total</div>
                   <p className="font-semibold text-gray-800">
                     {formatCurrency(order.total_amount, order.currency)}
                     {shopDetails?.currency && order.currency !== shopDetails.currency && (
@@ -330,12 +330,12 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
                     )}
                   </p>
                 </div>
-                <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-gray-500"><CreditCard className="h-4 w-4 text-red-500" /> Payment Method</div><p className="capitalize text-gray-800">{order.payment_method.replace(/_/g, ' ')}</p></div>
-                <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-gray-500"><CheckCircle className="h-4 w-4 text-red-500" /> Payment Status</div><p className="capitalize text-gray-800">{order.payment_status}</p></div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><CreditCard className="h-4 w-4 text-red-500" /> Payment Method</div><p className="capitalize text-gray-800">{order.payment_method.replace(/_/g, ' ')}</p></div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><CheckCircle className="h-4 w-4 text-red-500" /> Payment Status</div><p className="capitalize text-gray-800">{order.payment_status}</p></div>
               </div>
               <Separator className="bg-gray-200" />
               <div>
-                <h3 className="font-semibold mb-4 flex items-center gap-2 text-gray-800"><MapPin className="h-5 w-5 text-red-500" /> Shipping Details</h3>
+                <h3 className="font-semibold mb-4 flex items-center gap-2 text-gray-800 text-base md:text-lg"><MapPin className="h-5 w-5 text-red-500" /> Shipping Details</h3>
                 <div className="space-y-2 text-sm text-gray-500 p-3 border rounded-md bg-gray-50">
                   <p><span className="font-medium">Address:</span> {order.shipping_address || 'N/A'}</p>
                   <p><span className="font-medium">City:</span> {order.shipping_city || 'N/A'}</p>
@@ -351,17 +351,17 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
               </div>
               <Separator className="bg-gray-200" />
               <div>
-                <h3 className="font-semibold mb-4 flex items-center gap-2 text-gray-800"><Package className="h-5 w-5 text-red-500" /> Items Ordered</h3>
+                <h3 className="font-semibold mb-4 flex items-center gap-2 text-gray-800 text-base md:text-lg"><Package className="h-5 w-5 text-red-500" /> Items Ordered</h3>
                 {isLoadingItems ? <Loader2 className="animate-spin text-gray-500" /> : (
                   <div className="space-y-4">
                     {items.map((item, index) => (
-                      <div key={index} className="flex items-center gap-4">
-                        <MediaItem src={item.products.media_url} alt={item.products.name} className="h-16 w-16 rounded-md object-cover bg-gray-100" />
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-800">{item.products.name}</p>
+                      <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-2 border rounded-md bg-gray-50"> {/* Added responsive flex */}
+                        <MediaItem src={item.products.media_url} alt={item.products.name} className="h-16 w-16 rounded-md object-cover bg-gray-100 flex-shrink-0" />
+                        <div className="flex-1 w-full"> {/* Ensure text wraps */}
+                          <p className="font-medium text-gray-800 text-sm md:text-base">{item.products.name}</p>
                           <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                         </div>
-                        <p className="font-medium text-gray-800">
+                        <p className="font-medium text-gray-800 text-sm md:text-base flex-shrink-0">
                           {formatCurrency(convertCurrency(item.price_at_purchase * item.quantity, 'ALL', shopDetails?.currency), shopDetails?.currency)}
                         </p>
                       </div>
@@ -371,19 +371,19 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
               </div>
               <Separator className="bg-gray-200" />
               <div>
-                <h3 className="font-semibold mb-4 flex items-center gap-2 text-gray-800"><MessageSquareWarning className="h-5 w-5 text-red-500" /> Issue Report</h3>
+                <h3 className="font-semibold mb-4 flex items-center gap-2 text-gray-800 text-base md:text-lg"><MessageSquareWarning className="h-5 w-5 text-red-500" /> Issue Report</h3>
                 {isLoadingDispute ? <Loader2 className="animate-spin text-gray-500" /> : dispute ? (
                   <div className="space-y-3 p-3 border rounded-md bg-gray-50">
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium flex items-center gap-2 text-gray-800"><Hash className="h-4 w-4" /> Dispute ID: {dispute.id.substring(0, 8)}</p>
-                      <Badge className={cn("text-white", getStatusColor(dispute.status))}>{dispute.status}</Badge>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"> {/* Responsive flex */}
+                      <p className="font-medium flex items-center gap-2 text-gray-800 text-sm md:text-base"><Hash className="h-4 w-4" /> Dispute ID: {dispute.id.substring(0, 8)}</p>
+                      <Badge className={cn("text-white text-xs md:text-sm", getStatusColor(dispute.status))}>{dispute.status}</Badge>
                     </div>
                     <p className="text-sm text-gray-800"><span className="font-medium">Reason:</span> {dispute.reason}</p>
                     {dispute.message && <p className="text-sm text-gray-800"><span className="font-medium">Customer's Message:</span> {dispute.message}</p>}
                     {dispute.reply_message && (
                       <div className="space-y-2 mt-3">
                         <Label className="flex items-center gap-2 text-sm text-gray-700"><Reply className="h-4 w-4" /> Seller's Reply</Label>
-                        <Textarea id="replyMessage" rows={3} value={dispute.reply_message} readOnly className="pl-10 pt-3 h-auto min-h-[80px] px-3 py-2 border-gray-300 bg-gray-100 text-gray-800" />
+                        <Textarea id="replyMessage" rows={3} value={dispute.reply_message} readOnly className="pl-3 pt-3 h-auto min-h-[80px] px-3 py-2 border-gray-300 bg-gray-100 text-gray-800 text-sm md:text-base" /> {/* Adjusted padding */}
                       </div>
                     )}
                   </div>
@@ -396,37 +396,37 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
           <DialogFooter className="pt-4 border-t border-gray-200 flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
             <div className="flex items-center gap-2 mr-auto">
               <span className="text-sm text-gray-700">Status:</span>
-              <Badge className={cn("text-white", getStatusColor(order.status))}>{order.status}</Badge>
+              <Badge className={cn("text-white text-sm md:text-base", getStatusColor(order.status))}>{order.status}</Badge>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto"> {/* Responsive flex for buttons */}
               {order.payment_method === 'cash_on_delivery' && order.status !== 'Fulfilled' && order.status !== 'Cancelled' && (
-                <Button onClick={() => setIsMarkCompletedAlertOpen(true)} disabled={isUpdatingOrder} className="bg-red-500 hover:bg-red-600 text-white">
+                <Button onClick={() => setIsMarkCompletedAlertOpen(true)} disabled={isUpdatingOrder} className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto text-sm md:text-base">
                   {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Mark as Completed & Paid
                 </Button>
               )}
               {order.payment_method === 'card' && order.status === 'Given to Courier' && (
-                <Button onClick={() => setIsConfirmReceiptAlertOpen(true)} disabled={isUpdatingOrder} className="bg-red-500 hover:bg-red-600 text-white">
+                <Button onClick={() => setIsConfirmReceiptAlertOpen(true)} disabled={isUpdatingOrder} className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto text-sm md:text-base">
                   {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <Handshake className="mr-2 h-4 w-4" />
                   Confirm Receipt
                 </Button>
               )}
               {order.status === 'Pending' && (
-                <Button variant="destructive" onClick={() => setIsCancelOrderAlertOpen(true)} disabled={isUpdatingOrder} className="bg-red-500 hover:bg-red-600 text-white">
+                <Button variant="destructive" onClick={() => setIsCancelOrderAlertOpen(true)} disabled={isUpdatingOrder} className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto text-sm md:text-base">
                   {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <XCircle className="mr-2 h-4 w-4" />
                   Cancel Order
                 </Button>
               )}
               {!dispute && order.status !== 'Cancelled' && (
-                <Button variant="outline" onClick={() => setIsReportIssueModalOpen(true)} disabled={isUpdatingOrder} className="text-gray-800 hover:bg-gray-100">
+                <Button variant="outline" onClick={() => setIsReportIssueModalOpen(true)} disabled={isUpdatingOrder} className="text-gray-800 hover:bg-gray-100 w-full sm:w-auto text-sm md:text-base">
                   <MessageSquareWarning className="mr-2 h-4 w-4" />
                   Report Issue
                 </Button>
               )}
-              <Button variant="ghost" onClick={onClose} className="text-gray-800 hover:bg-gray-100">Close</Button>
+              <Button variant="ghost" onClick={onClose} className="text-gray-800 hover:bg-gray-100 w-full sm:w-auto text-sm md:text-base">Close</Button>
             </div>
           </DialogFooter>
         </DialogContent>
