@@ -162,8 +162,11 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
             <MediaItem src={shopDetails?.logo_url || undefined} alt={shopDetails?.shop_name || "Shop"} className="object-cover" />
           </div>
           <div>
-            <p className="font-semibold text-sm text-gray-800 leading-tight">{product.category || 'Uncategorized'}</p>
-            <p className="text-xs text-gray-500 leading-tight">{product.details?.type || 'Generic'}</p>
+            <p className="font-semibold text-sm text-gray-800 leading-tight">{product.name}</p> {/* Product Name */}
+            <p className="text-xs text-gray-500 leading-tight">
+              {product.category || 'Uncategorized'}
+              {product.details?.type && ` · ${product.details.type}`}
+            </p> {/* Category - Type */}
           </div>
         </div>
 
@@ -356,10 +359,10 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
               <div className="flex gap-2 w-full">
                 {/* Circular Add to Cart on smaller screens */}
                 <Button
-                  size="lg"
+                  size="icon" // Changed to icon size
                   className={cn(
-                    "flex-1 text-base bg-red-500 hover:bg-red-600 text-white rounded-md",
-                    "sm:hidden" // Hide on sm and larger
+                    "flex-1 text-base bg-red-500 hover:bg-red-600 text-white rounded-full h-10 w-10", // Circular button
+                    "sm:hidden max-[380px]:hidden" // Hide on sm and larger, and on very small screens
                   )}
                   onClick={handleAddToCart}
                   disabled={isOutOfStock}
@@ -379,7 +382,8 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                       )}
                       disabled={isOutOfStock}
                     >
-                      Actions <ChevronDown className="ml-2 h-4 w-4" />
+                      <ShoppingCart className="mr-2 h-5 w-5" />
+                      Add to cart <ChevronDown className="ml-2 h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
