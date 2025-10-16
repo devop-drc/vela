@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
+import { Link, useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom"; // Added useSearchParams
 import { ShoppingBag, ArrowLeft, ChevronDown, Truck, Filter, ArrowUpNarrowWide, LayoutGrid } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -60,7 +60,8 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramSho
             </Button>
           ) : (
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold">{shopDetails.username || shopDetails.shop_name}</h1>
+              <h1 className="text-lg font-bold">Products</h1>
+              <p className="text-xs text-muted-foreground">{shopDetails.username || shopDetails.shop_name}</p>
             </div>
           )}
         </div>
