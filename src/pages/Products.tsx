@@ -23,7 +23,7 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIntegration } from "@/contexts/IntegrationContext";
 import { toast } from "sonner";
-import { useSync } from "@/contexts/SyncContext";
+import { useSync } from "@/hooks/useSync";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { useAppearance } from "@/contexts/AppearanceContext";
 
