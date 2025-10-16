@@ -237,7 +237,7 @@ const StorefrontInstagramProfile = () => {
 
   const totalPosts = allProducts.length;
   const totalFollowers = shopDetails.followers_count || 0;
-  const totalFollowing = 1; // Hardcoded as per image, or fetch if available
+  const totalProducts = allProducts.length; // Using allProducts.length for total products
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
@@ -252,7 +252,7 @@ const StorefrontInstagramProfile = () => {
 
       <main className="flex-1">
         {/* Profile Section */}
-        <section className="flex flex-col items-center md:items-start mb-8 md:mb-10 px-4">
+        <section className="flex flex-col items-center mb-8 md:mb-10 px-4 pt-4"> {/* Added pt-4 */}
           <div className="flex items-center w-full max-w-md md:max-w-none md:justify-start gap-4 md:gap-8 mb-4">
             <Avatar className="h-24 w-24 md:h-28 md:w-28 border-2 border-gray-300">
               <AvatarImage src={shopDetails.logo_url || undefined} alt={shopDetails.shop_name} />
@@ -270,8 +270,8 @@ const StorefrontInstagramProfile = () => {
                 <p className="text-xs md:text-sm text-gray-500">followers</p>
               </div>
               <div>
-                <p className="text-lg md:text-xl font-bold">{formatLargeNumber(totalFollowing)}</p>
-                <p className="text-xs md:text-sm text-gray-500">following</p>
+                <p className="text-lg md:text-xl font-bold">{formatLargeNumber(totalProducts)}</p> {/* Changed to products */}
+                <p className="text-xs md:text-sm text-gray-500">products</p> {/* Changed label */}
               </div>
             </div>
           </div>
@@ -280,9 +280,10 @@ const StorefrontInstagramProfile = () => {
             <h2 className="text-base md:text-lg font-semibold">{shopDetails.shop_name}</h2>
             {shopDetails.headline && <p className="text-sm md:text-base text-gray-600">{shopDetails.headline}</p>}
             {shopDetails.about && <p className="text-sm md:text-base text-gray-600">{shopDetails.about}</p>}
+            {/* Removed LinkIcon from instagram_url as per image */}
             {shopDetails.instagram_url && (
               <a href={shopDetails.instagram_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm md:text-base flex items-center justify-center md:justify-start gap-1">
-                <LinkIcon className="h-4 w-4" /> {shopDetails.instagram_url.replace(/^(https?:\/\/)?(www\.)?/i, '').split('/')[0]}
+                {shopDetails.instagram_url.replace(/^(https?:\/\/)?(www\.)?/i, '').split('/')[0]}
               </a>
             )}
           </div>
@@ -313,7 +314,7 @@ const StorefrontInstagramProfile = () => {
           <Select value={sortOption} onValueChange={handleSortChange}>
             <SelectTrigger className="w-[140px] h-9 text-sm border-none shadow-none bg-transparent text-gray-800 hover:bg-gray-100">
               <ArrowUpNarrowWide className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Sort by" />
+              <SelectValue placeholder="Newest" /> {/* Changed placeholder */}
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="newest" className="text-sm">Newest</SelectItem>
@@ -357,7 +358,7 @@ const StorefrontInstagramProfile = () => {
                 <InstagramProductCard
                   key={product.id}
                   product={product}
-                  shopSlug={shopDetails.slug}
+                  shopSlug={shopSlug}
                   className="aspect-square"
                   externalShopDetails={shopDetails}
                   externalConvertCurrency={convertCurrency}

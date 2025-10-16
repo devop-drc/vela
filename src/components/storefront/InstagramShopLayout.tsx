@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils';
 import { loadGoogleFont } from '@/lib/fontUtils';
 import { InstagramFloatingCart } from './InstagramFloatingCart'; // Import new floating cart
 import { InstagramMyOrdersDrawer } from './InstagramMyOrdersDrawer'; // Import InstagramMyOrdersDrawer
+import { InstagramFixedMyOrdersButton } from './InstagramFixedMyOrdersButton'; // Import new fixed button
+import { supabase } from '@/integrations/supabase/client'; // Import supabase for order count
 
 // Function to apply fixed Instagram-like settings to the DOM
 const applyInstagramShopSettingsToDOM = () => {
@@ -60,6 +62,7 @@ const InstagramShopLayoutContent = () => {
   const isMobile = useIsMobile();
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
   const [isMyOrdersDrawerOpen, setIsMyOrdersDrawerOpen] = useState(false); // New state for My Orders drawer
+  const [myOrdersCount, setMyOrdersCount] = useState(0); // State for My Orders count
 
   useEffect(() => {
     applyInstagramShopSettingsToDOM();
@@ -123,6 +126,28 @@ const InstagramShopLayoutContent = () => {
     }
   }, [shopDetails]);
 
+  // Fetch order count for the fixed button
+  useEffect(() => {
+    const fetchOrderCount = async () => {
+      if (!shopDetails?.business_id) return;
+      const customerEmail = localStorage.getItem('instagram_shop_customer_email');
+      if (!customerEmail) return;
+
+      const { count, error } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('business_id', shopDetails.business_id)
+        .eq('customer_email', customerEmail)
+        .in('status', ['Pending', 'Order Seen', 'Order Packaged', 'Given to Courier', 'Problematic']); // Only count active orders
+
+      if (error) {
+        console.error("Error fetching my orders count:", error);
+      } else {
+        setMyOrdersCount(count || 0);
+      }
+    };
+    fetchOrderCount();
+  }, [shopDetails?.business_id, isMyOrdersDrawerOpen]); // Re-fetch when drawer opens/closes
 
   if (isLoading) {
     return (
@@ -163,13 +188,14 @@ const InstagramShopLayoutContent = () => {
   return (
     <div className="flex flex-col min-h-screen bg-white text-black">
       <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} />
-      <main className="flex-1 overflow-y-auto pt-14"> {/* Adjusted padding-top to account for fixed header */}
+      <main className="flex-1 overflow-y-auto pt-14 pb-14"> {/* Adjusted padding-top and added padding-bottom */}
         <Outlet />
       </main>
       <Sonner />
       <InstagramCartDrawer isOpen={isCartModalOpen} onClose={() => setIsCartModalOpen(false)} />
       <InstagramMyOrdersDrawer isOpen={isMyOrdersDrawerOpen} onClose={() => setIsMyOrdersDrawerOpen(false)} /> {/* Render My Orders drawer */}
       <InstagramFloatingCart onOpenCart={() => setIsCartModalOpen(true)} />
+      {shopDetails && <InstagramFixedMyOrdersButton onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} orderCount={myOrdersCount} />} {/* Render fixed button */}
     </div>
   );
 };

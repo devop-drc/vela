@@ -15,7 +15,7 @@ interface InstagramShopHeaderProps {
   onOpenMyOrders: () => void; // New prop for opening My Orders drawer
 }
 
-export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramShopHeaderProps) => {
+export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramShopHeaderHeaderProps) => {
   const { shopDetails } = useStorefront();
   const { totalItems } = useCart();
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
@@ -38,7 +38,7 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramSho
   return (
     <header className={cn(
       "sticky top-0 left-0 right-0 z-40 transition-all duration-200",
-      "bg-white border-b border-gray-200 text-gray-800 shadow-sm" // Fixed Instagram-like styles
+      "bg-white text-gray-800" // Fixed Instagram-like styles, removed border-b and shadow-sm
     )}>
       <div className="container flex h-14 items-center justify-between px-4">
 
@@ -51,13 +51,13 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramSho
             </Button>
           ) : (
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold">{shopDetails.username || shopDetails.shop_name}</h1>
-              <ChevronDown className="h-4 w-4 text-gray-500" />
+              <h1 className="text-lg font-bold">InstaShop</h1> {/* Changed title to InstaShop */}
+              {/* <ChevronDown className="h-4 w-4 text-gray-500" /> Removed dropdown icon */}
             </div>
           )}
         </div>
 
-        {/* Middle Section: Title for Product Detail Page */}
+        {/* Middle Section: Title for Product Detail Page (removed as per image) */}
         {isProductDetailPage && (
           <div className="flex flex-col items-center justify-center flex-1 min-w-0">
             <h2 className="text-base font-semibold truncate">Products</h2>
@@ -65,17 +65,9 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramSho
           </div>
         )}
 
-        {/* Right Section: Shopping Cart and My Orders */}
+        {/* Right Section: Shopping Cart */}
         <nav className="flex items-center space-x-2 flex-shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onOpenMyOrders} // Button to open My Orders drawer
-            className="relative text-gray-800 hover:bg-gray-100"
-          >
-            <Truck className="h-5 w-5" />
-            <span className="sr-only">My Orders</span>
-          </Button>
+          {/* Removed My Orders button from header */}
           <Button
             variant="ghost"
             size="icon"

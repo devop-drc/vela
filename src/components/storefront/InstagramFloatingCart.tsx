@@ -28,15 +28,15 @@ export const InstagramFloatingCart = ({ onOpenCart }: InstagramFloatingCartProps
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 50 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed top-4 right-4 z-50"
+      className="fixed bottom-4 right-4 z-50" // Repositioned to bottom-right
     >
       <Button
-        variant="secondary"
+        variant="default" // Changed to default variant
         size="icon"
         onClick={onOpenCart}
         className={cn(
           "relative h-12 w-12 rounded-full shadow-lg",
-          "bg-white text-gray-800 hover:bg-gray-100 border border-gray-200"
+          "bg-red-500 text-white hover:bg-red-600 border border-red-600" // Instagram-like red styling
         )}
       >
         <motion.span

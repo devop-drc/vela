@@ -116,8 +116,7 @@ export const InstagramProductCard = ({
       >
         <Card className={cn(
           "group h-full flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
-          "border-none rounded-none shadow-none bg-white",
-          isOutOfStock && "opacity-80"
+          "border-none rounded-none shadow-none bg-white" // Removed borders, shadows, and background
         )}>
           <CardContent className={cn("p-0 relative", "pb-0")}>
             <Carousel

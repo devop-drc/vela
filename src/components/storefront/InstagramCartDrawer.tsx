@@ -7,7 +7,7 @@ import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, 
 import { useCart } from "@/contexts/CartContext";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
-import { Link, useNavigate, useParams } => "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { MediaItem } from "@/components/MediaItem";
 import { cn } from "@/lib/utils";
