@@ -8,7 +8,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
-import { ShoppingCart, Minus, Plus, Bookmark, XCircle, ArrowRight, ChevronDown } from "lucide-react";
+import { ShoppingCart, Minus, Plus, Bookmark, XCircle, ArrowRight, ChevronDown, Banknote, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -322,70 +322,66 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
           {/* Quantity & Add to Cart / Buy Now - Responsive */}
           {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && (
-            <div className="flex flex-col gap-3 pt-3">
-              {/* Counter and Buttons on one line for all screens */}
-              <div className="flex items-center justify-between gap-2 w-full">
-                {/* Quantity Counter */}
-                <div className="flex items-center border border-gray-300 rounded-md flex-shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
-                    disabled={quantity <= 1}
-                    className="h-8 w-8 text-gray-800 hover:bg-gray-100"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <Input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.max(1, Math.min(product.inventory || 1, parseInt(e.target.value) || 1)))}
-                    className="w-14 text-center border-y-0 border-x border-gray-300 focus-visible:ring-0 text-sm bg-white"
-                    min={1}
-                    max={product.inventory || 1}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setQuantity(prev => Math.min(product.inventory || 1, prev + 1))}
-                    disabled={quantity >= (product.inventory || 1)}
-                    className="h-8 w-8 text-gray-800 hover:bg-gray-100"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Buttons for larger screens (>= 380px) */}
-                <div className="hidden max-[380px]:hidden flex-1 flex items-center justify-end gap-2">
-                  <Button
-                    size="lg"
-                    className="flex-1 text-base bg-blue-600 hover:bg-blue-700 text-white rounded-md"
-                    disabled={isOutOfStock}
-                  >
-                    Buy Now <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon" // Circular icon button
-                    className="h-10 w-10 text-base bg-red-500 hover:bg-red-600 text-white rounded-full flex-shrink-0"
-                    onClick={handleAddToCart}
-                    disabled={isOutOfStock}
-                  >
-                    <ShoppingCart className="h-5 w-5" />
-                    <span className="sr-only">Add to cart</span>
-                  </Button>
-                </div>
-
-                {/* Single large button for smallest screens (< 380px) */}
+            <div className="flex items-center gap-2 pt-3">
+              {/* Quantity Counter */}
+              <div className="flex items-center border border-gray-300 rounded-md flex-shrink-0">
                 <Button
-                  size="lg"
-                  className="flex-1 text-base bg-red-500 hover:bg-red-600 text-white rounded-md max-[380px]:flex hidden" // Show only on smallest screens
-                  onClick={handleAddToCart}
-                  disabled={isOutOfStock}
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
+                  disabled={quantity <= 1}
+                  className="h-8 w-8 text-gray-800 hover:bg-gray-100"
                 >
-                  <ShoppingCart className="mr-2 h-5 w-5" />
-                  {isOutOfStock ? "Out of Stock" : (product.pricing_type === 'subscription' ? "Subscribe Now" : "Add to cart")}
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <Input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, Math.min(product.inventory || 1, parseInt(e.target.value) || 1)))}
+                  className="w-14 text-center border-y-0 border-x border-gray-300 focus-visible:ring-0 text-sm bg-white"
+                  min={1}
+                  max={product.inventory || 1}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setQuantity(prev => Math.min(product.inventory || 1, prev + 1))}
+                  disabled={quantity >= (product.inventory || 1)}
+                  className="h-8 w-8 text-gray-800 hover:bg-gray-100"
+                >
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
+
+              {/* Buy Now Button */}
+              <Button
+                size="lg"
+                className={cn(
+                  "flex-1 text-base rounded-md",
+                  hasDiscount
+                    ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                )}
+                disabled={isOutOfStock}
+              >
+                Buy Now <Banknote className="ml-2 h-4 w-4" />
+              </Button>
+
+              {/* Add to Cart Button (circular, icon only) */}
+              <Button
+                size="icon"
+                className={cn(
+                  "h-10 w-10 text-base rounded-full flex-shrink-0 border",
+                  hasDiscount
+                    ? "border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+                    : "border-primary text-primary hover:bg-primary/5"
+                )}
+                onClick={handleAddToCart}
+                disabled={isOutOfStock}
+              >
+                <ShoppingBag className="h-5 w-5" />
+                <span className="sr-only">Add to cart</span>
+              </Button>
             </div>
           )}
           {product.pricing_type === 'one_time' && (product.inventory === null || product.inventory <= 0) && (
