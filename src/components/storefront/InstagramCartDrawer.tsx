@@ -24,10 +24,12 @@ import { showError, showSuccess } from "@/utils/toast";
 interface InstagramCartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  initialCartItems?: CartItem[]; // New prop for Buy Now flow
+  onOrderPlaced?: () => void; // New callback for Buy Now flow
 }
 
-export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProps) => {
-  const { cartItems, savedItems, totalItems, subtotal, shipping, total, totalSaved, updateQuantity, removeFromCart, clearCart, saveForLater, moveToCart, removeSavedItem, hasSubscriptionProducts } = useCart();
+export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrderPlaced }: InstagramCartDrawerProps) => {
+  const { cartItems: persistentCartItems, savedItems, totalItems: persistentTotalItems, subtotal: persistentSubtotal, shipping: persistentShipping, total: persistentTotal, totalSaved: persistentTotalSaved, updateQuantity, removeFromCart, clearCart, saveForLater, moveToCart, removeSavedItem, hasSubscriptionProducts: persistentHasSubscriptionProducts } = useCart();
   const { shopDetails, convertCurrency } = useStorefront();
   const navigate = useNavigate();
   const { shopSlug } = useParams<{ shopSlug: string }>();
@@ -35,18 +37,59 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'contact-shipping' | 'payment'>('cart');
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
 
+  // Determine which cart items to use (persistent or initial for Buy Now)
+  const currentCartItems = useMemo(() => initialCartItems || persistentCartItems, [initialCartItems, persistentCartItems]);
+
+  // Recalculate totals based on currentCartItems
+  const totalItems = useMemo(() => currentCartItems.reduce((sum, item) => sum + item.quantity, 0), [currentCartItems]);
+  const subtotal = useMemo(() => {
+    if (!shopDetails) return 0;
+    return currentCartItems.reduce((sum, item) => {
+      const convertedPrice = convertCurrency(item.price, item.currency, shopDetails.currency);
+      return sum + (convertedPrice * item.quantity);
+    }, 0);
+  }, [currentCartItems, shopDetails, convertCurrency]);
+
+  const FREE_SHIPPING_THRESHOLD = 50; // Define free shipping threshold in USD
+  const shipping = useMemo(() => {
+    if (!shopDetails) return 0;
+    const convertedThreshold = convertCurrency(FREE_SHIPPING_THRESHOLD, 'USD', shopDetails.currency);
+    return subtotal >= convertedThreshold ? 0 : convertCurrency(5, 'USD', shopDetails.currency); // Example: $5 shipping, converted
+  }, [subtotal, shopDetails, convertCurrency]);
+
+  const total = useMemo(() => subtotal + shipping, [subtotal, shipping]);
+
+  const totalSaved = useMemo(() => {
+    if (!shopDetails) return 0;
+    return currentCartItems.reduce((sum, item) => {
+      const convertedOriginalPrice = convertCurrency(item.originalPrice, item.currency, shopDetails.currency);
+      const convertedCurrentPrice = convertCurrency(item.price, item.currency, shopDetails.currency);
+      return sum + ((convertedOriginalPrice - convertedCurrentPrice) * item.quantity);
+    }, 0);
+  }, [currentCartItems, shopDetails, convertCurrency]);
+
+  const hasSubscriptionProducts = useMemo(() => {
+    return currentCartItems.some(item => item.pricing_type === 'subscription');
+  }, [currentCartItems]);
+
+
   useEffect(() => {
     if (isOpen) {
-      setCheckoutStep('cart');
+      // If initialCartItems are provided, go straight to checkout
+      if (initialCartItems && initialCartItems.length > 0) {
+        setCheckoutStep('contact-shipping');
+      } else {
+        setCheckoutStep('cart');
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialCartItems]);
 
   const handleProceedToCheckout = () => {
     if (!shopDetails?.slug) {
       toast.error("Shop details not available.");
       return;
     }
-    if (cartItems.length === 0) {
+    if (currentCartItems.length === 0) {
       toast.error("Your cart is empty. Please add items before checking out.");
       return;
     }
@@ -57,7 +100,12 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
     if (checkoutStep === 'payment') {
       setCheckoutStep('contact-shipping');
     } else if (checkoutStep === 'contact-shipping') {
-      setCheckoutStep('cart');
+      // If it's a Buy Now flow, going back from contact-shipping should close the drawer
+      if (initialCartItems) {
+        onClose();
+      } else {
+        setCheckoutStep('cart');
+      }
     } else {
       onClose();
     }
@@ -68,7 +116,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
       showError("Shop details not loaded. Cannot place order.");
       return;
     }
-    if (cartItems.length === 0) {
+    if (currentCartItems.length === 0) {
       showError("Your cart is empty. Please add items before placing an order.");
       return;
     }
@@ -88,13 +136,13 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
           email: data.email,
           phone: data.phone,
         },
-        cartItems: cartItems.map(item => ({
+        cartItems: currentCartItems.map(item => ({ // Use currentCartItems here
           productId: item.productId,
           quantity: item.quantity,
           price: item.price,
           currency: item.currency,
         })),
-        totalAmount: total,
+        totalAmount: total, // Use calculated total
         currency: shopDetails.currency,
         paymentMethod: data.paymentMethod,
         shippingAddress: data.shippingAddress,
@@ -115,8 +163,16 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
 
       if (toastId) toast.success("Order placed successfully! Redirecting to your orders.", { id: toastId });
       else showSuccess("Order placed successfully! Redirecting to your orders.");
-      clearCart();
+      
+      // Only clear persistent cart if it's not a Buy Now flow
+      if (!initialCartItems) {
+        clearCart();
+      }
+      
       onClose();
+      if (onOrderPlaced) {
+        onOrderPlaced(); // Notify parent for Buy Now flow
+      }
       navigate(`/shop/${shopDetails.slug}/orders?orderId=${responseData.order.id}`);
     } catch (err: any) {
       console.error("Checkout failed:", err);
@@ -148,9 +204,9 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
         </DrawerHeader>
 
         <div className="flex-1 overflow-hidden">
-          {(checkoutStep === 'cart') && (
+          {(checkoutStep === 'cart' && !initialCartItems) ? (
             <>
-              {cartItems.length === 0 && savedItems.length === 0 ? (
+              {currentCartItems.length === 0 && savedItems.length === 0 ? (
                 <motion.div
                   key="empty-cart"
                   initial={{ opacity: 0, y: 50 }}
@@ -167,9 +223,9 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
               ) : (
                 <ScrollArea className="flex-1 p-4 pr-6">
                   <div className="space-y-6">
-                    {cartItems.length > 0 && (
+                    {currentCartItems.length > 0 && (
                       <div className="space-y-4">
-                        <h2 className="text-lg font-bold text-gray-800">Items in Cart ({cartItems.length})</h2>
+                        <h2 className="text-lg font-bold text-gray-800">Items in Cart ({currentCartItems.length})</h2>
                         {hasSubscriptionProducts && (
                           <div className="flex items-center gap-2 p-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md">
                             <Info className="h-4 w-4 flex-shrink-0" />
@@ -177,7 +233,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                           </div>
                         )}
                         <AnimatePresence>
-                          {cartItems.map(item => (
+                          {currentCartItems.map(item => (
                             <motion.div
                               key={item.productId}
                               layout
@@ -378,20 +434,18 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                 </ScrollArea>
               )}
             </>
-          )}
-
-          {(checkoutStep === 'contact-shipping' || checkoutStep === 'payment') && (
+          ) : (
             <InstagramCheckoutForm
               onBack={handleBack}
               onPlaceOrder={handlePlaceOrder}
               isSubmittingOrder={isSubmittingOrder}
-              cartItems={cartItems}
-              subtotal={subtotal}
-              shipping={shipping}
-              total={total}
+              cartItems={currentCartItems} // Pass currentCartItems
+              subtotal={subtotal} // Pass calculated subtotal
+              shipping={shipping} // Pass calculated shipping
+              total={total} // Pass calculated total
               shopDetails={shopDetails}
               convertCurrency={convertCurrency}
-              hasSubscriptionProducts={hasSubscriptionProducts}
+              hasSubscriptionProducts={hasSubscriptionProducts} // Pass calculated hasSubscriptionProducts
               checkoutStep={checkoutStep}
               setCheckoutStep={setCheckoutStep}
               onContinue={() => setCheckoutStep('payment')}
@@ -421,8 +475,8 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
               <span>Total:</span>
               <span>{formatCurrency(total, shopDetails?.currency)}</span>
             </div>
-            {checkoutStep === 'cart' && (
-              <Button className="w-full text-base bg-red-500 hover:bg-red-600 text-white mt-4" onClick={handleProceedToCheckout} disabled={cartItems.length === 0}>
+            {checkoutStep === 'cart' && !initialCartItems && ( // Only show if it's the persistent cart
+              <Button className="w-full text-base bg-red-500 hover:bg-red-600 text-white mt-4" onClick={handleProceedToCheckout} disabled={currentCartItems.length === 0}>
                 Proceed to Checkout
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

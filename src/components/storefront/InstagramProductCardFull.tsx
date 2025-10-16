@@ -13,11 +13,12 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useCart } from "@/contexts/CartContext";
+import { useCart, CartItem } from "@/contexts/CartContext"; // Import CartItem type
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { ShopDetails as StorefrontShopDetails, Promotion as StorefrontPromotion } from "@/contexts/StorefrontContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { InstagramCartDrawer } from "./InstagramCartDrawer"; // Import the drawer
 
 interface Product {
   id: string;
@@ -58,6 +59,10 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
     const [api, setApi] = useState<CarouselApi>();
     const [currentSlide, setCurrentSlide] = useState(0);
+
+    // State for Buy Now drawer
+    const [isBuyNowDrawerOpen, setIsBuyNowDrawerOpen] = useState(false);
+    const [buyNowProduct, setBuyNowProduct] = useState<CartItem | null>(null);
 
     useEffect(() => {
       if (!api) return;
@@ -134,6 +139,41 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
         product_type: product.product_type,
         billing_interval: product.billing_interval,
       }, quantity);
+    };
+
+    const handleBuyNow = () => {
+      if (!shopDetails?.slug) {
+        toast.error("Shop details not available.");
+        return;
+      }
+      if (isOutOfStock) {
+        toast.error("This product is currently out of stock.");
+        return;
+      }
+
+      const selectedOptions: { [key: string]: string | string[] } = {};
+      if (selectedColor) selectedOptions.color = selectedColor;
+      if (selectedSize) selectedOptions.size = selectedSize;
+
+      const itemToBuy: CartItem = {
+        productId: product.id,
+        name: product.name,
+        price: hasDiscount ? discountedPrice : originalDisplayPrice,
+        originalPrice: originalDisplayPrice,
+        isDiscounted: hasDiscount,
+        currency: shopDetails.currency || 'USD',
+        media_url: product.media_url,
+        media_type: product.media_type,
+        slug: shopDetails.slug,
+        selectedOptions: Object.keys(selectedOptions).length > 0 ? selectedOptions : undefined,
+        pricing_type: product.pricing_type,
+        product_type: product.product_type,
+        billing_interval: product.billing_interval,
+        quantity: quantity, // Use current quantity for Buy Now
+      };
+
+      setBuyNowProduct(itemToBuy);
+      setIsBuyNowDrawerOpen(true);
     };
 
     const allDetails = Object.entries(product.details || {}).filter(([key, value]) => key !== 'type' && value && (!Array.isArray(value) || value.length > 0));
@@ -362,6 +402,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                     ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                     : "bg-primary hover:bg-primary/90 text-primary-foreground"
                 )}
+                onClick={handleBuyNow} // Call handleBuyNow
                 disabled={isOutOfStock}
               >
                 Buy Now <Banknote className="ml-2 h-4 w-4" />
@@ -390,12 +431,22 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
             </Button>
           )}
           {product.pricing_type === 'subscription' && (
-            <Button size="lg" className="w-full text-base bg-red-500 hover:bg-red-600 text-white rounded-md" onClick={handleAddToCart} disabled={isOutOfStock}>
+            <Button size="lg" className="w-full text-base bg-red-500 hover:bg-red-600 text-white rounded-md" onClick={handleBuyNow} disabled={isOutOfStock}>
               <ShoppingCart className="mr-2 h-5 w-5" />
               Subscribe Now
             </Button>
           )}
         </div>
+
+        {/* Buy Now Drawer */}
+        {buyNowProduct && (
+          <InstagramCartDrawer
+            isOpen={isBuyNowDrawerOpen}
+            onClose={() => setIsBuyNowDrawerOpen(false)}
+            initialCartItems={[buyNowProduct]}
+            onOrderPlaced={() => setIsBuyNowDrawerOpen(false)}
+          />
+        )}
       </div>
     );
   }
