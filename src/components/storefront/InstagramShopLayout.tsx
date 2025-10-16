@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { Outlet, useSearchParams, useLocation } from 'react-router-dom'; // Import useSearchParams and useLocation
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import { InstagramShopHeader } from './InstagramShopHeader'; // Custom header
@@ -176,17 +176,6 @@ const InstagramShopLayoutContent = () => {
     fetchOrderCount();
   }, [shopDetails?.business_id, isMyOrdersDrawerOpen]); // Re-fetch when drawer opens/closes
 
-  // Dynamic viewport height for mobile browsers
-  useEffect(() => {
-    const setAppHeight = () => {
-      document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
-    };
-
-    setAppHeight();
-    window.addEventListener('resize', setAppHeight);
-    return () => window.removeEventListener('resize', setAppHeight);
-  }, []);
-
   // Determine if current route is the products feed page
   const isProductsFeedPage = location.pathname.includes('/products');
 
@@ -239,7 +228,7 @@ const InstagramShopLayoutContent = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col min-h-screen bg-white text-black" style={{ height: 'var(--app-height)' }}>
+      <div className="flex flex-col min-h-screen bg-white text-black" style={{ height: '100dvh' }}>
         <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} isProductsFeedPage={isProductsFeedPage} onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)} />
         <main className="flex-1 container py-4 mt-14">
           <div className="flex flex-col items-center mb-8">
@@ -265,7 +254,7 @@ const InstagramShopLayoutContent = () => {
 
   if (error) {
     return (
-      <div className="flex flex-col min-h-screen items-center justify-center text-center p-8 bg-white text-black" style={{ height: 'var(--app-height)' }}>
+      <div className="flex flex-col min-h-screen items-center justify-center text-center p-8 bg-white text-black" style={{ height: '100dvh' }}>
         <h1 className="text-xl md:text-2xl font-bold text-red-600">Error Loading Instagram Shop</h1>
         <p className="text-sm md:text-base text-gray-600 mt-2">{error}</p>
         <p className="text-xs md:text-sm text-gray-500 mt-4">Please check the URL or contact support.</p>
@@ -274,7 +263,7 @@ const InstagramShopLayoutContent = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-white text-black" style={{ height: 'var(--app-height)' }}>
+    <div className="flex flex-col min-h-screen bg-white text-black" style={{ height: '100dvh' }}>
       <style>{`
         :root {
           --instagram-header-height: ${HEADER_HEIGHT};
@@ -288,7 +277,16 @@ const InstagramShopLayoutContent = () => {
         onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)} // Pass the setter
       />
       <main className="flex-1 overflow-y-auto" style={{ paddingTop: 'var(--instagram-header-height)', paddingBottom: 'var(--instagram-bottom-nav-height)' }}>
-        <Outlet />
+        <Outlet context={{
+          isFilterDrawerOpen,
+          setIsFilterDrawerOpen,
+          filters,
+          handleFilterChange,
+          handleResetFilters,
+          maxPrice,
+          allProducts,
+          convertCurrency,
+        }} />
       </main>
       <Sonner />
       <InstagramCartDrawer isOpen={isCartModalOpen} onClose={() => setIsCartModalOpen(false)} />

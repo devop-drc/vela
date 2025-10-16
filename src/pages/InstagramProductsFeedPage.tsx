@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useParams, useNavigate, useSearchParams, useOutletContext } from "react-router-dom"; // Import useOutletContext
 import {
   Link as LinkIcon,
   Package,
@@ -27,7 +27,6 @@ import { motion } from "framer-motion";
 import { Marquee } from "@/components/ui/marquee";
 import * as LucideIcons from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// import { InstagramFilterDrawer } from "@/components/storefront/InstagramFilterDrawer"; // Removed import
 import { debounce } from 'lodash';
 import { InstagramShopHeader } from "@/components/storefront/InstagramShopHeader"; // Import the updated header
 
@@ -57,6 +56,18 @@ interface FilterState {
   [key: string]: string[] | [number, number];
 }
 
+// Define the type for the OutletContext
+interface InstagramShopLayoutContext {
+  isFilterDrawerOpen: boolean;
+  setIsFilterDrawerOpen: (open: boolean) => void;
+  filters: FilterState;
+  handleFilterChange: (newFilters: FilterState) => void;
+  handleResetFilters: () => void;
+  maxPrice: number;
+  allProducts: Product[];
+  convertCurrency: (amount: number | null | undefined, fromCurrency?: string) => number;
+}
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -72,17 +83,23 @@ const getIconComponent = (iconName: keyof typeof LucideIcons) => {
 
 const InstagramProductsFeedPage = () => {
   const { shopSlug, productId: productIdFromUrl } = useParams<{ shopSlug: string; productId: string }>();
-  const { shopDetails, products: allProducts, isLoading, error, convertCurrency, marqueeElements, promotions } = useStorefront();
+  const { shopDetails, products: allProductsFromContext, isLoading, error, convertCurrency: convertCurrencyFromContext, marqueeElements, promotions } = useStorefront();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Consume context from InstagramShopLayout
+  const {
+    isFilterDrawerOpen,
+    setIsFilterDrawerOpen,
+    filters,
+    handleFilterChange,
+    handleResetFilters,
+    maxPrice,
+    allProducts, // Use allProducts from context
+    convertCurrency, // Use convertCurrency from context
+  } = useOutletContext<InstagramShopLayoutContext>();
+
   const [sortOption, setSortOption] = useState(searchParams.get('sort') || "newest");
-  // const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false); // Removed state
-  const [filters, setFilters] = useState<FilterState>({
-    categories: searchParams.getAll('category') || [],
-    tags: searchParams.getAll('tag') || [],
-    priceRange: [0, 1000], // Initial dummy value, will be updated by maxPrice
-  });
 
   const productRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
 
@@ -103,66 +120,14 @@ const InstagramProductsFeedPage = () => {
     }
   }, [productIdFromUrl, allProducts]); // Re-run when products load or URL changes
 
-  const maxPrice = useMemo(() => {
-    let currentMax = 0;
-    allProducts.forEach(p => {
-      if (p.price !== null) {
-        const convertedPrice = convertCurrency(p.price, p.currency);
-        if (convertedPrice > currentMax) {
-          currentMax = convertedPrice;
-        }
-      }
-    });
-    return Math.ceil(currentMax / 10) * 10 || 100;
-  }, [allProducts, convertCurrency]);
-
   useEffect(() => {
-    if (filters.priceRange[1] === 1000 && maxPrice !== 1000) {
-      setFilters(prev => ({ ...prev, priceRange: [0, maxPrice] }));
-    }
-  }, [maxPrice, filters.priceRange]);
-
-  useEffect(() => {
-    const urlCategories = searchParams.getAll('category');
-    const urlTags = searchParams.getAll('tag');
     const urlSort = searchParams.get('sort');
-
-    setFilters(prev => {
-      const newFilters = { ...prev };
-      if (JSON.stringify(urlCategories) !== JSON.stringify(prev.categories)) {
-        newFilters.categories = urlCategories;
-      }
-      if (JSON.stringify(urlTags) !== JSON.stringify(prev.tags)) {
-        newFilters.tags = urlTags;
-      }
-      return newFilters;
-    });
-
     if (urlSort !== null && urlSort !== sortOption) {
       setSortOption(urlSort);
     } else if (urlSort === null && sortOption !== 'newest') {
       setSortOption('newest');
     }
   }, [searchParams, sortOption]);
-
-  const handleFilterChange = useCallback((newFilters: FilterState) => {
-    setFilters(newFilters);
-    const newSearchParams = new URLSearchParams();
-    if (sortOption !== 'newest') newSearchParams.set('sort', sortOption);
-    newFilters.categories.forEach(cat => newSearchParams.append('category', cat));
-    newFilters.tags.forEach(tag => newSearchParams.append('tag', tag));
-    setSearchParams(newSearchParams, { replace: true });
-  }, [sortOption, setSearchParams]);
-
-  const handleResetFilters = useCallback(() => {
-    setSortOption("newest");
-    setFilters({
-      categories: [],
-      tags: [],
-      priceRange: [0, maxPrice],
-    });
-    setSearchParams({}, { replace: true });
-  }, [maxPrice, setSearchParams]);
 
   const handleSortChange = (value: string) => {
     setSortOption(value);
