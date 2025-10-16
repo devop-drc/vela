@@ -19,14 +19,14 @@ import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { InstagramProductCardFull } from "@/components/storefront/InstagramProductCardFull"; // Use the new full card
+import { InstagramProductCard } from "@/components/storefront/InstagramProductCard"; // Using the smaller card
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatLargeNumber } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import { Marquee } from "@/components/ui/marquee";
 import * as LucideIcons from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { InstagramFilterDrawer } from "@/components/storefront/InstagramFilterDrawer"; // Import the new filter drawer
+import { InstagramFilterDrawer } from "@/components/storefront/InstagramFilterDrawer";
 import { debounce } from 'lodash';
 
 interface Product {
@@ -68,8 +68,8 @@ const getIconComponent = (iconName: keyof typeof LucideIcons) => {
   return Icon ? <Icon className="h-5 w-5 text-red-500" /> : <Sparkles className="h-5 w-5 text-red-500" />;
 };
 
-const InstagramProductsPage = () => {
-  const { shopSlug, productId: productIdFromUrl } = useParams<{ shopSlug: string; productId: string }>();
+const InstagramProfilePage = () => {
+  const { shopSlug } = useParams<{ shopSlug: string }>();
   const { shopDetails, products: allProducts, isLoading, error, convertCurrency, marqueeElements, promotions } = useStorefront();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -81,25 +81,6 @@ const InstagramProductsPage = () => {
     tags: searchParams.getAll('tag') || [],
     priceRange: [0, 1000], // Initial dummy value, will be updated by maxPrice
   });
-
-  const productRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
-
-  const setProductRef = useCallback((id: string, node: HTMLDivElement | null) => {
-    if (node) {
-      productRefs.current.set(id, node);
-    } else {
-      productRefs.current.delete(id);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (productIdFromUrl && productRefs.current.size > 0) {
-      const targetElement = productRefs.current.get(productIdFromUrl);
-      if (targetElement) {
-        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }
-  }, [productIdFromUrl, allProducts]); // Re-run when products load or URL changes
 
   const maxPrice = useMemo(() => {
     let currentMax = 0;
@@ -260,15 +241,6 @@ const InstagramProductsPage = () => {
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
-      <InstagramFilterDrawer
-        isOpen={isFilterDrawerOpen}
-        onClose={() => setIsFilterDrawerOpen(false)}
-        products={allProducts}
-        currentFilters={filters}
-        onFilterChange={handleFilterChange}
-        onResetFilters={handleResetFilters}
-      />
-
       <main className="flex-1">
         {/* Profile Section */}
         <section className="flex flex-col items-center mb-8 md:mb-10 px-4 pt-4">
@@ -324,35 +296,6 @@ const InstagramProductsPage = () => {
           </section>
         )}
 
-        {/* Filter and Sort Bar */}
-        <div className="flex flex-col items-center justify-center py-2 mb-6 px-4">
-          <div className="flex items-center justify-center gap-2 w-full max-w-xs mb-2">
-            <Button variant="outline" size="sm" onClick={() => setIsFilterDrawerOpen(true)} className="w-1/2 text-gray-800 border-gray-300 hover:bg-gray-100">
-              <Filter className="mr-2 h-4 w-4" />
-              Filter {hasActiveFilters && <span className="ml-1 text-xs text-red-500">(Active)</span>}
-            </Button>
-            <Select value={sortOption} onValueChange={handleSortChange}>
-              <SelectTrigger className="w-1/2 h-9 text-sm border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200">
-                <ArrowUpNarrowWide className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Sort" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest" className="text-sm">Newest</SelectItem>
-                <SelectItem value="oldest" className="text-sm">Oldest</SelectItem>
-                <SelectItem value="price-asc" className="text-sm">Price: Low to High</SelectItem>
-                <SelectItem value="price-desc" className="text-sm">Price: High to Low</SelectItem>
-                <SelectItem value="name-asc" className="text-sm">Name: A-Z</SelectItem>
-                <SelectItem value="name-desc" className="text-sm">Name: Z-A</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center justify-center w-full max-w-xs">
-            <span className="p-2 rounded-md text-gray-800">
-                <LayoutGrid className="h-4 w-4" />
-            </span>
-          </div>
-        </div >
-
         {/* Product Grid */}
         <section className="mt-4">
           {filteredAndSortedProducts.length === 0 ? (
@@ -375,16 +318,17 @@ const InstagramProductsPage = () => {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="flex flex-col gap-4" // Changed to flex-col for feed-like layout
+              className="grid grid-cols-3 gap-1"
             >
               {filteredAndSortedProducts.map((product) => (
-                <InstagramProductCardFull
+                <InstagramProductCard
                   key={product.id}
-                  ref={(node) => setProductRef(product.id, node)} // Set ref for scrolling
                   product={product}
-                  shopDetails={shopDetails}
-                  convertCurrency={convertCurrency}
-                  promotions={promotions}
+                  shopSlug={shopSlug}
+                  className="aspect-square"
+                  externalShopDetails={shopDetails}
+                  externalConvertCurrency={convertCurrency}
+                  externalPromotions={promotions}
                 />
               ))}
             </motion.div>
@@ -395,4 +339,4 @@ const InstagramProductsPage = () => {
   );
 };
 
-export default InstagramProductsPage;
+export default InstagramProfilePage;

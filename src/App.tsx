@@ -24,7 +24,8 @@ import StorefrontIndex from "./pages/StorefrontIndex";
 import StorefrontProductDetail from "./pages/StorefrontProductDetail";
 import StorefrontAllProducts from "./pages/StorefrontAllProducts";
 import StorefrontClientOrders from "./pages/StorefrontClientOrders";
-import InstagramProductsPage from "./pages/InstagramProductsPage"; // Updated import
+import InstagramProfilePage from "./pages/InstagramProfilePage"; // Updated import
+import InstagramProductsFeedPage from "./pages/InstagramProductsFeedPage"; // New import
 import InstagramShopLayout from "./components/storefront/InstagramShopLayout";
 import Promotions from "./pages/Promotions";
 import { useEffect } from "react";
@@ -114,8 +115,9 @@ const AppContent = () => {
       </Route>
       {/* New Instagram Profile Storefront Routes */}
       <Route path="/instagramShop/:shopSlug" element={<InstagramShopLayout />}>
-        <Route index element={<InstagramProductsPage />} /> {/* Updated to InstagramProductsPage */}
-        <Route path="products/:productId" element={<InstagramProductsPage />} /> {/* New route for scrolling to product */}
+        <Route index element={<InstagramProfilePage />} /> {/* Instagram Profile Page */}
+        <Route path="products" element={<InstagramProductsFeedPage />} /> {/* New Products Feed Page */}
+        <Route path="products/:productId" element={<InstagramProductsFeedPage />} /> {/* Products Feed Page with scrolling */}
       </Route>
 
       {/* Auth Routes */}

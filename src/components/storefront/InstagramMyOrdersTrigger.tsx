@@ -18,7 +18,7 @@ export const InstagramMyOrdersTrigger = ({ orderCount }: InstagramMyOrdersTrigge
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 50 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center"
+      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center w-full" // Added w-full
     >
       <DrawerTrigger asChild>
         <Button

@@ -13,7 +13,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { InstagramCartDrawer } from './InstagramCartDrawer'; // Import InstagramCartDrawer
 import { cn } from '@/lib/utils';
 import { loadGoogleFont } from '@/lib/fontUtils';
-import { InstagramFloatingCart } from './InstagramFloatingCart'; // Import new floating cart
 import { InstagramMyOrdersDrawer } from './InstagramMyOrdersDrawer'; // Import InstagramMyOrdersDrawer
 import { InstagramMyOrdersTrigger } from './InstagramMyOrdersTrigger'; // Import new trigger component
 import { supabase } from '@/integrations/supabase/client'; // Import supabase for order count
@@ -201,7 +200,7 @@ const InstagramShopLayoutContent = () => {
         <InstagramMyOrdersDrawer isOpen={isMyOrdersDrawerOpen} onClose={() => setIsMyOrdersDrawerOpen(false)} />
       </Drawer>
 
-      <InstagramFloatingCart onOpenCart={() => setIsCartModalOpen(true)} />
+      {/* Removed InstagramFloatingCart */}
     </div>
   );
 };
