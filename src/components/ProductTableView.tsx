@@ -77,7 +77,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
           <TableHead>Total Earned</TableHead>
           <TableHead className="text-right w-[150px]">Actions</TableHead>
         </TableRow>
-      </TableHeader>
+      </TableHeader>{/* No whitespace here */}
       <TableBody>
         {products.length > 0 ? products.map((product) => (
           <TableRow key={product.id} data-state={selectedProducts.includes(product.id) && "selected"} className="group">

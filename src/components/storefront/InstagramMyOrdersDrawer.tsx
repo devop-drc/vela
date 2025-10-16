@@ -253,7 +253,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose }: InstagramMyOrdersDr
                   <div className="mt-6 space-y-4">
                     <h2 className="text-lg font-bold text-gray-800">Your Orders ({orders.length})</h2>
                     <ScrollArea className="w-full whitespace-nowrap"> {/* Added ScrollArea for horizontal overflow */}
-                      <Table className="min-w-full"> {/* Ensure table takes full width */}
+                      <Table className="min-w-full">
                         <TableHeader>
                           <TableRow>
                             <TableHead className="text-xs md:text-sm">Order ID</TableHead>
@@ -262,7 +262,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose }: InstagramMyOrdersDr
                             <TableHead className="text-right text-xs md:text-sm">Total</TableHead>
                             <TableHead className="w-[60px] text-xs md:text-sm"></TableHead>
                           </TableRow>
-                        </TableHeader>
+                        </TableHeader>{/* No whitespace here */}
                         <TableBody>
                           {orders.map(order => (
                             <TableRow key={order.id} onClick={() => { setSelectedOrder(order); setIsOrderDetailModalOpen(true); }} className="cursor-pointer hover:bg-gray-100">

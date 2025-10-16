@@ -186,15 +186,22 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
     }
   };
 
-  const statusOptions: { value: OrderStatusType; label: string; icon: React.ElementType }[] = [
-    { value: 'Pending', label: 'Pending', icon: Package },
-    { value: 'Order Seen', label: 'Order Seen', icon: Eye },
-    { value: 'Order Packaged', label: 'Order Packaged', icon: Box },
-    { value: 'Given to Courier', label: 'Given to Courier', icon: Truck },
-    { value: 'Fulfilled', label: 'Fulfilled', icon: CheckCircle },
-    { value: 'Problematic', label: 'Problematic', icon: XCircle },
-    { value: 'Cancelled', label: 'Cancelled', icon: XCircle },
-  ];
+  const getStatusIcon = (status: OrderStatusType | Dispute['status']) => {
+    switch (status) {
+      case "Fulfilled": return <CheckCircle className="h-5 w-5" />;
+      case "Given to Courier": return <Truck className="h-5 w-5" />;
+      case "Order Packaged": return <Box className="h-5 w-5" />;
+      case "Order Seen": return <Eye className="h-5 w-5" />;
+      case "Pending": return <Package className="h-5 w-5" />;
+      case "Problematic": return <XCircle className="h-5 w-5" />;
+      case "Cancelled": return <XCircle className="h-5 w-5" />;
+      case "Open": return <MessageSquareWarning className="h-5 w-5" />;
+      case "In Review": return <Reply className="h-5 w-5" />;
+      case "Resolved": return <Handshake className="h-5 w-5" />;
+      case "Closed": return <XCircle className="h-5 w-5" />;
+      default: return <Package className="h-5 w-5" />;
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

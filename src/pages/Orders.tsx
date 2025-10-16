@@ -71,7 +71,7 @@ const OrderTable = ({ orders, onSelectOrder }: { orders: Order[], onSelectOrder:
           <TableHead className="text-right">Total</TableHead>
           <TableHead className="w-[100px]"></TableHead>
         </TableRow>
-      </TableHeader>
+      </TableHeader>{/* No whitespace here */}
       <TableBody>
         {orders.length > 0 ? orders.map((order) => (
           <TableRow key={order.id}>
