@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   List,
   XCircle,
+  Sparkles,
 } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -28,6 +29,7 @@ import * as LucideIcons from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InstagramFilterDrawer } from "@/components/storefront/InstagramFilterDrawer";
 import { debounce } from 'lodash';
+import { InstagramShopHeader } from "@/components/storefront/InstagramShopHeader"; // Import the updated header
 
 interface Product {
   id: string;
@@ -265,52 +267,11 @@ const InstagramProductsFeedPage = () => {
         onResetFilters={handleResetFilters}
       />
 
-      <main className="flex-1">
-        {/* Storefront Announcements */}
-        {marqueeElements.length > 0 && (
-          <section className="my-4">
-            <Marquee pauseOnHover className="py-2 border-y border-gray-200 bg-gray-50">
-              {marqueeElements.map(element => (
-                <div key={element.id} className="flex items-center gap-4 text-sm font-semibold text-gray-800 px-4">
-                  {getIconComponent(element.icon_name)}
-                  <span>{element.message}</span>
-                </div>
-              ))}
-            </Marquee>
-          </section>
-        )}
-
-        {/* Filter and Sort Bar */}
-        <div className="flex flex-col items-center justify-center py-2 mb-6 px-4">
-          <div className="flex items-center justify-center gap-2 w-full max-w-xs mb-2">
-            <Button variant="outline" size="sm" onClick={() => setIsFilterDrawerOpen(true)} className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100 w-1/2">
-              <Filter className="mr-2 h-4 w-4" />
-              Filter {hasActiveFilters && <span className="ml-1 text-xs text-red-500">(Active)</span>}
-            </Button>
-            <Select value={sortOption} onValueChange={handleSortChange}>
-              <SelectTrigger className="flex-1 h-9 text-sm border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 w-1/2">
-                <ArrowUpNarrowWide className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Sort" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest" className="text-sm">Newest</SelectItem>
-                <SelectItem value="oldest" className="text-sm">Oldest</SelectItem>
-                <SelectItem value="price-asc" className="text-sm">Price: Low to High</SelectItem>
-                <SelectItem value="price-desc" className="text-sm">Price: High to Low</SelectItem>
-                <SelectItem value="name-asc" className="text-sm">Name: A-Z</SelectItem>
-                <SelectItem value="name-desc" className="text-sm">Name: Z-A</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center justify-center w-full max-w-xs">
-            <span className="p-2 rounded-md text-gray-800">
-                <LayoutGrid className="h-4 w-4" />
-            </span>
-          </div>
-        </div >
+      <main className="flex-1 pt-0"> {/* Removed padding-top as header now handles it */}
+        {/* Removed Marquee, Filter/Sort, and Grid Icon */}
 
         {/* Product Grid */}
-        <section className="mt-4">
+        <section className="mt-0"> {/* Removed margin-top */}
           {filteredAndSortedProducts.length === 0 ? (
             <div className="text-center py-16 text-gray-600 border-2 border-dashed rounded-lg mx-4">
               <h3 className="text-xl md:text-2xl font-semibold">No Products Found</h3>

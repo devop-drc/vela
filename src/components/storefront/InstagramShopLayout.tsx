@@ -14,9 +14,9 @@ import { InstagramCartDrawer } from './InstagramCartDrawer'; // Import Instagram
 import { cn } from '@/lib/utils';
 import { loadGoogleFont } from '@/lib/fontUtils';
 import { InstagramMyOrdersDrawer } from './InstagramMyOrdersDrawer'; // Import InstagramMyOrdersDrawer
-import { InstagramMyOrdersTrigger } from './InstagramMyOrdersTrigger'; // Import new trigger component
 import { supabase } from '@/integrations/supabase/client'; // Import supabase for order count
 import { Drawer } from '@/components/ui/drawer'; // Import Drawer.Root
+import { InstagramBottomNav } from './InstagramBottomNav'; // Import new bottom nav
 
 // Function to apply fixed Instagram-like settings to the DOM
 const applyInstagramShopSettingsToDOM = () => {
@@ -152,7 +152,7 @@ const InstagramShopLayoutContent = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen bg-white text-black">
-        <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} />
+        <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} isProfilePage={true} />
         <main className="flex-1 container py-4 mt-14">
           <div className="flex flex-col items-center mb-8">
             <Skeleton className="h-24 w-24 rounded-full mb-4" />
@@ -187,7 +187,7 @@ const InstagramShopLayoutContent = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-white text-black">
-      <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} />
+      <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} isProfilePage={true} />
       <main className="flex-1 overflow-y-auto pt-14 pb-14"> {/* Adjusted padding-top and added padding-bottom */}
         <Outlet />
       </main>
@@ -196,11 +196,11 @@ const InstagramShopLayoutContent = () => {
       
       {/* My Orders Drawer */}
       <Drawer open={isMyOrdersDrawerOpen} onOpenChange={setIsMyOrdersDrawerOpen} shouldScaleBackground>
-        {shopDetails && <InstagramMyOrdersTrigger orderCount={myOrdersCount} />}
         <InstagramMyOrdersDrawer isOpen={isMyOrdersDrawerOpen} onClose={() => setIsMyOrdersDrawerOpen(false)} />
       </Drawer>
 
-      {/* Removed InstagramFloatingCart */}
+      {/* New Instagram Bottom Nav */}
+      <InstagramBottomNav onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} myOrdersCount={myOrdersCount} />
     </div>
   );
 };

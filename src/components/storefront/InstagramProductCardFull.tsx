@@ -8,7 +8,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
-import { ShoppingCart, Minus, Plus, Bookmark, XCircle, ArrowRight } from "lucide-react";
+import { ShoppingCart, Minus, Plus, Bookmark, XCircle, ArrowRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { ShopDetails as StorefrontShopDetails, Promotion as StorefrontPromotion } from "@/contexts/StorefrontContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface Product {
   id: string;
@@ -52,6 +54,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     const [selectedColor, setSelectedColor] = useState<string | null>(null);
     const [selectedSize, setSelectedSize] = useState<string | null>(null);
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+    const isMobile = useIsMobile(); // Use the mobile hook
 
     const [api, setApi] = useState<CarouselApi>();
     const [currentSlide, setCurrentSlide] = useState(0);
@@ -314,46 +317,118 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
             </div>
           )}
 
-          {/* Quantity & Add to Cart / Buy Now */}
-          <div className="flex items-center gap-4 pt-3">
-            {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && (
-              <div className="flex items-center border border-gray-300 rounded-md">
+          {/* Quantity & Add to Cart / Buy Now - Responsive */}
+          {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && (
+            <div className="flex flex-col gap-3 pt-3">
+              {/* Counter above buttons on smaller screens */}
+              <div className="flex items-center justify-center sm:justify-start">
+                <div className="flex items-center border border-gray-300 rounded-md">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
+                    disabled={quantity <= 1}
+                    className="h-8 w-8 text-gray-800 hover:bg-gray-100"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => setQuantity(Math.max(1, Math.min(product.inventory || 1, parseInt(e.target.value) || 1)))}
+                    className="w-14 text-center border-y-0 border-x border-gray-300 focus-visible:ring-0 text-sm bg-white"
+                    min={1}
+                    max={product.inventory || 1}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setQuantity(prev => Math.min(product.inventory || 1, prev + 1))}
+                    disabled={quantity >= (product.inventory || 1)}
+                    className="h-8 w-8 text-gray-800 hover:bg-gray-100"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-2 w-full">
+                {/* Circular Add to Cart on smaller screens */}
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
-                  disabled={quantity <= 1}
-                  className="h-8 w-8 text-gray-800 hover:bg-gray-100"
+                  size="lg"
+                  className={cn(
+                    "flex-1 text-base bg-red-500 hover:bg-red-600 text-white rounded-md",
+                    "sm:hidden" // Hide on sm and larger
+                  )}
+                  onClick={handleAddToCart}
+                  disabled={isOutOfStock}
                 >
-                  <Minus className="h-4 w-4" />
+                  <ShoppingCart className="h-5 w-5" />
+                  <span className="sr-only">Add to cart</span>
                 </Button>
-                <Input
-                  type="number"
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, Math.min(product.inventory || 1, parseInt(e.target.value) || 1)))}
-                  className="w-14 text-center border-y-0 border-x border-gray-300 focus-visible:ring-0 text-sm bg-white"
-                  min={1}
-                  max={product.inventory || 1}
-                />
+
+                {/* Dropdown for Add to Cart / Buy Now on smallest screens */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="lg"
+                      className={cn(
+                        "flex-1 text-base bg-red-500 hover:bg-red-600 text-white rounded-md",
+                        "hidden max-[380px]:flex" // Show only on very small screens
+                      )}
+                      disabled={isOutOfStock}
+                    >
+                      Actions <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={handleAddToCart} disabled={isOutOfStock}>
+                      <ShoppingCart className="mr-2 h-4 w-4" /> Add to Cart
+                    </DropdownMenuItem>
+                    <DropdownMenuItem disabled={isOutOfStock}>
+                      <ArrowRight className="mr-2 h-4 w-4" /> Buy Now
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Default Add to Cart / Buy Now on larger mobile/tablet screens */}
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setQuantity(prev => Math.min(product.inventory || 1, prev + 1))}
-                  disabled={quantity >= (product.inventory || 1)}
-                  className="h-8 w-8 text-gray-800 hover:bg-gray-100"
+                  size="lg"
+                  className={cn(
+                    "flex-1 text-base bg-red-500 hover:bg-red-600 text-white rounded-md",
+                    "hidden sm:flex max-[380px]:hidden" // Show on sm and larger, hide on very small
+                  )}
+                  onClick={handleAddToCart}
+                  disabled={isOutOfStock}
                 >
-                  <Plus className="h-4 w-4" />
+                  <ShoppingCart className="mr-2 h-5 w-5" />
+                  {isOutOfStock ? "Out of Stock" : (product.pricing_type === 'subscription' ? "Subscribe Now" : "Add to cart")}
+                </Button>
+                <Button
+                  size="lg"
+                  className={cn(
+                    "flex-1 text-base bg-blue-600 hover:bg-blue-700 text-white rounded-md",
+                    "hidden sm:flex max-[380px]:hidden" // Show on sm and larger, hide on very small
+                  )}
+                  disabled={isOutOfStock}
+                >
+                  Buy Now <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
-            )}
-            <Button size="lg" className="flex-1 text-base bg-red-500 hover:bg-red-600 text-white rounded-md" onClick={handleAddToCart} disabled={isOutOfStock}>
+            </div>
+          )}
+          {product.pricing_type === 'one_time' && (product.inventory === null || product.inventory <= 0) && (
+            <Button size="lg" className="w-full text-base bg-red-500 hover:bg-red-600 text-white rounded-md" disabled>
+              Out of Stock
+            </Button>
+          )}
+          {product.pricing_type === 'subscription' && (
+            <Button size="lg" className="w-full text-base bg-red-500 hover:bg-red-600 text-white rounded-md" onClick={handleAddToCart} disabled={isOutOfStock}>
               <ShoppingCart className="mr-2 h-5 w-5" />
-              {isOutOfStock ? "Out of Stock" : (product.pricing_type === 'subscription' ? "Subscribe Now" : "Add to cart")}
+              Subscribe Now
             </Button>
-            <Button size="lg" className="flex-1 text-base bg-blue-600 hover:bg-blue-700 text-white rounded-md" disabled={isOutOfStock}>
-              Buy Now <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
+          )}
         </div>
       </div>
     );

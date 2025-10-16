@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { Link, useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom"; // Added useSearchParams
-import { ShoppingBag, ArrowLeft, ChevronDown, Truck, Filter, ArrowUpNarrowWide, LayoutGrid } from "lucide-react";
+import { Link, useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
+import { ShoppingBag, ArrowLeft, ChevronDown, Truck, Filter, ArrowUpNarrowWide, LayoutGrid, User, Sparkles } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -13,10 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 interface InstagramShopHeaderProps {
   onOpenCart: () => void;
-  onOpenMyOrders: () => void;
+  onOpenFilterDrawer?: () => void; // Optional for products feed page
+  isFilterDrawerOpen?: boolean; // Optional for products feed page
+  onOpenMyOrders?: () => void; // Optional for profile page
 }
 
-export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramShopHeaderProps) => {
+export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, onOpenMyOrders }: InstagramShopHeaderHeaderProps) => {
   const { shopDetails } = useStorefront();
   const { totalItems } = useCart();
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
@@ -27,7 +29,7 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramSho
   if (!shopDetails) return null;
 
   const isProductsFeedPage = location.pathname.includes('/products');
-  const isProductDetailPage = !!productId; // This is now true if a product ID is in the URL on the feed page
+  const isProfilePage = !isProductsFeedPage && !productId; // Profile page is default if not products feed or product detail
 
   const handleBack = () => {
     if (isProductsFeedPage) {
@@ -47,34 +49,70 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramSho
   return (
     <header className={cn(
       "sticky top-0 left-0 right-0 z-40 transition-all duration-200",
-      "bg-white text-gray-800"
+      "bg-white text-gray-800 border-b border-gray-200"
     )}>
-      <div className="container flex h-14 items-center justify-between px-4">
-
-        {/* Left Section: Back Button or Shop Name */}
-        <div className="flex items-center space-x-2 flex-shrink-0">
-          {isProductsFeedPage ? (
+      {isProfilePage ? (
+        // Profile Page Header Layout
+        <div className="container flex h-14 items-center justify-between px-4">
+          <div className="flex items-center space-x-2 flex-shrink-0">
+            <h1 className="text-lg font-bold">instaShop</h1>
+          </div>
+          <div className="flex items-center justify-center flex-1">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={shopDetails.logo_url || undefined} alt={shopDetails.shop_name} />
+              <AvatarFallback className="text-sm bg-gray-100 text-gray-600">
+                {shopDetails.shop_name?.[0]}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+          <div className="flex items-center space-x-2 flex-shrink-0">
+            <Button variant="ghost" size="sm" asChild className="text-gray-800 hover:bg-gray-100">
+              <Link to={`/instagramShop/${shopSlug}/products`}>
+                Products <ChevronDown className="ml-1 h-4 w-4 rotate-[-90deg]" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        // Products Feed Page Header Layout (Two Rows)
+        <div className="flex flex-col">
+          {/* Row 1 */}
+          <div className="container flex h-14 items-center justify-between px-4">
             <Button variant="ghost" size="icon" onClick={handleBack} className="text-gray-800 hover:bg-gray-100">
               <ArrowLeft className="h-5 w-5" />
               <span className="sr-only">Back</span>
             </Button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold">Products</h1>
-              <p className="text-xs text-muted-foreground">{shopDetails.username || shopDetails.shop_name}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Middle Section: Filter and Sort on Products Feed Page */}
-        {isProductsFeedPage && (
-          <div className="flex items-center justify-center gap-2 flex-1 max-w-xs">
-            <Button variant="outline" size="sm" onClick={() => { /* Open filter drawer */ }} className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100 w-1/2">
+            <h1 className="text-lg font-bold">Products</h1>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onOpenCart}
+              className="relative text-gray-800 hover:bg-gray-100"
+            >
+              <motion.span
+                key={totalItems}
+                initial={{ scale: 1 }}
+                animate={totalItems > 0 ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className="relative"
+              >
+                <ShoppingBag className="h-5 w-5" />
+                {totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white font-bold">
+                    {totalItems}
+                  </span>
+                )}
+              </motion.span>
+            </Button>
+          </div>
+          {/* Row 2: Filter and Sort */}
+          <div className="container flex items-center justify-center gap-2 py-2 px-4 border-t border-gray-200">
+            <Button variant="outline" size="sm" onClick={onOpenFilterDrawer} className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-lg">
               <Filter className="mr-2 h-4 w-4" />
               Filter
             </Button>
             <Select value={searchParams.get('sort') || "newest"} onValueChange={handleSortChange}>
-              <SelectTrigger className="flex-1 h-9 text-sm border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 w-1/2">
+              <SelectTrigger className="flex-1 h-9 text-sm border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 rounded-lg">
                 <ArrowUpNarrowWide className="mr-2 h-4 w-4" />
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
@@ -88,33 +126,8 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramSho
               </SelectContent>
             </Select>
           </div>
-        )}
-
-        {/* Right Section: Shopping Cart */}
-        <nav className="flex items-center space-x-2 flex-shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onOpenCart}
-            className="relative text-gray-800 hover:bg-gray-100"
-          >
-            <motion.span
-              key={totalItems}
-              initial={{ scale: 1 }}
-              animate={totalItems > 0 ? { scale: [1, 1.2, 1] } : { scale: 1 }}
-              transition={{ duration: 0.3 }}
-              className="relative"
-            >
-              <ShoppingBag className="h-5 w-5" />
-              {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white font-bold">
-                  {totalItems}
-                </span>
-              )}
-            </motion.span>
-          </Button>
-        </nav>
-      </div>
+        </div>
+      )}
     </header>
   );
 };

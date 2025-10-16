@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   List,
   XCircle,
+  Sparkles,
 } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -28,6 +29,7 @@ import * as LucideIcons from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InstagramFilterDrawer } from "@/components/storefront/InstagramFilterDrawer";
 import { debounce } from 'lodash';
+import { InstagramShopHeader } from "@/components/storefront/InstagramShopHeader"; // Import the updated header
 
 interface Product {
   id: string;
@@ -241,6 +243,15 @@ const InstagramProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
+      <InstagramFilterDrawer
+        isOpen={isFilterDrawerOpen}
+        onClose={() => setIsFilterDrawerOpen(false)}
+        products={allProducts}
+        currentFilters={filters}
+        onFilterChange={handleFilterChange}
+        onResetFilters={handleResetFilters}
+      />
+
       <main className="flex-1">
         {/* Profile Section */}
         <section className="flex flex-col items-center mb-8 md:mb-10 px-4 pt-4">
@@ -295,6 +306,35 @@ const InstagramProfilePage = () => {
             </Marquee>
           </section>
         )}
+
+        {/* Filter, Sort, and Grid Icon for Profile Page */}
+        <div className="flex flex-col items-center justify-center py-2 mb-6 px-4">
+          <div className="flex items-center justify-center gap-2 w-full max-w-md mb-2">
+            <Button variant="outline" size="sm" onClick={() => setIsFilterDrawerOpen(true)} className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-lg" style={{ borderRadius: '10px' }}>
+              <Filter className="mr-2 h-4 w-4" />
+              Filter {hasActiveFilters && <span className="ml-1 text-xs text-red-500">(Active)</span>}
+            </Button>
+            <Select value={sortOption} onValueChange={handleSortChange}>
+              <SelectTrigger className="flex-1 h-9 text-sm border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 rounded-lg" style={{ borderRadius: '10px' }}>
+                <ArrowUpNarrowWide className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest" className="text-sm">Newest</SelectItem>
+                <SelectItem value="oldest" className="text-sm">Oldest</SelectItem>
+                <SelectItem value="price-asc" className="text-sm">Price: Low to High</SelectItem>
+                <SelectItem value="price-desc" className="text-sm">Price: High to Low</SelectItem>
+                <SelectItem value="name-asc" className="text-sm">Name: A-Z</SelectItem>
+                <SelectItem value="name-desc" className="text-sm">Name: Z-A</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center justify-center w-full max-w-md">
+            <span className="p-2 rounded-md text-gray-800">
+                <LayoutGrid className="h-4 w-4" />
+            </span>
+          </div>
+        </div>
 
         {/* Product Grid */}
         <section className="mt-4">
