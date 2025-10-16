@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { InstagramCheckoutForm, CheckoutFormData } from "./InstagramCheckoutForm"; // Import InstagramCheckoutForm
+import { InstagramCheckoutForm, CheckoutFormData, CustomerAddress } from "./InstagramCheckoutForm"; // Import InstagramCheckoutForm and CustomerAddress type
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 
@@ -36,6 +36,8 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
 
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'contact-shipping' | 'payment'>('cart');
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]); // State for saved addresses
+  const [selectedAddressId, setSelectedAddressId] = useState<string | 'new'>('new'); // State for selected address
 
   // Determine which cart items to use (persistent or initial for Buy Now)
   const currentCartItems = useMemo(() => initialCartItems || persistentCartItems, [initialCartItems, persistentCartItems]);
@@ -83,6 +85,14 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
       }
     }
   }, [isOpen, initialCartItems]);
+
+  // Load addresses from local storage on mount
+  useEffect(() => {
+    const storedAddresses = localStorage.getItem('instagram_saved_addresses');
+    if (storedAddresses) {
+      setSavedAddresses(JSON.parse(storedAddresses));
+    }
+  }, []);
 
   const handleProceedToCheckout = () => {
     if (!shopDetails?.slug) {
@@ -203,7 +213,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
           {/* Removed X button */}
         </DrawerHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col"> {/* Added flex flex-col here */}
+        <div className="flex-1 overflow-hidden flex flex-col">
           {(checkoutStep === 'cart' && !initialCartItems) ? (
             <>
               {currentCartItems.length === 0 && savedItems.length === 0 ? (
@@ -221,7 +231,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                   <Button onClick={onClose} className="text-base bg-red-500 hover:bg-red-600 text-white">Start Shopping</Button>
                 </motion.div>
               ) : (
-                <ScrollArea className="flex-1 p-4 pr-6 h-full"> {/* Added h-full */}
+                <ScrollArea className="flex-1 p-4 pr-6">
                   <div className="space-y-6">
                     {currentCartItems.length > 0 && (
                       <div className="space-y-4">
@@ -449,6 +459,10 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
               checkoutStep={checkoutStep}
               setCheckoutStep={setCheckoutStep}
               onContinue={() => setCheckoutStep('payment')}
+              savedAddresses={savedAddresses} // Pass saved addresses
+              setSavedAddresses={setSavedAddresses} // Pass setter for saved addresses
+              selectedAddressId={selectedAddressId} // Pass selected address ID
+              setSelectedAddressId={setSelectedAddressId} // Pass setter for selected address ID
             />
           )}
         </div>

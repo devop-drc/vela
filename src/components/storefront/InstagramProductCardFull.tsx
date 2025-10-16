@@ -161,7 +161,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
         price: hasDiscount ? discountedPrice : originalDisplayPrice,
         originalPrice: originalDisplayPrice,
         isDiscounted: hasDiscount,
-        currency: shopDetails.currency || 'USD',
+        currency: shopDetails.currency || 'EUR',
         media_url: product.media_url,
         media_type: product.media_type,
         slug: shopDetails.slug,
@@ -257,12 +257,12 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                   {formatCurrency(originalDisplayPrice, shopDetails?.currency)}
                 </p>
                 <p className={cn("text-2xl font-bold", isOutOfStock && "text-gray-500")}>
-                  {formatCurrency(discountedPrice, shopDetails?.currency)}
+                  <span className={cn("text-green-600", isOutOfStock && "text-gray-500")}>{formatCurrency(discountedPrice, shopDetails?.currency)}</span>
                   {product.pricing_type === 'subscription' && (
-                      <span className="text-base font-light text-gray-500">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                      <span className="text-base font-light text-green-600">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                   )}
                 </p>
-                  <Badge className={cn("bg-green-500 text-white text-sm font-semibold px-2 py-1 rounded-md", isOutOfStock && "bg-gray-500")}>
+                  <Badge className={cn("bg-green-600 text-white text-sm font-semibold px-2 py-1 rounded-md", isOutOfStock && "bg-gray-500")}>
                     {getPromotionBadge(activePromotions[0])}
                   </Badge>
                 {product.pricing_type === 'one_time' && (product.inventory === null || product.inventory <= 0) && (
@@ -378,7 +378,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                   size="icon"
                   onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
                   disabled={quantity <= 1}
-                  className="h-full w-full rounded-none text-gray-800 hover:bg-gray-100"
+                  className="h-full w-full text-gray-800 hover:bg-gray-100"
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
@@ -395,7 +395,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                   size="icon"
                   onClick={() => setQuantity(prev => Math.min(product.inventory || 1, prev + 1))}
                   disabled={quantity >= (product.inventory || 1)}
-                  className="h-full w-full rounded-none text-gray-800 hover:bg-gray-100"
+                  className="h-full w-full text-gray-800 hover:bg-gray-100"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>

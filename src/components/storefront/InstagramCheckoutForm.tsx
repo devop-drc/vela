@@ -37,9 +37,28 @@ const checkoutSchema = z.object({
   shippingNotesSeller: z.string().optional(),
   shippingNotesCourier: z.string().optional(),
   paymentMethod: z.enum(["card", "cash_on_delivery"], { message: "Payment method is required" }),
+  saveAddress: z.boolean().optional(), // Added for UI logic
+  addressLabel: z.string().optional(), // Added for UI logic
 });
 
 export type CheckoutFormData = z.infer<typeof checkoutSchema>;
+
+export interface CustomerAddress {
+  id: string;
+  label: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  address: string;
+  city: string;
+  state: string | null; // Keeping state as optional for now
+  zip_code: string;
+  country: string;
+  is_default: boolean;
+}
+
+const LOCAL_STORAGE_ADDRESSES_KEY = 'instagram_saved_addresses';
 
 const countries = [
   { code: "AL", name: "Albania" },
@@ -67,6 +86,10 @@ interface InstagramCheckoutFormProps {
   checkoutStep: 'contact-shipping' | 'payment';
   setCheckoutStep: (step: 'contact-shipping' | 'payment') => void;
   onContinue: () => void;
+  savedAddresses: CustomerAddress[]; // Passed from parent
+  setSavedAddresses: (addresses: CustomerAddress[]) => void; // Passed from parent
+  selectedAddressId: string | 'new'; // Passed from parent
+  setSelectedAddressId: (id: string | 'new') => void; // Passed from parent
 }
 
 export const InstagramCheckoutForm = ({
@@ -83,8 +106,12 @@ export const InstagramCheckoutForm = ({
   checkoutStep,
   setCheckoutStep,
   onContinue,
+  savedAddresses,
+  setSavedAddresses,
+  selectedAddressId,
+  setSelectedAddressId,
 }: InstagramCheckoutFormProps) => {
-  const { register, handleSubmit, control, reset, watch, formState: { errors, isValid, isDirty } } = useForm<CheckoutFormData>({
+  const { register, handleSubmit, control, reset, watch, setValue, formState: { errors, isValid, isDirty } } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
       firstName: "",
@@ -98,17 +125,93 @@ export const InstagramCheckoutForm = ({
       shippingNotesSeller: "",
       shippingNotesCourier: "",
       paymentMethod: "cash_on_delivery",
+      saveAddress: false,
+      addressLabel: "",
     },
   });
 
   const currentPaymentMethod = watch('paymentMethod');
+  const saveAddressChecked = watch('saveAddress');
+  const [isSaveAddressModalOpen, setIsSaveAddressModalOpen] = useState(false);
+  const [newAddressLabel, setNewAddressLabel] = useState('');
 
+  // Effect to reset form when checkout step changes
   useEffect(() => {
-    reset();
-  }, [checkoutStep, reset]);
+    if (checkoutStep === 'contact-shipping') {
+      // If a saved address is selected, fill the form
+      if (selectedAddressId !== 'new') {
+        const address = savedAddresses.find(addr => addr.id === selectedAddressId);
+        if (address) {
+          fillFormWithAddress(address);
+        }
+      } else {
+        // Otherwise, clear the form for a new address
+        reset({
+          firstName: "", lastName: "", email: "", phone: "",
+          shippingAddress: "", shippingCity: "", shippingZip: "",
+          shippingCountry: "AL",
+          shippingNotesSeller: "", shippingNotesCourier: "",
+          paymentMethod: watch('paymentMethod'), // Keep current payment method
+          saveAddress: false,
+          addressLabel: "",
+        });
+      }
+    }
+  }, [checkoutStep, selectedAddressId, savedAddresses, reset, watch]);
+
+  const fillFormWithAddress = useCallback((address: CustomerAddress) => {
+    setValue('firstName', address.first_name);
+    setValue('lastName', address.last_name);
+    setValue('email', address.email);
+    setValue('phone', address.phone || '');
+    setValue('shippingAddress', address.address);
+    setValue('shippingCity', address.city);
+    setValue('shippingZip', address.zip_code);
+    setValue('shippingCountry', address.country);
+    // Keep notes and payment method as they are not part of saved address
+    setValue('saveAddress', false); // Always uncheck when loading saved address
+    setValue('addressLabel', address.label);
+  }, [setValue]);
+
+  const handleSaveAddressToLocal = () => {
+    if (!newAddressLabel.trim()) {
+      showError("Please provide a label for your address.");
+      return;
+    }
+
+    const formData = watch();
+    const newAddress: CustomerAddress = {
+      id: crypto.randomUUID(), // Generate a unique ID
+      label: newAddressLabel.trim(),
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      email: formData.email,
+      phone: formData.phone || null,
+      address: formData.shippingAddress,
+      city: formData.shippingCity,
+      state: "", // State is not collected in this form
+      zip_code: formData.shippingZip,
+      country: formData.shippingCountry,
+      is_default: savedAddresses.length === 0, // First saved address is default
+    };
+
+    const updatedAddresses = [...savedAddresses, newAddress];
+    localStorage.setItem(LOCAL_STORAGE_ADDRESSES_KEY, JSON.stringify(updatedAddresses));
+    setSavedAddresses(updatedAddresses);
+    setSelectedAddressId(newAddress.id); // Select the newly saved address
+    setIsSaveAddressModalOpen(false);
+    setNewAddressLabel('');
+    setValue('saveAddress', false); // Uncheck the checkbox after saving
+    showSuccess("Address saved successfully!");
+  };
 
   const onSubmit = async (data: CheckoutFormData) => {
     if (checkoutStep === 'contact-shipping') {
+      // If "Save address" is checked, open the modal to get the label
+      if (data.saveAddress) {
+        setIsSaveAddressModalOpen(true);
+        return; // Stop submission until label is provided
+      }
       onContinue();
     } else {
       await onPlaceOrder(data);
@@ -124,56 +227,108 @@ export const InstagramCheckoutForm = ({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} id="instagram-checkout-form" className="flex-1 flex flex-col overflow-hidden">
-      <ScrollArea className="flex-1 p-4 pr-6 max-h-full">
-        <div className="space-y-6">
-          {checkoutStep === 'contact-shipping' && (
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-6"
-            >
+    <>
+      <Dialog open={isSaveAddressModalOpen} onOpenChange={setIsSaveAddressModalOpen}>
+        <DialogContent className="bg-white text-black rounded-lg">
+          <DialogHeader className="border-b border-gray-200 pb-4">
+            <DialogTitle className="text-xl font-bold text-gray-800">Save Shipping Address</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500">Give a name to this address for future use.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-4">
+            <Label htmlFor="addressLabel" className="text-sm text-gray-700">Address Label</Label>
+            <Input id="addressLabel" value={newAddressLabel} onChange={(e) => setNewAddressLabel(e.target.value)} placeholder="e.g., Home, Work, My Apartment" className="border-gray-300 bg-gray-50 text-gray-800" />
+          </div>
+          <DialogFooter className="border-t border-gray-200 pt-4">
+            <Button variant="ghost" onClick={() => setIsSaveAddressModalOpen(false)} className="text-gray-800 hover:bg-gray-100">Cancel</Button>
+            <Button onClick={handleSaveAddressToLocal} disabled={!newAddressLabel.trim()} className="bg-red-500 hover:bg-red-600 text-white">
+              <Save className="mr-2 h-4 w-4" /> Save Address
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <form onSubmit={handleSubmit(onSubmit)} id="instagram-checkout-form" className="flex-1 flex flex-col overflow-hidden">
+        <ScrollArea className="flex-1 p-4 pr-6">
+          <div className="space-y-6">
+            {/* Address Selection Card */}
+            {savedAddresses.length > 0 && (
               <Card className="shadow-sm border border-gray-200 bg-white">
                 <CardHeader>
                   <CardTitle className="text-xl flex items-center gap-2 text-gray-800">
-                    <User className="h-6 w-6 text-red-500" />
-                    Contact & Shipping Information
+                    <MapPin className="h-6 w-6 text-red-500" />
+                    Choose Shipping Address
                   </CardTitle>
-                  <CardDescription className="text-sm text-gray-500">Enter your details for delivery.</CardDescription>
+                  <CardDescription className="text-sm text-gray-500">Select a saved address or enter a new one.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
-                      <Input id="firstName" {...register("firstName")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                      {errors.firstName && <p className="text-sm text-red-500 mt-1">{errors.firstName.message}</p>}
+                <CardContent>
+                  <Select value={selectedAddressId} onValueChange={setSelectedAddressId}>
+                    <SelectTrigger className="border-gray-300 bg-gray-50 text-gray-800">
+                      <SelectValue placeholder="Select an address" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white text-gray-800">
+                      <SelectItem value="new">New Address</SelectItem>
+                      <Separator className="bg-gray-200" />
+                      {savedAddresses.map(address => (
+                        <SelectItem key={address.id} value={address.id}>
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">{address.label}</span>
+                            <span className="text-xs text-gray-500">{address.address}, {address.city}, {address.country}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
+            )}
+
+            {checkoutStep === 'contact-shipping' && (
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
+                <Card className="shadow-sm border border-gray-200 bg-white">
+                  <CardHeader>
+                    <CardTitle className="text-xl flex items-center gap-2 text-gray-800">
+                      <User className="h-6 w-6 text-red-500" />
+                      Contact & Shipping Information
+                    </CardTitle>
+                    <CardDescription className="text-sm text-gray-500">Enter your details for delivery.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName">First Name</Label>
+                        <Input id="firstName" {...register("firstName")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        {errors.firstName && <p className="text-sm text-red-500 mt-1">{errors.firstName.message}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName">Last Name</Label>
+                        <Input id="lastName" {...register("lastName")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        {errors.lastName && <p className="text-sm text-red-500 mt-1">{errors.lastName.message}</p>}
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
-                      <Input id="lastName" {...register("lastName")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                      {errors.lastName && <p className="text-sm text-red-500 mt-1">{errors.lastName.message}</p>}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" type="email" {...register("email")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone (Optional)</Label>
+                        <Input id="phone" type="tel" {...register("phone")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                      </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Separator className="bg-gray-200" />
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" {...register("email")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                      {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>}
+                      <Label htmlFor="shippingAddress" className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Shipping Address</Label>
+                      <Input id="shippingAddress" {...register("shippingAddress")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                      {errors.shippingAddress && <p className="text-sm text-red-500 mt-1">{errors.shippingAddress.message}</p>}
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone (Optional)</Label>
-                      <Input id="phone" type="tel" {...register("phone")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                    </div>
-                  </div>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label htmlFor="shippingAddress" className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Shipping Address</Label>
-                    <Input id="shippingAddress" {...register("shippingAddress")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                    {errors.shippingAddress && <p className="text-sm text-red-500 mt-1">{errors.shippingAddress.message}</p>}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="shippingCity" className="flex items-center gap-2"><Building2 className="h-4 w-4" /> City</Label>
                       <Input id="shippingCity" {...register("shippingCity")} className="border-gray-300 bg-gray-50 text-gray-800" />
@@ -195,7 +350,7 @@ export const InstagramCheckoutForm = ({
                           <SelectTrigger id="shippingCountry" className="border-gray-300 bg-gray-50 text-gray-800">
                             <SelectValue placeholder="Select country" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-white text-gray-800">
                             {countries.map(country => (
                               <SelectItem key={country.code} value={country.code}>
                                 {country.name}
@@ -214,6 +369,15 @@ export const InstagramCheckoutForm = ({
                   <div className="space-y-2">
                     <Label htmlFor="shippingNotesCourier" className="flex items-center gap-2"><Truck className="h-4 w-4" /> Notes for Courier (Optional)</Label>
                     <Textarea id="shippingNotesCourier" {...register("shippingNotesCourier")} rows={2} placeholder="e.g., Leave package at the back door." className="border-gray-300 bg-gray-50 text-gray-800" />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="saveAddress"
+                      {...register("saveAddress")}
+                      className="h-4 w-4 text-red-500 focus:ring-red-500 border-gray-300 rounded"
+                    />
+                    <Label htmlFor="saveAddress" className="text-sm text-gray-700">Save this address for future orders</Label>
                   </div>
                 </CardContent>
               </Card>
