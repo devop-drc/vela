@@ -199,7 +199,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose }: InstagramMyOrdersDr
         <DrawerContent
           className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl"
           snapPoints={[0.1, 0.5, 0.9]}
-          initialSnap={0.9}
+          initialSnap={0.1} // Changed initialSnap to 0.1
         >
           <DrawerHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
             <DrawerTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
