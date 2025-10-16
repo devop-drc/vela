@@ -203,6 +203,16 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
     }
   };
 
+  const statusOptions = [
+    { value: 'Pending', label: 'Pending', icon: Package },
+    { value: 'Order Seen', label: 'Order Seen', icon: Eye },
+    { value: 'Order Packaged', label: 'Order Packaged', icon: Box },
+    { value: 'Given to Courier', label: 'Given to Courier', icon: Truck },
+    { value: 'Fulfilled', label: 'Fulfilled', icon: CheckCircle },
+    { value: 'Problematic', label: 'Problematic', icon: MessageSquareWarning },
+    { value: 'Cancelled', label: 'Cancelled', icon: XCircle },
+  ];
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">

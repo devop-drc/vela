@@ -71,8 +71,7 @@ const OrderTable = ({ orders, onSelectOrder }: { orders: Order[], onSelectOrder:
           <TableHead className="text-right">Total</TableHead>
           <TableHead className="w-[100px]"></TableHead>
         </TableRow>
-      </TableHeader>{/* No whitespace here */}
-      <TableBody>
+      </TableHeader><TableBody>
         {orders.length > 0 ? orders.map((order) => (
           <TableRow key={order.id}>
             <TableCell className="font-medium">#{order.id.substring(0, 8)}</TableCell>
@@ -236,7 +235,7 @@ const Orders = () => {
             <CardContent className="p-0">
               {isLoading || !shopDetails ? (
                 <div className="space-y-4 p-6">
-                  <Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" />
                 </div>
               ) : (
                 <OrderTable orders={filteredOrders} onSelectOrder={setSelectedOrder} />

@@ -439,10 +439,28 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
             </Button>
           )}
           {product.pricing_type === 'subscription' && (
-            <Button size="lg" className="w-full text-base bg-red-500 hover:bg-red-600 text-white rounded-md" onClick={handleBuyNow} disabled={isOutOfStock}>
-              <ShoppingCart className="mr-2 h-5 w-5" />
-              Subscribe Now
-            </Button>
+              <div className="flex flex-col gap-2 flex-1 w-full">
+                {/* Buy Now Button */}
+                <Button size="lg" className="w-full text-base bg-red-500 hover:bg-red-600 text-white rounded-md" onClick={handleBuyNow} disabled={isOutOfStock}>
+                <ShoppingCart className="mr-2 h-5 w-5" />
+                Subscribe Now
+              </Button>
+
+                {/* Add to Cart Button */}
+                <Button
+                  size="lg"
+                  className={cn(
+                    "w-full text-base rounded-md border h-12", // Full width and fixed height
+                    outlineColorClass
+                  )}
+                  variant="outline"
+                  onClick={handleAddToCart}
+                  disabled={isOutOfStock}
+                >
+                  <ShoppingBag className="mr-2 h-6 w-6" />
+                  Add to cart
+                </Button>
+              </div>
           )}
         </div>
 
