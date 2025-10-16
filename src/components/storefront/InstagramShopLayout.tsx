@@ -14,7 +14,7 @@ import { InstagramCartDrawer } from './InstagramCartDrawer'; // Import Instagram
 import { cn } from '@/lib/utils';
 import { loadGoogleFont } from '@/lib/fontUtils';
 import { InstagramFloatingCart } from './InstagramFloatingCart'; // Import new floating cart
-import { InstagramMyOrdersDrawer } from './InstagramMyOrdersDrawer'; // Import InstagramMyOrdersDrawer
+import { InstagramMyOrdersDrawerContent } from './InstagramMyOrdersDrawerContent'; // Import refactored drawer content
 import { InstagramMyOrdersTrigger } from './InstagramMyOrdersTrigger'; // Import new trigger component
 import { supabase } from '@/integrations/supabase/client'; // Import supabase for order count
 import { Drawer } from '@/components/ui/drawer'; // Import Drawer.Root
@@ -195,11 +195,16 @@ const InstagramShopLayoutContent = () => {
       <Sonner />
       <InstagramCartDrawer isOpen={isCartModalOpen} onClose={() => setIsCartModalOpen(false)} />
       
-      {/* My Orders Drawer */}
-      <Drawer open={isMyOrdersDrawerOpen} onOpenChange={setIsMyOrdersDrawerOpen} shouldScaleBackground>
+      {/* My Orders Drawer - Always render Drawer.Root */}
+      <Drawer.Root open={isMyOrdersDrawerOpen} onOpenChange={setIsMyOrdersDrawerOpen} shouldScaleBackground>
         {shopDetails && <InstagramMyOrdersTrigger orderCount={myOrdersCount} />}
-        <InstagramMyOrdersDrawer isOpen={isMyOrdersDrawerOpen} onClose={() => setIsMyOrdersDrawerOpen(false)} />
-      </Drawer>
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/80" />
+          <Drawer.Content className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl">
+            <InstagramMyOrdersDrawerContent isOpen={isMyOrdersDrawerOpen} onClose={() => setIsMyOrdersDrawerOpen(false)} />
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
 
       <InstagramFloatingCart onOpenCart={() => setIsCartModalOpen(true)} />
     </div>
