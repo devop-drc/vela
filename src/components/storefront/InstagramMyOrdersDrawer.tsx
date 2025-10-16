@@ -93,6 +93,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
       if (customerEmailInput && shopDetails?.slug) {
         fetchOrders();
       }
+      // Do NOT auto-open the modal here. The user will click the card.
       if (onOrderOpened) {
         onOrderOpened(); // Notify parent that order has been processed
       }
@@ -173,11 +174,8 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
         setOrders([]);
       } else if (data) {
         setOrders(data as OrderDetails[]);
-        // Automatically open the order detail modal if a specific order was searched
-        if (orderIdInput && data.length > 0) {
-          setSelectedOrder(data[0] as OrderDetails);
-          setIsOrderDetailModalOpen(true);
-        }
+        // Do NOT auto-open the order detail modal here.
+        // The user will click on the order card to open it.
         localStorage.setItem(LOCAL_STORAGE_EMAIL_KEY, customerEmailInput);
       } else {
         setOrders([]);

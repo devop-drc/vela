@@ -261,14 +261,14 @@ export const InstagramCheckoutForm = ({
                 <CardHeader>
                   <CardTitle className="text-xl flex items-center gap-2 text-gray-800">
                     <MapPin className="h-6 w-6 text-red-500" />
-                    Choose Shipping Address
+                    Choose Address
                   </CardTitle>
                   <CardDescription className="text-sm text-gray-500">Select a saved address or enter a new one.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Select value={selectedAddressId} onValueChange={setSelectedAddressId}>
                     <SelectTrigger className="border-gray-300 bg-gray-50 text-gray-800 h-auto min-h-[40px] py-2"> {/* Added h-auto and py-2 */}
-                      <SelectValue placeholder="Select an address">
+                      <SelectValue placeholder="Select an address" className="text-left">
                         {selectedAddressId === 'new' ? (
                           <div className="flex flex-col items-start w-full">
                             <span className="font-medium text-gray-800 text-sm">New Address</span>
@@ -276,13 +276,13 @@ export const InstagramCheckoutForm = ({
                           </div>
                         ) : selectedAddress ? (
                           <div className="flex flex-col items-start w-full">
-                            <span className="font-medium text-gray-800 text-sm">{selectedAddress.label}</span>
-                            <span className="text-xs text-gray-500 text-wrap break-words max-w-full min-w-0">
+                            <span className="font-medium text-gray-800 text-sm text-left">{selectedAddress.label}</span>
+                            <span className="text-xs text-gray-500 text-wrap break-words max-w-full min-w-0 text-left">
                               {selectedAddress.address}, {selectedAddress.city}, {selectedAddress.zip_code}, {selectedAddress.country}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-gray-500">Select an address</span>
+                          <span className="text-gray-500 text-left">Select an address</span>
                         )}
                       </SelectValue>
                     </SelectTrigger>
@@ -328,7 +328,7 @@ export const InstagramCheckoutForm = ({
                     <CardDescription className="text-sm text-gray-500">Enter your details for delivery.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="flex items-center justify-between rounded-lg">
                         <div className="space-y-0.5">
                           <Label htmlFor="saveAddress" className="text-base">Save Address</Label>
                           <p className="text-sm text-gray-500">Save this address for future orders.</p>
@@ -345,44 +345,45 @@ export const InstagramCheckoutForm = ({
                           )}
                         />
                       </div>
+                      <Separator></Separator>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="firstName">First Name</Label>
-                        <Input id="firstName" {...register("firstName")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        <Input placeholder="First Name" id="firstName" {...register("firstName")} className="border-gray-300 bg-gray-50 text-gray-800" />
                         {errors.firstName && <p className="text-sm text-red-500 mt-1">{errors.firstName.message}</p>}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="lastName">Last Name</Label>
-                        <Input id="lastName" {...register("lastName")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        <Input placeholder="Last Name" id="lastName" {...register("lastName")} className="border-gray-300 bg-gray-50 text-gray-800" />
                         {errors.lastName && <p className="text-sm text-red-500 mt-1">{errors.lastName.message}</p>}
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" {...register("email")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        <Input placeholder="Email" id="email" type="email" {...register("email")} className="border-gray-300 bg-gray-50 text-gray-800" />
                         {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="phone">Phone (Optional)</Label>
-                        <Input id="phone" type="tel" {...register("phone")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        <Input placeholder="Phone" id="phone" type="tel" {...register("phone")} className="border-gray-300 bg-gray-50 text-gray-800" />
                       </div>
                     </div>
                     <Separator className="bg-gray-200" />
                     <div className="space-y-2">
                       <Label htmlFor="shippingAddress" className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Shipping Address</Label>
-                      <Input id="shippingAddress" {...register("shippingAddress")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                      <Input placeholder="Shipping Address" id="shippingAddress" {...register("shippingAddress")} className="border-gray-300 bg-gray-50 text-gray-800" />
                       {errors.shippingAddress && <p className="text-sm text-red-500 mt-1">{errors.shippingAddress.message}</p>}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="shippingCity" className="flex items-center gap-2"><Building2 className="h-4 w-4" /> City</Label>
-                      <Input id="shippingCity" {...register("shippingCity")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                      <Input placeholder="City" id="shippingCity" {...register("shippingCity")} className="border-gray-300 bg-gray-50 text-gray-800" />
                       {errors.shippingCity && <p className="text-sm text-red-500 mt-1">{errors.shippingCity.message}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="shippingZip">Zip/Postal Code</Label>
-                      <Input id="shippingZip" {...register("shippingZip")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                      <Input placeholder="Zip/Postal Code" id="shippingZip" {...register("shippingZip")} className="border-gray-300 bg-gray-50 text-gray-800" />
                       {errors.shippingZip && <p className="text-sm text-red-500 mt-1">{errors.shippingZip.message}</p>}
                     </div>
                   </div>

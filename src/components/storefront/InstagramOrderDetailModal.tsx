@@ -303,8 +303,8 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
       </AlertDialog>
 
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl bg-white text-black rounded-lg">
-          <DialogHeader className="border-b border-gray-200 pb-4">
+        <DialogContent className="max-w-2xl bg-white text-black rounded-lg h-[90vh] flex flex-col">
+          <DialogHeader className="p-4 border-b border-gray-200 pb-4 flex-shrink-0">
             <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
               {getStatusIcon(order.status)}
               Order #{order.id.substring(0, 8)}
@@ -313,7 +313,7 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
               Details for your order placed on {new Date(order.created_at).toLocaleDateString()}.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh] pr-4 md:pr-6"> {/* Adjusted padding for scroll area */}
+          <ScrollArea className="flex-1 pr-4 md:pr-6">
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><User className="h-4 w-4 text-red-500" /> Customer</div><p className="text-gray-800">{order.customer_name}</p></div>
@@ -393,7 +393,7 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
               </div>
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 border-t border-gray-200 flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+          <DialogFooter className="pt-4 border-t border-gray-200 flex-col sm:flex-row sm:justify-between sm:items-center gap-2 flex-shrink-0">
             <div className="flex items-center gap-2 mr-auto">
               <span className="text-sm text-gray-700">Status:</span>
               <Badge className={cn("text-white text-sm md:text-base", getStatusColor(order.status))}>{order.status}</Badge>
