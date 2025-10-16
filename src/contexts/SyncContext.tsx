@@ -124,12 +124,3 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     </SyncContext.Provider>
   );
 };
-
-// useSync hook has been moved to @/hooks/useSync
-export const useSync = () => {
-  const context = useContext(SyncContext);
-  if (context === undefined) {
-    throw new Error('useSync must be used within a SyncProvider');
-  }
-  return context;
-};s

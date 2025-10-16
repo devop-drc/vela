@@ -15,7 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BulkActionsToolbar } from "@/components/BulkActionsToolbar";
 import { AnimatePresence, motion } from "framer-motion";
 import { SaleModal, SaleFormData } from "@/components/SaleModal";
-import { cn } => "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { Input } from "@/components/ui/input";
 import { Search, ListFilter } from "lucide-react";
@@ -23,7 +23,7 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIntegration } from "@/contexts/IntegrationContext";
 import { toast } from "sonner";
-import { useSync } from "@/hooks/useSync"; // Corrected import path
+import { useSync } from "@/hooks/useSync";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { useAppearance } from "@/contexts/AppearanceContext";
 
