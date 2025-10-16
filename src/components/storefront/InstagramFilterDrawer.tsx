@@ -206,7 +206,7 @@ export const InstagramFilterDrawer = ({
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose} shouldScaleBackground>
-      <DrawerContent side="bottom" className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl">
+      <DrawerContent side="bottom" className="max-h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl">
         <DrawerHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
           <DrawerTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
             <Filter className="h-6 w-6 text-red-500" />
