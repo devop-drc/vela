@@ -56,20 +56,13 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, onOpenMyOr
         // Profile Page Header Layout
         <div className="container flex h-14 items-center justify-between px-4">
           <div className="flex items-center space-x-2 flex-shrink-0">
-            <h1 className="text-lg font-bold">instaShop</h1>
+            <h1 className="text-lg font-bold">InstaShop</h1>
           </div>
-          <div className="flex items-center justify-center flex-1">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={shopDetails.logo_url || undefined} alt={shopDetails.shop_name} />
-              <AvatarFallback className="text-sm bg-gray-100 text-gray-600">
-                {shopDetails.shop_name?.[0]}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-          <div className="flex items-center space-x-2 flex-shrink-0">
-            <Button variant="ghost" size="sm" asChild className="text-gray-800 hover:bg-gray-100">
+          
+          <div className="flex items-center flex-shrink-0">
+            <Button variant="ghost" size="sm" asChild className="text-gray-800 hover:bg-gray-100 px-0">
               <Link to={`/instagramShop/${shopSlug}/products`}>
-                Products <ChevronDown className="ml-1 h-4 w-4 rotate-[-90deg]" />
+                <p className="text-lg">Products</p> <ChevronDown className="ml-1 h-6 w-6 rotate-[-90deg]" />
               </Link>
             </Button>
           </div>
@@ -80,7 +73,7 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, onOpenMyOr
           {/* Row 1 */}
           <div className="container flex h-14 items-center justify-between px-4">
             <Button variant="ghost" size="icon" onClick={handleBack} className="text-gray-800 hover:bg-gray-100">
-              <ArrowLeft className="h-5 w-5" />
+              <ChevronDown className="mr-1 h-6 w-6 rotate-[+90deg]" />
               <span className="sr-only">Back</span>
             </Button>
             <h1 className="text-lg font-bold">Products</h1>

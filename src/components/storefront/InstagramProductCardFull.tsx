@@ -362,15 +362,15 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
           {/* Quantity & Add to Cart / Buy Now - Responsive */}
           {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && (
-            <div className="flex flex-col sm:flex-row items-center gap-2 pt-3">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3">
               {/* Quantity Counter */}
-              <div className="flex items-center border border-gray-300 rounded-md flex-shrink-0">
+              <div className="flex items-center border border-gray-300 rounded-full flex-shrink-0 w-full sm:w-auto max-w-[150px]">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
                   disabled={quantity <= 1}
-                  className="h-8 w-8 text-gray-800 hover:bg-gray-100"
+                  className="h-9 w-9 text-gray-800 hover:bg-gray-100 rounded-full"
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
@@ -378,7 +378,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                   type="number"
                   value={quantity}
                   onChange={(e) => setQuantity(Math.max(1, Math.min(product.inventory || 1, parseInt(e.target.value) || 1)))}
-                  className="w-14 text-center border-y-0 border-x border-gray-300 focus-visible:ring-0 text-sm bg-white"
+                  className="w-12 text-center border-y-0 border-x-0 focus-visible:ring-0 text-base bg-white h-9 p-0"
                   min={1}
                   max={product.inventory || 1}
                 />
@@ -387,43 +387,46 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                   size="icon"
                   onClick={() => setQuantity(prev => Math.min(product.inventory || 1, prev + 1))}
                   disabled={quantity >= (product.inventory || 1)}
-                  className="h-8 w-8 text-gray-800 hover:bg-gray-100"
+                  className="h-9 w-9 text-gray-800 hover:bg-gray-100 rounded-full"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
 
-              {/* Buy Now Button */}
-              <Button
-                size="lg"
-                className={cn(
-                  "flex-1 text-base rounded-md",
-                  hasDiscount
-                    ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                )}
-                onClick={handleBuyNow}
-                disabled={isOutOfStock}
-              >
-                Buy Now <Banknote className="ml-2 h-4 w-4" />
-              </Button>
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-2 flex-1 w-full">
+                {/* Buy Now Button */}
+                <Button
+                  size="lg"
+                  className={cn(
+                    "w-full text-base rounded-md",
+                    hasDiscount
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                      : "bg-red-500 hover:bg-red-600 text-white"
+                  )}
+                  onClick={handleBuyNow}
+                  disabled={isOutOfStock}
+                >
+                  Buy Now <Banknote className="ml-2 h-4 w-4" />
+                </Button>
 
-              {/* Add to Cart Button */}
-              <Button
-                size="lg"
-                className={cn(
-                  "flex-1 text-base rounded-md sm:w-auto sm:flex-none", // Make it full width on small screens, auto on sm+
-                  hasDiscount
-                    ? "border-emerald-600 text-emerald-600 hover:bg-emerald-50 bg-transparent"
-                    : "border-primary text-primary hover:bg-primary/5 bg-transparent"
-                )}
-                variant="outline"
-                onClick={handleAddToCart}
-                disabled={isOutOfStock}
-              >
-                <ShoppingBag className="mr-2 h-5 w-5" />
-                Add to cart
-              </Button>
+                {/* Add to Cart Button */}
+                <Button
+                  size="lg"
+                  className={cn(
+                    "w-full text-base rounded-md border",
+                    hasDiscount
+                      ? "border-emerald-600 text-emerald-600 hover:bg-emerald-50 bg-transparent"
+                      : "border-red-500 text-red-500 hover:bg-red-50 bg-transparent"
+                  )}
+                  variant="outline"
+                  onClick={handleAddToCart}
+                  disabled={isOutOfStock}
+                >
+                  <ShoppingBag className="mr-2 h-5 w-5" />
+                  Add to cart
+                </Button>
+              </div>
             </div>
           )}
           {product.pricing_type === 'one_time' && (product.inventory === null || product.inventory <= 0) && (

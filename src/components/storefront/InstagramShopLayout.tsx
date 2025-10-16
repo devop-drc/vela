@@ -188,7 +188,7 @@ const InstagramShopLayoutContent = () => {
   return (
     <div className="flex flex-col min-h-screen bg-white text-black">
       <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} isProfilePage={true} />
-      <main className="flex-1 overflow-y-auto pt-14 pb-14"> {/* Adjusted padding-top and added padding-bottom */}
+      <main className="flex-1 overflow-y-auto pt-3 pb-14"> {/* Adjusted padding-top and added padding-bottom */}
         <Outlet />
       </main>
       <Sonner />
