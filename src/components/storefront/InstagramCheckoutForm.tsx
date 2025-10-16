@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { motion} from "framer-motion";
+import { Switch } from "@/components/ui/switch"; // Import Switch
 
 const checkoutSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -208,7 +209,7 @@ export const InstagramCheckoutForm = ({
   const onSubmit = async (data: CheckoutFormData) => {
     if (checkoutStep === 'contact-shipping') {
       // If "Save address" is checked, open the modal to get the label
-      if (data.saveAddress) {
+      if (data.saveAddress && selectedAddressId === 'new') { // Only prompt to save if it's a new address
         setIsSaveAddressModalOpen(true);
         return; // Stop submission until label is provided
       }
@@ -290,142 +291,152 @@ export const InstagramCheckoutForm = ({
                 transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
+                {selectedAddressId === 'new' && (
+                  <Card className="shadow-sm border border-gray-200 bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-xl flex items-center gap-2 text-gray-800">
+                        <User className="h-6 w-6 text-red-500" />
+                        Contact & Shipping Information
+                      </CardTitle>
+                      <CardDescription className="text-sm text-gray-500">Enter your details for delivery.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="saveAddress" className="text-base">Save Address</Label>
+                          <p className="text-sm text-gray-500">Save this address for future orders.</p>
+                        </div>
+                        <Controller
+                          name="saveAddress"
+                          control={control}
+                          render={({ field }) => (
+                            <Switch
+                              id="saveAddress"
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          )}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="firstName">First Name</Label>
+                          <Input id="firstName" {...register("firstName")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                          {errors.firstName && <p className="text-sm text-red-500 mt-1">{errors.firstName.message}</p>}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="lastName">Last Name</Label>
+                          <Input id="lastName" {...register("lastName")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                          {errors.lastName && <p className="text-sm text-red-500 mt-1">{errors.lastName.message}</p>}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email</Label>
+                          <Input id="email" type="email" {...register("email")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                          {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">Phone (Optional)</Label>
+                          <Input id="phone" type="tel" {...register("phone")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        </div>
+                      </div>
+                      <Separator className="bg-gray-200" />
+                      <div className="space-y-2">
+                        <Label htmlFor="shippingAddress" className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Shipping Address</Label>
+                        <Input id="shippingAddress" {...register("shippingAddress")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        {errors.shippingAddress && <p className="text-sm text-red-500 mt-1">{errors.shippingAddress.message}</p>}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="shippingCity" className="flex items-center gap-2"><Building2 className="h-4 w-4" /> City</Label>
+                        <Input id="shippingCity" {...register("shippingCity")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        {errors.shippingCity && <p className="text-sm text-red-500 mt-1">{errors.shippingCity.message}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="shippingZip">Zip/Postal Code</Label>
+                        <Input id="shippingZip" {...register("shippingZip")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        {errors.shippingZip && <p className="text-sm text-red-500 mt-1">{errors.shippingZip.message}</p>}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="shippingCountry" className="flex items-center gap-2"><Globe className="h-4 w-4" /> Country</Label>
+                      <Controller
+                        name="shippingCountry"
+                        control={control}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value} disabled>
+                            <SelectTrigger id="shippingCountry" className="border-gray-300 bg-gray-50 text-gray-800">
+                              <SelectValue placeholder="Select country" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white text-gray-800">
+                              {countries.map(country => (
+                                <SelectItem key={country.code} value={country.code}>
+                                  {country.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {errors.shippingCountry && <p className="text-sm text-red-500 mt-1">{errors.shippingCountry.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="shippingNotesSeller" className="flex items-center gap-2"><StickyNote className="h-4 w-4" /> Notes for Seller (Optional)</Label>
+                      <Textarea id="shippingNotesSeller" {...register("shippingNotesSeller")} rows={2} placeholder="e.g., Please wrap as a gift." className="border-gray-300 bg-gray-50 text-gray-800" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="shippingNotesCourier" className="flex items-center gap-2"><Truck className="h-4 w-4" /> Notes for Courier (Optional)</Label>
+                      <Textarea id="shippingNotesCourier" {...register("shippingNotesCourier")} rows={2} placeholder="e.g., Leave package at the back door." className="border-gray-300 bg-gray-50 text-gray-800" />
+                    </div>
+                  </CardContent>
+                </Card>
+                )}
+              </motion.div>
+            )}
+
+            {checkoutStep === 'payment' && (
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
                 <Card className="shadow-sm border border-gray-200 bg-white">
                   <CardHeader>
                     <CardTitle className="text-xl flex items-center gap-2 text-gray-800">
-                      <User className="h-6 w-6 text-red-500" />
-                      Contact & Shipping Information
+                      <CreditCard className="h-6 w-6 text-red-500" />
+                      Payment Method
                     </CardTitle>
-                    <CardDescription className="text-sm text-gray-500">Enter your details for delivery.</CardDescription>
+                    <CardDescription className="text-sm text-gray-500">Choose how you'd like to pay.</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName">First Name</Label>
-                        <Input id="firstName" {...register("firstName")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                        {errors.firstName && <p className="text-sm text-red-500 mt-1">{errors.firstName.message}</p>}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName">Last Name</Label>
-                        <Input id="lastName" {...register("lastName")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                        {errors.lastName && <p className="text-sm text-red-500 mt-1">{errors.lastName.message}</p>}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" {...register("email")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                        {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone (Optional)</Label>
-                        <Input id="phone" type="tel" {...register("phone")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                      </div>
-                    </div>
-                    <Separator className="bg-gray-200" />
-                    <div className="space-y-2">
-                      <Label htmlFor="shippingAddress" className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Shipping Address</Label>
-                      <Input id="shippingAddress" {...register("shippingAddress")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                      {errors.shippingAddress && <p className="text-sm text-red-500 mt-1">{errors.shippingAddress.message}</p>}
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="shippingCity" className="flex items-center gap-2"><Building2 className="h-4 w-4" /> City</Label>
-                      <Input id="shippingCity" {...register("shippingCity")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                      {errors.shippingCity && <p className="text-sm text-red-500 mt-1">{errors.shippingCity.message}</p>}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="shippingZip">Zip/Postal Code</Label>
-                      <Input id="shippingZip" {...register("shippingZip")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                      {errors.shippingZip && <p className="text-sm text-red-500 mt-1">{errors.shippingZip.message}</p>}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="shippingCountry" className="flex items-center gap-2"><Globe className="h-4 w-4" /> Country</Label>
+                  <CardContent className="space-y-4">
                     <Controller
-                      name="shippingCountry"
+                      name="paymentMethod"
                       control={control}
                       render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value} disabled>
-                          <SelectTrigger id="shippingCountry" className="border-gray-300 bg-gray-50 text-gray-800">
-                            <SelectValue placeholder="Select country" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white text-gray-800">
-                            {countries.map(country => (
-                              <SelectItem key={country.code} value={country.code}>
-                                {country.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.shippingCountry && <p className="text-sm text-red-500 mt-1">{errors.shippingCountry.message}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="shippingNotesSeller" className="flex items-center gap-2"><StickyNote className="h-4 w-4" /> Notes for Seller (Optional)</Label>
-                    <Textarea id="shippingNotesSeller" {...register("shippingNotesSeller")} rows={2} placeholder="e.g., Please wrap as a gift." className="border-gray-300 bg-gray-50 text-gray-800" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="shippingNotesCourier" className="flex items-center gap-2"><Truck className="h-4 w-4" /> Notes for Courier (Optional)</Label>
-                    <Textarea id="shippingNotesCourier" {...register("shippingNotesCourier")} rows={2} placeholder="e.g., Leave package at the back door." className="border-gray-300 bg-gray-50 text-gray-800" />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="saveAddress"
-                      {...register("saveAddress")}
-                      className="h-4 w-4 text-red-500 focus:ring-red-500 border-gray-300 rounded"
-                    />
-                    <Label htmlFor="saveAddress" className="text-sm text-gray-700">Save this address for future orders</Label>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {checkoutStep === 'payment' && (
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-6"
-            >
-              <Card className="shadow-sm border border-gray-200 bg-white">
-                <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2 text-gray-800">
-                    <CreditCard className="h-6 w-6 text-red-500" />
-                    Payment Method
-                  </CardTitle>
-                  <CardDescription className="text-sm text-gray-500">Choose how you'd like to pay.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Controller
-                    name="paymentMethod"
-                    control={control}
-                    render={({ field }) => (
-                      <RadioGroup onValueChange={field.onChange} value={field.value} className="space-y-3">
-                        <Label htmlFor="cash_on_delivery" className={cn("flex items-center gap-3 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-red-500 flex-1", hasSubscriptionProducts && "opacity-50 cursor-not-allowed")}>
-                          <RadioGroupItem value="cash_on_delivery" id="cash_on_delivery" disabled={hasSubscriptionProducts} />
-                          <div>
-                            <p className="font-medium flex items-center gap-2 text-gray-800">
-                              <Banknote className="h-5 w-5" /> Cash on Delivery
-                            </p>
-                            <p className="text-sm text-gray-500">Pay with cash when your order is delivered.</p>
-                            {hasSubscriptionProducts && <p className="text-xs text-red-500 mt-1">Not available for subscriptions.</p>}
-                          </div>
-                        </Label>
-                        {currentPaymentMethod === 'cash_on_delivery' && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="p-3 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-md"
-                          >
-                            <Info className="h-4 w-4 inline-block mr-2" />
-                            Please have the exact amount ready for the courier.
-                          </motion.div>
+                        <RadioGroup onValueChange={field.onChange} value={field.value} className="space-y-3">
+                          <Label htmlFor="cash_on_delivery" className={cn("flex items-center gap-3 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-red-500 flex-1", hasSubscriptionProducts && "opacity-50 cursor-not-allowed")}>
+                            <RadioGroupItem value="cash_on_delivery" id="cash_on_delivery" disabled={hasSubscriptionProducts} />
+                            <div>
+                              <p className="font-medium flex items-center gap-2 text-gray-800">
+                                <Banknote className="h-5 w-5" /> Cash on Delivery
+                              </p>
+                              <p className="text-sm text-gray-500">Pay with cash when your order is delivered.</p>
+                              {hasSubscriptionProducts && <p className="text-xs text-red-500 mt-1">Not available for subscriptions.</p>}
+                            </div>
+                          </Label>
+                          {currentPaymentMethod === 'cash_on_delivery' && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="p-3 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-md"
+                            >
+                              <Info className="h-4 w-4 inline-block mr-2" />
+                              Please have the exact amount ready for the courier.
+                            </motion.div>
                         )}
                         <Label htmlFor="card" className="flex items-center gap-3 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-red-500 flex-1">
                           <RadioGroupItem value="card" id="card" />
@@ -451,5 +462,6 @@ export const InstagramCheckoutForm = ({
         </div>
       </ScrollArea>
     </form>
+    </>
   );
 };

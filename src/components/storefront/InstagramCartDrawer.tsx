@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { InstagramCheckoutForm, CheckoutFormData, CustomerAddress } from "./InstagramCheckoutForm"; // Import InstagramCheckoutForm and CustomerAddress type
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
+import { InstagramProductQuickViewModal } from "./InstagramProductQuickViewModal"; // Import new modal
 
 interface InstagramCartDrawerProps {
   isOpen: boolean;
@@ -38,6 +39,10 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]); // State for saved addresses
   const [selectedAddressId, setSelectedAddressId] = useState<string | 'new'>('new'); // State for selected address
+
+  const [isProductQuickViewModalOpen, setIsProductQuickViewModalOpen] = useState(false);
+  const [productToQuickView, setProductToQuickView] = useState<{ productId: string; shopSlug: string } | null>(null);
+
 
   // Determine which cart items to use (persistent or initial for Buy Now)
   const currentCartItems = useMemo(() => initialCartItems || persistentCartItems, [initialCartItems, persistentCartItems]);
@@ -202,101 +207,116 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
     }
   };
 
+  const handleOpenProductQuickView = (productId: string) => {
+    setProductToQuickView({ productId, shopSlug: shopDetails?.slug || '' });
+    setIsProductQuickViewModalOpen(true);
+  };
+
   return (
-    <Drawer open={isOpen} onOpenChange={onClose} shouldScaleBackground>
-      <DrawerContent side="bottom" className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl">
-        <DrawerHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
-          <DrawerTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
-            <ShoppingBag className="h-6 w-6 text-red-500" />
-            {getDrawerTitle()}
-          </DrawerTitle>
-          {/* Removed X button */}
-        </DrawerHeader>
+    <>
+      {isProductQuickViewModalOpen && productToQuickView && (
+        <InstagramProductQuickViewModal
+          isOpen={isProductQuickViewModalOpen}
+          onClose={() => setIsProductQuickViewModalOpen(false)}
+          productId={productToQuickView.productId}
+          shopSlug={productToQuickView.shopSlug}
+        />
+      )}
 
-        <div className="flex-1 overflow-hidden flex flex-col">
-          {(checkoutStep === 'cart' && !initialCartItems) ? (
-            <>
-              {currentCartItems.length === 0 && savedItems.length === 0 ? (
-                <motion.div
-                  key="empty-cart"
-                  initial={{ opacity: 0, y: 50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -50 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex flex-col items-center justify-center flex-1 p-8 text-center h-full"
-                >
-                  <ShoppingBag className="h-20 w-20 text-gray-400 mb-6" />
-                  <h3 className="text-2xl font-bold mb-4">Your cart is empty</h3>
-                  <p className="text-base text-gray-500 mb-8">Looks like you haven't added anything to your cart yet.</p>
-                  <Button onClick={onClose} className="text-base bg-red-500 hover:bg-red-600 text-white">Start Shopping</Button>
-                </motion.div>
-              ) : (
-                <ScrollArea className="flex-1 p-4 pr-6">
-                  <div className="space-y-6">
-                    {currentCartItems.length > 0 && (
-                      <div className="space-y-4">
-                        <h2 className="text-lg font-bold text-gray-800">Items in Cart ({currentCartItems.length})</h2>
-                        {hasSubscriptionProducts && (
-                          <div className="flex items-center gap-2 p-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md">
-                            <Info className="h-4 w-4 flex-shrink-0" />
-                            <span>This cart includes subscription products. Cash on Delivery is not available.</span>
-                          </div>
-                        )}
-                        <AnimatePresence>
-                          {currentCartItems.map(item => (
-                            <motion.div
-                              key={item.productId}
-                              layout
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, x: -100 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <Card className="flex flex-col sm:flex-row items-start sm:items-center p-3 gap-3 sm:gap-4 shadow-sm border border-gray-200 bg-white">
-                                <Link to={`/instagramShop/${shopSlug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
-                                  <div className="h-20 w-20 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
-                                    <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
+      <Drawer open={isOpen} onOpenChange={onClose} shouldScaleBackground>
+        <DrawerContent side="bottom" className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl">
+          <DrawerHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
+            <DrawerTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
+              <ShoppingBag className="h-6 w-6 text-red-500" />
+              {getDrawerTitle()}
+            </DrawerTitle>
+            {/* Removed X button */}
+          </DrawerHeader>
+
+          <div className="flex-1 overflow-hidden flex flex-col">
+            {(checkoutStep === 'cart' && !initialCartItems) ? (
+              <>
+                {currentCartItems.length === 0 && savedItems.length === 0 ? (
+                  <motion.div
+                    key="empty-cart"
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -50 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex flex-col items-center justify-center flex-1 p-8 text-center h-full"
+                  >
+                    <ShoppingBag className="h-20 w-20 text-gray-400 mb-6" />
+                    <h3 className="text-2xl font-bold mb-4">Your cart is empty</h3>
+                    <p className="text-base text-gray-500 mb-8">Looks like you haven't added anything to your cart yet.</p>
+                    <Button onClick={onClose} className="text-base bg-red-500 hover:bg-red-600 text-white">Start Shopping</Button>
+                  </motion.div>
+                ) : (
+                  <ScrollArea className="flex-1 p-4 pr-6">
+                    <div className="space-y-4">
+                      {currentCartItems.length > 0 && (
+                        <div className="space-y-3">
+                          <h2 className="text-lg font-bold text-gray-800">Items in Cart ({currentCartItems.length})</h2>
+                          {hasSubscriptionProducts && (
+                            <div className="flex items-center gap-2 p-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md">
+                              <Info className="h-4 w-4 flex-shrink-0" />
+                              <span>This cart includes subscription products. Cash on Delivery is not available.</span>
+                            </div>
+                          )}
+                          <AnimatePresence>
+                            {currentCartItems.map(item => (
+                              <motion.div
+                                key={item.productId}
+                                layout
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, x: -100 }}
+                                transition={{ duration: 0.2 }}
+                              >
+                                <Card className="flex items-center p-2 gap-2 shadow-sm border border-gray-200 bg-white">
+                                  <button onClick={() => handleOpenProductQuickView(item.productId)} className="flex-shrink-0">
+                                    <div className="h-16 w-16 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                                      <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
+                                    </div>
+                                  </button>
+                                  <div className="flex-1 flex flex-col justify-center min-w-0">
+                                    <button onClick={() => handleOpenProductQuickView(item.productId)} className="text-left">
+                                      <h3 className="font-semibold text-sm hover:underline leading-tight text-gray-800 truncate">{item.name}</h3>
+                                    </button>
+                                    {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                                      <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                        {Object.entries(item.selectedOptions).map(([key, value]) => (
+                                          <span key={key} className="capitalize">
+                                            {key}: {Array.isArray(value) ? value.join(', ') : value}
+                                          </span>
+                                        )).join(' | ')}
+                                      </p>
+                                    )}
+                                    {item.pricing_type === 'subscription' && (
+                                      <p className="text-xs text-gray-500 mt-0.5">
+                                        Subscription: {item.billing_interval === 'month' ? 'Monthly' : 'Yearly'}
+                                      </p>
+                                    )}
                                   </div>
-                                </Link>
-                                <div className="flex-1 flex flex-col justify-between w-full sm:w-auto">
-                                  <Link to={`/instagramShop/${shopSlug}/product/${item.productId}`} onClick={onClose}>
-                                    <h3 className="font-semibold text-base hover:underline leading-tight text-gray-800">{item.name}</h3>
-                                  </Link>
 
-                                  {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      {Object.entries(item.selectedOptions).map(([key, value]) => (
-                                        <span key={key} className="capitalize">
-                                          {key}: {Array.isArray(value) ? value.join(', ') : value}
-                                        </span>
-                                      )).join(' | ')}
-                                    </p>
-                                  )}
-                                  {item.pricing_type === 'subscription' && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      Subscription: {item.billing_interval === 'month' ? 'Monthly' : 'Yearly'}
-                                    </p>
-                                  )}
-
-                                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-2 w-full">
-                                    <div className="flex items-center border border-gray-300 rounded-md h-9 flex-shrink-0">
+                                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                    <div className="flex items-center border border-gray-300 rounded-md h-7">
                                       <motion.button
                                         type="button"
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                                         disabled={item.quantity <= 1}
-                                        className="h-full w-8 rounded-r-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
+                                        className="h-full w-6 rounded-r-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
                                         whileHover={{ scale: 1.1 }}
                                         whileTap={{ scale: 0.9 }}
                                       >
-                                        <Minus className="h-4 w-4" />
+                                        <Minus className="h-3 w-3" />
                                       </motion.button>
                                       <Input
                                         type="number"
                                         value={item.quantity}
                                         onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
-                                        className="w-14 text-center border-y-0 border-x border-gray-300 focus-visible:ring-0 text-sm h-full rounded-none bg-white"
+                                        className="w-10 text-center border-y-0 border-x border-gray-300 focus-visible:ring-0 text-xs h-full rounded-none bg-white p-0"
                                         min={1}
                                       />
                                       <motion.button
@@ -305,60 +325,58 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                         size="icon"
                                         onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                                         disabled={item.quantity >= 99}
-                                        className="h-full w-8 rounded-l-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
+                                        className="h-full w-6 rounded-l-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
                                         whileHover={{ scale: 1.1 }}
                                         whileTap={{ scale: 0.9 }}
                                       >
-                                        <Plus className="h-4 w-4" />
+                                        <Plus className="h-3 w-3" />
                                       </motion.button>
                                     </div>
                                     
-                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                    <div className="flex items-center gap-1">
                                       {item.isDiscounted && (
-                                        <p className="text-sm text-gray-500 line-through">
+                                        <p className="text-xs text-gray-500 line-through">
                                           {formatCurrency(convertCurrency(item.originalPrice, item.currency, shopDetails?.currency), shopDetails?.currency)}
                                         </p>
                                       )}
-                                      <p className={cn("font-semibold text-base", item.isDiscounted && "text-green-600")}>
+                                      <p className={cn("font-semibold text-sm", item.isDiscounted && "text-green-600")}>
                                         {formatCurrency(convertCurrency(item.price * item.quantity, item.currency, shopDetails?.currency), shopDetails?.currency)}
                                       </p>
                                     </div>
-
-                                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
+                                    <div className="flex gap-1">
                                       <Button
                                         type="button"
                                         variant="outline"
-                                        size="sm"
+                                        size="xs"
                                         onClick={() => saveForLater(item)}
-                                        className="flex-1 sm:flex-none text-sm h-9 px-3 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                                        className="text-xs h-6 px-2 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
                                       >
-                                          <Bookmark className="mr-2 h-4 w-4" />
+                                          <Bookmark className="mr-1 h-3 w-3" />
                                           Save
                                       </Button>
                                       <motion.button
                                         type="button"
                                         variant="destructive"
-                                        size="icon"
+                                        size="xs"
                                         onClick={() => removeFromCart(item.productId)}
-                                        className="flex-shrink-0 text-red-500 hover:text-red-600 h-9 w-9 rounded-full bg-red-50 hover:bg-red-100"
+                                        className="text-red-500 hover:text-red-600 h-6 w-6 rounded-full bg-red-50 hover:bg-red-100"
                                         whileHover={{ scale: 1.1 }}
                                         whileTap={{ scale: 0.9 }}
                                       >
-                                        <XCircle className="h-5 w-5" />
+                                        <XCircle className="h-3 w-3" />
                                         <span className="sr-only">Remove {item.name}</span>
                                       </motion.button>
                                     </div>
                                   </div>
-                                </div>
-                              </Card>
-                            </motion.div>
+                                </Card>
+                              </motion.div>
                           ))}
                         </AnimatePresence>
                       </div>
                     )}
 
                     {savedItems.length > 0 && (
-                      <div className="space-y-4 mt-6">
+                      <div className="space-y-3 mt-6">
                         <h2 className="text-lg font-bold text-gray-800">Saved ({savedItems.length})</h2>
                         <AnimatePresence>
                           {savedItems.map(item => (
@@ -370,19 +388,18 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                               exit={{ opacity: 0, x: -100 }}
                               transition={{ duration: 0.2 }}
                             >
-                              <Card className="flex flex-col sm:flex-row items-start sm:items-center p-3 gap-3 sm:gap-4 shadow-sm border border-gray-200 bg-white">
-                                <Link to={`/instagramShop/${shopSlug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
-                                  <div className="h-20 w-20 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                              <Card className="flex items-center p-2 gap-2 shadow-sm border border-gray-200 bg-white">
+                                <button onClick={() => handleOpenProductQuickView(item.productId)} className="flex-shrink-0">
+                                  <div className="h-16 w-16 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
                                     <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                   </div>
-                                </Link>
-                                <div className="flex-1 flex flex-col justify-between w-full sm:w-auto">
-                                  <Link to={`/instagramShop/${shopSlug}/product/${item.productId}`} onClick={onClose}>
-                                    <h3 className="font-semibold text-base hover:underline leading-tight text-gray-800">{item.name}</h3>
-                                  </Link>
-
+                                </button>
+                                <div className="flex-1 flex flex-col justify-center min-w-0">
+                                  <button onClick={() => handleOpenProductQuickView(item.productId)} className="text-left">
+                                    <h3 className="font-semibold text-sm hover:underline leading-tight text-gray-800 truncate">{item.name}</h3>
+                                  </button>
                                   {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-xs text-gray-500 mt-0.5 truncate">
                                       {Object.entries(item.selectedOptions).map(([key, value]) => (
                                         <span key={key} className="capitalize">
                                           {key}: {Array.isArray(value) ? value.join(', ') : value}
@@ -391,47 +408,46 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                     </p>
                                   )}
                                   {item.pricing_type === 'subscription' && (
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-xs text-gray-500 mt-0.5">
                                       Subscription: {item.billing_interval === 'month' ? 'Monthly' : 'Yearly'}
                                     </p>
                                   )}
+                                </div>
 
-                                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-2 w-full">
-                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                      {item.isDiscounted && (
-                                        <p className="text-sm text-gray-500 line-through">
-                                          {formatCurrency(convertCurrency(item.originalPrice, item.currency, shopDetails?.currency), shopDetails?.currency)}
-                                        </p>
-                                      )}
-                                      <p className={cn("font-semibold text-base", item.isDiscounted && "text-green-600")}>
-                                        {formatCurrency(convertCurrency(item.price, item.currency, shopDetails?.currency), shopDetails?.currency)}
+                                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                  <div className="flex items-center gap-1">
+                                    {item.isDiscounted && (
+                                      <p className="text-xs text-gray-500 line-through">
+                                        {formatCurrency(convertCurrency(item.originalPrice, item.currency, shopDetails?.currency), shopDetails?.currency)}
                                       </p>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => moveToCart(item.productId)}
-                                        className="flex-1 sm:flex-none text-sm h-9 px-3 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
-                                      >
-                                          <MoveRight className="mr-2 h-4 w-4" />
-                                          Move to Cart
-                                      </Button>
-                                      <motion.button
-                                        type="button"
-                                        variant="destructive"
-                                        size="icon"
-                                        onClick={() => removeSavedItem(item.productId)}
-                                        className="flex-shrink-0 text-red-500 hover:text-red-600 h-9 w-9 rounded-full bg-red-50 hover:bg-red-100"
-                                        whileHover={{ scale: 1.1 }}
-                                        whileTap={{ scale: 0.9 }}
-                                      >
-                                        <XCircle className="h-5 w-5" />
-                                        <span className="sr-only">Remove {item.name}</span>
-                                      </motion.button>
-                                    </div>
+                                    )}
+                                    <p className={cn("font-semibold text-sm", item.isDiscounted && "text-green-600")}>
+                                      {formatCurrency(convertCurrency(item.price, item.currency, shopDetails?.currency), shopDetails?.currency)}
+                                    </p>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="xs"
+                                      onClick={() => moveToCart(item.productId)}
+                                      className="flex-1 sm:flex-none text-xs h-6 px-2 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                                    >
+                                        <MoveRight className="mr-1 h-3 w-3" />
+                                        Move to Cart
+                                    </Button>
+                                    <motion.button
+                                      type="button"
+                                      variant="destructive"
+                                      size="xs"
+                                      onClick={() => removeSavedItem(item.productId)}
+                                      className="flex-shrink-0 text-red-500 hover:text-red-600 h-6 w-6 rounded-full bg-red-50 hover:bg-red-100"
+                                      whileHover={{ scale: 1.1 }}
+                                      whileTap={{ scale: 0.9 }}
+                                    >
+                                      <XCircle className="h-3 w-3" />
+                                      <span className="sr-only">Remove {item.name}</span>
+                                    </motion.button>
                                   </div>
                                 </div>
                               </Card>
