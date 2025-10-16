@@ -206,100 +206,95 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose }: InstagramMyOrdersDr
               <ShoppingBag className="h-6 w-6 text-red-500" />
               My Orders
             </DrawerTitle>
-            <Button variant="ghost" size="icon" onClick={onClose} className="text-gray-800 hover:bg-gray-100">
-              <X className="h-5 w-5" />
-              <span className="sr-only">Close</span>
-            </Button>
+            {/* Removed X button */}
           </DrawerHeader>
 
           <ScrollArea className="flex-1 p-4 pr-6">
-            <Card className="shadow-none border-none bg-white">
-              <CardContent className="p-0">
-                <form onSubmit={fetchOrders} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="customerEmail" className="text-sm text-gray-700">Email Address</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                      <Input
-                        id="customerEmail"
-                        type="email"
-                        placeholder="your.email@example.com"
-                        value={customerEmailInput}
-                        onChange={(e) => setCustomerEmailInput(e.target.value)}
-                        required
-                        className="pl-10 text-sm border-gray-300 bg-gray-50 text-gray-800"
-                      />
-                    </div>
+            <div className="space-y-4"> {/* Removed Card, adjusted spacing */}
+              <form onSubmit={fetchOrders} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="customerEmail" className="text-sm text-gray-700">Email Address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <Input
+                      id="customerEmail"
+                      type="email"
+                      placeholder="your.email@example.com"
+                      value={customerEmailInput}
+                      onChange={(e) => setCustomerEmailInput(e.target.value)}
+                      required
+                      className="pl-10 text-sm border-gray-300 bg-gray-50 text-gray-800"
+                    />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="orderId" className="text-sm text-gray-700">Specific Order ID (Optional)</Label>
-                    <div className="relative">
-                      <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                      <Input
-                        id="orderId"
-                        placeholder="e.g., 12345"
-                        value={orderIdInput}
-                        onChange={(e) => setOrderIdInput(e.target.value)}
-                        className="pl-10 text-sm border-gray-300 bg-gray-50 text-gray-800"
-                      />
-                    </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="orderId" className="text-sm text-gray-700">Specific Order ID (Optional)</Label>
+                  <div className="relative">
+                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <Input
+                      id="orderId"
+                      placeholder="e.g., 12345"
+                      value={orderIdInput}
+                      onChange={(e) => setOrderIdInput(e.target.value)}
+                      className="pl-10 text-sm border-gray-300 bg-gray-50 text-gray-800"
+                    />
                   </div>
-                  <Button type="submit" className="w-full text-base bg-red-500 hover:bg-red-600 text-white" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Loading Orders...
-                      </>
-                    ) : "View Orders"}
-                  </Button>
-                </form>
+                </div>
+                <Button type="submit" className="w-full text-base bg-red-500 hover:bg-red-600 text-white" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading Orders...
+                    </>
+                  ) : "View Orders"}
+                </Button>
+              </form>
 
-                {searchAttempted && !isLoading && (
-                  orders.length > 0 ? (
-                    <div className="mt-6 space-y-4">
-                      <h2 className="text-lg font-bold text-gray-800">Your Orders ({orders.length})</h2>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Order ID</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                            <TableHead className="w-[60px]"></TableHead>
+              {searchAttempted && !isLoading && (
+                orders.length > 0 ? (
+                  <div className="mt-6 space-y-4">
+                    <h2 className="text-lg font-bold text-gray-800">Your Orders ({orders.length})</h2>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Order ID</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead className="w-[60px]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {orders.map(order => (
+                          <TableRow key={order.id} onClick={() => { setSelectedOrder(order); setIsOrderDetailModalOpen(true); }} className="cursor-pointer hover:bg-gray-100">
+                            <TableCell className="font-medium text-gray-800">#{order.id.substring(0, 8)}</TableCell>
+                            <TableCell className="text-gray-700">{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              <Badge className={cn("font-normal", getStatusColorClass(order.status))}>
+                                {getStatusIcon(order.status)}
+                                <span className="ml-1">{order.status}</span>
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-gray-800">
+                              {formatCurrency(convertCurrency(order.total_amount, order.currency, shopDetails?.currency), shopDetails?.currency)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="sm" className="text-gray-800 hover:bg-gray-100">View</Button>
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {orders.map(order => (
-                            <TableRow key={order.id} onClick={() => { setSelectedOrder(order); setIsOrderDetailModalOpen(true); }} className="cursor-pointer hover:bg-gray-100">
-                              <TableCell className="font-medium text-gray-800">#{order.id.substring(0, 8)}</TableCell>
-                              <TableCell className="text-gray-700">{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                              <TableCell>
-                                <Badge className={cn("font-normal", getStatusColorClass(order.status))}>
-                                  {getStatusIcon(order.status)}
-                                  <span className="ml-1">{order.status}</span>
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-right font-medium text-gray-800">
-                                {formatCurrency(convertCurrency(order.total_amount, order.currency, shopDetails?.currency), shopDetails?.currency)}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Button variant="ghost" size="sm" className="text-gray-800 hover:bg-gray-100">View</Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <div className="mt-6 p-4 border rounded-lg bg-gray-50 text-center space-y-3 text-gray-600">
-                      <Package className="h-12 w-12 text-gray-400 mx-auto" />
-                      <h3 className="text-lg font-semibold">No Orders Found</h3>
-                      <p className="text-sm">We couldn't find any orders for this email address.</p>
-                    </div>
-                  )
-                )}
-              </CardContent>
-            </Card>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="mt-6 p-4 border rounded-lg bg-gray-50 text-center space-y-3 text-gray-600">
+                    <Package className="h-12 w-12 text-gray-400 mx-auto" />
+                    <h3 className="text-lg font-semibold">No Orders Found</h3>
+                    <p className="text-sm">We couldn't find any orders for this email address.</p>
+                  </div>
+                )
+              )}
+            </div>
           </ScrollArea>
           <DrawerFooter className="p-4 border-t border-gray-200 flex-shrink-0">
             <Button variant="ghost" className="w-full text-base text-gray-800 hover:bg-gray-100" onClick={onClose}>

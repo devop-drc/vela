@@ -237,7 +237,7 @@ const StorefrontInstagramProfile = () => {
 
   const totalPosts = allProducts.length;
   const totalFollowers = shopDetails.followers_count || 0;
-  const totalProducts = allProducts.length; // Using allProducts.length for total products
+  const totalFollowing = 1; // Placeholder for 'following' count as it's not in shopDetails
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
@@ -252,7 +252,7 @@ const StorefrontInstagramProfile = () => {
 
       <main className="flex-1">
         {/* Profile Section */}
-        <section className="flex flex-col items-center mb-8 md:mb-10 px-4 pt-4"> {/* Added pt-4 */}
+        <section className="flex flex-col items-center mb-8 md:mb-10 px-4 pt-4">
           <div className="flex items-center w-full max-w-md md:max-w-none md:justify-start gap-4 md:gap-8 mb-4">
             <Avatar className="h-24 w-24 md:h-28 md:w-28 border-2 border-gray-300">
               <AvatarImage src={shopDetails.logo_url || undefined} alt={shopDetails.shop_name} />
@@ -260,7 +260,7 @@ const StorefrontInstagramProfile = () => {
                 {shopDetails.shop_name?.[0]}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 grid grid-cols-3 text-center md:text-left gap-2">
+            <div className="flex-1 grid grid-cols-3 text-center gap-2"> {/* Adjusted to grid-cols-3 */}
               <div>
                 <p className="text-lg md:text-xl font-bold">{formatLargeNumber(totalPosts)}</p>
                 <p className="text-xs md:text-sm text-gray-500">posts</p>
@@ -270,25 +270,24 @@ const StorefrontInstagramProfile = () => {
                 <p className="text-xs md:text-sm text-gray-500">followers</p>
               </div>
               <div>
-                <p className="text-lg md:text-xl font-bold">{formatLargeNumber(totalProducts)}</p> {/* Changed to products */}
-                <p className="text-xs md:text-sm text-gray-500">products</p> {/* Changed label */}
+                <p className="text-lg md:text-xl font-bold">{formatLargeNumber(totalFollowing)}</p> {/* Changed to totalFollowing */}
+                <p className="text-xs md:text-sm text-gray-500">following</p> {/* Changed label to 'following' */}
               </div>
             </div>
           </div>
 
-          <div className="w-full max-w-md md:max-w-none md:pl-0 space-y-1 text-center md:text-left">
+          <div className="w-full max-w-md md:max-w-none md:pl-0 space-y-1 text-left"> {/* Changed to text-left */}
             <h2 className="text-base md:text-lg font-semibold">{shopDetails.shop_name}</h2>
+            {/* Placeholder for 'Advertising/marketing' */}
+            <p className="text-sm md:text-base text-gray-600">Advertising/marketing</p>
             {shopDetails.headline && <p className="text-sm md:text-base text-gray-600">{shopDetails.headline}</p>}
             {shopDetails.about && <p className="text-sm md:text-base text-gray-600">{shopDetails.about}</p>}
-            {/* Removed LinkIcon from instagram_url as per image */}
             {shopDetails.instagram_url && (
-              <a href={shopDetails.instagram_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm md:text-base flex items-center justify-center md:justify-start gap-1">
+              <a href={shopDetails.instagram_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm md:text-base flex items-center justify-start gap-1"> {/* Changed to justify-start */}
                 {shopDetails.instagram_url.replace(/^(https?:\/\/)?(www\.)?/i, '').split('/')[0]}
               </a>
             )}
           </div>
-
-          {/* Action Buttons (Removed as per screenshot) */}
         </section>
 
         {/* Storefront Announcements */}
@@ -306,26 +305,28 @@ const StorefrontInstagramProfile = () => {
         )}
 
         {/* Filter and Sort Bar */}
-        <div className="flex items-center justify-around border-t border-b border-gray-200 py-2 mb-6">
-          <Button variant="ghost" size="sm" onClick={() => setIsFilterDrawerOpen(true)} className="text-gray-800 hover:bg-gray-100">
-            <Filter className="mr-2 h-4 w-4" />
-            Filter {hasActiveFilters && <span className="ml-1 text-xs text-red-500">(Active)</span>}
-          </Button>
-          <Select value={sortOption} onValueChange={handleSortChange}>
-            <SelectTrigger className="w-[140px] h-9 text-sm border-none shadow-none bg-transparent text-gray-800 hover:bg-gray-100">
-              <ArrowUpNarrowWide className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Newest" /> {/* Changed placeholder */}
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest" className="text-sm">Newest</SelectItem>
-              <SelectItem value="oldest" className="text-sm">Oldest</SelectItem>
-              <SelectItem value="price-asc" className="text-sm">Price: Low to High</SelectItem>
-              <SelectItem value="price-desc" className="text-sm">Price: High to Low</SelectItem>
-              <SelectItem value="name-asc" className="text-sm">Name: A-Z</SelectItem>
-              <SelectItem value="name-desc" className="text-sm">Name: Z-A</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="ghost" size="sm" className="text-gray-800 hover:bg-gray-100">
+        <div className="flex flex-col items-center justify-center py-2 mb-6 px-4"> {/* Centered container */}
+          <div className="flex items-center justify-center gap-2 w-full max-w-xs mb-2"> {/* Filter and Sort buttons */}
+            <Button variant="outline" size="sm" onClick={() => setIsFilterDrawerOpen(true)} className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100">
+              <Filter className="mr-2 h-4 w-4" />
+              Filter {hasActiveFilters && <span className="ml-1 text-xs text-red-500">(Active)</span>}
+            </Button>
+            <Select value={sortOption} onValueChange={handleSortChange}>
+              <SelectTrigger className="flex-1 h-9 text-sm border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200"> {/* Styled as button */}
+                <ArrowUpNarrowWide className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest" className="text-sm">Newest</SelectItem>
+                <SelectItem value="oldest" className="text-sm">Oldest</SelectItem>
+                <SelectItem value="price-asc" className="text-sm">Price: Low to High</SelectItem>
+                <SelectItem value="price-desc" className="text-sm">Price: High to Low</SelectItem>
+                <SelectItem value="name-asc" className="text-sm">Name: A-Z</SelectItem>
+                <SelectItem value="name-desc" className="text-sm">Name: Z-A</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button variant="ghost" size="sm" className="text-gray-800 hover:bg-gray-100"> {/* Grid icon button */}
             <LayoutGrid className="h-4 w-4" />
           </Button>
         </div>

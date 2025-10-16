@@ -144,10 +144,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
             <ShoppingBag className="h-6 w-6 text-red-500" />
             {getDrawerTitle()}
           </DrawerTitle>
-          <Button variant="ghost" size="icon" onClick={handleBack} className="text-gray-800 hover:bg-gray-100">
-            <X className="h-5 w-5" />
-            <span className="sr-only">Close</span>
-          </Button>
+          {/* Removed X button */}
         </DrawerHeader>
 
         <div className="flex-1 overflow-hidden">

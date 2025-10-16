@@ -212,10 +212,7 @@ export const InstagramFilterDrawer = ({
             <Filter className="h-6 w-6 text-red-500" />
             Filters
           </DrawerTitle>
-          <Button variant="ghost" size="icon" onClick={onClose} className="text-gray-800 hover:bg-gray-100">
-            <X className="h-5 w-5" />
-            <span className="sr-only">Close filters</span>
-          </Button>
+          {/* Removed X button */}
         </DrawerHeader>
 
         <ScrollArea className="flex-1 px-4 py-6">
