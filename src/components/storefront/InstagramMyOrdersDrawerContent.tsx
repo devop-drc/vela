@@ -68,11 +68,11 @@ const getStatusIcon = (status: OrderStatusType) => {
 };
 
 interface InstagramMyOrdersDrawerContentProps {
-  isOpen: boolean; // Keep isOpen for internal logic if needed, but Drawer.Content handles visibility
+  // isOpen: boolean; // Removed as Drawer.Content manages visibility
   onClose: () => void;
 }
 
-export const InstagramMyOrdersDrawerContent = ({ isOpen, onClose }: InstagramMyOrdersDrawerContentProps) => {
+export const InstagramMyOrdersDrawerContent = ({ onClose }: InstagramMyOrdersDrawerContentProps) => {
   const { shopDetails, convertCurrency } = useStorefront();
   const [customerEmailInput, setCustomerEmailInput] = useState(() => {
     return localStorage.getItem(LOCAL_STORAGE_EMAIL_KEY) || "";
@@ -175,10 +175,14 @@ export const InstagramMyOrdersDrawerContent = ({ isOpen, onClose }: InstagramMyO
   }, [customerEmailInput, orderIdInput, shopDetails?.slug]);
 
   useEffect(() => {
-    if (isOpen && customerEmailInput && shopDetails?.slug) {
+    // Only fetch orders if the drawer is open and email is provided
+    // The `isOpen` prop is no longer passed, so we can't rely on it here.
+    // Instead, the parent `Drawer.Root` will control when this component is mounted/unmounted.
+    // We'll trigger fetch on mount if email is present.
+    if (customerEmailInput && shopDetails?.slug) {
       fetchOrders();
     }
-  }, [isOpen, customerEmailInput, shopDetails?.slug, fetchOrders]);
+  }, [customerEmailInput, shopDetails?.slug, fetchOrders]);
 
   const handleOrderUpdate = useCallback(() => {
     fetchOrders();
