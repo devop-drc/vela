@@ -21,6 +21,7 @@ import { InstagramCheckoutForm, CheckoutFormData, CustomerAddress } from "./Inst
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { InstagramProductQuickViewModal } from "./InstagramProductQuickViewModal"; // Import new modal
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"; // Import Accordion components
 
 interface InstagramCartDrawerProps {
   isOpen: boolean;
@@ -31,7 +32,7 @@ interface InstagramCartDrawerProps {
 
 export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrderPlaced }: InstagramCartDrawerProps) => {
   const { cartItems: persistentCartItems, savedItems, totalItems: persistentTotalItems, subtotal: persistentSubtotal, shipping: persistentShipping, total: persistentTotal, totalSaved: persistentTotalSaved, updateQuantity, removeFromCart, clearCart, saveForLater, moveToCart, removeSavedItem, hasSubscriptionProducts: persistentHasSubscriptionProducts } = useCart();
-  const { shopDetails, convertCurrency } = useStorefront();
+  const { shopDetails, convertCurrency, promotions } = useStorefront();
   const navigate = useNavigate();
   const { shopSlug } = useParams<{ shopSlug: string }>();
 
@@ -212,6 +213,19 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
     setIsProductQuickViewModalOpen(true);
   };
 
+  const getPromotionBadge = (promo: any) => {
+    switch (promo.type) {
+      case 'discount':
+        if (promo.value?.discountType === 'percentage') return `${promo.value.discountValue}% OFF`;
+        if (promo.value?.discountType === 'flat') return `-${formatCurrency(promo.value.discountValue, shopDetails?.currency)} OFF`;
+        return 'Discount';
+      case 'offer':
+        if (promo.value?.offerType === 'free_shipping') return 'Free Shipping';
+        return 'Offer';
+      default: return null;
+    }
+  };
+
   return (
     <>
       {isProductQuickViewModalOpen && productToQuickView && (
@@ -252,293 +266,312 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                   </motion.div>
                 ) : (
                   <ScrollArea className="flex-1 p-4 pr-6">
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       {currentCartItems.length > 0 && (
-                        <div className="space-y-3">
-                          <h2 className="text-lg font-bold text-gray-800">Items in Cart ({currentCartItems.length})</h2>
-                          {hasSubscriptionProducts && (
-                            <div className="flex items-center gap-2 p-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md">
-                              <Info className="h-4 w-4 flex-shrink-0" />
-                              <span>This cart includes subscription products. Cash on Delivery is not available.</span>
-                            </div>
-                          )}
-                          <AnimatePresence>
-                            {currentCartItems.map(item => (
-                              <motion.div
-                                key={item.productId}
-                                layout
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, x: -100 }}
-                                transition={{ duration: 0.2 }}
-                              >
-                                <Card className="flex items-center p-2 gap-2 shadow-sm border border-gray-200 bg-white">
-                                  <button onClick={() => handleOpenProductQuickView(item.productId)} className="flex-shrink-0">
-                                    <div className="h-16 w-16 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
-                                      <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
-                                    </div>
-                                  </button>
-                                  <div className="flex-1 flex flex-col justify-center min-w-0">
-                                    <button onClick={() => handleOpenProductQuickView(item.productId)} className="text-left">
-                                      <h3 className="font-semibold text-sm hover:underline leading-tight text-gray-800 truncate">{item.name}</h3>
-                                    </button>
-                                    {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                                      <p className="text-xs text-gray-500 mt-0.5 truncate">
-                                        {Object.entries(item.selectedOptions).map(([key, value]) => (
-                                          <span key={key} className="capitalize">
-                                            {key}: {Array.isArray(value) ? value.join(', ') : value}
-                                          </span>
-                                        )).join(' | ')}
-                                      </p>
-                                    )}
-                                    {item.pricing_type === 'subscription' && (
-                                      <p className="text-xs text-gray-500 mt-0.5">
-                                        Subscription: {item.billing_interval === 'month' ? 'Monthly' : 'Yearly'}
-                                      </p>
-                                    )}
-                                  </div>
-
-                                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                    <div className="flex items-center border border-gray-300 rounded-md h-7">
-                                      <motion.button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                                        disabled={item.quantity <= 1}
-                                        className="h-full w-6 rounded-r-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
-                                        whileHover={{ scale: 1.1 }}
-                                        whileTap={{ scale: 0.9 }}
-                                      >
-                                        <Minus className="h-3 w-3" />
-                                      </motion.button>
-                                      <Input
-                                        type="number"
-                                        value={item.quantity}
-                                        onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
-                                        className="w-10 text-center border-y-0 border-x border-gray-300 focus-visible:ring-0 text-xs h-full rounded-none bg-white p-0"
-                                        min={1}
-                                      />
-                                      <motion.button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                                        disabled={item.quantity >= 99}
-                                        className="h-full w-6 rounded-l-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
-                                        whileHover={{ scale: 1.1 }}
-                                        whileTap={{ scale: 0.9 }}
-                                      >
-                                        <Plus className="h-3 w-3" />
-                                      </motion.button>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-1">
-                                      {item.isDiscounted && (
-                                        <p className="text-xs text-gray-500 line-through">
-                                          {formatCurrency(convertCurrency(item.originalPrice, item.currency, shopDetails?.currency), shopDetails?.currency)}
-                                        </p>
-                                      )}
-                                      <p className={cn("font-semibold text-sm", item.isDiscounted && "text-green-600")}>
-                                        {formatCurrency(convertCurrency(item.price * item.quantity, item.currency, shopDetails?.currency), shopDetails?.currency)}
-                                      </p>
-                                    </div>
-                                    <div className="flex gap-1">
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="xs"
-                                        onClick={() => saveForLater(item)}
-                                        className="text-xs h-6 px-2 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
-                                      >
-                                          <Bookmark className="mr-1 h-3 w-3" />
-                                          Save
-                                      </Button>
-                                      <motion.button
-                                        type="button"
-                                        variant="destructive"
-                                        size="xs"
-                                        onClick={() => removeFromCart(item.productId)}
-                                        className="text-red-500 hover:text-red-600 h-6 w-6 rounded-full bg-red-50 hover:bg-red-100"
-                                        whileHover={{ scale: 1.1 }}
-                                        whileTap={{ scale: 0.9 }}
-                                      >
-                                        <XCircle className="h-3 w-3" />
-                                        <span className="sr-only">Remove {item.name}</span>
-                                      </motion.button>
-                                    </div>
-                                  </div>
-                                </Card>
-                              </motion.div>
-                          ))}
-                        </AnimatePresence>
-                      </div>
-                    )}
-
-                    {savedItems.length > 0 && (
-                      <div className="space-y-3 mt-6">
-                        <h2 className="text-lg font-bold text-gray-800">Saved ({savedItems.length})</h2>
-                        <AnimatePresence>
-                          {savedItems.map(item => (
-                            <motion.div
-                              key={item.productId}
-                              layout
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, x: -100 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <Card className="flex items-center p-2 gap-2 shadow-sm border border-gray-200 bg-white">
-                                <button onClick={() => handleOpenProductQuickView(item.productId)} className="flex-shrink-0">
-                                  <div className="h-16 w-16 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
-                                    <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
-                                  </div>
-                                </button>
-                                <div className="flex-1 flex flex-col justify-center min-w-0">
-                                  <button onClick={() => handleOpenProductQuickView(item.productId)} className="text-left">
-                                    <h3 className="font-semibold text-sm hover:underline leading-tight text-gray-800 truncate">{item.name}</h3>
-                                  </button>
-                                  {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                                    <p className="text-xs text-gray-500 mt-0.5 truncate">
-                                      {Object.entries(item.selectedOptions).map(([key, value]) => (
-                                        <span key={key} className="capitalize">
-                                          {key}: {Array.isArray(value) ? value.join(', ') : value}
-                                        </span>
-                                      )).join(' | ')}
-                                    </p>
-                                  )}
-                                  {item.pricing_type === 'subscription' && (
-                                    <p className="text-xs text-gray-500 mt-0.5">
-                                      Subscription: {item.billing_interval === 'month' ? 'Monthly' : 'Yearly'}
-                                    </p>
-                                  )}
+                        <Accordion type="single" collapsible defaultValue="items-in-cart" className="w-full">
+                          <AccordionItem value="items-in-cart">
+                            <AccordionTrigger className="text-lg font-bold text-gray-800">Items in Cart ({currentCartItems.length})</AccordionTrigger>
+                            <AccordionContent>
+                              {hasSubscriptionProducts && (
+                                <div className="flex items-center gap-2 p-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md mb-4">
+                                  <Info className="h-4 w-4 flex-shrink-0" />
+                                  <span>This cart includes subscription products. Cash on Delivery is not available.</span>
                                 </div>
+                              )}
+                              <AnimatePresence>
+                                {currentCartItems.map(item => {
+                                  const productPromotions = promotions.filter(promo => {
+                                    if (!promo.is_active) return false;
+                                    const now = new Date();
+                                    const startDate = promo.start_date ? new Date(promo.start_date) : null;
+                                    const endDate = promo.end_date ? new Date(promo.end_date) : null;
+                                    if (startDate && now < startDate) return false;
+                                    if (endDate && now > endDate) return false;
+                                    if (promo.target_products && promo.target_products.length > 0) {
+                                      return promo.target_products.includes(item.productId);
+                                    }
+                                    return true;
+                                  });
+                                  const firstDiscount = productPromotions.find(p => p.type === 'discount');
+                                  const hasOffer = productPromotions.some(p => p.type === 'offer');
 
-                                <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                  <div className="flex items-center gap-1">
-                                    {item.isDiscounted && (
-                                      <p className="text-xs text-gray-500 line-through">
-                                        {formatCurrency(convertCurrency(item.originalPrice, item.currency, shopDetails?.currency), shopDetails?.currency)}
-                                      </p>
-                                    )}
-                                    <p className={cn("font-semibold text-sm", item.isDiscounted && "text-green-600")}>
-                                      {formatCurrency(convertCurrency(item.price, item.currency, shopDetails?.currency), shopDetails?.currency)}
-                                    </p>
-                                  </div>
-                                  <div className="flex gap-1">
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="xs"
-                                      onClick={() => moveToCart(item.productId)}
-                                      className="flex-1 sm:flex-none text-xs h-6 px-2 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                                  return (
+                                    <motion.div
+                                      key={item.productId}
+                                      layout
+                                      initial={{ opacity: 0, y: 20 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={{ opacity: 0, x: -100 }}
+                                      transition={{ duration: 0.2 }}
+                                      className="mb-3 last:mb-0"
                                     >
-                                        <MoveRight className="mr-1 h-3 w-3" />
-                                        Move to Cart
-                                    </Button>
-                                    <motion.button
-                                      type="button"
-                                      variant="destructive"
-                                      size="xs"
-                                      onClick={() => removeSavedItem(item.productId)}
-                                      className="flex-shrink-0 text-red-500 hover:text-red-600 h-6 w-6 rounded-full bg-red-50 hover:bg-red-100"
-                                      whileHover={{ scale: 1.1 }}
-                                      whileTap={{ scale: 0.9 }}
-                                    >
-                                      <XCircle className="h-3 w-3" />
-                                      <span className="sr-only">Remove {item.name}</span>
-                                    </motion.button>
-                                  </div>
-                                </div>
-                              </Card>
-                            </motion.div>
-                          ))}
-                        </AnimatePresence>
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
-              )}
-            </>
-          ) : (
-            <InstagramCheckoutForm
-              onBack={handleBack}
-              onPlaceOrder={handlePlaceOrder}
-              isSubmittingOrder={isSubmittingOrder}
-              cartItems={currentCartItems} // Pass currentCartItems
-              subtotal={subtotal} // Pass calculated subtotal
-              shipping={shipping} // Pass calculated shipping
-              total={total} // Pass calculated total
-              shopDetails={shopDetails}
-              convertCurrency={convertCurrency}
-              hasSubscriptionProducts={hasSubscriptionProducts} // Pass calculated hasSubscriptionProducts
-              checkoutStep={checkoutStep}
-              setCheckoutStep={setCheckoutStep}
-              onContinue={() => setCheckoutStep('payment')}
-              savedAddresses={savedAddresses} // Pass saved addresses
-              setSavedAddresses={setSavedAddresses} // Pass setter for saved addresses
-              selectedAddressId={selectedAddressId} // Pass selected address ID
-              setSelectedAddressId={setSelectedAddressId} // Pass setter for selected address ID
-            />
-          )}
-        </div>
-        <DrawerFooter className="p-4 border-t border-gray-200 flex-shrink-0">
-          <div className="flex flex-col w-full space-y-2">
-            <div className="flex justify-between text-sm text-gray-800">
-              <span>Subtotal ({totalItems} items):</span>
-              <span className="font-semibold">{formatCurrency(subtotal, shopDetails?.currency)}</span>
-            </div>
-            <div className="flex justify-between text-sm text-gray-800">
-              <span>Shipping:</span>
-              <span className={cn("font-semibold", shipping === 0 && "text-green-600")}>
-                {shipping === 0 ? "FREE" : formatCurrency(shipping, shopDetails?.currency)}
-              </span>
-            </div>
-            {totalSaved > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
-                <span>You Saved:</span>
-                <span className="font-semibold">{formatCurrency(totalSaved, shopDetails?.currency)}</span>
-              </div>
-            )}
-            <Separator className="my-2" />
-            <div className="flex justify-between text-lg font-bold pt-2 text-gray-800">
-              <span>Total:</span>
-              <span>{formatCurrency(total, shopDetails?.currency)}</span>
-            </div>
-            {checkoutStep === 'cart' && !initialCartItems && ( // Only show if it's the persistent cart
-              <Button className="w-full text-base bg-red-500 hover:bg-red-600 text-white mt-4" onClick={handleProceedToCheckout} disabled={currentCartItems.length === 0}>
-                Proceed to Checkout
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            )}
-            {checkoutStep === 'contact-shipping' && (
-              <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-red-500 hover:bg-red-600 text-white mt-4" disabled={isSubmittingOrder}>
-                Continue to Payment
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            )}
-            {checkoutStep === 'payment' && (
-              <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-red-500 hover:bg-red-600 text-white mt-4" disabled={isSubmittingOrder}>
-                {isSubmittingOrder ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Placing Order...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="mr-2 h-5 w-5" />
-                    Place Order
-                  </>
+                                      <Card className="grid grid-cols-[auto_1fr_auto] items-center p-2 gap-2 shadow-sm border border-gray-200 bg-white">
+                                        {/* Column 1: Thumbnail */}
+                                        <button onClick={() => handleOpenProductQuickView(item.productId)} className="flex-shrink-0">
+                                          <div className="h-16 w-16 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                                            <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
+                                          </div>
+                                        </button>
+
+                                        {/* Column 2: Name, Price, Offer */}
+                                        <div className="flex-1 flex flex-col justify-center min-w-0">
+                                          <button onClick={() => handleOpenProductQuickView(item.productId)} className="text-left">
+                                            <h3 className="font-semibold text-sm hover:underline leading-tight text-gray-800 truncate">{item.name}</h3>
+                                          </button>
+                                          <div className="flex items-baseline gap-1 mt-0.5">
+                                            {item.isDiscounted && (
+                                              <p className="text-xs text-gray-500 line-through">
+                                                {formatCurrency(convertCurrency(item.originalPrice, item.currency, shopDetails?.currency), shopDetails?.currency)}
+                                              </p>
+                                            )}
+                                            <p className={cn("font-semibold text-sm", item.isDiscounted && "text-green-600")}>
+                                              {formatCurrency(convertCurrency(item.price, item.currency, shopDetails?.currency), shopDetails?.currency)}
+                                            </p>
+                                          </div>
+                                          {(firstDiscount || hasOffer) && (
+                                            <div className="flex gap-1 mt-0.5">
+                                              {firstDiscount && (
+                                                <Badge className="bg-green-600 text-white text-xs px-1.5 py-0.5">
+                                                  {getPromotionBadge(firstDiscount)}
+                                                </Badge>
+                                              )}
+                                              {hasOffer && (
+                                                <Badge className="bg-blue-600 text-white text-xs px-1.5 py-0.5">
+                                                  Offer
+                                                </Badge>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* Column 3: Counter, Save/Remove */}
+                                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                          <div className="flex items-center border border-gray-300 rounded-md h-7">
+                                            <motion.button
+                                              type="button"
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                                              disabled={item.quantity <= 1}
+                                              className="h-full w-6 rounded-r-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
+                                              whileHover={{ scale: 1.1 }}
+                                              whileTap={{ scale: 0.9 }}
+                                            >
+                                              <Minus className="h-3 w-3" />
+                                            </motion.button>
+                                            <Input
+                                              type="number"
+                                              value={item.quantity}
+                                              onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
+                                              className="w-10 text-center border-y-0 border-x border-gray-300 focus-visible:ring-0 text-xs h-full rounded-none bg-white p-0"
+                                              min={1}
+                                            />
+                                            <motion.button
+                                              type="button"
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                                              disabled={item.quantity >= 99}
+                                              className="h-full w-6 rounded-l-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
+                                              whileHover={{ scale: 1.1 }}
+                                              whileTap={{ scale: 0.9 }}
+                                            >
+                                              <Plus className="h-3 w-3" />
+                                            </motion.button>
+                                          </div>
+                                          <div className="flex gap-1">
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              size="xs"
+                                              onClick={() => saveForLater(item)}
+                                              className="text-xs h-6 px-2 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                                            >
+                                                <Bookmark className="mr-1 h-3 w-3" />
+                                                Save
+                                            </Button>
+                                            <motion.button
+                                              type="button"
+                                              variant="destructive"
+                                              size="xs"
+                                              onClick={() => removeFromCart(item.productId)}
+                                              className="text-red-500 hover:text-red-600 h-6 w-6 rounded-full bg-red-50 hover:bg-red-100"
+                                              whileHover={{ scale: 1.1 }}
+                                              whileTap={{ scale: 0.9 }}
+                                            >
+                                              <XCircle className="h-3 w-3" />
+                                              <span className="sr-only">Remove {item.name}</span>
+                                            </motion.button>
+                                          </div>
+                                        </div>
+                                      </Card>
+                                    </motion.div>
+                                  );
+                                })}
+                              </AnimatePresence>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
+                      )}
+
+                      {savedItems.length > 0 && (
+                        <Accordion type="single" collapsible className="w-full">
+                          <AccordionItem value="saved-for-later">
+                            <AccordionTrigger className="text-lg font-bold text-gray-800">Saved for Later ({savedItems.length})</AccordionTrigger>
+                            <AccordionContent>
+                              <AnimatePresence>
+                                {savedItems.map(item => (
+                                  <motion.div
+                                    key={item.productId}
+                                    layout
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, x: -100 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="mb-3 last:mb-0"
+                                  >
+                                    <Card className="flex items-center p-2 gap-2 shadow-sm border border-gray-200 bg-white">
+                                      {/* Column 1: Thumbnail */}
+                                      <button onClick={() => handleOpenProductQuickView(item.productId)} className="flex-shrink-0">
+                                        <div className="h-16 w-16 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                                          <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
+                                        </div>
+                                      </button>
+
+                                      {/* Column 2: Name, Price */}
+                                      <div className="flex-1 flex flex-col justify-center min-w-0">
+                                        <button onClick={() => handleOpenProductQuickView(item.productId)} className="text-left">
+                                          <h3 className="font-semibold text-sm hover:underline leading-tight text-gray-800 truncate">{item.name}</h3>
+                                        </button>
+                                        <div className="flex items-baseline gap-1 mt-0.5">
+                                          {item.isDiscounted && (
+                                            <p className="text-xs text-gray-500 line-through">
+                                              {formatCurrency(convertCurrency(item.originalPrice, item.currency, shopDetails?.currency), shopDetails?.currency)}
+                                            </p>
+                                          )}
+                                          <p className={cn("font-semibold text-sm", item.isDiscounted && "text-green-600")}>
+                                            {formatCurrency(convertCurrency(item.price, item.currency, shopDetails?.currency), shopDetails?.currency)}
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      {/* Column 3: Move to Cart, Remove */}
+                                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="xs"
+                                          onClick={() => moveToCart(item.productId)}
+                                          className="flex-1 sm:flex-none text-xs h-6 px-2 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                                        >
+                                            <MoveRight className="mr-1 h-3 w-3" />
+                                            Move to Cart
+                                        </Button>
+                                        <motion.button
+                                          type="button"
+                                          variant="destructive"
+                                          size="xs"
+                                          onClick={() => removeSavedItem(item.productId)}
+                                          className="flex-shrink-0 text-red-500 hover:text-red-600 h-6 w-6 rounded-full bg-red-50 hover:bg-red-100"
+                                          whileHover={{ scale: 1.1 }}
+                                          whileTap={{ scale: 0.9 }}
+                                        >
+                                          <XCircle className="h-3 w-3" />
+                                          <span className="sr-only">Remove {item.name}</span>
+                                        </motion.button>
+                                      </div>
+                                    </Card>
+                                  </motion.div>
+                                ))}
+                              </AnimatePresence>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
+                      )}
+                    </div>
+                  </ScrollArea>
                 )}
-              </Button>
+              </>
+            ) : (
+              <InstagramCheckoutForm
+                onBack={handleBack}
+                onPlaceOrder={handlePlaceOrder}
+                isSubmittingOrder={isSubmittingOrder}
+                cartItems={currentCartItems} // Pass currentCartItems
+                subtotal={subtotal} // Pass calculated subtotal
+                shipping={shipping} // Pass calculated shipping
+                total={total} // Pass calculated total
+                shopDetails={shopDetails}
+                convertCurrency={convertCurrency}
+                hasSubscriptionProducts={hasSubscriptionProducts} // Pass calculated hasSubscriptionProducts
+                checkoutStep={checkoutStep}
+                setCheckoutStep={setCheckoutStep}
+                onContinue={() => setCheckoutStep('payment')}
+                savedAddresses={savedAddresses} // Pass saved addresses
+                setSavedAddresses={setSavedAddresses} // Pass setter for saved addresses
+                selectedAddressId={selectedAddressId} // Pass selected address ID
+                setSelectedAddressId={setSelectedAddressId} // Pass setter for selected address ID
+              />
             )}
-            <Button variant="ghost" className="w-full text-base text-gray-800 hover:bg-gray-100 mt-2" onClick={handleBack}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
           </div>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+          <DrawerFooter className="p-4 border-t border-gray-200 flex-shrink-0">
+            <div className="flex flex-col w-full space-y-2">
+              <div className="flex justify-between text-sm text-gray-800">
+                <span>Subtotal ({totalItems} items):</span>
+                <span className="font-semibold">{formatCurrency(subtotal, shopDetails?.currency)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-800">
+                <span>Shipping:</span>
+                <span className={cn("font-semibold", shipping === 0 && "text-green-600")}>
+                  {shipping === 0 ? "FREE" : formatCurrency(shipping, shopDetails?.currency)}
+                </span>
+              </div>
+              {totalSaved > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>You Saved:</span>
+                  <span className="font-semibold">{formatCurrency(totalSaved, shopDetails?.currency)}</span>
+                </div>
+              )}
+              <Separator className="my-2" />
+              <div className="flex justify-between text-lg font-bold pt-2 text-gray-800">
+                <span>Total:</span>
+                <span>{formatCurrency(total, shopDetails?.currency)}</span>
+              </div>
+              {checkoutStep === 'cart' && !initialCartItems && ( // Only show if it's the persistent cart
+                <Button className="w-full text-base bg-red-500 hover:bg-red-600 text-white mt-4" onClick={handleProceedToCheckout} disabled={currentCartItems.length === 0}>
+                  Proceed to Checkout
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+              {checkoutStep === 'contact-shipping' && (
+                <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-red-500 hover:bg-red-600 text-white mt-4" disabled={isSubmittingOrder}>
+                  Continue to Payment
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              )}
+              {checkoutStep === 'payment' && (
+                <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-red-500 hover:bg-red-600 text-white mt-4" disabled={isSubmittingOrder}>
+                  {isSubmittingOrder ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Placing Order...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-2 h-5 w-5" />
+                      Place Order
+                    </>
+                  )}
+                </Button>
+              )}
+              <Button variant="ghost" className="w-full text-base text-gray-800 hover:bg-gray-100 mt-2" onClick={handleBack}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
+            </div>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    </>
   );
 };

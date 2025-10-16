@@ -283,7 +283,7 @@ export const InstagramCheckoutForm = ({
               </Card>
             )}
 
-            {checkoutStep === 'contact-shipping' && (
+            {checkoutStep === 'contact-shipping' && selectedAddressId === 'new' && (
               <motion.div
                 initial={{ opacity: 0, x: 50 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -291,17 +291,16 @@ export const InstagramCheckoutForm = ({
                 transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
-                {selectedAddressId === 'new' && (
-                  <Card className="shadow-sm border border-gray-200 bg-white">
-                    <CardHeader>
-                      <CardTitle className="text-xl flex items-center gap-2 text-gray-800">
-                        <User className="h-6 w-6 text-red-500" />
-                        Contact & Shipping Information
-                      </CardTitle>
-                      <CardDescription className="text-sm text-gray-500">Enter your details for delivery.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="flex items-center justify-between rounded-lg border p-3">
+                <Card className="shadow-sm border border-gray-200 bg-white">
+                  <CardHeader>
+                    <CardTitle className="text-xl flex items-center gap-2 text-gray-800">
+                      <User className="h-6 w-6 text-red-500" />
+                      Contact & Shipping Information
+                    </CardTitle>
+                    <CardDescription className="text-sm text-gray-500">Enter your details for delivery.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between rounded-lg border p-3">
                         <div className="space-y-0.5">
                           <Label htmlFor="saveAddress" className="text-base">Save Address</Label>
                           <p className="text-sm text-gray-500">Save this address for future orders.</p>
@@ -318,80 +317,79 @@ export const InstagramCheckoutForm = ({
                           )}
                         />
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="firstName">First Name</Label>
-                          <Input id="firstName" {...register("firstName")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                          {errors.firstName && <p className="text-sm text-red-500 mt-1">{errors.firstName.message}</p>}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="lastName">Last Name</Label>
-                          <Input id="lastName" {...register("lastName")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                          {errors.lastName && <p className="text-sm text-red-500 mt-1">{errors.lastName.message}</p>}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email</Label>
-                          <Input id="email" type="email" {...register("email")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                          {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">Phone (Optional)</Label>
-                          <Input id="phone" type="tel" {...register("phone")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                        </div>
-                      </div>
-                      <Separator className="bg-gray-200" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="shippingAddress" className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Shipping Address</Label>
-                        <Input id="shippingAddress" {...register("shippingAddress")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                        {errors.shippingAddress && <p className="text-sm text-red-500 mt-1">{errors.shippingAddress.message}</p>}
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="shippingCity" className="flex items-center gap-2"><Building2 className="h-4 w-4" /> City</Label>
-                        <Input id="shippingCity" {...register("shippingCity")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                        {errors.shippingCity && <p className="text-sm text-red-500 mt-1">{errors.shippingCity.message}</p>}
+                        <Label htmlFor="firstName">First Name</Label>
+                        <Input id="firstName" {...register("firstName")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        {errors.firstName && <p className="text-sm text-red-500 mt-1">{errors.firstName.message}</p>}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="shippingZip">Zip/Postal Code</Label>
-                        <Input id="shippingZip" {...register("shippingZip")} className="border-gray-300 bg-gray-50 text-gray-800" />
-                        {errors.shippingZip && <p className="text-sm text-red-500 mt-1">{errors.shippingZip.message}</p>}
+                        <Label htmlFor="lastName">Last Name</Label>
+                        <Input id="lastName" {...register("lastName")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        {errors.lastName && <p className="text-sm text-red-500 mt-1">{errors.lastName.message}</p>}
                       </div>
                     </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" type="email" {...register("email")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone (Optional)</Label>
+                        <Input id="phone" type="tel" {...register("phone")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                      </div>
+                    </div>
+                    <Separator className="bg-gray-200" />
                     <div className="space-y-2">
-                      <Label htmlFor="shippingCountry" className="flex items-center gap-2"><Globe className="h-4 w-4" /> Country</Label>
-                      <Controller
-                        name="shippingCountry"
-                        control={control}
-                        render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value} disabled>
-                            <SelectTrigger id="shippingCountry" className="border-gray-300 bg-gray-50 text-gray-800">
-                              <SelectValue placeholder="Select country" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white text-gray-800">
-                              {countries.map(country => (
-                                <SelectItem key={country.code} value={country.code}>
-                                  {country.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      />
-                      {errors.shippingCountry && <p className="text-sm text-red-500 mt-1">{errors.shippingCountry.message}</p>}
+                      <Label htmlFor="shippingAddress" className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Shipping Address</Label>
+                      <Input id="shippingAddress" {...register("shippingAddress")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                      {errors.shippingAddress && <p className="text-sm text-red-500 mt-1">{errors.shippingAddress.message}</p>}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="shippingCity" className="flex items-center gap-2"><Building2 className="h-4 w-4" /> City</Label>
+                      <Input id="shippingCity" {...register("shippingCity")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                      {errors.shippingCity && <p className="text-sm text-red-500 mt-1">{errors.shippingCity.message}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="shippingNotesSeller" className="flex items-center gap-2"><StickyNote className="h-4 w-4" /> Notes for Seller (Optional)</Label>
-                      <Textarea id="shippingNotesSeller" {...register("shippingNotesSeller")} rows={2} placeholder="e.g., Please wrap as a gift." className="border-gray-300 bg-gray-50 text-gray-800" />
+                      <Label htmlFor="shippingZip">Zip/Postal Code</Label>
+                      <Input id="shippingZip" {...register("shippingZip")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                      {errors.shippingZip && <p className="text-sm text-red-500 mt-1">{errors.shippingZip.message}</p>}
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="shippingNotesCourier" className="flex items-center gap-2"><Truck className="h-4 w-4" /> Notes for Courier (Optional)</Label>
-                      <Textarea id="shippingNotesCourier" {...register("shippingNotesCourier")} rows={2} placeholder="e.g., Leave package at the back door." className="border-gray-300 bg-gray-50 text-gray-800" />
-                    </div>
-                  </CardContent>
-                </Card>
-                )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="shippingCountry" className="flex items-center gap-2"><Globe className="h-4 w-4" /> Country</Label>
+                    <Controller
+                      name="shippingCountry"
+                      control={control}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value} disabled>
+                          <SelectTrigger id="shippingCountry" className="border-gray-300 bg-gray-50 text-gray-800">
+                            <SelectValue placeholder="Select country" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white text-gray-800">
+                            {countries.map(country => (
+                              <SelectItem key={country.code} value={country.code}>
+                                {country.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.shippingCountry && <p className="text-sm text-red-500 mt-1">{errors.shippingCountry.message}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="shippingNotesSeller" className="flex items-center gap-2"><StickyNote className="h-4 w-4" /> Notes for Seller (Optional)</Label>
+                    <Textarea id="shippingNotesSeller" {...register("shippingNotesSeller")} rows={2} placeholder="e.g., Please wrap as a gift." className="border-gray-300 bg-gray-50 text-gray-800" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="shippingNotesCourier" className="flex items-center gap-2"><Truck className="h-4 w-4" /> Notes for Courier (Optional)</Label>
+                    <Textarea id="shippingNotesCourier" {...register("shippingNotesCourier")} rows={2} placeholder="e.g., Leave package at the back door." className="border-gray-300 bg-gray-50 text-gray-800" />
+                  </div>
+                </CardContent>
+              </Card>
               </motion.div>
             )}
 
