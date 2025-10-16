@@ -291,7 +291,6 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
             <AlertDialogDescription className="text-sm text-gray-500">
               This action cannot be undone. Your order will be marked as **Cancelled**, and if applicable, product inventory will be restored.
             </AlertDialogDescription>
-          </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isUpdatingOrder} className="text-gray-800 hover:bg-gray-100">No, keep order</AlertDialogCancel>

@@ -116,7 +116,7 @@ serve(async (req) => {
   }
 
   try {
-    const { shopSlug, page = 1, limit = 12 } = await req.json(); // Add page and limit parameters
+    const { shopSlug, page = 1, limit = 12, customerEmail, orderId } = await req.json(); // Add customerEmail and orderId
     if (!shopSlug) {
       return new Response(JSON.stringify({ error: "Missing shopSlug" }), {
         status: 400,
@@ -233,6 +233,55 @@ serve(async (req) => {
       console.log(`[get-public-shop-data] Active Marquee Elements after filtering (${activeMarqueeElements.length} items):`, activeMarqueeElements); // DEBUG LOG: Show filtered elements
     }
 
+    // Fetch orders for a specific customer email and/or order ID (for client-side order lookup)
+    let customerOrders: any[] = [];
+    if (customerEmail) {
+      let ordersQuery = supabaseAdmin
+        .from('orders')
+        .select(`
+          id,
+          customer_name,
+          customer_email,
+          status,
+          total_amount,
+          created_at,
+          updated_at,
+          currency,
+          payment_method,
+          payment_status,
+          shipping_address,
+          shipping_city,
+          shipping_state,
+          shipping_zip,
+          shipping_country,
+          order_notes,
+          order_items (
+            quantity,
+            price_at_purchase,
+            products (
+              name,
+              media_url,
+              currency
+            )
+          )
+        `)
+        .eq('business_id', businessId)
+        .eq('customer_email', customerEmail)
+        .order('created_at', { ascending: false });
+
+      if (orderId) {
+        ordersQuery = ordersQuery.eq('id', orderId);
+      }
+
+      const { data: fetchedOrders, error: ordersFetchError } = await ordersQuery;
+      if (ordersFetchError) {
+        console.error(`[get-public-shop-data] Error fetching customer orders for ${customerEmail}:`, ordersFetchError);
+      } else {
+        customerOrders = fetchedOrders || [];
+      }
+    }
+
+
     return new Response(JSON.stringify({
       shopDetails: {
         id: businessId,
@@ -259,6 +308,7 @@ serve(async (req) => {
       recommendedProducts: recommendedProducts || [],
       promotions: promotions || [], // Include promotions
       marqueeElements: activeMarqueeElements || [], // Include filtered marquee elements
+      customerOrders: customerOrders || [], // Include customer orders
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

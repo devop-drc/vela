@@ -74,7 +74,7 @@ interface InstagramMyOrdersDrawerProps {
 }
 
 export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrderOpened }: InstagramMyOrdersDrawerProps) => {
-  const { shopDetails, convertCurrency } = useStorefront();
+  const { shopDetails, convertCurrency, customerOrders: contextCustomerOrders } = useStorefront(); // Use customerOrders from context
   const [customerEmailInput, setCustomerEmailInput] = useState(() => {
     return localStorage.getItem(LOCAL_STORAGE_EMAIL_KEY) || "";
   });
@@ -118,68 +118,18 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
     }
 
     try {
-      const { data: shopData, error: shopError } = await supabase
-        .from('shop_details')
-        .select('business_id')
-        .eq('slug', shopDetails.slug)
-        .single();
+      // The get-public-shop-data function already fetches customer orders if customerEmail is provided.
+      // We can leverage that data from the context.
+      // However, if orderIdInput is present, we need to filter the context orders or re-fetch specifically.
+      let filteredContextOrders = contextCustomerOrders.filter(order => order.customer_email === customerEmailInput);
 
-      if (shopError || !shopData) {
-        throw new Error("Shop not found or inaccessible.");
-      }
-      const businessId = shopData.business_id;
-
-      let query = supabase
-        .from('orders')
-        .select(`
-          id,
-          customer_name,
-          customer_email,
-          status,
-          total_amount,
-          created_at,
-          updated_at,
-          currency,
-          payment_method,
-          payment_status,
-          shipping_address,
-          shipping_city,
-          shipping_state,
-          shipping_zip,
-          shipping_country,
-          order_notes,
-          order_items (
-            quantity,
-            price_at_purchase,
-            products (
-              name,
-              media_url,
-              currency
-            )
-          )
-        `)
-        .eq('customer_email', customerEmailInput)
-        .eq('business_id', businessId)
-        .order('created_at', { ascending: false });
-
-      // Use the orderIdInput state, which might be set by initialOrderId prop
       if (orderIdInput) {
-        query = query.eq('id', orderIdInput);
+        filteredContextOrders = filteredContextOrders.filter(order => order.id === orderIdInput);
       }
 
-      const { data, error } = await query;
+      setOrders(filteredContextOrders);
+      localStorage.setItem(LOCAL_STORAGE_EMAIL_KEY, customerEmailInput);
 
-      if (error) {
-        console.error("Error fetching orders:", error);
-        setOrders([]);
-      } else if (data) {
-        setOrders(data as OrderDetails[]);
-        // Do NOT auto-open the order detail modal here.
-        // The user will click on the order card to open it.
-        localStorage.setItem(LOCAL_STORAGE_EMAIL_KEY, customerEmailInput);
-      } else {
-        setOrders([]);
-      }
     } catch (err: any) {
       console.error("Order fetching failed:", err);
       showError(`Failed to fetch orders: ${err.message || "An unexpected error occurred."}`);
@@ -187,7 +137,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
     } finally {
       setIsLoading(false);
     }
-  }, [customerEmailInput, orderIdInput, shopDetails?.slug]); // Add orderIdInput to dependencies
+  }, [customerEmailInput, orderIdInput, shopDetails?.slug, contextCustomerOrders]); // Add contextCustomerOrders to dependencies
 
   useEffect(() => {
     if (isOpen && customerEmailInput && shopDetails?.slug) {
@@ -212,14 +162,17 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
 
       <DrawerContent
         className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl"
+        aria-describedby="instagram-my-orders-description" // Added aria-describedby
       >
         <DrawerHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
           <DrawerTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
             <ShoppingBag className="h-6 w-6 text-red-500" />
             My Orders
           </DrawerTitle>
-          {/* Removed X button */}
         </DrawerHeader>
+        <span id="instagram-my-orders-description" className="sr-only">
+          Enter your email and optionally an order ID to view your orders.
+        </span>
 
         <ScrollArea className="flex-1 p-4 pr-6">
           <div className="space-y-4">

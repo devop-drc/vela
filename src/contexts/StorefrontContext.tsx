@@ -64,6 +64,26 @@ interface ExchangeRates {
   [key: string]: number;
 }
 
+interface OrderDetails {
+  id: string;
+  customer_name: string;
+  customer_email: string;
+  status: 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic' | 'Cancelled';
+  total_amount: number;
+  created_at: string;
+  updated_at: string;
+  currency: string;
+  payment_method: string;
+  payment_status: string;
+  order_items: any[];
+  shipping_address?: string;
+  shipping_city?: string;
+  shipping_state?: string;
+  shipping_zip?: string;
+  shipping_country?: string;
+  order_notes?: string;
+}
+
 interface StorefrontContextType {
   shopDetails: ShopDetails | null;
   appearanceSettings: DesignSettings | null;
@@ -80,6 +100,7 @@ interface StorefrontContextType {
   convertCurrency: (amount: number | null | undefined, fromCurrency?: string) => number; // Add convertCurrency
   promotions: Promotion[]; // New: Active promotions
   marqueeElements: StorefrontAnnouncement[]; // New: Marquee elements
+  customerOrders: OrderDetails[]; // New: Customer orders
 }
 
 const StorefrontContext = createContext<StorefrontContextType | undefined>(undefined);
@@ -110,6 +131,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
   const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(null); // New state for exchange rates
   const [promotions, setPromotions] = useState<Promotion[]>([]); // New state for promotions
   const [marqueeElements, setMarqueeElements] = useState<StorefrontAnnouncement[]>([]); // New state for marquee elements
+  const [customerOrders, setCustomerOrders] = useState<OrderDetails[]>([]); // New state for customer orders
 
   // Fetch exchange rates once on mount
   useEffect(() => {
@@ -143,6 +165,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
       setRecommendedProducts([]); // Clear recommended products for initial load
       setPromotions([]); // Clear promotions for initial load
       setMarqueeElements([]); // Clear marquee elements for initial load
+      setCustomerOrders([]); // Clear customer orders for initial load
     } else {
       setIsLoadingMore(true);
     }
@@ -183,6 +206,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         setRecommendedProducts(data.recommendedProducts || []); // Set recommended products
         setPromotions(data.promotions || []); // Set promotions
         setMarqueeElements(data.marqueeElements || []); // Set marquee elements
+        setCustomerOrders(data.customerOrders || []); // Set customer orders
         console.log("StorefrontContext: Marquee elements received from Edge Function:", data.marqueeElements); // NEW LOG
       } else {
         setProducts(prevProducts => [...prevProducts, ...data.products]);
@@ -260,6 +284,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
     convertCurrency, // Provide convertCurrency
     promotions, // Provide promotions
     marqueeElements, // Provide marquee elements
+    customerOrders, // Provide customer orders
   };
 
   return (

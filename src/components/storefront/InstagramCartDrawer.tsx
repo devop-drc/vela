@@ -95,7 +95,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
 
   // Load addresses from local storage on mount
   useEffect(() => {
-    const storedAddresses = localStorage.getItem('instagram_saved_addresses');
+    const storedAddresses = localStorage.getItem(LOCAL_STORAGE_ADDRESSES_KEY);
     if (storedAddresses) {
       setSavedAddresses(JSON.parse(storedAddresses));
     }
@@ -240,13 +240,20 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
       )}
 
       <Drawer open={isOpen} onOpenChange={onClose} shouldScaleBackground>
-        <DrawerContent side="bottom" className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl">
+        <DrawerContent
+          side="bottom"
+          className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl"
+          aria-describedby="instagram-cart-description" // Added aria-describedby
+        >
           <DrawerHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
             <DrawerTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
               <ShoppingBag className="h-6 w-6 text-red-500" />
               {getDrawerTitle()}
             </DrawerTitle>
           </DrawerHeader>
+          <span id="instagram-cart-description" className="sr-only">
+            {checkoutStep === 'cart' ? 'Review your items, then proceed to checkout.' : 'Enter your details to complete your order.'}
+          </span>
 
           <div className="flex-1 overflow-hidden flex flex-col">
             {(checkoutStep === 'cart' && !initialCartItems) ? (
