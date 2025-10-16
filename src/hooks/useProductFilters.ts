@@ -125,27 +125,33 @@ export const useProductFilters = ({
 
   const filteredAndSortedProducts = useMemo(() => {
     let filtered = allProducts;
+    console.log("useProductFilters: Initial products for filtering:", filtered.length, filtered);
 
     if (searchTerm) {
       filtered = filtered.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }
+    console.log("useProductFilters: After search term filter:", filtered.length, filtered);
 
     if (statusFilter.length > 0) { // Use array for status filter
       filtered = filtered.filter(p => statusFilter.includes(p.status));
     }
+    console.log("useProductFilters: After status filter:", filtered.length, filtered);
 
     if (filters.categories.length > 0) {
       filtered = filtered.filter(p => p.category && filters.categories.includes(p.category));
     }
+    console.log("useProductFilters: After categories filter:", filtered.length, filtered);
 
     if (filters.tags.length > 0) {
       filtered = filtered.filter(p => p.tags?.some(tag => filters.tags.includes(tag)));
     }
+    console.log("useProductFilters: After tags filter:", filtered.length, filtered);
 
     filtered = filtered.filter(p => {
       const price = convertCurrency(p.price, p.currency);
       return price >= filters.priceRange[0] && price <= filters.priceRange[1];
     });
+    console.log("useProductFilters: After price range filter:", filtered.length, filtered);
 
     for (const key in filters) {
       if (key !== 'categories' && key !== 'tags' && key !== 'priceRange' && key !== 'status' && Array.isArray(filters[key]) && (filters[key] as string[]).length > 0) {
@@ -160,6 +166,7 @@ export const useProductFilters = ({
         });
       }
     }
+    console.log("useProductFilters: After dynamic attributes filter:", filtered.length, filtered);
 
     return filtered.sort((a, b) => {
       const priceA = convertCurrency(a.price, a.currency);
