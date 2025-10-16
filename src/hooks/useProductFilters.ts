@@ -7,6 +7,7 @@ export interface FilterState {
   categories: string[];
   tags: string[];
   priceRange: [number, number];
+  status: string[]; // Changed to array
   [key: string]: string[] | [number, number]; // For dynamic attributes
 }
 
@@ -23,11 +24,11 @@ interface UseProductFiltersResult {
   setSearchTerm: (term: string) => void;
   sortOption: string;
   setSortOption: (option: string) => void;
-  statusFilter: string;
-  setStatusFilter: (status: string) => void;
+  statusFilter: string[]; // Changed to array
+  handleToggleStatusFilter: (status: string) => void; // New handler
   filters: FilterState;
   handleToggleFilter: (filterKey: keyof FilterState, value: string) => void;
-  handleClearSection: (filterKey: keyof FilterState) => void;
+  handleClearSection: (filterKey: keyof FilterState | 'status') => void; // Updated to include 'status'
   handleResetAllFilters: () => void;
   localPriceRange: [number, number];
   handlePriceRangeChange: (range: [number, number]) => void;
@@ -45,11 +46,12 @@ export const useProductFilters = ({
   const { convertCurrency, shopDetails } = useShop();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState("newest");
-  const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]); // Changed to array
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
     tags: [],
-    priceRange: [0, 1000], // Initial dummy value, will be updated by maxPrice
+    priceRange: [0, 1000],
+    status: [], // Initialize status as array
   });
   const [localPriceRange, setLocalPriceRange] = useState<[number, number]>([0, 1000]);
 
@@ -84,31 +86,39 @@ export const useProductFilters = ({
     });
   }, []);
 
-  const handleClearSection = useCallback((filterKey: keyof FilterState) => {
-    setFilters(prev => {
-      const updatedFilters = { ...prev, [filterKey]: filterKey === 'priceRange' ? [0, maxPrice] : [] };
-      if (filterKey === 'priceRange') {
-        setLocalPriceRange([0, maxPrice]);
-      }
-      return updatedFilters;
-    });
+  const handleToggleStatusFilter = useCallback((status: string) => {
+    setStatusFilter(prev =>
+      prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+    );
+  }, []);
+
+  const handleClearSection = useCallback((filterKey: keyof FilterState | 'status') => {
+    if (filterKey === 'status') {
+      setStatusFilter([]);
+    } else if (filterKey === 'priceRange') {
+      setFilters(prev => ({ ...prev, priceRange: [0, maxPrice] }));
+      setLocalPriceRange([0, maxPrice]);
+    } else {
+      setFilters(prev => ({ ...prev, [filterKey]: [] }));
+    }
   }, [maxPrice]);
 
   const hasActiveFilters = useMemo(() => {
-    return searchTerm || statusFilter !== 'All' || sortOption !== 'newest' ||
+    return searchTerm || statusFilter.length > 0 || sortOption !== 'newest' ||
            filters.categories.length > 0 || filters.tags.length > 0 ||
            filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice ||
-           Object.entries(filters).some(([key, value]) => key !== 'categories' && key !== 'tags' && key !== 'priceRange' && Array.isArray(value) && value.length > 0);
+           Object.entries(filters).some(([key, value]) => key !== 'categories' && key !== 'tags' && key !== 'priceRange' && key !== 'status' && Array.isArray(value) && value.length > 0);
   }, [searchTerm, statusFilter, sortOption, filters, maxPrice]);
 
   const handleResetAllFilters = useCallback(() => {
     setSearchTerm("");
     setSortOption("newest");
-    setStatusFilter("All");
+    setStatusFilter([]); // Reset status filter
     setFilters({
       categories: [],
       tags: [],
       priceRange: [0, maxPrice],
+      status: [],
     });
     setLocalPriceRange([0, maxPrice]);
   }, [maxPrice]);
@@ -120,8 +130,8 @@ export const useProductFilters = ({
       filtered = filtered.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }
 
-    if (statusFilter !== "All") {
-      filtered = filtered.filter(p => p.status === statusFilter);
+    if (statusFilter.length > 0) { // Use array for status filter
+      filtered = filtered.filter(p => statusFilter.includes(p.status));
     }
 
     if (filters.categories.length > 0) {
@@ -138,7 +148,7 @@ export const useProductFilters = ({
     });
 
     for (const key in filters) {
-      if (key !== 'categories' && key !== 'tags' && key !== 'priceRange' && Array.isArray(filters[key]) && (filters[key] as string[]).length > 0) {
+      if (key !== 'categories' && key !== 'tags' && key !== 'priceRange' && key !== 'status' && Array.isArray(filters[key]) && (filters[key] as string[]).length > 0) {
         const selectedValues = filters[key] as string[];
         filtered = filtered.filter(p => {
           const productDetailValue = p.details?.[key];
@@ -173,7 +183,7 @@ export const useProductFilters = ({
     sortOption,
     setSortOption,
     statusFilter,
-    setStatusFilter,
+    handleToggleStatusFilter,
     filters,
     handleToggleFilter,
     handleClearSection,

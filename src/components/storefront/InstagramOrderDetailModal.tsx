@@ -291,6 +291,7 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
             <AlertDialogDescription className="text-sm text-gray-500">
               This action cannot be undone. Your order will be marked as **Cancelled**, and if applicable, product inventory will be restored.
             </AlertDialogDescription>
+          </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isUpdatingOrder} className="text-gray-800 hover:bg-gray-100">No, keep order</AlertDialogCancel>
@@ -393,12 +394,12 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
               </div>
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 border-t border-gray-200 flex-col sm:flex-row sm:justify-between sm:items-center gap-2 flex-shrink-0">
-            <div className="flex items-center gap-2 mr-auto">
+          <DialogFooter className="pt-4 border-t border-gray-200 flex-col sm:flex-row sm:justify-end sm:items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 mr-auto sm:mr-0">
               <span className="text-sm text-gray-700">Status:</span>
               <Badge className={cn("text-white text-sm md:text-base", getStatusColor(order.status))}>{order.status}</Badge>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto"> {/* Responsive flex for buttons */}
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               {order.payment_method === 'cash_on_delivery' && order.status !== 'Fulfilled' && order.status !== 'Cancelled' && (
                 <Button onClick={() => setIsMarkCompletedAlertOpen(true)} disabled={isUpdatingOrder} className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto text-sm md:text-base">
                   {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

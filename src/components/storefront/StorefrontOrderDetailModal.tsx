@@ -187,20 +187,24 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
     }
   };
 
-  const getStatusColor = (status: OrderStatusType) => {
+  const getStatusColor = (status: OrderStatusType | Dispute['status']) => {
     switch (status) {
-      case 'Fulfilled': return 'bg-emerald-500';
-      case 'Given to Courier': return 'bg-blue-500';
-      case 'Order Packaged': return 'bg-blue-500';
-      case 'Order Seen': return 'bg-amber-500';
-      case 'Pending': return 'bg-amber-500';
+      case 'Fulfilled':
+      case 'Resolved': return 'bg-emerald-500';
+      case 'Given to Courier':
+      case 'Order Packaged':
+      case 'In Review': return 'bg-blue-500';
+      case 'Order Seen':
+      case 'Pending':
+      case 'Open': return 'bg-amber-500';
       case 'Problematic': return 'bg-destructive';
-      case 'Cancelled': return 'bg-gray-500';
+      case 'Cancelled':
+      case 'Closed': return 'bg-gray-500';
       default: return 'bg-gray-500';
     }
   };
 
-  const getStatusIcon = (status: OrderStatusType) => {
+  const getStatusIcon = (status: OrderStatusType | Dispute['status']) => {
     switch (status) {
       case "Fulfilled": return <CheckCircle className="h-5 w-5" />;
       case "Given to Courier": return <Truck className="h-5 w-5" />;
@@ -209,6 +213,10 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
       case "Pending": return <Package className="h-5 w-5" />;
       case "Problematic": return <XCircle className="h-5 w-5" />;
       case "Cancelled": return <XCircle className="h-5 w-5" />;
+      case "Open": return <MessageSquareWarning className="h-5 w-5" />;
+      case "In Review": return <Reply className="h-5 w-5" />;
+      case "Resolved": return <Handshake className="h-5 w-5" />;
+      case "Closed": return <XCircle className="h-5 w-5" />;
       default: return <Package className="h-5 w-5" />;
     }
   };
@@ -335,9 +343,6 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
                   {order.shipping_notes_seller && <p><span className="font-medium flex items-center gap-1"><StickyNote className="h-4 w-4" /> Notes for Seller:</span> {order.shipping_notes_seller}</p>}
                   {order.shipping_notes_courier && <p><span className="font-medium flex items-center gap-1"><Truck className="h-4 w-4" /> Notes for Courier:</span> {order.shipping_notes_courier}</p>}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Shipping address cannot be changed after an order is placed. Please contact support for urgent changes.
-                </p>
               </div>
               <Separator />
               <div>
@@ -345,14 +350,14 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
                 {isLoadingItems ? <Loader2 className="animate-spin" /> : (
                   <div className="space-y-4">
                     {items.map((item, index) => (
-                      <div key={index} className="flex items-center gap-4">
-                        <MediaItem src={item.products.media_url} alt={item.products.name} className="h-16 w-16 rounded-md object-cover bg-muted" />
-                        <div className="flex-1">
+                      <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-2 border rounded-md bg-muted/50">
+                        <img src={item.products.media_url} alt={item.products.name} className="h-16 w-16 rounded-md object-cover bg-muted" />
+                        <div className="flex-1 w-full">
                           <p className="font-medium">{item.products.name}</p>
                           <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                         </div>
                         <p className="font-medium">
-                          {formatCurrency(convertCurrency(item.price_at_purchase * item.quantity, 'ALL', shopDetails.currency), shopDetails.currency)}
+                          {formatCurrency(convertCurrency(item.price_at_purchase * item.quantity, 'ALL', shopDetails?.currency), shopDetails?.currency)}
                         </p>
                       </div>
                     ))}
@@ -361,10 +366,10 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
               </div>
               <Separator />
               <div>
-                <h3 className="font-semibold mb-4 flex items-center gap-2"><MessageSquareWarning className="h-5 w-5 text-primary" /> Issue Report</h3>
+                <h3 className="font-semibold mb-4 flex items-center gap-2"><MessageSquareWarning className="h-5 w-5 text-primary" /> Client Dispute</h3>
                 {isLoadingDispute ? <Loader2 className="animate-spin" /> : dispute ? (
                   <div className="space-y-3 p-3 border rounded-md bg-muted/50">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                       <p className="font-medium flex items-center gap-2"><Hash className="h-4 w-4" /> Dispute ID: {dispute.id.substring(0, 8)}</p>
                       <Badge className={cn("text-white", getStatusColor(dispute.status))}>{dispute.status}</Badge>
                     </div>
@@ -373,7 +378,7 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
                     {dispute.reply_message && (
                       <div className="space-y-2 mt-3">
                         <Label className="flex items-center gap-2 text-sm"><Reply className="h-4 w-4" /> Seller's Reply</Label>
-                        <Textarea id="replyMessage" rows={3} value={dispute.reply_message} readOnly className="pl-10 pt-3 h-auto min-h-[80px] px-3 py-2" />
+                        <Textarea id="replyMessage" rows={3} value={dispute.reply_message} readOnly className="pl-3 pt-3 h-auto min-h-[80px] px-3 py-2" />
                       </div>
                     )}
                   </div>
@@ -383,40 +388,40 @@ export const StorefrontOrderDetailModal = ({ order, isOpen, onClose, onOrderUpda
               </div>
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-            <div className="flex items-center gap-2 mr-auto">
+          <DialogFooter className="pt-4 flex-col sm:flex-row sm:justify-end sm:items-center gap-2">
+            <div className="flex items-center gap-2 mr-auto sm:mr-0">
               <span className="text-sm">Status:</span>
               <Badge className={cn("text-white", getStatusColor(order.status))}>{order.status}</Badge>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               {order.payment_method === 'cash_on_delivery' && order.status !== 'Fulfilled' && order.status !== 'Cancelled' && (
-                <Button onClick={() => setIsMarkCompletedAlertOpen(true)} disabled={isUpdatingOrder}>
+                <Button onClick={() => setIsMarkCompletedAlertOpen(true)} disabled={isUpdatingOrder} className="w-full sm:w-auto text-sm md:text-base">
                   {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Mark as Completed & Paid
                 </Button>
               )}
               {order.payment_method === 'card' && order.status === 'Given to Courier' && (
-                <Button onClick={() => setIsConfirmReceiptAlertOpen(true)} disabled={isUpdatingOrder}>
+                <Button onClick={() => setIsConfirmReceiptAlertOpen(true)} disabled={isUpdatingOrder} className="w-full sm:w-auto text-sm md:text-base">
                   {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <Handshake className="mr-2 h-4 w-4" />
                   Confirm Receipt
                 </Button>
               )}
               {order.status === 'Pending' && (
-                <Button variant="destructive" onClick={() => setIsCancelOrderAlertOpen(true)} disabled={isUpdatingOrder}>
+                <Button variant="destructive" onClick={() => setIsCancelOrderAlertOpen(true)} disabled={isUpdatingOrder} className="w-full sm:w-auto text-sm md:text-base">
                   {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <XCircle className="mr-2 h-4 w-4" />
                   Cancel Order
                 </Button>
               )}
               {!dispute && order.status !== 'Cancelled' && (
-                <Button variant="outline" onClick={() => setIsReportIssueModalOpen(true)} disabled={isUpdatingOrder}>
+                <Button variant="outline" onClick={() => setIsReportIssueModalOpen(true)} disabled={isUpdatingOrder} className="w-full sm:w-auto text-sm md:text-base">
                   <MessageSquareWarning className="mr-2 h-4 w-4" />
                   Report Issue
                 </Button>
               )}
-              <Button variant="ghost" onClick={onClose}>Close</Button>
+              <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto text-sm md:text-base">Close</Button>
             </div>
           </DialogFooter>
         </DialogContent>
