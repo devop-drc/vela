@@ -15,8 +15,9 @@ import { cn } from '@/lib/utils';
 import { loadGoogleFont } from '@/lib/fontUtils';
 import { InstagramFloatingCart } from './InstagramFloatingCart'; // Import new floating cart
 import { InstagramMyOrdersDrawer } from './InstagramMyOrdersDrawer'; // Import InstagramMyOrdersDrawer
-import { InstagramFixedMyOrdersButton } from './InstagramFixedMyOrdersButton'; // Import new fixed button
+import { InstagramMyOrdersTrigger } from './InstagramMyOrdersTrigger'; // Import new trigger component
 import { supabase } from '@/integrations/supabase/client'; // Import supabase for order count
+import { Drawer } from '@/components/ui/drawer'; // Import Drawer.Root
 
 // Function to apply fixed Instagram-like settings to the DOM
 const applyInstagramShopSettingsToDOM = () => {
@@ -193,9 +194,14 @@ const InstagramShopLayoutContent = () => {
       </main>
       <Sonner />
       <InstagramCartDrawer isOpen={isCartModalOpen} onClose={() => setIsCartModalOpen(false)} />
-      <InstagramMyOrdersDrawer isOpen={isMyOrdersDrawerOpen} onClose={() => setIsMyOrdersDrawerOpen(false)} /> {/* Render My Orders drawer */}
+      
+      {/* My Orders Drawer */}
+      <Drawer open={isMyOrdersDrawerOpen} onOpenChange={setIsMyOrdersDrawerOpen} shouldScaleBackground>
+        {shopDetails && <InstagramMyOrdersTrigger orderCount={myOrdersCount} />}
+        <InstagramMyOrdersDrawer isOpen={isMyOrdersDrawerOpen} onClose={() => setIsMyOrdersDrawerOpen(false)} />
+      </Drawer>
+
       <InstagramFloatingCart onOpenCart={() => setIsCartModalOpen(true)} />
-      {shopDetails && <InstagramFixedMyOrdersButton onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} orderCount={myOrdersCount} />} {/* Render fixed button */}
     </div>
   );
 };
