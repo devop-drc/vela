@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight, ArrowRight, User, Mail, MapPin, Phone, StickyNote, Info, Wallet, ShieldCheck, Lock, Banknote, Hash, XCircle, Truck } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } => "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { MediaItem } from "@/components/MediaItem";
 import { cn } from "@/lib/utils";
@@ -137,18 +137,18 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl">
-        <SheetHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
-          <SheetTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
+    <Drawer open={isOpen} onOpenChange={onClose} shouldScaleBackground>
+      <DrawerContent side="bottom" className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl">
+        <DrawerHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
+          <DrawerTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
             <ShoppingBag className="h-6 w-6 text-red-500" />
             {getDrawerTitle()}
-          </SheetTitle>
+          </DrawerTitle>
           <Button variant="ghost" size="icon" onClick={handleBack} className="text-gray-800 hover:bg-gray-100">
             <X className="h-5 w-5" />
             <span className="sr-only">Close</span>
           </Button>
-        </SheetHeader>
+        </DrawerHeader>
 
         <div className="flex-1 overflow-hidden">
           {(checkoutStep === 'cart') && (
@@ -351,7 +351,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                         variant="outline"
                                         size="sm"
                                         onClick={() => moveToCart(item.productId)}
-                                        className="flex-1 sm:flex-none text-sm h-9 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                                        className="flex-1 sm:flex-none text-sm h-9 px-3 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
                                       >
                                           <MoveRight className="mr-2 h-4 w-4" />
                                           Move to Cart
@@ -401,7 +401,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
             />
           )}
         </div>
-        <SheetFooter className="p-4 border-t border-gray-200 flex-shrink-0">
+        <DrawerFooter className="p-4 border-t border-gray-200 flex-shrink-0">
           <div className="flex flex-col w-full space-y-2">
             <div className="flex justify-between text-sm text-gray-800">
               <span>Subtotal ({totalItems} items):</span>
@@ -456,8 +456,8 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
               Back
             </Button>
           </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 };

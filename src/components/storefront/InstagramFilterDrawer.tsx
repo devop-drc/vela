@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -205,18 +205,18 @@ export const InstagramFilterDrawer = ({
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl">
-        <SheetHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
-          <SheetTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
+    <Drawer open={isOpen} onOpenChange={onClose} shouldScaleBackground>
+      <DrawerContent side="bottom" className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl">
+        <DrawerHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
+          <DrawerTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
             <Filter className="h-6 w-6 text-red-500" />
             Filters
-          </SheetTitle>
+          </DrawerTitle>
           <Button variant="ghost" size="icon" onClick={onClose} className="text-gray-800 hover:bg-gray-100">
             <X className="h-5 w-5" />
             <span className="sr-only">Close filters</span>
           </Button>
-        </SheetHeader>
+        </DrawerHeader>
 
         <ScrollArea className="flex-1 px-4 py-6">
           <Accordion type="multiple" defaultValue={["Categories", "Price Range"]} className="w-full">
@@ -308,11 +308,11 @@ export const InstagramFilterDrawer = ({
             })}
           </Accordion>
         </ScrollArea>
-        <SheetFooter className="p-4 border-t border-gray-200 flex-shrink-0">
+        <DrawerFooter className="p-4 border-t border-gray-200 flex-shrink-0">
           <Button variant="outline" onClick={handleClearAll} className="flex-1 text-base bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200">Clear All</Button>
           <Button onClick={onClose} className="flex-1 text-base bg-red-500 hover:bg-red-600 text-white">Apply Filters</Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 };

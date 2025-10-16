@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -219,18 +218,7 @@ export const StorefrontFilterSidebar = ({
 
   const filterContent = (
     <div className="flex flex-col h-full">
-      {isMobile ? (
-        <SheetHeader className="p-4 border-b flex-row items-center justify-between">
-          <SheetTitle className="flex items-center gap-2 text-xl font-bold">
-            <Filter className="h-6 w-6 text-primary" />
-            Advanced Filters
-          </SheetTitle>
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close filters</span>
-          </Button>
-        </SheetHeader>
-      ) : (
+      
         <div className="p-4 border-b flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-xl font-bold">
             <Filter className="h-6 w-6 text-primary" />
@@ -241,7 +229,6 @@ export const StorefrontFilterSidebar = ({
             <span className="sr-only">Close filters</span>
           </Button>
         </div>
-      )}
 
       <ScrollArea className="flex-1 px-4 py-6">
         <Accordion type="multiple" defaultValue={["Categories", "Price Range"]} className="w-full">
@@ -326,24 +313,6 @@ export const StorefrontFilterSidebar = ({
       </div>
     </div>
   );
-
-  if (isMobile) {
-    return (
-      <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent
-          side="left"
-          className={cn(
-            "w-full sm:max-w-xs p-0 flex flex-col h-full",
-            blurEnabled ? "bg-card/80 backdrop-blur-[20px]" : "bg-card",
-            isFloatingLayout && "rounded-none"
-          )}
-          style={{ borderRadius: isFloatingLayout ? '0' : borderRadius }}
-        >
-          {filterContent}
-        </SheetContent>
-      </Sheet>
-    );
-  }
 
   return (
     <motion.aside

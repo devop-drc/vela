@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, X, Loader2, Search, Package, CheckCircle, Truck, Box, Eye, XCircle, Mail, Hash, ArrowLeft } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
@@ -195,28 +195,22 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose }: InstagramMyOrdersDr
         />
       )}
 
-      <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent side="bottom" className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl"
-          // Hide default Vaul handle and add snap points
-          // handle={false} // Removed to allow Vaul's default handle
-          snapPoints={[0.1, 0.5, 0.9]} // Example snap points: 10%, 50%, 90% of viewport height
-          initialSnap={0.9} // Start fully open
+      <Drawer open={isOpen} onOpenChange={onClose} shouldScaleBackground>
+        <DrawerContent
+          className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl"
+          snapPoints={[0.1, 0.5, 0.9]}
+          initialSnap={0.9}
         >
-          {/* Removed custom handle div to use Vaul's default handle */}
-          {/* <div className="flex justify-center pt-3 pb-2">
-            <div className="h-1.5 w-16 rounded-full bg-gray-300" />
-          </div> */}
-
-          <SheetHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
-            <SheetTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
+          <DrawerHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
+            <DrawerTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
               <ShoppingBag className="h-6 w-6 text-red-500" />
               My Orders
-            </SheetTitle>
+            </DrawerTitle>
             <Button variant="ghost" size="icon" onClick={onClose} className="text-gray-800 hover:bg-gray-100">
               <X className="h-5 w-5" />
               <span className="sr-only">Close</span>
             </Button>
-          </SheetHeader>
+          </DrawerHeader>
 
           <ScrollArea className="flex-1 p-4 pr-6">
             <Card className="shadow-none border-none bg-white">
@@ -307,14 +301,14 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose }: InstagramMyOrdersDr
               </CardContent>
             </Card>
           </ScrollArea>
-          <SheetFooter className="p-4 border-t border-gray-200 flex-shrink-0">
+          <DrawerFooter className="p-4 border-t border-gray-200 flex-shrink-0">
             <Button variant="ghost" className="w-full text-base text-gray-800 hover:bg-gray-100" onClick={onClose}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Shop
             </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 };
