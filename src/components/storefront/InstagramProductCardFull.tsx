@@ -8,7 +8,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
-import { ShoppingCart, Minus, Plus, Bookmark, XCircle, ArrowRight, ChevronDown, Banknote, ShoppingBag } from "lucide-react";
+import { ShoppingCart, Minus, Plus, Bookmark, XCircle, ArrowRight, ChevronDown, Banknote, ShoppingBag, CreditCard } from "lucide-react"; // Added CreditCard
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -194,6 +194,9 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
       }
     };
 
+    const primaryColorClass = hasDiscount ? "bg-green-600 hover:bg-green-700 text-white" : "bg-red-700 hover:bg-red-800 text-white";
+    const outlineColorClass = hasDiscount ? "border-green-600 text-green-600 hover:bg-green-50" : "border-red-700 text-red-700 hover:bg-red-50";
+
     return (
       <div ref={ref} id={`product-${product.id}`} className="bg-white text-black border-b border-gray-200 pb-4 mb-4">
         {/* Product Header */}
@@ -362,15 +365,15 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
           {/* Quantity & Add to Cart / Buy Now - Responsive */}
           {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3">
+            <div className="flex items-stretch gap-3 pt-3"> {/* Changed to items-stretch for vertical alignment */}
               {/* Quantity Counter */}
-              <div className="flex items-center border border-gray-300 rounded-full flex-shrink-0 w-full sm:w-auto max-w-[150px]">
+              <div className="flex flex-col border border-gray-300 rounded-md overflow-hidden flex-shrink-0 w-16"> {/* Fixed width for counter */}
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
                   disabled={quantity <= 1}
-                  className="h-9 w-9 text-gray-800 hover:bg-gray-100 rounded-full"
+                  className="h-full w-full rounded-none text-gray-800 hover:bg-gray-100"
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
@@ -378,7 +381,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                   type="number"
                   value={quantity}
                   onChange={(e) => setQuantity(Math.max(1, Math.min(product.inventory || 1, parseInt(e.target.value) || 1)))}
-                  className="w-12 text-center border-y-0 border-x-0 focus-visible:ring-0 text-base bg-white h-9 p-0"
+                  className="w-full text-center border-y border-gray-300 border-x-0 focus-visible:ring-0 text-base bg-white h-full p-0"
                   min={1}
                   max={product.inventory || 1}
                 />
@@ -387,37 +390,33 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                   size="icon"
                   onClick={() => setQuantity(prev => Math.min(product.inventory || 1, prev + 1))}
                   disabled={quantity >= (product.inventory || 1)}
-                  className="h-9 w-9 text-gray-800 hover:bg-gray-100 rounded-full"
+                  className="h-full w-full rounded-none text-gray-800 hover:bg-gray-100"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-2 flex-1 w-full">
+              <div className="flex flex-col gap-2 flex-1 w-full"> {/* Always stack vertically */}
                 {/* Buy Now Button */}
                 <Button
                   size="lg"
                   className={cn(
-                    "w-full text-base rounded-md",
-                    hasDiscount
-                      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                      : "bg-red-500 hover:bg-red-600 text-white"
+                    "w-full text-base rounded-md h-12", // Full width and fixed height
+                    primaryColorClass
                   )}
                   onClick={handleBuyNow}
                   disabled={isOutOfStock}
                 >
-                  Buy Now <Banknote className="ml-2 h-4 w-4" />
+                  Buy <CreditCard className="ml-2 h-4 w-4" />
                 </Button>
 
                 {/* Add to Cart Button */}
                 <Button
                   size="lg"
                   className={cn(
-                    "w-full text-base rounded-md border",
-                    hasDiscount
-                      ? "border-emerald-600 text-emerald-600 hover:bg-emerald-50 bg-transparent"
-                      : "border-red-500 text-red-500 hover:bg-red-50 bg-transparent"
+                    "w-full text-base rounded-md border h-12", // Full width and fixed height
+                    outlineColorClass
                   )}
                   variant="outline"
                   onClick={handleAddToCart}
@@ -430,7 +429,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
             </div>
           )}
           {product.pricing_type === 'one_time' && (product.inventory === null || product.inventory <= 0) && (
-            <Button size="lg" className="w-full text-base bg-red-500 hover:bg-red-600 text-white rounded-md" disabled>
+            <Button size="lg" className="w-full text-base bg-gray-500 hover:bg-gray-600 text-white rounded-md" disabled>
               Out of Stock
             </Button>
           )}
