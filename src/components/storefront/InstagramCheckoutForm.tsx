@@ -136,6 +136,20 @@ export const InstagramCheckoutForm = ({
   const [isSaveAddressModalOpen, setIsSaveAddressModalOpen] = useState(false);
   const [newAddressLabel, setNewAddressLabel] = useState('');
 
+  const fillFormWithAddress = useCallback((address: CustomerAddress) => {
+    setValue('firstName', address.first_name);
+    setValue('lastName', address.last_name);
+    setValue('email', address.email);
+    setValue('phone', address.phone || '');
+    setValue('shippingAddress', address.address);
+    setValue('shippingCity', address.city);
+    setValue('shippingZip', address.zip_code);
+    setValue('shippingCountry', address.country);
+    // Keep notes and payment method as they are not part of saved address
+    setValue('saveAddress', false); // Always uncheck when loading saved address
+    setValue('addressLabel', address.label);
+  }, [setValue]);
+
   // Effect to reset form when checkout step changes
   useEffect(() => {
     console.log("CheckoutForm: selectedAddressId changed to", selectedAddressId);
@@ -161,20 +175,6 @@ export const InstagramCheckoutForm = ({
       console.log("CheckoutForm: New address selected, setting checkoutStep to 'contact-shipping'");
     }
   }, [selectedAddressId, savedAddresses, reset, fillFormWithAddress, setCheckoutStep, watch]);
-
-  const fillFormWithAddress = useCallback((address: CustomerAddress) => {
-    setValue('firstName', address.first_name);
-    setValue('lastName', address.last_name);
-    setValue('email', address.email);
-    setValue('phone', address.phone || '');
-    setValue('shippingAddress', address.address);
-    setValue('shippingCity', address.city);
-    setValue('shippingZip', address.zip_code);
-    setValue('shippingCountry', address.country);
-    // Keep notes and payment method as they are not part of saved address
-    setValue('saveAddress', false); // Always uncheck when loading saved address
-    setValue('addressLabel', address.label);
-  }, [setValue]);
 
   const handleSaveAddressToLocal = () => {
     if (!newAddressLabel.trim()) {
@@ -292,7 +292,7 @@ export const InstagramCheckoutForm = ({
               </Card>
             )}
 
-            {checkoutStep === 'contact-shipping' && (
+            {checkoutStep === 'contact-shipping' && selectedAddressId === 'new' && (
               <motion.div
                 key="contact-shipping-form" // Added key for AnimatePresence
                 initial={{ opacity: 0, x: 50 }}
