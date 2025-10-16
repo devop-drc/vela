@@ -52,7 +52,7 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, isProducts
       "bg-white text-gray-800 border-b border-gray-200"
     )}>
       {isProfilePage ? (
-        <div className="container flex h-full items-center justify-between px-4">
+        <div className="container flex h-full items-center justify-between px-4 py-3">
           <div className="flex items-center space-x-2 flex-shrink-0">
             <h1 className="text-lg font-bold">InstaShop</h1>
           </div>
@@ -68,7 +68,7 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, isProducts
       ) : (
         <div className="flex flex-col h-full">
           {/* Row 1 */}
-          <div className="container flex items-center justify-between px-4">
+          <div className="container flex items-center justify-between px-4 py-2">
             <Button variant="ghost" size="icon" onClick={handleBack} className="text-gray-800 hover:bg-gray-100">
               <ChevronDown className="mr-1 h-6 w-6 rotate-[+90deg]" />
               <span className="sr-only">Back</span>

@@ -44,7 +44,7 @@ serve(async (req) => {
     // Determine access token source: from body (server-to-server call) or DB (client-to-server call)
     if (body?.user_access_token) {
       userAccessToken = body.user_access_token;
-      console.log(`Instagram Posts Function: Using access token from request body for user ${userId}.`);
+      console.log(`[${userId}] Instagram Posts Function: Using access token from request body.`);
     } else {
       const { data: integration, error: integrationError } = await supabase
         .from('integrations')
@@ -54,18 +54,18 @@ serve(async (req) => {
         .single();
 
       if (integrationError || !integration) {
-        console.error(`Instagram integration not found for user ${userId}:`, integrationError?.message || 'No integration record.');
+        console.error(`[${userId}] Instagram integration not found:`, integrationError?.message || 'No integration record.');
         return new Response(JSON.stringify({ error: "Instagram integration not found for this user. Please connect your account in the settings." }), {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       userAccessToken = integration.access_token;
-      console.log(`Instagram Posts Function: Using access token from DB for user ${userId}.`);
+      console.log(`[${userId}] Instagram Posts Function: Using access token from DB.`);
     }
 
     if (!FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
-        console.error('Instagram Posts Function Error: FACEBOOK_APP_ID or FACEBOOK_APP_SECRET is not configured in Supabase secrets.');
+        console.error(`[${userId}] Instagram Posts Function Error: FACEBOOK_APP_ID or FACEBOOK_APP_SECRET is not configured.`);
         return new Response(JSON.stringify({ error: "Server configuration error: Facebook App ID or Secret is missing." }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -75,23 +75,26 @@ serve(async (req) => {
     // 1. Debug user access token to ensure it's valid
     const appAccessToken = `${FACEBOOK_APP_ID}|${FACEBOOK_APP_SECRET}`;
     const debugUrl = `https://graph.facebook.com/debug_token?input_token=${userAccessToken}&access_token=${appAccessToken}`;
+    console.log(`[${userId}] Debugging access token...`);
     const debugResponse = await fetch(debugUrl);
     const debugData = await debugResponse.json();
 
     if (!debugData.data || !debugData.data.is_valid) {
-        console.error(`Instagram Posts Function Error for user ${userId}: Invalid or expired Facebook connection. Debug data:`, debugData);
+        console.error(`[${userId}] Invalid or expired Facebook connection. Debug data:`, debugData);
         return new Response(JSON.stringify({ error: "Your Facebook connection is invalid or has expired. Please disconnect and reconnect in the settings." }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }
+    console.log(`[${userId}] Access token is valid.`);
     
     // 2. Fetch Facebook pages to find the linked Instagram Business Account
     const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account,name&access_token=${userAccessToken}`;
+    console.log(`[${userId}] Fetching Facebook pages...`);
     const pagesResponse = await fetch(pagesUrl);
     if (!pagesResponse.ok) {
         const errorData = await pagesResponse.json();
-        console.error(`Instagram Posts Function Error for user ${userId}: Failed to fetch Facebook pages. Error:`, errorData.error?.message || errorData);
+        console.error(`[${userId}] Failed to fetch Facebook pages. Error:`, errorData.error?.message || errorData);
         return new Response(JSON.stringify({ error: errorData.error?.message || 'Failed to fetch Facebook pages. Please try reconnecting your account.' }), {
           status: pagesResponse.status,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -103,12 +106,13 @@ serve(async (req) => {
     if (!igAccount) {
       const pageNames = pagesData.data.map((page: any) => page.name).join(', ');
       const detailedError = `We found the following Facebook Page(s): ${pageNames}. However, none of them have a linked Instagram Business Account that this app has permission to access. Please try disconnecting and reconnecting. During the Facebook login process, ensure you click "Edit Settings" and grant all requested permissions for both your Facebook Page and your Instagram account.`;
-      console.error(`Instagram Posts Function Error for user ${userId}: No linked Instagram Business Account. Detailed error:`, detailedError);
+      console.error(`[${userId}] No linked Instagram Business Account. Detailed error:`, detailedError);
       return new Response(JSON.stringify({ error: detailedError }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    console.log(`[${userId}] Found Instagram Business Account ID: ${igAccount.instagram_business_account.id}`);
     
     const igAccountId = igAccount.instagram_business_account.id;
     const fields = 'id,media_type,media_url,permalink,thumbnail_url,timestamp,caption';
@@ -118,12 +122,13 @@ serve(async (req) => {
     const MAX_PAGES = 10; // Safety break to prevent overwhelming API
 
     // 3. Fetch all media posts from Instagram Business Account
+    console.log(`[${userId}] Fetching media posts from Instagram...`);
     while (mediaUrl && pageCount < MAX_PAGES) {
         pageCount++;
         const mediaResponse = await fetch(mediaUrl);
         if (!mediaResponse.ok) {
             const errorData = await mediaResponse.json();
-            console.error(`Instagram Posts Function Error for user ${userId}: Failed to fetch media from Instagram. Error:`, errorData.error?.message || errorData);
+            console.error(`[${userId}] Failed to fetch media from Instagram (page ${pageCount}). Error:`, errorData.error?.message || errorData);
             throw new Error(errorData.error?.message || 'Failed to fetch media from Instagram.');
         }
 
@@ -134,8 +139,7 @@ serve(async (req) => {
 
         mediaUrl = pageData.paging?.next || null;
     }
-
-    console.log(`Instagram Posts fetched for user ${userId}: ${allMedia.length} posts.`);
+    console.log(`[${userId}] Fetched ${allMedia.length} media posts from Instagram.`);
 
     // 4. Upload media to Supabase Storage and replace URLs
     const supabaseAdmin = getSupabaseAdmin();
@@ -149,13 +153,21 @@ serve(async (req) => {
       };
 
       const uploadFile = async (url: string, type: 'media' | 'thumbnail') => {
-        if (!url) return null;
+        if (!url) {
+          console.log(`[${userId}][Post ${post.id}] Skipping ${type} upload: URL is null or empty.`);
+          return null;
+        }
+        console.log(`[${userId}][Post ${post.id}] Attempting to fetch ${type} from Instagram: ${url}`);
         try {
           const response = await fetch(url);
-          if (!response.ok) throw new Error(`Failed to fetch ${type} from Instagram: ${response.statusText}`);
+          if (!response.ok) {
+            console.error(`[${userId}][Post ${post.id}] Failed to fetch ${type} from Instagram. Status: ${response.status}, URL: ${url}`);
+            throw new Error(`Failed to fetch ${type} from Instagram: ${response.statusText}`);
+          }
           const blob = await response.blob();
           const fileName = `${userId}/${post.id}/${type}_${Date.now()}.${fileExtension(url)}`;
           
+          console.log(`[${userId}][Post ${post.id}] Uploading ${type} to Supabase Storage: ${fileName}`);
           const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
             .from('product-media')
             .upload(fileName, blob, {
@@ -163,13 +175,16 @@ serve(async (req) => {
               upsert: true,
             });
 
-          if (uploadError) throw uploadError;
+          if (uploadError) {
+            console.error(`[${userId}][Post ${post.id}] Error uploading ${type} to storage:`, uploadError.message);
+            throw uploadError;
+          }
           
           const { data: publicUrlData } = supabaseAdmin.storage.from('product-media').getPublicUrl(fileName);
+          console.log(`[${userId}][Post ${post.id}] Successfully uploaded ${type}. Public URL: ${publicUrlData.publicUrl}`);
           return publicUrlData.publicUrl;
         } catch (uploadErr: any) {
-          console.error(`Error uploading ${type} for post ${post.id}:`, uploadErr.message);
-          // IMPORTANT: If upload fails, return null, do NOT fallback to original Instagram URL
+          console.error(`[${userId}][Post ${post.id}] Final error during ${type} upload process:`, uploadErr.message);
           return null; 
         }
       };
@@ -177,23 +192,23 @@ serve(async (req) => {
       if (post.media_type === 'IMAGE' || post.media_type === 'CAROUSEL_ALBUM') {
         uploadedMediaUrl = await uploadFile(post.media_url, 'media');
       } else if (post.media_type === 'VIDEO') {
-        // For videos, we primarily use the thumbnail for display in grids/cards
         uploadedThumbnailUrl = await uploadFile(post.thumbnail_url, 'thumbnail');
-        // Keep the original media_url for video playback if it's a direct link,
-        // or upload if it's a short-lived URL that needs to be proxied/stored.
-        // For now, we'll keep the original media_url for video playback.
-        // If Instagram video URLs also expire quickly, a more robust solution
-        // would involve uploading the video itself or using a streaming service.
+        // For videos, we'll also try to upload the main video file if it's not null
+        // This ensures we have a permanent link for playback if needed, though thumbnail is primary for display
+        if (post.media_url) {
+          uploadedMediaUrl = await uploadFile(post.media_url, 'media');
+        }
       }
 
       return {
         ...post,
-        media_url: uploadedMediaUrl, // Now directly use uploaded URL, or null if failed
-        thumbnail_url: uploadedThumbnailUrl, // Now directly use uploaded URL, or null if failed
+        media_url: uploadedMediaUrl, 
+        thumbnail_url: uploadedThumbnailUrl, 
       };
     });
 
     const uploadedPosts = await Promise.all(uploadedMediaPromises);
+    console.log(`[${userId}] Finished processing all media posts.`);
 
     return new Response(JSON.stringify({ posts: uploadedPosts }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -201,7 +216,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error(`Instagram Posts Function (Catch Block) Error for user ${userId || 'unknown'}:`, error.message);
+    console.error(`[${userId || 'unknown'}] Instagram Posts Function (Catch Block) Error:`, error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

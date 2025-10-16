@@ -71,7 +71,7 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
-  visible: { y: 0, opacity: 1 },
+  visible: { opacity: 1, y: 0 },
 };
 
 const Products = () => {
@@ -295,6 +295,35 @@ const Products = () => {
   const cycleGridSize = () => setGridSize(prev => sizeCycle[(sizeCycle.indexOf(prev) + 1) % sizeCycle.length]);
 
   const currentView = isMobile ? 'grid' : viewMode;
+
+  const handleSelectProduct = (productId: string) => {
+    if (isSelectionModeActive) {
+      setSelectedProducts(prev =>
+        prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]
+      );
+    } else {
+      const productToEdit = filteredAndSortedProducts.find(p => p.id === productId);
+      if (productToEdit) {
+        setSelectedProduct(productToEdit);
+      }
+    }
+  };
+
+  const groupedProducts = useMemo(() => {
+    if (grouping === 'category') {
+      return filteredAndSortedProducts.reduce((acc, product) => {
+        const category = product.category || 'Uncategorized';
+        if (!acc[category]) {
+          acc[category] = [];
+        }
+        acc[category].push(product);
+        return acc;
+      }, {} as { [key: string]: Product[] });
+    }
+    // If no grouping, return a single group or handle as flat list
+    return { 'All Products': filteredAndSortedProducts };
+  }, [filteredAndSortedProducts, grouping]);
+
 
   return (
     <>
