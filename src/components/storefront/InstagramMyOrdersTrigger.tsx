@@ -29,7 +29,6 @@ export const InstagramMyOrdersTrigger = ({ orderCount }: InstagramMyOrdersTrigge
             "flex flex-col items-center justify-center pt-2 pb-1" // Adjust padding for icon and text
           )}
         >
-          {/* ChevronUp removed as DrawerTrigger provides its own handle */}
           <ShoppingBag className="h-6 w-6 text-gray-800" />
           <span className="text-xs font-semibold mt-1">My Orders</span>
           {orderCount > 0 && (

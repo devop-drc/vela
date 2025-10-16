@@ -254,36 +254,37 @@ const StorefrontInstagramProfile = () => {
         {/* Profile Section */}
         <section className="flex flex-col items-center mb-8 md:mb-10 px-4 pt-4">
           <div className="flex items-center w-full max-w-md md:max-w-none md:justify-start gap-4 md:gap-8 mb-4">
-            <Avatar className="h-24 w-24 md:h-28 md:w-28 border-2 border-gray-300">
+            <Avatar className="h-24 w-24 md:h-28 md:w-28 border-2 border-gray-300 flex-shrink-0">
               <AvatarImage src={shopDetails.logo_url || undefined} alt={shopDetails.shop_name} />
               <AvatarFallback className="text-3xl md:text-4xl font-bold bg-gray-100 text-gray-600">
                 {shopDetails.shop_name?.[0]}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 grid grid-cols-3 text-center gap-2"> {/* Adjusted to grid-cols-3 */}
-              <div>
-                <p className="text-lg md:text-xl font-bold">{formatLargeNumber(totalPosts)}</p>
-                <p className="text-xs md:text-sm text-gray-500">posts</p>
-              </div>
-              <div>
-                <p className="text-lg md:text-xl font-bold">{formatLargeNumber(totalFollowers)}</p>
-                <p className="text-xs md:text-sm text-gray-500">followers</p>
-              </div>
-              <div>
-                <p className="text-lg md:text-xl font-bold">{formatLargeNumber(totalFollowing)}</p> {/* Changed to totalFollowing */}
-                <p className="text-xs md:text-sm text-gray-500">following</p> {/* Changed label to 'following' */}
-              </div>
+            <div className="flex-1"> {/* This div will contain the two rows */}
+                <h2 className="text-base md:text-lg font-semibold mb-1">{shopDetails.shop_name}</h2> {/* Shop Name */}
+                <div className="grid grid-cols-3 text-center gap-2"> {/* Counters row */}
+                    <div>
+                        <p className="text-lg md:text-xl font-bold">{formatLargeNumber(totalPosts)}</p>
+                        <p className="text-xs md:text-sm text-gray-500">posts</p>
+                    </div>
+                    <div>
+                        <p className="text-lg md:text-xl font-bold">{formatLargeNumber(totalFollowers)}</p>
+                        <p className="text-xs md:text-sm text-gray-500">followers</p>
+                    </div>
+                    <div>
+                        <p className="text-lg md:text-xl font-bold">{formatLargeNumber(totalFollowing)}</p>
+                        <p className="text-xs md:text-sm text-gray-500">following</p>
+                    </div>
+                </div>
             </div>
           </div>
 
-          <div className="w-full max-w-md md:max-w-none md:pl-0 space-y-1 text-left"> {/* Changed to text-left */}
-            <h2 className="text-base md:text-lg font-semibold">{shopDetails.shop_name}</h2>
-            {/* Placeholder for 'Advertising/marketing' */}
+          <div className="w-full max-w-md md:max-w-none md:pl-0 space-y-1 text-left">
             <p className="text-sm md:text-base text-gray-600">Advertising/marketing</p>
             {shopDetails.headline && <p className="text-sm md:text-base text-gray-600">{shopDetails.headline}</p>}
             {shopDetails.about && <p className="text-sm md:text-base text-gray-600">{shopDetails.about}</p>}
             {shopDetails.instagram_url && (
-              <a href={shopDetails.instagram_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm md:text-base flex items-center justify-start gap-1"> {/* Changed to justify-start */}
+              <a href={shopDetails.instagram_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm md:text-base flex items-center justify-start gap-1">
                 {shopDetails.instagram_url.replace(/^(https?:\/\/)?(www\.)?/i, '').split('/')[0]}
               </a>
             )}
@@ -305,14 +306,14 @@ const StorefrontInstagramProfile = () => {
         )}
 
         {/* Filter and Sort Bar */}
-        <div className="flex flex-col items-center justify-center py-2 mb-6 px-4"> {/* Centered container */}
-          <div className="flex items-center justify-center gap-2 w-full max-w-xs mb-2"> {/* Filter and Sort buttons */}
-            <Button variant="outline" size="sm" onClick={() => setIsFilterDrawerOpen(true)} className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100">
+        <div className="flex flex-col items-center justify-center py-2 mb-6 px-4">
+          <div className="flex items-center justify-center gap-2 w-full max-w-xs mb-2">
+            <Button variant="outline" size="sm" onClick={() => setIsFilterDrawerOpen(true)} className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100 w-1/2">
               <Filter className="mr-2 h-4 w-4" />
               Filter {hasActiveFilters && <span className="ml-1 text-xs text-red-500">(Active)</span>}
             </Button>
             <Select value={sortOption} onValueChange={handleSortChange}>
-              <SelectTrigger className="flex-1 h-9 text-sm border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200"> {/* Styled as button */}
+              <SelectTrigger className="flex-1 h-9 text-sm border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 w-1/2">
                 <ArrowUpNarrowWide className="mr-2 h-4 w-4" />
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
@@ -326,10 +327,12 @@ const StorefrontInstagramProfile = () => {
               </SelectContent>
             </Select>
           </div>
-          <Button variant="ghost" size="sm" className="text-gray-800 hover:bg-gray-100"> {/* Grid icon button */}
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-        </div>
+          <div className="flex items-center justify-center w-full max-w-xs">
+            <span className="p-2 rounded-md text-gray-800">
+                <LayoutGrid className="h-4 w-4" />
+            </span>
+          </div>
+        </div >
 
         {/* Product Grid */}
         <section className="mt-4">
