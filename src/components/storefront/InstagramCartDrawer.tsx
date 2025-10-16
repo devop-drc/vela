@@ -203,7 +203,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
           {/* Removed X button */}
         </DrawerHeader>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden flex flex-col"> {/* Added flex flex-col here */}
           {(checkoutStep === 'cart' && !initialCartItems) ? (
             <>
               {currentCartItems.length === 0 && savedItems.length === 0 ? (
@@ -221,7 +221,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                   <Button onClick={onClose} className="text-base bg-red-500 hover:bg-red-600 text-white">Start Shopping</Button>
                 </motion.div>
               ) : (
-                <ScrollArea className="flex-1 p-4 pr-6">
+                <ScrollArea className="flex-1 p-4 pr-6 h-full"> {/* Added h-full */}
                   <div className="space-y-6">
                     {currentCartItems.length > 0 && (
                       <div className="space-y-4">
