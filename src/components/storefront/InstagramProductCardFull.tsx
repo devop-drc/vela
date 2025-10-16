@@ -376,11 +376,11 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
-                  disabled={quantity <= 1}
+                  onClick={() => setQuantity(prev => Math.min(product.inventory || 1, prev + 1))}
+                  disabled={quantity >= (product.inventory || 1)}
                   className="h-full w-full text-gray-800 hover:bg-gray-100"
                 >
-                  <Minus className="h-4 w-4" />
+                  <Plus className="h-4 w-4" />
                 </Button>
                 <Input
                   type="number"
@@ -393,11 +393,11 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setQuantity(prev => Math.min(product.inventory || 1, prev + 1))}
-                  disabled={quantity >= (product.inventory || 1)}
+                  onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
+                  disabled={quantity <= 1}
                   className="h-full w-full text-gray-800 hover:bg-gray-100"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Minus className="h-4 w-4" />
                 </Button>
               </div>
 

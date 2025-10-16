@@ -229,6 +229,8 @@ export const InstagramCheckoutForm = ({
     );
   }
 
+  const selectedAddress = savedAddresses.find(addr => addr.id === selectedAddressId);
+
   return (
     <>
       <Dialog open={isSaveAddressModalOpen} onOpenChange={setIsSaveAddressModalOpen}>
@@ -265,22 +267,38 @@ export const InstagramCheckoutForm = ({
                 </CardHeader>
                 <CardContent>
                   <Select value={selectedAddressId} onValueChange={setSelectedAddressId}>
-                    <SelectTrigger className="border-gray-300 bg-gray-50 text-gray-800">
-                      <SelectValue placeholder="Select an address" />
+                    <SelectTrigger className="border-gray-300 bg-gray-50 text-gray-800 h-auto min-h-[40px] py-2"> {/* Added h-auto and py-2 */}
+                      <SelectValue placeholder="Select an address">
+                        {selectedAddressId === 'new' ? (
+                          <div className="flex flex-col items-start w-full">
+                            <span className="font-medium text-gray-800 text-sm">New Address</span>
+                            <span className="text-xs text-gray-500 text-wrap break-words max-w-full min-w-0">Enter details below</span>
+                          </div>
+                        ) : selectedAddress ? (
+                          <div className="flex flex-col items-start w-full">
+                            <span className="font-medium text-gray-800 text-sm">{selectedAddress.label}</span>
+                            <span className="text-xs text-gray-500 text-wrap break-words max-w-full min-w-0">
+                              {selectedAddress.address}, {selectedAddress.city}, {selectedAddress.zip_code}, {selectedAddress.country}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-500">Select an address</span>
+                        )}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="bg-white text-gray-800 w-[--radix-select-trigger-width] max-w-[calc(100vw-2rem)] sm:max-w-xs md:max-w-sm"> {/* Added responsive max-width */}
                       <SelectItem value="new" className="py-2">
                         <div className="flex flex-col items-start w-full">
                           <span className="font-medium text-gray-800 text-sm">New Address</span>
-                          <span className="text-xs text-gray-500 text-wrap break-words max-w-full min-w-0">Enter details below</span> {/* Added min-w-0 */}
+                          <span className="text-xs text-gray-500 text-wrap break-words max-w-full min-w-0">Enter details below</span>
                         </div>
                       </SelectItem>
                       <Separator className="bg-gray-200" />
                       {savedAddresses.map(address => (
-                        <SelectItem key={address.id} value={address.id} className="py-2 overflow-hidden"> {/* Added overflow-hidden */}
+                        <SelectItem key={address.id} value={address.id} className="py-2 overflow-hidden">
                           <div className="flex flex-col items-start w-full">
                             <span className="font-medium text-gray-800 text-sm">{address.label}</span>
-                            <span className="text-xs text-gray-500 text-wrap break-words max-w-full min-w-0"> {/* Added min-w-0 */}
+                            <span className="text-xs text-gray-500 text-wrap break-words max-w-full min-w-0">
                               {address.address}, {address.city}, {address.zip_code}, {address.country}
                             </span>
                           </div>
