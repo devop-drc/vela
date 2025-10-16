@@ -69,19 +69,35 @@ const getStatusIcon = (status: OrderStatusType) => {
 interface InstagramMyOrdersDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  initialOrderId?: string | null; // New prop
+  onOrderOpened?: () => void; // New callback
 }
 
-export const InstagramMyOrdersDrawer = ({ isOpen, onClose }: InstagramMyOrdersDrawerProps) => {
+export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrderOpened }: InstagramMyOrdersDrawerProps) => {
   const { shopDetails, convertCurrency } = useStorefront();
   const [customerEmailInput, setCustomerEmailInput] = useState(() => {
     return localStorage.getItem(LOCAL_STORAGE_EMAIL_KEY) || "";
   });
-  const [orderIdInput, setOrderIdInput] = useState("");
+  const [orderIdInput, setOrderIdInput] = useState(""); // This will be managed by initialOrderId prop
   const [orders, setOrders] = useState<OrderDetails[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderDetails | null>(null);
   const [isOrderDetailModalOpen, setIsOrderDetailModalOpen] = useState(false);
+
+  // Effect to handle initialOrderId prop
+  useEffect(() => {
+    if (initialOrderId) {
+      setOrderIdInput(initialOrderId);
+      // Trigger fetchOrders if email is already present
+      if (customerEmailInput && shopDetails?.slug) {
+        fetchOrders();
+      }
+      if (onOrderOpened) {
+        onOrderOpened(); // Notify parent that order has been processed
+      }
+    }
+  }, [initialOrderId, customerEmailInput, shopDetails?.slug, onOrderOpened]); // Add dependencies
 
   const fetchOrders = useCallback(async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -145,6 +161,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose }: InstagramMyOrdersDr
         .eq('business_id', businessId)
         .order('created_at', { ascending: false });
 
+      // Use the orderIdInput state, which might be set by initialOrderId prop
       if (orderIdInput) {
         query = query.eq('id', orderIdInput);
       }
@@ -156,6 +173,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose }: InstagramMyOrdersDr
         setOrders([]);
       } else if (data) {
         setOrders(data as OrderDetails[]);
+        // Automatically open the order detail modal if a specific order was searched
         if (orderIdInput && data.length > 0) {
           setSelectedOrder(data[0] as OrderDetails);
           setIsOrderDetailModalOpen(true);
@@ -171,7 +189,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose }: InstagramMyOrdersDr
     } finally {
       setIsLoading(false);
     }
-  }, [customerEmailInput, orderIdInput, shopDetails?.slug]);
+  }, [customerEmailInput, orderIdInput, shopDetails?.slug]); // Add orderIdInput to dependencies
 
   useEffect(() => {
     if (isOpen && customerEmailInput && shopDetails?.slug) {

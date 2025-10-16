@@ -105,7 +105,7 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, onOpenMyOr
               variant="outline"
               size="sm"
               onClick={onOpenFilterDrawer}
-              className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
+              className="flex-1 bg-gray-50 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
             >
               <Filter className="mr-2 h-4 w-4" />
               Filter
@@ -115,7 +115,7 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, onOpenMyOr
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
+                  className="flex-1 bg-gray-50 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
                 >
                   Sort <ArrowUpNarrowWide className="ml-2 h-4 w-4" />
                 </Button>

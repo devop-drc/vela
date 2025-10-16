@@ -315,7 +315,7 @@ const InstagramProfilePage = () => {
               variant="outline"
               size="sm"
               onClick={() => setIsFilterDrawerOpen(true)}
-              className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
+              className="flex-1 text-gray-800 bg-gray-50 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
             >
               <Filter className="mr-2 h-4 w-4" />
               Filter {hasActiveFilters && <span className="ml-1 text-xs text-red-500">(Active)</span>}
@@ -325,7 +325,7 @@ const InstagramProfilePage = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
+                  className="flex-1 text-gray-800 bg-gray-50 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
                 >
                   Sort <ArrowUpNarrowWide className="ml-2 h-4 w-4" />
                 </Button>

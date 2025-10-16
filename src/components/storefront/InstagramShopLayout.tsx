@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useSearchParams } from 'react-router-dom'; // Import useSearchParams
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import { InstagramShopHeader } from './InstagramShopHeader'; // Custom header
 import { defaultSettings } from '@/contexts/AppearanceContext';
@@ -63,6 +63,10 @@ const InstagramShopLayoutContent = () => {
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
   const [isMyOrdersDrawerOpen, setIsMyOrdersDrawerOpen] = useState(false); // New state for My Orders drawer
   const [myOrdersCount, setMyOrdersCount] = useState(0); // State for My Orders count
+  const [searchParams, setSearchParams] = useSearchParams(); // Initialize useSearchParams
+
+  // New state for initial order ID to pass to the drawer
+  const [initialOrderIdForDrawer, setInitialOrderIdForDrawer] = useState<string | null>(null);
 
   useEffect(() => {
     applyInstagramShopSettingsToDOM();
@@ -125,6 +129,20 @@ const InstagramShopLayoutContent = () => {
       if (link) link.remove();
     }
   }, [shopDetails]);
+
+  // Effect to check for orderId in URL and open drawer
+  useEffect(() => {
+    if (shopDetails) { // Ensure shopDetails are loaded before checking URL
+      const orderIdFromUrl = searchParams.get('orderId');
+      if (orderIdFromUrl) {
+        setInitialOrderIdForDrawer(orderIdFromUrl);
+        setIsMyOrdersDrawerOpen(true);
+        // Clear the orderId from URL after processing
+        searchParams.delete('orderId');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [searchParams, shopDetails, setSearchParams]); // Add shopDetails to dependencies
 
   // Fetch order count for the fixed button
   useEffect(() => {
@@ -196,7 +214,12 @@ const InstagramShopLayoutContent = () => {
       
       {/* My Orders Drawer */}
       <Drawer open={isMyOrdersDrawerOpen} onOpenChange={setIsMyOrdersDrawerOpen} shouldScaleBackground>
-        <InstagramMyOrdersDrawer isOpen={isMyOrdersDrawerOpen} onClose={() => setIsMyOrdersDrawerOpen(false)} />
+        <InstagramMyOrdersDrawer
+          isOpen={isMyOrdersDrawerOpen}
+          onClose={() => setIsMyOrdersDrawerOpen(false)}
+          initialOrderId={initialOrderIdForDrawer} // Pass the initial order ID
+          onOrderOpened={() => setInitialOrderIdForDrawer(null)} // Clear after order is opened
+        />
       </Drawer>
 
       {/* New Instagram Bottom Nav */}

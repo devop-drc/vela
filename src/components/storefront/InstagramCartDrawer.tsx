@@ -190,7 +190,8 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
       if (onOrderPlaced) {
         onOrderPlaced(); // Notify parent for Buy Now flow
       }
-      navigate(`/shop/${shopDetails.slug}/orders?orderId=${responseData.order.id}`);
+      // MODIFIED: Redirect to Instagram shop homepage and pass orderId
+      navigate(`/instagramShop/${shopDetails.slug}?orderId=${responseData.order.id}`);
     } catch (err: any) {
       console.error("Checkout failed:", err);
       if (toastId) toast.error(`Failed to place order: ${err.message || "An unexpected error occurred."}`, { id: toastId });
