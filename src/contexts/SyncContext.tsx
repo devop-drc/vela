@@ -1,4 +1,4 @@
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect, ReactNode, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChannel, Session } from '@supabase/supabase-js';
 import { SyncJob, SyncContextType } from '@/types/sync';
@@ -126,3 +126,10 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
 };
 
 // useSync hook has been moved to @/hooks/useSync
+export const useSync = () => {
+  const context = useContext(SyncContext);
+  if (context === undefined) {
+    throw new Error('useSync must be used within a SyncProvider');
+  }
+  return context;
+};s

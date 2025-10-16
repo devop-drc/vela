@@ -15,7 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BulkActionsToolbar } from "@/components/BulkActionsToolbar";
 import { AnimatePresence, motion } from "framer-motion";
 import { SaleModal, SaleFormData } from "@/components/SaleModal";
-import { cn } from "@/lib/utils";
+import { cn } => "@/lib/utils";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { Input } from "@/components/ui/input";
 import { Search, ListFilter } from "lucide-react";
