@@ -269,7 +269,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                     <div>
                       {currentCartItems.length > 0 && (
                         <Accordion type="single" collapsible defaultValue="items-in-cart" className="w-full">
-                          <AccordionItem value="items-in-cart" className="border-b-0 border px-5 border-gray-200">
+                          <AccordionItem value="items-in-cart" className="border-b px-5">
                             <AccordionTrigger className="text-lg font-bold text-gray-800">Items in Cart ({currentCartItems.length})</AccordionTrigger>
                             <AccordionContent>
                               {hasSubscriptionProducts && (
@@ -347,14 +347,14 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                           </div>
 
                                           {/* Col 3: Counter */}
-                                          <div className="flex items-center border border-gray-300 rounded-md h-7 flex-shrink-0">
+                                          <div className="flex items-center border border-gray-300 rounded-md w-32 h-10 flex-shrink-0">
                                             <motion.button
                                               type="button"
                                               variant="ghost"
                                               size="icon"
                                               onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                                               disabled={item.quantity <= 1}
-                                              className="h-full w-6 rounded-r-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
+                                              className="h-full w-10 rounded-r-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
                                               whileHover={{ scale: 1.1 }}
                                               whileTap={{ scale: 0.9 }}
                                             >
@@ -364,7 +364,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                               type="number"
                                               value={item.quantity}
                                               onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
-                                              className="w-10 text-center border-y-0 border-x border-gray-300 focus-visible:ring-0 text-xs h-full rounded-none bg-white p-0"
+                                              className="w-12 text-center border-y-0 border-x border-gray-300 focus-visible:ring-0 text-xs h-full rounded-none bg-white p-0"
                                               min={1}
                                             />
                                             <motion.button
@@ -373,7 +373,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                               size="icon"
                                               onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                                               disabled={item.quantity >= 99}
-                                              className="h-full w-6 rounded-l-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
+                                              className="h-full w-10 rounded-l-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
                                               whileHover={{ scale: 1.1 }}
                                               whileTap={{ scale: 0.9 }}
                                             >
@@ -387,25 +387,23 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                           <Button
                                             type="button"
                                             variant="outline"
-                                            size="xs"
+                                            size="sm"
                                             onClick={() => saveForLater(item)}
-                                            className="text-xs h-6 px-2 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                                            className="text-xs w-[50%] h-9 px-2 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
                                           >
                                               <Bookmark className="mr-1 h-3 w-3" />
                                               Save
                                           </Button>
-                                          <motion.button
+                                          <Button
                                             type="button"
-                                            variant="destructive"
-                                            size="xs"
+                                            variant="outline"
+                                            size="sm"
                                             onClick={() => removeFromCart(item.productId)}
-                                            className="text-red-500 hover:text-red-600 h-6 w-6 rounded-full bg-red-50 hover:bg-red-100"
-                                            whileHover={{ scale: 1.1 }}
-                                            whileTap={{ scale: 0.9 }}
+                                            className="text-xs w-[50%] h-9 px-2 text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100"
                                           >
-                                            <XCircle className="h-3 w-3" />
-                                            <span className="sr-only">Remove {item.name}</span>
-                                          </motion.button>
+                                              <XCircle className="h-3 w-3 mr-2" />
+                                              Remove
+                                          </Button>
                                         </div>
                                       </Card>
                                     </motion.div>
@@ -419,7 +417,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
 
                       {savedItems.length > 0 && (
                         <Accordion type="single" collapsible className="w-full">
-                          <AccordionItem value="saved-for-later" className="border-b-0 border px-5 border-gray-200">
+                          <AccordionItem value="saved-for-later" className="border-b px-5">
                             <AccordionTrigger className="text-lg font-bold text-gray-800">Saved for Later ({savedItems.length})</AccordionTrigger>
                             <AccordionContent>
                               <AnimatePresence>
@@ -465,29 +463,27 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                       </div>
 
                                       {/* Row 2: Move to Cart, Remove */}
-                                      <div className="flex justify-end gap-1 pt-2 border-t border-gray-100">
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="xs"
-                                          onClick={() => moveToCart(item.productId)}
-                                          className="flex-1 sm:flex-none text-xs h-6 px-2 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
-                                        >
-                                            <MoveRight className="mr-1 h-3 w-3" />
-                                            Move to Cart
-                                        </Button>
-                                        <motion.button
-                                          type="button"
-                                          variant="destructive"
-                                          size="xs"
-                                          onClick={() => removeSavedItem(item.productId)}
-                                          className="flex-shrink-0 text-red-500 hover:text-red-600 h-6 w-6 rounded-full bg-red-50 hover:bg-red-100"
-                                          whileHover={{ scale: 1.1 }}
-                                          whileTap={{ scale: 0.9 }}
-                                        >
-                                          <XCircle className="h-3 w-3" />
-                                          <span className="sr-only">Remove {item.name}</span>
-                                        </motion.button>
+                                      <div className="flex justify-end gap-1 pt-2 border-t border-gray-1000">
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => moveToCart(item.productId)}
+                                            className="text-xs w-[50%] h-9 px-2 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                                          >
+                                              <MoveRight className="mr-1 h-3 w-3 rotate-[-90deg]" />
+                                              Move to Cart
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => removeSavedItem(item.productId)}
+                                            className="text-xs w-[50%] h-9 px-2 text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100"
+                                          >
+                                              <XCircle className="h-3 w-3 mr-2" />
+                                              Remove
+                                          </Button>
                                       </div>
                                     </Card>
                                   </motion.div>

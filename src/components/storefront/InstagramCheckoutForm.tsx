@@ -267,13 +267,20 @@ export const InstagramCheckoutForm = ({
                       <SelectValue placeholder="Select an address" />
                     </SelectTrigger>
                     <SelectContent className="bg-white text-gray-800">
-                      <SelectItem value="new">New Address</SelectItem>
+                      <SelectItem value="new" className="py-2">
+                        <div className="flex flex-col items-start w-full">
+                          <span className="font-medium text-gray-800 text-sm">New Address</span>
+                          <span className="text-xs text-gray-500 text-wrap break-words max-w-full">Enter details below</span>
+                        </div>
+                      </SelectItem>
                       <Separator className="bg-gray-200" />
                       {savedAddresses.map(address => (
-                        <SelectItem key={address.id} value={address.id}>
-                          <div className="flex flex-col items-start">
-                            <span className="font-medium">{address.label}</span>
-                            <span className="text-xs text-gray-500">{address.address}, {address.city}, {address.country}</span>
+                        <SelectItem key={address.id} value={address.id} className="py-2">
+                          <div className="flex flex-col items-start w-full">
+                            <span className="font-medium text-gray-800 text-sm">{address.label}</span>
+                            <span className="text-xs text-gray-500 text-wrap break-words max-w-full">
+                              {address.address}, {address.city}, {address.zip_code}, {address.country}
+                            </span>
                           </div>
                         </SelectItem>
                       ))}

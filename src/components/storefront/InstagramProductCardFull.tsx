@@ -195,7 +195,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     };
 
     const primaryColorClass = hasDiscount ? "bg-green-600 hover:bg-green-700 text-white" : "bg-red-700 hover:bg-red-800 text-white";
-    const outlineColorClass = hasDiscount ? "border-green-600 text-green-600 hover:bg-green-50" : "border-red-700 text-red-700 hover:bg-red-50";
+    const outlineColorClass = hasDiscount ? "border-green-600 text-green-600 hover:bg-green-100 hover:border-green-800 hover:text-green-800" : "border-red-700 text-red-700 hover:bg-red-50 hover:border-ring-0 hover:border-red-700";
 
     return (
       <div ref={ref} id={`product-${product.id}`} className="bg-white text-black border-b border-gray-200 pb-4 mb-4">
