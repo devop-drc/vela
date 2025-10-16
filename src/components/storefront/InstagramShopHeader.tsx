@@ -24,14 +24,15 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramSho
 
   if (!shopDetails) return null;
 
-  const isProductDetailPage = !!productId;
+  const isProductDetailPage = !!productId; // Now refers to a product being scrolled to on the feed
 
   const handleBack = () => {
     if (isProductDetailPage) {
+      // If on a specific product within the feed, navigate back to the root of the feed
       navigate(`/instagramShop/${shopSlug}`);
     } else {
-      // Fallback if somehow on root of instagramShop and no product ID
-      navigate(`/shop/${shopSlug}`); // Or a more appropriate fallback
+      // If on the root of the feed, navigate back to the main storefront
+      navigate(`/shop/${shopSlug}`);
     }
   };
 
@@ -51,23 +52,14 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenMyOrders }: InstagramSho
             </Button>
           ) : (
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold">{shopDetails.username || shopDetails.shop_name}</h1> {/* Changed title to username */}
-              {/* Removed ChevronDown icon */}
+              <h1 className="text-lg font-bold">Products</h1> {/* Changed title to "Products" */}
+              <p className="text-xs text-muted-foreground">{shopDetails.username || shopDetails.shop_name}</p> {/* Username below */}
             </div>
           )}
         </div>
 
-        {/* Middle Section: Title for Product Detail Page (removed as per image) */}
-        {isProductDetailPage && (
-          <div className="flex flex-col items-center justify-center flex-1 min-w-0">
-            <h2 className="text-base font-semibold truncate">Products</h2>
-            <p className="text-xs text-muted-foreground truncate">{shopDetails.username || shopDetails.shop_name}</p>
-          </div>
-        )}
-
         {/* Right Section: Shopping Cart */}
         <nav className="flex items-center space-x-2 flex-shrink-0">
-          {/* Removed My Orders button from header */}
           <Button
             variant="ghost"
             size="icon"
