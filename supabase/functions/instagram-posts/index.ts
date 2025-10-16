@@ -9,6 +9,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const getSupabaseAdmin = () => createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  { auth: { persistSession: false } }
+);
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -131,7 +137,64 @@ serve(async (req) => {
 
     console.log(`Instagram Posts fetched for user ${userId}: ${allMedia.length} posts.`);
 
-    return new Response(JSON.stringify({ posts: allMedia }), {
+    // 4. Upload media to Supabase Storage and replace URLs
+    const supabaseAdmin = getSupabaseAdmin();
+    const uploadedMediaPromises = allMedia.map(async (post: any) => {
+      let uploadedMediaUrl = post.media_url;
+      let uploadedThumbnailUrl = post.thumbnail_url;
+
+      const fileExtension = (url: string) => {
+        const parts = url.split('.');
+        return parts.length > 1 ? parts.pop()?.split('?')[0] : 'jpg';
+      };
+
+      const uploadFile = async (url: string, type: 'media' | 'thumbnail') => {
+        if (!url) return null;
+        try {
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`Failed to fetch ${type} from Instagram: ${response.statusText}`);
+          const blob = await response.blob();
+          const fileName = `${userId}/${post.id}/${type}_${Date.now()}.${fileExtension(url)}`;
+          
+          const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+            .from('product-media')
+            .upload(fileName, blob, {
+              contentType: response.headers.get('content-type') || 'application/octet-stream',
+              upsert: true,
+            });
+
+          if (uploadError) throw uploadError;
+          
+          const { data: publicUrlData } = supabaseAdmin.storage.from('product-media').getPublicUrl(fileName);
+          return publicUrlData.publicUrl;
+        } catch (uploadErr: any) {
+          console.error(`Error uploading ${type} for post ${post.id}:`, uploadErr.message);
+          return url; // Fallback to original URL if upload fails
+        }
+      };
+
+      if (post.media_type === 'IMAGE' || post.media_type === 'CAROUSE_ALBUM') {
+        uploadedMediaUrl = await uploadFile(post.media_url, 'media');
+      } else if (post.media_type === 'VIDEO') {
+        // For videos, we primarily use the thumbnail for display in grids/cards
+        uploadedThumbnailUrl = await uploadFile(post.thumbnail_url, 'thumbnail');
+        // Keep the original media_url for video playback if it's a direct link,
+        // or upload if it's a short-lived URL that needs to be proxied/stored.
+        // For now, we'll keep the original media_url for video playback.
+        // If Instagram video URLs also expire quickly, a more robust solution
+        // would involve uploading the video itself or using a streaming service.
+      }
+
+      return {
+        ...post,
+        media_url: uploadedMediaUrl || post.media_url,
+        thumbnail_url: uploadedThumbnailUrl || post.thumbnail_url,
+      };
+    });
+
+    const uploadedPosts = await Promise.all(uploadedMediaPromises);
+
+    return new Response(JSON.stringify({ posts: uploadedPosts }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
