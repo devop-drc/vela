@@ -200,7 +200,7 @@ const InstagramShopLayoutContent = () => {
         {shopDetails && <InstagramMyOrdersTrigger orderCount={myOrdersCount} />}
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 z-50 bg-black/80" />
-          <Drawer.Content className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl">
+          <Drawer.Content className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl" snapPoints={[0.1, 0.5, 0.9]} initialSnap={0.1}>
             <InstagramMyOrdersDrawerContent isOpen={isMyOrdersDrawerOpen} onClose={() => setIsMyOrdersDrawerOpen(false)} />
           </Drawer.Content>
         </Drawer.Portal>
