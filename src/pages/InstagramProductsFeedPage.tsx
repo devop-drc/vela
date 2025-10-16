@@ -225,9 +225,9 @@ const InstagramProductsFeedPage = () => {
     <div className="min-h-screen bg-white text-black flex flex-col">
       {/* InstagramFilterDrawer is now rendered in InstagramShopLayout */}
 
-      <main className="flex-1 pt-0"> {/* Removed padding-top as header now handles it */}
+      <main className="flex-1 pt-0">
         {/* Product Grid */}
-        <section className="mt-0"> {/* Removed margin-top */}
+        <section className="mt-0">
           {filteredAndSortedProducts.length === 0 ? (
             <div className="text-center py-16 text-gray-600 border-2 border-dashed rounded-lg mx-4">
               <h3 className="text-xl md:text-2xl font-semibold">No Products Found</h3>

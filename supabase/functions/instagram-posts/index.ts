@@ -169,11 +169,12 @@ serve(async (req) => {
           return publicUrlData.publicUrl;
         } catch (uploadErr: any) {
           console.error(`Error uploading ${type} for post ${post.id}:`, uploadErr.message);
-          return url; // Fallback to original URL if upload fails
+          // IMPORTANT: If upload fails, return null, do NOT fallback to original Instagram URL
+          return null; 
         }
       };
 
-      if (post.media_type === 'IMAGE' || post.media_type === 'CAROUSE_ALBUM') {
+      if (post.media_type === 'IMAGE' || post.media_type === 'CAROUSEL_ALBUM') {
         uploadedMediaUrl = await uploadFile(post.media_url, 'media');
       } else if (post.media_type === 'VIDEO') {
         // For videos, we primarily use the thumbnail for display in grids/cards
@@ -187,8 +188,8 @@ serve(async (req) => {
 
       return {
         ...post,
-        media_url: uploadedMediaUrl || post.media_url,
-        thumbnail_url: uploadedThumbnailUrl || post.thumbnail_url,
+        media_url: uploadedMediaUrl, // Now directly use uploaded URL, or null if failed
+        thumbnail_url: uploadedThumbnailUrl, // Now directly use uploaded URL, or null if failed
       };
     });
 

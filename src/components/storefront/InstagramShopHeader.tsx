@@ -49,10 +49,9 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, isProducts
   return (
     <header className={cn(
       "sticky top-0 left-0 right-0 z-40 transition-all duration-200",
-      "bg-white text-gray-800 border-b border-gray-200 h-[var(--instagram-header-height)]" // Use CSS variable for height
+      "bg-white text-gray-800 border-b border-gray-200"
     )}>
       {isProfilePage ? (
-        // Profile Page Header Layout
         <div className="container flex h-full items-center justify-between px-4">
           <div className="flex items-center space-x-2 flex-shrink-0">
             <h1 className="text-lg font-bold">InstaShop</h1>
@@ -67,10 +66,9 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, isProducts
           </div>
         </div>
       ) : (
-        // Products Feed Page Header Layout (Two Rows)
-        <div className="flex flex-col h-full"> {/* Ensure full height for flex column */}
+        <div className="flex flex-col h-full">
           {/* Row 1 */}
-          <div className="container flex h-1/2 items-center justify-between px-4"> {/* Take half height */}
+          <div className="container flex items-center justify-between px-4">
             <Button variant="ghost" size="icon" onClick={handleBack} className="text-gray-800 hover:bg-gray-100">
               <ChevronDown className="mr-1 h-6 w-6 rotate-[+90deg]" />
               <span className="sr-only">Back</span>
@@ -99,11 +97,11 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, isProducts
             </Button>
           </div>
           {/* Row 2: Filter and Sort */}
-          <div className="container flex items-center justify-center gap-2 py-2 px-4 border-t border-gray-200 h-1/2"> {/* Take half height */}
+          <div className="container flex items-center justify-center gap-2 py-2 px-4 border-t border-gray-200">
             <Button
               variant="outline"
               size="sm"
-              onClick={onOpenFilterDrawer} // This will now correctly trigger the drawer in the layout
+              onClick={onOpenFilterDrawer}
               className="flex-1 bg-gray-50 text-gray-800 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
             >
               <Filter className="mr-2 h-4 w-4" />

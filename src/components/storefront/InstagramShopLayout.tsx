@@ -276,7 +276,7 @@ const InstagramShopLayoutContent = () => {
         isProductsFeedPage={isProductsFeedPage}
         onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)} // Pass the setter
       />
-      <main className="flex-1 overflow-y-auto" style={{ paddingTop: 'var(--instagram-header-height)', paddingBottom: 'var(--instagram-bottom-nav-height)' }}>
+      <main className="flex-1 overflow-y-auto">
         <Outlet context={{
           isFilterDrawerOpen,
           setIsFilterDrawerOpen,
