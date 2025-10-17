@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Package, DollarSign } from "lucide-react";
+import { Edit, Trash2, Package, DollarSign, XCircle } from "lucide-react";
 import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
@@ -33,7 +33,6 @@ const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, tx
 
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
     const { shopDetails, convertCurrency } = useShop();
-    const [attributes, setAttributes] = useState<any[]>([]);
     
     // Convert product price from its stored currency (now always ALL) to the shop's display currency
     const displayPrice = useMemo(() => {
@@ -42,7 +41,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
         return converted;
     }, [product.price, product.currency, convertCurrency, shopDetails]);
 
-    // New: Extract options and variants from details
+    // Extract options and variants from details
     const options = product.details?.options || [];
     const variants = product.details?.variants || [];
     const hasVariants = variants.length > 0;
@@ -55,10 +54,30 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
             .map(([key, value]) => ({ name: key, value }));
     }, [product.details]);
 
+    // Calculate total inventory from active variants
+    const totalVariantInventory = useMemo(() => {
+        if (!hasVariants) return product.inventory || 0;
+        return variants.filter((v: any) => !v.disabled).reduce((sum: number, v: any) => sum + v.inventory, 0);
+    }, [hasVariants, variants, product.inventory]);
+
+    // Calculate lowest price from active variants
+    const lowestVariantPrice = useMemo(() => {
+        if (!hasVariants) return displayPrice;
+        const activePrices = variants.filter((v: any) => !v.disabled).map((v: any) => v.price);
+        if (activePrices.length === 0) return displayPrice;
+        
+        // Convert the lowest variant price (which is stored in the form's currency, which is shopDetails.currency)
+        // back to the display currency (which is shopDetails.currency) - essentially no conversion needed here,
+        // but we use convertCurrency for safety/consistency if the variant price structure changes.
+        const lowestPrice = Math.min(...activePrices);
+        return convertCurrency(lowestPrice, shopDetails?.currency, shopDetails?.currency);
+    }, [hasVariants, variants, displayPrice, convertCurrency, shopDetails?.currency]);
+
+
     return (
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
         <ScrollArea className="flex-1 overflow-y-auto">
-          <div className="p-4 space-y-4">
+          <div className="p-4 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
               <div className="md:col-span-4">
                 <Carousel className="w-full rounded-lg overflow-hidden group">
@@ -99,15 +118,15 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                     <Label className="text-sm">Base Price</Label>
                     <p className="font-semibold text-2xl">
                       {product.pricing_type === 'subscription' 
-                        ? `${formatCurrency(displayPrice, shopDetails?.currency)} / ${product.billing_interval}` 
-                        : formatCurrency(displayPrice, shopDetails?.currency)}
+                        ? `${formatCurrency(lowestVariantPrice, shopDetails?.currency)} / ${product.billing_interval}` 
+                        : formatCurrency(lowestVariantPrice, shopDetails?.currency)}
                     </p>
-                    {hasVariants && <p className="text-xs text-muted-foreground">Lowest variant price</p>}
+                    {hasVariants && <p className="text-xs text-muted-foreground">Lowest active variant price</p>}
                   </div>
                   {product.pricing_type !== 'subscription' && (
                     <div>
                       <Label className="text-sm">Total Inventory</Label>
-                      <p className="font-semibold text-2xl">{product.inventory || 0}</p>
+                      <p className="font-semibold text-2xl">{totalVariantInventory}</p>
                       {hasVariants && <p className="text-xs text-muted-foreground">Sum of active variants</p>}
                     </div>
                   )}
@@ -115,13 +134,37 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </div>
             </div>
 
+            {/* Variant Options Display */}
+            {options.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitleComponent className="text-base flex items-center gap-2">
+                            <Settings className="h-5 w-5" />
+                            Customer Options
+                        </CardTitleComponent>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-4">
+                        {options.map((option: any) => (
+                            <div key={option.name} className="space-y-2">
+                                <Label className="font-semibold capitalize">{option.name}</Label>
+                                <div className="flex flex-wrap gap-2">
+                                    {option.values.map((value: string) => (
+                                        <Badge key={value} variant="outline" className="text-sm">{value}</Badge>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Variant Table */}
             {hasVariants && (
                 <Card>
                     <CardHeader>
                         <CardTitleComponent className="text-base flex items-center gap-2">
                             <Package className="h-5 w-5" />
-                            Variants ({variants.filter((v: any) => !v.disabled).length} active)
+                            Product Variants ({variants.filter((v: any) => !v.disabled).length} active)
                         </CardTitleComponent>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -129,10 +172,11 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[200px]">Name</TableHead>
-                                        <TableHead className="w-[120px]">Price</TableHead>
+                                        <TableHead className="w-[200px]">Variant Name</TableHead>
+                                        <TableHead className="w-[120px]">Price ({shopDetails?.currency})</TableHead>
                                         <TableHead className="w-[100px]">Stock</TableHead>
                                         <TableHead className="w-[120px]">SKU</TableHead>
+                                        <TableHead className="w-[50px]">Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -142,6 +186,11 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                                             <TableCell>{formatCurrency(convertCurrency(variant.price, shopDetails?.currency, shopDetails?.currency), shopDetails?.currency)}</TableCell>
                                             <TableCell>{variant.inventory}</TableCell>
                                             <TableCell>{variant.sku}</TableCell>
+                                            <TableCell>
+                                                <Badge variant="secondary" className={cn(variant.disabled ? "bg-gray-500 text-white" : "bg-emerald-500 text-white")}>
+                                                    {variant.disabled ? 'Disabled' : 'Active'}
+                                                </Badge>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
