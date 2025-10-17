@@ -19,42 +19,26 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   You are an expert AI for e-commerce, specializing in analyzing Instagram captions to create structured product listings. Your task is to extract product information with high accuracy.
 
   **Primary Objectives:**
-  1. **Currency Detection:** Pay close attention to the currency mentioned in the caption (e.g., ALL, $, €, £). If no currency is specified, default to the local currency (ALL for Albania).
-  2. **Product Identification:** Determine if the post is selling a product. If not, return \`{"isProductPost": false}\`.
-  3. **Product Name:** Extract a clear and concise product name. If the product has a model number or specific identifier, include it.
-  4. **Category & Type:** Determine the most specific category and type based on the product name and description.
-  5. **Price Extraction:**
-     - Look for price patterns like "1000 ALL", "$10", "10€"
-     - If multiple prices are found, use the one that appears to be the main product price
-     - If no price is found, set price to null
-  6. **Specifications vs Options:**
-     - **Specifications (fixed details):** Material, dimensions, weight, model number, compatibility, features
-     - **Options (customer choices):** Size, color, quantity, style, configuration
-  7. **Attributes Extraction:**
-     - Extract all relevant attributes from the caption
-     - Use the user-defined keywords as primary guides
-     - For each attribute, include:
-         - \`"name"\`: Lowercase, snake_case key (e.g., "material", "screen_size")
-         - \`"value"\`: Extracted value(s) as string or array
-         - \`"inputType"\`: "text", "number", "color", "tags", "dropdown", "textarea"
-         - \`"isOption"\`: true if customer-selectable (size, color), false for fixed specs
-         - \`"possibleValues"\`: Array of options if applicable
-  8. **Description:** Create a compelling 2-3 sentence description highlighting key features and benefits
-  9. **Tags:** Generate 3-5 relevant tags for search and categorization
+  1. **Product Identification:** Determine if the post is selling a product. If not, return \`{"isProductPost": false}\`.
+  2. **Product Name:** Extract a clear and concise product name (max 10 words).
+  3. **Category & Type:** Determine the most specific category and type.
+  4. **Pricing Model:**
+     - Determine \`pricingType\`: "one_time" or "subscription". Default to "one_time".
+     - If "subscription", determine \`billingInterval\`: "month" or "year". Default to "month".
+  5. **Price Extraction:** Extract the numerical price and the currency code (e.g., USD, EUR, ALL). Default currency to "ALL" if none is specified.
+  6. **Inventory/Stock:** Infer \`inventory\` as an integer. If stock is mentioned (e.g., "only 5 left"), use that number. If it's clearly a product post but stock is not mentioned, default to 10. If explicitly "sold out" or "out of stock", default to 0.
+  7. **Attributes Extraction (Crucial):**
+     - **Options (isOption: true):** These are customer-selectable variants (e.g., Size, Color, Style).
+     - **Specifications (isOption: false):** These are fixed details (e.g., Material, Dimensions, Weight, Model Number).
+     - Use the user-defined keywords as primary guides.
+     - For each attribute, include: \`"name"\` (snake_case), \`"value"\` (string or array), \`"inputType"\` ("text", "number", "color", "tags", "dropdown", "textarea"), and \`"isOption"\` (boolean).
+  8. **Description:** Generate a compelling, detailed 3-4 sentence description highlighting key features, benefits, and materials.
+  9. **Tags:** Generate 3-5 relevant tags.
 
   **Currency Handling:**
-  - If the caption includes "ALL", "Lek", or "Lekë", use "ALL" as currency
+  - If the caption includes "ALL", "Lek", or "Lekë", use "ALL" as currency.
   - For other currencies, use standard codes: USD, EUR, GBP, etc.
-  - If no currency is specified, default to "ALL"
-
-  **Common Albanian Product Terms:**
-  - Çmimi/Çmimi: Price
-  - Madhësia: Size
-  - Ngjyra: Color
-  - Materiali: Material
-  - Përmasat: Dimensions
-  - Pesha: Weight
-  - Përshkrimi: Description
+  - If no currency is specified, default to "ALL".
 
   **User-Defined Keywords:**
   ${keywords.length > 0 ? keywords.map(k => `- **${k.keyword}:** ${k.description}`).join('\n') : 'No custom keywords provided.'}
@@ -64,29 +48,24 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   **Output Format:**
   Respond ONLY with a single, valid JSON object. Do not include any explanation or markdown.
 
-  **INPUT CAPTION:**
-  \`\`\`
-  ${caption}
-  \`\`\`
-
   **EXAMPLE JSON OUTPUT:**
   {
     "isProductPost": true,
-    "productName": "iPhone 13 Pro Max 256GB",
-    "description": "Experience cutting-edge technology with the iPhone 13 Pro Max. Features a stunning Super Retina XDR display, powerful A15 Bionic chip, and professional camera system for breathtaking photos and videos.",
-    "categoryName": "Electronics",
-    "typeName": "Smartphone",
-    "price": 150000,
-    "currency": "ALL",
-    "tags": ["iphone", "smartphone", "apple", "pro", "5g"],
+    "productName": "Vintage Sunset Tee",
+    "description": "A soft, vintage-style t-shirt made from 100% organic cotton. Features a stunning, faded sunset graphic print. Perfect for casual wear and sustainable fashion enthusiasts.",
+    "categoryName": "Clothing",
+    "typeName": "T-Shirt",
+    "pricingType": "one_time",
+    "billingInterval": null,
+    "price": 35.00,
+    "currency": "USD",
+    "inventory": 50,
+    "tags": ["vintage", "sunset", "graphic tee", "organic cotton"],
     "attributes": [
-      { "name": "storage", "value": "256GB", "inputType": "dropdown", "isOption": true, "possibleValues": ["128GB", "256GB", "512GB"] },
-      { "name": "color", "value": ["Graphite", "Silver", "Gold", "Sierra Blue"], "inputType": "dropdown", "isOption": true },
-      { "name": "screen_size", "value": "6.7 inches", "inputType": "text", "isOption": false },
-      { "name": "camera", "value": "Pro 12MP camera system (Telephoto, Wide, Ultra Wide)", "inputType": "text", "isOption": false },
-      { "name": "battery_life", "value": "Up to 28 hours video playback", "inputType": "text", "isOption": false },
-      { "name": "condition", "value": "New", "inputType": "dropdown", "isOption": true, "possibleValues": ["New", "Refurbished", "Used"] },
-      { "name": "warranty", "value": "2 years", "inputType": "text", "isOption": false }
+      { "name": "size", "value": ["S", "M", "L", "XL"], "inputType": "dropdown", "isOption": true, "possibleValues": ["S", "M", "L", "XL"] },
+      { "name": "color", "value": ["Cream", "Faded Blue"], "inputType": "color", "isOption": true },
+      { "name": "material", "value": "100% Organic Cotton", "inputType": "text", "isOption": false },
+      { "name": "fit", "value": "Regular", "inputType": "text", "isOption": false }
     ]
   }
   
@@ -96,6 +75,8 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   }
 `;
 }
+
+const toTitleCase = (str: string) => str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -112,7 +93,7 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Get user's preferred currency
+    // Get user's preferred currency (though we store in ALL, this is for context)
     const { data: userData, error: userError } = await supabaseAdmin
       .from('profiles')
       .select('currency')
@@ -157,13 +138,14 @@ serve(async (req) => {
     const analysisText = geminiData.candidates[0].content.parts[0].text;
     let analysis = JSON.parse(analysisText);
 
-    // Store the original price and currency as extracted
-    // The conversion will be handled in the UI based on user's display currency
+    // Map the new fields to the expected output structure
     const result = {
       ...analysis,
       original_price: analysis.price,
       original_currency: analysis.currency,
-      is_price_converted: false,
+      pricing_type: analysis.pricingType || 'one_time',
+      billing_interval: analysis.billingInterval || null,
+      inventory: analysis.inventory ?? 10, // Ensure inventory is set
       tokenUsage: geminiData.usageMetadata,
       currency_preferences: {
         original_currency: analysis.currency,

@@ -20,6 +20,9 @@ interface AnalysisResult {
   tags?: string[];
   categoryName?: string;
   typeName?: string;
+  inventory?: number; // Added inventory
+  pricingType?: 'one_time' | 'subscription'; // Added pricingType
+  billingInterval?: 'month' | 'year' | null; // Added billingInterval
   attributes?: { name: string; value: string | string[]; inputType?: string; possibleValues?: string[] }[];
   tokenUsage?: { promptTokenCount?: number; candidatesTokenCount?: number };
 }
@@ -46,7 +49,10 @@ interface ProductPayload {
   media_url: string;
   thumbnail_url?: string;
   media_type: string;
-  inventory?: number; // Added inventory to payload
+  inventory?: number;
+  pricing_type?: 'one_time' | 'subscription'; // Added pricing_type
+  billing_interval?: 'month' | 'year' | null; // Added billing_interval
+  product_type?: 'physical' | 'digital'; // Added product_type
 }
 
 const corsHeaders = {
@@ -116,7 +122,7 @@ const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, categoryId
   const { data: existingType, error } = await supabase.from('types').select('id, attributes').eq('category_id', categoryId).eq('name', normalizedTypeName).eq('user_id', userId).single();
   if (error && error.code !== 'PGRST116') throw error;
 
-  const newAttributesMap = new Map((newAttributes || []).map(attr => [attr.name, { name: attr.name, inputType: attr.inputType, possibleValues: attr.possibleValues }]));
+  const newAttributesMap = new Map((newAttributes || []).map(attr => [attr.name, { name: attr.name, inputType: attr.inputType, possibleValues: attr.possibleValues, isOption: attr.isOption }]));
 
   if (existingType) {
     const existingAttributesMap = new Map((existingType.attributes || []).map((attr: any) => [attr.name, attr]));
@@ -260,7 +266,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         continue;
       }
 
-      const { categoryName, typeName, attributes, ...productInfo } = analysis;
+      const { categoryName, typeName, attributes, pricingType, billingInterval, inventory: aiInventory, ...productInfo } = analysis;
       if (categoryName && typeName) {
         const categoryId = await upsertCategory(supabaseAdmin, categoryName, user.id);
         await upsertTypeAndMergeAttributes(supabaseAdmin, categoryId, typeName, attributes, user.id);
@@ -271,8 +277,10 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         for (const attr of attributes) { details[attr.name] = attr.value; }
       }
 
-      // Default inventory to 0 if not provided by AI
-      const inventory = productInfo.inventory ?? 0; 
+      // Determine final pricing and inventory
+      const finalPricingType = pricingType || 'one_time';
+      const finalBillingInterval = finalPricingType === 'subscription' ? (billingInterval || 'month') : null;
+      const inventory = finalPricingType === 'subscription' ? 0 : (aiInventory ?? 10); 
 
       // Convert AI-suggested price to ALL for storage
       let priceInALL = productInfo.price ?? 0;
@@ -297,6 +305,8 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         thumbnail_url: post.thumbnail_url || post.media_url, 
         media_type: post.media_type,
         inventory: inventory, // Include inventory in payload
+        pricing_type: finalPricingType, // Include pricing_type
+        billing_interval: finalBillingInterval, // Include billing_interval
       };
 
       const existingId = existingProductMap.get(post.id);
@@ -305,6 +315,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         summary.updated++;
         summary.updated_items.push(productPayload);
       } else {
+        productPayload.product_type = 'physical'; // Default product_type for new products
         summary.created++;
         summary.created_items.push(productPayload);
       }

@@ -26,10 +26,19 @@ const productSchema = z.object({
   category: z.string().min(1, "Category is required"),
   price: z.coerce.number().min(0, "Price must be a positive number"),
   currency: z.string().min(3, "Currency code is required").max(3),
-  inventory: z.coerce.number().int().min(0, "Inventory must be a positive integer").optional(),
+  inventory: z.coerce.number().int().min(0, "Inventory must be a non-negative integer").optional(),
   tags: z.array(z.string()).optional(),
   pricing_type: z.enum(['one_time', 'subscription']),
+  billing_interval: z.enum(['month', 'year']).optional().nullable(),
   details: z.any(),
+}).refine(data => {
+    if (data.pricing_type === 'subscription' && !data.billing_interval) {
+        return false;
+    }
+    return true;
+}, {
+    message: "Interval is required for subscriptions.",
+    path: ["billing_interval"],
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -75,10 +84,14 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
         }
     }
 
-    // Convert AI-suggested price (which might be in a different currency) to shop's display currency for form
+    // Extract new AI fields
     const aiSuggestedPrice = productData?.price?.value;
     const aiSuggestedCurrency = productData?.currency?.value;
-    // Ensure shopDetails is available before attempting conversion for defaultValues
+    const aiSuggestedPricingType = productData?.pricing_type?.value || 'one_time';
+    const aiSuggestedBillingInterval = productData?.billing_interval?.value || null;
+    const aiSuggestedInventory = productData?.inventory?.value ?? 10;
+
+    // Convert AI-suggested price (which might be in a different currency) to shop's display currency for form
     const priceInDisplayCurrency = shopDetails ? convertCurrency(aiSuggestedPrice, aiSuggestedCurrency, shopDetails.currency) : aiSuggestedPrice;
     console.log("CreateProductModal: AI suggested price:", aiSuggestedPrice, aiSuggestedCurrency, "Converted to display currency:", priceInDisplayCurrency, shopDetails?.currency);
 
@@ -88,9 +101,10 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
       category: productData?.category?.value || "Generic Product",
       price: priceInDisplayCurrency || 0, // Use converted price for form
       currency: shopDetails?.currency || 'USD', // Always use shop's currency for the form's currency selector
-      inventory: 10,
+      inventory: aiSuggestedInventory, // Use AI suggested inventory
       tags: productData?.tags?.value || [],
-      pricing_type: 'one_time',
+      pricing_type: aiSuggestedPricingType, // Use AI suggested pricing type
+      billing_interval: aiSuggestedBillingInterval, // Use AI suggested billing interval
       details: flattenedDetails,
     });
   }, [productData, post, shopDetails, reset, convertCurrency]);
@@ -147,12 +161,22 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
     const priceInALL = convertCurrency(data.price, data.currency, 'ALL');
     console.log("CreateProductModal: Price in form's currency:", data.price, data.currency, "Converted to ALL for storage:", priceInALL);
 
+    const cleanedDetails: { [key: string]: any } = { type: data.details.type };
+    if (typeAttributes) {
+        typeAttributes.forEach(field => {
+            if (data.details[field.name] !== undefined) {
+                cleanedDetails[field.name] = data.details[field.name];
+            }
+        });
+    }
+
     const { error } = await supabase.from('products').insert({
       business_id: business.id, name: data.name, caption: data.description, category: data.category,
       price: priceInALL, // Store price in ALL
       currency: 'ALL', // Store currency as ALL
       inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
       tags: data.tags, details: data.details, pricing_type: data.pricing_type, status: 'Draft',
+      billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
       instagram_post_id: post.id, media_url: post.media_url, thumbnail_url: post.thumbnail_url, media_type: post.media_type,
     });
 

@@ -7,45 +7,88 @@ const corsHeaders = {
 };
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-const GEMINI_PRO_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_PRO_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`;
 
-const getClassifierPrompt = () => `
-  You are an AI that analyzes an Instagram post's caption to determine if it's a product and extracts its details.
+const getClassifierPrompt = (caption: string, keywords: { keyword: string, description: string }[], similarProducts: any[]) => {
+  const similarProductsContext = similarProducts.length > 0 ? `
+**Similar Product Examples from User's Catalog (Use as a Style Guide):**
+${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.details?.type}, Description: ${p.caption?.substring(0, 100)}..., Attributes: ${JSON.stringify(p.details)}`).join('\n')}
+` : '';
 
-  **Rules:**
-  1.  **Categorization:** Assign a broad 'categoryName' and a specific 'typeName'.
-  2.  **Attributes:** For each attribute (e.g., color, material), create an object with "name", "value", "inputType", and optional "possibleValues".
-  3.  **Normalization:** Capitalize the first letter of category and type names.
-  4.  **Confidence:** If not a product, return '{"isProductPost": false}'.
+  return `
+  You are an expert AI for e-commerce, specializing in analyzing Instagram captions to create structured product listings. Your task is to extract product information with high accuracy.
+
+  **Primary Objectives:**
+  1. **Product Identification:** Determine if the post is selling a product. If not, return \`{"isProductPost": false}\`.
+  2. **Product Name:** Extract a clear and concise product name (max 10 words).
+  3. **Category & Type:** Determine the most specific category and type.
+  4. **Pricing Model:**
+     - Determine \`pricingType\`: "one_time" or "subscription". Default to "one_time".
+     - If "subscription", determine \`billingInterval\`: "month" or "year". Default to "month".
+  5. **Price Extraction:** Extract the numerical price and the currency code (e.g., USD, EUR, ALL). Default currency to "ALL" if none is specified.
+  6. **Inventory/Stock:** Infer \`inventory\` as an integer. If stock is mentioned (e.g., "only 5 left"), use that number. If it's clearly a product post but stock is not mentioned, default to 10. If explicitly "sold out" or "out of stock", default to 0.
+  7. **Attributes Extraction (Crucial):**
+     - **Options (isOption: true):** These are customer-selectable variants (e.g., Size, Color, Style).
+     - **Specifications (isOption: false):** These are fixed details (e.g., Material, Dimensions, Weight, Model Number).
+     - Use the user-defined keywords as primary guides.
+     - For each attribute, include: \`"name"\` (snake_case), \`"value"\` (string or array), \`"inputType"\` ("text", "number", "color", "tags", "dropdown", "textarea"), and \`"isOption"\` (boolean).
+  8. **Description:** Generate a compelling, detailed 3-4 sentence description highlighting key features, benefits, and materials.
+  9. **Tags:** Generate 3-5 relevant tags.
+
+  **Currency Handling:**
+  - If the caption includes "ALL", "Lek", or "Lekë", use "ALL" as currency.
+  - For other currencies, use standard codes: USD, EUR, GBP, etc.
+  - If no currency is specified, default to "ALL".
+
+  **User-Defined Keywords:**
+  ${keywords.length > 0 ? keywords.map(k => `- **${k.keyword}:** ${k.description}`).join('\n') : 'No custom keywords provided.'}
+
+  ${similarProductsContext}
 
   **Output Format:**
-  Respond ONLY with a single, valid JSON object.
+  Respond ONLY with a single, valid JSON object. Do not include any explanation or markdown.
 
-  **Example:**
+  **EXAMPLE JSON OUTPUT:**
   {
     "isProductPost": true,
+    "productName": "Vintage Sunset Tee",
+    "description": "A soft, vintage-style t-shirt made from 100% organic cotton. Features a stunning, faded sunset graphic print. Perfect for casual wear and sustainable fashion enthusiasts.",
     "categoryName": "Clothing",
     "typeName": "T-Shirt",
-    "productName": "Vintage Sunset Tee",
-    "description": "A soft, vintage-style t-shirt.",
+    "pricingType": "one_time",
+    "billingInterval": null,
     "price": 35.00,
     "currency": "USD",
-    "tags": ["vintage", "sunset", "graphic tee"],
+    "inventory": 50,
+    "tags": ["vintage", "sunset", "graphic tee", "organic cotton"],
     "attributes": [
-      { "name": "material", "value": "Cotton", "inputType": "dropdown", "possibleValues": ["Cotton", "Polyester", "Blend"] }
+      { "name": "size", "value": ["S", "M", "L", "XL"], "inputType": "dropdown", "isOption": true, "possibleValues": ["S", "M", "L", "XL"] },
+      { "name": "color", "value": ["Cream", "Faded Blue"], "inputType": "color", "isOption": true },
+      { "name": "material", "value": "100% Organic Cotton", "inputType": "text", "isOption": false },
+      { "name": "fit", "value": "Regular", "inputType": "text", "isOption": false }
     ]
   }
+  
+  **FOR NON-PRODUCT POSTS:**
+  {
+    "isProductPost": false
+  }
 `;
+}
 
 const toTitleCase = (str: string) => str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
-const analyzeAndEnrichPost = async (post: any) => {
+const analyzeAndEnrichPost = async (post: any, supabase: SupabaseClient, userId: string) => {
     try {
         if (!GEMINI_API_KEY) throw new Error("Gemini API key is not configured.");
         if (!post.caption) return { skipped: true, reason: "Post has no caption to analyze." };
 
-        const prompt = getClassifierPrompt();
-        const requestParts = [{ text: prompt }, { text: `Caption to analyze: ${post.caption}` }];
+        // Fetch keywords and recent products (similar logic to background sync, but simplified for UI preview)
+        const { data: keywords } = await supabase.from('keywords').select('keyword, description').eq('user_id', userId);
+        const { data: recentProducts } = await supabase.from('products').select('name, category, details, caption').eq('user_id', userId).limit(5).order('created_at', { ascending: false });
+
+        const prompt = getClassifierPrompt(post.caption, keywords || [], recentProducts || []);
+        const requestParts = [{ text: prompt }];
 
         const geminiResponse = await fetch(GEMINI_PRO_API_URL, {
             method: 'POST',
@@ -61,7 +104,7 @@ const analyzeAndEnrichPost = async (post: any) => {
             return { skipped: true, reason: "AI determined this is not a product post." };
         }
 
-        const { categoryName, typeName, attributes, ...productInfo } = analysis;
+        const { categoryName, typeName, attributes, pricingType, billingInterval, inventory, ...productInfo } = analysis;
         
         const details: { [key: string]: any } = {};
         if (attributes) {
@@ -74,6 +117,9 @@ const analyzeAndEnrichPost = async (post: any) => {
                 description: { value: productInfo.description },
                 price: { value: productInfo.price },
                 currency: { value: productInfo.currency },
+                inventory: { value: inventory ?? 10 }, // Include inventory
+                pricing_type: { value: pricingType || 'one_time' }, // Include pricing_type
+                billing_interval: { value: pricingType === 'subscription' ? (billingInterval || 'month') : null }, // Include billing_interval
                 tags: { value: productInfo.tags },
                 category: { value: toTitleCase(categoryName) },
                 details: { type: { value: toTitleCase(typeName) }, ...details },
@@ -108,7 +154,7 @@ serve(async (req) => {
     const existingPostIds = new Set((existingProducts || []).map(p => p.instagram_post_id));
 
     const analysisPromises = postsData.posts.map(async (post: any) => {
-      const analysisResult = await analyzeAndEnrichPost(post);
+      const analysisResult = await analyzeAndEnrichPost(post, supabase, user.id);
       return {
         ...post,
         isImported: existingPostIds.has(post.id),
