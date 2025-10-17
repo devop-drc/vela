@@ -268,7 +268,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
           }).eq('id', product.id);
 
         if (error) { showError(`Failed to update product: ${error.message}`); console.error("ProductEditor: Error updating product:", error); } 
-        else { showSuccess("Product updated successfully!"); onUpdate(); setIsEditing(false); }
+        else { showSuccess("Product updated successfully!"); onUpdate(); onCancel(); }
         setIsSubmitting(false);
     };
 
