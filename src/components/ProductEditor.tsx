@@ -197,6 +197,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
                   isSubmitting={isSubmitting}
                   isEditing={isEditing}
                   setMediaItems={setMediaItems}
+                  setIsSubmitting={setIsSubmitting}
                 />
               </FormProvider>
             ) : (
