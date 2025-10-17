@@ -64,7 +64,7 @@ const AttributeInput = ({ control, fieldName, inputType }: any) => {
   }
 };
 
-export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting }: any) => {
+export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting, setIsSubmitting }: any) => {
     const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
     const { shopDetails, convertCurrency } = useShop();
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
@@ -247,7 +247,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             // If variants exist, set base price to the lowest active variant price
             const activePrices = activeVariants.map(v => v.price);
             const lowestPrice = activePrices.length > 0 ? Math.min(...activePrices) : data.price;
-            basePriceForDB = convertCurrency(lowestPrice, data.currency, 'ALL');
+            priceInALL = convertCurrency(lowestPrice, data.currency, 'ALL');
             
             // Set base inventory to the sum of all active variant inventories
             baseInventoryForDB = activeVariants.reduce((sum, v) => sum + v.inventory, 0);
@@ -256,7 +256,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         // 3. Update Supabase
         const { error } = await supabase.from('products').update({
             name: data.name, status: data.status, caption: data.caption, category: data.category,
-            price: basePriceForDB, // Save calculated base price in ALL
+            price: priceInALL, // Save calculated base price in ALL
             currency: 'ALL', // Always store currency as ALL
             inventory: baseInventoryForDB, // Save calculated total inventory
             tags: data.tags, pricing_type: data.pricing_type,
@@ -327,7 +327,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                   <div>
                     <div className="flex shrink gap-4 text-sm font-medium">
                       <div className="w-fit min-w-[165px]"><Controller name="category" control={control} render={({ field }) => (<CreatableCombobox options={categoryOptions} placeholder="Category..." {...field} />)} /></div>
-                      <div className="w-fit min-w-[165px]"><Controller name="details.type" control={control} render={({ field }) => (<CreatableCombobox options={typeOptions} placeholder="Type..." {...field} disabled={!categoryValue} />)} /></div>
+                      <div className="w-fit min-w-[165px]"><Controller name="details.type" control={control} render={({ field }) => (<CreatableCombobox options={typeOptions} placeholder="Type..." {...field} />)} /></div>
                     </div>
                     <div className="flex items-center gap-2 mt-4">
                       <Input id="name" {...register("name")} placeholder="Product Name" className="w-auto border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors" />
