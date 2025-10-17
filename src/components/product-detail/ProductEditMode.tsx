@@ -24,7 +24,8 @@ import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency } from "@/lib/formatters";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../ui/carousel";
-import { VariantManager } from "./VariantManager"; // Use the new VariantManager
+import { VariantManager } from "./VariantManager";
+import { showError, showSuccess } from "@/utils/toast"; // <-- IMPORTED TOAST UTILITIES
 
 // Define types used by VariantManager locally
 interface Option {
@@ -94,6 +95,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     // --- Initialization ---
     useEffect(() => {
         if (product && shopDetails) {
+            // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
             const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
 
             // 1. Initialize Options and Variants from product.details
@@ -113,7 +115,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 status: product.status || "Draft",
                 caption: product.caption || "",
                 category: product.category || "",
-                price: priceInDisplayCurrency, // Base price in display currency
+                price: priceInDisplayCurrency, // Set price in display currency for the form
                 currency: shopDetails.currency || 'USD', // Always use shop's currency for the form's currency selector
                 inventory: product.inventory || 0, // Base inventory (sum of variants or single stock)
                 tags: Array.isArray(product.tags) ? product.tags : [],
@@ -349,7 +351,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     </div>
                     <div className="flex items-center gap-2 mt-4">
                       <Input id="name" {...register("name")} placeholder="Product Name" className="w-auto border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors" />
-                      <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn("w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50", currentStatusConfig?.color)}>{StatusIcon ? (<div className="flex items-center gap-2"><StatusIcon className="h-4 w-4" /><span>{currentStatusConfig.label}</span></div>) : <SelectValue placeholder="Set status..." />}</SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
+                      <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn("w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50", currentStatusConfig?.color)}>{StatusIcon ? (<div className="flex items-center gap-2"><StatusIcon className="h-4 w-4" /><span>{currentStatusConfig.label}</span></div>) : <SelectValue placeholder="Set status..." />}</SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
                     </div>
                     {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
                   </div>

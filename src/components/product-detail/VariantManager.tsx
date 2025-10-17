@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { formatCurrency } from '@/lib/formatters';
 import { Reorder } from 'framer-motion';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
 
 // --- Types ---
 interface Option {
@@ -178,40 +179,54 @@ export const VariantManager: React.FC<VariantManagerProps> = ({
   const [isBulkPriceModalOpen, setIsBulkPriceModalOpen] = useState(false);
   const [isBulkStockModalOpen, setIsBulkStockModalOpen] = useState(false);
 
+  const isMounted = useRef(false); // Ref to track if component has mounted
+
   const currencyCode = shopDetails?.currency || 'USD';
   
-  // Base price is passed in shop's display currency, but stored in ALL in DB.
-  // Here, we use the passed basePrice (in display currency) for calculations.
   const displayBasePrice = basePrice; 
 
   // --- Option Management ---
   const handleAddOption = () => {
     if (newOptionName && !options.some(o => o.name.toLowerCase() === newOptionName.toLowerCase())) {
-      setOptions(prev => [...prev, { id: crypto.randomUUID(), name: toTitleCase(newOptionName), values: [] }]);
+      const newOptions = [...options, { id: crypto.randomUUID(), name: toTitleCase(newOptionName), values: [] }];
+      setOptions(newOptions);
       setNewOptionName('');
+      onUpdate(newOptions, variants); // Immediate update to parent
     }
   };
 
   const handleRemoveOption = (id: string) => {
-    setOptions(prev => prev.filter(o => o.id !== id));
+    const newOptions = options.filter(o => o.id !== id);
+    setOptions(newOptions);
+    onUpdate(newOptions, variants); // Immediate update to parent
   };
 
   const handleOptionValuesChange = (id: string, newValues: string[]) => {
-    setOptions(prev => prev.map(opt => opt.id === id ? { ...opt, values: newValues } : opt));
+    const newOptions = options.map(opt => opt.id === id ? { ...opt, values: newValues } : opt);
+    setOptions(newOptions);
+    onUpdate(newOptions, variants); // Immediate update to parent
   };
 
   const handleOptionNameChange = (id: string, newName: string) => {
-    setOptions(prev => prev.map(opt => opt.id === id ? { ...opt, name: toTitleCase(newName) } : opt));
+    const newOptions = options.map(opt => opt.id === id ? { ...opt, name: toTitleCase(newName) } : opt);
+    setOptions(newOptions);
+    onUpdate(newOptions, variants); // Immediate update to parent
   };
 
   const handleReorderOptions = (newOrder: Option[]) => {
     setOptions(newOrder);
+    onUpdate(newOrder, variants); // Immediate update to parent
   };
 
   // --- Variant Generation & Sync ---
   const combinations = useMemo(() => generateCombinations(options), [options]);
 
   useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return; // Skip initial run to prevent calling onUpdate during render
+    }
+
     setVariants(prevVariants => {
       const existingMap = new Map(prevVariants.map(v => [v.name, v]));
       const newVariants: Variant[] = [];
@@ -243,7 +258,7 @@ export const VariantManager: React.FC<VariantManagerProps> = ({
       onUpdate(options, finalVariants);
       return finalVariants;
     });
-  }, [options, baseInventory, onUpdate, combinations]);
+  }, [options, baseInventory, combinations]); // Removed onUpdate from dependencies as it's called inside setVariants
 
   // --- Variant Table Handlers ---
   const handleVariantUpdate = (id: string, key: keyof Variant, value: any) => {
