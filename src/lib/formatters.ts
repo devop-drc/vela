@@ -1,19 +1,34 @@
 export const formatCurrency = (
   amount: number | null | undefined,
   currency: string | null | undefined,
-  locale: string = 'en-US'
+  locale: string = 'en-US',
+  showSign: boolean = false
 ) => {
   const numericAmount = amount ?? 0;
   const currencyCode = currency || 'USD';
 
   try {
-    return new Intl.NumberFormat(locale, {
+    const formatter = new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: currencyCode,
-    }).format(numericAmount);
+    });
+
+    let formatted = formatter.format(numericAmount);
+
+    if (showSign && numericAmount !== 0) {
+      const sign = numericAmount > 0 ? '+' : '';
+      // Remove existing sign if present (Intl.NumberFormat adds it)
+      formatted = formatted.replace(/^-/, '').replace(/^\+/, '');
+      
+      // Re-add the sign at the beginning
+      formatted = sign + formatted;
+    }
+
+    return formatted;
   } catch (e) {
     // Fallback for invalid currency codes
-    return `${currencyCode} ${numericAmount.toFixed(2)}`;
+    const signPrefix = showSign && numericAmount !== 0 ? (numericAmount > 0 ? '+' : '') : '';
+    return `${signPrefix}${currencyCode} ${Math.abs(numericAmount).toFixed(2)}`;
   }
 };
 

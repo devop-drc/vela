@@ -5,13 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Package, DollarSign, XCircle } from "lucide-react";
+import { Edit, Trash2, Package, DollarSign, XCircle, Settings } from "lucide-react";
 import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { MediaItem } from "../MediaItem";
-import { useEffect, useState, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useMemo } from "react";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { cn } from "@/lib/utils";
@@ -37,6 +36,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     // Convert product price from its stored currency (now always ALL) to the shop's display currency
     const displayPrice = useMemo(() => {
         if (product.price == null || !shopDetails) return null;
+        // product.price is the calculated base price (lowest variant price or single price) stored in ALL
         const converted = convertCurrency(product.price, product.currency, shopDetails.currency);
         return converted;
     }, [product.price, product.currency, convertCurrency, shopDetails]);
@@ -45,6 +45,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     const options = product.details?.options || [];
     const variants = product.details?.variants || [];
     const hasVariants = variants.length > 0;
+    const currencyCode = shopDetails?.currency || 'USD';
 
     // Filter out options and variants from general details to get specifications
     const specifications = useMemo(() => {
@@ -57,21 +58,24 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     // Calculate total inventory from active variants
     const totalVariantInventory = useMemo(() => {
         if (!hasVariants) return product.inventory || 0;
-        return variants.filter((v: any) => !v.disabled).reduce((sum: number, v: any) => sum + v.inventory, 0);
+        return variants.filter((v: any) => !v.disabled).reduce((sum: number, v: any) => v.inventory > 0 ? sum + v.inventory : sum, 0);
     }, [hasVariants, variants, product.inventory]);
 
     // Calculate lowest price from active variants
     const lowestVariantPrice = useMemo(() => {
         if (!hasVariants) return displayPrice;
-        const activePrices = variants.filter((v: any) => !v.disabled).map((v: any) => v.price);
-        if (activePrices.length === 0) return displayPrice;
         
-        // Convert the lowest variant price (which is stored in the form's currency, which is shopDetails.currency)
-        // back to the display currency (which is shopDetails.currency) - essentially no conversion needed here,
-        // but we use convertCurrency for safety/consistency if the variant price structure changes.
-        const lowestPrice = Math.min(...activePrices);
-        return convertCurrency(lowestPrice, shopDetails?.currency, shopDetails?.currency);
-    }, [hasVariants, variants, displayPrice, convertCurrency, shopDetails?.currency]);
+        // Find the lowest price difference among active variants
+        const activeVariants = variants.filter((v: any) => !v.disabled);
+        if (activeVariants.length === 0) return displayPrice;
+
+        const lowestDiff = Math.min(...activeVariants.map((v: any) => v.priceDifference));
+        
+        // Calculate the lowest final price in display currency
+        const lowestFinalPrice = (displayPrice || 0) + lowestDiff;
+        
+        return lowestFinalPrice;
+    }, [hasVariants, variants, displayPrice]);
 
 
     return (
@@ -118,8 +122,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                     <Label className="text-sm">Base Price</Label>
                     <p className="font-semibold text-2xl">
                       {product.pricing_type === 'subscription' 
-                        ? `${formatCurrency(lowestVariantPrice, shopDetails?.currency)} / ${product.billing_interval}` 
-                        : formatCurrency(lowestVariantPrice, shopDetails?.currency)}
+                        ? `${formatCurrency(lowestVariantPrice, currencyCode)} / ${product.billing_interval}` 
+                        : formatCurrency(lowestVariantPrice, currencyCode)}
                     </p>
                     {hasVariants && <p className="text-xs text-muted-foreground">Lowest active variant price</p>}
                   </div>
@@ -145,7 +149,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                     </CardHeader>
                     <CardContent className="p-4 space-y-4">
                         {options.map((option: any) => (
-                            <div key={option.name} className="space-y-2">
+                            <div key={option.id} className="space-y-2">
                                 <Label className="font-semibold capitalize">{option.name}</Label>
                                 <div className="flex flex-wrap gap-2">
                                     {option.values.map((value: string) => (
@@ -173,26 +177,37 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[200px]">Variant Name</TableHead>
-                                        <TableHead className="w-[120px]">Price ({shopDetails?.currency})</TableHead>
+                                        <TableHead className="w-[120px]">Price Diff</TableHead>
+                                        <TableHead className="w-[120px]">Final Price</TableHead>
                                         <TableHead className="w-[100px]">Stock</TableHead>
                                         <TableHead className="w-[120px]">SKU</TableHead>
                                         <TableHead className="w-[50px]">Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {variants.map((variant: any) => (
-                                        <TableRow key={variant.id} className={cn(variant.disabled && "opacity-50 bg-muted/50")}>
-                                            <TableCell className="font-medium">{variant.name}</TableCell>
-                                            <TableCell>{formatCurrency(convertCurrency(variant.price, shopDetails?.currency, shopDetails?.currency), shopDetails?.currency)}</TableCell>
-                                            <TableCell>{variant.inventory}</TableCell>
-                                            <TableCell>{variant.sku}</TableCell>
-                                            <TableCell>
-                                                <Badge variant="secondary" className={cn(variant.disabled ? "bg-gray-500 text-white" : "bg-emerald-500 text-white")}>
-                                                    {variant.disabled ? 'Disabled' : 'Active'}
-                                                </Badge>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                    {variants.map((variant: any) => {
+                                        const finalPrice = (displayPrice || 0) + variant.priceDifference;
+                                        const priceDiffFormatted = formatCurrency(variant.priceDifference, currencyCode, 'en-US', true);
+                                        
+                                        return (
+                                            <TableRow key={variant.id} className={cn(variant.disabled && "opacity-50 bg-muted/50")}>
+                                                <TableCell className="font-medium">{variant.name}</TableCell>
+                                                <TableCell>
+                                                    <span className={cn(variant.priceDifference < 0 && "text-destructive", variant.priceDifference > 0 && "text-emerald-600")}>
+                                                        {priceDiffFormatted}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell>{formatCurrency(finalPrice, currencyCode)}</TableCell>
+                                                <TableCell>{variant.inventory}</TableCell>
+                                                <TableCell>{variant.sku}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="secondary" className={cn(variant.disabled ? "bg-gray-500 text-white" : "bg-emerald-500 text-white")}>
+                                                        {variant.disabled ? 'Unavailable' : 'Available'}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
                                 </TableBody>
                             </Table>
                         </ScrollArea>

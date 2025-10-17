@@ -24,10 +24,11 @@ import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency } from "@/lib/formatters";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../ui/carousel";
-import { VariantManager } from "./VariantManager";
+import { VariantManager } from "./VariantManager"; // Use the new VariantManager
 
 // Define types used by VariantManager locally
 interface Option {
+  id: string;
   name: string;
   values: string[];
 }
@@ -35,7 +36,8 @@ interface Option {
 interface Variant {
   id: string;
   name: string; // e.g., "Red / Small"
-  price: number;
+  optionValues: string[]; // e.g., ["Red", "Small"]
+  priceDifference: number; // Difference from base price
   inventory: number;
   sku: string;
   disabled: boolean;
@@ -95,8 +97,11 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
 
             // 1. Initialize Options and Variants from product.details
-            // Note: Options are stored as an array of {name, values}
-            const initialOptions: Option[] = product.details?.options || [];
+            // Ensure IDs are present for Reorder.Group in VariantManager
+            const initialOptions: Option[] = (product.details?.options || []).map((opt: any) => ({
+                ...opt,
+                id: opt.id || crypto.randomUUID(),
+            }));
             const initialVariants: Variant[] = product.details?.variants || [];
             
             setProductOptions(initialOptions);
@@ -203,6 +208,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             // Update options (for VariantManager)
             if (analysis.options) {
                 const newOptions: Option[] = Object.entries(analysis.options).map(([name, values]) => ({
+                    id: crypto.randomUUID(), // Assign new IDs for new options
                     name: toTitleCase(name),
                     values: Array.isArray(values) ? values.map(String) : [String(values)],
                 }));
@@ -236,31 +242,31 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             }
         });
 
-        // Add options and variants
+        // 2. Determine base price and inventory for the main product record
         const activeVariants = productVariants.filter(v => !v.disabled);
         const hasVariants = activeVariants.length > 0;
 
+        // Convert price from form's display currency (data.currency) to ALL for storage
+        let priceInALL = convertCurrency(data.price, data.currency, 'ALL');
+        let baseInventoryForDB = data.pricing_type === 'one_time' ? data.inventory : 0;
+
         if (hasVariants) {
+            // If variants exist, set base price to the lowest active variant price
+            const activePrices = activeVariants.map(v => data.price + v.priceDifference);
+            const lowestFinalPrice = activePrices.length > 0 ? Math.min(...activePrices) : data.price;
+            
+            priceInALL = convertCurrency(lowestFinalPrice, data.currency, 'ALL');
+            
+            // Set base inventory to the sum of all active variant inventories
+            baseInventoryForDB = activeVariants.reduce((sum, v) => sum + v.inventory, 0);
+
+            // Add options and variants to details
             cleanedDetails.options = productOptions;
             cleanedDetails.variants = activeVariants;
         } else {
             // If no variants, remove options/variants keys
             delete cleanedDetails.options;
             delete cleanedDetails.variants;
-        }
-
-        // 2. Determine base price and inventory for the main product record
-        let priceInALL = convertCurrency(data.price, data.currency, 'ALL');
-        let baseInventoryForDB = data.pricing_type === 'one_time' ? data.inventory : 0;
-
-        if (hasVariants) {
-            // If variants exist, set base price to the lowest active variant price
-            const activePrices = activeVariants.map(v => v.price);
-            const lowestPrice = activePrices.length > 0 ? Math.min(...activePrices) : data.price;
-            priceInALL = convertCurrency(lowestPrice, data.currency, 'ALL');
-            
-            // Set base inventory to the sum of all active variant inventories
-            baseInventoryForDB = activeVariants.reduce((sum, v) => sum + v.inventory, 0);
         }
 
         // 3. Update Supabase
@@ -289,6 +295,8 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     const specificationKeys = new Set(typeAttributes.map(attr => attr.name));
     const specificationsToRender = Object.entries(getValues('details') || {})
         .filter(([key]) => key !== 'type' && key !== 'options' && key !== 'variants' && (specificationKeys.has(key) || !productOptions.some(o => o.name.toLowerCase() === key.toLowerCase())));
+
+    const hasVariants = productVariants.length > 0;
 
     return (
       <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -365,10 +373,10 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                       )} />
                     </div>
                     <div className="grid grid-cols-3 gap-4 pt-2">
-                        <div className="space-y-1 col-span-2"><Label htmlFor="price" className="text-xs">Base Price</Label><div className="flex items-center gap-2"><Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" disabled={productVariants.length > 0} /><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
-                        <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">Base Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" disabled={productVariants.length > 0} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
+                        <div className="space-y-1 col-span-2"><Label htmlFor="price" className="text-xs">Base Price</Label><div className="flex items-center gap-2"><Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" disabled={hasVariants} /><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
+                        <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">Base Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" disabled={hasVariants} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
                     </div>
-                    {productVariants.length > 0 && (
+                    {hasVariants && (
                         <p className="text-xs text-muted-foreground mt-1">Base Price/Stock fields are disabled because variants are active. The lowest variant price and total variant stock will be used for the main product listing.</p>
                     )}
                   </div>
