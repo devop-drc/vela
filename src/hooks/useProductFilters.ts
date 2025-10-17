@@ -46,22 +46,22 @@ export const useProductFilters = ({
   const { convertCurrency, shopDetails } = useShop();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState("newest");
-  const [statusFilter, setStatusFilter] = useState<string[]>([]); // Changed to array
+  const [statusFilter, setStatusFilter] = useState<string[]>([]); // Initialize status as empty array
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
     tags: [],
     priceRange: [0, 1000],
-    status: [], // Initialize status as array
+    status: [],
   });
   const [localPriceRange, setLocalPriceRange] = useState<[number, number]>([0, 1000]);
 
   // Initialize price range based on maxPrice
   useEffect(() => {
-    if (filters.priceRange[1] === 1000 && maxPrice !== 1000) {
+    if (filters.priceRange[1] === 1000 || filters.priceRange[1] !== maxPrice) {
       setFilters(prev => ({ ...prev, priceRange: [0, maxPrice] }));
       setLocalPriceRange([0, maxPrice]);
     }
-  }, [maxPrice, filters.priceRange]);
+  }, [maxPrice]);
 
   const debouncedPriceRangeChange = useMemo(
     () =>
@@ -104,10 +104,15 @@ export const useProductFilters = ({
   }, [maxPrice]);
 
   const hasActiveFilters = useMemo(() => {
+    // Check if any filter is active
+    const isPriceFiltered = filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice;
+    const isAttributeFiltered = Object.entries(filters).some(([key, value]) => 
+      key !== 'categories' && key !== 'tags' && key !== 'priceRange' && key !== 'status' && Array.isArray(value) && value.length > 0
+    );
+
     return searchTerm || statusFilter.length > 0 || sortOption !== 'newest' ||
            filters.categories.length > 0 || filters.tags.length > 0 ||
-           filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice ||
-           Object.entries(filters).some(([key, value]) => key !== 'categories' && key !== 'tags' && key !== 'priceRange' && key !== 'status' && Array.isArray(value) && value.length > 0);
+           isPriceFiltered || isAttributeFiltered;
   }, [searchTerm, statusFilter, sortOption, filters, maxPrice]);
 
   const handleResetAllFilters = useCallback(() => {
@@ -125,33 +130,27 @@ export const useProductFilters = ({
 
   const filteredAndSortedProducts = useMemo(() => {
     let filtered = allProducts;
-    console.log("useProductFilters: Initial products for filtering:", filtered.length, filtered);
 
     if (searchTerm) {
       filtered = filtered.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }
-    console.log("useProductFilters: After search term filter:", filtered.length, filtered);
 
     if (statusFilter.length > 0) { // Use array for status filter
       filtered = filtered.filter(p => statusFilter.includes(p.status));
     }
-    console.log("useProductFilters: After status filter:", filtered.length, filtered);
 
     if (filters.categories.length > 0) {
       filtered = filtered.filter(p => p.category && filters.categories.includes(p.category));
     }
-    console.log("useProductFilters: After categories filter:", filtered.length, filtered);
 
     if (filters.tags.length > 0) {
       filtered = filtered.filter(p => p.tags?.some(tag => filters.tags.includes(tag)));
     }
-    console.log("useProductFilters: After tags filter:", filtered.length, filtered);
 
     filtered = filtered.filter(p => {
       const price = convertCurrency(p.price, p.currency);
       return price >= filters.priceRange[0] && price <= filters.priceRange[1];
     });
-    console.log("useProductFilters: After price range filter:", filtered.length, filtered);
 
     for (const key in filters) {
       if (key !== 'categories' && key !== 'tags' && key !== 'priceRange' && key !== 'status' && Array.isArray(filters[key]) && (filters[key] as string[]).length > 0) {
@@ -166,7 +165,6 @@ export const useProductFilters = ({
         });
       }
     }
-    console.log("useProductFilters: After dynamic attributes filter:", filtered.length, filtered);
 
     return filtered.sort((a, b) => {
       const priceA = convertCurrency(a.price, a.currency);
