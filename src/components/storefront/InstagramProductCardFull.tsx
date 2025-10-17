@@ -17,7 +17,7 @@ import { useCart, CartItem } from "@/contexts/CartContext"; // Import CartItem t
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { ShopDetails as StorefrontShopDetails, Promotion as StorefrontPromotion } from "@/contexts/StorefrontContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
 import { InstagramCartDrawer } from "./InstagramCartDrawer"; // Import the drawer
 
 interface Product {
@@ -46,6 +46,14 @@ interface InstagramProductCardFullProps {
   convertCurrency: (amount: number | null | undefined, fromCurrency?: string) => number;
   promotions: StorefrontPromotion[];
 }
+
+// Helper to safely extract array values from product details
+const getDetailArray = (details: any, key: string): string[] => {
+  const value = details?.[key];
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value === 'string' && value) return value.split(',').map(s => s.trim()).filter(Boolean);
+  return [];
+};
 
 export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProductCardFullProps>(
   ({ product, shopDetails, convertCurrency, promotions }, ref) => {
@@ -177,8 +185,11 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     };
 
     const allDetails = Object.entries(product.details || {}).filter(([key, value]) => key !== 'type' && value && (!Array.isArray(value) || value.length > 0));
-    const colors = allDetails.find(([key]) => key === 'color')?.[1] as string[] || [];
-    const sizes = allDetails.find(([key]) => key === 'size')?.[1] as string[] || [];
+    
+    // Safely extract colors and sizes
+    const colors = getDetailArray(product.details, 'color');
+    const sizes = getDetailArray(product.details, 'size');
+    
     const otherOptions = allDetails.filter(([key]) => !['color', 'size', 'type'].includes(key)); // All other details are specs
 
     const getPromotionBadge = (promo: StorefrontPromotion) => {
@@ -314,16 +325,14 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                     {colors.map(color => (
                       <Button
                         key={color}
-                        variant="outline"
+                        variant={selectedColor === color ? "default" : "outline"}
                         onClick={() => setSelectedColor(color)}
                         className={cn(
-                          "capitalize text-sm h-9 w-9 rounded-full p-0 border-2",
-                          selectedColor === color ? "border-red-500" : "border-gray-300",
-                          "hover:border-red-500"
+                          "capitalize text-sm h-9 px-4",
+                          selectedColor === color ? "bg-red-500 text-white border-red-500 hover:bg-red-600" : "bg-gray-50 text-gray-800 border-gray-300 hover:bg-gray-100"
                         )}
-                        style={{ backgroundColor: color.toLowerCase() }}
                       >
-                        <span className="sr-only">{color}</span>
+                        {color}
                       </Button>
                     ))}
                   </div>
