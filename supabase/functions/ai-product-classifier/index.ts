@@ -28,10 +28,8 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   5. **Price Extraction:** Extract the numerical price and the currency code (e.g., USD, EUR, ALL). Default currency to "ALL" if none is specified.
   6. **Inventory/Stock:** Infer \`inventory\` as an integer. If stock is mentioned (e.g., "only 5 left"), use that number. If it's clearly a product post but stock is not mentioned, default to 10. If explicitly "sold out" or "out of stock", default to 0.
   7. **Attributes Extraction (Crucial):**
-     - **Options (isOption: true):** These are customer-selectable variants (e.g., Size, Color, Style).
-     - **Specifications (isOption: false):** These are fixed details (e.g., Material, Dimensions, Weight, Model Number).
-     - Use the user-defined keywords as primary guides.
-     - For each attribute, include: \`"name"\` (snake_case), \`"value"\` (string or array), \`"inputType"\` ("text", "number", "color", "tags", "dropdown", "textarea"), and \`"isOption"\` (boolean).
+     - **Specifications:** A key-value object of fixed, unchangeable attributes (e.g., Material, Dimensions, Weight). Use snake_case for keys.
+     - **Options:** A key-value object where values are arrays of customer-selectable variants (e.g., Color, Size, Storage). Use snake_case for keys.
   8. **Description:** Generate a compelling, detailed 3-4 sentence description highlighting key features, benefits, and materials.
   9. **Tags:** Generate 3-5 relevant tags.
 
@@ -61,12 +59,14 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
     "currency": "USD",
     "inventory": 50,
     "tags": ["vintage", "sunset", "graphic tee", "organic cotton"],
-    "attributes": [
-      { "name": "size", "value": ["S", "M", "L", "XL"], "inputType": "dropdown", "isOption": true, "possibleValues": ["S", "M", "L", "XL"] },
-      { "name": "color", "value": ["Cream", "Faded Blue"], "inputType": "color", "isOption": true },
-      { "name": "material", "value": "100% Organic Cotton", "inputType": "text", "isOption": false },
-      { "name": "fit", "value": "Regular", "inputType": "text", "isOption": false }
-    ]
+    "specifications": {
+      "material": "100% Organic Cotton",
+      "fit": "Regular"
+    },
+    "options": {
+      "color": ["Cream", "Faded Blue"],
+      "size": ["S", "M", "L", "XL"]
+    }
   }
   
   **FOR NON-PRODUCT POSTS:**
@@ -94,7 +94,7 @@ serve(async (req) => {
     );
 
     // Get user's preferred currency (though we store in ALL, this is for context)
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData } = await supabaseAdmin
       .from('profiles')
       .select('currency')
       .eq('id', user_id)

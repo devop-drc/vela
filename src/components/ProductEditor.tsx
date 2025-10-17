@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { AnimatePresence } from "framer-motion";
@@ -18,7 +18,7 @@ const productSchema = z.object({
   category: z.string().min(1, "Category is required"),
   price: z.coerce.number().min(0, "Price must be a positive number"),
   currency: z.string().min(3, "Currency code is required").max(3),
-  inventory: z.coerce.number().int().min(0, "Inventory must be a positive integer").optional(),
+  inventory: z.coerce.number().int().min(0, "Inventory must be a non-negative integer").optional(),
   tags: z.array(z.string()).optional(),
   pricing_type: z.enum(['one_time', 'subscription']),
   billing_interval: z.enum(['month', 'year']).optional().nullable(),
@@ -51,7 +51,7 @@ interface Product {
   billing_interval: 'month' | 'year' | null;
   details: any;
   currency: string | null;
-  instagram_post_id?: string; // Added instagram_post_id
+  instagram_post_id?: string;
 }
 
 interface ProductEditorProps {
@@ -68,17 +68,15 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   const [mediaItems, setMediaItems] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const { shopDetails, convertCurrency } = useShop();
-  const [typeAttributes, setTypeAttributes] = useState<any[]>([]);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
   });
+  
   useEffect(() => {
     if (product && shopDetails) {
-      console.log("ProductEditor: Initializing form. Product from DB:", product, "Shop details:", shopDetails);
       // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
       const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
-      console.log("ProductEditor: Stored price:", product.price, product.currency, "Converted to display currency:", priceInDisplayCurrency, shopDetails.currency);
 
       form.reset({
         name: product.name || "",
@@ -96,15 +94,14 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
       setMediaItems(gallery);
     } else if (product) {
-      console.log("ProductEditor: Initializing form (shopDetails not loaded). Product from DB:", product);
-      // Fallback if shopDetails not loaded yet, use product's original currency (which should be ALL)
+      // Fallback if shopDetails not loaded yet
       form.reset({
         name: product.name || "",
         status: product.status || "Draft",
         caption: product.caption || "",
         category: product.category || "",
         price: product.price || 0,
-        currency: product.currency || 'ALL', // Should be ALL if standardized
+        currency: product.currency || 'ALL',
         inventory: product.inventory || 0,
         tags: product.tags || [],
         pricing_type: product.pricing_type || 'one_time',
@@ -116,35 +113,6 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     }
   }, [product, form.reset, shopDetails, convertCurrency]);
   
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === 'category') {
-        form.setValue("details.type", "", { shouldDirty: true });
-      }
-      if (name === 'category' || name === 'details.type') {
-        const fetchAttributes = async () => {
-          const categoryValue = form.getValues('category');
-          const typeValue = form.getValues('details.type');
-          if (!categoryValue || !typeValue) {
-            setTypeAttributes([]);
-            return;
-          }
-          const { data: categoryData } = await supabase.from('categories').select('id').eq('name', categoryValue).single();
-          if (categoryData) {
-            const { data: typeData } = await supabase.from('types').select('attributes').eq('category_id', categoryData.id).eq('name', typeValue).single();
-            setTypeAttributes(typeData?.attributes || []);
-          } else {
-            setTypeAttributes([]);
-          }
-        };
-        fetchAttributes();
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
-
-  if (!product) return null;
-
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -152,12 +120,12 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     setIsUploading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      showError("You must be logged in to upload.");
+      showError("You must be logged in to upload an image.");
       setIsUploading(false);
       return;
     }
 
-    const filePath = `${user.id}/${product.id}/${Date.now()}-${file.name}`;
+    const filePath = `${user.id}/${product!.id}/${Date.now()}-${file.name}`;
     const { error } = await supabase.storage.from('product-media').upload(filePath, file);
 
     if (error) {
@@ -176,7 +144,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const filePath = `${user.id}/${product.id}/${fileName}`;
+    const filePath = `${user.id}/${product!.id}/${fileName}`;
     const { error } = await supabase.storage.from('product-media').remove([filePath]);
 
     if (error) {
@@ -186,89 +154,11 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     }
   };
 
-  const logFeedback = async (originalProduct: Product, newData: ProductFormData) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const feedbackEntries = [];
-    const fieldsToCompare: (keyof ProductFormData)[] = ['name', 'caption', 'category', 'price', 'currency', 'inventory'];
-
-    for (const field of fieldsToCompare) {
-      const originalValue = String(originalProduct[field as keyof Product] ?? '');
-      const correctedValue = String(newData[field] ?? '');
-      if (originalValue !== correctedValue) {
-        feedbackEntries.push({
-          user_id: user.id,
-          product_id: originalProduct.id,
-          field_name: field,
-          original_value: originalValue,
-          corrected_value: correctedValue,
-        });
-      }
-    }
-    
-    const originalDetails = originalProduct.details || {};
-    const correctedDetails = newData.details || {};
-    for (const key in correctedDetails) {
-        const originalValue = String(originalDetails[key] ?? '');
-        const correctedValue = String(correctedDetails[key] ?? '');
-        if (originalValue !== correctedValue) {
-            feedbackEntries.push({
-                user_id: user.id,
-                product_id: originalProduct.id,
-                field_name: `details.${key}`,
-                original_value: originalValue,
-                corrected_value: correctedValue,
-            });
-        }
-    }
-
-    if (feedbackEntries.length > 0) {
-      await supabase.from('ai_feedback').insert(feedbackEntries);
-    }
-  };
-
-  const handleSave = async (data: ProductFormData) => {
-    setIsSubmitting(true);
-    console.log("ProductEditor: Saving product. Form data:", data);
-    await logFeedback(product, data);
-
-    // Convert price from form's display currency (data.currency) to ALL for storage
-    const priceInALL = convertCurrency(data.price, data.currency, 'ALL'); // Explicitly convert to ALL
-    console.log("ProductEditor: Price in form's currency:", data.price, data.currency, "Converted to ALL for storage:", priceInALL);
-
-    const cleanedDetails: { [key: string]: any } = { type: data.details.type };
-    if (typeAttributes) {
-        typeAttributes.forEach(field => {
-            if (data.details[field.name] !== undefined) {
-                cleanedDetails[field.name] = data.details[field.name];
-            }
-        });
-    }
-
-    const { error } = await supabase.from('products').update({
-        name: data.name, status: data.status, caption: data.caption, category: data.category,
-        price: priceInALL, // Save price in ALL
-        currency: 'ALL', // Always save currency as ALL
-        inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
-        tags: data.tags, pricing_type: data.pricing_type,
-        billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
-        details: cleanedDetails,
-        media_gallery: mediaItems,
-        media_url: mediaItems[0] || null,
-        thumbnail_url: mediaItems[0] || null,
-      }).eq('id', product.id);
-
-    if (error) { showError(`Failed to update product: ${error.message}`); console.error("ProductEditor: Error updating product:", error); } 
-    else { showSuccess("Product updated successfully!"); onUpdate(); setIsEditing(false); }
-    setIsSubmitting(false);
-  };
-
   const handleDelete = async () => {
     setIsSubmitting(true);
     
     // Delete from AI analysis cache if instagram_post_id exists
-    if (product.instagram_post_id) {
+    if (product?.instagram_post_id) {
       const { error: cacheError } = await supabase
         .from('ai_analysis_cache')
         .delete()
@@ -279,7 +169,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       }
     }
 
-    const { error } = await supabase.from('products').delete().eq('id', product.id);
+    const { error } = await supabase.from('products').delete().eq('id', product!.id);
     if (error) { showError(`Failed to delete product: ${error.message}`); } 
     else { showSuccess("Product deleted."); onUpdate(); onClose(); }
     setIsSubmitting(false); setIsDeleting(false);
@@ -290,23 +180,25 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setIsEditing(false); } }}>
         <DialogContent className="sm:max-w-6xl max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="sr-only">
-            <DialogTitle>Product Details: {product.name}</DialogTitle>
-            <DialogDescription>View or edit product details for {product.name}.</DialogDescription>
+            <DialogTitle>Product Details: {product?.name}</DialogTitle>
+            <DialogDescription>View or edit product details for {product?.name}.</DialogDescription>
           </DialogHeader>
           <AnimatePresence mode="wait">
             {isEditing ? (
-              <ProductEditMode
-                product={product}
-                mediaItems={mediaItems}
-                handleImageUpload={handleImageUpload}
-                handleImageDelete={handleImageDelete}
-                isUploading={isUploading}
-                form={{...form, handleSubmit: form.handleSubmit(handleSave)}}
-                onCancel={() => setIsEditing(false)}
-                isSubmitting={isSubmitting}
-                isEditing={isEditing}
-                setMediaItems={setMediaItems} // Pass setMediaItems
-              />
+              <FormProvider {...form}>
+                <ProductEditMode
+                  product={product}
+                  mediaItems={mediaItems}
+                  handleImageUpload={handleImageUpload}
+                  handleImageDelete={handleImageDelete}
+                  isUploading={isUploading}
+                  form={{...form, handleSubmit: form.handleSubmit}}
+                  onCancel={() => setIsEditing(false)}
+                  isSubmitting={isSubmitting}
+                  isEditing={isEditing}
+                  setMediaItems={setMediaItems}
+                />
+              </FormProvider>
             ) : (
               <ProductViewMode
                 product={product}

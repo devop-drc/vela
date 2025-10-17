@@ -20,10 +20,12 @@ interface AnalysisResult {
   tags?: string[];
   categoryName?: string;
   typeName?: string;
-  inventory?: number; // Added inventory
-  pricingType?: 'one_time' | 'subscription'; // Added pricingType
-  billingInterval?: 'month' | 'year' | null; // Added billingInterval
-  attributes?: { name: string; value: string | string[]; inputType?: string; possibleValues?: string[] }[];
+  inventory?: number;
+  pricingType?: 'one_time' | 'subscription';
+  billingInterval?: 'month' | 'year' | null;
+  // New fields replacing 'attributes'
+  specifications?: { [key: string]: string | string[] };
+  options?: { [key: string]: string[] };
   tokenUsage?: { promptTokenCount?: number; candidatesTokenCount?: number };
 }
 
@@ -50,9 +52,9 @@ interface ProductPayload {
   thumbnail_url?: string;
   media_type: string;
   inventory?: number;
-  pricing_type?: 'one_time' | 'subscription'; // Added pricing_type
-  billing_interval?: 'month' | 'year' | null; // Added billing_interval
-  product_type?: 'physical' | 'digital'; // Added product_type
+  pricing_type?: 'one_time' | 'subscription';
+  billing_interval?: 'month' | 'year' | null;
+  product_type?: 'physical' | 'digital';
 }
 
 const corsHeaders = {
@@ -117,12 +119,13 @@ const upsertCategory = async (supabase: SupabaseClient, name: string, userId: st
   return data!.id;
 };
 
-const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, categoryId: string, typeName: string, newAttributes: AnalysisResult['attributes'], userId: string): Promise<void> => {
+// Updated upsertTypeAndMergeAttributes to handle the new attribute structure
+const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, categoryId: string, typeName: string, newAttributes: any[]): Promise<void> => {
   const normalizedTypeName = toTitleCase(typeName);
-  const { data: existingType, error } = await supabase.from('types').select('id, attributes').eq('category_id', categoryId).eq('name', normalizedTypeName).eq('user_id', userId).single();
+  const { data: existingType, error } = await supabase.from('types').select('id, attributes').eq('category_id', categoryId).eq('name', normalizedTypeName).single();
   if (error && error.code !== 'PGRST116') throw error;
 
-  const newAttributesMap = new Map((newAttributes || []).map(attr => [attr.name, { name: attr.name, inputType: attr.inputType, possibleValues: attr.possibleValues, isOption: attr.isOption }]));
+  const newAttributesMap = new Map((newAttributes || []).map(attr => [attr.name, attr]));
 
   if (existingType) {
     const existingAttributesMap = new Map((existingType.attributes || []).map((attr: any) => [attr.name, attr]));
@@ -136,7 +139,7 @@ const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, categoryId
     if (updateError) throw updateError;
   } else {
     const attributesToInsert = Array.from(newAttributesMap.values());
-    const { error: insertError } = await supabase.from('types').insert({ category_id: categoryId, name: normalizedTypeName, attributes: attributesToInsert, user_id: userId });
+    const { error: insertError } = await supabase.from('types').insert({ category_id: categoryId, name: normalizedTypeName, attributes: attributesToInsert, user_id: supabase.auth.getUser().id }); // Assuming user_id is available via RLS or context
     if (insertError) throw insertError;
   }
 };
@@ -266,15 +269,47 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         continue;
       }
 
-      const { categoryName, typeName, attributes, pricingType, billingInterval, inventory: aiInventory, ...productInfo } = analysis;
+      const { categoryName, typeName, specifications, options, pricingType, billingInterval, inventory: aiInventory, ...productInfo } = analysis;
+      
+      // 1. Upsert Category and Type (using options/specs to define attributes)
       if (categoryName && typeName) {
         const categoryId = await upsertCategory(supabaseAdmin, categoryName, user.id);
-        await upsertTypeAndMergeAttributes(supabaseAdmin, categoryId, typeName, attributes, user.id);
+        
+        // Convert specifications and options into the old 'attributes' array format for upsertTypeAndMergeAttributes
+        const attributesForTypeUpsert = [];
+        if (specifications) {
+            for (const [name, value] of Object.entries(specifications)) {
+                attributesForTypeUpsert.push({ name, inputType: 'text', isOption: false });
+            }
+        }
+        if (options) {
+            for (const [name, values] of Object.entries(options)) {
+                // Determine input type based on name (simple heuristic)
+                let inputType = 'text';
+                if (name.toLowerCase().includes('color')) inputType = 'color';
+                else if (Array.isArray(values) && values.length > 0) inputType = 'tags';
+                
+                attributesForTypeUpsert.push({ name, inputType, isOption: true, possibleValues: values });
+            }
+        }
+        await upsertTypeAndMergeAttributes(supabaseAdmin, categoryId, typeName, attributesForTypeUpsert);
       }
 
+      // 2. Construct the new 'details' object for the product table
       const details: { [key: string]: any } = { type: toTitleCase(typeName || '') };
-      if (attributes) {
-        for (const attr of attributes) { details[attr.name] = attr.value; }
+      
+      // Merge specifications and options into the 'details' column
+      if (specifications) {
+          for (const [key, value] of Object.entries(specifications)) {
+              details[key] = value;
+          }
+      }
+      if (options) {
+          // Store options in the details column for initialization
+          details.options = Object.entries(options).map(([name, values]) => ({
+            name: toTitleCase(name),
+            values: Array.isArray(values) ? values.map(String) : [String(values)],
+          }));
       }
 
       // Determine final pricing and inventory
@@ -317,6 +352,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       } else {
         productPayload.product_type = 'physical'; // Default product_type for new products
         summary.created++;
+        productPayload.details.variants = []; // Initialize variants array for new products
         summary.created_items.push(productPayload);
       }
       productsToUpsert.push(productPayload);

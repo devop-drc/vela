@@ -5,14 +5,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Package, DollarSign } from "lucide-react";
 import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { MediaItem } from "../MediaItem";
-import { useEffect, useState, useMemo } from "react"; // Import useMemo
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getAttributeIcon } from "@/lib/attributeIcons";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import { cn } from "@/lib/utils";
 
 const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
@@ -26,41 +28,32 @@ const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon
     </div>
 );
 
+// Helper to convert snake_case to Title Case for display
+const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
     const { shopDetails, convertCurrency } = useShop();
     const [attributes, setAttributes] = useState<any[]>([]);
     
     // Convert product price from its stored currency (now always ALL) to the shop's display currency
     const displayPrice = useMemo(() => {
-        if (product.price == null || !shopDetails) return null; // Ensure shopDetails is available
+        if (product.price == null || !shopDetails) return null;
         const converted = convertCurrency(product.price, product.currency, shopDetails.currency);
         return converted;
-    }, [product.price, product.currency, convertCurrency, shopDetails]); // Add shopDetails to dependencies
+    }, [product.price, product.currency, convertCurrency, shopDetails]);
 
-    useEffect(() => {
-      const fetchAttributes = async () => {
-        if (!product.category || !product.details?.type) {
-          setAttributes([]);
-          return;
-        }
-        const { data: categoryData } = await supabase.from('categories').select('id').eq('name', product.category).single();
-        if (categoryData) {
-          const { data: typeData } = await supabase.from('types').select('attributes').eq('category_id', categoryData.id).eq('name', product.details.type).single();
-          setAttributes(typeData?.attributes || []);
-        } else {
-          setAttributes([]);
-        }
-      };
-      fetchAttributes();
-    }, [product.category, product.details?.type]);
-    
-    const allDetails = attributes.filter(attr => {
-        const value = product.details?.[attr.name];
-        return value && (!Array.isArray(value) || value.length > 0);
-    });
+    // New: Extract options and variants from details
+    const options = product.details?.options || [];
+    const variants = product.details?.variants || [];
+    const hasVariants = variants.length > 0;
 
-    const options = allDetails.filter(f => f.isOption);
-    const specifications = allDetails.filter(f => !f.isOption);
+    // Filter out options and variants from general details to get specifications
+    const specifications = useMemo(() => {
+        const reservedKeys = new Set(['type', 'options', 'variants']);
+        return Object.entries(product.details || {})
+            .filter(([key]) => !reservedKeys.has(key))
+            .map(([key, value]) => ({ name: key, value }));
+    }, [product.details]);
 
     return (
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -88,7 +81,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
                     <span>{product.category || 'Uncategorized'}</span>
-                    {product.details?.type && <span> &middot; {product.details.type}</span>}
+                    {product.details?.type && <span> &middot; {toTitleCase(product.details.type)}</span>}
                   </p>
                   <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2 mt-1">
                     {product.name}
@@ -102,52 +95,77 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div><Label className="text-sm">Price</Label><p className="font-semibold text-2xl">{product.pricing_type === 'subscription' ? `${formatCurrency(displayPrice, shopDetails?.currency)} / ${product.billing_interval}` : formatCurrency(displayPrice, shopDetails?.currency)}</p></div>
-                  {product.pricing_type !== 'subscription' && (<div><Label className="text-sm">Inventory</Label><p className="font-semibold text-2xl">{product.inventory || 0}</p></div>)}
+                  <div>
+                    <Label className="text-sm">Base Price</Label>
+                    <p className="font-semibold text-2xl">
+                      {product.pricing_type === 'subscription' 
+                        ? `${formatCurrency(displayPrice, shopDetails?.currency)} / ${product.billing_interval}` 
+                        : formatCurrency(displayPrice, shopDetails?.currency)}
+                    </p>
+                    {hasVariants && <p className="text-xs text-muted-foreground">Lowest variant price</p>}
+                  </div>
+                  {product.pricing_type !== 'subscription' && (
+                    <div>
+                      <Label className="text-sm">Total Inventory</Label>
+                      <p className="font-semibold text-2xl">{product.inventory || 0}</p>
+                      {hasVariants && <p className="text-xs text-muted-foreground">Sum of active variants</p>}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {(options.length > 0 || specifications.length > 0) && (
+            {/* Variant Table */}
+            {hasVariants && (
+                <Card>
+                    <CardHeader>
+                        <CardTitleComponent className="text-base flex items-center gap-2">
+                            <Package className="h-5 w-5" />
+                            Variants ({variants.filter((v: any) => !v.disabled).length} active)
+                        </CardTitleComponent>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <ScrollArea className="h-64 w-full">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[200px]">Name</TableHead>
+                                        <TableHead className="w-[120px]">Price</TableHead>
+                                        <TableHead className="w-[100px]">Stock</TableHead>
+                                        <TableHead className="w-[120px]">SKU</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {variants.map((variant: any) => (
+                                        <TableRow key={variant.id} className={cn(variant.disabled && "opacity-50 bg-muted/50")}>
+                                            <TableCell className="font-medium">{variant.name}</TableCell>
+                                            <TableCell>{formatCurrency(convertCurrency(variant.price, shopDetails?.currency, shopDetails?.currency), shopDetails?.currency)}</TableCell>
+                                            <TableCell>{variant.inventory}</TableCell>
+                                            <TableCell>{variant.sku}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Specifications (Fixed Details) */}
+            {specifications.length > 0 && (
               <Card>
-                <CardHeader><CardTitleComponent className="text-base">Options & Specifications</CardTitleComponent></CardHeader>
+                <CardHeader><CardTitleComponent className="text-base">Specifications</CardTitleComponent></CardHeader>
                 <CardContent className="p-4 space-y-4">
-                  {options.length > 0 && (
-                    <div>
-                      <h3 className="text-base font-semibold mb-3">Options & Variants</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                        {options.map(field => {
-                          const value = product.details?.[field.name];
-                          const Icon = getAttributeIcon(field.name);
-                          return (
-                            <DetailDisplayRow key={field.name} label={field.label || field.name.replace(/_/g, ' ')} icon={Icon}>
-                              {Array.isArray(value) ? (
-                                value.map(item => <Badge key={item} variant="outline">{item}</Badge>)
-                              ) : (
-                                <p className="text-base">{value}</p>
-                              )}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                    {specifications.map(field => {
+                        const Icon = getAttributeIcon(field.name);
+                        return (
+                            <DetailDisplayRow key={field.name} label={toTitleCase(field.name)} icon={Icon}>
+                                <p className="text-base">{Array.isArray(field.value) ? field.value.join(', ') : String(field.value)}</p>
                             </DetailDisplayRow>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  {options.length > 0 && specifications.length > 0 && <hr />}
-                  {specifications.length > 0 && (
-                    <div>
-                      <h3 className="text-base font-semibold mb-3">Specifications</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                        {specifications.map(field => {
-                           const Icon = getAttributeIcon(field.name);
-                           return (
-                            <DetailDisplayRow key={field.name} label={field.label || field.name.replace(/_/g, ' ')} icon={Icon}>
-                                <p className="text-base">{Array.isArray(product.details?.[field.name]) ? product.details?.[field.name].join(', ') : product.details?.[field.name]}</p>
-                            </DetailDisplayRow>
-                           )
-                        })}
-                      </div>
-                    </div>
-                  )}
+                        );
+                    })}
+                  </div>
                 </CardContent>
               </Card>
             )}

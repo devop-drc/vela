@@ -1,13 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+
+const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+const GEMINI_PRO_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-const GEMINI_PRO_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`;
 
 const getClassifierPrompt = (caption: string, keywords: { keyword: string, description: string }[], similarProducts: any[]) => {
   const similarProductsContext = similarProducts.length > 0 ? `
@@ -28,10 +28,8 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   5. **Price Extraction:** Extract the numerical price and the currency code (e.g., USD, EUR, ALL). Default currency to "ALL" if none is specified.
   6. **Inventory/Stock:** Infer \`inventory\` as an integer. If stock is mentioned (e.g., "only 5 left"), use that number. If it's clearly a product post but stock is not mentioned, default to 10. If explicitly "sold out" or "out of stock", default to 0.
   7. **Attributes Extraction (Crucial):**
-     - **Options (isOption: true):** These are customer-selectable variants (e.g., Size, Color, Style).
-     - **Specifications (isOption: false):** These are fixed details (e.g., Material, Dimensions, Weight, Model Number).
-     - Use the user-defined keywords as primary guides.
-     - For each attribute, include: \`"name"\` (snake_case), \`"value"\` (string or array), \`"inputType"\` ("text", "number", "color", "tags", "dropdown", "textarea"), and \`"isOption"\` (boolean).
+     - **Specifications:** A key-value object of fixed, unchangeable attributes (e.g., Material, Dimensions, Weight). Use snake_case for keys.
+     - **Options:** A key-value object where values are arrays of customer-selectable variants (e.g., Color, Size, Storage). Use snake_case for keys.
   8. **Description:** Generate a compelling, detailed 3-4 sentence description highlighting key features, benefits, and materials.
   9. **Tags:** Generate 3-5 relevant tags.
 
@@ -61,12 +59,14 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
     "currency": "USD",
     "inventory": 50,
     "tags": ["vintage", "sunset", "graphic tee", "organic cotton"],
-    "attributes": [
-      { "name": "size", "value": ["S", "M", "L", "XL"], "inputType": "dropdown", "isOption": true, "possibleValues": ["S", "M", "L", "XL"] },
-      { "name": "color", "value": ["Cream", "Faded Blue"], "inputType": "color", "isOption": true },
-      { "name": "material", "value": "100% Organic Cotton", "inputType": "text", "isOption": false },
-      { "name": "fit", "value": "Regular", "inputType": "text", "isOption": false }
-    ]
+    "specifications": {
+      "material": "100% Organic Cotton",
+      "fit": "Regular"
+    },
+    "options": {
+      "color": ["Cream", "Faded Blue"],
+      "size": ["S", "M", "L", "XL"]
+    }
   }
   
   **FOR NON-PRODUCT POSTS:**
@@ -80,7 +80,7 @@ const toTitleCase = (str: string) => str.replace(/\w\S*/g, txt => txt.charAt(0).
 
 const analyzeAndEnrichPost = async (post: any, supabase: SupabaseClient, userId: string) => {
     try {
-        if (!GEMINI_API_KEY) throw new Error("Gemini API key is not configured.");
+        if (!GEMINI_API_KEY) return { skipped: true, reason: "AI configuration missing." };
         if (!post.caption) return { skipped: true, reason: "Post has no caption to analyze." };
 
         // Fetch keywords and recent products (similar logic to background sync, but simplified for UI preview)
@@ -104,11 +104,28 @@ const analyzeAndEnrichPost = async (post: any, supabase: SupabaseClient, userId:
             return { skipped: true, reason: "AI determined this is not a product post." };
         }
 
-        const { categoryName, typeName, attributes, pricingType, billingInterval, inventory, ...productInfo } = analysis;
+        const { categoryName, typeName, specifications, options, pricingType, billingInterval, inventory, ...productInfo } = analysis;
         
+        // Combine specifications and options into the old 'details' structure for compatibility with CreateProductModal
         const details: { [key: string]: any } = {};
-        if (attributes) {
-            for (const attr of attributes) { details[attr.name] = { value: attr.value }; }
+        
+        // Add specifications (fixed details)
+        if (specifications) {
+            for (const [key, value] of Object.entries(specifications)) {
+                details[key] = { value: value, inputType: 'text' }; // Default inputType for specs
+            }
+        }
+
+        // Add options (variants)
+        if (options) {
+            for (const [key, value] of Object.entries(options)) {
+                // Determine input type based on key name (simple heuristic)
+                let inputType = 'text';
+                if (key.toLowerCase().includes('color')) inputType = 'color';
+                else if (Array.isArray(value) && value.length > 0) inputType = 'tags'; // Use tags for multi-select options
+                
+                details[key] = { value: value, inputType: inputType };
+            }
         }
 
         return {
@@ -117,9 +134,9 @@ const analyzeAndEnrichPost = async (post: any, supabase: SupabaseClient, userId:
                 description: { value: productInfo.description },
                 price: { value: productInfo.price },
                 currency: { value: productInfo.currency },
-                inventory: { value: inventory ?? 10 }, // Include inventory
-                pricing_type: { value: pricingType || 'one_time' }, // Include pricing_type
-                billing_interval: { value: pricingType === 'subscription' ? (billingInterval || 'month') : null }, // Include billing_interval
+                inventory: { value: inventory ?? 10 },
+                pricing_type: { value: pricingType || 'one_time' },
+                billing_interval: { value: pricingType === 'subscription' ? (billingInterval || 'month') : null },
                 tags: { value: productInfo.tags },
                 category: { value: toTitleCase(categoryName) },
                 details: { type: { value: toTitleCase(typeName) }, ...details },
