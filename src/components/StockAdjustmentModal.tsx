@@ -51,6 +51,7 @@ const stockSchema = z.object({
       inventory: z.coerce.number().int().min(0, "Inventory must be a non-negative integer"),
     })).optional(),
   })),
+  batchStockValue: z.string().optional(), // Added for batch input
 });
 
 type StockFormData = z.infer<typeof stockSchema>;
@@ -149,7 +150,8 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
 
         // 2. Handle Variant Updates
         if (product.details?.options_v2?.length && productData.variants) {
-          const newOptionsV2 = JSON.parse(JSON.stringify(product.details.options_v2)); // Deep clone existing structure
+          // Deep clone existing structure to modify options_v2
+          const newOptionsV2 = JSON.parse(JSON.stringify(product.details.options_v2)); 
           let totalVariantStock = 0;
           
           productData.variants.forEach(variantData => {
@@ -195,8 +197,7 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
     if (!product.details?.options_v2?.length) return null;
 
     const optionsV2 = product.details.options_v2;
-    let variantIndexCounter = 0;
-
+    
     return (
       <Accordion type="multiple" className="w-full mt-3 border rounded-md">
         {optionsV2.map((option, optionIndex) => (
@@ -206,6 +207,7 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
               <div className="divide-y divide-muted">
                 {option.values.map((value, valueIndex) => {
                   // Calculate the flat index for RHF form array access
+                  // This calculation must match the flattening logic in defaultValues
                   const variantIndex = product.details.options_v2!.slice(0, optionIndex).reduce((sum, opt) => sum + opt.values.length, 0) + valueIndex;
                   const fieldName = `products.${productIndex}.variants.${variantIndex}`;
                   
@@ -260,6 +262,7 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
               <Input
                 id="batch-stock"
                 type="number"
+                {...register("batchStockValue")} // Register the batch input to prevent uncontrolled component warning
                 value={batchStockValue}
                 onChange={handleBatchStockChange}
                 className="w-full mt-1"

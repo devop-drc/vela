@@ -247,9 +247,6 @@ export const InstagramFilterDrawer = ({
                   value={localPriceRange}
                   onValueChange={handlePriceRangeChange}
                   className="w-full"
-                  indicatorClassName="bg-red-500"
-                  rangeClassName="bg-red-500"
-                  thumbClassName="bg-red-500 border-red-500"
                 />
                 <div className="flex justify-between text-sm font-medium text-gray-800">
                   <span>{formatCurrency(localPriceRange[0], shopDetails?.currency)}</span>

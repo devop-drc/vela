@@ -31,10 +31,12 @@ interface ProductOption {
 const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, control, currencyCode, convertCurrency, valuesFields, removeValue, setValue, watch, getValues, trigger }: any) => {
   const fieldName = `details.options_v2.${optionIndex}.values.${valueIndex}`;
   
-  // Use watch for performance critical fields only (priceDiff and isDefault are needed for display logic)
+  // Use watch for performance critical fields only
   const priceDiff = watch(`${fieldName}.price_difference`);
   const isDefault = watch(`${fieldName}.is_default`);
   const isSelected = watch(`${fieldName}.isSelected`);
+  const isActive = watch(`${fieldName}.is_active`);
+  const inventory = watch(`${fieldName}.inventory`);
 
   const displayPriceDiff = useMemo(() => {
     const convertedDiff = convertCurrency(priceDiff, 'ALL', currencyCode);
@@ -66,6 +68,18 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
     setValue(`${fieldName}.is_active`, checked, { shouldDirty: true });
   }, [fieldName, setValue]);
 
+  const availabilityColor = useMemo(() => {
+    if (!isActive) return "bg-gray-100 text-gray-600 border-gray-300";
+    if (inventory <= 0) return "bg-red-100 text-red-800 border-red-300";
+    return "bg-emerald-100 text-emerald-800 border-emerald-300";
+  }, [isActive, inventory]);
+
+  const availabilityLabel = useMemo(() => {
+    if (!isActive) return "Unavailable";
+    if (inventory <= 0) return "Out of Stock";
+    return "In Stock";
+  }, [isActive, inventory]);
+
   return (
     <div
       className="grid grid-cols-12 gap-2 items-center p-2 border-b last:border-b-0 hover:bg-muted/50 transition-colors"
@@ -79,7 +93,7 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
         />
       </div>
 
-      {/* Default Badge (Col 2) */}
+      {/* Default Badge (Col 2) - Toggleable */}
       <div className="col-span-1 flex justify-center">
         <Badge
           variant="outline"
@@ -88,7 +102,7 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
             isDefault ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-muted-foreground/50 hover:bg-primary/10 hover:text-primary"
           )}
           onClick={handleSetDefault}
-          title={isDefault ? "This is the default option" : "Click to set as default"}
+          title={isDefault ? "Default" : "Click to set as default"}
         >
           {isDefault ? 'Default' : 'Set'}
         </Badge>
@@ -154,17 +168,9 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
 
       {/* Active/Delete (Col 12) */}
       <div className="col-span-1 flex items-center justify-end gap-1">
-        <Controller
-          name={`${fieldName}.is_active`}
-          control={control}
-          render={({ field }) => (
-            <Switch
-              checked={field.value}
-              onCheckedChange={handleToggleActive}
-              className="h-5 w-9"
-            />
-          )}
-        />
+        <Badge variant="outline" className={cn("text-xs font-semibold h-6 px-2 py-0", availabilityColor)} title={availabilityLabel}>
+          {inventory <= 0 ? <XCircle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
+        </Badge>
         <Button
           type="button"
           variant="ghost"
@@ -180,8 +186,7 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
     </div>
   );
 }, (prevProps, nextProps) => {
-    // Only re-render if indices change, or if the RHF field array structure changes (valuesFields.length)
-    // We rely on RHF's internal updates for the values array content via Controller/useWatch.
+    // Optimization: Only re-render if indices change, or if the RHF field array structure changes (valuesFields.length)
     return prevProps.optionIndex === nextProps.optionIndex &&
            prevProps.valueIndex === nextProps.valueIndex &&
            prevProps.optionName === nextProps.optionName &&
@@ -202,7 +207,8 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
   const allValues = watch(`details.options_v2.${index}.values`);
 
   const selectedCount = useMemo(() => {
-    return (allValues || []).filter((val: OptionValue) => val.isSelected).length;
+    // FIX: Ensure allValues is an array before filtering
+    return (Array.isArray(allValues) ? allValues : []).filter((val: OptionValue) => val.isSelected).length;
   }, [allValues]);
 
   const isAllSelected = useMemo(() => {
@@ -291,7 +297,7 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
                       <div className="col-span-3">Value</div>
                       <div className="col-span-3 flex items-center gap-1"><Banknote className="h-3 w-3" /> Price Diff</div>
                       <div className="col-span-3 flex items-center gap-1"><Package className="h-3 w-3" /> Inventory</div>
-                      <div className="col-span-1 text-right">Active</div>
+                      <div className="col-span-1 text-right">Status</div>
                   </div>
 
                   {/* Bulk Actions Toolbar */}
@@ -322,6 +328,8 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
                       {valuesFields.map((field, valueIndex) => (
                           <OptionValueRow
                               key={field.id}
+                              option={option} // Pass option object to ensure memoization works if option name changes
+                              index={index}
                               optionIndex={index}
                               valueIndex={valueIndex}
                               optionName={option.name}
@@ -358,7 +366,7 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
     </Card>
   );
 }, (prevProps, nextProps) => {
-    // Only re-render OptionSection if the option name changes, or the number of values changes.
+    // Optimization: Only re-render OptionSection if the option name changes, or the number of values changes.
     return prevProps.option.name === nextProps.option.name &&
            prevProps.option.values.length === nextProps.option.values.length &&
            prevProps.index === nextProps.index;

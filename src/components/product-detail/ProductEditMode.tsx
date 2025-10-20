@@ -237,59 +237,67 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
 
     const handleSave = async (data: any) => {
         setIsSubmitting(true);
+        let error = null;
         
-        // 1. Prepare details payload: only include fields present in the form/type attributes
-        const cleanedDetails: { [key: string]: any } = { type: data.details.type };
-        
-        // Add all dynamic attributes (specs + options_v2)
-        Object.entries(data.details).forEach(([key, value]) => {
-            if (key !== 'type') {
-                // Remove the temporary 'isSelected' field from options_v2 values before saving
-                if (key === 'options_v2' && Array.isArray(value)) {
-                    cleanedDetails[key] = value.map((option: any) => ({
-                        ...option,
-                        values: option.values.map((val: any) => {
-                            const { isSelected, ...rest } = val;
-                            return rest;
-                        })
-                    }));
-                } else {
-                    cleanedDetails[key] = value;
+        try {
+            // 1. Prepare details payload: only include fields present in the form/type attributes
+            const cleanedDetails: { [key: string]: any } = { type: data.details.type };
+            
+            // Add all dynamic attributes (specs + options_v2)
+            Object.entries(data.details).forEach(([key, value]) => {
+                if (key !== 'type') {
+                    // Remove the temporary 'isSelected' field from options_v2 values before saving
+                    if (key === 'options_v2' && Array.isArray(value)) {
+                        cleanedDetails[key] = value.map((option: any) => ({
+                            ...option,
+                            values: option.values.map((val: any) => {
+                                const { isSelected, ...rest } = val;
+                                return rest;
+                            })
+                        }));
+                    } else {
+                        cleanedDetails[key] = value;
+                    }
                 }
+            });
+
+            // 2. Convert price from form's display currency (data.currency) to ALL for storage
+            const priceInALL = convertCurrency(data.price, data.currency, 'ALL');
+
+            // 3. Update Supabase
+            const { error: updateError } = await supabase.from('products').update({
+                name: data.name, status: data.status, caption: data.caption, category: data.category,
+                price: priceInALL, // Save price in ALL
+                currency: 'ALL', // Always store currency as ALL
+                inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
+                tags: data.tags, pricing_type: data.pricing_type,
+                billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
+                details: cleanedDetails,
+                media_gallery: mediaItems,
+                media_url: mediaItems[0] || null,
+                thumbnail_url: mediaItems[0] || null,
+                product_type: data.product_type,
+              }).eq('id', product.id);
+
+            if (updateError) { 
+                error = updateError;
+                showError(`Failed to update product: ${error.message}`); 
+                console.error("ProductEditor: Error updating product:", error); 
+            } 
+            else { 
+                showSuccess("Product updated successfully!"); 
+                if (onUpdate) onUpdate(); // Call onUpdate
             }
-        });
-
-        // 2. Convert price from form's display currency (data.currency) to ALL for storage
-        const priceInALL = convertCurrency(data.price, data.currency, 'ALL');
-
-        // 3. Update Supabase
-        const { error } = await supabase.from('products').update({
-            name: data.name, status: data.status, caption: data.caption, category: data.category,
-            price: priceInALL, // Save price in ALL
-            currency: 'ALL', // Always store currency as ALL
-            inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
-            tags: data.tags, pricing_type: data.pricing_type,
-            billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
-            details: cleanedDetails,
-            media_gallery: mediaItems,
-            media_url: mediaItems[0] || null,
-            thumbnail_url: mediaItems[0] || null,
-            product_type: data.product_type,
-          }).eq('id', product.id);
-
-        if (error) { 
-            showError(`Failed to update product: ${error.message}`); 
-            console.error("ProductEditor: Error updating product:", error); 
-        } 
-        else { 
-            showSuccess("Product updated successfully!"); 
-            if (onUpdate) onUpdate(); // Check if onUpdate exists
-        }
-        
-        // CRITICAL FIX: Ensure submitting state is cleared before closing the modal
-        setIsSubmitting(false);
-        if (!error) {
-            onClose();
+        } catch (e: any) {
+            error = e;
+            showError(`An unexpected error occurred: ${e.message}`);
+            console.error("ProductEditor: Unexpected error during save:", e);
+        } finally {
+            // CRITICAL FIX: Ensure submitting state is cleared regardless of success/failure
+            setIsSubmitting(false);
+            if (!error) {
+                onClose();
+            }
         }
     };
 
