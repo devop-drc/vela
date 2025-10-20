@@ -28,19 +28,26 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     let channel: RealtimeChannel | null = null;
 
     const setupSync = async () => {
+      const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
+
       const { data: initialJob, error } = await supabase
         .from('sync_jobs')
         .select('*')
         .eq('user_id', userId)
-        .or('status.eq.starting,status.eq.in_progress')
+        .or('status.eq.starting,status.eq.in_progress,status.eq.completed,status.eq.failed') // Check for recent finished jobs too
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+      if (error && error.code !== 'PGRST116') {
         console.error("Error fetching initial sync job:", error);
       } else if (initialJob) {
-        setActiveJob(initialJob as SyncJob);
+        // Only set the initial job if it's running OR if it's finished and hasn't been dismissed
+        if (['starting', 'in_progress'].includes(initialJob.status) || initialJob.id !== dismissedJobId) {
+          setActiveJob(initialJob as SyncJob);
+        } else {
+          setActiveJob(null);
+        }
       }
 
       channel = supabase.channel(`sync_jobs:${userId}`)
@@ -51,23 +58,26 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
             const newJobData = payload.new as SyncJob;
             const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
 
+            // If the job is completed/failed and was dismissed, ignore it.
             if (newJobData.id === dismissedJobId && ['completed', 'failed'].includes(newJobData.status)) {
-              return; // Do not show a job that has been explicitly dismissed.
+              setActiveJob(null);
+              return;
             }
 
             setActiveJob(prevJob => {
-              // If there's no previous job or the incoming job is different, just set the new job.
+              // If it's a new job or a different job, set it.
               if (!prevJob || prevJob.id !== newJobData.id) {
+                // If a new job starts, clear dismissal flag for it.
+                if (['starting', 'in_progress'].includes(newJobData.status)) {
+                    sessionStorage.removeItem('dismissed_sync_job_id');
+                }
                 return newJobData;
               }
 
-              // If it's the same job, merge the states to prevent stale data.
-              // This creates a new object, guaranteeing a re-render.
+              // If it's the same job, merge the states.
               return {
                 ...prevJob,
                 ...newJobData,
-                // Explicitly handle the analysis_result to prevent staleness.
-                // If the new payload doesn't have an analysis_result, it means we've moved to the next item.
                 analysis_result: newJobData.analysis_result || null,
               };
             });
@@ -111,7 +121,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   const dismissJob = () => {
     if (activeJob) {
       sessionStorage.setItem('dismissed_sync_job_id', activeJob.id);
-      // We only set to null if the job is finished. If it's running, let the user abort.
+      // Only set to null if the job is finished. If it's running, let the user abort.
       if (['completed', 'failed'].includes(activeJob.status)) {
         setActiveJob(null);
       }

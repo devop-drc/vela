@@ -206,7 +206,7 @@ const useDashboardData = (
 
 const Index = () => {
   const { setTitle } = usePageTitle();
-  const { shopDetails, isLoading: isShopLoading, convertCurrency } = useShop();
+  const { shopDetails, isLoading: isShopLoading, convertCurrency, fetchShopDetails } = useShop();
   const { activeJob } = useSync();
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subMonths(new Date(), 5),
@@ -221,10 +221,13 @@ const Index = () => {
   }, [setTitle]);
 
   useEffect(() => {
+    // Trigger dashboard data and shop details refresh after a successful sync
     if (activeJob?.status === 'completed') {
       fetchData();
+      fetchShopDetails(); // <-- Refresh shop details and currency rates
     }
-  }, [activeJob?.status, fetchData]);
+  }, [activeJob?.status, fetchData, fetchShopDetails]);
+
 
   useEffect(() => {
     const checkIntegrationStatus = async () => {

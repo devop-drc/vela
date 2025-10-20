@@ -204,6 +204,14 @@ const Products = () => {
     }
   }, [allProducts, selectedProduct]);
 
+  // Fix for crash after deletion: Clear selectedProduct if it no longer exists in allProducts
+  useEffect(() => {
+    if (selectedProduct && !allProducts.some(p => p.id === selectedProduct.id)) {
+      setSelectedProduct(null);
+    }
+  }, [allProducts, selectedProduct]);
+
+
   const handleSync = async (syncType: 'quick' | 'full') => {
     runWithIntegrationCheck(async () => {
       toast.loading("Initiating sync job...", { id: 'sync-initiating' });
@@ -308,6 +316,23 @@ const Products = () => {
     }
   };
 
+  const handleSelectAllInGroup = (productsInGroup: Product[]) => {
+    const productIdsInGroup = productsInGroup.map(p => p.id);
+    const allSelected = productIdsInGroup.every(id => selectedProducts.includes(id));
+
+    setSelectedProducts(prev => {
+      if (allSelected) {
+        // Deselect all in group
+        return prev.filter(id => !productIdsInGroup.includes(id));
+      } else {
+        // Select all in group
+        const newSelection = new Set([...prev, ...productIdsInGroup]);
+        return Array.from(newSelection);
+      }
+    });
+    setIsSelectionModeActive(true);
+  };
+
   const groupedProducts = useMemo(() => {
     if (grouping === 'category') {
       return filteredAndSortedProducts.reduce((acc, product) => {
@@ -322,8 +347,6 @@ const Products = () => {
     // If no grouping, return a single group or handle as flat list
     return { 'All Products': filteredAndSortedProducts };
   }, [filteredAndSortedProducts, grouping]);
-
-  console.log("Products.tsx: filteredAndSortedProducts for rendering:", filteredAndSortedProducts); // NEW LOG
 
   return (
     <>
@@ -422,7 +445,7 @@ const Products = () => {
         </div>
 
         {/* Product List/Grid */}
-        {isProductDataLoading ? (currentView === 'grid' ? <div className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>{Array.from({ length: 12 }).map((_, i) => <div key={i} className="space-y-2"><Skeleton className="aspect-square w-full rounded-lg" /><Skeleton className="h-4 w-2/3" /><Skeleton className="h-4 w-1/2" /></div>)}</div> : <div className="p-6 space-y-2"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>) : Object.keys(groupedProducts).length > 0 ? (currentView === 'grid' ? <div className="space-y-8">{Object.entries(groupedProducts).map(([groupName, products]) => (<div key={groupName}><h2 className={cn("text-xl font-bold mb-4 capitalize inline-block", settings.backgroundImageUrl && "bg-card/60 backdrop-blur-[20px] px-3 py-1 rounded-md")}>{groupName} ({products.length})</h2><motion.div variants={containerVariants} initial="hidden" animate="visible" className={cn("grid grid-cols-2 md:grid-cols-3 gap-4 items-stretch", gridSizeClasses[gridSize])}>{products.map((product) => <motion.div key={product.id} variants={itemVariants} className="h-full"><ProductCard product={product} gridSize={gridSize} isSelected={selectedProducts.includes(product.id)} isSelectionModeActive={isSelectionModeActive || selectedProducts.length > 0} onSelect={handleSelectProduct} onEdit={setSelectedProduct} onStatusChange={handleStatusChange} /></motion.div>)}</motion.div></div>))}</div> : <Card><CardContent className="p-0"><ProductTableView products={filteredAndSortedProducts} selectedProducts={selectedProducts} onSelectAll={(checked) => setSelectedProducts(checked ? filteredAndSortedProducts.map(p => p.id) : [])} onSelectOne={handleSelectProduct} onEdit={setSelectedProduct} onDelete={handleBulkDelete} /></CardContent></Card>) : <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg"><h3 className="lg:text-lg font-semibold">No Products Found</h3><p className="text-sm mt-1">Try adjusting your search or filters, or import from Instagram.</p></div>}
+        {isProductDataLoading ? (currentView === 'grid' ? <div className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>{Array.from({ length: 12 }).map((_, i) => <div key={i} className="space-y-2"><Skeleton className="aspect-square w-full rounded-lg" /><Skeleton className="h-4 w-2/3" /><Skeleton className="h-4 w-1/2" /></div>)}</div> : <div className="p-6 space-y-2"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>) : Object.keys(groupedProducts).length > 0 ? (currentView === 'grid' ? <div className="space-y-8">{Object.entries(groupedProducts).map(([groupName, products]) => (<div key={groupName}><div className="flex items-center gap-4 mb-4"><h2 className={cn("text-xl font-bold capitalize inline-block", settings.backgroundImageUrl && "bg-card/60 backdrop-blur-[20px] px-3 py-1 rounded-md")}>{groupName} ({products.length})</h2>{grouping === 'category' && products.length > 0 && (<Button variant="outline" size="sm" onClick={() => handleSelectAllInGroup(products)}><CheckSquare className="mr-2 h-4 w-4" />{products.every(p => selectedProducts.includes(p.id)) ? 'Deselect All' : 'Select All'}</Button>)}</div><motion.div variants={containerVariants} initial="hidden" animate="visible" className={cn("grid grid-cols-2 md:grid-cols-3 gap-4 items-stretch", gridSizeClasses[gridSize])}>{products.map((product) => <motion.div key={product.id} variants={itemVariants} className="h-full"><ProductCard product={product} gridSize={gridSize} isSelected={selectedProducts.includes(product.id)} isSelectionModeActive={isSelectionModeActive || selectedProducts.length > 0} onSelect={handleSelectProduct} onEdit={setSelectedProduct} onStatusChange={handleStatusChange} /></motion.div>)}</motion.div></div>))}</div> : <Card><CardContent className="p-0"><ProductTableView products={filteredAndSortedProducts} selectedProducts={selectedProducts} onSelectAll={(checked) => setSelectedProducts(checked ? filteredAndSortedProducts.map(p => p.id) : [])} onSelectOne={handleSelectProduct} onEdit={setSelectedProduct} onDelete={handleBulkDelete} /></CardContent></Card>) : <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg"><h3 className="lg:text-lg font-semibold">No Products Found</h3><p className="text-sm mt-1">Try adjusting your search or filters, or import from Instagram.</p></div>}
       </div>
       <AnimatePresence>{selectedProducts.length > 0 && <BulkActionsToolbar selectedCount={selectedProducts.length} onClear={() => { setSelectedProducts([]); setIsSelectionModeActive(false); }} onSetStatus={handleBulkStatusChange} onDelete={() => setBulkDeleteConfirm(true)} onAddSale={() => setIsSaleModalOpen(true)} />}</AnimatePresence>
     </>
