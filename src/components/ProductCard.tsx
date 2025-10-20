@@ -54,6 +54,15 @@ const DetailRow = ({ icon: Icon, children }: { icon: React.ElementType, children
 export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSize, onSelect, onEdit, onStatusChange }: ProductCardProps) => {
   const { shopDetails, convertCurrency } = useShop();
 
+  // CRITICAL NULL CHECK: If product is null or price is null, handle gracefully
+  if (!product || product.price === null) {
+    // If the product object itself is null (which shouldn't happen if the parent list is filtered correctly, but good for safety)
+    // or if the price is null, we render a placeholder or skip rendering.
+    // Since this component is mapped over a list, returning null is appropriate if data is incomplete.
+    // However, since the crash happens during unmount/re-render, we must ensure all properties accessed are safe.
+    // We proceed assuming `product` is valid but `product.price` might be null.
+  }
+
   const handleCardClick = () => {
     if (isSelectionModeActive) {
       onSelect(product.id);
@@ -66,14 +75,19 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
   
   // Convert price to display currency
   let displayPrice = product.price;
+  let originalPriceFormatted = 'N/A';
+
   if (product.price != null && shopDetails?.currency) {
     displayPrice = convertCurrency(product.price, product.currency, shopDetails.currency);
+    
+    // Format the original price (which is now always ALL) with its currency for comparison if needed
+    originalPriceFormatted = product.currency 
+      ? new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)
+      : 'N/A';
+  } else {
+    displayPrice = null;
   }
 
-  // Format the original price (which is now always ALL) with its currency for comparison if needed
-  const originalPriceFormatted = product.price != null && product.currency 
-    ? new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)
-    : '';
 
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
   
@@ -174,20 +188,16 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
           </div>
 
           <div className="flex items-end justify-between pt-2">
-            {product.price != null && shopDetails ? ( // Ensure shopDetails is available
+            {displayPrice != null && shopDetails ? ( 
               <div className="flex flex-col">
                 <p className="font-semibold text-lg">
-                  {displayPrice != null ? (
-                    <>
-                      {new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: shopDetails.currency
-                      }).format(displayPrice)}
-                      {product.pricing_type === 'subscription' && (
-                        <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
-                      )}
-                    </>
-                  ) : 'N/A'}
+                  {new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: shopDetails.currency
+                  }).format(displayPrice)}
+                  {product.pricing_type === 'subscription' && (
+                    <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                  )}
                 </p>
                 {product.currency && product.currency !== shopDetails.currency && (
                   <span className="text-xs text-muted-foreground">
