@@ -94,29 +94,30 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         const existingOptions = details?.options || [];
 
         if (existingOptions.length > 0) {
-            // Already in new additive format
+            // Case 1: Already in the new additive format (details.options)
             return existingOptions.map((opt: any) => ({ 
                 ...opt, 
                 id: opt.id || crypto.randomUUID(),
-                values: opt.values.map((v: any) => ({
-                    value: v.value,
+                name: opt.name || 'Option',
+                values: (opt.values || []).map((v: any) => ({
+                    value: v.value || String(v), // Handle case where value might be a string array element
                     priceDifference: v.priceDifference || 0,
                 }))
             }));
         }
 
-        // Check for legacy/flattened attributes (color, size, material, etc.)
+        // Case 2: Legacy/Flattened attributes (color, size, etc.)
         const legacyOptionKeys = ['color', 'size', 'material']; // Common option keys
         const options: Option[] = [];
         
         legacyOptionKeys.forEach(key => {
             const value = details[key];
             // Check if value is an array of strings (which is how TagInput saves it)
-            if (value && Array.isArray(value) && value.length > 0 && value.every(v => typeof v === 'string')) {
+            if (Array.isArray(value) && value.length > 0 && value.every(v => typeof v === 'string')) {
                 options.push({
                     id: crypto.randomUUID(),
                     name: toTitleCase(key),
-                    values: value.map(v => ({ value: String(v), priceDifference: 0 })), // Default price diff to 0
+                    values: value.map(v => ({ value: String(v), priceDifference: 0 })),
                 });
             }
         });
@@ -297,14 +298,19 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         // 3. Add options to details if they exist
         if (productOptions.length > 0) {
             cleanedDetails.options = productOptions;
-            // Ensure variants key is explicitly removed if it existed previously
+            // Explicitly remove variants key if it exists (from old model)
             delete cleanedDetails.variants;
         } else {
             delete cleanedDetails.options;
             delete cleanedDetails.variants;
         }
+        
+        // 4. Remove legacy flat attributes (color, size, material) from details before saving
+        const legacyKeysToRemove = ['color', 'size', 'material'];
+        legacyKeysToRemove.forEach(key => delete cleanedDetails[key]);
 
-        // 4. Update Supabase
+
+        // 5. Update Supabase
         const { error } = await supabase.from('products').update({
             name: data.name, status: data.status, caption: data.caption, category: data.category,
             price: priceInALL, // Save lowest final price in ALL
@@ -414,7 +420,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     </div>
                     <div className="grid grid-cols-3 gap-4 pt-2">
                         <div className="space-y-1 col-span-2"><Label htmlFor="price" className="text-xs">Base Price</Label><div className="flex items-center gap-2"><Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" /><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
-                        <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">Base Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
+                        <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">Base Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller control={control} name="billing_interval" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
                     </div>
                   </div>
                 </div>

@@ -504,17 +504,9 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                 </Button>
               </div>
           )}
-        </div>
-
-        {/* Buy Now Drawer */}
-        {buyNowProduct && (
-          <InstagramCartDrawer
-            isOpen={isBuyNowDrawerOpen}
-            onClose={() => setIsBuyNowDrawerOpen(false)}
-            initialCartItems={[buyNowProduct]}
-            onOrderPlaced={() => onClose()} // Close modal after order is placed
-          />
-        )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
       </Dialog>
     </>
   );

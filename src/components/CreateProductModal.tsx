@@ -99,9 +99,11 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
   // Helper to normalize AI options into the new additive options structure
   const normalizeAIOptions = useCallback((details: any): Option[] => {
     const options: Option[] = [];
+    // The AI analysis result structure is flat: details.color.value = ['Red', 'Blue']
     if (details) {
       for (const [key, valueObj] of Object.entries(details as any)) {
-        if (key !== 'type' && Array.isArray(valueObj.value) && valueObj.value.length > 0) {
+        // Check if the key is a potential option key and its value is an array of strings
+        if (key !== 'type' && Array.isArray(valueObj.value) && valueObj.value.length > 0 && valueObj.value.every((v: any) => typeof v === 'string')) {
           options.push({
             id: crypto.randomUUID(),
             name: toTitleCase(key),
