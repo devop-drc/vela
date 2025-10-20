@@ -187,6 +187,7 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
   );
 }, (prevProps, nextProps) => {
     // Optimization: Only re-render if indices change, or if the RHF field array structure changes (valuesFields.length)
+    // This prevents unrelated form changes from resetting the local state of OptionSection.
     return prevProps.optionIndex === nextProps.optionIndex &&
            prevProps.valueIndex === nextProps.valueIndex &&
            prevProps.optionName === nextProps.optionName &&
@@ -265,10 +266,10 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
           />
         </CardTitle>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(prev => !prev)} title={isCollapsed ? "Expand" : "Collapse"}>
+          <Button type="button" variant="ghost" size="icon" onClick={() => setIsCollapsed(prev => !prev)} title={isCollapsed ? "Expand" : "Collapse"}>
               {isCollapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
           </Button>
-          <Button variant="destructive" size="icon" onClick={() => removeOption(index)} title="Delete Option Group">
+          <Button type="button" variant="destructive" size="icon" onClick={() => removeOption(index)} title="Delete Option Group">
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -310,13 +311,13 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
                     >
                       <span className="text-sm font-medium">{selectedCount} values selected</span>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleBulkAction('activate')} className="h-8 text-emerald-600 border-emerald-300 hover:bg-emerald-50">
+                        <Button type="button" size="sm" variant="outline" onClick={() => handleBulkAction('activate')} className="h-8 text-emerald-600 border-emerald-300 hover:bg-emerald-50">
                           <CheckCircle className="h-4 w-4 mr-1" /> Activate
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleBulkAction('deactivate')} className="h-8 text-amber-600 border-amber-300 hover:bg-amber-50">
+                        <Button type="button" size="sm" variant="outline" onClick={() => handleBulkAction('deactivate')} className="h-8 text-amber-600 border-amber-300 hover:bg-amber-50">
                           <XCircle className="h-4 w-4 mr-1" /> Deactivate
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleBulkAction('delete')} className="h-8">
+                        <Button type="button" size="sm" variant="destructive" onClick={() => handleBulkAction('delete')} className="h-8">
                           <Trash2 className="h-4 w-4 mr-1" /> Delete
                         </Button>
                       </div>
@@ -366,10 +367,11 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
     </Card>
   );
 }, (prevProps, nextProps) => {
-    // Optimization: Only re-render OptionSection if the option name changes, or the number of values changes.
-    return prevProps.option.name === nextProps.option.name &&
-           prevProps.option.values.length === nextProps.option.values.length &&
-           prevProps.index === nextProps.index;
+    // Custom comparison to preserve the local isCollapsed state
+    // Only re-render if the index changes, or the option name changes, or the number of values changes.
+    return prevProps.index === nextProps.index &&
+           prevProps.option.name === nextProps.option.name &&
+           prevProps.option.values.length === nextProps.option.values.length;
 });
 OptionSection.displayName = 'OptionSection';
 
