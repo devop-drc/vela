@@ -18,6 +18,7 @@ interface Product {
   media_url: string;
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
+  details: { [key: string]: any }; // Include details to check for options_v2
 }
 
 interface ProductWithSales extends Product {
@@ -54,6 +55,38 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
     return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">Out of Stock</Badge>;
   };
 
+  const getVariantStockSummary = (details: any) => {
+    const optionsV2 = details?.options_v2 || [];
+    if (optionsV2.length === 0) return null;
+
+    let totalStock = 0;
+    let outOfStockCount = 0;
+    let totalVariants = 0;
+
+    optionsV2.forEach((option: any) => {
+      (option.values || []).forEach((val: any) => {
+        totalVariants++;
+        if (val.inventory <= 0) {
+          outOfStockCount++;
+        }
+        totalStock += val.inventory;
+      });
+    });
+
+    if (totalVariants === 0) return null;
+
+    const inStockCount = totalVariants - outOfStockCount;
+
+    return (
+      <div className="text-xs text-muted-foreground">
+        <p className="font-medium">{totalVariants} variants</p>
+        <p className={cn(inStockCount > 0 ? 'text-emerald-600' : 'text-destructive')}>
+          {inStockCount} in stock / {outOfStockCount} out of stock
+        </p>
+      </div>
+    );
+  };
+
   if (!shopDetails) {
     return null; // Or a loading indicator
   }
@@ -74,6 +107,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
           {showStatusColumn && <TableHead>Status</TableHead>}
           <TableHead>Price</TableHead>
           <TableHead>Inventory</TableHead>
+          <TableHead>Variant Stock</TableHead> {/* New Column */}
           <TableHead>Total Earned</TableHead>
           <TableHead className="text-right w-[150px]">Actions</TableHead>
         </TableRow>
@@ -126,6 +160,9 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
               </div>
             </TableCell>
             <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+              {getVariantStockSummary(product.details)}
+            </TableCell>
+            <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
               <div className="flex-1 text-sm font-medium">
                 {product.total_earned !== undefined && product.total_earned !== null
                   ? formatCurrency(convertCurrency(product.total_earned, product.currency, shopDetails.currency), shopDetails.currency)
@@ -145,7 +182,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
           </TableRow>
         )) : (
           <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center">
+            <TableCell colSpan={9} className="h-24 text-center">
               No products found.
             </TableCell>
           </TableRow>

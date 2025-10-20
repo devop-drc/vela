@@ -32,7 +32,7 @@ interface Product {
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
   created_at: string;
-  details: any;
+  details: any; // Added details
   media_type: string | null; // Added media_type
 }
 
@@ -67,7 +67,7 @@ const OutOfStock = () => {
 
     const { data, error } = await supabase
       .from("products")
-      .select("*")
+      .select("*, details") // Select details field
       .eq('status', 'Out of Stock')
       .eq('user_id', user.id); // Ensure RLS is respected
 
@@ -153,8 +153,11 @@ const OutOfStock = () => {
     if (selectedProducts.length > 0) {
       return products.filter(p => selectedProducts.includes(p.id));
     }
-    return filteredAndSortedProducts; // If no products selected, apply to all filtered
-  }, [products, selectedProducts, filteredAndSortedProducts]);
+    // If no products selected, we don't want to adjust all filtered products on this page, 
+    // only the ones explicitly selected or the single product being edited.
+    // Since this modal is only triggered by the BulkActionsToolbar, it should only run when selectedProducts > 0.
+    return products.filter(p => selectedProducts.includes(p.id));
+  }, [products, selectedProducts]);
 
   return (
     <>

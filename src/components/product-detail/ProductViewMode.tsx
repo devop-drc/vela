@@ -10,7 +10,7 @@ import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { MediaItem } from "../MediaItem";
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +55,13 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     // Options are now read from options_v2
     const optionsV2 = product.details?.options_v2 || [];
     const specifications = allDetails.filter(d => !d.isOption);
+
+    // Function to determine the color class for an option value badge
+    const getOptionValueColor = useCallback((val: any) => {
+        if (!val.is_active) return "bg-gray-100 text-gray-600 border-gray-300";
+        if (val.inventory <= 0) return "bg-destructive/10 text-destructive border-destructive/30";
+        return "bg-emerald-100 text-emerald-800 border-emerald-300";
+    }, []);
 
     return (
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -133,10 +140,15 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                                         return (
                                             <div key={val.value} className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50">
                                                 <div className="flex items-center gap-2">
-                                                    <Badge variant="outline" className={cn("text-sm", val.is_active ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-gray-100 text-gray-600 border-gray-300")}>
+                                                    <Badge variant="outline" className={cn("text-sm", getOptionValueColor(val))}>
                                                         {val.is_active ? <CheckCircle className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
                                                         {val.value}
                                                     </Badge>
+                                                    {val.is_default && (
+                                                        <Badge variant="default" className="text-xs bg-primary/80 text-primary-foreground">
+                                                            Default
+                                                        </Badge>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-4">
                                                     <div className="flex items-center gap-1 text-muted-foreground">

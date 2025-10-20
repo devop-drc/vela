@@ -11,6 +11,7 @@ import { formatCurrency } from '@/lib/formatters';
 import { Switch } from '@/components/ui/switch';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 
 interface OptionValue {
   value: string;
@@ -34,6 +35,8 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
   const priceDiff = watch(`${fieldName}.price_difference`);
   const isDefault = watch(`${fieldName}.is_default`);
   const isSelected = watch(`${fieldName}.isSelected`);
+  const isActive = watch(`${fieldName}.is_active`);
+  const inventory = watch(`${fieldName}.inventory`);
 
   const displayPriceDiff = useMemo(() => {
     const convertedDiff = convertCurrency(priceDiff, 'ALL', currencyCode);
@@ -41,6 +44,9 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
   }, [priceDiff, currencyCode, convertCurrency]);
 
   const handleSetDefault = useCallback(() => {
+    // If already default, do nothing. If not, set it as default.
+    if (isDefault) return;
+
     // Find the currently default value in this option group and set it to false
     const currentValues = getValues(`details.options_v2.${optionIndex}.values`);
     currentValues.forEach((val: OptionValue, index: number) => {
@@ -50,10 +56,14 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
     });
     // Set the current value to default
     setValue(`${fieldName}.is_default`, true, { shouldDirty: true });
-  }, [getValues, setValue, optionIndex, valueIndex, fieldName]);
+  }, [isDefault, getValues, setValue, optionIndex, valueIndex, fieldName]);
 
   const handleToggleSelect = useCallback((checked: boolean) => {
     setValue(`${fieldName}.isSelected`, checked);
+  }, [fieldName, setValue]);
+
+  const handleToggleActive = useCallback((checked: boolean) => {
+    setValue(`${fieldName}.is_active`, checked, { shouldDirty: true });
   }, [fieldName, setValue]);
 
   return (
@@ -69,7 +79,22 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
         />
       </div>
 
-      {/* Value Name (Col 2-4) */}
+      {/* Default Badge (Col 2) */}
+      <div className="col-span-1 flex justify-center">
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-xs font-semibold cursor-pointer transition-colors h-6 px-2 py-0",
+            isDefault ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-muted-foreground/50 hover:bg-primary/10 hover:text-primary"
+          )}
+          onClick={handleSetDefault}
+          title={isDefault ? "This is the default option" : "Click to set as default"}
+        >
+          {isDefault ? 'Default' : 'Set'}
+        </Badge>
+      </div>
+
+      {/* Value Name (Col 3-5) */}
       <div className="col-span-3">
         <Controller
           name={`${fieldName}.value`}
@@ -84,7 +109,7 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
         />
       </div>
 
-      {/* Price Difference (Col 5-7) */}
+      {/* Price Difference (Col 6-8) */}
       <div className="col-span-3 flex items-center gap-1">
         <DollarSign className="h-4 w-4 text-muted-foreground flex-shrink-0" />
         <Controller
@@ -106,7 +131,7 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
         <span className="text-xs text-muted-foreground ml-1">{currencyCode}</span>
       </div>
 
-      {/* Inventory (Col 8-10) */}
+      {/* Inventory (Col 9-11) */}
       <div className="col-span-3 flex items-center gap-1">
         <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
         <Controller
@@ -127,27 +152,17 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
         />
       </div>
 
-      {/* Default/Active/Delete (Col 11-12) */}
-      <div className="col-span-2 flex items-center justify-end gap-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={handleSetDefault}
-          className={cn("h-8 w-8", isDefault ? "text-primary hover:bg-primary/10" : "text-muted-foreground hover:bg-muted")}
-          title="Set as Default"
-        >
-          <CheckCircle className={cn("h-4 w-4", isDefault ? "fill-primary" : "fill-transparent")} />
-        </Button>
+      {/* Active/Delete (Col 12) */}
+      <div className="col-span-1 flex items-center justify-end gap-1">
         <Controller
           name={`${fieldName}.is_active`}
           control={control}
           render={({ field }) => (
             <Switch
               checked={field.value}
-              onCheckedChange={field.onChange}
+              onCheckedChange={handleToggleActive}
               className="h-5 w-9"
-              thumbClassName="h-4 w-4"
+              // Removed thumbClassName prop to fix warning
             />
           )}
         />
@@ -184,10 +199,12 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
   
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Watch all 'isSelected' fields to determine bulk selection state
+  // 2. Bulk Actions Visibility Fix: Use a simple watch on the entire array to force re-evaluation of selectedCount
+  const allValues = watch(`details.options_v2.${index}.values`);
+
   const selectedCount = useMemo(() => {
-    return valuesFields.filter((_, valueIndex) => watch(`details.options_v2.${index}.values.${valueIndex}.isSelected`)).length;
-  }, [valuesFields, watch, index]);
+    return (allValues || []).filter((val: OptionValue) => val.isSelected).length;
+  }, [allValues]);
 
   const isAllSelected = useMemo(() => {
     return valuesFields.length > 0 && selectedCount === valuesFields.length;
@@ -269,10 +286,11 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
                           className="h-4 w-4"
                         />
                       </div>
+                      <div className="col-span-1">Default</div>
                       <div className="col-span-3">Value</div>
                       <div className="col-span-3 flex items-center gap-1"><DollarSign className="h-3 w-3" /> Price Diff</div>
                       <div className="col-span-3 flex items-center gap-1"><Package className="h-3 w-3" /> Inventory</div>
-                      <div className="col-span-2 text-right">Actions</div>
+                      <div className="col-span-1 text-right">Active</div>
                   </div>
 
                   {/* Bulk Actions Toolbar */}
@@ -324,7 +342,7 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => appendValue({ value: '', price_difference: 0, inventory: 0, is_active: true, is_default: false, isSelected: false })}
+                          onClick={() => appendValue({ value: '', price_difference: 0, inventory: 10, is_active: true, is_default: false, isSelected: false })}
                           className="w-full"
                       >
                           <PlusCircle className="mr-2 h-4 w-4" />

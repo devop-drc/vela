@@ -283,9 +283,13 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         else { 
             showSuccess("Product updated successfully!"); 
             onUpdate(); 
+        }
+        
+        // CRITICAL FIX: Ensure submitting state is cleared before closing the modal
+        setIsSubmitting(false);
+        if (!error) {
             onClose();
         }
-        setIsSubmitting(false);
     };
 
     const currentStatusConfig = statusConfig[statusValue as keyof typeof statusConfig];
