@@ -184,7 +184,6 @@ export const InstagramFilterDrawer = ({
           <AnimatePresence>
             {isFilterApplied && (
               <motion.button
-                type="button"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
@@ -224,7 +223,6 @@ export const InstagramFilterDrawer = ({
                   {uniqueCategories.map(category => (
                     <Button
                       key={category}
-                      type="button"
                       variant={localFilters.categories.includes(category) ? "default" : "outline"}
                       size="sm"
                       onClick={() => handleToggleFilter('categories', category)}
@@ -263,7 +261,6 @@ export const InstagramFilterDrawer = ({
                   {uniqueTags.map(tag => (
                     <Button
                       key={tag}
-                      type="button"
                       variant={(localFilters.tags as string[] || []).includes(tag) ? "default" : "outline"}
                       size="sm"
                       onClick={() => handleToggleFilter('tags', tag)}
@@ -288,7 +285,6 @@ export const InstagramFilterDrawer = ({
                     {attr.values.map(value => (
                       <Button
                         key={value}
-                        type="button"
                         variant={(localFilters[filterKey] as string[] || []).includes(value) ? "default" : "outline"}
                         size="sm"
                         onClick={() => handleToggleFilter(filterKey, value)}
@@ -307,8 +303,8 @@ export const InstagramFilterDrawer = ({
           </Accordion>
         </ScrollArea>
         <DrawerFooter className="p-4 border-t border-gray-200 flex-shrink-0">
-          <Button type="button" variant="outline" onClick={handleClearAll} className="flex-1 text-base bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200">Clear All</Button>
-          <Button type="button" onClick={onClose} className="flex-1 text-base bg-red-500 hover:bg-red-600 text-white">Apply Filters</Button>
+          <Button variant="outline" onClick={handleClearAll} className="flex-1 text-base bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200">Clear All</Button>
+          <Button onClick={onClose} className="flex-1 text-base bg-red-500 hover:bg-red-600 text-white">Apply Filters</Button>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>

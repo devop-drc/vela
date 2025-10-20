@@ -9,10 +9,10 @@ import { Edit, Trash2, Package, Banknote, XCircle, Settings, CheckCircle, Archiv
 import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
+import { MediaItem } from "../MediaItem";
 import { useMemo, useCallback } from "react";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { cn } from "@/lib/utils";
-import { MediaItem } from "../MediaItem";
 
 const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
@@ -28,46 +28,6 @@ const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon
 
 // Helper to convert snake_case to Title Case for display
 const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
-
-// New component for Option Value display
-const OptionValueDisplay = ({ val, currencyCode, convertCurrency }: { val: any, currencyCode: string, convertCurrency: (amount: number | null | undefined, fromCurrency?: string, toCurrency?: string) => number }) => {
-    const displayPriceDiff = useMemo(() => {
-        const convertedDiff = convertCurrency(val.price_difference, 'ALL', currencyCode);
-        return formatCurrency(convertedDiff, currencyCode, 'en-US', true);
-    }, [val.price_difference, currencyCode, convertCurrency]);
-
-    const availabilityColor = useMemo(() => {
-        if (!val.is_active) return "bg-gray-100 text-gray-600 border-gray-300";
-        if (val.inventory <= 0) return "bg-red-100 text-red-800 border-red-300";
-        return "bg-emerald-100 text-emerald-800 border-emerald-300";
-    }, [val.is_active, val.inventory]);
-
-    return (
-        <div className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50 border">
-            <div className="flex items-center gap-2">
-                <Badge variant="outline" className={cn("text-sm font-medium", availabilityColor)}>
-                    {val.is_active ? <CheckCircle className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
-                    {val.value}
-                </Badge>
-                {val.is_default && (
-                    <Badge variant="default" className="text-xs bg-primary/80 text-primary-foreground">
-                        Default
-                    </Badge>
-                )}
-            </div>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                    <Banknote className="h-3 w-3" />
-                    <span>{displayPriceDiff}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                    <Package className="h-3 w-3" />
-                    <span>{val.inventory} in stock</span>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
     const { shopDetails, convertCurrency } = useShop();
@@ -95,6 +55,13 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     // Options are now read from options_v2
     const optionsV2 = product.details?.options_v2 || [];
     const specifications = allDetails.filter(d => !d.isOption);
+
+    // Function to determine the color class for an option value badge
+    const getOptionValueColor = useCallback((val: any) => {
+        if (!val.is_active) return "bg-gray-100 text-gray-600 border-gray-300";
+        if (val.inventory <= 0) return "bg-slate-100 text-slate-600 border-slate-300"; // Out of Stock color
+        return "bg-emerald-100 text-emerald-800 border-emerald-300"; // Active/In Stock color
+    }, []);
 
     return (
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -163,19 +130,39 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                             Customer Options
                         </CardTitleComponent>
                     </CardHeader>
-                    <CardContent className="p-4 space-y-6">
+                    <CardContent className="p-4 space-y-4">
                         {optionsV2.map((option: any) => (
-                            <div key={option.name} className="space-y-3 border-b pb-4 last:border-b-0 last:pb-0">
-                                <Label className="font-semibold capitalize text-base text-foreground">{option.name}</Label>
-                                <div className="space-y-2">
-                                    {option.values.map((val: any) => (
-                                        <OptionValueDisplay 
-                                            key={val.value} 
-                                            val={val} 
-                                            currencyCode={currencyCode} 
-                                            convertCurrency={convertCurrency} 
-                                        />
-                                    ))}
+                            <div key={option.name} className="space-y-2 border-b pb-3 last:border-b-0 last:pb-0">
+                                <Label className="font-semibold capitalize text-base">{option.name}</Label>
+                                <div className="space-y-1">
+                                    {option.values.map((val: any) => {
+                                        const priceDiff = convertCurrency(val.price_difference, 'ALL', currencyCode);
+                                        return (
+                                            <div key={val.value} className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50">
+                                                <div className="flex items-center gap-2">
+                                                    <Badge variant="outline" className={cn("text-sm", getOptionValueColor(val))}>
+                                                        {val.is_active ? <CheckCircle className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
+                                                        {val.value}
+                                                    </Badge>
+                                                    {val.is_default && (
+                                                        <Badge variant="default" className="text-xs bg-primary/80 text-primary-foreground">
+                                                            Default
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex items-center gap-1 text-muted-foreground">
+                                                        <Banknote className="h-3 w-3" />
+                                                        <span>{formatCurrency(priceDiff, currencyCode, 'en-US', true)}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 text-muted-foreground">
+                                                        <Package className="h-3 w-3" />
+                                                        <span>{val.inventory} in stock</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         ))}
@@ -186,7 +173,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
             {/* Specifications (Fixed Details) */}
             {specifications.length > 0 && (
               <Card>
-                <CardHeader><CardTitleComponent className="text-base flex items-center gap-2"><Settings className="h-5 w-5" /> Specifications</CardTitleComponent></CardHeader>
+                <CardHeader><CardTitleComponent className="text-base">Specifications</CardTitleComponent></CardHeader>
                 <CardContent className="p-4 space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
                     {specifications.map(field => {
