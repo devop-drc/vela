@@ -59,7 +59,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     // Function to determine the color class for an option value badge
     const getOptionValueColor = useCallback((val: any) => {
         if (!val.is_active) return "bg-gray-100 text-gray-600 border-gray-300";
-        if (val.inventory <= 0) return "bg-slate-100 text-slate-600 border-slate-300"; // Out of Stock color
+        if (val.inventory <= 0) return "bg-slate-100 text-slate-800 border-slate-300"; // Out of Stock color
         return "bg-emerald-100 text-emerald-800 border-emerald-300"; // Active/In Stock color
     }, []);
 
@@ -134,32 +134,41 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                         {optionsV2.map((option: any) => (
                             <div key={option.name} className="space-y-2 border-b pb-3 last:border-b-0 last:pb-0">
                                 <Label className="font-semibold capitalize text-base">{option.name}</Label>
-                                <div className="space-y-1">
+                                <div className="flex flex-wrap gap-2 pt-1">
                                     {option.values.map((val: any) => {
                                         const priceDiff = convertCurrency(val.price_difference, 'ALL', currencyCode);
+                                        const priceDiffFormatted = formatCurrency(priceDiff, currencyCode, 'en-US', true);
+                                        const isActive = val.is_active;
+                                        const isOOS = val.inventory <= 0;
+                                        
                                         return (
-                                            <div key={val.value} className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50">
-                                                <div className="flex items-center gap-2">
-                                                    <Badge variant="outline" className={cn("text-sm", getOptionValueColor(val))}>
-                                                        {val.is_active ? <CheckCircle className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
-                                                        {val.value}
-                                                    </Badge>
-                                                    {val.is_default && (
-                                                        <Badge variant="default" className="text-xs bg-primary/80 text-primary-foreground">
-                                                            Default
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-4">
-                                                    <div className="flex items-center gap-1 text-muted-foreground">
-                                                        <Banknote className="h-3 w-3" />
-                                                        <span>{formatCurrency(priceDiff, currencyCode, 'en-US', true)}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1 text-muted-foreground">
-                                                        <Package className="h-3 w-3" />
-                                                        <span>{val.inventory} in stock</span>
-                                                    </div>
-                                                </div>
+                                            <div 
+                                                key={val.value} 
+                                                className={cn(
+                                                    "flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium transition-colors",
+                                                    isActive ? (isOOS ? "bg-slate-100 text-slate-800 border border-slate-300" : "bg-emerald-100 text-emerald-800 border border-emerald-300") : "bg-gray-100 text-gray-600 border border-gray-300",
+                                                    val.is_default && "ring-2 ring-primary ring-offset-1 ring-offset-background"
+                                                )}
+                                                title={val.is_default ? "Default Selection" : undefined}
+                                            >
+                                                {/* Value Name */}
+                                                <span className="flex items-center gap-1">
+                                                    {val.is_default && <CheckCircle className="h-3 w-3 text-primary" />}
+                                                    {val.value}
+                                                </span>
+                                                
+                                                {/* Price Diff */}
+                                                {priceDiff !== 0 && (
+                                                    <span className="text-xs font-normal opacity-80">
+                                                        ({priceDiffFormatted})
+                                                    </span>
+                                                )}
+                                                
+                                                {/* Inventory */}
+                                                <span className="text-xs font-normal opacity-80 flex items-center gap-1">
+                                                    <Package className="h-3 w-3" />
+                                                    {val.inventory}
+                                                </span>
                                             </div>
                                         );
                                     })}
