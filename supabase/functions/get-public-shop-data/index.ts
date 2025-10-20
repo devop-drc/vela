@@ -19,41 +19,24 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
   const todayUtcStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const todayUtcEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
-  console.log(`[isRecurringActive - ${elementId}] Checking: '${message}'`);
-  console.log(`[isRecurringActive - ${elementId}] Current Time (UTC): ${now.toISOString()}`);
-  console.log(`[isRecurringActive - ${elementId}] Today UTC Start: ${todayUtcStart.toISOString()}`);
-  console.log(`[isRecurringActive - ${elementId}] Today UTC End: ${todayUtcEnd.toISOString()}`);
-  console.log(`[isRecurringActive - ${elementId}] Raw Start Date from DB: ${startDate?.toISOString() || 'null'}`);
-  console.log(`[isRecurringActive - ${elementId}] Raw End Date from DB: ${endDate?.toISOString() || 'null'}`);
-  console.log(`[isRecurringActive - ${elementId}] Repeat Interval: ${repeatInterval || 'null'}`);
-
-  // Normalize DB dates to UTC day start/end for comparison
-  const normalizedDbStartDate = startDate ? new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate())) : null;
-  const normalizedDbEndDate = endDate ? new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate(), 23, 59, 59, 999)) : null;
-
-  console.log(`[isRecurringActive - ${elementId}] Normalized DB Start Date (UTC): ${normalizedDbStartDate?.toISOString() || 'null'}`);
-  console.log(`[isRecurringActive - ${elementId}] Normalized DB End Date (UTC): ${normalizedDbEndDate?.toISOString() || 'null'}`);
-
   // 1. Check absolute start and end dates (using UTC normalized dates)
-  if (normalizedDbStartDate && todayUtcEnd.getTime() < normalizedDbStartDate.getTime()) {
-    console.log(`[isRecurringActive - ${elementId}] Reason: Today is before normalized DB start date.`);
+  // If today is before the start date, it's inactive.
+  if (startDate && todayUtcEnd.getTime() < startDate.getTime()) {
     return false;
   }
-  if (normalizedDbEndDate && todayUtcStart.getTime() > normalizedDbEndDate.getTime()) {
-    console.log(`[isRecurringActive - ${elementId}] Reason: Today is after normalized DB end date.`);
+  // If today is after the end date, it's inactive.
+  if (endDate && todayUtcStart.getTime() > endDate.getTime()) {
     return false;
   }
 
   // 2. If no repeat interval or 'none', and it passed step 1, it's active
   if (!repeatInterval || repeatInterval === 'none') {
-    console.log(`[isRecurringActive - ${elementId}] Result: Active (no repeat interval, within absolute dates).`);
     return true;
   }
 
   // 3. Handle specific recurring intervals
-  // For recurring, a start date is essential to define the pattern.
   if (!startDate) {
-    console.warn(`[isRecurringActive - ${elementId}] Reason: Recurring announcement has repeat_interval '${repeatInterval}' but no valid start_date. Skipping.`);
+    // If it has a repeat interval but no start date, it's invalid/inactive
     return false;
   }
 
@@ -62,51 +45,48 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
   // Extract month and day from startDate and endDate (relative to their own year)
   const startMonth = startDate.getUTCMonth();
   const startDay = startDate.getUTCDate();
-  const endMonth = endDate ? endDate.getUTCMonth() : startMonth; // If no end date, assume it's just the start day
+  const endMonth = endDate ? endDate.getUTCMonth() : startMonth;
   const endDay = endDate ? endDate.getUTCDate() : startDay;
 
   // Extract current month and day
   const currentMonth = todayUtcStart.getUTCMonth();
   const currentDay = todayUtcStart.getUTCDate();
+  const currentDayOfWeek = todayUtcStart.getUTCDay(); // 0 (Sunday) to 6 (Saturday)
+  const startDayOfWeek = startDate.getUTCDay();
 
   switch (repeatInterval) {
     case 'daily':
-      isActiveByRecurrence = true; // Already covered by absolute date range
+      isActiveByRecurrence = true;
       break;
     case 'weekly':
       // Check if today's day of week matches startDate's day of week
-      isActiveByRecurrence = todayUtcStart.getUTCDay() === startDate.getUTCDay();
+      isActiveByRecurrence = currentDayOfWeek === startDayOfWeek;
       break;
     case 'monthly':
       // Check if today's day of month falls within the recurring monthly window
       if (startDay <= endDay) { // Normal range within a month (e.g., 1st to 15th)
         isActiveByRecurrence = currentDay >= startDay && currentDay <= endDay;
       } else { // Range crosses month boundary (e.g., 25th to 5th of next month)
-        // For monthly repeats, if startDay > endDay, it implies an invalid range for a single month.
-        // We'll consider it active if today is >= startDay OR <= endDay (crossing month boundary)
+        // If startDay > endDay, it means the range spans across the month end.
+        // It's active if today is >= startDay OR <= endDay.
         isActiveByRecurrence = currentDay >= startDay || currentDay <= endDay;
-        console.warn(`[isRecurringActive - ${elementId}] Monthly repeat has startDay (${startDay}) > endDay (${endDay}). Interpreting as range crossing month boundary.`);
       }
       break;
     case 'yearly':
       // Check if today's month and day fall within the recurring yearly window
-      if (startMonth < endMonth) { // Normal range within a year (e.g., Jan 1 to Mar 15)
-        isActiveByRecurrence = (currentMonth > startMonth && currentMonth < endMonth) ||
-                               (currentMonth === startMonth && currentDay >= startDay) ||
-                               (currentMonth === endMonth && currentDay <= endDay);
-      } else if (startMonth > endMonth) { // Range crosses year boundary (e.g., Nov 15 to Feb 15)
-        isActiveByRecurrence = (currentMonth > startMonth || currentMonth < endMonth) ||
-                               (currentMonth === startMonth && currentDay >= startDay) ||
-                               (currentMonth === endMonth && currentDay <= endDay);
-      } else { // Same month (e.g., Oct 1 to Oct 15)
-        isActiveByRecurrence = currentMonth === startMonth && currentDay >= startDay && currentDay <= endDay;
+      const isAfterStartMonth = currentMonth > startMonth || (currentMonth === startMonth && currentDay >= startDay);
+      const isBeforeEndMonth = currentMonth < endMonth || (currentMonth === endMonth && currentDay <= endDay);
+
+      if (startMonth <= endMonth) { // Normal range within a year (e.g., Jan 1 to Mar 15)
+        isActiveByRecurrence = isAfterStartMonth && isBeforeEndMonth;
+      } else { // Range crosses year boundary (e.g., Nov 15 to Feb 15)
+        isActiveByRecurrence = isAfterStartMonth || isBeforeEndMonth;
       }
       break;
     default:
       isActiveByRecurrence = false;
   }
 
-  console.log(`[isRecurringActive - ${elementId}] Recurrence Check for '${repeatInterval}': Result: ${isActiveByRecurrence}`);
   return isActiveByRecurrence;
 };
 
@@ -222,15 +202,12 @@ serve(async (req) => {
     if (marqueeElementsError) {
       console.error("Error fetching marquee elements:", marqueeElementsError);
     } else if (rawMarqueeElements) {
-      console.log(`[get-public-shop-data] Raw Marquee Elements fetched (${rawMarqueeElements.length} items):`, rawMarqueeElements); // DEBUG LOG: Show raw fetched elements
       activeMarqueeElements = rawMarqueeElements.filter(element => {
         const startDateObj = element.start_date ? new Date(element.start_date) : null;
         const endDateObj = element.end_date ? new Date(element.end_date) : null;
         const isActive = isRecurringActive(startDateObj, endDateObj, element.repeat_interval, element.id, element.message);
-        console.log(`[get-public-shop-data] Final decision for Marquee Element '${element.message}' (ID: ${element.id}): isActive=${isActive}`); // DEBUG LOG
         return isActive;
       });
-      console.log(`[get-public-shop-data] Active Marquee Elements after filtering (${activeMarqueeElements.length} items):`, activeMarqueeElements); // DEBUG LOG: Show filtered elements
     }
 
     // Fetch orders for a specific customer email and/or order ID (for client-side order lookup)
