@@ -30,67 +30,53 @@ const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon
 // Helper to convert snake_case to Title Case for display
 const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
-// Comprehensive list of keys that should NOT be displayed as specifications
-const OPTION_KEYS_TO_EXCLUDE = ['type', 'options', 'variants', 'color', 'size', 'material']; 
-
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
     const { shopDetails, convertCurrency } = useShop();
     
-    // CRITICAL FIX: Ensure product is defined before accessing properties
-    if (!product) {
-        console.log("ProductViewMode: Rendering null because product is null.");
-        return null;
-    }
-    console.log("ProductViewMode: Rendering for product:", product.id);
-
     // Convert product price from its stored currency (now always ALL) to the shop's display currency
-    const displayBasePrice = useMemo(() => {
+    const displayPrice = useMemo(() => {
         if (product.price == null || !shopDetails) return null;
-        // product.price is the calculated lowest final price stored in ALL
+        // product.price is the calculated base price (lowest variant price or single price) stored in ALL
         const converted = convertCurrency(product.price, product.currency, shopDetails.currency);
         return converted;
     }, [product.price, product.currency, convertCurrency, shopDetails]);
 
-    // Extract options (new additive model)
+    // Extract options and variants from details
     const options = product.details?.options || [];
-    const hasOptions = options.length > 0;
+    const variants = product.details?.variants || [];
+    const hasVariants = variants.length > 0;
     const currencyCode = shopDetails?.currency || 'USD';
 
     // Filter out options and variants from general details to get specifications
     const specifications = useMemo(() => {
-        const reservedKeys = new Set(OPTION_KEYS_TO_EXCLUDE);
+        const reservedKeys = new Set(['type', 'options', 'variants']);
         return Object.entries(product.details || {})
             .filter(([key]) => !reservedKeys.has(key))
             .map(([key, value]) => ({ name: key, value }));
     }, [product.details]);
 
-    // Calculate price range based on additive options
-    const { minPrice, maxPrice } = useMemo(() => {
-        if (!hasOptions || displayBasePrice === null) return { minPrice: displayBasePrice, maxPrice: displayBasePrice };
+    // Calculate total inventory from active variants
+    const totalVariantInventory = useMemo(() => {
+        if (!hasVariants) return product.inventory || 0;
+        return variants.filter((v: any) => !v.disabled).reduce((sum: number, v: any) => v.inventory > 0 ? sum + v.inventory : sum, 0);
+    }, [hasVariants, variants, product.inventory]);
 
-        const base = displayBasePrice;
+    // Calculate lowest price from active variants
+    const lowestVariantPrice = useMemo(() => {
+        if (!hasVariants) return displayPrice;
         
-        // Calculate min/max total adjustment
-        const minAdjustment = options.reduce((min, opt: any) => {
-            if (opt.values.length === 0) return min;
-            const minDiff = Math.min(...opt.values.map((v: any) => v.priceDifference));
-            return min + minDiff;
-        }, 0);
+        // Find the lowest price difference among active variants
+        const activeVariants = variants.filter((v: any) => !v.disabled);
+        if (activeVariants.length === 0) return displayPrice;
 
-        const maxAdjustment = options.reduce((max, opt: any) => {
-            if (opt.values.length === 0) return max;
-            const maxDiff = Math.max(...opt.values.map((v: any) => v.priceDifference));
-            return max + maxDiff;
-        }, 0);
+        const lowestDiff = Math.min(...activeVariants.map((v: any) => v.priceDifference));
+        
+        // Calculate the lowest final price in display currency
+        const lowestFinalPrice = (displayPrice || 0) + lowestDiff;
+        
+        return lowestFinalPrice;
+    }, [hasVariants, variants, displayPrice]);
 
-        return {
-            minPrice: base + minAdjustment,
-            maxPrice: base + maxAdjustment,
-        };
-    }, [hasOptions, options, displayBasePrice]);
-
-    // Inventory is always the base inventory from the product record
-    const totalInventory = product.inventory || 0;
 
     return (
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -133,32 +119,27 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 )}
                 <div className="grid grid-cols-2 gap-4 pt-2">
                   <div>
-                    <Label className="text-sm">Price</Label>
+                    <Label className="text-sm">Base Price</Label>
                     <p className="font-semibold text-2xl">
-                      {hasOptions && minPrice !== maxPrice ? (
-                          `${formatCurrency(minPrice, currencyCode)} - ${formatCurrency(maxPrice, currencyCode)}`
-                      ) : (
-                          formatCurrency(displayBasePrice, currencyCode)
-                      )}
-                      {product.pricing_type === 'subscription' && (
-                        <span className="text-sm font-light text-muted-foreground">/{product.billing_interval}</span>
-                      )}
+                      {product.pricing_type === 'subscription' 
+                        ? `${formatCurrency(lowestVariantPrice, currencyCode)} / ${product.billing_interval}` 
+                        : formatCurrency(lowestVariantPrice, currencyCode)}
                     </p>
-                    {hasOptions && <p className="text-xs text-muted-foreground">Price range based on options.</p>}
+                    {hasVariants && <p className="text-xs text-muted-foreground">Lowest active variant price</p>}
                   </div>
                   {product.pricing_type !== 'subscription' && (
                     <div>
-                      <Label className="text-sm">Inventory</Label>
-                      <p className="font-semibold text-2xl">{totalInventory}</p>
-                      <p className="text-xs text-muted-foreground">Total stock available.</p>
+                      <Label className="text-sm">Total Inventory</Label>
+                      <p className="font-semibold text-2xl">{totalVariantInventory}</p>
+                      {hasVariants && <p className="text-xs text-muted-foreground">Sum of active variants</p>}
                     </div>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Options Display */}
-            {hasOptions && (
+            {/* Variant Options Display */}
+            {options.length > 0 && (
                 <Card>
                     <CardHeader>
                         <CardTitleComponent className="text-base flex items-center gap-2">
@@ -171,19 +152,65 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                             <div key={option.id} className="space-y-2">
                                 <Label className="font-semibold capitalize">{option.name}</Label>
                                 <div className="flex flex-wrap gap-2">
-                                    {option.values.map((value: any) => (
-                                        <Badge key={value.value} variant="outline" className="text-sm">
-                                            {value.value}
-                                            {value.priceDifference !== 0 && (
-                                                <span className={cn("ml-1 font-mono text-xs", value.priceDifference > 0 ? "text-emerald-600" : "text-destructive")}>
-                                                    ({formatCurrency(value.priceDifference, currencyCode, 'en-US', true)})
-                                                </span>
-                                            )}
-                                        </Badge>
+                                    {option.values.map((value: string) => (
+                                        <Badge key={value} variant="outline" className="text-sm">{value}</Badge>
                                     ))}
                                 </div>
                             </div>
                         ))}
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Variant Table */}
+            {hasVariants && (
+                <Card>
+                    <CardHeader>
+                        <CardTitleComponent className="text-base flex items-center gap-2">
+                            <Package className="h-5 w-5" />
+                            Product Variants ({variants.filter((v: any) => !v.disabled).length} active)
+                        </CardTitleComponent>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <ScrollArea className="h-64 w-full">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[200px]">Variant Name</TableHead>
+                                        <TableHead className="w-[120px]">Price Diff</TableHead>
+                                        <TableHead className="w-[120px]">Final Price</TableHead>
+                                        <TableHead className="w-[100px]">Stock</TableHead>
+                                        <TableHead className="w-[120px]">SKU</TableHead>
+                                        <TableHead className="w-[50px]">Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {variants.map((variant: any) => {
+                                        const finalPrice = (displayPrice || 0) + variant.priceDifference;
+                                        const priceDiffFormatted = formatCurrency(variant.priceDifference, currencyCode, 'en-US', true);
+                                        
+                                        return (
+                                            <TableRow key={variant.id} className={cn(variant.disabled && "opacity-50 bg-muted/50")}>
+                                                <TableCell className="font-medium">{variant.name}</TableCell>
+                                                <TableCell>
+                                                    <span className={cn(variant.priceDifference < 0 && "text-destructive", variant.priceDifference > 0 && "text-emerald-600")}>
+                                                        {priceDiffFormatted}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell>{formatCurrency(finalPrice, currencyCode)}</TableCell>
+                                                <TableCell>{variant.inventory}</TableCell>
+                                                <TableCell>{variant.sku}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="secondary" className={cn(variant.disabled ? "bg-gray-500 text-white" : "bg-emerald-500 text-white")}>
+                                                        {variant.disabled ? 'Unavailable' : 'Available'}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </ScrollArea>
                     </CardContent>
                 </Card>
             )}

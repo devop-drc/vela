@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback, useMemo, useRef as useRefReact } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -24,19 +24,24 @@ import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency } from "@/lib/formatters";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../ui/carousel";
-import { OptionManager } from "./OptionManager";
-import { showError, showSuccess } from "@/utils/toast";
+import { VariantManager } from "./VariantManager";
+import { showError, showSuccess } from "@/utils/toast"; // <-- IMPORTED TOAST UTILITIES
 
-// Define types used by OptionManager locally
-interface OptionValue {
-  value: string;
-  priceDifference: number; // Price difference relative to the base product price
-}
-
+// Define types used by VariantManager locally
 interface Option {
   id: string;
   name: string;
-  values: OptionValue[];
+  values: string[];
+}
+
+interface Variant {
+  id: string;
+  name: string; // e.g., "Red / Small"
+  optionValues: string[]; // e.g., ["Red", "Small"]
+  priceDifference: number; // Difference from base price
+  inventory: number;
+  sku: string;
+  disabled: boolean;
 }
 
 const statusConfig = {
@@ -56,19 +61,13 @@ const AttributeInput = ({ control, fieldName, inputType }: any) => {
     case 'tags':
       return <Controller name={name} control={control} render={({ field }) => <TagInput {...field} value={Array.isArray(field.value) ? field.value : (field.value ? [field.value] : [])} />} />;
     case 'color':
-        return <Controller name={name} control={control} render={({ field }) => <Controller name={name} control={control} render={({ field }) => <Input type="color" {...field} value={field.value || '#000000'} className="h-10 w-16" />} />} />;
+        return <Controller name={name} control={control} render={({ field }) => <Input type="color" {...field} value={field.value || '#000000'} className="h-10 w-16" />} />;
     default:
       return <Controller name={name} control={control} render={({ field }) => <Input {...field} value={field.value || ''} />} />;
   }
 };
 
-// Comprehensive list of keys that should NOT be displayed as specifications
-const OPTION_KEYS_TO_EXCLUDE = ['type', 'options', 'variants', 'color', 'size', 'material']; 
-
-export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, onClose, isSubmitting, setIsSubmitting, onUpdate }: any) => {
-    // CRITICAL FIX: Ensure product is defined before accessing properties
-    if (!product) return null;
-
+export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting, setIsSubmitting }: any) => {
     const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
     const { shopDetails, convertCurrency } = useShop();
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
@@ -76,8 +75,9 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     const [typeAttributes, setTypeAttributes] = useState<any[]>([]);
     const [isReanalyzing, setIsReanalyzing] = useState(false);
     
-    // New state for options (using the new additive model structure)
+    // New state for variants
     const [productOptions, setProductOptions] = useState<Option[]>([]);
+    const [productVariants, setProductVariants] = useState<Variant[]>([]);
 
     const pricingType = watch("pricing_type");
     const categoryValue = watch("category");
@@ -88,64 +88,28 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     const basePrice = watch("price");
     const baseInventory = watch("inventory");
 
-    const textAreaRef = useRefReact<HTMLTextAreaElement>(null);
+    const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const { ref: rhfRef, ...captionProps } = register("caption");
     useAutosizeTextArea(textAreaRef.current, captionValue || "");
 
-    // Helper to normalize old flat attributes (like color, size) into the new options/variants structure
-    const normalizeOptions = useCallback((details: any): Option[] => {
-        const existingOptions = details?.options || [];
-
-        if (existingOptions.length > 0) {
-            // Case 1: Already in the new additive format (details.options)
-            return existingOptions.map((opt: any) => ({ 
-                ...opt, 
-                id: opt.id || crypto.randomUUID(),
-                name: opt.name || 'Option',
-                values: (opt.values || []).map((v: any) => ({
-                    value: v.value || String(v), // Handle case where value might be a string array element
-                    priceDifference: v.priceDifference || 0,
-                }))
-            }));
-        }
-
-        // Case 2: Legacy/Flattened attributes (color, size, etc.)
-        const legacyOptionKeys = ['color', 'size', 'material']; // Common option keys
-        const options: Option[] = [];
-        
-        legacyOptionKeys.forEach(key => {
-            const value = details[key];
-            // Check if value is an array of strings (which is how TagInput saves it)
-            if (value && Array.isArray(value) && value.length > 0 && value.every(v => typeof v === 'string')) {
-                options.push({
-                    id: crypto.randomUUID(),
-                    name: toTitleCase(key),
-                    values: value.map(v => ({ value: String(v), priceDifference: 0 })),
-                });
-            }
-        });
-
-        return options;
-    }, []);
-
     // --- Initialization ---
     useEffect(() => {
-        console.log("ProductEditor useEffect: Running initialization/reset logic for product:", product?.id);
         if (product && shopDetails) {
             // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
             const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
-            const baseInventory = product.inventory || 0;
 
-            // 1. Normalize Options
-            const initialOptions = normalizeOptions(product.details);
+            // 1. Initialize Options and Variants from product.details
+            // Ensure IDs are present for Reorder.Group in VariantManager
+            const initialOptions: Option[] = (product.details?.options || []).map((opt: any) => ({
+                ...opt,
+                id: opt.id || crypto.randomUUID(),
+            }));
+            const initialVariants: Variant[] = product.details?.variants || [];
+            
             setProductOptions(initialOptions);
+            setProductVariants(initialVariants);
 
             // 2. Initialize form with base product data
-            // Filter out all option keys from details before resetting the form.
-            const specificationsOnly = Object.fromEntries(
-                Object.entries(product.details || {}).filter(([k]) => !OPTION_KEYS_TO_EXCLUDE.includes(k))
-            );
-
             form.reset({
                 name: product.name || "",
                 status: product.status || "Draft",
@@ -153,20 +117,20 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 category: product.category || "",
                 price: priceInDisplayCurrency, // Set price in display currency for the form
                 currency: shopDetails.currency || 'USD', // Always use shop's currency for the form's currency selector
-                inventory: baseInventory, // Base inventory (single source of truth)
+                inventory: product.inventory || 0, // Base inventory (sum of variants or single stock)
                 tags: Array.isArray(product.tags) ? product.tags : [],
                 pricing_type: product.pricing_type || 'one_time',
                 billing_interval: product.billing_interval,
-                // Specifications are stored directly in details, excluding reserved keys
+                // Specifications are stored directly in details, excluding 'options' and 'variants'
                 details: {
                     type: product.details?.type || 'generic',
-                    ...specificationsOnly // Use cleaned details
+                    ...Object.fromEntries(Object.entries(product.details || {}).filter(([k]) => k !== 'type' && k !== 'options' && k !== 'variants'))
                 }
             });
             const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
             setMediaItems(gallery);
         } else if (product) {
-            // Fallback if shopDetails not loaded yet (simplified reset)
+            // Fallback if shopDetails not loaded yet
             form.reset({
                 name: product.name || "",
                 status: product.status || "Draft",
@@ -183,7 +147,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         } else {
             setMediaItems([]);
         }
-    }, [product, form.reset, shopDetails, convertCurrency, setMediaItems, normalizeOptions]);
+    }, [product, form.reset, shopDetails, convertCurrency, setMediaItems]);
 
     // --- Metadata Fetching ---
     useEffect(() => {
@@ -243,14 +207,15 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 }
             }
 
-            // Update options (for OptionManager - new additive model)
+            // Update options (for VariantManager)
             if (analysis.options) {
                 const newOptions: Option[] = Object.entries(analysis.options).map(([name, values]) => ({
-                    id: crypto.randomUUID(),
+                    id: crypto.randomUUID(), // Assign new IDs for new options
                     name: toTitleCase(name),
-                    values: Array.isArray(values) ? values.map(v => ({ value: String(v), priceDifference: 0 })) : [{ value: String(values), priceDifference: 0 }],
+                    values: Array.isArray(values) ? values.map(String) : [String(values)],
                 }));
                 setProductOptions(newOptions);
+                setProductVariants([]); // Reset variants to force regeneration based on new options
             }
 
             toast.success("AI analysis complete! Product details have been updated.", { id: toastId });
@@ -261,14 +226,15 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         }
     };
 
-    const handleOptionManagerUpdate = useCallback((options: Option[]) => {
+    const handleVariantManagerUpdate = useCallback((options: Option[], variants: Variant[]) => {
         setProductOptions(options);
+        setProductVariants(variants);
     }, []);
 
     const handleSave = async (data: any) => {
         setIsSubmitting(true);
         
-        // 1. Prepare details payload: merge specifications and new option data
+        // 1. Prepare details payload: merge specifications and new variant data
         const cleanedDetails: { [key: string]: any } = { type: data.details.type };
         
         // Add specifications (non-option fields)
@@ -279,44 +245,38 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         });
 
         // 2. Determine base price and inventory for the main product record
-        // Base price is the price entered in the form (in display currency)
-        const basePriceInDisplay = data.price;
-        
-        // Calculate lowest possible price based on options
-        const minPriceAdjustment = productOptions.reduce((min, opt) => {
-            if (opt.values.length === 0) return min;
-            const minDiff = Math.min(...opt.values.map(v => v.priceDifference));
-            return min + minDiff;
-        }, 0);
+        const activeVariants = productVariants.filter(v => !v.disabled);
+        const hasVariants = activeVariants.length > 0;
 
-        const lowestFinalPriceInDisplay = basePriceInDisplay + minPriceAdjustment;
-        
-        // Convert lowest final price to ALL for storage
-        let priceInALL = convertCurrency(lowestFinalPriceInDisplay, data.currency, 'ALL');
-        
-        // Inventory is always the base inventory from the form
+        // Convert price from form's display currency (data.currency) to ALL for storage
+        let priceInALL = convertCurrency(data.price, data.currency, 'ALL');
         let baseInventoryForDB = data.pricing_type === 'one_time' ? data.inventory : 0;
 
-        // 3. Add options to details if they exist
-        if (productOptions.length > 0) {
+        if (hasVariants) {
+            // If variants exist, set base price to the lowest active variant price
+            const activePrices = activeVariants.map(v => data.price + v.priceDifference);
+            const lowestFinalPrice = activePrices.length > 0 ? Math.min(...activePrices) : data.price;
+            
+            priceInALL = convertCurrency(lowestFinalPrice, data.currency, 'ALL');
+            
+            // Set base inventory to the sum of all active variant inventories
+            baseInventoryForDB = activeVariants.reduce((sum, v) => sum + v.inventory, 0);
+
+            // Add options and variants to details
             cleanedDetails.options = productOptions;
-            // Explicitly remove variants key if it exists (from old model)
-            delete cleanedDetails.variants;
+            cleanedDetails.variants = activeVariants;
         } else {
+            // If no variants, remove options/variants keys
             delete cleanedDetails.options;
             delete cleanedDetails.variants;
         }
-        
-        // 4. Remove legacy flat attributes (color, size, material) from details before saving
-        OPTION_KEYS_TO_EXCLUDE.forEach(key => delete cleanedDetails[key]);
 
-
-        // 5. Update Supabase
+        // 3. Update Supabase
         const { error } = await supabase.from('products').update({
             name: data.name, status: data.status, caption: data.caption, category: data.category,
-            price: priceInALL, // Save lowest final price in ALL
+            price: priceInALL, // Save calculated base price in ALL
             currency: 'ALL', // Always store currency as ALL
-            inventory: baseInventoryForDB, // Save base inventory
+            inventory: baseInventoryForDB, // Save calculated total inventory
             tags: data.tags, pricing_type: data.pricing_type,
             billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
             details: cleanedDetails,
@@ -325,15 +285,8 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             thumbnail_url: mediaItems[0] || null,
           }).eq('id', product.id);
 
-        if (error) { 
-            showError(`Failed to update product: ${error.message}`); 
-            console.error("ProductEditor: Error updating product:", error); 
-        } 
-        else { 
-            showSuccess("Product updated successfully!"); 
-            onUpdate(); // Trigger parent refresh
-            onClose(); // <-- CRITICAL FIX: Call onClose here
-        }
+        if (error) { showError(`Failed to update product: ${error.message}`); console.error("ProductEditor: Error updating product:", error); } 
+        else { showSuccess("Product updated successfully!"); onUpdate(); onCancel(); }
         setIsSubmitting(false);
     };
 
@@ -343,9 +296,9 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     // Filter specifications to only include those defined by the current type, plus any existing custom ones
     const specificationKeys = new Set(typeAttributes.map(attr => attr.name));
     const specificationsToRender = Object.entries(getValues('details') || {})
-        .filter(([key, value]) => !OPTION_KEYS_TO_EXCLUDE.includes(key) && (specificationKeys.has(key) || (value !== undefined && value !== null && value !== '')));
+        .filter(([key]) => key !== 'type' && key !== 'options' && key !== 'variants' && (specificationKeys.has(key) || !productOptions.some(o => o.name.toLowerCase() === key.toLowerCase())));
 
-    const hasOptions = productOptions.length > 0;
+    const hasVariants = productVariants.length > 0;
 
     return (
       <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -366,10 +319,12 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                                   </CarouselItem>
                               ))}
                           </CarouselContent>
-                          {mediaItems.length > 1 && <>
-                              <CarouselPrevious className="left-2" />
-                              <CarouselNext className="right-2" />
-                          </>}
+                          {mediaItems.length > 1 && (
+                              <>
+                                  <CarouselPrevious className="left-2" />
+                                  <CarouselNext className="right-2" />
+                              </>
+                          )}
                       </Carousel>
                   )}
                   <Reorder.Group axis="x" values={mediaItems} onReorder={setMediaItems} className="flex flex-wrap gap-2 overflow-x-auto pb-2">
@@ -420,19 +375,24 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                       )} />
                     </div>
                     <div className="grid grid-cols-3 gap-4 pt-2">
-                        <div className="space-y-1 col-span-2"><Label htmlFor="price" className="text-xs">Base Price</Label><div className="flex items-center gap-2"><Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" /><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
-                        <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">Base Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller control={control} name="billing_interval" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
+                        <div className="space-y-1 col-span-2"><Label htmlFor="price" className="text-xs">Base Price</Label><div className="flex items-center gap-2"><Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" disabled={hasVariants} /><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
+                        <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">Base Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" disabled={hasVariants} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
                     </div>
+                    {hasVariants && (
+                        <p className="text-xs text-muted-foreground mt-1">Base Price/Stock fields are disabled because variants are active. The lowest variant price and total variant stock will be used for the main product listing.</p>
+                    )}
                   </div>
                 </div>
               </div>
               <div className="flex items-center justify-end pt-4"><Button type="button" variant="outline" onClick={handleReanalyze} disabled={isReanalyzing}>{isReanalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-amber-400" />}Find Specs with AI</Button></div>
               
-              {/* Option Manager (Replaced Variant Manager) */}
-              <OptionManager
+              {/* Variant Manager */}
+              <VariantManager
                 initialOptions={productOptions}
+                initialVariants={productVariants}
                 basePrice={basePrice}
-                onUpdate={handleOptionManagerUpdate}
+                baseInventory={baseInventory}
+                onUpdate={handleVariantManagerUpdate}
               />
 
               {/* Specifications (Fixed Details) */}

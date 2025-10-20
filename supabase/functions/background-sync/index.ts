@@ -175,9 +175,9 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       return;
     }
 
-    const { data: existingProducts, error: productsError } = await supabaseAdmin.from('products').select('id, instagram_post_id, details, inventory').eq('business_id', business.id);
+    const { data: existingProducts, error: productsError } = await supabaseAdmin.from('products').select('id, instagram_post_id').eq('business_id', business.id);
     if (productsError) throw productsError;
-    const existingProductMap = new Map((existingProducts || []).map(p => [p.instagram_post_id, p]));
+    const existingProductMap = new Map((existingProducts || []).map(p => [p.instagram_post_id, p.id]));
 
     const postsToProcess: InstagramPost[] = syncType === 'quick' ? allPosts.filter(p => !existingProductMap.has(p.id)) : allPosts;
     const total = postsToProcess.length;
@@ -317,7 +317,15 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
               details[key] = value;
           }
       }
-      
+      if (options) {
+          details.options = Object.entries(options).map(([name, values]) => ({
+            id: crypto.randomUUID(), // Assign ID for client-side management
+            name: toTitleCase(name),
+            values: Array.isArray(values) ? values.map(String) : [String(values)],
+          }));
+          details.variants = []; // Initialize variants array for new products
+      }
+
       // Determine final pricing and inventory
       const finalPricingType = pricingType || 'one_time';
       const finalBillingInterval = finalPricingType === 'subscription' ? (billingInterval || 'month') : null;
@@ -329,85 +337,29 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         priceInALL = await convertCurrencyServer(productInfo.price, productInfo.currency, 'ALL');
       }
 
-      // --- Additive Option Generation (Replaces Variant Generation) ---
-      let productOptions: any[] = [];
-      let basePriceForDB = priceInALL;
-      let baseInventoryForDB = inventory;
-
-      if (options && Object.keys(options).length > 0) {
-          // Convert AI options object to additive option array format
-          productOptions = Object.entries(options).map(([name, values]) => ({
-              id: crypto.randomUUID(),
-              name: toTitleCase(name),
-              values: Array.isArray(values) 
-                  ? values.map(v => ({ value: String(v), priceDifference: 0 })) 
-                  : [{ value: String(values), priceDifference: 0 }],
-          }));
-          
-          // Add options to details
-          details.options = productOptions;
-          
-          // Base price remains the AI price (priceInALL) because all price differences are 0 initially.
-          // Inventory remains the AI inventory (inventory).
-          basePriceForDB = priceInALL;
-          baseInventoryForDB = inventory;
-          
-          // Ensure variants key is explicitly removed
-          delete details.variants;
-      } else {
-          // If no options, ensure options/variants keys are not present
-          delete details.options;
-          delete details.variants;
-      }
-
       const productPayload: ProductPayload = {
         name: productInfo.productName,
         caption: productInfo.description,
-        price: basePriceForDB, // Store base price in ALL (which is the lowest final price initially)
+        price: priceInALL, // Store price in ALL
         currency: 'ALL', // Always store currency as ALL
         tags: productInfo.tags,
         category: toTitleCase(categoryName || ''),
         details: details,
         business_id: business.id, 
         user_id: user.id, 
-        status: baseInventoryForDB === 0 ? 'Out of Stock' : 'Draft', // Set status based on calculated inventory
+        status: inventory === 0 ? 'Out of Stock' : 'Draft', // Set status based on inventory
         instagram_post_id: post.id, 
         media_url: post.media_url, 
         thumbnail_url: post.thumbnail_url || post.media_url, 
         media_type: post.media_type,
-        inventory: baseInventoryForDB, // Include calculated inventory in payload
+        inventory: inventory, // Include inventory in payload
         pricing_type: finalPricingType, // Include pricing_type
         billing_interval: finalBillingInterval, // Include billing_interval
       };
 
-      const existingProduct = existingProductMap.get(post.id);
-      if (existingProduct) {
-        productPayload.id = existingProduct.id;
-        
-        // If updating an existing product, preserve existing options if they exist
-        if (existingProduct.details?.options) {
-            productPayload.details.options = existingProduct.details.options;
-            
-            // Recalculate base price from existing options
-            const existingOptions = existingProduct.details.options as any[];
-            const minPriceAdjustment = existingOptions.reduce((min, opt) => {
-                if (opt.values.length === 0) return min;
-                const minDiff = Math.min(...opt.values.map((v: any) => v.priceDifference));
-                return min + minDiff;
-            }, 0);
-            
-            // The price stored in the DB is the lowest final price. We need to calculate it again.
-            const lowestFinalPriceInALL = priceInALL + minPriceAdjustment;
-            productPayload.price = lowestFinalPriceInALL;
-            
-        } else {
-            // If no existing options, use the newly generated ones (or none)
-            productPayload.details.options = details.options;
-        }
-        
-        // Inventory is always updated to the AI-suggested/current base inventory
-        productPayload.inventory = inventory;
-
+      const existingId = existingProductMap.get(post.id);
+      if (existingId) {
+        productPayload.id = existingId;
         summary.updated++;
         summary.updated_items.push(productPayload);
       } else {
@@ -456,6 +408,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
     const finalMessage = `Sync complete. Created ${summary.created}, updated ${summary.updated}, skipped ${summary.skipped}.`;
     await updateJobProgress(supabaseAdmin, jobId, { status: 'completed', progress: total, total, message: finalMessage, summary });
+    console.log(`Sync AI Token Summary for Job ${jobId}: Prompt Tokens: ${summary.total_ai_tokens_used.prompt}, Candidate Tokens: ${summary.total_ai_tokens_used.candidates}`);
 
   } catch (error) {
     console.error('Background Sync Error:', error.message);

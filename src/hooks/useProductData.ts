@@ -17,7 +17,6 @@ export interface Product {
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
   product_type: 'physical' | 'digital';
-  caption: string;
 }
 
 export interface DetailsAttribute {
@@ -46,13 +45,15 @@ export const useProductData = (): UseProductDataResult => {
     setIsLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
+      console.log("useProductData: No user found, skipping fetch.");
       setIsLoading(false);
       return;
     }
+    console.log("useProductData: Fetching products for user ID:", user.id);
 
     const [productsRes, categoriesRes, typesRes] = await Promise.all([
-      // ADDED caption to the select list
-      supabase.from("products").select("id, name, status, price, currency, inventory, media_url, created_at, category, tags, details, pricing_type, billing_interval, product_type, caption").eq('user_id', user.id).order('created_at', { ascending: false }),
+      // ADDED inventory to the select list
+      supabase.from("products").select("id, name, status, price, currency, inventory, media_url, created_at, category, tags, details, pricing_type, billing_interval, product_type").eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from("categories").select("name").eq('user_id', user.id),
       supabase.from("types").select("name, attributes").eq('user_id', user.id),
     ]);
@@ -60,6 +61,7 @@ export const useProductData = (): UseProductDataResult => {
     if (productsRes.error) { 
       console.error("useProductData: Error fetching products:", productsRes.error); 
     } else { 
+      console.log("useProductData: Fetched products data:", productsRes.data);
       setAllProducts(productsRes.data as Product[]); 
     }
 

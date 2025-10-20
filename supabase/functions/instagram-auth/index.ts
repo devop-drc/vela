@@ -74,7 +74,6 @@ serve(async (req) => {
       const shortLivedToken = tokenData.access_token;
 
       // 2. Exchange for long-lived token
-      // FIX: Changed FACEABASE_APP_SECRET to FACEBOOK_APP_SECRET
       const longLivedTokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${FACEBOOK_APP_ID}&client_secret=${FACEBOOK_APP_SECRET}&fb_exchange_token=${shortLivedToken}`;
       const longLivedTokenResponse = await fetch(longLivedTokenUrl);
       const longLivedTokenData = await longLivedTokenResponse.json();
@@ -126,7 +125,7 @@ serve(async (req) => {
         throw upsertError;
       }
 
-      // 5. Upload Instagram profile picture to Supabase Storage (shop-assets)
+      // 5. Upload Instagram profile picture to Supabase Storage
       let uploadedLogoUrl: string | null = null;
       if (instagram_profile_picture_url) {
         try {
@@ -134,8 +133,6 @@ serve(async (req) => {
           if (!imageResponse.ok) throw new Error(`Failed to fetch profile picture: ${imageResponse.statusText}`);
           const imageBlob = await imageResponse.blob();
           const fileName = `${userIdFromState}/profile_pic_${Date.now()}.jpg`;
-          
-          // Use 'shop-assets' bucket
           const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
             .from('shop-assets')
             .upload(fileName, imageBlob, {
@@ -191,7 +188,7 @@ serve(async (req) => {
         shop_name: finalShopName, // Use the Instagram shop name
         slug: finalSlug, // Use the Instagram username as slug if available
         logo_url: uploadedLogoUrl,
-        favicon_url: uploadedLogoUrl, // Use the uploaded image as favicon
+        favicon_url: uploadedLogoUrl,
         currency: 'USD', // Default currency, user can change in settings
         headline: instagram_biography?.substring(0, 100) || null, // Use IG bio as initial headline
         about: instagram_biography || null, // Use IG bio as initial about

@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { SyncJob, SyncContextType } from '@/types/sync';
+import { useState, useEffect, ReactNode, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChannel, Session } from '@supabase/supabase-js';
+import { SyncJob, SyncContextType } from '@/types/sync';
 import { SyncContext } from './syncContext';
 
 export const SyncProvider = ({ children }: { children: ReactNode }) => {
@@ -34,7 +34,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
         .from('sync_jobs')
         .select('*')
         .eq('user_id', userId)
-        .or('status.eq.starting,status.eq.in_progress,status.eq.completed,status.eq.failed')
+        .or('status.eq.starting,status.eq.in_progress,status.eq.completed,status.eq.failed') // Check for recent finished jobs too
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -42,6 +42,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       if (error && error.code !== 'PGRST116') {
         console.error("Error fetching initial sync job:", error);
       } else if (initialJob) {
+        // Only set the initial job if it's running OR if it's finished and hasn't been dismissed
         if (['starting', 'in_progress'].includes(initialJob.status) || initialJob.id !== dismissedJobId) {
           setActiveJob(initialJob as SyncJob);
         } else {
@@ -57,19 +58,23 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
             const newJobData = payload.new as SyncJob;
             const dismissedJobId = sessionStorage.getItem('dismissed_sync_job_id');
 
+            // If the job is completed/failed and was dismissed, ignore it.
             if (newJobData.id === dismissedJobId && ['completed', 'failed'].includes(newJobData.status)) {
               setActiveJob(null);
               return;
             }
 
             setActiveJob(prevJob => {
+              // If it's a new job or a different job, set it.
               if (!prevJob || prevJob.id !== newJobData.id) {
+                // If a new job starts, clear dismissal flag for it.
                 if (['starting', 'in_progress'].includes(newJobData.status)) {
                     sessionStorage.removeItem('dismissed_sync_job_id');
                 }
                 return newJobData;
               }
 
+              // If it's the same job, merge the states.
               return {
                 ...prevJob,
                 ...newJobData,
@@ -77,6 +82,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
               };
             });
 
+            // If a job becomes active again, clear any dismissal flag for it.
             if (['starting', 'in_progress'].includes(newJobData.status)) {
               sessionStorage.removeItem('dismissed_sync_job_id');
             }
@@ -115,16 +121,15 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   const dismissJob = () => {
     if (activeJob) {
       sessionStorage.setItem('dismissed_sync_job_id', activeJob.id);
+      // Only set to null if the job is finished. If it's running, let the user abort.
       if (['completed', 'failed'].includes(activeJob.status)) {
         setActiveJob(null);
       }
     }
   };
 
-  const isSyncing = !!activeJob && ['starting', 'in_progress'].includes(activeJob.status);
-
   return (
-    <SyncContext.Provider value={{ activeJob, isSyncing, dismissJob, startNewSync }}>
+    <SyncContext.Provider value={{ activeJob, isSyncing: !!activeJob && ['starting', 'in_progress'].includes(activeJob.status), dismissJob, startNewSync }}>
       {children}
     </SyncContext.Provider>
   );

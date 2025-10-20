@@ -22,7 +22,7 @@ interface Product {
   inventory: number;
   media_url: string;
   media_gallery: string[] | null;
-  media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM';
+  media_type: string | null;
   thumbnail_url?: string;
   caption: string;
   category: string;
@@ -54,11 +54,6 @@ const DetailRow = ({ icon: Icon, children }: { icon: React.ElementType, children
 export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSize, onSelect, onEdit, onStatusChange }: ProductCardProps) => {
   const { shopDetails, convertCurrency } = useShop();
 
-  // CRITICAL NULL CHECK: If product is null, return null immediately.
-  if (!product) {
-    return null;
-  }
-
   const handleCardClick = () => {
     if (isSelectionModeActive) {
       onSelect(product.id);
@@ -71,26 +66,18 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
   
   // Convert price to display currency
   let displayPrice = product.price;
-  let originalPriceFormatted = 'N/A';
-
   if (product.price != null && shopDetails?.currency) {
     displayPrice = convertCurrency(product.price, product.currency, shopDetails.currency);
-    
-    // Format the original price (which is now always ALL) with its currency for comparison if needed
-    originalPriceFormatted = product.currency 
-      ? new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)
-      : 'N/A';
-  } else {
-    displayPrice = null;
   }
 
+  // Format the original price (which is now always ALL) with its currency for comparison if needed
+  const originalPriceFormatted = product.price != null && product.currency 
+    ? new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)
+    : '';
 
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
   
-  // Filter out 'options' and 'variants' from general details display
-  const detailsToDisplay = Object.entries(details || {}).filter(([key, value]) => 
-    key !== 'type' && key !== 'options' && key !== 'variants' && value && (!Array.isArray(value) || value.length > 0)
-  );
+  const detailsToDisplay = Object.entries(details || {}).filter(([key, value]) => key !== 'type' && value && (!Array.isArray(value) || value.length > 0));
 
   const getStockBadge = (inventory: number | null) => {
     if (product.pricing_type === 'subscription') {
@@ -177,7 +164,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
             {gridSize === 'lg' && detailsToDisplay.length > 0 && (
               <div className="space-y-1.5 pt-1">
                 {detailsToDisplay.slice(0, 2).map(([key, value]) => (
-                  <DetailRow key={key} icon={getAttributeIcon(key)}>
+                  <DetailRow key={key} icon={Cog}>
                     <span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span>
                     <span className="truncate">{Array.isArray(value) ? value.join(', ') : String(value)}</span>
                   </DetailRow>
@@ -187,16 +174,20 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
           </div>
 
           <div className="flex items-end justify-between pt-2">
-            {displayPrice != null && shopDetails ? ( 
+            {product.price != null && shopDetails ? ( // Ensure shopDetails is available
               <div className="flex flex-col">
                 <p className="font-semibold text-lg">
-                  {new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: shopDetails.currency
-                  }).format(displayPrice)}
-                  {product.pricing_type === 'subscription' && (
-                    <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
-                  )}
+                  {displayPrice != null ? (
+                    <>
+                      {new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: shopDetails.currency
+                      }).format(displayPrice)}
+                      {product.pricing_type === 'subscription' && (
+                        <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                      )}
+                    </>
+                  ) : 'N/A'}
                 </p>
                 {product.currency && product.currency !== shopDetails.currency && (
                   <span className="text-xs text-muted-foreground">

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -22,7 +22,7 @@ const productSchema = z.object({
   tags: z.array(z.string()).optional(),
   pricing_type: z.enum(['one_time', 'subscription']),
   billing_interval: z.enum(['month', 'year']).optional().nullable(),
-  details: z.any(), // Keep details as any for dynamic attributes and options
+  details: z.any(),
 }).refine(data => {
     if (data.pricing_type === 'subscription' && !data.billing_interval) {
         return false;
@@ -61,10 +61,7 @@ interface ProductEditorProps {
   onUpdate: () => void;
 }
 
-const LEGACY_OPTION_KEYS = ['color', 'size', 'material', 'options', 'variants'];
-
 export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEditorProps) => {
-  // --- HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP LEVEL ---
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,18 +73,10 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     resolver: zodResolver(productSchema),
   });
   
-  // --- END UNCONDITIONAL HOOKS ---
-
-  // Use a separate effect to handle form reset and media initialization when 'product' changes
   useEffect(() => {
     if (product && shopDetails) {
       // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
       const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
-
-      // Filter out legacy option keys from details before resetting the form
-      const specificationsOnly = Object.fromEntries(
-          Object.entries(product.details || {}).filter(([k]) => !LEGACY_OPTION_KEYS.includes(k))
-      );
 
       form.reset({
         name: product.name || "",
@@ -100,10 +89,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
         tags: Array.isArray(product.tags) ? product.tags : [],
         pricing_type: product.pricing_type || 'one_time',
         billing_interval: product.billing_interval,
-        details: {
-            type: product.details?.type || 'generic',
-            ...specificationsOnly
-        },
+        details: product.details || { type: 'generic' },
       });
       const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
       setMediaItems(gallery);
@@ -122,14 +108,14 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
         billing_interval: product.billing_interval,
         details: product.details || { type: 'generic' },
       });
-      const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
-      setMediaItems(gallery);
+    } else {
+      setMediaItems([]);
     }
   }, [product, form.reset, shopDetails, convertCurrency]);
   
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !product) return;
+    if (!file) return;
 
     setIsUploading(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -139,7 +125,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       return;
     }
 
-    const filePath = `${user.id}/${product.id}/${Date.now()}-${file.name}`;
+    const filePath = `${user.id}/${product!.id}/${Date.now()}-${file.name}`;
     const { error } = await supabase.storage.from('product-media').upload(filePath, file);
 
     if (error) {
@@ -152,14 +138,13 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   };
 
   const handleImageDelete = async (urlToDelete: string) => {
-    if (!product) return;
     const fileName = urlToDelete.split('/').pop();
     if (!fileName) return;
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const filePath = `${user.id}/${product.id}/${fileName}`;
+    const filePath = `${user.id}/${product!.id}/${fileName}`;
     const { error } = await supabase.storage.from('product-media').remove([filePath]);
 
     if (error) {
@@ -170,11 +155,10 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   };
 
   const handleDelete = async () => {
-    if (!product) return;
     setIsSubmitting(true);
     
     // Delete from AI analysis cache if instagram_post_id exists
-    if (product.instagram_post_id) {
+    if (product?.instagram_post_id) {
       const { error: cacheError } = await supabase
         .from('ai_analysis_cache')
         .delete()
@@ -185,7 +169,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       }
     }
 
-    const { error } = await supabase.from('products').delete().eq('id', product.id);
+    const { error } = await supabase.from('products').delete().eq('id', product!.id);
     if (error) { 
       showError(`Failed to delete product: ${error.message}`); 
     } else { 
@@ -196,23 +180,13 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     setIsSubmitting(false); setIsDeleting(false);
   };
 
-  // If product is null, we render nothing inside the dialog, but the dialog itself is controlled by `isOpen`
-  if (!product) {
-    return null;
-  }
-
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(open) => { 
-        if (!open) { 
-          onClose(); 
-          setIsEditing(false); 
-        } 
-      }}>
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setIsEditing(false); } }}>
         <DialogContent className="sm:max-w-6xl max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="sr-only">
-            <DialogTitle>Product Details: {product.name}</DialogTitle>
-            <DialogDescription>View or edit product details for {product.name}.</DialogDescription>
+            <DialogTitle>Product Details: {product?.name}</DialogTitle>
+            <DialogDescription>View or edit product details for {product?.name}.</DialogDescription>
           </DialogHeader>
           <AnimatePresence mode="wait">
             {isEditing ? (
@@ -225,12 +199,10 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
                   isUploading={isUploading}
                   form={{...form, handleSubmit: form.handleSubmit}}
                   onCancel={() => setIsEditing(false)}
-                  onClose={onClose} // Pass onClose here
                   isSubmitting={isSubmitting}
                   isEditing={isEditing}
                   setMediaItems={setMediaItems}
                   setIsSubmitting={setIsSubmitting}
-                  onUpdate={onUpdate}
                 />
               </FormProvider>
             ) : (

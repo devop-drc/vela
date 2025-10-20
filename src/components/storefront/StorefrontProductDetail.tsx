@@ -7,7 +7,7 @@ import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Loader2, ShoppingCart, Minus, Plus, Home, ArrowLeft, Star, Truck, Sparkles, User, Mail, MapPin, City, Globe, StickyNote, Calendar, Lock, CreditCard, DollarSign } from "lucide-react";
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,45 +32,17 @@ const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon
     </div>
 );
 
-// Define keys that should NOT be displayed as specifications because they are options/variants
-const OPTION_KEYS_TO_EXCLUDE = ['type', 'options', 'variants', 'color', 'size', 'material']; 
-
 const StorefrontProductDetail = () => {
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
   const { shopDetails, products, isLoading, error, appearanceSettings, convertCurrency, promotions } = useStorefront();
   const { addToCart } = useCart();
   const { addRecentlyViewed } = useRecentlyViewed(); // Use the new hook
   const [quantity, setQuantity] = useState(1);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null); // Placeholder for variant selection
+  const [selectedSize, setSelectedSize] = useState<string | null>(null); // Placeholder for variant selection
 
   const [api, setApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
-
-  const product = products.find(p => p.id === productId);
-  const productOptions = product?.details?.options || [];
-  const hasOptions = productOptions.length > 0;
-
-  // State for selected option values (e.g., { Color: 'Red', Size: 'M' })
-  const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string | null }>(() => {
-    const initial: { [key: string]: string | null } = {};
-    productOptions.forEach((opt: any) => {
-      initial[opt.name] = opt.values[0]?.value || null; // Default to first value
-    });
-    return initial;
-  });
-
-  // Reset quantity and options when product changes
-  useEffect(() => {
-    if (product) {
-      setQuantity(1);
-      setSelectedOptions(() => {
-        const initial: { [key: string]: string | null } = {};
-        productOptions.forEach((opt: any) => {
-          initial[opt.name] = opt.values[0]?.value || null;
-        });
-        return initial;
-      });
-    }
-  }, [product, productOptions]);
 
   useEffect(() => {
     // Scroll to top when component mounts or productId changes
@@ -104,6 +76,8 @@ const StorefrontProductDetail = () => {
     );
   }
 
+  const product = products.find(p => p.id === productId);
+
   useEffect(() => {
     if (product && shopDetails?.slug) {
       addRecentlyViewed({
@@ -135,33 +109,11 @@ const StorefrontProductDetail = () => {
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
   const blurEnabled = appearanceSettings?.blurEnabled;
 
-  // The base price is the lowest final price stored in the main product record (in ALL)
-  const lowestFinalPriceInDisplay = convertCurrency(product.price, product.currency);
+  // Convert product price to shop's display currency
+  const originalDisplayPrice = convertCurrency(product.price, product.currency);
 
-  // --- Price and Inventory Logic (Additive Model) ---
-  const { finalDisplayPrice, finalInventory, basePriceInDisplay } = useMemo(() => {
-      const basePrice = lowestFinalPriceInDisplay;
-      let priceAdjustment = 0;
-      let inventory = product.inventory; // Inventory is now stored at the product level
+  const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && product.inventory <= 0);
 
-      // Calculate price adjustment based on selected options
-      productOptions.forEach((option: any) => {
-          const selectedValue = selectedOptions[option.name];
-          const optionValue = option.values.find((v: any) => v.value === selectedValue);
-          priceAdjustment += optionValue?.priceDifference || 0;
-      });
-
-      return {
-          finalDisplayPrice: basePrice + priceAdjustment,
-          finalInventory: inventory,
-          basePriceInDisplay: basePrice,
-      };
-  }, [product.inventory, productOptions, selectedOptions, lowestFinalPriceInDisplay]);
-
-  // Use the main product status if no variants, otherwise rely on variant stock/disabled status
-  const isProductOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && finalInventory <= 0);
-  
-  // --- Promotion Logic ---
   const activePromotions = promotions.filter(promo => {
     if (!promo.is_active) return false;
     const now = new Date();
@@ -177,24 +129,24 @@ const StorefrontProductDetail = () => {
     return true; // Applies to all products if target_products is empty
   });
 
-  let discountedPrice = finalDisplayPrice;
+  let discountedPrice = originalDisplayPrice;
   let hasDiscount = false;
 
-  if (activePromotions.length > 0 && finalDisplayPrice !== null) {
+  if (activePromotions.length > 0 && originalDisplayPrice !== null) {
     const firstDiscount = activePromotions.find(p => p.type === 'discount');
     if (firstDiscount && firstDiscount.value) {
       if (firstDiscount.value.discountType === 'percentage') {
-        discountedPrice = finalDisplayPrice * (1 - firstDiscount.value.discountValue / 100);
+        discountedPrice = originalDisplayPrice * (1 - firstDiscount.value.discountValue / 100);
         hasDiscount = true;
       } else if (firstDiscount.value.discountType === 'flat') {
-        discountedPrice = finalDisplayPrice - firstDiscount.value.discountValue;
+        discountedPrice = originalDisplayPrice - firstDiscount.value.discountValue;
         hasDiscount = true;
       }
       discountedPrice = Math.max(0, discountedPrice);
     }
   }
 
-  const getPromotionBadge = (promo: any) => {
+  const getPromotionBadge = (promo: Promotion) => {
     switch (promo.type) {
       case 'discount':
         if (promo.value?.discountType === 'percentage') return `${promo.value.discountValue}% OFF`;
@@ -212,42 +164,38 @@ const StorefrontProductDetail = () => {
       toast.error("Shop details not available.");
       return;
     }
-    if (isProductOutOfStock) {
+    if (isOutOfStock) {
       toast.error("This product is currently out of stock.");
       return;
     }
 
-    const optionsForCart: { [key: string]: string | string[] } = {};
-    if (hasOptions) {
-        Object.entries(selectedOptions).forEach(([key, value]) => {
-            if (value) optionsForCart[key] = value;
-        });
-    }
+    const selectedOptions: { [key: string]: string | string[] } = {};
+    if (selectedColor) selectedOptions.color = selectedColor;
+    if (selectedSize) selectedOptions.size = selectedSize;
+    // Add other selected options here if they were part of the UI
 
     addToCart({
       productId: product.id,
       name: product.name,
-      price: hasDiscount ? discountedPrice : finalDisplayPrice, // Use final calculated price
-      originalPrice: finalDisplayPrice, // Pass final price as original price for discount calculation
-      isDiscounted: hasDiscount,
+      price: hasDiscount ? discountedPrice : originalDisplayPrice, // Use discounted price if applicable
+      originalPrice: originalDisplayPrice, // Pass original price
+      isDiscounted: hasDiscount, // Pass discount status
       currency: shopDetails.currency || 'USD',
       media_url: product.media_url,
       media_type: product.media_type,
       slug: shopDetails.slug,
-      selectedOptions: Object.keys(optionsForCart).length > 0 ? optionsForCart : undefined,
-      pricing_type: product.pricing_type,
-      product_type: product.product_type,
-      billing_interval: product.billing_interval,
+      selectedOptions: Object.keys(selectedOptions).length > 0 ? selectedOptions : undefined, // Pass selected options
+      pricing_type: product.pricing_type, // Pass pricing_type
+      product_type: product.product_type, // Pass product_type
+      billing_interval: product.billing_interval, // Pass billing_interval
     }, quantity);
   };
 
-  // Filter out options and variants from general details to get specifications
-  const specifications = useMemo(() => {
-    const reservedKeys = new Set(OPTION_KEYS_TO_EXCLUDE);
-    return Object.entries(product.details || {})
-        .filter(([key]) => !reservedKeys.has(key))
-        .map(([key, value]) => ({ name: key, value }));
-  }, [product.details]);
+  const allDetails = Object.entries(product.details || {}).filter(([key, value]) => key !== 'type' && value && (!Array.isArray(value) || value.length > 0));
+  const colors = allDetails.find(([key]) => key === 'color')?.[1] as string[] || [];
+  const sizes = allDetails.find(([key]) => key === 'size')?.[1] as string[] || [];
+  const otherOptions = allDetails.filter(([key]) => ['material'].includes(key)); // Example other options
+  const specifications = allDetails.filter(([key]) => !['color', 'size', 'material', 'type'].includes(key)); // Example specs
 
   const relatedProducts = useMemo(() => {
     // Filter out the current product and take up to 4 other products
@@ -265,7 +213,7 @@ const StorefrontProductDetail = () => {
               {mediaItems.map((url: string, index: number) => (
                 <CarouselItem key={index}>
                   <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
-                    <MediaItem src={url} alt={`${product.name} - image ${index + 1}`} type={product.media_type} className={cn(isProductOutOfStock && "grayscale")} /> {/* Apply grayscale here */}
+                    <MediaItem src={url} alt={`${product.name} - image ${index + 1}`} className={cn(isOutOfStock && "grayscale")} /> {/* Apply grayscale here */}
                   </div>
                 </CarouselItem>
               ))}
@@ -307,12 +255,12 @@ const StorefrontProductDetail = () => {
             </p>
             <h1 className="text-3xl md:text-5xl font-bold font-heading mb-2 md:mb-3 leading-tight flex flex-wrap items-center gap-2"> {/* Added flex-wrap */}
               {product.name}
-              {isProductOutOfStock && (
+              {isOutOfStock && (
                 <Badge variant="secondary" className="text-sm md:text-base bg-amber-500 text-white flex-shrink-0"> {/* Added flex-shrink-0 */}
                   Coming Soon
                 </Badge>
               )}
-              {activePromotions.length > 0 && !isProductOutOfStock && (
+              {activePromotions.length > 0 && !isOutOfStock && (
                 <div className="flex gap-1 flex-shrink-0"> {/* Added flex-shrink-0 */}
                   {activePromotions.map(promo => (
                     <Badge key={promo.id} className="bg-emerald-500 text-white text-sm md:text-base">
@@ -323,10 +271,10 @@ const StorefrontProductDetail = () => {
               )}
             </h1>
             <div className="flex items-center gap-3 mb-3">
-                {hasDiscount && finalDisplayPrice !== null ? (
+                {hasDiscount && originalDisplayPrice !== null ? (
                   <div className="flex items-baseline gap-2">
                     <p className="text-base text-muted-foreground line-through">
-                      {formatCurrency(basePriceInDisplay, shopDetails?.currency)}
+                      {formatCurrency(originalDisplayPrice, shopDetails?.currency)}
                     </p>
                     <p className="text-2xl md:text-3xl font-bold text-emerald-600"> {/* Made discounted price green */}
                       {formatCurrency(discountedPrice, shopDetails?.currency)}
@@ -337,7 +285,7 @@ const StorefrontProductDetail = () => {
                   </div>
                 ) : (
                   <p className="text-2xl md:text-3xl font-bold text-primary">
-                    {finalDisplayPrice != null ? formatCurrency(finalDisplayPrice, shopDetails?.currency) : 'N/A'}
+                    {originalDisplayPrice != null ? formatCurrency(originalDisplayPrice, shopDetails?.currency) : 'N/A'}
                     {product.pricing_type === 'subscription' && (
                         <span className="text-base md:text-lg font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                     )}
@@ -361,33 +309,61 @@ const StorefrontProductDetail = () => {
             </div>
           )}
 
-          {/* Variant Selection */}
-          {hasOptions && (
+          {/* Variant Selection (Placeholder) */}
+          {(colors.length > 0 || sizes.length > 0 || otherOptions.length > 0) && (
             <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-md")}>
               <CardHeader><CardTitle className="text-lg md:text-xl">Options</CardTitle></CardHeader>
               <CardContent className="p-4 space-y-4">
-                {productOptions.map((option: any) => (
-                  <div key={option.id} className="space-y-2">
-                    <Label className="text-sm capitalize">{option.name}</Label>
+                {colors.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Color</Label>
                     <div className="flex flex-wrap gap-2">
-                      {option.values.map((value: any) => (
+                      {colors.map(color => (
                         <Button
-                          key={value.value}
-                          variant={selectedOptions[option.name] === value.value ? "default" : "outline"}
-                          onClick={() => setSelectedOptions(prev => ({ ...prev, [option.name]: value.value }))}
-                          className={cn("capitalize text-sm md:text-base", selectedOptions[option.name] === value.value && "ring-2 ring-primary ring-offset-2")}
+                          key={color}
+                          variant={selectedColor === color ? "default" : "outline"}
+                          onClick={() => setSelectedColor(color)}
+                          className={cn("capitalize text-sm md:text-base", selectedColor === color && "ring-2 ring-primary ring-offset-2")}
                         >
-                          {value.value}
-                          {value.priceDifference !== 0 && (
-                              <span className={cn("ml-1 font-mono text-xs", value.priceDifference > 0 ? "text-emerald-600" : "text-destructive")}>
-                                  ({formatCurrency(value.priceDifference, shopDetails?.currency, 'en-US', true)})
-                              </span>
-                          )}
+                          {color}
                         </Button>
                       ))}
                     </div>
                   </div>
-                ))}
+                )}
+                {sizes.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Size</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {sizes.map(size => (
+                        <Button
+                          key={size}
+                          variant={selectedSize === size ? "default" : "outline"}
+                          onClick={() => setSelectedSize(size)}
+                          className={cn("text-sm md:text-base", selectedSize === size && "ring-2 ring-primary ring-offset-2")}
+                        >
+                          {size}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {otherOptions.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 md:gap-x-6 gap-y-3 md:gap-y-4">
+                    {otherOptions.map(([key, value]) => {
+                      const Icon = getAttributeIcon(key);
+                      return (
+                        <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
+                          {Array.isArray(value) ? (
+                            value.map(item => <Badge key={item} variant="outline" className="text-xs md:text-sm bg-primary/10 text-primary border-primary/30">{item}</Badge>)
+                          ) : (
+                            <p className="text-sm md:text-base">{String(value)}</p>
+                          )}
+                        </DetailDisplayRow>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -398,11 +374,11 @@ const StorefrontProductDetail = () => {
               <CardHeader><CardTitle className="text-lg md:text-xl">Specifications</CardTitle></CardHeader>
               <CardContent className="p-4 space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 md:gap-x-6 gap-y-3 md:gap-y-4">
-                  {specifications.map(field => {
-                    const Icon = getAttributeIcon(field.name);
+                  {specifications.map(([key, value]) => {
+                    const Icon = getAttributeIcon(key);
                     return (
-                      <DetailDisplayRow key={field.name} label={field.name.replace(/_/g, ' ')} icon={Icon}>
-                          <p className="text-sm md:text-base">{Array.isArray(field.value) ? field.value.join(', ') : String(field.value)}</p>
+                      <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
+                          <p className="text-sm md:text-base">{Array.isArray(value) ? value.join(', ') : String(value)}</p>
                       </DetailDisplayRow>
                     );
                   })}
@@ -412,55 +388,49 @@ const StorefrontProductDetail = () => {
           )}
 
           {/* Inventory & Add to Cart */}
-          {product.pricing_type === 'one_time' && (
-            <div className="space-y-4">
-                {finalInventory !== null && (
-                    <p className="text-sm font-medium text-muted-foreground">
-                        {finalInventory > 0 ? (
-                            <span className="text-emerald-600">{finalInventory} in stock</span>
-                        ) : (
-                            <span className="text-destructive">Out of Stock</span>
-                        )}
-                    </p>
-                )}
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center border rounded-md">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
-                            disabled={quantity <= 1}
-                            className="h-8 w-8 md:h-9 md:w-9"
-                        >
-                            <Minus className="h-4 w-4" />
-                        </Button>
-                        <Input
-                            type="number"
-                            value={quantity}
-                            onChange={(e) => setQuantity(Math.max(1, Math.min(finalInventory || 1, parseInt(e.target.value) || 1)))}
-                            className="w-14 md:w-16 text-center border-y-0 border-x rounded-none focus-visible:ring-0 text-sm md:text-base"
-                            min={1}
-                            max={finalInventory || 1}
-                        />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setQuantity(prev => Math.min(finalInventory || 1, prev + 1))}
-                            disabled={quantity >= (finalInventory || 1)}
-                            className="h-8 w-8 md:h-9 md:w-9"
-                        >
-                            <Plus className="h-4 w-4" />
-                        </Button>
-                    </div>
-                    <Button size="lg" className="flex-1 text-base md:text-lg" onClick={handleAddToCart} disabled={isProductOutOfStock}>
-                        <ShoppingCart className="mr-2 h-5 w-5" />
-                        Add to Cart
-                    </Button>
-                </div>
+          {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && (
+            <div className="flex items-center gap-4">
+              <div className="flex items-center border rounded-md">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
+                  disabled={quantity <= 1}
+                  className="h-8 w-8 md:h-9 md:w-9"
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <Input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, Math.min(product.inventory || 1, parseInt(e.target.value) || 1)))}
+                  className="w-14 md:w-16 text-center border-y-0 border-x rounded-none focus-visible:ring-0 text-sm md:text-base"
+                  min={1}
+                  max={product.inventory || 1}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setQuantity(prev => Math.min(product.inventory || 1, prev + 1))}
+                  disabled={quantity >= (product.inventory || 1)}
+                  className="h-8 w-8 md:h-9 md:w-9"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <Button size="lg" className="flex-1 text-base md:text-lg" onClick={handleAddToCart} disabled={isOutOfStock}>
+                <ShoppingCart className="mr-2 h-5 w-5" />
+                Add to Cart
+              </Button>
             </div>
           )}
+          {product.pricing_type === 'one_time' && (product.inventory === null || product.inventory <= 0) && (
+            <Button size="lg" className="w-full text-base md:text-lg" disabled>
+              Out of Stock
+            </Button>
+          )}
           {product.pricing_type === 'subscription' && (
-            <Button size="lg" className="w-full text-base md:text-lg" onClick={handleAddToCart} disabled={isProductOutOfStock}>
+            <Button size="lg" className="w-full text-base md:text-lg" onClick={handleAddToCart} disabled={isOutOfStock}>
               <ShoppingCart className="mr-2 h-5 w-5" />
               Subscribe Now
             </Button>

@@ -44,6 +44,7 @@ serve(async (req) => {
     // Determine access token source: from body (server-to-server call) or DB (client-to-server call)
     if (body?.user_access_token) {
       userAccessToken = body.user_access_token;
+      console.log(`[${userId}] Instagram Posts Function: Using access token from request body.`);
     } else {
       const { data: integration, error: integrationError } = await supabase
         .from('integrations')
@@ -60,6 +61,7 @@ serve(async (req) => {
         });
       }
       userAccessToken = integration.access_token;
+      console.log(`[${userId}] Instagram Posts Function: Using access token from DB.`);
     }
 
     if (!FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
@@ -73,6 +75,7 @@ serve(async (req) => {
     // 1. Debug user access token to ensure it's valid
     const appAccessToken = `${FACEBOOK_APP_ID}|${FACEBOOK_APP_SECRET}`;
     const debugUrl = `https://graph.facebook.com/debug_token?input_token=${userAccessToken}&access_token=${appAccessToken}`;
+    console.log(`[${userId}] Debugging access token...`);
     const debugResponse = await fetch(debugUrl);
     const debugData = await debugResponse.json();
 
@@ -83,9 +86,11 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }
+    console.log(`[${userId}] Access token is valid.`);
     
     // 2. Fetch Facebook pages to find the linked Instagram Business Account
     const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account,name&access_token=${userAccessToken}`;
+    console.log(`[${userId}] Fetching Facebook pages...`);
     const pagesResponse = await fetch(pagesUrl);
     if (!pagesResponse.ok) {
         const errorData = await pagesResponse.json();
@@ -107,6 +112,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    console.log(`[${userId}] Found Instagram Business Account ID: ${igAccount.instagram_business_account.id}`);
     
     const igAccountId = igAccount.instagram_business_account.id;
     const fields = 'id,media_type,media_url,permalink,thumbnail_url,timestamp,caption';
@@ -116,6 +122,7 @@ serve(async (req) => {
     const MAX_PAGES = 10; // Safety break to prevent overwhelming API
 
     // 3. Fetch all media posts from Instagram Business Account
+    console.log(`[${userId}] Fetching media posts from Instagram...`);
     while (mediaUrl && pageCount < MAX_PAGES) {
         pageCount++;
         const mediaResponse = await fetch(mediaUrl);
@@ -132,6 +139,7 @@ serve(async (req) => {
 
         mediaUrl = pageData.paging?.next || null;
     }
+    console.log(`[${userId}] Fetched ${allMedia.length} media posts from Instagram.`);
 
     // 4. Upload media to Supabase Storage and replace URLs
     const supabaseAdmin = getSupabaseAdmin();
@@ -146,8 +154,10 @@ serve(async (req) => {
 
       const uploadFile = async (url: string, type: 'media' | 'thumbnail') => {
         if (!url) {
+          console.log(`[${userId}][Post ${post.id}] Skipping ${type} upload: URL is null or empty.`);
           return null;
         }
+        console.log(`[${userId}][Post ${post.id}] Attempting to fetch ${type} from Instagram: ${url}`);
         try {
           const response = await fetch(url);
           if (!response.ok) {
@@ -157,6 +167,7 @@ serve(async (req) => {
           const blob = await response.blob();
           const fileName = `${userId}/${post.id}/${type}_${Date.now()}.${fileExtension(url)}`;
           
+          console.log(`[${userId}][Post ${post.id}] Uploading ${type} to Supabase Storage: ${fileName}`);
           const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
             .from('product-media')
             .upload(fileName, blob, {
@@ -170,6 +181,7 @@ serve(async (req) => {
           }
           
           const { data: publicUrlData } = supabaseAdmin.storage.from('product-media').getPublicUrl(fileName);
+          console.log(`[${userId}][Post ${post.id}] Successfully uploaded ${type}. Public URL: ${publicUrlData.publicUrl}`);
           return publicUrlData.publicUrl;
         } catch (uploadErr: any) {
           console.error(`[${userId}][Post ${post.id}] Final error during ${type} upload process:`, uploadErr.message);
@@ -196,6 +208,7 @@ serve(async (req) => {
     });
 
     const uploadedPosts = await Promise.all(uploadedMediaPromises);
+    console.log(`[${userId}] Finished processing all media posts.`);
 
     return new Response(JSON.stringify({ posts: uploadedPosts }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

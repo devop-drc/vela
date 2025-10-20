@@ -5,8 +5,7 @@ import { showError } from '@/utils/toast';
 import { DesignSettings } from './AppearanceContext'; // Re-use DesignSettings type
 import { StorefrontAnnouncement } from '@/types/storefront';
 
-export interface ShopDetails {
-  username: string;
+interface ShopDetails {
   id: string;
   userId: string; // Added user ID here
   name: string;
@@ -50,7 +49,7 @@ interface TopProduct {
   total_sold: number;
 }
 
-export interface Promotion {
+interface Promotion {
   id: string;
   name: string;
   type: 'discount' | 'offer';
@@ -180,12 +179,13 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
       if (invokeError) throw invokeError;
       if (data.error) throw new Error(data.error);
 
+      console.log("StorefrontContext: Fetched shopDetails from get-public-shop-data:", data.shopDetails); // Debug log
+      console.log("StorefrontContext: Fetched appearanceSettings from get-public-shop-data:", data.appearanceSettings); // Debug log
 
       setShopDetails({
         id: data.shopDetails.id,
         userId: data.shopDetails.user_id, // Set the user ID here
         name: data.shopDetails.name,
-        username: data.shopDetails.username,
         shop_name: data.shopDetails.shop_name,
         slug: data.shopDetails.slug,
         logo_url: data.shopDetails.logo_url || null, // Ensure null if empty
@@ -207,6 +207,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         setPromotions(data.promotions || []); // Set promotions
         setMarqueeElements(data.marqueeElements || []); // Set marquee elements
         setCustomerOrders(data.customerOrders || []); // Set customer orders
+        console.log("StorefrontContext: Marquee elements received from Edge Function:", data.marqueeElements); // NEW LOG
       } else {
         setProducts(prevProducts => [...prevProducts, ...data.products]);
       }
