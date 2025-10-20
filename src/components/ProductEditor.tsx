@@ -22,7 +22,6 @@ const productSchema = z.object({
   tags: z.array(z.string()).optional(),
   pricing_type: z.enum(['one_time', 'subscription']),
   billing_interval: z.enum(['month', 'year']).optional().nullable(),
-  details: z.any(),
 }).refine(data => {
     if (data.pricing_type === 'subscription' && !data.billing_interval) {
         return false;
@@ -114,6 +113,20 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
         details: product.details || { type: 'generic' },
       });
     } else {
+      // If product is null, reset form to defaults/empty state to prevent crashes during unmount
+      form.reset({
+        name: "",
+        status: "Draft",
+        caption: "",
+        category: "",
+        price: 0,
+        currency: shopDetails?.currency || 'USD',
+        inventory: 0,
+        tags: [],
+        pricing_type: 'one_time',
+        billing_interval: null,
+        details: { type: 'generic' },
+      });
       setMediaItems([]);
     }
   }, [product, form.reset, shopDetails, convertCurrency]);

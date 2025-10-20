@@ -264,7 +264,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
 
             // Add options and variants to details
             cleanedDetails.options = productOptions;
-            cleanedDetails.variants = activeVariants;
+            cleanedDetails.variants = productVariants; // Store ALL variants, including disabled ones
         } else {
             // If no variants, remove options/variants keys
             delete cleanedDetails.options;
@@ -292,7 +292,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         else { 
             showSuccess("Product updated successfully!"); 
             onUpdate(); // Trigger parent refresh
-            onClose(); // Close the modal
+            onClose(); // <-- CRITICAL FIX: Call onClose here
         }
         setIsSubmitting(false);
     };
