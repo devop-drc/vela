@@ -33,8 +33,8 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   5. **Price Extraction:** Extract the numerical price and the currency code (e.g., USD, EUR, ALL). **Crucially, if a price and currency are present in the caption, use them.** Default currency to "ALL" if none is specified.
   6. **Inventory/Stock:** Infer \`inventory\` as an integer. If stock is mentioned (e.g., "only 5 left"), use that number. If it's clearly a product post but stock is not mentioned, default to 10. If explicitly "sold out" or "out of stock", default to 0.
   7. **Attributes Extraction (Crucial):**
-     - **Specifications (Fixed Details):** A key-value object of fixed, unchangeable attributes (e.g., Material, Dimensions, Weight). **If the caption is sparse, use your general knowledge about the product name and category to infer 2-3 relevant specifications (e.g., for a scooter: Max Speed, Battery Life, Weight).** Use snake_case for keys.
-     - **Options (Variants):** A key-value object where values are arrays of customer-selectable variants (e.g., Color, Size, Storage). Extract these directly from the caption. Use snake_case for keys.
+     - **Specifications (Fixed Details):** A key-value object of fixed, unchangeable attributes (e.g., Material, Dimensions, Weight). Use string or number values. **If the caption is sparse, use your general knowledge about the product name and category to infer 2-3 relevant specifications (e.g., for a scooter: Max Speed, Battery Life, Weight).** Use snake_case for keys.
+     - **Options (Variants):** A key-value object where values are arrays of customer-selectable variants (e.g., Color, Size, Storage). Use arrays of strings for values. Extract these directly from the caption. Use snake_case for keys.
   8. **Description:** Generate a compelling, detailed 3-4 sentence description highlighting key features, benefits, and materials, based on the caption and inferred specifications.
   9. **Tags:** Generate 3-5 relevant tags.
 

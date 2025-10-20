@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback, useMemo, forwardRef } from "react";
-import { motion, AnimatePresence, Reorder } from "framer-motion";
-import { Controller, useFieldArray, useFormContext } from "react-hook-form";
+import { motion, AnimatePresence } from "framer-motion";
+import { Controller, useFormContext } from "react-hook-form";
 import { DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { TagInput } from "@/components/TagInput";
-import { Loader2, XCircle, PlusCircle, CheckCircle, Archive, Sparkles, Move, Edit2, Package, Cloud, Settings } from "lucide-react";
+import { Loader2, XCircle, PlusCircle, CheckCircle, Archive, Sparkles, Settings, Cloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,28 +21,9 @@ import { MediaItem } from "../MediaItem";
 import { toast } from "sonner";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { useShop } from "@/contexts/ShopContext";
-import { formatCurrency } from "@/lib/formatters";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../ui/carousel";
-import { VariantManager } from "./VariantManager";
-import { showError, showSuccess } from "@/utils/toast"; // <-- IMPORTED TOAST UTILITIES
-
-// Define types used by VariantManager locally
-interface Option {
-  id: string;
-  name: string;
-  values: string[];
-}
-
-interface Variant {
-  id: string;
-  name: string; // e.g., "Red / Small"
-  optionValues: string[]; // e.g., ["Red", "Small"]
-  priceDifference: number; // Difference from base price
-  inventory: number;
-  sku: string;
-  disabled: boolean;
-}
+import { showError, showSuccess } from "@/utils/toast";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -75,18 +56,12 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     const [typeAttributes, setTypeAttributes] = useState<any[]>([]);
     const [isReanalyzing, setIsReanalyzing] = useState(false);
     
-    // New state for variants
-    const [productOptions, setProductOptions] = useState<Option[]>([]);
-    const [productVariants, setProductVariants] = useState<Variant[]>([]);
-
     const pricingType = watch("pricing_type");
     const categoryValue = watch("category");
     const typeValue = watch("details.type");
     const statusValue = watch("status");
     const captionValue = watch("caption");
     const productType = watch("product_type");
-    const basePrice = watch("price");
-    const baseInventory = watch("inventory");
 
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const { ref: rhfRef, ...captionProps } = register("caption");
@@ -98,24 +73,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
             const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
 
-            // 1. Initialize Options and Variants from product.details
-            // Ensure IDs are present for Reorder.Group in VariantManager
-            const initialOptions: Option[] = (product.details?.options || []).map((opt: any) => ({
-                ...opt,
-                id: opt.id || crypto.randomUUID(),
-            }));
-            const initialVariants: Variant[] = product.details?.variants || [];
-            
-            setProductOptions(initialOptions);
-            setProductVariants(initialVariants);
-
-            // 2. Initialize form with base product data
-            // Filter out legacy option keys from details before resetting the form
-            const LEGACY_OPTION_KEYS = ['color', 'size', 'material', 'options', 'variants'];
-            const specificationsOnly = Object.fromEntries(
-                Object.entries(product.details || {}).filter(([k]) => !LEGACY_OPTION_KEYS.includes(k))
-            );
-
+            // 1. Initialize form with base product data
             form.reset({
                 name: product.name || "",
                 status: product.status || "Draft",
@@ -123,15 +81,12 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 category: product.category || "",
                 price: priceInDisplayCurrency, // Set price in display currency for the form
                 currency: shopDetails.currency || 'USD', // Always use shop's currency for the form's currency selector
-                inventory: product.inventory || 0, // Base inventory (sum of variants or single stock)
+                inventory: product.inventory || 0, // Base inventory
                 tags: Array.isArray(product.tags) ? product.tags : [],
                 pricing_type: product.pricing_type || 'one_time',
                 billing_interval: product.billing_interval,
-                // Specifications are stored directly in details, excluding 'options' and 'variants'
-                details: {
-                    type: product.details?.type || 'generic',
-                    ...specificationsOnly
-                }
+                details: product.details || { type: 'generic' },
+                product_type: product.product_type || 'physical',
             });
             const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
             setMediaItems(gallery);
@@ -149,6 +104,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 pricing_type: product.pricing_type || 'one_time',
                 billing_interval: product.billing_interval,
                 details: product.details || { type: 'generic' },
+                product_type: product.product_type || 'physical',
             });
         } else {
             setMediaItems([]);
@@ -157,34 +113,34 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
 
     // --- Metadata Fetching ---
     useEffect(() => {
-      const fetchCategories = async () => {
-          const { data } = await supabase.from('categories').select('name');
-          setCategoryOptions(data?.map(c => c.name) || []);
-      };
-      fetchCategories();
+        const fetchCategories = async () => {
+            const { data } = await supabase.from('categories').select('name');
+            setCategoryOptions(data?.map(c => c.name) || []);
+        };
+        fetchCategories();
     }, []);
 
     useEffect(() => {
-      const fetchTypesAndAttributes = async () => {
-          if (!categoryValue) {
-              setTypeOptions([]);
-              setTypeAttributes([]);
-              return;
-          }
-          const { data: categoryData } = await supabase.from('categories').select('id').eq('name', categoryValue).single();
-          if (categoryData) {
-              const { data: dbTypes } = await supabase.from('types').select('name, attributes').eq('category_id', categoryData.id);
-              setTypeOptions(dbTypes?.map(t => t.name) || []);
-              
-              const selectedType = dbTypes?.find(t => t.name === typeValue);
-              // Filter attributes to only include specifications (isOption: false)
-              setTypeAttributes(selectedType?.attributes?.filter((attr: any) => !attr.isOption) || []);
-          } else {
-              setTypeOptions([]);
-              setTypeAttributes([]);
-          }
-      };
-      fetchTypesAndAttributes();
+        const fetchTypesAndAttributes = async () => {
+            if (!categoryValue) {
+                setTypeOptions([]);
+                setTypeAttributes([]);
+                return;
+            }
+            const { data: categoryData } = await supabase.from('categories').select('id').eq('name', categoryValue).single();
+            if (categoryData) {
+                const { data: dbTypes } = await supabase.from('types').select('name, attributes').eq('category_id', categoryData.id);
+                setTypeOptions(dbTypes?.map(t => t.name) || []);
+                
+                const selectedType = dbTypes?.find(t => t.name === typeValue);
+                // Use all attributes defined for the type
+                setTypeAttributes(selectedType?.attributes || []);
+            } else {
+                setTypeOptions([]);
+                setTypeAttributes([]);
+            }
+        };
+        fetchTypesAndAttributes();
     }, [categoryValue, typeValue]);
 
     // --- Handlers ---
@@ -206,23 +162,23 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             if (analysis.categoryName) setValue('category', analysis.categoryName, { shouldDirty: true });
             if (analysis.typeName) setValue('details.type', analysis.typeName, { shouldDirty: true });
             
-            // Update specifications (direct details)
+            // Update specifications and options (which are now combined in the details object)
+            const newDetails: { [key: string]: any } = { type: analysis.typeName };
+            
+            // Merge specifications and options into newDetails
             if (analysis.specifications) {
                 for (const [key, value] of Object.entries(analysis.specifications)) {
-                    setValue(`details.${key}`, value, { shouldDirty: true });
+                    newDetails[key] = value;
+                }
+            }
+            if (analysis.options) {
+                for (const [key, value] of Object.entries(analysis.options)) {
+                    newDetails[key] = value;
                 }
             }
 
-            // Update options (for VariantManager)
-            if (analysis.options) {
-                const newOptions: Option[] = Object.entries(analysis.options).map(([name, values]) => ({
-                    id: crypto.randomUUID(), // Assign new IDs for new options
-                    name: toTitleCase(name),
-                    values: Array.isArray(values) ? values.map(String) : [String(values)],
-                }));
-                setProductOptions(newOptions);
-                setProductVariants([]); // Reset variants to force regeneration based on new options
-            }
+            // Update the form's details object
+            setValue('details', newDetails, { shouldDirty: true });
 
             toast.success("AI analysis complete! Product details have been updated.", { id: toastId });
         } catch (err: any) {
@@ -232,63 +188,35 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         }
     };
 
-    const handleVariantManagerUpdate = useCallback((options: Option[], variants: Variant[]) => {
-        setProductOptions(options);
-        setProductVariants(variants);
-    }, []);
-
     const handleSave = async (data: any) => {
         setIsSubmitting(true);
         
-        // 1. Prepare details payload: merge specifications and new variant data
+        // 1. Prepare details payload: only include fields present in the form/type attributes
         const cleanedDetails: { [key: string]: any } = { type: data.details.type };
         
-        // Add specifications (non-option fields)
+        // Add all dynamic attributes (specs + options)
         Object.entries(data.details).forEach(([key, value]) => {
             if (key !== 'type') {
                 cleanedDetails[key] = value;
             }
         });
 
-        // 2. Determine base price and inventory for the main product record
-        const activeVariants = productVariants.filter(v => !v.disabled);
-        const hasVariants = activeVariants.length > 0;
-
-        // Convert price from form's display currency (data.currency) to ALL for storage
-        let priceInALL = convertCurrency(data.price, data.currency, 'ALL');
-        let baseInventoryForDB = data.pricing_type === 'one_time' ? data.inventory : 0;
-
-        if (hasVariants) {
-            // If variants exist, set base price to the lowest active variant price
-            const activePrices = activeVariants.map(v => data.price + v.priceDifference);
-            const lowestFinalPrice = activePrices.length > 0 ? Math.min(...activePrices) : data.price;
-            
-            priceInALL = convertCurrency(lowestFinalPrice, data.currency, 'ALL');
-            
-            // Set base inventory to the sum of all active variant inventories
-            baseInventoryForDB = activeVariants.reduce((sum, v) => sum + v.inventory, 0);
-
-            // Add options and variants to details
-            cleanedDetails.options = productOptions;
-            cleanedDetails.variants = activeVariants;
-        } else {
-            // If no variants, remove options/variants keys
-            delete cleanedDetails.options;
-            delete cleanedDetails.variants;
-        }
+        // 2. Convert price from form's display currency (data.currency) to ALL for storage
+        const priceInALL = convertCurrency(data.price, data.currency, 'ALL');
 
         // 3. Update Supabase
         const { error } = await supabase.from('products').update({
             name: data.name, status: data.status, caption: data.caption, category: data.category,
-            price: priceInALL, // Save calculated base price in ALL
+            price: priceInALL, // Save price in ALL
             currency: 'ALL', // Always store currency as ALL
-            inventory: baseInventoryForDB, // Save calculated total inventory
+            inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
             tags: data.tags, pricing_type: data.pricing_type,
             billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
             details: cleanedDetails,
             media_gallery: mediaItems,
             media_url: mediaItems[0] || null,
             thumbnail_url: mediaItems[0] || null,
+            product_type: data.product_type,
           }).eq('id', product.id);
 
         if (error) { 
@@ -298,7 +226,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         else { 
             showSuccess("Product updated successfully!"); 
             onUpdate(); 
-            onClose(); // <-- Call onClose to close the main dialog
+            onClose();
         }
         setIsSubmitting(false);
     };
@@ -306,12 +234,31 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     const currentStatusConfig = statusConfig[statusValue as keyof typeof statusConfig];
     const StatusIcon = currentStatusConfig?.icon;
 
-    // Filter specifications to only include those defined by the current type, plus any existing custom ones
-    const specificationKeys = new Set(typeAttributes.map(attr => attr.name));
-    const specificationsToRender = Object.entries(getValues('details') || {})
-        .filter(([key]) => key !== 'type' && key !== 'options' && key !== 'variants' && (specificationKeys.has(key) || !productOptions.some(o => o.name.toLowerCase() === key.toLowerCase())));
+    // Filter attributes to only include those defined by the current type
+    const attributesToRender = useMemo(() => {
+        const attributeNames = new Set(typeAttributes.map(attr => attr.name));
+        
+        // Include all attributes defined in the type, plus any existing custom ones in details
+        const existingDetailsKeys = Object.keys(getValues('details') || {}).filter(key => key !== 'type');
+        const allKeys = new Set([...attributeNames, ...existingDetailsKeys]);
 
-    const hasVariants = productVariants.length > 0;
+        return Array.from(allKeys).map(key => {
+            const typeAttr = typeAttributes.find(attr => attr.name === key);
+            return {
+                name: key,
+                inputType: typeAttr?.inputType || 'text',
+                isOption: typeAttr?.isOption || false,
+            };
+        }).sort((a, b) => {
+            // Sort options (isOption: true) first, then specifications
+            if (a.isOption && !b.isOption) return -1;
+            if (!a.isOption && b.isOption) return 1;
+            return a.name.localeCompare(b.name);
+        });
+    }, [typeAttributes, getValues]);
+
+    const optionsToRender = attributesToRender.filter(attr => attr.isOption);
+    const specificationsToRender = attributesToRender.filter(attr => !attr.isOption);
 
     return (
       <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -340,14 +287,14 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                           )}
                       </Carousel>
                   )}
-                  <Reorder.Group axis="x" values={mediaItems} onReorder={setMediaItems} className="flex flex-wrap gap-2 overflow-x-auto pb-2">
+                  <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
                     {mediaItems.map((url: string) => (
-                      <Reorder.Item key={url} value={url} className="relative group cursor-grab active:cursor-grabbing">
+                      <div key={url} className="relative group">
                         <MediaItem src={url} alt="Thumbnail" className="h-16 w-16 rounded-md object-cover border" />
                         <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleImageDelete(url); }}><XCircle className="h-4 w-4" /></Button>
-                      </Reorder.Item>
+                      </div>
                     ))}
-                  </Reorder.Group>
+                  </div>
                   <Button asChild size="sm" variant="outline" className="mt-2">
                     <label htmlFor="image-upload" className="cursor-pointer">
                       {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
@@ -369,6 +316,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
                   </div>
                   <Textarea id="caption" {...captionProps} ref={(e) => { rhfRef(e); textAreaRef.current = e as HTMLTextAreaElement; }} placeholder="No description provided." className="border-0 border-b-2 rounded-none bg-transparent p-0 text-base text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors resize-none" />
+                  <div className="flex items-center justify-end pt-4"><Button type="button" variant="outline" onClick={handleReanalyze} disabled={isReanalyzing}>{isReanalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-amber-400" />}Find Specs with AI</Button></div>
                   <div><Label>Tags</Label><Controller control={control} name="tags" render={({ field }) => <TagInput {...field} value={Array.isArray(field.value) ? field.value : (field.value ? [field.value] : [])} />} /></div>
                   <div className="space-y-2 pt-2">
                     <Label>Pricing Model</Label>
@@ -388,41 +336,48 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                       )} />
                     </div>
                     <div className="grid grid-cols-3 gap-4 pt-2">
-                        <div className="space-y-1 col-span-2"><Label htmlFor="price" className="text-xs">Base Price</Label><div className="flex items-center gap-2"><Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" disabled={hasVariants} /><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
-                        <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">Base Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" disabled={hasVariants} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
+                        <div className="space-y-1 col-span-2"><Label htmlFor="price" className="text-xs">Base Price</Label><div className="flex items-center gap-2"><Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" /><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
+                        <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">Base Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
                     </div>
-                    {hasVariants && (
-                        <p className="text-xs text-muted-foreground mt-1">Base Price/Stock fields are disabled because variants are active. The lowest variant price and total variant stock will be used for the main product listing.</p>
-                    )}
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-end pt-4"><Button type="button" variant="outline" onClick={handleReanalyze} disabled={isReanalyzing}>{isReanalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-amber-400" />}Find Specs with AI</Button></div>
               
-              {/* Variant Manager */}
-              <VariantManager
-                initialOptions={productOptions}
-                initialVariants={productVariants}
-                basePrice={basePrice}
-                baseInventory={baseInventory}
-                onUpdate={handleVariantManagerUpdate}
-              />
+              {/* Options (Attributes with isOption: true) */}
+              {optionsToRender.length > 0 && (
+                <Card>
+                  <CardHeader><CardTitleComponent className="text-base flex items-center gap-2"><Settings className="h-5 w-5" /> Options (Customer Selectable)</CardTitleComponent></CardHeader>
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {optionsToRender.map((attr: any) => {
+                      const Icon = getAttributeIcon(attr.name);
+                      return (
+                        <div key={attr.name} className="space-y-2">
+                          <Label className="capitalize flex items-center gap-1.5"><Icon className="h-4 w-4" />{toTitleCase(attr.name)}</Label>
+                          <AttributeInput control={control} fieldName={attr.name} inputType={attr.inputType} />
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Specifications (Fixed Details) */}
-              <Card>
-                <CardHeader><CardTitleComponent className="text-base flex items-center gap-2"><Settings className="h-5 w-5" /> Specifications (Fixed Details)</CardTitleComponent></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {specificationsToRender.map(([key, value]) => {
-                    const Icon = getAttributeIcon(key);
-                    return (
-                      <div key={key} className="space-y-2">
-                        <Label className="capitalize flex items-center gap-1.5"><Icon className="h-4 w-4" />{toTitleCase(key)}</Label>
-                        <AttributeInput control={control} fieldName={key} inputType={typeAttributes.find(attr => attr.name === key)?.inputType || 'text'} />
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
+              {specificationsToRender.length > 0 && (
+                <Card>
+                  <CardHeader><CardTitleComponent className="text-base flex items-center gap-2"><Settings className="h-5 w-5" /> Specifications (Fixed Details)</CardTitleComponent></CardHeader>
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {specificationsToRender.map((attr: any) => {
+                      const Icon = getAttributeIcon(attr.name);
+                      return (
+                        <div key={attr.name} className="space-y-2">
+                          <Label className="capitalize flex items-center gap-1.5"><Icon className="h-4 w-4" />{toTitleCase(attr.name)}</Label>
+                          <AttributeInput control={control} fieldName={attr.name} inputType={attr.inputType} />
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </ScrollArea>
           <DialogFooter className="p-4 border-t"><Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button></DialogFooter>

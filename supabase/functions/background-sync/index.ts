@@ -77,7 +77,7 @@ const getSupabaseAdmin = () => createClient(
   { auth: { persistSession: false } }
 );
 
-const toTitleCase = (str: string) => str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
 // Currency conversion helper (assumes rates are ALL-based)
 const convertCurrencyServer = async (amount: number, fromCurrency: string, toCurrency: string = 'ALL'): Promise<number> => {
@@ -286,11 +286,15 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
         // Convert specifications and options into the 'attributes' array format for type upsert
         const attributesForTypeUpsert = [];
+        
+        // Add specifications (fixed details)
         if (specifications) {
             for (const [name] of Object.entries(specifications)) {
                 attributesForTypeUpsert.push({ name, inputType: 'text', isOption: false });
             }
         }
+        
+        // Add options (variants)
         if (options) {
             for (const [name, values] of Object.entries(options)) {
                 let inputType = 'text';
@@ -312,18 +316,16 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       // 2. Construct the new 'details' object for the product table
       const details: { [key: string]: any } = { type: toTitleCase(typeName || '') };
       
+      // Merge specifications and options into the single details object
       if (specifications) {
           for (const [key, value] of Object.entries(specifications)) {
               details[key] = value;
           }
       }
       if (options) {
-          details.options = Object.entries(options).map(([name, values]) => ({
-            id: crypto.randomUUID(), // Assign ID for client-side management
-            name: toTitleCase(name),
-            values: Array.isArray(values) ? values.map(String) : [String(values)],
-          }));
-          details.variants = []; // Initialize variants array for new products
+          for (const [key, value] of Object.entries(options)) {
+              details[key] = value;
+          }
       }
 
       // Determine final pricing and inventory

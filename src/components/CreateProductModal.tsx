@@ -162,30 +162,30 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
     console.log("CreateProductModal: Price in form's currency:", data.price, data.currency, "Converted to ALL for storage:", priceInALL);
 
     const cleanedDetails: { [key: string]: any } = { type: data.details.type };
-    if (typeAttributes) {
-        typeAttributes.forEach(field => {
-            if (data.details[field.name] !== undefined) {
-                cleanedDetails[field.name] = data.details[field.name];
-            }
-        });
-    }
+    // Include all dynamic attributes (specs + options)
+    Object.entries(data.details).forEach(([key, value]) => {
+        if (key !== 'type') {
+            cleanedDetails[key] = value;
+        }
+    });
 
     const { error } = await supabase.from('products').insert({
       business_id: business.id, name: data.name, caption: data.description, category: data.category,
       price: priceInALL, // Store price in ALL
       currency: 'ALL', // Store currency as ALL
       inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
-      tags: data.tags, details: data.details, pricing_type: data.pricing_type, status: 'Draft',
+      tags: data.tags, details: cleanedDetails, pricing_type: data.pricing_type, status: 'Draft',
       billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
       instagram_post_id: post.id, media_url: post.media_url, thumbnail_url: post.thumbnail_url, media_type: post.media_type,
+      product_type: 'physical', // Default to physical for new products
     });
 
     if (error) { showError(`Failed to create product: ${error.message}`); console.error("CreateProductModal: Error creating product:", error); } 
     else { showSuccess("Product created successfully!"); onSave(); onClose(); }
   };
 
-  const options = typeAttributes.filter(attr => attr.isOption);
-  const specifications = typeAttributes.filter(attr => !attr.isOption);
+  const optionsToRender = typeAttributes.filter(attr => attr.isOption);
+  const specificationsToRender = typeAttributes.filter(attr => !attr.isOption);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -218,28 +218,34 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
                 <div className="space-y-2"><Label>Price</Label><div className="flex items-center gap-2"><Input type="number" step="0.01" {...register("price")} className="flex-1" /><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
                 <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-2"><Label>Inventory</Label><Input type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
               </div>
-              <Card>
-                <CardHeader><CardTitle className="text-base">Options (for Variants)</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {options.map((attr: any) => (
-                    <div key={attr.name} className="space-y-2">
-                      <Label className="capitalize">{attr.name.replace(/_/g, ' ')}</Label>
-                      <AttributeInput control={control} fieldName={attr.name} inputType={attr.inputType} />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader><CardTitle className="text-base">Specifications (Fixed Details)</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {specifications.map((attr: any) => (
-                    <div key={attr.name} className="space-y-2">
-                      <Label className="capitalize">{attr.name.replace(/_/g, ' ')}</Label>
-                      <AttributeInput control={control} fieldName={attr.name} inputType={attr.inputType} />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+              
+              {optionsToRender.length > 0 && (
+                <Card>
+                  <CardHeader><CardTitle className="text-base">Options (for Variants)</CardTitle></CardHeader>
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {optionsToRender.map((attr: any) => (
+                      <div key={attr.name} className="space-y-2">
+                        <Label className="capitalize">{attr.name.replace(/_/g, ' ')}</Label>
+                        <AttributeInput control={control} fieldName={attr.name} inputType={attr.inputType} />
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+              
+              {specificationsToRender.length > 0 && (
+                <Card>
+                  <CardHeader><CardTitle className="text-base">Specifications (Fixed Details)</CardTitle></CardHeader>
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {specificationsToRender.map((attr: any) => (
+                      <div key={attr.name} className="space-y-2">
+                        <Label className="capitalize">{attr.name.replace(/_/g, ' ')}</Label>
+                        <AttributeInput control={control} fieldName={attr.name} inputType={attr.inputType} />
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
           <DialogFooter><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save Product</Button></DialogFooter>
