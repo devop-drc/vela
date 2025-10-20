@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback, useMemo } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo, useRef as useRefReact } from "react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -61,13 +61,13 @@ const AttributeInput = ({ control, fieldName, inputType }: any) => {
     case 'tags':
       return <Controller name={name} control={control} render={({ field }) => <TagInput {...field} value={Array.isArray(field.value) ? field.value : (field.value ? [field.value] : [])} />} />;
     case 'color':
-        return <Controller name={name} control={control} render={({ field }) => <Input type="color" {...field} value={field.value || '#000000'} className="h-10 w-16" />} />;
+        return <Controller name={name} control={control} render={({ field }) => <Controller name={name} control={control} render={({ field }) => <Input type="color" {...field} value={field.value || '#000000'} className="h-10 w-16" />} />} />;
     default:
       return <Controller name={name} control={control} render={({ field }) => <Input {...field} value={field.value || ''} />} />;
   }
 };
 
-export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting, setIsSubmitting }: any) => {
+export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting, setIsSubmitting, onUpdate }: any) => {
     const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
     const { shopDetails, convertCurrency } = useShop();
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
@@ -88,7 +88,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     const basePrice = watch("price");
     const baseInventory = watch("inventory");
 
-    const textAreaRef = useRef<HTMLTextAreaElement>(null);
+    const textAreaRef = useRefReact<HTMLTextAreaElement>(null);
     const { ref: rhfRef, ...captionProps } = register("caption");
     useAutosizeTextArea(textAreaRef.current, captionValue || "");
 
@@ -319,12 +319,10 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                                   </CarouselItem>
                               ))}
                           </CarouselContent>
-                          {mediaItems.length > 1 && (
-                              <>
-                                  <CarouselPrevious className="left-2" />
-                                  <CarouselNext className="right-2" />
-                              </>
-                          )}
+                          {mediaItems.length > 1 && <>
+                              <CarouselPrevious className="left-2" />
+                              <CarouselNext className="right-2" />
+                          </>}
                       </Carousel>
                   )}
                   <Reorder.Group axis="x" values={mediaItems} onReorder={setMediaItems} className="flex flex-wrap gap-2 overflow-x-auto pb-2">

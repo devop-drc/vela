@@ -73,6 +73,11 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     resolver: zodResolver(productSchema),
   });
   
+  // CRITICAL FIX: If product is null, we cannot proceed with initialization or rendering.
+  if (!product) {
+    return null;
+  }
+
   useEffect(() => {
     if (product && shopDetails) {
       // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
@@ -158,7 +163,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     setIsSubmitting(true);
     
     // Delete from AI analysis cache if instagram_post_id exists
-    if (product?.instagram_post_id) {
+    if (product.instagram_post_id) {
       const { error: cacheError } = await supabase
         .from('ai_analysis_cache')
         .delete()
@@ -169,7 +174,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       }
     }
 
-    const { error } = await supabase.from('products').delete().eq('id', product!.id);
+    const { error } = await supabase.from('products').delete().eq('id', product.id);
     if (error) { 
       showError(`Failed to delete product: ${error.message}`); 
     } else { 
@@ -185,8 +190,8 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setIsEditing(false); } }}>
         <DialogContent className="sm:max-w-6xl max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="sr-only">
-            <DialogTitle>Product Details: {product?.name}</DialogTitle>
-            <DialogDescription>View or edit product details for {product?.name}.</DialogDescription>
+            <DialogTitle>Product Details: {product.name}</DialogTitle>
+            <DialogDescription>View or edit product details for {product.name}.</DialogDescription>
           </DialogHeader>
           <AnimatePresence mode="wait">
             {isEditing ? (
@@ -203,6 +208,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
                   isEditing={isEditing}
                   setMediaItems={setMediaItems}
                   setIsSubmitting={setIsSubmitting}
+                  onUpdate={onUpdate} // Pass onUpdate down to EditMode for saving
                 />
               </FormProvider>
             ) : (
