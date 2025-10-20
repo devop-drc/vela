@@ -54,13 +54,9 @@ const DetailRow = ({ icon: Icon, children }: { icon: React.ElementType, children
 export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSize, onSelect, onEdit, onStatusChange }: ProductCardProps) => {
   const { shopDetails, convertCurrency } = useShop();
 
-  // CRITICAL NULL CHECK: If product is null or price is null, handle gracefully
-  if (!product || product.price === null) {
-    // If the product object itself is null (which shouldn't happen if the parent list is filtered correctly, but good for safety)
-    // or if the price is null, we render a placeholder or skip rendering.
-    // Since this component is mapped over a list, returning null is appropriate if data is incomplete.
-    // However, since the crash happens during unmount/re-render, we must ensure all properties accessed are safe.
-    // We proceed assuming `product` is valid but `product.price` might be null.
+  // CRITICAL NULL CHECK: If product is null, return null immediately.
+  if (!product) {
+    return null;
   }
 
   const handleCardClick = () => {

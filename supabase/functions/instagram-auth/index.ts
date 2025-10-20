@@ -74,7 +74,8 @@ serve(async (req) => {
       const shortLivedToken = tokenData.access_token;
 
       // 2. Exchange for long-lived token
-      const longLivedTokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${FACEBOOK_APP_ID}&client_secret=${FACEABASE_APP_SECRET}&fb_exchange_token=${shortLivedToken}`;
+      // FIX: Changed FACEABASE_APP_SECRET to FACEBOOK_APP_SECRET
+      const longLivedTokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${FACEBOOK_APP_ID}&client_secret=${FACEBOOK_APP_SECRET}&fb_exchange_token=${shortLivedToken}`;
       const longLivedTokenResponse = await fetch(longLivedTokenUrl);
       const longLivedTokenData = await longLivedTokenResponse.json();
       if (!longLivedTokenResponse.ok) {
