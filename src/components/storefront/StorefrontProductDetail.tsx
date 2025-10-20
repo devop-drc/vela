@@ -44,14 +44,13 @@ const StorefrontProductDetail = () => {
 
   const product = products.find(p => p.id === productId);
   const productOptions = product?.details?.options || [];
-  const productVariants = product?.details?.variants || [];
-  const hasVariants = productVariants.length > 0;
+  const hasOptions = productOptions.length > 0;
 
   // State for selected option values (e.g., { Color: 'Red', Size: 'M' })
   const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string | null }>(() => {
     const initial: { [key: string]: string | null } = {};
     productOptions.forEach((opt: any) => {
-      initial[opt.name] = opt.values[0] || null; // Default to first value
+      initial[opt.name] = opt.values[0]?.value || null; // Default to first value
     });
     return initial;
   });
@@ -63,7 +62,7 @@ const StorefrontProductDetail = () => {
       setSelectedOptions(() => {
         const initial: { [key: string]: string | null } = {};
         productOptions.forEach((opt: any) => {
-          initial[opt.name] = opt.values[0] || null;
+          initial[opt.name] = opt.values[0]?.value || null;
         });
         return initial;
       });
@@ -133,26 +132,31 @@ const StorefrontProductDetail = () => {
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
   const blurEnabled = appearanceSettings?.blurEnabled;
 
-  // Convert product base price (which is the lowest active variant price or single price) to shop's display currency
-  const originalDisplayPrice = convertCurrency(product.price, product.currency);
+  // The base price is the lowest final price stored in the main product record (in ALL)
+  const lowestFinalPriceInDisplay = convertCurrency(product.price, product.currency);
 
-  // --- Variant Logic ---
-  const selectedVariant = useMemo(() => {
-    if (!hasVariants) return null;
-    
-    const selectedValues = productOptions.map((opt: any) => selectedOptions[opt.name]);
-    
-    return productVariants.find((variant: any) => {
-      return variant.optionValues.every((vValue: string, index: number) => vValue === selectedValues[index]);
-    });
-  }, [productOptions, productVariants, selectedOptions, hasVariants]);
+  // --- Price and Inventory Logic (Additive Model) ---
+  const { finalDisplayPrice, finalInventory, basePriceInDisplay } = useMemo(() => {
+      const basePrice = lowestFinalPriceInDisplay;
+      let priceAdjustment = 0;
+      let inventory = product.inventory; // Inventory is now stored at the product level
 
-  const finalDisplayPrice = selectedVariant ? originalDisplayPrice + selectedVariant.priceDifference : originalDisplayPrice;
-  const finalInventory = selectedVariant ? selectedVariant.inventory : product.inventory;
-  const isVariantOutOfStock = hasVariants && (selectedVariant?.disabled || finalInventory <= 0);
-  
+      // Calculate price adjustment based on selected options
+      productOptions.forEach((option: any) => {
+          const selectedValue = selectedOptions[option.name];
+          const optionValue = option.values.find((v: any) => v.value === selectedValue);
+          priceAdjustment += optionValue?.priceDifference || 0;
+      });
+
+      return {
+          finalDisplayPrice: basePrice + priceAdjustment,
+          finalInventory: inventory,
+          basePriceInDisplay: basePrice,
+      };
+  }, [product.inventory, productOptions, selectedOptions, lowestFinalPriceInDisplay]);
+
   // Use the main product status if no variants, otherwise rely on variant stock/disabled status
-  const isProductOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && (product.inventory <= 0 || isVariantOutOfStock));
+  const isProductOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && finalInventory <= 0);
   
   // --- Promotion Logic ---
   const activePromotions = promotions.filter(promo => {
@@ -211,7 +215,7 @@ const StorefrontProductDetail = () => {
     }
 
     const optionsForCart: { [key: string]: string | string[] } = {};
-    if (hasVariants) {
+    if (hasOptions) {
         Object.entries(selectedOptions).forEach(([key, value]) => {
             if (value) optionsForCart[key] = value;
         });
@@ -319,7 +323,7 @@ const StorefrontProductDetail = () => {
                 {hasDiscount && finalDisplayPrice !== null ? (
                   <div className="flex items-baseline gap-2">
                     <p className="text-base text-muted-foreground line-through">
-                      {formatCurrency(originalDisplayPrice, shopDetails?.currency)}
+                      {formatCurrency(basePriceInDisplay, shopDetails?.currency)}
                     </p>
                     <p className="text-2xl md:text-3xl font-bold text-emerald-600"> {/* Made discounted price green */}
                       {formatCurrency(discountedPrice, shopDetails?.currency)}
@@ -355,7 +359,7 @@ const StorefrontProductDetail = () => {
           )}
 
           {/* Variant Selection */}
-          {hasVariants && (
+          {hasOptions && (
             <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-md")}>
               <CardHeader><CardTitle className="text-lg md:text-xl">Options</CardTitle></CardHeader>
               <CardContent className="p-4 space-y-4">
@@ -363,25 +367,24 @@ const StorefrontProductDetail = () => {
                   <div key={option.id} className="space-y-2">
                     <Label className="text-sm capitalize">{option.name}</Label>
                     <div className="flex flex-wrap gap-2">
-                      {option.values.map((value: string) => (
+                      {option.values.map((value: any) => (
                         <Button
-                          key={value}
-                          variant={selectedOptions[option.name] === value ? "default" : "outline"}
-                          onClick={() => setSelectedOptions(prev => ({ ...prev, [option.name]: value }))}
-                          className={cn("capitalize text-sm md:text-base", selectedOptions[option.name] === value && "ring-2 ring-primary ring-offset-2")}
+                          key={value.value}
+                          variant={selectedOptions[option.name] === value.value ? "default" : "outline"}
+                          onClick={() => setSelectedOptions(prev => ({ ...prev, [option.name]: value.value }))}
+                          className={cn("capitalize text-sm md:text-base", selectedOptions[option.name] === value.value && "ring-2 ring-primary ring-offset-2")}
                         >
-                          {value}
+                          {value.value}
+                          {value.priceDifference !== 0 && (
+                              <span className={cn("ml-1 font-mono text-xs", value.priceDifference > 0 ? "text-emerald-600" : "text-destructive")}>
+                                  ({formatCurrency(value.priceDifference, shopDetails?.currency, 'en-US', true)})
+                              </span>
+                          )}
                         </Button>
                       ))}
                     </div>
                   </div>
                 ))}
-                {selectedVariant && (
-                    <div className="pt-2 text-sm text-muted-foreground">
-                        SKU: <span className="font-mono text-xs">{selectedVariant.sku}</span>
-                        {selectedVariant.disabled && <Badge variant="destructive" className="ml-2">Unavailable</Badge>}
-                    </div>
-                )}
               </CardContent>
             </Card>
           )}

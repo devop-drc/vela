@@ -79,43 +79,6 @@ const getSupabaseAdmin = () => createClient(
 
 const toTitleCase = (str: string) => str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
-// Helper function to generate all combinations
-const generateCombinations = (options: any[]): { name: string, optionValues: string[] }[] => {
-  const activeOptions = options.filter(opt => opt.values.length > 0);
-  if (activeOptions.length === 0) return [];
-  
-  const combinations: string[][] = [];
-  const helper = (index: number, current: string[]) => {
-    if (index === activeOptions.length) {
-      combinations.push(current);
-      return;
-    }
-    activeOptions[index].values.forEach(value => {
-      helper(index + 1, [...current, value]);
-    });
-  };
-  helper(0, []);
-  
-  return combinations.map(combo => ({
-    name: combo.join(' / '),
-    optionValues: combo,
-  }));
-};
-
-// Helper function to generate default variants
-const generateDefaultVariants = (options: any[], baseInventory: number): any[] => {
-    const combinations = generateCombinations(options);
-    return combinations.map(combo => ({
-        id: crypto.randomUUID(),
-        name: combo.name,
-        optionValues: combo.optionValues,
-        priceDifference: 0,
-        inventory: baseInventory,
-        sku: combo.name.toUpperCase().replace(/[^A-Z0-9]/g, '-').substring(0, 20),
-        disabled: false,
-    }));
-};
-
 // Currency conversion helper (assumes rates are ALL-based)
 const convertCurrencyServer = async (amount: number, fromCurrency: string, toCurrency: string = 'ALL'): Promise<number> => {
   if (fromCurrency === toCurrency) return amount;
@@ -366,31 +329,31 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         priceInALL = await convertCurrencyServer(productInfo.price, productInfo.currency, 'ALL');
       }
 
-      // --- Variant Generation ---
+      // --- Additive Option Generation (Replaces Variant Generation) ---
       let productOptions: any[] = [];
-      let productVariants: any[] = [];
       let basePriceForDB = priceInALL;
       let baseInventoryForDB = inventory;
 
       if (options && Object.keys(options).length > 0) {
-          // Convert AI options object to array format for VariantManager
+          // Convert AI options object to additive option array format
           productOptions = Object.entries(options).map(([name, values]) => ({
               id: crypto.randomUUID(),
               name: toTitleCase(name),
-              values: Array.isArray(values) ? values.map(String) : [String(values)],
+              values: Array.isArray(values) 
+                  ? values.map(v => ({ value: String(v), priceDifference: 0 })) 
+                  : [{ value: String(values), priceDifference: 0 }],
           }));
           
-          // Generate default variants
-          productVariants = generateDefaultVariants(productOptions, inventory);
-
-          // Add options and variants to details
+          // Add options to details
           details.options = productOptions;
-          details.variants = productVariants;
           
-          // If variants exist, set base price to the lowest active variant price (which is currently basePrice + 0)
-          // and set base inventory to the sum of all variant inventories.
-          basePriceForDB = priceInALL; // Since priceDifference is 0, base price remains the same
-          baseInventoryForDB = productVariants.reduce((sum, v) => v.inventory > 0 ? sum + v.inventory : sum, 0);
+          // Base price remains the AI price (priceInALL) because all price differences are 0 initially.
+          // Inventory remains the AI inventory (inventory).
+          basePriceForDB = priceInALL;
+          baseInventoryForDB = inventory;
+          
+          // Ensure variants key is explicitly removed
+          delete details.variants;
       } else {
           // If no options, ensure options/variants keys are not present
           delete details.options;
@@ -400,7 +363,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       const productPayload: ProductPayload = {
         name: productInfo.productName,
         caption: productInfo.description,
-        price: basePriceForDB, // Store calculated base price in ALL
+        price: basePriceForDB, // Store base price in ALL (which is the lowest final price initially)
         currency: 'ALL', // Always store currency as ALL
         tags: productInfo.tags,
         category: toTitleCase(categoryName || ''),
@@ -421,23 +384,29 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       if (existingProduct) {
         productPayload.id = existingProduct.id;
         
-        // If updating an existing product, preserve existing variants/options if they exist
-        // This prevents overwriting manual variant configuration on subsequent syncs.
-        if (existingProduct.details?.options && existingProduct.details?.variants) {
+        // If updating an existing product, preserve existing options if they exist
+        if (existingProduct.details?.options) {
             productPayload.details.options = existingProduct.details.options;
-            productPayload.details.variants = existingProduct.details.variants;
-            // Recalculate base price and inventory from existing variants if they exist
-            const existingActiveVariants = existingProduct.details.variants.filter((v: any) => !v.disabled);
-            if (existingActiveVariants.length > 0) {
-                const lowestFinalPrice = Math.min(...existingActiveVariants.map((v: any) => priceInALL + v.priceDifference));
-                productPayload.price = lowestFinalPrice;
-                productPayload.inventory = existingActiveVariants.reduce((sum: number, v: any) => v.inventory > 0 ? sum + v.inventory : sum, 0);
-            } else {
-                // If variants exist but none are active, use the AI price/inventory as fallback base
-                productPayload.price = priceInALL;
-                productPayload.inventory = inventory;
-            }
+            
+            // Recalculate base price from existing options
+            const existingOptions = existingProduct.details.options as any[];
+            const minPriceAdjustment = existingOptions.reduce((min, opt) => {
+                if (opt.values.length === 0) return min;
+                const minDiff = Math.min(...opt.values.map((v: any) => v.priceDifference));
+                return min + minDiff;
+            }, 0);
+            
+            // The price stored in the DB is the lowest final price. We need to calculate it again.
+            const lowestFinalPriceInALL = priceInALL + minPriceAdjustment;
+            productPayload.price = lowestFinalPriceInALL;
+            
+        } else {
+            // If no existing options, use the newly generated ones (or none)
+            productPayload.details.options = details.options;
         }
+        
+        // Inventory is always updated to the AI-suggested/current base inventory
+        productPayload.inventory = inventory;
 
         summary.updated++;
         summary.updated_items.push(productPayload);

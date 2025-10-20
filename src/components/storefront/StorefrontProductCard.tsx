@@ -79,6 +79,7 @@ export const StorefrontProductCard = ({
 
   const blurEnabled = effectiveAppearanceSettings?.blurEnabled;
 
+  // The base price is the lowest active variant price (or single price) stored in the main product record
   const originalDisplayPrice = effectiveConvertCurrency ? effectiveConvertCurrency(product.price, product.currency) : product.price;
 
   const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && product.inventory <= 0);

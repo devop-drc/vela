@@ -50,16 +50,15 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
 
   const product = products.find(p => p.id === productId);
   
-  // NEW: Read structured options and variants
+  // NEW: Read structured options (additive model)
   const productOptions = product?.details?.options || [];
-  const productVariants = product?.details?.variants || [];
-  const hasVariants = productVariants.length > 0;
+  const hasOptions = productOptions.length > 0;
 
   // NEW: State for selected option values
   const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string | null }>(() => {
       const initial: { [key: string]: string | null } = {};
       productOptions.forEach((opt: any) => {
-          initial[opt.name] = opt.values[0] || null; // Default to first value
+          initial[opt.name] = opt.values[0]?.value || null; // Default to first value
       });
       return initial;
   });
@@ -71,7 +70,7 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
       setSelectedOptions(() => {
           const initial: { [key: string]: string | null } = {};
           productOptions.forEach((opt: any) => {
-              initial[opt.name] = opt.values[0] || null;
+              initial[opt.name] = opt.values[0]?.value || null;
           });
           return initial;
       });
@@ -117,25 +116,29 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
   }
 
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
-  const originalDisplayPrice = convertCurrency(product.price, product.currency);
+  const lowestFinalPriceInDisplay = convertCurrency(product.price, product.currency);
 
-  // NEW: Find the currently selected variant
-  const selectedVariant = useMemo(() => {
-      if (!hasVariants) return null;
-      
-      const selectedValues = productOptions.map((opt: any) => selectedOptions[opt.name]);
-      
-      return productVariants.find((variant: any) => {
-          return variant.optionValues.every((vValue: string, index: number) => vValue === selectedValues[index]);
+  // --- Price and Inventory Logic (Additive Model) ---
+  const { finalDisplayPrice, finalInventory, basePriceInDisplay } = useMemo(() => {
+      const basePrice = lowestFinalPriceInDisplay;
+      let priceAdjustment = 0;
+      let inventory = product.inventory; // Inventory is now stored at the product level
+
+      // Calculate price adjustment based on selected options
+      productOptions.forEach((option: any) => {
+          const selectedValue = selectedOptions[option.name];
+          const optionValue = option.values.find((v: any) => v.value === selectedValue);
+          priceAdjustment += optionValue?.priceDifference || 0;
       });
-  }, [productOptions, productVariants, selectedOptions, hasVariants]);
 
-  // NEW: Calculate final price and stock based on selected variant
-  const finalDisplayPrice = selectedVariant ? originalDisplayPrice + selectedVariant.priceDifference : originalDisplayPrice;
-  const finalInventory = selectedVariant ? selectedVariant.inventory : product.inventory;
-  const isVariantOutOfStock = hasVariants && (selectedVariant?.disabled || finalInventory <= 0);
+      return {
+          finalDisplayPrice: basePrice + priceAdjustment,
+          finalInventory: inventory,
+          basePriceInDisplay: basePrice,
+      };
+  }, [product.inventory, productOptions, selectedOptions, lowestFinalPriceInDisplay]);
   
-  const isProductOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && (product.inventory <= 0 || isVariantOutOfStock));
+  const isProductOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && finalInventory <= 0);
 
   const activePromotions = promotions.filter(promo => {
     if (!promo.is_active) return false;
@@ -193,7 +196,7 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
     }
 
     const optionsForCart: { [key: string]: string | string[] } = {};
-    if (hasVariants) {
+    if (hasOptions) {
         Object.entries(selectedOptions).forEach(([key, value]) => {
             if (value) optionsForCart[key] = value;
         });
@@ -228,7 +231,7 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
     }
 
     const optionsForCart: { [key: string]: string | string[] } = {};
-    if (hasVariants) {
+    if (hasOptions) {
         Object.entries(selectedOptions).forEach(([key, value]) => {
             if (value) optionsForCart[key] = value;
         });
@@ -345,7 +348,7 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
                   {hasDiscount && finalDisplayPrice !== null ? (
                     <>
                       <p className="text-base text-gray-500 line-through">
-                        {formatCurrency(originalDisplayPrice, shopDetails?.currency)}
+                        {formatCurrency(basePriceInDisplay, shopDetails?.currency)}
                       </p>
                       <p className={cn("text-2xl font-bold", isProductOutOfStock ? "text-gray-500" : "text-green-600")}>
                         {formatCurrency(discountedPrice, shopDetails?.currency)}
@@ -374,34 +377,33 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
               )}
 
               {/* Options */}
-              {hasVariants && (
+              {hasOptions && (
                 <div className="space-y-4 pt-2 border-t border-gray-100">
                   {productOptions.map((option: any) => (
                     <div key={option.id} className="space-y-2">
                       <Label className="text-sm text-gray-700 capitalize">{option.name}</Label>
                       <div className="flex flex-wrap gap-2">
-                        {option.values.map((value: string) => (
+                        {option.values.map((value: any) => (
                           <Button
-                            key={value}
-                            variant={selectedOptions[option.name] === value ? "default" : "outline"}
-                            onClick={() => setSelectedOptions(prev => ({ ...prev, [option.name]: value }))}
+                            key={value.value}
+                            variant={selectedOptions[option.name] === value.value ? "default" : "outline"}
+                            onClick={() => setSelectedOptions(prev => ({ ...prev, [option.name]: value.value }))}
                             className={cn(
                               "capitalize text-sm h-9 px-4",
-                              selectedOptions[option.name] === value ? "bg-red-500 text-white border-red-500 hover:bg-red-600" : "bg-gray-50 text-gray-800 border-gray-300 hover:bg-gray-100"
+                              selectedOptions[option.name] === value.value ? "bg-red-500 text-white border-red-500 hover:bg-red-600" : "bg-gray-50 text-gray-800 border-gray-300 hover:bg-gray-100"
                             )}
                           >
-                            {value}
+                            {value.value}
+                            {value.priceDifference !== 0 && (
+                                <span className={cn("ml-1 font-mono text-xs", value.priceDifference > 0 ? "text-green-600" : "text-red-500")}>
+                                    ({formatCurrency(value.priceDifference, shopDetails?.currency, 'en-US', true)})
+                                </span>
+                            )}
                           </Button>
                         ))}
                       </div>
                     </div>
                   ))}
-                  {selectedVariant && (
-                      <div className="pt-2 text-xs text-gray-500">
-                          SKU: <span className="font-mono text-xs">{selectedVariant.sku}</span>
-                          {selectedVariant.disabled && <Badge variant="destructive" className="ml-2">Unavailable</Badge>}
-                      </div>
-                  )}
                 </div>
               )}
 
