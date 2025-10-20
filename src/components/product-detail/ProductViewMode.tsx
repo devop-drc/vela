@@ -41,7 +41,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     console.log("ProductViewMode: Rendering for product:", product.id);
 
     // Convert product price from its stored currency (now always ALL) to the shop's display currency
-    const displayPrice = useMemo(() => {
+    const displayBasePrice = useMemo(() => {
         if (product.price == null || !shopDetails) return null;
         // product.price is the calculated base price (lowest variant price or single price) stored in ALL
         const converted = convertCurrency(product.price, product.currency, shopDetails.currency);
@@ -70,19 +70,19 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
 
     // Calculate lowest price from active variants
     const lowestVariantPrice = useMemo(() => {
-        if (!hasVariants) return displayPrice;
+        if (!hasVariants) return displayBasePrice;
         
         // Find the lowest price difference among active variants
         const activeVariants = variants.filter((v: any) => !v.disabled);
-        if (activeVariants.length === 0) return displayPrice;
+        if (activeVariants.length === 0) return displayBasePrice;
 
-        const lowestDiff = Math.min(...activeVariants.map((v: any) => v.priceDifference));
-        
-        // Calculate the lowest final price in display currency
-        const lowestFinalPrice = (displayPrice || 0) + lowestDiff;
+        // We need the base price in display currency to calculate the final price
+        const basePriceInDisplay = displayBasePrice || 0;
+
+        const lowestFinalPrice = Math.min(...activeVariants.map((v: any) => basePriceInDisplay + v.priceDifference));
         
         return lowestFinalPrice;
-    }, [hasVariants, variants, displayPrice]);
+    }, [hasVariants, variants, displayBasePrice]);
 
 
     return (
@@ -193,7 +193,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                                 </TableHeader>
                                 <TableBody>
                                     {variants.map((variant: any) => {
-                                        const finalPrice = (lowestVariantPrice || 0) + variant.priceDifference;
+                                        const finalPrice = (displayBasePrice || 0) + variant.priceDifference;
                                         const priceDiffFormatted = formatCurrency(variant.priceDifference, currencyCode, 'en-US', true);
                                         
                                         return (

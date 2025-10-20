@@ -25,7 +25,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../ui/carousel";
 import { VariantManager } from "./VariantManager";
-import { showError, showSuccess } from "@/utils/toast"; // <-- IMPORTED TOAST UTILITIES
+import { showError, showSuccess } from "@/utils/toast";
 
 // Define types used by VariantManager locally
 interface Option {
@@ -48,6 +48,29 @@ const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
   'Draft': { icon: XCircle, color: "text-amber-600", label: "Draft" },
   'Out of Stock': { icon: Archive, color: "text-slate-600", label: "Out of Stock" },
+};
+
+// Helper function to generate all combinations (copied from VariantManager.tsx)
+const generateCombinations = (options: Option[]): { name: string, optionValues: string[] }[] => {
+  const activeOptions = options.filter(opt => opt.values.length > 0);
+  if (activeOptions.length === 0) return [];
+  
+  const combinations: string[][] = [];
+  const helper = (index: number, current: string[]) => {
+    if (index === activeOptions.length) {
+      combinations.push(current);
+      return;
+    }
+    activeOptions[index].values.forEach(value => {
+      helper(index + 1, [...current, value]);
+    });
+  };
+  helper(0, []);
+  
+  return combinations.map(combo => ({
+    name: combo.join(' / '),
+    optionValues: combo,
+  }));
 };
 
 // Helper to convert snake_case to Title Case for display
@@ -95,24 +118,74 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     const { ref: rhfRef, ...captionProps } = register("caption");
     useAutosizeTextArea(textAreaRef.current, captionValue || "");
 
+    // Helper to normalize old flat attributes (like color, size) into the new options/variants structure
+    const normalizeOptionsAndVariants = useCallback((details: any, baseInventory: number): { options: Option[], variants: Variant[] } => {
+        const existingOptions = details?.options || [];
+        const existingVariants = details?.variants || [];
+
+        if (existingOptions.length > 0) {
+            // Already in new format
+            return { 
+                options: existingOptions.map((opt: any) => ({ ...opt, id: opt.id || crypto.randomUUID() })), 
+                variants: existingVariants
+            };
+        }
+
+        // Check for legacy/flattened attributes (color, size, material, etc.)
+        const legacyOptionKeys = ['color', 'size', 'material']; // Common option keys
+        const options: Option[] = [];
+        
+        legacyOptionKeys.forEach(key => {
+            const value = details[key];
+            // Check if value is an array of strings (which is how TagInput saves it)
+            if (value && Array.isArray(value) && value.length > 0 && value.every(v => typeof v === 'string')) {
+                options.push({
+                    id: crypto.randomUUID(),
+                    name: toTitleCase(key),
+                    values: value.map(String),
+                });
+            }
+        });
+
+        // If we found options in the legacy format, generate default variants
+        if (options.length > 0) {
+            const combinations = generateCombinations(options);
+            const generatedVariants: Variant[] = combinations.map(combo => ({
+                id: crypto.randomUUID(),
+                name: combo.name,
+                optionValues: combo.optionValues,
+                priceDifference: 0,
+                inventory: baseInventory,
+                sku: combo.name.toUpperCase().replace(/[^A-Z0-9]/g, '-').substring(0, 20),
+                disabled: false,
+            }));
+            return { options, variants: generatedVariants };
+        }
+
+        return { options: [], variants: [] };
+    }, [product.inventory]);
+
     // --- Initialization ---
     useEffect(() => {
         if (product && shopDetails) {
             // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
             const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
+            const baseInventory = product.inventory || 0;
 
-            // 1. Initialize Options and Variants from product.details
-            // Ensure IDs are present for Reorder.Group in VariantManager
-            const initialOptions: Option[] = (product.details?.options || []).map((opt: any) => ({
-                ...opt,
-                id: opt.id || crypto.randomUUID(),
-            }));
-            const initialVariants: Variant[] = product.details?.variants || [];
+            // 1. Normalize Options and Variants
+            const { options: initialOptions, variants: initialVariants } = normalizeOptionsAndVariants(product.details, baseInventory);
             
             setProductOptions(initialOptions);
             setProductVariants(initialVariants);
 
             // 2. Initialize form with base product data
+            // Filter out legacy option keys from details before resetting the form, 
+            // so they don't interfere with the specification inputs.
+            const legacyOptionKeys = ['color', 'size', 'material'];
+            const specificationsOnly = Object.fromEntries(
+                Object.entries(product.details || {}).filter(([k]) => !legacyOptionKeys.includes(k))
+            );
+
             form.reset({
                 name: product.name || "",
                 status: product.status || "Draft",
@@ -120,20 +193,20 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 category: product.category || "",
                 price: priceInDisplayCurrency, // Set price in display currency for the form
                 currency: shopDetails.currency || 'USD', // Always use shop's currency for the form's currency selector
-                inventory: product.inventory || 0, // Base inventory (sum of variants or single stock)
+                inventory: baseInventory, // Base inventory (sum of variants or single stock)
                 tags: Array.isArray(product.tags) ? product.tags : [],
                 pricing_type: product.pricing_type || 'one_time',
                 billing_interval: product.billing_interval,
                 // Specifications are stored directly in details, excluding 'options' and 'variants'
                 details: {
                     type: product.details?.type || 'generic',
-                    ...Object.fromEntries(Object.entries(product.details || {}).filter(([k]) => k !== 'type' && k !== 'options' && k !== 'variants'))
+                    ...specificationsOnly // Use cleaned details
                 }
             });
             const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
             setMediaItems(gallery);
         } else if (product) {
-            // Fallback if shopDetails not loaded yet
+            // Fallback if shopDetails not loaded yet (simplified reset)
             form.reset({
                 name: product.name || "",
                 status: product.status || "Draft",
@@ -150,7 +223,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         } else {
             setMediaItems([]);
         }
-    }, [product, form.reset, shopDetails, convertCurrency, setMediaItems]);
+    }, [product, form.reset, shopDetails, convertCurrency, setMediaItems, normalizeOptionsAndVariants]);
 
     // --- Metadata Fetching ---
     useEffect(() => {
@@ -241,6 +314,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         const cleanedDetails: { [key: string]: any } = { type: data.details.type };
         
         // Add specifications (non-option fields)
+        // We iterate over all keys in data.details (which includes specifications)
         Object.entries(data.details).forEach(([key, value]) => {
             if (key !== 'type') {
                 cleanedDetails[key] = value;
@@ -263,11 +337,16 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             priceInALL = convertCurrency(lowestFinalPrice, data.currency, 'ALL');
             
             // Set base inventory to the sum of all active variant inventories
-            baseInventoryForDB = activeVariants.reduce((sum, v) => sum + v.inventory, 0);
+            baseInventoryForDB = activeVariants.reduce((sum, v) => v.inventory > 0 ? sum + v.inventory : sum, 0);
 
             // Add options and variants to details
             cleanedDetails.options = productOptions;
             cleanedDetails.variants = productVariants; // Store ALL variants, including disabled ones
+            
+            // CRITICAL FIX: Remove legacy/flattened option keys from the final details object
+            const legacyOptionKeys = ['color', 'size', 'material'];
+            legacyOptionKeys.forEach(key => delete cleanedDetails[key]);
+
         } else {
             // If no variants, remove options/variants keys
             delete cleanedDetails.options;
