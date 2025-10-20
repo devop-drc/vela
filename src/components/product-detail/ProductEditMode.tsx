@@ -68,6 +68,9 @@ const AttributeInput = ({ control, fieldName, inputType }: any) => {
 };
 
 export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, onClose, isSubmitting, setIsSubmitting, onUpdate }: any) => {
+    // CRITICAL FIX: Ensure product is defined before accessing properties
+    if (!product) return null;
+
     const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
     const { shopDetails, convertCurrency } = useShop();
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
