@@ -204,11 +204,12 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
                   isUploading={isUploading}
                   form={{...form, handleSubmit: form.handleSubmit}}
                   onCancel={() => setIsEditing(false)}
+                  onClose={onClose} // Pass onClose here
                   isSubmitting={isSubmitting}
                   isEditing={isEditing}
                   setMediaItems={setMediaItems}
                   setIsSubmitting={setIsSubmitting}
-                  onUpdate={onUpdate} // Pass onUpdate down to EditMode for saving
+                  onUpdate={onUpdate}
                 />
               </FormProvider>
             ) : (

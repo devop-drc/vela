@@ -67,7 +67,7 @@ const AttributeInput = ({ control, fieldName, inputType }: any) => {
   }
 };
 
-export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting, setIsSubmitting, onUpdate }: any) => {
+export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, onClose, isSubmitting, setIsSubmitting, onUpdate }: any) => {
     const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
     const { shopDetails, convertCurrency } = useShop();
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
@@ -285,8 +285,15 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             thumbnail_url: mediaItems[0] || null,
           }).eq('id', product.id);
 
-        if (error) { showError(`Failed to update product: ${error.message}`); console.error("ProductEditor: Error updating product:", error); } 
-        else { showSuccess("Product updated successfully!"); onUpdate(); onCancel(); }
+        if (error) { 
+            showError(`Failed to update product: ${error.message}`); 
+            console.error("ProductEditor: Error updating product:", error); 
+        } 
+        else { 
+            showSuccess("Product updated successfully!"); 
+            onUpdate(); // Trigger parent refresh
+            onClose(); // Close the modal
+        }
         setIsSubmitting(false);
     };
 
@@ -296,7 +303,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     // Filter specifications to only include those defined by the current type, plus any existing custom ones
     const specificationKeys = new Set(typeAttributes.map(attr => attr.name));
     const specificationsToRender = Object.entries(getValues('details') || {})
-        .filter(([key]) => key !== 'type' && key !== 'options' && key !== 'variants' && (specificationKeys.has(key) || !productOptions.some(o => o.name.toLowerCase() === key.toLowerCase())));
+        .filter(([key, value]) => key !== 'type' && key !== 'options' && key !== 'variants' && (specificationKeys.has(key) || (value !== undefined && value !== null && value !== '')));
 
     const hasVariants = productVariants.length > 0;
 
