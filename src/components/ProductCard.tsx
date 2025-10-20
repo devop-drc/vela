@@ -22,7 +22,7 @@ interface Product {
   inventory: number;
   media_url: string;
   media_gallery: string[] | null;
-  media_type: string | null;
+  media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM';
   thumbnail_url?: string;
   caption: string;
   category: string;
@@ -87,7 +87,10 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
 
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
   
-  const detailsToDisplay = Object.entries(details || {}).filter(([key, value]) => key !== 'type' && value && (!Array.isArray(value) || value.length > 0));
+  // Filter out 'options' and 'variants' from general details display
+  const detailsToDisplay = Object.entries(details || {}).filter(([key, value]) => 
+    key !== 'type' && key !== 'options' && key !== 'variants' && value && (!Array.isArray(value) || value.length > 0)
+  );
 
   const getStockBadge = (inventory: number | null) => {
     if (product.pricing_type === 'subscription') {
@@ -174,7 +177,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
             {gridSize === 'lg' && detailsToDisplay.length > 0 && (
               <div className="space-y-1.5 pt-1">
                 {detailsToDisplay.slice(0, 2).map(([key, value]) => (
-                  <DetailRow key={key} icon={Cog}>
+                  <DetailRow key={key} icon={getAttributeIcon(key)}>
                     <span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span>
                     <span className="truncate">{Array.isArray(value) ? value.join(', ') : String(value)}</span>
                   </DetailRow>

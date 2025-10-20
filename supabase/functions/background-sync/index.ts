@@ -79,6 +79,43 @@ const getSupabaseAdmin = () => createClient(
 
 const toTitleCase = (str: string) => str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
+// Helper function to generate all combinations
+const generateCombinations = (options: any[]): { name: string, optionValues: string[] }[] => {
+  const activeOptions = options.filter(opt => opt.values.length > 0);
+  if (activeOptions.length === 0) return [];
+  
+  const combinations: string[][] = [];
+  const helper = (index: number, current: string[]) => {
+    if (index === activeOptions.length) {
+      combinations.push(current);
+      return;
+    }
+    activeOptions[index].values.forEach(value => {
+      helper(index + 1, [...current, value]);
+    });
+  };
+  helper(0, []);
+  
+  return combinations.map(combo => ({
+    name: combo.join(' / '),
+    optionValues: combo,
+  }));
+};
+
+// Helper function to generate default variants
+const generateDefaultVariants = (options: any[], baseInventory: number): any[] => {
+    const combinations = generateCombinations(options);
+    return combinations.map(combo => ({
+        id: crypto.randomUUID(),
+        name: combo.name,
+        optionValues: combo.optionValues,
+        priceDifference: 0,
+        inventory: baseInventory,
+        sku: combo.name.toUpperCase().replace(/[^A-Z0-9]/g, '-').substring(0, 20),
+        disabled: false,
+    }));
+};
+
 // Currency conversion helper (assumes rates are ALL-based)
 const convertCurrencyServer = async (amount: number, fromCurrency: string, toCurrency: string = 'ALL'): Promise<number> => {
   if (fromCurrency === toCurrency) return amount;
@@ -175,9 +212,9 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       return;
     }
 
-    const { data: existingProducts, error: productsError } = await supabaseAdmin.from('products').select('id, instagram_post_id').eq('business_id', business.id);
+    const { data: existingProducts, error: productsError } = await supabaseAdmin.from('products').select('id, instagram_post_id, details, inventory').eq('business_id', business.id);
     if (productsError) throw productsError;
-    const existingProductMap = new Map((existingProducts || []).map(p => [p.instagram_post_id, p.id]));
+    const existingProductMap = new Map((existingProducts || []).map(p => [p.instagram_post_id, p]));
 
     const postsToProcess: InstagramPost[] = syncType === 'quick' ? allPosts.filter(p => !existingProductMap.has(p.id)) : allPosts;
     const total = postsToProcess.length;
@@ -317,15 +354,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
               details[key] = value;
           }
       }
-      if (options) {
-          details.options = Object.entries(options).map(([name, values]) => ({
-            id: crypto.randomUUID(), // Assign ID for client-side management
-            name: toTitleCase(name),
-            values: Array.isArray(values) ? values.map(String) : [String(values)],
-          }));
-          details.variants = []; // Initialize variants array for new products
-      }
-
+      
       // Determine final pricing and inventory
       const finalPricingType = pricingType || 'one_time';
       const finalBillingInterval = finalPricingType === 'subscription' ? (billingInterval || 'month') : null;
@@ -337,29 +366,79 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         priceInALL = await convertCurrencyServer(productInfo.price, productInfo.currency, 'ALL');
       }
 
+      // --- Variant Generation ---
+      let productOptions: any[] = [];
+      let productVariants: any[] = [];
+      let basePriceForDB = priceInALL;
+      let baseInventoryForDB = inventory;
+
+      if (options && Object.keys(options).length > 0) {
+          // Convert AI options object to array format for VariantManager
+          productOptions = Object.entries(options).map(([name, values]) => ({
+              id: crypto.randomUUID(),
+              name: toTitleCase(name),
+              values: Array.isArray(values) ? values.map(String) : [String(values)],
+          }));
+          
+          // Generate default variants
+          productVariants = generateDefaultVariants(productOptions, inventory);
+
+          // Add options and variants to details
+          details.options = productOptions;
+          details.variants = productVariants;
+          
+          // If variants exist, set base price to the lowest active variant price (which is currently basePrice + 0)
+          // and set base inventory to the sum of all variant inventories.
+          basePriceForDB = priceInALL; // Since priceDifference is 0, base price remains the same
+          baseInventoryForDB = productVariants.reduce((sum, v) => v.inventory > 0 ? sum + v.inventory : sum, 0);
+      } else {
+          // If no options, ensure options/variants keys are not present
+          delete details.options;
+          delete details.variants;
+      }
+
       const productPayload: ProductPayload = {
         name: productInfo.productName,
         caption: productInfo.description,
-        price: priceInALL, // Store price in ALL
+        price: basePriceForDB, // Store calculated base price in ALL
         currency: 'ALL', // Always store currency as ALL
         tags: productInfo.tags,
         category: toTitleCase(categoryName || ''),
         details: details,
         business_id: business.id, 
         user_id: user.id, 
-        status: inventory === 0 ? 'Out of Stock' : 'Draft', // Set status based on inventory
+        status: baseInventoryForDB === 0 ? 'Out of Stock' : 'Draft', // Set status based on calculated inventory
         instagram_post_id: post.id, 
         media_url: post.media_url, 
         thumbnail_url: post.thumbnail_url || post.media_url, 
         media_type: post.media_type,
-        inventory: inventory, // Include inventory in payload
+        inventory: baseInventoryForDB, // Include calculated inventory in payload
         pricing_type: finalPricingType, // Include pricing_type
         billing_interval: finalBillingInterval, // Include billing_interval
       };
 
-      const existingId = existingProductMap.get(post.id);
-      if (existingId) {
-        productPayload.id = existingId;
+      const existingProduct = existingProductMap.get(post.id);
+      if (existingProduct) {
+        productPayload.id = existingProduct.id;
+        
+        // If updating an existing product, preserve existing variants/options if they exist
+        // This prevents overwriting manual variant configuration on subsequent syncs.
+        if (existingProduct.details?.options && existingProduct.details?.variants) {
+            productPayload.details.options = existingProduct.details.options;
+            productPayload.details.variants = existingProduct.details.variants;
+            // Recalculate base price and inventory from existing variants if they exist
+            const existingActiveVariants = existingProduct.details.variants.filter((v: any) => !v.disabled);
+            if (existingActiveVariants.length > 0) {
+                const lowestFinalPrice = Math.min(...existingActiveVariants.map((v: any) => priceInALL + v.priceDifference));
+                productPayload.price = lowestFinalPrice;
+                productPayload.inventory = existingActiveVariants.reduce((sum: number, v: any) => v.inventory > 0 ? sum + v.inventory : sum, 0);
+            } else {
+                // If variants exist but none are active, use the AI price/inventory as fallback base
+                productPayload.price = priceInALL;
+                productPayload.inventory = inventory;
+            }
+        }
+
         summary.updated++;
         summary.updated_items.push(productPayload);
       } else {
