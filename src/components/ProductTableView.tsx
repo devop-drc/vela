@@ -1,12 +1,13 @@
+import React from 'react';
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Edit, Trash2, AlertTriangle } from "lucide-react";
-import { Checkbox } from "./ui/checkbox";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency } from "@/lib/formatters";
 import { ProductStatusDropdown } from "./ProductStatusDropdown"; // Import ProductStatusDropdown
-import { useShop } from "@/contexts/ShopContext"; // Import useShop
 import { Badge } from "./ui/badge"; // Import Badge
-import { cn } from "@/lib/utils"; // Import cn
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Product {
   id: string;
@@ -127,9 +128,9 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
             </TableCell>
             <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
               <div className="flex-1 text-sm font-medium">
-                {product.total_earned !== undefined && product.total_earned !== null
-                  ? formatCurrency(convertCurrency(product.total_earned, product.currency, shopDetails.currency), shopDetails.currency)
-                  : formatCurrency(0, shopDetails.currency)}
+                {product.total_earned !== undefined && product.total_earned !== null && product.currency ? (
+                  formatCurrency(convertCurrency(product.total_earned, product.currency, shopDetails.currency), shopDetails.currency)
+                ) : formatCurrency(0, shopDetails.currency)}
               </div>
             </TableCell>
             <TableCell className="text-right">
