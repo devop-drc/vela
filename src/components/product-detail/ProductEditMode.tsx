@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback, useMemo } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo, forwardRef } from "react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -67,7 +67,7 @@ const AttributeInput = ({ control, fieldName, inputType }: any) => {
   }
 };
 
-export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, isSubmitting, setIsSubmitting }: any) => {
+export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, onClose, onUpdate, isSubmitting, setIsSubmitting }: any) => {
     const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
     const { shopDetails, convertCurrency } = useShop();
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
@@ -110,6 +110,12 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             setProductVariants(initialVariants);
 
             // 2. Initialize form with base product data
+            // Filter out legacy option keys from details before resetting the form
+            const LEGACY_OPTION_KEYS = ['color', 'size', 'material', 'options', 'variants'];
+            const specificationsOnly = Object.fromEntries(
+                Object.entries(product.details || {}).filter(([k]) => !LEGACY_OPTION_KEYS.includes(k))
+            );
+
             form.reset({
                 name: product.name || "",
                 status: product.status || "Draft",
@@ -124,7 +130,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 // Specifications are stored directly in details, excluding 'options' and 'variants'
                 details: {
                     type: product.details?.type || 'generic',
-                    ...Object.fromEntries(Object.entries(product.details || {}).filter(([k]) => k !== 'type' && k !== 'options' && k !== 'variants'))
+                    ...specificationsOnly
                 }
             });
             const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
@@ -285,8 +291,15 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             thumbnail_url: mediaItems[0] || null,
           }).eq('id', product.id);
 
-        if (error) { showError(`Failed to update product: ${error.message}`); console.error("ProductEditor: Error updating product:", error); } 
-        else { showSuccess("Product updated successfully!"); onUpdate(); onCancel(); }
+        if (error) { 
+            showError(`Failed to update product: ${error.message}`); 
+            console.error("ProductEditor: Error updating product:", error); 
+        } 
+        else { 
+            showSuccess("Product updated successfully!"); 
+            onUpdate(); 
+            onClose(); // <-- Call onClose to close the main dialog
+        }
         setIsSubmitting(false);
     };
 

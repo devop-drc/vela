@@ -33,6 +33,16 @@ const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, tx
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
     const { shopDetails, convertCurrency } = useShop();
     
+    // CRITICAL FIX: Handle null product early to prevent crash
+    if (!product) return null;
+
+    // Fix ESLint warning by wrapping initialization in useMemo
+    const options = useMemo(() => product.details?.options || [], [product.details?.options]);
+    const variants = useMemo(() => product.details?.variants || [], [product.details?.variants]);
+    
+    const hasVariants = variants.length > 0;
+    const currencyCode = shopDetails?.currency || 'USD';
+
     // Convert product price from its stored currency (now always ALL) to the shop's display currency
     const displayPrice = useMemo(() => {
         if (product.price == null || !shopDetails) return null;
@@ -40,12 +50,6 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
         const converted = convertCurrency(product.price, product.currency, shopDetails.currency);
         return converted;
     }, [product.price, product.currency, convertCurrency, shopDetails]);
-
-    // Extract options and variants from details
-    const options = product.details?.options || [];
-    const variants = product.details?.variants || [];
-    const hasVariants = variants.length > 0;
-    const currencyCode = shopDetails?.currency || 'USD';
 
     // Filter out options and variants from general details to get specifications
     const specifications = useMemo(() => {
@@ -181,7 +185,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                                         <TableHead className="w-[120px]">Final Price</TableHead>
                                         <TableHead className="w-[100px]">Stock</TableHead>
                                         <TableHead className="w-[120px]">SKU</TableHead>
-                                        <TableHead className="w-[50px]">Status</TableHead>
+                                        <TableHead className="w-[50px] text-right">Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -200,7 +204,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                                                 <TableCell>{formatCurrency(finalPrice, currencyCode)}</TableCell>
                                                 <TableCell>{variant.inventory}</TableCell>
                                                 <TableCell>{variant.sku}</TableCell>
-                                                <TableCell>
+                                                <TableCell className="text-right">
                                                     <Badge variant="secondary" className={cn(variant.disabled ? "bg-gray-500 text-white" : "bg-emerald-500 text-white")}>
                                                         {variant.disabled ? 'Unavailable' : 'Available'}
                                                     </Badge>
