@@ -260,6 +260,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     const outlineColorClass = hasDiscount ? "border-green-600 text-green-600 hover:bg-green-100 hover:border-green-800 hover:text-green-800" : "border-red-700 text-red-700 hover:bg-red-100 hover:text-red-800 hover:border-red-800";
 
     return (
+      <>
       <div ref={ref} id={`product-${product.id}`} className="bg-white text-black border-b border-gray-200 pb-4 mb-4">
         {/* Product Header */}
         <div className="flex items-center gap-3 px-4 py-2">
@@ -518,7 +519,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
             onOrderPlaced={() => onClose()} // Close modal after order is placed
           />
         )}
-      </Dialog>
+      </div>
     </>
   );
-};
+});

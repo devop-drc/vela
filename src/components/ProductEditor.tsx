@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -64,6 +64,7 @@ interface ProductEditorProps {
 const LEGACY_OPTION_KEYS = ['color', 'size', 'material', 'options', 'variants'];
 
 export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEditorProps) => {
+  // --- HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP LEVEL ---
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,13 +76,9 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     resolver: zodResolver(productSchema),
   });
   
-  // CRITICAL FIX: Ensure product is defined before accessing properties
-  if (!product) {
-    return null;
-  }
-  
+  // --- END UNCONDITIONAL HOOKS ---
 
-
+  // Use a separate effect to handle form reset and media initialization when 'product' changes
   useEffect(() => {
     if (product && shopDetails) {
       // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
@@ -125,13 +122,14 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
         billing_interval: product.billing_interval,
         details: product.details || { type: 'generic' },
       });
+      const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
+      setMediaItems(gallery);
     }
-    // Removed the 'else' block that called form.reset() when product was null.
   }, [product, form.reset, shopDetails, convertCurrency]);
   
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !product) return;
 
     setIsUploading(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -141,7 +139,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       return;
     }
 
-    const filePath = `${user.id}/${product!.id}/${Date.now()}-${file.name}`;
+    const filePath = `${user.id}/${product.id}/${Date.now()}-${file.name}`;
     const { error } = await supabase.storage.from('product-media').upload(filePath, file);
 
     if (error) {
@@ -154,13 +152,14 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   };
 
   const handleImageDelete = async (urlToDelete: string) => {
+    if (!product) return;
     const fileName = urlToDelete.split('/').pop();
     if (!fileName) return;
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const filePath = `${user.id}/${product!.id}/${fileName}`;
+    const filePath = `${user.id}/${product.id}/${fileName}`;
     const { error } = await supabase.storage.from('product-media').remove([filePath]);
 
     if (error) {
@@ -171,6 +170,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   };
 
   const handleDelete = async () => {
+    if (!product) return;
     setIsSubmitting(true);
     
     // Delete from AI analysis cache if instagram_post_id exists
@@ -195,6 +195,11 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     }
     setIsSubmitting(false); setIsDeleting(false);
   };
+
+  // If product is null, we render nothing inside the dialog, but the dialog itself is controlled by `isOpen`
+  if (!product) {
+    return null;
+  }
 
   return (
     <>
