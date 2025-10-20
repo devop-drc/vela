@@ -33,6 +33,9 @@ const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, tx
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
     const { shopDetails, convertCurrency } = useShop();
     
+    // CRITICAL FIX: Ensure product is defined before accessing properties
+    if (!product) return null;
+
     // Convert product price from its stored currency (now always ALL) to the shop's display currency
     const displayPrice = useMemo(() => {
         if (product.price == null || !shopDetails) return null;

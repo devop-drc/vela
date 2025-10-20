@@ -101,31 +101,19 @@ const applyStorefrontSettingsToDOM = (settings: any, shopDetails: any) => {
 
     const setFavicon = (url: string | null) => {
       let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-      if (url) {
-        if (link) {
-          link.href = url;
-        } else {
-          link = document.createElement('link');
-          link.rel = 'icon';
-          link.href = url;
-          document.head.appendChild(link);
-        }
+      const effectiveUrl = url || '/favicon.ico'; // Use default if null
+      
+      if (link) {
+        link.href = effectiveUrl;
       } else {
-        if (link) link.href = '/favicon.ico';
-        else {
-          link = document.createElement('link');
-          link.rel = 'icon';
-          link.href = '/favicon.ico';
-          document.head.appendChild(link);
-        }
+        link = document.createElement('link');
+        link.rel = 'icon';
+        link.href = effectiveUrl;
+        document.head.appendChild(link);
       }
     };
 
-    if (shopDetails.favicon_url) {
-      setFavicon(shopDetails.favicon_url);
-    } else {
-      setFavicon(null);
-    }
+    setFavicon(shopDetails.favicon_url);
     
   } else {
     document.title = "Storefront";

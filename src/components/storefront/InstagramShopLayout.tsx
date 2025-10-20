@@ -20,7 +20,7 @@ import { InstagramBottomNav } from './InstagramBottomNav'; // Import new bottom 
 import { InstagramFilterDrawer } from './InstagramFilterDrawer'; // Import InstagramFilterDrawer
 
 // Function to apply fixed Instagram-like settings to the DOM
-const applyInstagramShopSettingsToDOM = () => {
+const applyInstagramShopSettingsToDOM = (shopDetails: any) => {
   const root = document.documentElement;
 
   // Reset any custom properties from AppearanceContext
@@ -56,6 +56,24 @@ const applyInstagramShopSettingsToDOM = () => {
     bgOverlay.style.backgroundColor = 'transparent';
     bgOverlay.style.filter = 'none';
   }
+
+  // Set favicon
+  if (shopDetails) {
+    const setFavicon = (url: string | null) => {
+      let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      const effectiveUrl = url || '/favicon.ico';
+      
+      if (link) {
+        link.href = effectiveUrl;
+      } else {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        link.href = effectiveUrl;
+        document.head.appendChild(link);
+      }
+    };
+    setFavicon(shopDetails.favicon_url);
+  }
 };
 
 const InstagramShopLayoutContent = () => {
@@ -78,7 +96,7 @@ const InstagramShopLayoutContent = () => {
   const BOTTOM_NAV_HEIGHT = '56px'; // h-14
 
   useEffect(() => {
-    applyInstagramShopSettingsToDOM();
+    applyInstagramShopSettingsToDOM(shopDetails);
     // Clean up styles when component unmounts or path changes away from instagramShop
     return () => {
       const root = document.documentElement;
@@ -92,7 +110,7 @@ const InstagramShopLayoutContent = () => {
       root.classList.remove('blur-enabled');
       // Re-apply default settings or main app settings if needed elsewhere
     };
-  }, []);
+  }, [shopDetails]);
 
   // Dynamically set page title and meta description
   useEffect(() => {
@@ -106,36 +124,10 @@ const InstagramShopLayoutContent = () => {
         document.head.appendChild(metaDescriptionTag);
       }
       metaDescriptionTag.setAttribute('content', shopDetails.headline || shopDetails.about || `Shop the Instagram feed of ${shopDetails.shop_name}.`);
-
-      // Set favicon
-      const setFavicon = (url: string | null) => {
-        let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-        if (url) {
-          if (link) {
-            link.href = url;
-          } else {
-            link = document.createElement('link');
-            link.rel = 'icon';
-            link.href = url;
-            document.head.appendChild(link);
-          }
-        } else {
-          if (link) link.href = '/favicon.ico';
-          else {
-            link = document.createElement('link');
-            link.rel = 'icon';
-            link.href = '/favicon.ico';
-            document.head.appendChild(link);
-          }
-        }
-      };
-      setFavicon(shopDetails.favicon_url || shopDetails.logo_url); // Use logo as favicon
     } else {
       document.title = "Instagram Shop";
       let metaDescriptionTag = document.querySelector('meta[name="description"]');
       if (metaDescriptionTag) metaDescriptionTag.setAttribute('content', "Discover unique products from various shops.");
-      let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-      if (link) link.remove();
     }
   }, [shopDetails]);
 
