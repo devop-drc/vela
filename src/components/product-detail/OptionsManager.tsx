@@ -27,8 +27,8 @@ interface ProductOption {
   values: OptionValue[];
 }
 
-// --- Memoized OptionValueRow Component ---
-const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, control, currencyCode, convertCurrency, valuesFields, removeValue, setValue, watch, getValues, trigger }: any) => {
+// --- OptionValueRow Component (Memoization removed for stability) ---
+const OptionValueRow = (({ optionIndex, valueIndex, optionName, control, currencyCode, convertCurrency, valuesFields, removeValue, setValue, watch, getValues, trigger }: any) => {
   const fieldName = `details.options_v2.${optionIndex}.values.${valueIndex}`;
   
   // Use watch for performance critical fields only
@@ -185,18 +185,11 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
       </div>
     </div>
   );
-}, (prevProps, nextProps) => {
-    // Optimization: Only re-render if indices change, or if the RHF field array structure changes (valuesFields.length)
-    // This prevents unrelated form changes from resetting the local state of OptionSection.
-    return prevProps.optionIndex === nextProps.optionIndex &&
-           prevProps.valueIndex === nextProps.valueIndex &&
-           prevProps.optionName === nextProps.optionName &&
-           prevProps.valuesFields.length === nextProps.valuesFields.length;
 });
 OptionValueRow.displayName = 'OptionValueRow';
 
-// --- Memoized OptionSection Component ---
-const OptionSection = React.memo(({ option, index, removeOption, control, watch, setValue, getValues, currencyCode, convertCurrency, trigger }: any) => {
+// --- OptionSection Component (Memoization removed for stability) ---
+const OptionSection = (({ option, index, removeOption, control, watch, setValue, getValues, currencyCode, convertCurrency, trigger }: any) => {
   const { fields: valuesFields, append: appendValue, remove: removeValue } = useFieldArray({
     control,
     name: `details.options_v2.${index}.values`,
@@ -366,12 +359,6 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
       </AnimatePresence>
     </Card>
   );
-}, (prevProps, nextProps) => {
-    // Custom comparison to preserve the local isCollapsed state
-    // Only re-render if the index changes, or the option name changes, or the number of values changes.
-    return prevProps.index === nextProps.index &&
-           prevProps.option.name === nextProps.option.name &&
-           prevProps.option.values.length === nextProps.option.values.length;
 });
 OptionSection.displayName = 'OptionSection';
 
