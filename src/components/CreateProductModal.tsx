@@ -101,11 +101,13 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
             if (Array.isArray(values) && values.length > 0 && ['color', 'size', 'material'].includes(name.toLowerCase())) {
                 newOptionsV2.push({
                     name: toTitleCase(name),
-                    values: values.map(v => ({
+                    values: values.map((v, index) => ({
                         value: v,
                         price_difference: 0,
                         inventory: 10, // Default inventory
                         is_active: true,
+                        is_default: index === 0, // Set the first value as default
+                        isSelected: false, // Add isSelected field
                     }))
                 });
             }
@@ -194,7 +196,18 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
     // Include all dynamic attributes (specs + options_v2)
     Object.entries(data.details).forEach(([key, value]) => {
         if (key !== 'type') {
-            cleanedDetails[key] = value;
+            // Remove the temporary 'isSelected' field from options_v2 values before saving
+            if (key === 'options_v2' && Array.isArray(value)) {
+                cleanedDetails[key] = value.map((option: any) => ({
+                    ...option,
+                    values: option.values.map((val: any) => {
+                        const { isSelected, ...rest } = val;
+                        return rest;
+                    })
+                }));
+            } else {
+                cleanedDetails[key] = value;
+            }
         }
     });
 

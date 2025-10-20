@@ -74,10 +74,20 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
             const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
 
-            // Ensure details.options_v2 exists and is an array
+            // Ensure details.options_v2 exists and is an array, and ensure is_default/isSelected are present
             const initialDetails = product.details || { type: 'generic' };
             if (!initialDetails.options_v2) {
                 initialDetails.options_v2 = [];
+            } else {
+                // Ensure every option value has is_default and isSelected property
+                initialDetails.options_v2 = initialDetails.options_v2.map((opt: any) => ({
+                    ...opt,
+                    values: opt.values.map((val: any, index: number) => ({
+                        ...val,
+                        is_default: val.is_default === undefined ? (index === 0 && opt.values.length === 1) : val.is_default,
+                        isSelected: false, // Always reset selection state on load
+                    }))
+                }));
             }
 
             // 1. Initialize form with base product data
@@ -102,6 +112,15 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             const initialDetails = product.details || { type: 'generic' };
             if (!initialDetails.options_v2) {
                 initialDetails.options_v2 = [];
+            } else {
+                initialDetails.options_v2 = initialDetails.options_v2.map((opt: any) => ({
+                    ...opt,
+                    values: opt.values.map((val: any, index: number) => ({
+                        ...val,
+                        is_default: val.is_default === undefined ? (index === 0 && opt.values.length === 1) : val.is_default,
+                        isSelected: false,
+                    }))
+                }));
             }
             form.reset({
                 name: product.name || "",
@@ -190,11 +209,13 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     if (Array.isArray(values) && values.length > 0) {
                         newOptionsV2.push({
                             name: toTitleCase(name),
-                            values: values.map(v => ({
+                            values: values.map((v, index) => ({
                                 value: v,
                                 price_difference: 0,
                                 inventory: 10, // Default inventory
                                 is_active: true,
+                                is_default: index === 0, // Set the first value as default
+                                isSelected: false, // Reset selection state
                             }))
                         });
                     }
@@ -219,10 +240,21 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         // 1. Prepare details payload: only include fields present in the form/type attributes
         const cleanedDetails: { [key: string]: any } = { type: data.details.type };
         
-        // Add all dynamic attributes (specs + options)
+        // Add all dynamic attributes (specs + options_v2)
         Object.entries(data.details).forEach(([key, value]) => {
             if (key !== 'type') {
-                cleanedDetails[key] = value;
+                // Remove the temporary 'isSelected' field from options_v2 values before saving
+                if (key === 'options_v2' && Array.isArray(value)) {
+                    cleanedDetails[key] = value.map((option: any) => ({
+                        ...option,
+                        values: option.values.map((val: any) => {
+                            const { isSelected, ...rest } = val;
+                            return rest;
+                        })
+                    }));
+                } else {
+                    cleanedDetails[key] = value;
+                }
             }
         });
 
