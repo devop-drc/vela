@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 const GEMINI_PRO_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`;
@@ -8,6 +8,24 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Types
+interface AnalysisResult {
+  isProductPost: boolean;
+  productName?: string;
+  description?: string;
+  price?: number;
+  currency?: string;
+  tags?: string[];
+  categoryName?: string;
+  typeName?: string;
+  inventory?: number;
+  pricingType?: 'one_time' | 'subscription';
+  billingInterval?: 'month' | 'year' | null;
+  specifications?: { [key: string]: string | string[] };
+  options?: { [key: string]: string[] };
+  tokenUsage?: { promptTokenCount?: number; candidatesTokenCount?: number };
+}
 
 const getClassifierPrompt = (caption: string, keywords: { keyword: string, description: string }[], similarProducts: any[]) => {
   const similarProductsContext = similarProducts.length > 0 ? `
@@ -18,19 +36,24 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   return `
   You are an expert AI for e-commerce, specializing in analyzing Instagram captions to create structured product listings. Your task is to extract product information with high accuracy.
 
+  **Input Caption:**
+  ---
+  ${caption}
+  ---
+
   **Primary Objectives:**
   1. **Product Identification:** Determine if the post is selling a product. If not, return \`{"isProductPost": false}\`.
-  2. **Product Name:** Extract a clear and concise product name (max 10 words).
-  3. **Category & Type:** Determine the most specific category and type.
+  2. **Product Name:** Extract the clearest and most concise product name directly from the caption (max 10 words).
+  3. **Category & Type:** Determine the most specific category and type based on the product name and caption content.
   4. **Pricing Model:**
      - Determine \`pricingType\`: "one_time" or "subscription". Default to "one_time".
      - If "subscription", determine \`billingInterval\`: "month" or "year". Default to "month".
-  5. **Price Extraction:** Extract the numerical price and the currency code (e.g., USD, EUR, ALL). Default currency to "ALL" if none is specified.
+  5. **Price Extraction:** Extract the numerical price and the currency code (e.g., USD, EUR, ALL). **Crucially, if a price and currency are present in the caption, use them.** Default currency to "ALL" if none is specified.
   6. **Inventory/Stock:** Infer \`inventory\` as an integer. If stock is mentioned (e.g., "only 5 left"), use that number. If it's clearly a product post but stock is not mentioned, default to 10. If explicitly "sold out" or "out of stock", default to 0.
   7. **Attributes Extraction (Crucial):**
-     - **Specifications:** A key-value object of fixed, unchangeable attributes (e.g., Material, Dimensions, Weight). Use snake_case for keys.
-     - **Options:** A key-value object where values are arrays of customer-selectable variants (e.g., Color, Size, Storage). Use snake_case for keys.
-  8. **Description:** Generate a compelling, detailed 3-4 sentence description highlighting key features, benefits, and materials.
+     - **Specifications (Fixed Details):** A key-value object of fixed, unchangeable attributes (e.g., Material, Dimensions, Weight). **If the caption is sparse, use your general knowledge about the product name and category to infer 2-3 relevant specifications (e.g., for a scooter: Max Speed, Battery Life, Weight).** Use snake_case for keys.
+     - **Options (Variants):** A key-value object where values are arrays of customer-selectable variants (e.g., Color, Size, Storage). Extract these directly from the caption. Use snake_case for keys.
+  8. **Description:** Generate a compelling, detailed 3-4 sentence description highlighting key features, benefits, and materials, based on the caption and inferred specifications.
   9. **Tags:** Generate 3-5 relevant tags.
 
   **Currency Handling:**
@@ -98,7 +121,19 @@ const analyzeAndEnrichPost = async (post: any, supabase: SupabaseClient, userId:
 
         if (!geminiResponse.ok) throw new Error(`Gemini API error: ${await geminiResponse.text()}`);
         const geminiData = await geminiResponse.json();
-        const analysis = JSON.parse(geminiData.candidates[0].content.parts[0].text);
+        
+        if (!geminiData.candidates || geminiData.candidates.length === 0) {
+            throw new Error("AI failed to generate a response. The prompt might be too complex or the model timed out.");
+        }
+
+        const analysisText = geminiData.candidates[0].content.parts[0].text;
+        let analysis;
+        try {
+            analysis = JSON.parse(analysisText);
+        } catch (e) {
+            console.error("Failed to parse AI response JSON:", analysisText);
+            throw new Error("AI returned invalid JSON format.");
+        }
 
         if (!analysis.isProductPost) {
             return { skipped: true, reason: "AI determined this is not a product post." };

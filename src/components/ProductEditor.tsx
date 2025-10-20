@@ -170,8 +170,13 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     }
 
     const { error } = await supabase.from('products').delete().eq('id', product!.id);
-    if (error) { showError(`Failed to delete product: ${error.message}`); } 
-    else { showSuccess("Product deleted."); onUpdate(); onClose(); }
+    if (error) { 
+      showError(`Failed to delete product: ${error.message}`); 
+    } else { 
+      showSuccess("Product deleted."); 
+      onUpdate(); // <-- Call onUpdate here to trigger parent refresh
+      onClose(); 
+    }
     setIsSubmitting(false); setIsDeleting(false);
   };
 
