@@ -8,8 +8,9 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { CheckCircle, Image as ImageIcon, Loader2, RefreshCw, Sparkles, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
-import { CreateProductModal } from "./CreateProductModal";
 import { MediaItem } from "./MediaItem";
+import { ProductEditor } from "./ProductEditor";
+import { toast } from "sonner";
 
 interface AnalyzedPost {
   id: string;
@@ -32,6 +33,9 @@ interface InstagramPostModalProps {
 
 const CACHE_KEY = 'instagram_posts_cache';
 
+// Helper to convert snake_case to Title Case for display and database consistency
+const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+
 export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProps) => {
   const [posts, setPosts] = useState<AnalyzedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,8 +45,7 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
   const [dismissedPostIds, setDismissedPostIds] = useState<string[]>([]);
 
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [productToCreate, setProductToCreate] = useState<any>(null);
+  const [newlyCreatedProduct, setNewlyCreatedProduct] = useState<any>(null);
 
   const fetchAndAnalyzePosts = useCallback(async (forceRefresh = false) => {
     if (forceRefresh) setIsRefreshing(true);
@@ -85,23 +88,90 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
     fetchAndAnalyzePosts();
   }, [fetchAndAnalyzePosts]);
 
-  const handleCreateProduct = (post: AnalyzedPost) => {
-    const productData = post.analysis?.isProductPost ? post.analysis.product : {
-      name: { value: "New Product" },
-      description: { value: post.caption || "" },
-      category: { value: "generic" },
-      details: { type: { value: "generic" } }
-    };
-    setProductToCreate(productData);
-    setIsCreateModalOpen(true);
-  };
+  const handleCreateProduct = async (post: AnalyzedPost) => {
+    const toastId = toast.loading("Creating product draft...");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated.");
 
-  const handleSaveProduct = () => {
-    const updatedPosts = posts.map(p => p.id === selectedPost?.id ? { ...p, isImported: true } : p);
-    setPosts(updatedPosts);
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify(updatedPosts));
-    setSelectedPost(prev => prev ? { ...prev, isImported: true } : null);
-    onImport();
+      const { data: business } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
+      if (!business) throw new Error("Could not find your business profile.");
+
+      const analysis = post.analysis?.product || {};
+      
+      // Prepare details payload
+      const cleanedDetails: { [key: string]: any } = { type: analysis.details?.type?.value || 'generic', options_v2: [] };
+      
+      // Process specifications and options
+      if (analysis.details) {
+          for (const [key, valueObj] of Object.entries(analysis.details as any)) {
+              if (key !== 'type') {
+                  const values = valueObj.value;
+                  if (Array.isArray(values) && ['color', 'size', 'material'].includes(key.toLowerCase())) {
+                      // Convert old options structure to new options_v2 structure
+                      cleanedDetails.options_v2.push({
+                          name: toTitleCase(key),
+                          values: values.map((v: string, index: number) => ({
+                              value: v,
+                              price_difference: 0,
+                              inventory: 10,
+                              is_active: true,
+                              is_default: index === 0,
+                          }))
+                      });
+                  } else {
+                      // Treat as specification
+                      cleanedDetails[key] = values;
+                  }
+              }
+          }
+      }
+
+      // Default to ALL currency for storage, price is stored as is from AI analysis (which defaults to ALL if not found)
+      const price = analysis.price?.value ?? 0;
+      const currency = analysis.currency?.value ?? 'ALL';
+      const pricing_type = analysis.pricing_type?.value || 'one_time';
+      const inventory = pricing_type === 'one_time' ? (analysis.inventory?.value ?? 10) : 0;
+      const status = inventory === 0 ? 'Out of Stock' : 'Draft';
+
+      const payload = {
+        business_id: business.id,
+        user_id: user.id,
+        name: analysis.name?.value || "New Product Draft",
+        caption: analysis.description?.value || post.caption || "",
+        category: analysis.category?.value || "Generic Product",
+        price: price,
+        currency: currency,
+        inventory: inventory,
+        tags: analysis.tags?.value || [],
+        details: cleanedDetails,
+        pricing_type: pricing_type,
+        billing_interval: pricing_type === 'subscription' ? (analysis.billing_interval?.value || 'month') : null,
+        status: status,
+        instagram_post_id: post.id,
+        media_url: post.media_url,
+        thumbnail_url: post.thumbnail_url,
+        media_type: post.media_type,
+        media_gallery: post.media_gallery || (post.media_url ? [post.media_url] : []),
+        product_type: 'physical', // Default
+      };
+
+      const { data: newProduct, error: insertError } = await supabase.from('products').insert(payload).select('*, media_gallery').single();
+      if (insertError) throw insertError;
+
+      toast.success("Product draft created! Please review details.", { id: toastId });
+      
+      // Update local state to reflect imported status
+      const updatedPosts = posts.map(p => p.id === post.id ? { ...p, isImported: true } : p);
+      setPosts(updatedPosts);
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(updatedPosts));
+      setSelectedPost(prev => prev ? { ...prev, isImported: true } : null);
+      onImport(); // Notify parent that an import happened
+
+      setNewlyCreatedProduct(newProduct); // Open ProductEditor
+    } catch (err: any) {
+      toast.error(`Failed to create product: ${err.message}`, { id: toastId });
+    }
   };
 
   const handleDismissPost = (postId: string) => {
@@ -228,8 +298,17 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
         </Dialog>
       )}
 
-      {isCreateModalOpen && productToCreate && selectedPost && (
-        <CreateProductModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onSave={handleSaveProduct} productData={productToCreate} post={selectedPost} />
+      {/* Use ProductEditor for newly created product */}
+      {newlyCreatedProduct && (
+        <ProductEditor 
+          isOpen={!!newlyCreatedProduct} 
+          onClose={() => setNewlyCreatedProduct(null)} 
+          product={newlyCreatedProduct} 
+          onUpdate={() => { 
+            // When ProductEditor updates, we assume the user is done editing the draft
+            setNewlyCreatedProduct(null); 
+          }} 
+        />
       )}
     </>
   );
