@@ -211,12 +211,8 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       }
     }
 
-    if (postsToProcess.length > 0 && postsNeedingAnalysis.length === 0) {
-      await updateJobProgress(supabaseAdmin, jobId, { status: 'completed', message: 'All posts are already up to date.', summary });
-      return;
-    }
-
-    await updateJobProgress(supabaseAdmin, jobId, { progress: 0, total, message: `Analyzing ${postsNeedingAnalysis.length} new posts...`, status: 'in_progress' });
+    // --- Step 1: Live Analysis ---
+    await updateJobProgress(supabaseAdmin, jobId, { progress: 0, total, message: `Analyzing ${postsNeedingAnalysis.length} new posts...` });
 
     const analysisPromises = postsNeedingAnalysis.map(post => 
       supabaseAdmin.functions.invoke('ai-product-classifier', { body: { caption: post.caption, user_id: user.id } })
@@ -252,8 +248,12 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       await supabaseAdmin.from('ai_analysis_cache').upsert(newCacheEntries);
     }
 
+    // --- Step 2: Process and Upsert Products ---
     const productsToUpsert: ProductPayload[] = [];
+    const categoriesToUpsert = new Map<string, { id: string, name: string }>();
+    const typesToUpsert = new Map<string, { categoryId: string, name: string, attributes: any[] }>();
     let progress = 0;
+    
     for (const post of postsToProcess) {
       const analysis = analysisFromCache.get(post.id);
       if (!analysis) { // Post was skipped during analysis, so we skip it here too.
@@ -261,7 +261,10 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       }
 
       progress++;
-      await updateJobProgress(supabaseAdmin, jobId, { progress, total, message: `Saving products...` });
+      // Batch progress updates: only update every 10 posts or on the last post
+      if (progress % 10 === 0 || progress === total) {
+        await updateJobProgress(supabaseAdmin, jobId, { progress, total, message: `Processing ${progress} of ${total} posts...` });
+      }
 
       if (!analysis.isProductPost) {
         summary.skipped++;
@@ -271,20 +274,25 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
       const { categoryName, typeName, specifications, options, pricingType, billingInterval, inventory: aiInventory, ...productInfo } = analysis;
       
-      // 1. Upsert Category and Type (using options/specs to define attributes)
+      // 1. Collect Category and Type data for batch upsert later
       if (categoryName && typeName) {
-        const categoryId = await upsertCategory(supabaseAdmin, categoryName, user.id);
+        const normalizedCategoryName = toTitleCase(categoryName);
+        const normalizedTypeName = toTitleCase(typeName);
         
-        // Convert specifications and options into the old 'attributes' array format for upsertTypeAndMergeAttributes
+        if (!categoriesToUpsert.has(normalizedCategoryName)) {
+            // We don't know the ID yet, we'll fetch/create it later
+            categoriesToUpsert.set(normalizedCategoryName, { id: '', name: normalizedCategoryName });
+        }
+
+        // Convert specifications and options into the 'attributes' array format for type upsert
         const attributesForTypeUpsert = [];
         if (specifications) {
-            for (const [name, value] of Object.entries(specifications)) {
+            for (const [name] of Object.entries(specifications)) {
                 attributesForTypeUpsert.push({ name, inputType: 'text', isOption: false });
             }
         }
         if (options) {
             for (const [name, values] of Object.entries(options)) {
-                // Determine input type based on name (simple heuristic)
                 let inputType = 'text';
                 if (name.toLowerCase().includes('color')) inputType = 'color';
                 else if (Array.isArray(values) && values.length > 0) inputType = 'tags';
@@ -292,24 +300,30 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
                 attributesForTypeUpsert.push({ name, inputType, isOption: true, possibleValues: values });
             }
         }
-        await upsertTypeAndMergeAttributes(supabaseAdmin, categoryId, typeName, attributesForTypeUpsert);
+        
+        // Store type data, linking it by name to the category
+        typesToUpsert.set(`${normalizedCategoryName}:${normalizedTypeName}`, { 
+            categoryId: '', // Will be filled later
+            name: normalizedTypeName, 
+            attributes: attributesForTypeUpsert 
+        });
       }
 
       // 2. Construct the new 'details' object for the product table
       const details: { [key: string]: any } = { type: toTitleCase(typeName || '') };
       
-      // Merge specifications and options into the 'details' column
       if (specifications) {
           for (const [key, value] of Object.entries(specifications)) {
               details[key] = value;
           }
       }
       if (options) {
-          // Store options in the details column for initialization
           details.options = Object.entries(options).map(([name, values]) => ({
+            id: crypto.randomUUID(), // Assign ID for client-side management
             name: toTitleCase(name),
             values: Array.isArray(values) ? values.map(String) : [String(values)],
           }));
+          details.variants = []; // Initialize variants array for new products
       }
 
       // Determine final pricing and inventory
@@ -321,7 +335,6 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       let priceInALL = productInfo.price ?? 0;
       if (productInfo.price && productInfo.currency && productInfo.currency !== 'ALL') {
         priceInALL = await convertCurrencyServer(productInfo.price, productInfo.currency, 'ALL');
-        console.log(`Background Sync: Converted AI price ${productInfo.price} ${productInfo.currency} to ${priceInALL} ALL for storage.`);
       }
 
       const productPayload: ProductPayload = {
@@ -352,15 +365,45 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       } else {
         productPayload.product_type = 'physical'; // Default product_type for new products
         summary.created++;
-        productPayload.details.variants = []; // Initialize variants array for new products
         summary.created_items.push(productPayload);
       }
       productsToUpsert.push(productPayload);
     }
+    
+    // --- Step 3: Batch Upsert Categories and Types ---
+    await updateJobProgress(supabaseAdmin, jobId, { message: `Updating categories and types...` });
+    
+    // Upsert Categories
+    for (const [name] of categoriesToUpsert.entries()) {
+        try {
+            const id = await upsertCategory(supabaseAdmin, name, user.id);
+            categoriesToUpsert.get(name)!.id = id;
+        } catch (e) {
+            console.error(`Failed to upsert category ${name}:`, e.message);
+        }
+    }
 
+    // Upsert Types
+    for (const [key, typeData] of typesToUpsert.entries()) {
+        const [categoryName, typeName] = key.split(':');
+        const categoryId = categoriesToUpsert.get(categoryName)?.id;
+        if (categoryId) {
+            try {
+                await upsertTypeAndMergeAttributes(supabaseAdmin, categoryId, typeName, typeData.attributes);
+            } catch (e) {
+                console.error(`Failed to upsert type ${typeName} in category ${categoryName}:`, e.message);
+            }
+        }
+    }
+
+    // --- Step 4: Batch Upsert Products ---
+    await updateJobProgress(supabaseAdmin, jobId, { message: `Saving ${productsToUpsert.length} products...` });
     if (productsToUpsert.length > 0) {
       const { error: upsertError } = await supabaseAdmin.from('products').upsert(productsToUpsert);
-      if (upsertError) throw upsertError;
+      if (upsertError) {
+        console.error("CRITICAL: Failed to upsert products batch:", upsertError);
+        throw upsertError;
+      }
     }
 
     const finalMessage = `Sync complete. Created ${summary.created}, updated ${summary.updated}, skipped ${summary.skipped}.`;
@@ -387,6 +430,7 @@ serve(async (req) => {
     const { data: job, error: jobError } = await supabaseAdmin.from('sync_jobs').insert({ user_id: user.id, status: 'starting', message: 'Initiating sync...' }).select('id').single();
     if (jobError) throw jobError;
 
+    // Run the sync process asynchronously
     syncProcess(supabaseAdmin, { ...user, token }, job.id, syncType);
 
     return new Response(JSON.stringify({ jobId: job.id }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });

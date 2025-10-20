@@ -180,10 +180,13 @@ serve(async (req) => {
       }
 
       // 8. Update or insert shop_details for the existing business
+      const finalShopName = instagram_shop_name || `${first_name}'s Shop`;
+      const finalSlug = instagram_username ? instagram_username.toLowerCase().replace(/[^a-z0-9-]/g, '') : `${first_name.toLowerCase()}-shop`;
+
       const shopDetailsPayload = {
         business_id: businessId,
-        shop_name: instagram_shop_name || `${first_name}'s Shop`,
-        slug: instagram_username ? instagram_username.toLowerCase().replace(/[^a-z0-9-]/g, '') : `${first_name.toLowerCase()}-shop`,
+        shop_name: finalShopName, // Use the Instagram shop name
+        slug: finalSlug, // Use the Instagram username as slug if available
         logo_url: uploadedLogoUrl,
         favicon_url: uploadedLogoUrl,
         currency: 'USD', // Default currency, user can change in settings
