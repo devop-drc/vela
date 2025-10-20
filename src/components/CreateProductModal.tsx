@@ -80,6 +80,8 @@ const AttributeInput = ({ control, fieldName, inputType }: any) => {
   }
 };
 
+const LEGACY_OPTION_KEYS = ['color', 'size', 'material', 'options', 'variants'];
+
 export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post }: CreateProductModalProps) => {
   const { shopDetails, convertCurrency } = useShop();
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
@@ -127,21 +129,20 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
     // Convert AI-suggested price (which might be in a different currency) to shop's display currency for form
     const priceInDisplayCurrency = shopDetails ? convertCurrency(aiSuggestedPrice, aiSuggestedCurrency, shopDetails.currency) : aiSuggestedPrice;
 
-    // Separate specifications from options in AI data
+    // 1. Normalize AI options
+    const initialOptions = normalizeAIOptions(productData?.details);
+    setProductOptions(initialOptions);
+
+    // 2. Separate specifications from options in AI data, filtering out all known option keys
     const specificationsOnly: { [key: string]: any } = {};
     if (productData?.details) {
         for (const [key, valueObj] of Object.entries(productData.details as any)) {
-            // Assume any array value that isn't explicitly an option key is a specification for now, 
-            // but the AI should now be returning clean specs/options.
-            if (key !== 'type' && !Array.isArray(valueObj.value)) {
+            // Filter out keys that are now handled by OptionManager or are obsolete variant structures
+            if (key !== 'type' && !LEGACY_OPTION_KEYS.includes(key) && !Array.isArray(valueObj.value)) {
                 specificationsOnly[key] = valueObj.value;
             }
         }
     }
-
-    // Normalize AI options
-    const initialOptions = normalizeAIOptions(productData?.details);
-    setProductOptions(initialOptions);
 
     reset({
       name: productData?.name?.value || "",
@@ -234,6 +235,10 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
     if (productOptions.length > 0) {
         cleanedDetails.options = productOptions;
     }
+    
+    // Ensure obsolete keys are removed before saving
+    LEGACY_OPTION_KEYS.forEach(key => delete cleanedDetails[key]);
+
 
     const { error } = await supabase.from('products').insert({
       business_id: business.id, name: data.name, caption: data.description, category: data.category,

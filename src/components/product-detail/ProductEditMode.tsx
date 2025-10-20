@@ -62,6 +62,8 @@ const AttributeInput = ({ control, fieldName, inputType }: any) => {
   }
 };
 
+const LEGACY_OPTION_KEYS = ['color', 'size', 'material', 'options', 'variants'];
+
 export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, onClose, isSubmitting, setIsSubmitting, onUpdate }: any) => {
     // CRITICAL FIX: Ensure product is defined before accessing properties
     if (!product) return null;
@@ -139,9 +141,8 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
 
             // 2. Initialize form with base product data
             // Filter out legacy option keys AND the new structured keys ('options', 'variants') from details before resetting the form.
-            const reservedKeys = ['color', 'size', 'material', 'options', 'variants'];
             const specificationsOnly = Object.fromEntries(
-                Object.entries(product.details || {}).filter(([k]) => !reservedKeys.includes(k))
+                Object.entries(product.details || {}).filter(([k]) => !LEGACY_OPTION_KEYS.includes(k))
             );
 
             form.reset({
@@ -306,8 +307,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         }
         
         // 4. Remove legacy flat attributes (color, size, material) from details before saving
-        const legacyKeysToRemove = ['color', 'size', 'material'];
-        legacyKeysToRemove.forEach(key => delete cleanedDetails[key]);
+        LEGACY_OPTION_KEYS.forEach(key => delete cleanedDetails[key]);
 
 
         // 5. Update Supabase

@@ -61,6 +61,8 @@ interface ProductEditorProps {
   onUpdate: () => void;
 }
 
+const LEGACY_OPTION_KEYS = ['color', 'size', 'material', 'options', 'variants'];
+
 export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEditorProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -73,7 +75,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     resolver: zodResolver(productSchema),
   });
   
-  // CRITICAL FIX: If product is null, we cannot proceed with initialization or rendering.
+  // CRITICAL FIX: Ensure product is defined before accessing properties
   if (!product) {
     console.log("ProductEditor: Rendering null (product is null). isOpen:", isOpen);
     return null;
@@ -88,6 +90,11 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
       const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
 
+      // Filter out legacy option keys from details before resetting the form
+      const specificationsOnly = Object.fromEntries(
+          Object.entries(product.details || {}).filter(([k]) => !LEGACY_OPTION_KEYS.includes(k))
+      );
+
       form.reset({
         name: product.name || "",
         status: product.status || "Draft",
@@ -99,7 +106,10 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
         tags: Array.isArray(product.tags) ? product.tags : [],
         pricing_type: product.pricing_type || 'one_time',
         billing_interval: product.billing_interval,
-        details: product.details || { type: 'generic' },
+        details: {
+            type: product.details?.type || 'generic',
+            ...specificationsOnly
+        },
       });
       const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
       setMediaItems(gallery);
