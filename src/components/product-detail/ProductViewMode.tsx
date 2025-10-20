@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Package, DollarSign, XCircle, Settings } from "lucide-react";
+import { Edit, Trash2, Package, DollarSign, XCircle, Settings, CheckCircle, Archive, Minus, Plus } from "lucide-react";
 import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
@@ -46,13 +46,14 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
 
     // Filter details into options (multi-value attributes) and specifications (single-value attributes)
     const allDetails = useMemo(() => {
-        const reservedKeys = new Set(['type']);
+        const reservedKeys = new Set(['type', 'options_v2']);
         return Object.entries(product.details || {})
             .filter(([key]) => !reservedKeys.has(key))
             .map(([key, value]) => ({ name: key, value, isOption: Array.isArray(value) }));
     }, [product.details]);
 
-    const options = allDetails.filter(d => d.isOption);
+    // Options are now read from options_v2
+    const optionsV2 = product.details?.options_v2 || [];
     const specifications = allDetails.filter(d => !d.isOption);
 
     return (
@@ -105,7 +106,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   </div>
                   {product.pricing_type !== 'subscription' && (
                     <div>
-                      <Label className="text-sm">Inventory</Label>
+                      <Label className="text-sm">Base Inventory</Label>
                       <p className="font-semibold text-2xl">{product.inventory || 0}</p>
                     </div>
                   )}
@@ -113,8 +114,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </div>
             </div>
 
-            {/* Options Display */}
-            {options.length > 0 && (
+            {/* Options V2 Display */}
+            {optionsV2.length > 0 && (
                 <Card>
                     <CardHeader>
                         <CardTitleComponent className="text-base flex items-center gap-2">
@@ -123,13 +124,33 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                         </CardTitleComponent>
                     </CardHeader>
                     <CardContent className="p-4 space-y-4">
-                        {options.map((field: any) => (
-                            <div key={field.name} className="space-y-2">
-                                <Label className="font-semibold capitalize">{toTitleCase(field.name)}</Label>
-                                <div className="flex flex-wrap gap-2">
-                                    {field.value.map((value: string) => (
-                                        <Badge key={value} variant="outline" className="text-sm">{value}</Badge>
-                                    ))}
+                        {optionsV2.map((option: any) => (
+                            <div key={option.name} className="space-y-2 border-b pb-3 last:border-b-0 last:pb-0">
+                                <Label className="font-semibold capitalize text-base">{option.name}</Label>
+                                <div className="space-y-1">
+                                    {option.values.map((val: any) => {
+                                        const priceDiff = convertCurrency(val.price_difference, 'ALL', currencyCode);
+                                        return (
+                                            <div key={val.value} className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50">
+                                                <div className="flex items-center gap-2">
+                                                    <Badge variant="outline" className={cn("text-sm", val.is_active ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-gray-100 text-gray-600 border-gray-300")}>
+                                                        {val.is_active ? <CheckCircle className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
+                                                        {val.value}
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex items-center gap-1 text-muted-foreground">
+                                                        <DollarSign className="h-3 w-3" />
+                                                        <span>{formatCurrency(priceDiff, currencyCode, 'en-US', true)}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 text-muted-foreground">
+                                                        <Package className="h-3 w-3" />
+                                                        <span>{val.inventory} in stock</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         ))}

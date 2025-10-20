@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -19,6 +19,7 @@ import { CreatableCombobox } from "./CreatableCombobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { currencies } from "@/lib/currencies";
 import { MediaItem } from "./MediaItem";
+import { OptionsManager } from "./product-detail/OptionsManager"; // Import OptionsManager
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -51,6 +52,8 @@ interface CreateProductModalProps {
   post: any;
 }
 
+const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+
 const AttributeInput = ({ control, fieldName, inputType }: any) => {
   const name = `details.${fieldName}`;
   switch (inputType) {
@@ -77,11 +80,37 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
 
   useEffect(() => {
     console.log("CreateProductModal: Initializing form with productData:", productData, "post:", post, "shopDetails:", shopDetails);
-    const flattenedDetails: { [key: string]: any } = {};
+    
+    const initialDetails: { [key: string]: any } = { type: productData?.details?.type?.value || 'generic', options_v2: [] };
+    
+    // 1. Process specifications (non-options)
     if (productData?.details) {
         for (const [key, valueObj] of Object.entries(productData.details as any)) {
-            flattenedDetails[key] = valueObj.value;
+            if (key !== 'type' && !['color', 'size', 'material'].includes(key.toLowerCase())) { // Assume color/size/material are options
+                initialDetails[key] = valueObj.value;
+            }
         }
+    }
+
+    // 2. Convert old options structure (simple array of values) into new options_v2 structure
+    const aiOptions = productData?.details;
+    if (aiOptions) {
+        const newOptionsV2: any[] = [];
+        for (const [name, valueObj] of Object.entries(aiOptions as any)) {
+            const values = valueObj.value;
+            if (Array.isArray(values) && values.length > 0 && ['color', 'size', 'material'].includes(name.toLowerCase())) {
+                newOptionsV2.push({
+                    name: toTitleCase(name),
+                    values: values.map(v => ({
+                        value: v,
+                        price_difference: 0,
+                        inventory: 10, // Default inventory
+                        is_active: true,
+                    }))
+                });
+            }
+        }
+        initialDetails.options_v2 = newOptionsV2;
     }
 
     // Extract new AI fields
@@ -105,7 +134,7 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
       tags: productData?.tags?.value || [],
       pricing_type: aiSuggestedPricingType, // Use AI suggested pricing type
       billing_interval: aiSuggestedBillingInterval, // Use AI suggested billing interval
-      details: flattenedDetails,
+      details: initialDetails,
     });
   }, [productData, post, shopDetails, reset, convertCurrency]);
 
@@ -162,7 +191,7 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
     console.log("CreateProductModal: Price in form's currency:", data.price, data.currency, "Converted to ALL for storage:", priceInALL);
 
     const cleanedDetails: { [key: string]: any } = { type: data.details.type };
-    // Include all dynamic attributes (specs + options)
+    // Include all dynamic attributes (specs + options_v2)
     Object.entries(data.details).forEach(([key, value]) => {
         if (key !== 'type') {
             cleanedDetails[key] = value;
@@ -184,8 +213,10 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
     else { showSuccess("Product created successfully!"); onSave(); onClose(); }
   };
 
-  const optionsToRender = typeAttributes.filter(attr => attr.isOption);
-  const specificationsToRender = typeAttributes.filter(attr => !attr.isOption);
+  // Filter out attributes that are now handled by options_v2 (Color, Size, etc.)
+  const specificationsToRender = useMemo(() => {
+    return typeAttributes.filter(attr => !attr.isOption);
+  }, [typeAttributes]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -219,20 +250,10 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
                 <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-2"><Label>Inventory</Label><Input type="number" {...register("inventory")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
               </div>
               
-              {optionsToRender.length > 0 && (
-                <Card>
-                  <CardHeader><CardTitle className="text-base">Options (for Variants)</CardTitle></CardHeader>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {optionsToRender.map((attr: any) => (
-                      <div key={attr.name} className="space-y-2">
-                        <Label className="capitalize">{attr.name.replace(/_/g, ' ')}</Label>
-                        <AttributeInput control={control} fieldName={attr.name} inputType={attr.inputType} />
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
+              {/* Options Manager */}
+              <OptionsManager />
               
+              {/* Specifications (Fixed Details) */}
               {specificationsToRender.length > 0 && (
                 <Card>
                   <CardHeader><CardTitle className="text-base">Specifications (Fixed Details)</CardTitle></CardHeader>

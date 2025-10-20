@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { TagInput } from "@/components/TagInput";
-import { Loader2, XCircle, PlusCircle, CheckCircle, Archive, Sparkles, Settings, Cloud } from "lucide-react";
+import { Loader2, XCircle, PlusCircle, CheckCircle, Archive, Sparkles, Settings, Cloud, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,7 @@ import { useShop } from "@/contexts/ShopContext";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../ui/carousel";
 import { showError, showSuccess } from "@/utils/toast";
+import { OptionsManager } from "./OptionsManager"; // Import OptionsManager
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -73,6 +74,12 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
             const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
 
+            // Ensure details.options_v2 exists and is an array
+            const initialDetails = product.details || { type: 'generic' };
+            if (!initialDetails.options_v2) {
+                initialDetails.options_v2 = [];
+            }
+
             // 1. Initialize form with base product data
             form.reset({
                 name: product.name || "",
@@ -85,13 +92,17 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 tags: Array.isArray(product.tags) ? product.tags : [],
                 pricing_type: product.pricing_type || 'one_time',
                 billing_interval: product.billing_interval,
-                details: product.details || { type: 'generic' },
+                details: initialDetails,
                 product_type: product.product_type || 'physical',
             });
             const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
             setMediaItems(gallery);
         } else if (product) {
             // Fallback if shopDetails not loaded yet
+            const initialDetails = product.details || { type: 'generic' };
+            if (!initialDetails.options_v2) {
+                initialDetails.options_v2 = [];
+            }
             form.reset({
                 name: product.name || "",
                 status: product.status || "Draft",
@@ -103,7 +114,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 tags: product.tags || [],
                 pricing_type: product.pricing_type || 'one_time',
                 billing_interval: product.billing_interval,
-                details: product.details || { type: 'generic' },
+                details: initialDetails,
                 product_type: product.product_type || 'physical',
             });
         } else {
@@ -163,7 +174,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             if (analysis.typeName) setValue('details.type', analysis.typeName, { shouldDirty: true });
             
             // Update specifications and options (which are now combined in the details object)
-            const newDetails: { [key: string]: any } = { type: analysis.typeName };
+            const newDetails: { [key: string]: any } = { type: analysis.typeName, options_v2: [] };
             
             // Merge specifications and options into newDetails
             if (analysis.specifications) {
@@ -171,10 +182,24 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     newDetails[key] = value;
                 }
             }
+            
+            // Convert old options structure (simple array of values) into new options_v2 structure
             if (analysis.options) {
-                for (const [key, value] of Object.entries(analysis.options)) {
-                    newDetails[key] = value;
+                const newOptionsV2: any[] = [];
+                for (const [name, values] of Object.entries(analysis.options)) {
+                    if (Array.isArray(values) && values.length > 0) {
+                        newOptionsV2.push({
+                            name: toTitleCase(name),
+                            values: values.map(v => ({
+                                value: v,
+                                price_difference: 0,
+                                inventory: 10, // Default inventory
+                                is_active: true,
+                            }))
+                        });
+                    }
                 }
+                newDetails.options_v2 = newOptionsV2;
             }
 
             // Update the form's details object
@@ -239,7 +264,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         const attributeNames = new Set(typeAttributes.map(attr => attr.name));
         
         // Include all attributes defined in the type, plus any existing custom ones in details
-        const existingDetailsKeys = Object.keys(getValues('details') || {}).filter(key => key !== 'type');
+        const existingDetailsKeys = Object.keys(getValues('details') || {}).filter(key => key !== 'type' && key !== 'options_v2');
         const allKeys = new Set([...attributeNames, ...existingDetailsKeys]);
 
         return Array.from(allKeys).map(key => {
@@ -257,7 +282,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         });
     }, [typeAttributes, getValues]);
 
-    const optionsToRender = attributesToRender.filter(attr => attr.isOption);
+    // Filter out attributes that are now handled by options_v2 (Color, Size, etc.)
     const specificationsToRender = attributesToRender.filter(attr => !attr.isOption);
 
     return (
@@ -343,23 +368,8 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 </div>
               </div>
               
-              {/* Options (Attributes with isOption: true) */}
-              {optionsToRender.length > 0 && (
-                <Card>
-                  <CardHeader><CardTitleComponent className="text-base flex items-center gap-2"><Settings className="h-5 w-5" /> Options (Customer Selectable)</CardTitleComponent></CardHeader>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {optionsToRender.map((attr: any) => {
-                      const Icon = getAttributeIcon(attr.name);
-                      return (
-                        <div key={attr.name} className="space-y-2">
-                          <Label className="capitalize flex items-center gap-1.5"><Icon className="h-4 w-4" />{toTitleCase(attr.name)}</Label>
-                          <AttributeInput control={control} fieldName={attr.name} inputType={attr.inputType} />
-                        </div>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
-              )}
+              {/* Options Manager */}
+              <OptionsManager />
 
               {/* Specifications (Fixed Details) */}
               {specificationsToRender.length > 0 && (

@@ -133,6 +133,9 @@ export const StorefrontProductCard = ({
   }
 
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
+  
+  const optionsV2 = product.details?.options_v2 || [];
+  const hasOptions = optionsV2.length > 0;
 
   return (
     <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }} className={className}>
@@ -193,7 +196,7 @@ export const StorefrontProductCard = ({
           <div className="p-3 md:p-4 flex-1 flex flex-col justify-between">
             <div>
               <h3 className="font-semibold text-base md:text-lg leading-tight mb-1 line-clamp-2">{product.name}</h3>
-              {(product.category || product.details?.type) && (
+              {(product.category || product.details?.type || hasOptions) && (
                 <div className="flex items-center gap-1 mb-2">
                   {product.category && (
                     <Badge
@@ -206,6 +209,11 @@ export const StorefrontProductCard = ({
                   {product.details?.type && (
                     <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
                       {product.details.type}
+                    </Badge>
+                  )}
+                  {hasOptions && (
+                    <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
+                      Options
                     </Badge>
                   )}
                 </div>
