@@ -113,7 +113,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         legacyOptionKeys.forEach(key => {
             const value = details[key];
             // Check if value is an array of strings (which is how TagInput saves it)
-            if (Array.isArray(value) && value.length > 0 && value.every(v => typeof v === 'string')) {
+            if (value && Array.isArray(value) && value.length > 0 && value.every(v => typeof v === 'string')) {
                 options.push({
                     id: crypto.randomUUID(),
                     name: toTitleCase(key),

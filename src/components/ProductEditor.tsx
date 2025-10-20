@@ -22,6 +22,7 @@ const productSchema = z.object({
   tags: z.array(z.string()).optional(),
   pricing_type: z.enum(['one_time', 'subscription']),
   billing_interval: z.enum(['month', 'year']).optional().nullable(),
+  details: z.any(), // Keep details as any for dynamic attributes and options
 }).refine(data => {
     if (data.pricing_type === 'subscription' && !data.billing_interval) {
         return false;
