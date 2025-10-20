@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Trash2, DollarSign, Package, Settings, ChevronDown, ChevronUp, CheckCircle, XCircle } from 'lucide-react';
+import { PlusCircle, Trash2, Banknote, Package, Settings, ChevronDown, ChevronUp, CheckCircle, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useShop } from '@/contexts/ShopContext';
 import { formatCurrency } from '@/lib/formatters';
@@ -28,15 +28,13 @@ interface ProductOption {
 }
 
 // --- Memoized OptionValueRow Component ---
-const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, control, currencyCode, convertCurrency, valuesFields, removeValue, setValue, watch, getValues }: any) => {
+const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, control, currencyCode, convertCurrency, valuesFields, removeValue, setValue, watch, getValues, trigger }: any) => {
   const fieldName = `details.options_v2.${optionIndex}.values.${valueIndex}`;
   
   // Use watch for performance critical fields only (priceDiff and isDefault are needed for display logic)
   const priceDiff = watch(`${fieldName}.price_difference`);
   const isDefault = watch(`${fieldName}.is_default`);
   const isSelected = watch(`${fieldName}.isSelected`);
-  const isActive = watch(`${fieldName}.is_active`);
-  const inventory = watch(`${fieldName}.inventory`);
 
   const displayPriceDiff = useMemo(() => {
     const convertedDiff = convertCurrency(priceDiff, 'ALL', currencyCode);
@@ -56,11 +54,13 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
     });
     // Set the current value to default
     setValue(`${fieldName}.is_default`, true, { shouldDirty: true });
-  }, [isDefault, getValues, setValue, optionIndex, valueIndex, fieldName]);
+    trigger(`details.options_v2.${optionIndex}.values`); // Force RHF to update the array state
+  }, [isDefault, getValues, setValue, optionIndex, valueIndex, fieldName, trigger]);
 
   const handleToggleSelect = useCallback((checked: boolean) => {
     setValue(`${fieldName}.isSelected`, checked);
-  }, [fieldName, setValue]);
+    trigger(`details.options_v2.${optionIndex}.values`); // Force RHF to update the array state
+  }, [fieldName, setValue, optionIndex, trigger]);
 
   const handleToggleActive = useCallback((checked: boolean) => {
     setValue(`${fieldName}.is_active`, checked, { shouldDirty: true });
@@ -111,7 +111,7 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
 
       {/* Price Difference (Col 6-8) */}
       <div className="col-span-3 flex items-center gap-1">
-        <DollarSign className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        <Banknote className="h-4 w-4 text-muted-foreground flex-shrink-0" />
         <Controller
           name={`${fieldName}.price_difference`}
           control={control}
@@ -162,7 +162,6 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
               checked={field.value}
               onCheckedChange={handleToggleActive}
               className="h-5 w-9"
-              // Removed thumbClassName prop to fix warning
             />
           )}
         />
@@ -181,7 +180,7 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
     </div>
   );
 }, (prevProps, nextProps) => {
-    // Deep comparison for performance: only re-render if indices change, or if the RHF field array structure changes (valuesFields.length)
+    // Only re-render if indices change, or if the RHF field array structure changes (valuesFields.length)
     // We rely on RHF's internal updates for the values array content via Controller/useWatch.
     return prevProps.optionIndex === nextProps.optionIndex &&
            prevProps.valueIndex === nextProps.valueIndex &&
@@ -191,7 +190,7 @@ const OptionValueRow = React.memo(({ optionIndex, valueIndex, optionName, contro
 OptionValueRow.displayName = 'OptionValueRow';
 
 // --- Memoized OptionSection Component ---
-const OptionSection = React.memo(({ option, index, removeOption, control, watch, setValue, getValues, currencyCode, convertCurrency }: any) => {
+const OptionSection = React.memo(({ option, index, removeOption, control, watch, setValue, getValues, currencyCode, convertCurrency, trigger }: any) => {
   const { fields: valuesFields, append: appendValue, remove: removeValue } = useFieldArray({
     control,
     name: `details.options_v2.${index}.values`,
@@ -199,7 +198,7 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
   
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // 2. Bulk Actions Visibility Fix: Use a simple watch on the entire array to force re-evaluation of selectedCount
+  // Watch all 'isSelected' fields to determine bulk selection state
   const allValues = watch(`details.options_v2.${index}.values`);
 
   const selectedCount = useMemo(() => {
@@ -215,6 +214,7 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
     valuesFields.forEach((_, valueIndex) => {
       setValue(`details.options_v2.${index}.values.${valueIndex}.isSelected`, newState);
     });
+    trigger(`details.options_v2.${index}.values`); // Force RHF to update the array state
   };
 
   const handleBulkAction = (action: 'activate' | 'deactivate' | 'delete') => {
@@ -238,6 +238,7 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
         setValue(`details.options_v2.${index}.values.${idx}.isSelected`, false);
       });
     }
+    trigger(`details.options_v2.${index}.values`); // Force RHF to update the array state
   };
 
   return (
@@ -288,7 +289,7 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
                       </div>
                       <div className="col-span-1">Default</div>
                       <div className="col-span-3">Value</div>
-                      <div className="col-span-3 flex items-center gap-1"><DollarSign className="h-3 w-3" /> Price Diff</div>
+                      <div className="col-span-3 flex items-center gap-1"><Banknote className="h-3 w-3" /> Price Diff</div>
                       <div className="col-span-3 flex items-center gap-1"><Package className="h-3 w-3" /> Inventory</div>
                       <div className="col-span-1 text-right">Active</div>
                   </div>
@@ -332,6 +333,7 @@ const OptionSection = React.memo(({ option, index, removeOption, control, watch,
                               setValue={setValue}
                               watch={watch}
                               getValues={getValues}
+                              trigger={trigger}
                           />
                       ))}
                   </AnimatePresence>
@@ -366,7 +368,7 @@ OptionSection.displayName = 'OptionSection';
 
 // --- Main OptionsManager Component ---
 export const OptionsManager = () => {
-  const { control, watch, setValue, getValues, formState: { errors } } = useFormContext();
+  const { control, watch, setValue, getValues, formState: { errors }, trigger } = useFormContext();
   const { shopDetails, convertCurrency } = useShop();
   const currencyCode = shopDetails?.currency || 'USD';
 
@@ -418,6 +420,7 @@ export const OptionsManager = () => {
                 getValues={getValues}
                 currencyCode={currencyCode}
                 convertCurrency={convertCurrency}
+                trigger={trigger}
               />
             </motion.div>
           ))}

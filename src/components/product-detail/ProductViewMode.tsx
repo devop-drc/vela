@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Package, DollarSign, XCircle, Settings, CheckCircle, Archive, Minus, Plus } from "lucide-react";
+import { Edit, Trash2, Package, Banknote, XCircle, Settings, CheckCircle, Archive, Minus, Plus } from "lucide-react";
 import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
@@ -59,8 +59,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     // Function to determine the color class for an option value badge
     const getOptionValueColor = useCallback((val: any) => {
         if (!val.is_active) return "bg-gray-100 text-gray-600 border-gray-300";
-        if (val.inventory <= 0) return "bg-destructive/10 text-destructive border-destructive/30";
-        return "bg-emerald-100 text-emerald-800 border-emerald-300";
+        if (val.inventory <= 0) return "bg-slate-100 text-slate-600 border-slate-300"; // Out of Stock color
+        return "bg-emerald-100 text-emerald-800 border-emerald-300"; // Active/In Stock color
     }, []);
 
     return (
@@ -152,7 +152,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                                                 </div>
                                                 <div className="flex items-center gap-4">
                                                     <div className="flex items-center gap-1 text-muted-foreground">
-                                                        <DollarSign className="h-3 w-3" />
+                                                        <Banknote className="h-3 w-3" />
                                                         <span>{formatCurrency(priceDiff, currencyCode, 'en-US', true)}</span>
                                                     </div>
                                                     <div className="flex items-center gap-1 text-muted-foreground">

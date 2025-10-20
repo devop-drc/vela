@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Package, PlusCircle, MinusCircle } from "lucide-react";
+import { Loader2, Package, PlusCircle, MinusCircle, Banknote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { ScrollArea } from "./ui/scroll-area";
@@ -81,7 +81,7 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
     }),
   }), [products]);
 
-  const { register, handleSubmit, reset, setValue, control, formState: { errors, isSubmitting } } = useForm<StockFormData>({
+  const { register, handleSubmit, reset, setValue, control, getValues, formState: { errors, isSubmitting } } = useForm<StockFormData>({
     resolver: zodResolver(stockSchema),
     defaultValues,
   });
