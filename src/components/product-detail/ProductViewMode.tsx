@@ -55,6 +55,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
 
     // Filter out options and variants from general details to get specifications
     const specifications = useMemo(() => {
+        // Explicitly exclude 'options' and 'variants' to prevent rendering [object Object]
         const reservedKeys = new Set(['type', 'options', 'variants']);
         return Object.entries(product.details || {})
             .filter(([key]) => !reservedKeys.has(key))

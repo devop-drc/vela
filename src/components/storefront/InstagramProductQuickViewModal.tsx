@@ -258,8 +258,8 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
     setIsBuyNowDrawerOpen(true);
   };
 
-  const allDetails = Object.entries(product.details || {}).filter(([key, value]) => key !== 'type' && key !== 'options' && key !== 'variants' && value && (!Array.isArray(value) || value.length > 0));
-  const specifications = allDetails;
+  // Filter out options and variants from general details to get specifications
+  const specifications = Object.entries(product.details || {}).filter(([key, value]) => key !== 'type' && key !== 'options' && key !== 'variants' && value && (!Array.isArray(value) || value.length > 0));
 
   const primaryColorClass = hasDiscount ? "bg-green-600 hover:bg-green-700 text-white" : "bg-red-700 hover:bg-red-800 text-white";
 
