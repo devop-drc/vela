@@ -32,6 +32,9 @@ const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon
     </div>
 );
 
+// Define keys that should NOT be displayed as specifications because they are options/variants
+const OPTION_KEYS_TO_EXCLUDE = ['type', 'options', 'variants', 'color', 'size', 'material']; 
+
 const StorefrontProductDetail = () => {
   const { shopSlug, productId } = useParams<{ shopSlug: string; productId: string }>();
   const { shopDetails, products, isLoading, error, appearanceSettings, convertCurrency, promotions } = useStorefront();
@@ -240,7 +243,7 @@ const StorefrontProductDetail = () => {
 
   // Filter out options and variants from general details to get specifications
   const specifications = useMemo(() => {
-    const reservedKeys = new Set(['type', 'options', 'variants']);
+    const reservedKeys = new Set(OPTION_KEYS_TO_EXCLUDE);
     return Object.entries(product.details || {})
         .filter(([key]) => !reservedKeys.has(key))
         .map(([key, value]) => ({ name: key, value }));

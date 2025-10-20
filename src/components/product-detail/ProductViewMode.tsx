@@ -30,6 +30,9 @@ const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon
 // Helper to convert snake_case to Title Case for display
 const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
+// Comprehensive list of keys that should NOT be displayed as specifications
+const OPTION_KEYS_TO_EXCLUDE = ['type', 'options', 'variants', 'color', 'size', 'material']; 
+
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
     const { shopDetails, convertCurrency } = useShop();
     
@@ -55,8 +58,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
 
     // Filter out options and variants from general details to get specifications
     const specifications = useMemo(() => {
-        // Explicitly exclude 'options' and 'variants' to prevent rendering [object Object]
-        const reservedKeys = new Set(['type', 'options', 'variants']);
+        const reservedKeys = new Set(OPTION_KEYS_TO_EXCLUDE);
         return Object.entries(product.details || {})
             .filter(([key]) => !reservedKeys.has(key))
             .map(([key, value]) => ({ name: key, value }));

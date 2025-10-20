@@ -456,7 +456,6 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
     const finalMessage = `Sync complete. Created ${summary.created}, updated ${summary.updated}, skipped ${summary.skipped}.`;
     await updateJobProgress(supabaseAdmin, jobId, { status: 'completed', progress: total, total, message: finalMessage, summary });
-    console.log(`Sync AI Token Summary for Job ${jobId}: Prompt Tokens: ${summary.total_ai_tokens_used.prompt}, Candidate Tokens: ${summary.total_ai_tokens_used.candidates}`);
 
   } catch (error) {
     console.error('Background Sync Error:', error.message);

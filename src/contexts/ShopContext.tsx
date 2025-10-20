@@ -51,15 +51,12 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const fetchRates = async () => {
-      console.log("ShopContext: Fetching exchange rates...");
       const { data, error } = await supabase.functions.invoke('exchange-rates');
       if (error || (data && data.error)) {
         const errorMessage = error?.message || (data && data.error) || "An unknown error occurred.";
-        console.error("ShopContext: Failed to fetch exchange rates:", errorMessage);
         showError(`Could not load currency rates: ${errorMessage}`);
       } else if (data) {
         setExchangeRates(data.rates);
-        console.log("ShopContext: Exchange rates fetched successfully:", data.rates);
       }
     };
     fetchRates();
@@ -67,10 +64,8 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchShopDetails = useCallback(async () => {
     setIsLoading(true);
-    console.log("ShopContext: Fetching shop details...");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      console.log("ShopContext: No user found, cannot fetch shop details.");
       setIsLoading(false);
       return;
     }
@@ -122,7 +117,6 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     };
 
     setShopDetails(finalDetails);
-    console.log("ShopContext: Final shop details set:", finalDetails);
     setIsLoading(false);
   }, []);
 
@@ -131,7 +125,6 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchShopDetails]);
 
   const updateShopDetails = async (details: Partial<ShopDetails>) => {
-    console.log("ShopContext: Attempting to update shop details with:", details);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { showError("You must be logged in."); return false; }
 
@@ -169,7 +162,6 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
       return false;
     } else {
       await fetchShopDetails();
-      console.log("ShopContext: Shop details updated successfully.");
       return true;
     }
   };
@@ -179,17 +171,14 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     // Ensure targetCurrency is always a valid string, defaulting to shopDetails.currency or 'USD'
     const targetCurrency = toCurrency || shopDetails?.currency || 'USD'; 
 
-    console.log("convertCurrency: Initiating conversion.", { amount, fromCurrency, toCurrency, targetCurrency, shopDetails, exchangeRates });
 
     // Crucial: Ensure shopDetails and exchangeRates are available for conversion
     if (!shopDetails || !exchangeRates) {
-      console.log("convertCurrency: Missing shopDetails or exchangeRates. Returning original amount.", { amount, fromCurrency, toCurrency, shopDetails, exchangeRates });
       return numericAmount;
     }
 
     // If source and target currencies are the same, no conversion needed
     if (fromCurrency === targetCurrency) {
-      console.log("convertCurrency: Source and target currencies are the same. Returning original amount.", { amount, fromCurrency, toCurrency, convertedAmount: numericAmount });
       return numericAmount;
     }
 
@@ -205,7 +194,6 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     // To convert from A to B: amount_in_B = amount_in_A * (rate[B] / rate[A])
     const convertedAmount = numericAmount * (toRate / fromRate);
     
-    console.log(`convertCurrency: Converting ${numericAmount} ${fromCurrency} to ${targetCurrency}. Rates: ${fromCurrency}=${fromRate}, ${targetCurrency}=${toRate}. Converted: ${convertedAmount.toFixed(2)}`);
     return Math.round(convertedAmount * 100) / 100;
   }, [shopDetails, exchangeRates]); // Add shopDetails to dependencies
 

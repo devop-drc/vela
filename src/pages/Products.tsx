@@ -334,7 +334,6 @@ const Products = () => {
   };
 
   const groupedProducts = useMemo(() => {
-    // console.log("Products.tsx: filteredAndSortedProducts for rendering:", filteredAndSortedProducts); // REMOVED LOGGING
     if (grouping === 'category') {
       return filteredAndSortedProducts.reduce((acc, product) => {
         const category = product.category || 'Uncategorized';

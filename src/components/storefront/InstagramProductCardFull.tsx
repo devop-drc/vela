@@ -55,6 +55,9 @@ const getDetailArray = (details: any, key: string): string[] => {
   return [];
 };
 
+// Define keys that should NOT be displayed as specifications because they are options/variants
+const OPTION_KEYS_TO_EXCLUDE = ['type', 'options', 'variants', 'color', 'size', 'material']; 
+
 export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProductCardFullProps>(
   ({ product, shopDetails, convertCurrency, promotions }, ref) => {
     const { addToCart } = useCart();
@@ -238,7 +241,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     };
 
     // Filter out options and variants from general details to get specifications
-    const specifications = Object.entries(product.details || {}).filter(([key, value]) => key !== 'type' && key !== 'options' && key !== 'variants' && value && (!Array.isArray(value) || value.length > 0));
+    const specifications = Object.entries(product.details || {}).filter(([key, value]) => !OPTION_KEYS_TO_EXCLUDE.includes(key) && value && (!Array.isArray(value) || value.length > 0));
 
     const getPromotionBadge = (promo: StorefrontPromotion) => {
       switch (promo.type) {

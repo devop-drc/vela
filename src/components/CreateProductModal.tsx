@@ -80,7 +80,7 @@ const AttributeInput = ({ control, fieldName, inputType }: any) => {
   }
 };
 
-const LEGACY_OPTION_KEYS = ['color', 'size', 'material', 'options', 'variants'];
+const OPTION_KEYS_TO_EXCLUDE = ['type', 'options', 'variants', 'color', 'size', 'material'];
 
 export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post }: CreateProductModalProps) => {
   const { shopDetails, convertCurrency } = useShop();
@@ -138,7 +138,7 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
     if (productData?.details) {
         for (const [key, valueObj] of Object.entries(productData.details as any)) {
             // Filter out keys that are now handled by OptionManager or are obsolete variant structures
-            if (key !== 'type' && !LEGACY_OPTION_KEYS.includes(key) && !Array.isArray(valueObj.value)) {
+            if (key !== 'type' && !OPTION_KEYS_TO_EXCLUDE.includes(key) && !Array.isArray(valueObj.value)) {
                 specificationsOnly[key] = valueObj.value;
             }
         }
@@ -237,7 +237,7 @@ export const CreateProductModal = ({ isOpen, onClose, onSave, productData, post 
     }
     
     // Ensure obsolete keys are removed before saving
-    LEGACY_OPTION_KEYS.forEach(key => delete cleanedDetails[key]);
+    OPTION_KEYS_TO_EXCLUDE.forEach(key => delete cleanedDetails[key]);
 
 
     const { error } = await supabase.from('products').insert({

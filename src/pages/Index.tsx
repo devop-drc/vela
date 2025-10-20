@@ -182,7 +182,6 @@ const useDashboardData = (
           'postgres_changes',
           { event: '*', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` },
           (payload) => {
-            console.log("Realtime order update detected, refetching dashboard data:", payload);
             fetchData();
           }
         )

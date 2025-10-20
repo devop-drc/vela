@@ -77,15 +77,12 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   
   // CRITICAL FIX: Ensure product is defined before accessing properties
   if (!product) {
-    console.log("ProductEditor: Rendering null (product is null). isOpen:", isOpen);
     return null;
   }
   
-  console.log("ProductEditor: Rendering product:", product.id, "isEditing:", isEditing, "isOpen:", isOpen);
 
 
   useEffect(() => {
-    console.log("ProductEditor useEffect: Running initialization/reset logic for product:", product?.id);
     if (product && shopDetails) {
       // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
       const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
@@ -202,7 +199,6 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { 
-        console.log("ProductEditor Dialog onOpenChange:", open);
         if (!open) { 
           onClose(); 
           setIsEditing(false); 

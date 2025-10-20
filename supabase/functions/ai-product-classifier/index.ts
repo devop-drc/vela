@@ -172,7 +172,6 @@ serve(async (req) => {
     };
 
     if (geminiData.usageMetadata) {
-      console.log(`AI Product Classifier Token Usage: Prompt: ${geminiData.usageMetadata.promptTokenCount}, Candidates: ${geminiData.usageMetadata.candidatesTokenCount}`);
     }
 
     return new Response(JSON.stringify(result), { 

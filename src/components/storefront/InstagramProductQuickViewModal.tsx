@@ -37,6 +37,9 @@ const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon
     </div>
 );
 
+// Define keys that should NOT be displayed as specifications because they are options/variants
+const OPTION_KEYS_TO_EXCLUDE = ['type', 'options', 'variants', 'color', 'size', 'material']; 
+
 export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, shopSlug }: InstagramProductQuickViewModalProps) => {
   const { shopDetails, products, isLoading, error, convertCurrency, promotions } = useStorefront();
   const { addToCart } = useCart();
@@ -259,7 +262,7 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
   };
 
   // Filter out options and variants from general details to get specifications
-  const specifications = Object.entries(product.details || {}).filter(([key, value]) => key !== 'type' && key !== 'options' && key !== 'variants' && value && (!Array.isArray(value) || value.length > 0));
+  const specifications = Object.entries(product.details || {}).filter(([key, value]) => !OPTION_KEYS_TO_EXCLUDE.includes(key) && value && (!Array.isArray(value) || value.length > 0));
 
   const primaryColorClass = hasDiscount ? "bg-green-600 hover:bg-green-700 text-white" : "bg-red-700 hover:bg-red-800 text-white";
 

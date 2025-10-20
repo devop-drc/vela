@@ -62,7 +62,8 @@ const AttributeInput = ({ control, fieldName, inputType }: any) => {
   }
 };
 
-const LEGACY_OPTION_KEYS = ['color', 'size', 'material', 'options', 'variants'];
+// Comprehensive list of keys that should NOT be displayed as specifications
+const OPTION_KEYS_TO_EXCLUDE = ['type', 'options', 'variants', 'color', 'size', 'material']; 
 
 export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, onClose, isSubmitting, setIsSubmitting, onUpdate }: any) => {
     // CRITICAL FIX: Ensure product is defined before accessing properties
@@ -140,9 +141,9 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             setProductOptions(initialOptions);
 
             // 2. Initialize form with base product data
-            // Filter out legacy option keys AND the new structured keys ('options', 'variants') from details before resetting the form.
+            // Filter out all option keys from details before resetting the form.
             const specificationsOnly = Object.fromEntries(
-                Object.entries(product.details || {}).filter(([k]) => !LEGACY_OPTION_KEYS.includes(k))
+                Object.entries(product.details || {}).filter(([k]) => !OPTION_KEYS_TO_EXCLUDE.includes(k))
             );
 
             form.reset({
@@ -307,7 +308,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         }
         
         // 4. Remove legacy flat attributes (color, size, material) from details before saving
-        LEGACY_OPTION_KEYS.forEach(key => delete cleanedDetails[key]);
+        OPTION_KEYS_TO_EXCLUDE.forEach(key => delete cleanedDetails[key]);
 
 
         // 5. Update Supabase
@@ -342,7 +343,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     // Filter specifications to only include those defined by the current type, plus any existing custom ones
     const specificationKeys = new Set(typeAttributes.map(attr => attr.name));
     const specificationsToRender = Object.entries(getValues('details') || {})
-        .filter(([key, value]) => key !== 'type' && key !== 'options' && key !== 'variants' && (specificationKeys.has(key) || (value !== undefined && value !== null && value !== '')));
+        .filter(([key, value]) => !OPTION_KEYS_TO_EXCLUDE.includes(key) && (specificationKeys.has(key) || (value !== undefined && value !== null && value !== '')));
 
     const hasOptions = productOptions.length > 0;
 
