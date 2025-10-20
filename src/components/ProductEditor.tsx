@@ -74,10 +74,15 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   
   // CRITICAL FIX: If product is null, we cannot proceed with initialization or rendering.
   if (!product) {
+    console.log("ProductEditor: Rendering null (product is null). isOpen:", isOpen);
     return null;
   }
+  
+  console.log("ProductEditor: Rendering product:", product.id, "isEditing:", isEditing, "isOpen:", isOpen);
+
 
   useEffect(() => {
+    console.log("ProductEditor useEffect: Running initialization/reset logic for product:", product?.id);
     if (product && shopDetails) {
       // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
       const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
@@ -112,23 +117,8 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
         billing_interval: product.billing_interval,
         details: product.details || { type: 'generic' },
       });
-    } else {
-      // If product is null, reset form to defaults/empty state to prevent crashes during unmount
-      form.reset({
-        name: "",
-        status: "Draft",
-        caption: "",
-        category: "",
-        price: 0,
-        currency: shopDetails?.currency || 'USD',
-        inventory: 0,
-        tags: [],
-        pricing_type: 'one_time',
-        billing_interval: null,
-        details: { type: 'generic' },
-      });
-      setMediaItems([]);
     }
+    // Removed the 'else' block that called form.reset() when product was null.
   }, [product, form.reset, shopDetails, convertCurrency]);
   
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -200,7 +190,13 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setIsEditing(false); } }}>
+      <Dialog open={isOpen} onOpenChange={(open) => { 
+        console.log("ProductEditor Dialog onOpenChange:", open);
+        if (!open) { 
+          onClose(); 
+          setIsEditing(false); 
+        } 
+      }}>
         <DialogContent className="sm:max-w-6xl max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Product Details: {product.name}</DialogTitle>

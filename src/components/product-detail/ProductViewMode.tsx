@@ -34,7 +34,11 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     const { shopDetails, convertCurrency } = useShop();
     
     // CRITICAL FIX: Ensure product is defined before accessing properties
-    if (!product) return null;
+    if (!product) {
+        console.log("ProductViewMode: Rendering null because product is null.");
+        return null;
+    }
+    console.log("ProductViewMode: Rendering for product:", product.id);
 
     // Convert product price from its stored currency (now always ALL) to the shop's display currency
     const displayPrice = useMemo(() => {
@@ -189,7 +193,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                                 </TableHeader>
                                 <TableBody>
                                     {variants.map((variant: any) => {
-                                        const finalPrice = (displayPrice || 0) + variant.priceDifference;
+                                        const finalPrice = (lowestVariantPrice || 0) + variant.priceDifference;
                                         const priceDiffFormatted = formatCurrency(variant.priceDifference, currencyCode, 'en-US', true);
                                         
                                         return (
