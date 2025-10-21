@@ -96,6 +96,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
       {/* Default Badge (Col 2) - Toggleable */}
       <div className="col-span-1 flex justify-center">
         <Badge
+          type="button"
           variant="outline"
           className={cn(
             "text-xs font-semibold cursor-pointer transition-colors h-6 px-2 py-0",
@@ -201,7 +202,6 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
   const allValues = watch(`details.options_v2.${index}.values`);
 
   const selectedCount = useMemo(() => {
-    // FIX: Ensure allValues is an array before filtering
     return (Array.isArray(allValues) ? allValues : []).filter((val: OptionValue) => val.isSelected).length;
   }, [allValues]);
 
@@ -239,6 +239,19 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
       });
     }
     trigger(`details.options_v2.${index}.values`); // Force RHF to update the array state
+  };
+
+  const handleBulkStockUpdate = (stockValue: number) => {
+    valuesFields.forEach((_, valueIndex) => {
+      if (watch(`details.options_v2.${index}.values.${valueIndex}.isSelected`)) {
+        setValue(`details.options_v2.${index}.values.${valueIndex}.inventory`, stockValue, { shouldDirty: true });
+        // Also set to active if stock > 0
+        if (stockValue > 0) {
+            setValue(`details.options_v2.${index}.values.${valueIndex}.is_active`, true, { shouldDirty: true });
+        }
+      }
+    });
+    trigger(`details.options_v2.${index}.values`);
   };
 
   return (
@@ -300,10 +313,12 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="p-2 bg-accent/50 border-b overflow-hidden flex flex-wrap items-center justify-between gap-2"
+                      className="p-2 bg-accent/50 border-b overflow-hidden flex flex-col gap-2"
                     >
                       <span className="text-sm font-medium">{selectedCount} values selected</span>
-                      <div className="flex gap-2">
+                      
+                      {/* Row 1: Status Actions */}
+                      <div className="flex flex-wrap gap-2">
                         <Button type="button" size="sm" variant="outline" onClick={() => handleBulkAction('activate')} className="h-8 text-emerald-600 border-emerald-300 hover:bg-emerald-50">
                           <CheckCircle className="h-4 w-4 mr-1" /> Activate
                         </Button>
@@ -312,6 +327,40 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                         </Button>
                         <Button type="button" size="sm" variant="destructive" onClick={() => handleBulkAction('delete')} className="h-8">
                           <Trash2 className="h-4 w-4 mr-1" /> Delete
+                        </Button>
+                      </div>
+
+                      {/* Row 2: Stock Adjustment */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-accent-foreground/10">
+                        <Label htmlFor={`bulk-stock-${index}`} className="text-sm font-medium flex-shrink-0">Set Stock:</Label>
+                        <Input
+                          id={`bulk-stock-${index}`}
+                          type="number"
+                          step="1"
+                          min="0"
+                          placeholder="e.g., 50"
+                          className="h-8 text-sm w-24"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const input = e.currentTarget.value;
+                              const stockValue = parseInt(input);
+                              if (!isNaN(stockValue) && stockValue >= 0) {
+                                handleBulkStockUpdate(stockValue);
+                                e.currentTarget.value = ''; // Clear input after action
+                              }
+                            }
+                          }}
+                        />
+                        <Button type="button" size="sm" onClick={() => {
+                            const inputElement = document.getElementById(`bulk-stock-${index}`) as HTMLInputElement;
+                            const stockValue = parseInt(inputElement.value);
+                            if (!isNaN(stockValue) && stockValue >= 0) {
+                                handleBulkStockUpdate(stockValue);
+                                inputElement.value = '';
+                            }
+                        }} className="h-8">
+                            <Package className="h-4 w-4 mr-1" /> Apply
                         </Button>
                       </div>
                     </motion.div>

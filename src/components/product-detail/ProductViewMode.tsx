@@ -56,13 +56,6 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     const optionsV2 = product.details?.options_v2 || [];
     const specifications = allDetails.filter(d => !d.isOption);
 
-    // Function to determine the color class for an option value badge
-    const getOptionValueColor = useCallback((val: any) => {
-        if (!val.is_active) return "bg-gray-100 text-gray-600 border-gray-300";
-        if (val.inventory <= 0) return "bg-slate-100 text-slate-800 border-slate-300"; // Out of Stock color
-        return "bg-emerald-100 text-emerald-800 border-emerald-300"; // Active/In Stock color
-    }, []);
-
     return (
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
         <ScrollArea className="flex-1 overflow-y-auto">
@@ -146,15 +139,24 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                                                 key={val.value} 
                                                 className={cn(
                                                     "flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium transition-colors",
-                                                    isActive ? (isOOS ? "bg-slate-100 text-slate-800 border border-slate-300" : "bg-emerald-100 text-emerald-800 border border-emerald-300") : "bg-gray-100 text-gray-600 border border-gray-300",
+                                                    // Determine base color based on active/stock status
+                                                    isActive 
+                                                        ? (isOOS 
+                                                            ? "bg-slate-100 text-slate-800 border border-slate-300" // Out of Stock (slate-600 requested, using slate-800 for contrast)
+                                                            : "bg-emerald-100 text-emerald-800 border border-emerald-300") // Active/In Stock
+                                                        : "bg-gray-100 text-gray-600 border border-gray-300", // Inactive (grayed out requested)
                                                     val.is_default && "ring-2 ring-primary ring-offset-1 ring-offset-background"
                                                 )}
                                                 title={val.is_default ? "Default Selection" : undefined}
                                             >
                                                 {/* Value Name */}
                                                 <span className="flex items-center gap-1">
-                                                    {val.is_default && <CheckCircle className="h-3 w-3 text-primary" />}
                                                     {val.value}
+                                                    {val.is_default && (
+                                                        <span className="text-xs font-normal opacity-80 ml-1 text-primary">
+                                                            (Default)
+                                                        </span>
+                                                    )}
                                                 </span>
                                                 
                                                 {/* Price Diff */}

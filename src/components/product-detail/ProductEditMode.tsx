@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { TagInput } from "@/components/TagInput";
-import { Loader2, XCircle, PlusCircle, CheckCircle, Archive, Sparkles, Settings, Cloud, Package, Banknote } from "lucide-react";
+import { Loader2, XCircle, PlusCircle, CheckCircle, Archive, Sparkles, Settings, Cloud, Package, Banknote, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,8 +28,8 @@ import { OptionsManager } from "./OptionsManager"; // Import OptionsManager
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
-  'Draft': { icon: XCircle, color: "text-amber-600", label: "Draft" },
-  'Out of Stock': { icon: Archive, color: "text-slate-600", label: "Out of Stock" },
+  'Draft': { icon: Eye, color: "text-amber-600", label: "Draft" }, // Changed icon to Eye
+  'Out of Stock': { icon: Package, color: "text-slate-600", label: "Out of Stock" }, // Changed icon to Package
 };
 
 // Helper to convert snake_case to Title Case for display
