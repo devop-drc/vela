@@ -251,6 +251,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                         cleanedDetails[key] = value.map((option: any) => ({
                             ...option,
                             values: option.values.map((val: any) => {
+                                // CRITICAL FIX: Ensure we only save the necessary fields, excluding temporary RHF/UI fields
                                 const { isSelected, ...rest } = val;
                                 return rest;
                             })

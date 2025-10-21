@@ -64,10 +64,6 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
     trigger(`details.options_v2.${optionIndex}.values`); // Force RHF to update the array state
   }, [fieldName, setValue, optionIndex, trigger]);
 
-  const handleToggleActive = useCallback((checked: boolean) => {
-    setValue(`${fieldName}.is_active`, checked, { shouldDirty: true });
-  }, [fieldName, setValue]);
-
   const availabilityColor = useMemo(() => {
     if (!isActive) return "bg-gray-100 text-gray-600 border-gray-300";
     if (inventory <= 0) return "bg-red-100 text-red-800 border-red-300";
@@ -197,6 +193,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
   });
   
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [bulkStockInput, setBulkStockInput] = useState('');
 
   // Watch all 'isSelected' fields to determine bulk selection state
   const allValues = watch(`details.options_v2.${index}.values`);
@@ -252,6 +249,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
       }
     });
     trigger(`details.options_v2.${index}.values`);
+    setBulkStockInput('');
   };
 
   return (
@@ -340,26 +338,24 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                           min="0"
                           placeholder="e.g., 50"
                           className="h-8 text-sm w-24"
+                          value={bulkStockInput}
+                          onChange={(e) => setBulkStockInput(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault();
-                              const input = e.currentTarget.value;
-                              const stockValue = parseInt(input);
+                              const stockValue = parseInt(bulkStockInput);
                               if (!isNaN(stockValue) && stockValue >= 0) {
                                 handleBulkStockUpdate(stockValue);
-                                e.currentTarget.value = ''; // Clear input after action
                               }
                             }
                           }}
                         />
                         <Button type="button" size="sm" onClick={() => {
-                            const inputElement = document.getElementById(`bulk-stock-${index}`) as HTMLInputElement;
-                            const stockValue = parseInt(inputElement.value);
+                            const stockValue = parseInt(bulkStockInput);
                             if (!isNaN(stockValue) && stockValue >= 0) {
                                 handleBulkStockUpdate(stockValue);
-                                inputElement.value = '';
                             }
-                        }} className="h-8">
+                        }} className="h-8" disabled={!bulkStockInput.trim() || isNaN(parseInt(bulkStockInput))}>
                             <Package className="h-4 w-4 mr-1" /> Apply
                         </Button>
                       </div>
