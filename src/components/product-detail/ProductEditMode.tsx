@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
-import { TagInput } from "@/components/TagInput";
+import { TagInput } from "../TagInput";
 import { Loader2, XCircle, PlusCircle, CheckCircle, Archive, Sparkles, Settings, Cloud, Package, Banknote, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
@@ -24,7 +24,7 @@ import { useShop } from "@/contexts/ShopContext";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../ui/carousel";
 import { showError, showSuccess } from "@/utils/toast";
-import { OptionsManager } from "./OptionsManager"; // Import OptionsManager
+import { OptionsManager } from "./OptionsManager";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -182,7 +182,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             const caption = getValues('caption');
             if (!caption) throw new Error("Please provide a description for the AI to analyze.");
             const { data: { user } = {} } = await supabase.auth.getUser();
-            if (!user) throw new Error("You must be logged in.");
+            if (!user) throw new Error("User not authenticated.");
             
             const { data: analysis, error } = await supabase.functions.invoke('ai-product-classifier', { body: { caption, user_id: user.id } });
             if (error) throw error;
@@ -246,12 +246,12 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             // Add all dynamic attributes (specs + options_v2)
             Object.entries(data.details).forEach(([key, value]) => {
                 if (key !== 'type') {
-                    // Remove the temporary 'isSelected' field from options_v2 values before saving
+                    // CRITICAL FIX: Ensure we only save the necessary fields, removing temporary RHF/UI fields like 'isSelected'
                     if (key === 'options_v2' && Array.isArray(value)) {
                         cleanedDetails[key] = value.map((option: any) => ({
                             ...option,
                             values: option.values.map((val: any) => {
-                                // CRITICAL FIX: Ensure we only save the necessary fields, excluding temporary RHF/UI fields
+                                // Destructure to exclude temporary fields
                                 const { isSelected, ...rest } = val;
                                 return rest;
                             })
@@ -263,6 +263,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             });
 
             // 2. Convert price from form's display currency (data.currency) to ALL for storage
+            // The price in the form is in the display currency. We must convert it back to ALL.
             const priceInALL = convertCurrency(data.price, data.currency, 'ALL');
 
             // 3. Update Supabase
@@ -294,7 +295,6 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             showError(`An unexpected error occurred: ${e.message}`);
             console.error("ProductEditor: Unexpected error during save:", e);
         } finally {
-            // CRITICAL FIX: Ensure submitting state is cleared regardless of success/failure
             setIsSubmitting(false);
             if (!error) {
                 onClose();

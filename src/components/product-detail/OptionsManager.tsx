@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { currencies } from '@/lib/currencies';
 
 interface OptionValue {
   value: string;
@@ -44,7 +45,12 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
   const isActive = watch(`${fieldName}.is_active`);
   const inventory = watch(`${fieldName}.inventory`);
 
+  const currencySymbol = useMemo(() => {
+    return currencies.find(c => c.code === currencyCode)?.symbol || currencyCode;
+  }, [currencyCode]);
+
   const displayPriceDiff = useMemo(() => {
+    // Price difference is stored in ALL, convert to display currency
     const convertedDiff = convertCurrency(priceDiff, 'ALL', currencyCode);
     return formatCurrency(convertedDiff, currencyCode, 'en-US', true);
   }, [priceDiff, currencyCode, convertCurrency]);
@@ -146,7 +152,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
               />
             )}
           />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{currencyCode}</span>
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{currencySymbol}</span>
         </div>
       </div>
 
@@ -173,8 +179,8 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
         </div>
       </div>
 
-      {/* Status Dropdown (Col 12) */}
-      <div className="col-span-1 flex justify-center">
+      {/* Actions (Col 12) - Status Dropdown + Delete Button */}
+      <div className="col-span-1 flex items-center justify-end gap-1">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className={cn("h-8 w-8", currentStatus.color)} title={currentStatus.label}>
@@ -190,10 +196,6 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
-
-      {/* Delete (Col 12) */}
-      <div className="col-span-1 flex items-center justify-end">
         <Button
           type="button"
           variant="ghost"
@@ -251,6 +253,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
     if (selectedIndices.length === 0) return;
 
     if (action === 'delete') {
+      // Delete in reverse order to maintain correct indices
       selectedIndices.sort((a, b) => b - a).forEach(idx => removeValue(idx));
     } else if (action === 'activate' || action === 'deactivate') {
       const isActive = action === 'activate';
@@ -260,7 +263,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
         if (isActive && watch(`details.options_v2.${index}.values.${idx}.inventory`) === 0) {
             setValue(`details.options_v2.${index}.values.${idx}.inventory`, 10, { shouldDirty: true });
         }
-        setValue(`details.options_v2.${index}.values.${idx}.isSelected`, false);
+        setValue(`details.options_v2.${index}.values.${idx}.isSelected`, false); // Deselect after action
       });
     }
     trigger(`details.options_v2.${index}.values`);
@@ -273,6 +276,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
         if (stockValue > 0) {
             setValue(`details.options_v2.${index}.values.${valueIndex}.is_active`, true, { shouldDirty: true });
         }
+        setValue(`details.options_v2.${index}.values.${valueIndex}.isSelected`, false); // Deselect after action
       }
     });
     trigger(`details.options_v2.${index}.values`);
@@ -329,8 +333,8 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                       <div className="col-span-3">Value</div>
                       <div className="col-span-3 flex items-center gap-1">Price Diff</div>
                       <div className="col-span-3 flex items-center gap-1">Inventory</div>
-                      <div className="col-span-1 text-center">Status</div>
-                      <div className="col-span-1 text-right"></div>
+                      <div className="col-span-1 text-center">Actions</div>
+                      {/* Removed extra empty column */}
                   </div>
 
                   {/* Bulk Actions Toolbar */}
@@ -419,7 +423,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => appendValue({ value: 'New Value', price_difference: 0, inventory: 10, is_active: true, is_default: false, isSelected: false })}
+                          onClick={() => appendValue({ value: 'Default Value', price_difference: 0, inventory: 10, is_active: true, is_default: false, isSelected: false })}
                           className="w-full"
                       >
                           <PlusCircle className="mr-2 h-4 w-4" />
@@ -453,7 +457,8 @@ export const OptionsManager = () => {
     if (newOptionName.trim()) {
       appendOption({
         name: newOptionName.trim(),
-        values: [{ value: 'Default', price_difference: 0, inventory: 10, is_active: true, is_default: true, isSelected: false }],
+        // CRITICAL FIX: Ensure the default value is explicitly set to a non-empty string
+        values: [{ value: 'Default Value', price_difference: 0, inventory: 10, is_active: true, is_default: true, isSelected: false }],
       });
       setNewOptionName('');
     }
