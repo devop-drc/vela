@@ -80,21 +80,36 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             if (!initialDetails.options_v2) {
                 initialDetails.options_v2 = [];
             } else {
-                // Ensure every option value has is_default and isSelected property
-                initialDetails.options_v2 = initialDetails.options_v2.map((opt: any) => ({
-                    ...opt,
-                    values: opt.values.map((val: any, index: number) => {
-                        // CONVERT price_difference from stored currency (product.currency) to display currency (shopDetails.currency)
+                initialDetails.options_v2 = initialDetails.options_v2.map((opt: any) => {
+                    let hasExistingDefault = false;
+                    
+                    // 1. Check if any value already has is_default set to true
+                    opt.values.forEach((val: any) => {
+                        if (val.is_default) {
+                            hasExistingDefault = true;
+                        }
+                    });
+
+                    // 2. Process values, applying conversion and setting default only if needed
+                    const processedValues = opt.values.map((val: any, index: number) => {
+                        // CRITICAL FIX: Use product.currency as source for conversion
                         const priceDiffInDisplayCurrency = convertCurrency(val.price_difference, product.currency, shopDetails.currency);
                         
+                        let isDefault = val.is_default;
+                        if (!hasExistingDefault && index === 0) {
+                            isDefault = true; // Set the first one as default if none exists
+                        }
+
                         return {
                             ...val,
                             price_difference: priceDiffInDisplayCurrency, // <-- CONVERTED HERE
-                            is_default: val.is_default === undefined ? (index === 0 && opt.values.length === 1) : val.is_default,
+                            is_default: isDefault || false, // Ensure it's boolean
                             isSelected: false, // Always reset selection state on load
                         };
-                    })
-                }));
+                    });
+
+                    return { ...opt, values: processedValues };
+                });
             }
 
             // 1. Initialize form with base product data

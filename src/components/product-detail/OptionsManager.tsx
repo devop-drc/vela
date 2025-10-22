@@ -89,7 +89,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
 
   return (
     <div
-      className="grid grid-cols-12 gap-2 items-center p-2 border-b last:border-b-0 hover:bg-muted/50 transition-colors"
+      className="grid grid-cols-12 gap-2 items-center py-3 px-4 border-b last:border-b-0 hover:bg-muted/50 transition-colors"
     >
       {/* Bulk Select Checkbox (Col 1) */}
       <div className="col-span-1 flex justify-center">
@@ -125,7 +125,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
             <Input
               {...field}
               placeholder={`${optionName} value`}
-              className="h-8 text-sm pl-3"
+              className="h-9 text-sm pl-3"
             />
           )}
         />
@@ -145,7 +145,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
                 type="number"
                 step="0.01"
                 placeholder="0.00"
-                className="h-8 text-sm text-right pl-9 pr-14"
+                className="h-9 text-sm text-right pl-9 pr-14"
                 value={field.value === 0 ? '0' : field.value}
                 onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
               />
@@ -169,7 +169,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
                 type="number"
                 step="1"
                 placeholder="0"
-                className="h-8 text-sm text-right pl-9 pr-3"
+                className="h-9 text-sm text-right pl-9 pr-3"
                 value={field.value === 0 ? '0' : field.value}
                 onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
               />
@@ -182,7 +182,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
       <div className="col-span-1 flex items-center justify-end gap-1">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className={cn("h-8 w-8", currentStatus.color)} title={currentStatus.label}>
+            <Button variant="ghost" size="icon" className={cn("h-9 w-9", currentStatus.color)} title={currentStatus.label}>
               <currentStatus.icon className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -201,7 +201,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
           size="icon"
           onClick={() => removeValue(valueIndex)}
           disabled={valuesFields.length === 1}
-          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+          className="h-9 w-9 text-destructive hover:bg-destructive/10"
           title="Delete Value"
         >
           <Trash2 className="h-4 w-4" />
@@ -322,7 +322,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
           >
               <CardContent className="p-0">
                   {/* Header Row */}
-                  <div className="grid grid-cols-12 gap-2 items-center p-2 bg-muted/50 text-xs font-semibold uppercase text-muted-foreground border-b">
+                  <div className="grid grid-cols-12 gap-2 items-center py-3 px-4 bg-muted/50 text-xs font-semibold uppercase text-muted-foreground border-b">
                       <div className="col-span-1 flex justify-center">
                         <Checkbox
                           checked={isAllSelected}
@@ -343,7 +343,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="p-2 bg-accent/50 border-b overflow-hidden flex flex-col md:flex-row md:items-center md:justify-between gap-2"
+                      className="p-3 bg-accent/50 border-b overflow-hidden flex flex-col md:flex-row md:items-center md:justify-between gap-2"
                     >
                       <span className="text-sm font-medium flex-shrink-0">{selectedCount} values selected</span>
                       
@@ -418,7 +418,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                   </AnimatePresence>
 
                   {/* Add New Value Button */}
-                  <div className="p-2 border-t">
+                  <div className="p-4 border-t">
                       <Button
                           type="button"
                           variant="outline"
