@@ -4,14 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Trash2, Banknote, Package, Settings, ChevronDown, ChevronUp, CheckCircle, XCircle } from 'lucide-react';
+import { PlusCircle, Trash2, Banknote, Package, Settings, ChevronDown, ChevronUp, CheckCircle, XCircle, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useShop } from '@/contexts/ShopContext';
 import { formatCurrency } from '@/lib/formatters';
-import { Switch } from '@/components/ui/switch';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface OptionValue {
   value: string;
@@ -27,11 +27,16 @@ interface ProductOption {
   values: OptionValue[];
 }
 
-// --- OptionValueRow Component (No Memo) ---
+const statusOptions = [
+  { value: 'Active', label: 'Active', icon: CheckCircle, isActive: true, inventory: 10, color: "text-emerald-600" },
+  { value: 'Draft', label: 'Draft', icon: Eye, isActive: false, inventory: 10, color: "text-amber-600" },
+  { value: 'Out of Stock', label: 'Out of Stock', icon: Package, isActive: true, inventory: 0, color: "text-slate-600" },
+];
+
+// --- OptionValueRow Component ---
 const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currencyCode, convertCurrency, valuesFields, removeValue, setValue, watch, getValues, trigger }: any) => {
   const fieldName = `details.options_v2.${optionIndex}.values.${valueIndex}`;
   
-  // Use watch for performance critical fields only
   const priceDiff = watch(`${fieldName}.price_difference`);
   const isDefault = watch(`${fieldName}.is_default`);
   const isSelected = watch(`${fieldName}.isSelected`);
@@ -44,36 +49,35 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
   }, [priceDiff, currencyCode, convertCurrency]);
 
   const handleSetDefault = useCallback(() => {
-    // If already default, do nothing. If not, set it as default.
     if (isDefault) return;
 
-    // Find the currently default value in this option group and set it to false
     const currentValues = getValues(`details.options_v2.${optionIndex}.values`);
     currentValues.forEach((val: OptionValue, index: number) => {
       if (val.is_default && index !== valueIndex) {
         setValue(`details.options_v2.${optionIndex}.values.${index}.is_default`, false, { shouldDirty: true });
       }
     });
-    // Set the current value to default
     setValue(`${fieldName}.is_default`, true, { shouldDirty: true });
-    trigger(`details.options_v2.${optionIndex}.values`); // Force RHF to update the array state
+    trigger(`details.options_v2.${optionIndex}.values`);
   }, [isDefault, getValues, setValue, optionIndex, valueIndex, fieldName, trigger]);
 
   const handleToggleSelect = useCallback((checked: boolean) => {
     setValue(`${fieldName}.isSelected`, checked);
-    trigger(`details.options_v2.${optionIndex}.values`); // Force RHF to update the array state
+    trigger(`details.options_v2.${optionIndex}.values`);
   }, [fieldName, setValue, optionIndex, trigger]);
 
-  const availabilityColor = useMemo(() => {
-    if (!isActive) return "bg-gray-100 text-gray-600 border-gray-300";
-    if (inventory <= 0) return "bg-red-100 text-red-800 border-red-300";
-    return "bg-emerald-100 text-emerald-800 border-emerald-300";
-  }, [isActive, inventory]);
+  const handleStatusChange = useCallback((statusValue: string) => {
+    const status = statusOptions.find(s => s.value === statusValue);
+    if (status) {
+      setValue(`${fieldName}.is_active`, status.isActive, { shouldDirty: true });
+      setValue(`${fieldName}.inventory`, status.inventory, { shouldDirty: true });
+    }
+  }, [fieldName, setValue]);
 
-  const availabilityLabel = useMemo(() => {
-    if (!isActive) return "Unavailable";
-    if (inventory <= 0) return "Out of Stock";
-    return "In Stock";
+  const currentStatus = useMemo(() => {
+    if (!isActive) return statusOptions.find(s => s.value === 'Draft')!;
+    if (inventory <= 0) return statusOptions.find(s => s.value === 'Out of Stock')!;
+    return statusOptions.find(s => s.value === 'Active')!;
   }, [isActive, inventory]);
 
   return (
@@ -105,8 +109,8 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
         </Badge>
       </div>
 
-      {/* Value Name (Col 3-5) */}
-      <div className="col-span-3">
+      {/* Value Name (Col 3-4) */}
+      <div className="col-span-2">
         <Controller
           name={`${fieldName}.value`}
           control={control}
@@ -120,54 +124,74 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
         />
       </div>
 
-      {/* Price Difference (Col 6-8) */}
-      <div className="col-span-3 flex items-center gap-1">
-        <Banknote className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-        <Controller
-          name={`${fieldName}.price_difference`}
-          control={control}
-          rules={{ required: true, min: -1000000 }}
-          render={({ field }) => (
-            <Input
-              {...field}
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              className="h-8 text-sm text-right"
-              value={field.value === 0 ? '0' : field.value}
-              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-            />
-          )}
-        />
-        <span className="text-xs text-muted-foreground ml-1">{currencyCode}</span>
+      {/* Price Difference (Col 5-7) */}
+      <div className="col-span-3 flex items-center">
+        <div className="relative w-full">
+          <Banknote className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Controller
+            name={`${fieldName}.price_difference`}
+            control={control}
+            rules={{ required: true, min: -1000000 }}
+            render={({ field }) => (
+              <Input
+                {...field}
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                className="h-8 text-sm text-right pl-9 pr-14"
+                value={field.value === 0 ? '0' : field.value}
+                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+              />
+            )}
+          />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{currencyCode}</span>
+        </div>
       </div>
 
-      {/* Inventory (Col 9-11) */}
-      <div className="col-span-3 flex items-center gap-1">
-        <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-        <Controller
-          name={`${fieldName}.inventory`}
-          control={control}
-          rules={{ required: true, min: 0 }}
-          render={({ field }) => (
-            <Input
-              {...field}
-              type="number"
-              step="1"
-              placeholder="0"
-              className="h-8 text-sm text-right"
-              value={field.value === 0 ? '0' : field.value}
-              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-            />
-          )}
-        />
+      {/* Inventory (Col 8-10) */}
+      <div className="col-span-3 flex items-center">
+        <div className="relative w-full">
+          <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Controller
+            name={`${fieldName}.inventory`}
+            control={control}
+            rules={{ required: true, min: 0 }}
+            render={({ field }) => (
+              <Input
+                {...field}
+                type="number"
+                step="1"
+                placeholder="0"
+                className="h-8 text-sm text-right pl-9"
+                value={field.value === 0 ? '0' : field.value}
+                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+              />
+            )}
+          />
+        </div>
       </div>
 
-      {/* Active/Delete (Col 12) */}
-      <div className="col-span-1 flex items-center justify-end gap-1">
-        <Badge variant="outline" className={cn("text-xs font-semibold h-6 px-2 py-0", availabilityColor)} title={availabilityLabel}>
-          {inventory <= 0 ? <XCircle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
-        </Badge>
+      {/* Status Dropdown (Col 11) */}
+      <div className="col-span-1 flex justify-center">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className={cn("h-8 w-8", currentStatus.color)} title={currentStatus.label}>
+              <currentStatus.icon className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {statusOptions.map(status => (
+              <DropdownMenuItem key={status.value} onClick={() => handleStatusChange(status.value)} className={cn("flex items-center gap-2", status.color)}>
+                <status.icon className="h-4 w-4" />
+                {status.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Delete (Col 12) */}
+      <div className="col-span-1 flex items-center justify-end">
         <Button
           type="button"
           variant="ghost"
@@ -185,7 +209,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
 };
 OptionValueRow.displayName = 'OptionValueRow';
 
-// --- OptionSection Component (No Memo) ---
+// --- OptionSection Component ---
 const OptionSection = ({ option, index, removeOption, control, watch, setValue, getValues, currencyCode, convertCurrency, trigger }: any) => {
   const { fields: valuesFields, append: appendValue, remove: removeValue } = useFieldArray({
     control,
@@ -195,7 +219,6 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [bulkStockInput, setBulkStockInput] = useState('');
 
-  // Watch all 'isSelected' fields to determine bulk selection state
   const allValues = watch(`details.options_v2.${index}.values`);
 
   const selectedCount = useMemo(() => {
@@ -211,10 +234,10 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
     valuesFields.forEach((_, valueIndex) => {
       setValue(`details.options_v2.${index}.values.${valueIndex}.isSelected`, newState);
     });
-    trigger(`details.options_v2.${index}.values`); // Force RHF to update the array state
+    trigger(`details.options_v2.${index}.values`);
   };
 
-  const handleBulkAction = (action: 'activate' | 'deactivate' | 'delete') => {
+  const handleBulkAction = (action: 'activate' | 'deactivate' | 'delete' | 'add_stock') => {
     const selectedIndices: number[] = [];
     valuesFields.forEach((_, valueIndex) => {
       if (watch(`details.options_v2.${index}.values.${valueIndex}.isSelected`)) {
@@ -225,24 +248,25 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
     if (selectedIndices.length === 0) return;
 
     if (action === 'delete') {
-      // Delete in reverse order to maintain correct indices
       selectedIndices.sort((a, b) => b - a).forEach(idx => removeValue(idx));
-    } else {
+    } else if (action === 'activate' || action === 'deactivate') {
       const isActive = action === 'activate';
       selectedIndices.forEach(idx => {
         setValue(`details.options_v2.${index}.values.${idx}.is_active`, isActive, { shouldDirty: true });
-        // Clear selection after action
+        // If activating, ensure stock is > 0 (default to 10 if currently 0)
+        if (isActive && watch(`details.options_v2.${index}.values.${idx}.inventory`) === 0) {
+            setValue(`details.options_v2.${index}.values.${idx}.inventory`, 10, { shouldDirty: true });
+        }
         setValue(`details.options_v2.${index}.values.${idx}.isSelected`, false);
       });
     }
-    trigger(`details.options_v2.${index}.values`); // Force RHF to update the array state
+    trigger(`details.options_v2.${index}.values`);
   };
 
   const handleBulkStockUpdate = (stockValue: number) => {
     valuesFields.forEach((_, valueIndex) => {
       if (watch(`details.options_v2.${index}.values.${valueIndex}.isSelected`)) {
         setValue(`details.options_v2.${index}.values.${valueIndex}.inventory`, stockValue, { shouldDirty: true });
-        // Also set to active if stock > 0
         if (stockValue > 0) {
             setValue(`details.options_v2.${index}.values.${valueIndex}.is_active`, true, { shouldDirty: true });
         }
@@ -253,8 +277,8 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
   };
 
   return (
-    <Card className="shadow-md">
-      <CardHeader className="p-4 border-b flex-row items-center justify-between">
+    <Card className="shadow-lg border-2 border-transparent focus-within:border-primary/50 transition-all">
+      <CardHeader className="p-4 border-b flex-row items-center justify-between bg-muted/50 rounded-t-lg">
         <CardTitle className="text-lg flex items-center gap-2">
           <Settings className="h-5 w-5 text-primary" />
           <Controller
@@ -264,7 +288,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
               <Input
                 {...field}
                 placeholder="Option Name (e.g., Color)"
-                className="h-8 text-lg font-semibold border-none shadow-none focus-visible:ring-0 p-0"
+                className="h-8 text-lg font-semibold border-none shadow-none focus-visible:ring-0 p-0 bg-transparent"
               />
             )}
           />
@@ -290,7 +314,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
           >
               <CardContent className="p-0">
                   {/* Header Row */}
-                  <div className="grid grid-cols-12 gap-2 items-center p-2 bg-muted/50 text-xs font-semibold uppercase text-muted-foreground">
+                  <div className="grid grid-cols-12 gap-2 items-center p-2 bg-muted/50 text-xs font-semibold uppercase text-muted-foreground border-b">
                       <div className="col-span-1 flex justify-center">
                         <Checkbox
                           checked={isAllSelected}
@@ -299,10 +323,11 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                         />
                       </div>
                       <div className="col-span-1">Default</div>
-                      <div className="col-span-3">Value</div>
-                      <div className="col-span-3 flex items-center gap-1"><Banknote className="h-3 w-3" /> Price Diff</div>
-                      <div className="col-span-3 flex items-center gap-1"><Package className="h-3 w-3" /> Inventory</div>
-                      <div className="col-span-1 text-right">Status</div>
+                      <div className="col-span-2">Value</div>
+                      <div className="col-span-3 flex items-center gap-1">Price Diff</div>
+                      <div className="col-span-3 flex items-center gap-1">Inventory</div>
+                      <div className="col-span-1 text-center">Status</div>
+                      <div className="col-span-1 text-right"></div>
                   </div>
 
                   {/* Bulk Actions Toolbar */}
@@ -311,17 +336,17 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="p-2 bg-accent/50 border-b overflow-hidden flex flex-col gap-2"
+                      className="p-2 bg-accent/50 border-b overflow-hidden flex flex-col md:flex-row md:items-center md:justify-between gap-2"
                     >
-                      <span className="text-sm font-medium">{selectedCount} values selected</span>
+                      <span className="text-sm font-medium flex-shrink-0">{selectedCount} values selected</span>
                       
                       {/* Row 1: Status Actions */}
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 flex-1 md:flex-none">
                         <Button type="button" size="sm" variant="outline" onClick={() => handleBulkAction('activate')} className="h-8 text-emerald-600 border-emerald-300 hover:bg-emerald-50">
                           <CheckCircle className="h-4 w-4 mr-1" /> Activate
                         </Button>
                         <Button type="button" size="sm" variant="outline" onClick={() => handleBulkAction('deactivate')} className="h-8 text-amber-600 border-amber-300 hover:bg-amber-50">
-                          <XCircle className="h-4 w-4 mr-1" /> Deactivate
+                          <Eye className="h-4 w-4 mr-1" /> Draft
                         </Button>
                         <Button type="button" size="sm" variant="destructive" onClick={() => handleBulkAction('delete')} className="h-8">
                           <Trash2 className="h-4 w-4 mr-1" /> Delete
@@ -329,7 +354,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                       </div>
 
                       {/* Row 2: Stock Adjustment */}
-                      <div className="flex items-center gap-2 pt-2 border-t border-accent-foreground/10">
+                      <div className="flex items-center gap-2 pt-2 md:pt-0 md:border-t-0 border-t border-accent-foreground/10">
                         <Label htmlFor={`bulk-stock-${index}`} className="text-sm font-medium flex-shrink-0">Set Stock:</Label>
                         <Input
                           id={`bulk-stock-${index}`}
@@ -367,7 +392,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                       {valuesFields.map((field, valueIndex) => (
                           <OptionValueRow
                               key={field.id}
-                              option={option} // Pass option object to ensure memoization works if option name changes
+                              option={option}
                               index={index}
                               optionIndex={index}
                               valueIndex={valueIndex}

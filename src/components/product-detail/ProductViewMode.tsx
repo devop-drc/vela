@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Package, Banknote, XCircle, Settings, CheckCircle, Archive, Minus, Plus } from "lucide-react";
+import { Edit, Trash2, Package, Banknote, XCircle, Settings, CheckCircle, Archive, Minus, Plus, Eye } from "lucide-react";
 import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
@@ -46,7 +46,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
 
     // Filter details into options (multi-value attributes) and specifications (single-value attributes)
     const allDetails = useMemo(() => {
-        const reservedKeys = new Set(['type', 'options_v2']);
+        // Explicitly exclude internal/legacy keys from being displayed as specifications
+        const reservedKeys = new Set(['type', 'options_v2', 'options', 'variants']); 
         return Object.entries(product.details || {})
             .filter(([key]) => !reservedKeys.has(key))
             .map(([key, value]) => ({ name: key, value, isOption: Array.isArray(value) }));
