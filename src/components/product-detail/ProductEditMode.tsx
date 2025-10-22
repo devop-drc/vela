@@ -83,11 +83,17 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 // Ensure every option value has is_default and isSelected property
                 initialDetails.options_v2 = initialDetails.options_v2.map((opt: any) => ({
                     ...opt,
-                    values: opt.values.map((val: any, index: number) => ({
-                        ...val,
-                        is_default: val.is_default === undefined ? (index === 0 && opt.values.length === 1) : val.is_default,
-                        isSelected: false, // Always reset selection state on load
-                    }))
+                    values: opt.values.map((val: any, index: number) => {
+                        // CONVERT price_difference from stored currency (ALL) to display currency
+                        const priceDiffInDisplayCurrency = convertCurrency(val.price_difference, 'ALL', shopDetails.currency);
+                        
+                        return {
+                            ...val,
+                            price_difference: priceDiffInDisplayCurrency, // <-- CONVERTED HERE
+                            is_default: val.is_default === undefined ? (index === 0 && opt.values.length === 1) : val.is_default,
+                            isSelected: false, // Always reset selection state on load
+                        };
+                    })
                 }));
             }
 
@@ -253,7 +259,11 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                             values: option.values.map((val: any) => {
                                 // Destructure to exclude temporary fields
                                 const { isSelected, ...rest } = val;
-                                return rest;
+                                
+                                // CONVERT price_difference back from display currency (data.currency) to ALL before saving
+                                const priceDiffInALL = convertCurrency(val.price_difference, data.currency, 'ALL');
+                                
+                                return { ...rest, price_difference: priceDiffInALL };
                             })
                         }));
                     } else {

@@ -50,10 +50,9 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
   }, [currencyCode]);
 
   const displayPriceDiff = useMemo(() => {
-    // Price difference is stored in ALL, convert to display currency
-    const convertedDiff = convertCurrency(priceDiff, 'ALL', currencyCode);
-    return formatCurrency(convertedDiff, currencyCode, 'en-US', true);
-  }, [priceDiff, currencyCode, convertCurrency]);
+    // Price difference is now loaded in display currency, but we format it here for the tooltip/title
+    return formatCurrency(priceDiff, currencyCode, 'en-US', true);
+  }, [priceDiff, currencyCode]);
 
   const handleSetDefault = useCallback(() => {
     if (isDefault) return;
@@ -126,7 +125,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
             <Input
               {...field}
               placeholder={`${optionName} value`}
-              className="h-8 text-sm"
+              className="h-8 text-sm pl-3"
             />
           )}
         />
@@ -170,7 +169,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
                 type="number"
                 step="1"
                 placeholder="0"
-                className="h-8 text-sm text-right pl-9"
+                className="h-8 text-sm text-right pl-9 pr-3"
                 value={field.value === 0 ? '0' : field.value}
                 onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
               />
@@ -244,7 +243,8 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
 
   const handleBulkAction = (action: 'activate' | 'deactivate' | 'delete' | 'add_stock') => {
     const selectedIndices: number[] = [];
-    valuesFields.forEach((_, valueIndex) => {
+    // Use the current fields array to find selected indices
+    valuesFields.forEach((field, valueIndex) => {
       if (watch(`details.options_v2.${index}.values.${valueIndex}.isSelected`)) {
         selectedIndices.push(valueIndex);
       }
@@ -266,6 +266,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
         setValue(`details.options_v2.${index}.values.${idx}.isSelected`, false); // Deselect after action
       });
     }
+    // Trigger re-render to update UI after bulk action
     trigger(`details.options_v2.${index}.values`);
   };
 
@@ -329,12 +330,11 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                           className="h-4 w-4"
                         />
                       </div>
-                      <div className="col-span-1">Default</div>
-                      <div className="col-span-3">Value</div>
-                      <div className="col-span-3 flex items-center gap-1">Price Diff</div>
-                      <div className="col-span-3 flex items-center gap-1">Inventory</div>
+                      <div className="col-span-1 flex justify-center">Default</div>
+                      <div className="col-span-3 pl-3">Value</div>
+                      <div className="col-span-3 text-right pr-14">Price Diff</div>
+                      <div className="col-span-3 text-right pr-3">Inventory</div>
                       <div className="col-span-1 text-center">Actions</div>
-                      {/* Removed extra empty column */}
                   </div>
 
                   {/* Bulk Actions Toolbar */}
@@ -423,7 +423,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => appendValue({ value: 'Default Value', price_difference: 0, inventory: 10, is_active: true, is_default: false, isSelected: false })}
+                          onClick={() => appendValue({ value: 'New Value', price_difference: 0, inventory: 10, is_active: true, is_default: false, isSelected: false })}
                           className="w-full"
                       >
                           <PlusCircle className="mr-2 h-4 w-4" />
@@ -458,7 +458,7 @@ export const OptionsManager = () => {
       appendOption({
         name: newOptionName.trim(),
         // CRITICAL FIX: Ensure the default value is explicitly set to a non-empty string
-        values: [{ value: 'Default Value', price_difference: 0, inventory: 10, is_active: true, is_default: true, isSelected: false }],
+        values: [{ value: 'New Value', price_difference: 0, inventory: 10, is_active: true, is_default: true, isSelected: false }],
       });
       setNewOptionName('');
     }
