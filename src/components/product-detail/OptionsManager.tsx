@@ -63,7 +63,8 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
   }, [isDefault, getValues, setValue, optionIndex, valueIndex, fieldName, trigger]);
 
   const handleToggleSelect = useCallback((checked: boolean) => {
-    setValue(`${fieldName}.isSelected`, checked);
+    setValue(`${fieldName}.isSelected`, checked, { shouldDirty: true });
+    // Trigger the parent array to force re-evaluation of selectedCount in OptionSection
     trigger(`details.options_v2.${optionIndex}.values`);
   }, [fieldName, setValue, optionIndex, trigger]);
 
@@ -220,7 +221,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [bulkStockInput, setBulkStockInput] = useState('');
 
-  // Watch all 'isSelected' fields to determine bulk selection state
+  // CRITICAL FIX: Watch the entire array to ensure selectedCount updates immediately
   const allValues = watch(`details.options_v2.${index}.values`);
 
   const selectedCount = useMemo(() => {
@@ -234,7 +235,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
   const handleToggleBulkSelectAll = () => {
     const newState = !isAllSelected;
     valuesFields.forEach((_, valueIndex) => {
-      setValue(`details.options_v2.${index}.values.${valueIndex}.isSelected`, newState);
+      setValue(`details.options_v2.${index}.values.${valueIndex}.isSelected`, newState, { shouldDirty: true });
     });
     trigger(`details.options_v2.${index}.values`);
   };
@@ -250,7 +251,6 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
     if (selectedIndices.length === 0) return;
 
     if (action === 'delete') {
-      // Delete in reverse order to maintain correct indices
       selectedIndices.sort((a, b) => b - a).forEach(idx => removeValue(idx));
     } else if (action === 'activate' || action === 'deactivate') {
       const isActive = action === 'activate';
@@ -317,7 +317,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
           >
               <CardContent className="p-0">
                   {/* Header Row */}
-                  <div className="grid grid-cols-12 gap-2 items-center p-2 bg-muted/50 text-xs font-semibold uppercase text-muted-foreground">
+                  <div className="grid grid-cols-12 gap-2 items-center p-2 bg-muted/50 text-xs font-semibold uppercase text-muted-foreground border-b">
                       <div className="col-span-1 flex justify-center">
                         <Checkbox
                           checked={isAllSelected}
@@ -327,9 +327,9 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                       </div>
                       <div className="col-span-1">Default</div>
                       <div className="col-span-3">Value</div>
-                      <div className="col-span-3 flex items-center gap-1"><Banknote className="h-3 w-3" /> Price Diff</div>
-                      <div className="col-span-3 flex items-center gap-1"><Package className="h-3 w-3" /> Inventory</div>
-                      <div className="col-span-1 text-right">Status</div>
+                      <div className="col-span-3 flex items-center gap-1">Price Diff</div>
+                      <div className="col-span-3 flex items-center gap-1">Inventory</div>
+                      <div className="col-span-1 text-center">Status</div>
                       <div className="col-span-1 text-right"></div>
                   </div>
 
