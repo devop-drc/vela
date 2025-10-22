@@ -149,7 +149,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                                 <Label className="font-semibold capitalize text-base">{option.name}</Label>
                                 <div className="flex flex-wrap gap-2 pt-1">
                                     {option.values.map((val: any) => {
-                                        const priceDiff = convertCurrency(val.price_difference, 'ALL', currencyCode);
+                                        // CRITICAL FIX: Use product.currency as source for conversion
+                                        const priceDiff = convertCurrency(val.price_difference, product.currency, currencyCode); 
                                         const priceDiffFormatted = formatCurrency(priceDiff, currencyCode, 'en-US', true);
                                         const isActive = val.is_active;
                                         const isOOS = val.inventory <= 0;

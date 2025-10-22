@@ -50,7 +50,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
   }, [currencyCode]);
 
   const displayPriceDiff = useMemo(() => {
-    // Price difference is now loaded in display currency, but we format it here for the tooltip/title
+    // Price difference is already in display currency (set in ProductEditMode on load)
     return formatCurrency(priceDiff, currencyCode, 'en-US', true);
   }, [priceDiff, currencyCode]);
 
@@ -263,7 +263,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
         if (isActive && watch(`details.options_v2.${index}.values.${idx}.inventory`) === 0) {
             setValue(`details.options_v2.${index}.values.${idx}.inventory`, 10, { shouldDirty: true });
         }
-        setValue(`details.options_v2.${index}.values.${idx}.isSelected`, false); // Deselect after action
+        setValue(`details.options_v2.${index}.values.${idx}.isSelected`, false, { shouldDirty: true }); // Reset selection
       });
     }
     // Trigger re-render to update UI after bulk action
@@ -277,7 +277,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
         if (stockValue > 0) {
             setValue(`details.options_v2.${index}.values.${valueIndex}.is_active`, true, { shouldDirty: true });
         }
-        setValue(`details.options_v2.${index}.values.${valueIndex}.isSelected`, false); // Deselect after action
+        setValue(`details.options_v2.${index}.values.${valueIndex}.isSelected`, false, { shouldDirty: true }); // Reset selection
       }
     });
     trigger(`details.options_v2.${index}.values`);

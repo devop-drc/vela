@@ -84,8 +84,8 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 initialDetails.options_v2 = initialDetails.options_v2.map((opt: any) => ({
                     ...opt,
                     values: opt.values.map((val: any, index: number) => {
-                        // CONVERT price_difference from stored currency (ALL) to display currency
-                        const priceDiffInDisplayCurrency = convertCurrency(val.price_difference, 'ALL', shopDetails.currency);
+                        // CONVERT price_difference from stored currency (product.currency) to display currency (shopDetails.currency)
+                        const priceDiffInDisplayCurrency = convertCurrency(val.price_difference, product.currency, shopDetails.currency);
                         
                         return {
                             ...val,
