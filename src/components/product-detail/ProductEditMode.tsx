@@ -419,9 +419,6 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 </div>
               </div>
               
-              {/* Options Manager */}
-              <OptionsManager />
-
               {/* Specifications (Fixed Details) */}
               {specificationsToRender.length > 0 && (
                 <Card>
@@ -439,6 +436,9 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                   </CardContent>
                 </Card>
               )}
+
+              {/* Options Manager */}
+              <OptionsManager />
             </div>
           </ScrollArea>
           <DialogFooter className="p-4 border-t"><Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button></DialogFooter>

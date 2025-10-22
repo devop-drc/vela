@@ -115,6 +115,25 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </div>
             </div>
 
+            {/* Specifications (Fixed Details) */}
+            {specifications.length > 0 && (
+              <Card>
+                <CardHeader><CardTitleComponent className="text-base">Specifications</CardTitleComponent></CardHeader>
+                <CardContent className="p-4 space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                    {specifications.map(field => {
+                        const Icon = getAttributeIcon(field.name);
+                        return (
+                            <DetailDisplayRow key={field.name} label={toTitleCase(field.name)} icon={Icon}>
+                                <p className="text-base">{Array.isArray(field.value) ? field.value.join(', ') : String(field.value)}</p>
+                            </DetailDisplayRow>
+                        );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Options V2 Display */}
             {optionsV2.length > 0 && (
                 <Card>
@@ -180,25 +199,6 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                         ))}
                     </CardContent>
                 </Card>
-            )}
-
-            {/* Specifications (Fixed Details) */}
-            {specifications.length > 0 && (
-              <Card>
-                <CardHeader><CardTitleComponent className="text-base">Specifications</CardTitleComponent></CardHeader>
-                <CardContent className="p-4 space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                    {specifications.map(field => {
-                        const Icon = getAttributeIcon(field.name);
-                        return (
-                            <DetailDisplayRow key={field.name} label={toTitleCase(field.name)} icon={Icon}>
-                                <p className="text-base">{Array.isArray(field.value) ? field.value.join(', ') : String(field.value)}</p>
-                            </DetailDisplayRow>
-                        );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
             )}
           </div>
         </ScrollArea>

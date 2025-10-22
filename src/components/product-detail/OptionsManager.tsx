@@ -8,6 +8,7 @@ import { PlusCircle, Trash2, Banknote, Package, Settings, ChevronDown, ChevronUp
 import { cn } from '@/lib/utils';
 import { useShop } from '@/contexts/ShopContext';
 import { formatCurrency } from '@/lib/formatters';
+import { Switch } from '@/components/ui/switch';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -109,8 +110,8 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
         </Badge>
       </div>
 
-      {/* Value Name (Col 3-4) */}
-      <div className="col-span-2">
+      {/* Value Name (Col 3-5) */}
+      <div className="col-span-3">
         <Controller
           name={`${fieldName}.value`}
           control={control}
@@ -124,7 +125,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
         />
       </div>
 
-      {/* Price Difference (Col 5-7) */}
+      {/* Price Difference (Col 6-8) */}
       <div className="col-span-3 flex items-center">
         <div className="relative w-full">
           <Banknote className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -148,7 +149,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
         </div>
       </div>
 
-      {/* Inventory (Col 8-10) */}
+      {/* Inventory (Col 9-11) */}
       <div className="col-span-3 flex items-center">
         <div className="relative w-full">
           <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -171,7 +172,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
         </div>
       </div>
 
-      {/* Status Dropdown (Col 11) */}
+      {/* Status Dropdown (Col 12) */}
       <div className="col-span-1 flex justify-center">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -219,6 +220,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [bulkStockInput, setBulkStockInput] = useState('');
 
+  // Watch all 'isSelected' fields to determine bulk selection state
   const allValues = watch(`details.options_v2.${index}.values`);
 
   const selectedCount = useMemo(() => {
@@ -248,6 +250,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
     if (selectedIndices.length === 0) return;
 
     if (action === 'delete') {
+      // Delete in reverse order to maintain correct indices
       selectedIndices.sort((a, b) => b - a).forEach(idx => removeValue(idx));
     } else if (action === 'activate' || action === 'deactivate') {
       const isActive = action === 'activate';
@@ -314,7 +317,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
           >
               <CardContent className="p-0">
                   {/* Header Row */}
-                  <div className="grid grid-cols-12 gap-2 items-center p-2 bg-muted/50 text-xs font-semibold uppercase text-muted-foreground border-b">
+                  <div className="grid grid-cols-12 gap-2 items-center p-2 bg-muted/50 text-xs font-semibold uppercase text-muted-foreground">
                       <div className="col-span-1 flex justify-center">
                         <Checkbox
                           checked={isAllSelected}
@@ -323,10 +326,10 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                         />
                       </div>
                       <div className="col-span-1">Default</div>
-                      <div className="col-span-2">Value</div>
-                      <div className="col-span-3 flex items-center gap-1">Price Diff</div>
-                      <div className="col-span-3 flex items-center gap-1">Inventory</div>
-                      <div className="col-span-1 text-center">Status</div>
+                      <div className="col-span-3">Value</div>
+                      <div className="col-span-3 flex items-center gap-1"><Banknote className="h-3 w-3" /> Price Diff</div>
+                      <div className="col-span-3 flex items-center gap-1"><Package className="h-3 w-3" /> Inventory</div>
+                      <div className="col-span-1 text-right">Status</div>
                       <div className="col-span-1 text-right"></div>
                   </div>
 
@@ -416,7 +419,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => appendValue({ value: '', price_difference: 0, inventory: 10, is_active: true, is_default: false, isSelected: false })}
+                          onClick={() => appendValue({ value: 'New Value', price_difference: 0, inventory: 10, is_active: true, is_default: false, isSelected: false })}
                           className="w-full"
                       >
                           <PlusCircle className="mr-2 h-4 w-4" />
