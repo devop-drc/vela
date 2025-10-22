@@ -182,7 +182,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
       <div className="col-span-1 flex items-center justify-end gap-1">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className={cn("h-9 w-9", currentStatus.color)} title={currentStatus.label}>
+            <Button variant="ghost" size="icon" className={cn("h-8 w-8", currentStatus.color)} title={currentStatus.label}>
               <currentStatus.icon className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -201,7 +201,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
           size="icon"
           onClick={() => removeValue(valueIndex)}
           disabled={valuesFields.length === 1}
-          className="h-9 w-9 text-destructive hover:bg-destructive/10"
+          className="h-8 w-8 text-destructive hover:bg-destructive/10"
           title="Delete Value"
         >
           <Trash2 className="h-4 w-4" />
@@ -423,7 +423,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => appendValue({ value: 'New Value', price_difference: 0, inventory: 10, is_active: true, is_default: false, isSelected: false })}
+                          onClick={() => appendValue({ value: 'Option Value', price_difference: 0, inventory: 10, is_active: true, is_default: false, isSelected: false })}
                           className="w-full"
                       >
                           <PlusCircle className="mr-2 h-4 w-4" />
@@ -458,7 +458,7 @@ export const OptionsManager = () => {
       appendOption({
         name: newOptionName.trim(),
         // CRITICAL FIX: Ensure the default value is explicitly set to a non-empty string
-        values: [{ value: 'New Value', price_difference: 0, inventory: 10, is_active: true, is_default: true, isSelected: false }],
+        values: [{ value: 'Option Value', price_difference: 0, inventory: 10, is_active: true, is_default: true, isSelected: false }],
       });
       setNewOptionName('');
     }

@@ -96,8 +96,10 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                         const priceDiffInDisplayCurrency = convertCurrency(val.price_difference, product.currency, shopDetails.currency);
                         
                         let isDefault = val.is_default;
-                        if (!hasExistingDefault && index === 0) {
-                            isDefault = true; // Set the first one as default if none exists
+                        
+                        // FIX: Only set the first item as default if NO existing default was found AND the list is not empty.
+                        if (!hasExistingDefault && index === 0 && opt.values.length > 0) {
+                            isDefault = true; 
                         }
 
                         return {
@@ -135,14 +137,19 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             if (!initialDetails.options_v2) {
                 initialDetails.options_v2 = [];
             } else {
-                initialDetails.options_v2 = initialDetails.options_v2.map((opt: any) => ({
-                    ...opt,
-                    values: opt.values.map((val: any, index: number) => ({
-                        ...val,
-                        is_default: val.is_default === undefined ? (index === 0 && opt.values.length === 1) : val.is_default,
-                        isSelected: false,
-                    }))
-                }));
+                initialDetails.options_v2 = initialDetails.options_v2.map((opt: any) => {
+                    let hasExistingDefault = false;
+                    opt.values.forEach((val: any) => { if (val.is_default) hasExistingDefault = true; });
+                    
+                    return {
+                        ...opt,
+                        values: opt.values.map((val: any, index: number) => ({
+                            ...val,
+                            is_default: !hasExistingDefault && index === 0 ? true : val.is_default || false,
+                            isSelected: false,
+                        }))
+                    };
+                });
             }
             form.reset({
                 name: product.name || "",
@@ -267,9 +274,11 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             // Add all dynamic attributes (specs + options_v2)
             Object.entries(data.details).forEach(([key, value]) => {
                 if (key !== 'type') {
-                    // CRITICAL FIX: Ensure we only save the necessary fields, removing temporary RHF/UI fields like 'isSelected'
                     if (key === 'options_v2' && Array.isArray(value)) {
-                        cleanedDetails[key] = value.map((option: any) => ({
+                        // FIX: Filter out any options groups that somehow became empty
+                        const filteredOptions = value.filter((option: any) => Array.isArray(option.values) && option.values.length > 0);
+
+                        cleanedDetails[key] = filteredOptions.map((option: any) => ({
                             ...option,
                             values: option.values.map((val: any) => {
                                 // Destructure to exclude temporary fields
