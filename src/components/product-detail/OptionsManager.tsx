@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { useFormContext, useFieldArray, Controller } from 'react-hook-form';
+import  { useFormContext, useFieldArray, Controller } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,7 +74,7 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
   }, [fieldName, setValue, optionIndex, trigger]);
 
   const handleStatusChange = useCallback((statusValue: string) => {
-    const status = statusOptions.find(s => status.value === statusValue);
+    const status = statusOptions.find(s => s.value === statusValue);
     if (status) {
       setValue(`${fieldName}.is_active`, status.isActive, { shouldDirty: true });
       setValue(`${fieldName}.inventory`, status.inventory, { shouldDirty: true });
@@ -489,29 +489,32 @@ export const OptionsManager = () => {
 
       <div className="space-y-4">
         <AnimatePresence initial={false}>
-          {optionsFields.map((field, index) => (
-            <motion.div
-              key={field.id}
-              layout
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, x: -100 }}
-              transition={{ duration: 0.2 }}
-            >
-              <OptionSection
-                option={field as ProductOption}
-                index={index}
-                removeOption={removeOption}
-                control={control}
-                watch={watch}
-                setValue={setValue}
-                getValues={getValues}
-                currencyCode={currencyCode}
-                convertCurrency={convertCurrency}
-                trigger={trigger}
-              />
-            </motion.div>
-          ))}
+          {optionsFields.map((field, index) => {
+            if (!field) return null; // ADDED GUARD: Ensure field is not null/undefined
+            return (
+              <motion.div
+                key={field.id}
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -100 }}
+                transition={{ duration: 0.2 }}
+              >
+                <OptionSection
+                  option={field as ProductOption}
+                  index={index}
+                  removeOption={removeOption}
+                  control={control}
+                  watch={watch}
+                  setValue={setValue}
+                  getValues={getValues}
+                  currencyCode={currencyCode}
+                  convertCurrency={convertCurrency}
+                  trigger={trigger}
+                />
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
       </div>
 
