@@ -57,6 +57,9 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     const [typeAttributes, setTypeAttributes] = useState<any[]>([]);
     const [isReanalyzing, setIsReanalyzing] = useState(false);
     
+    // Ref for the OptionsManager component to call its save function
+    const optionsManagerRef = useRef<{ handleSaveOptions: () => Promise<boolean> }>(null);
+
     const pricingType = watch("pricing_type");
     const categoryValue = watch("category");
     const typeValue = watch("details.type");
@@ -65,7 +68,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     const productType = watch("product_type");
     const currencyCode = watch("currency");
     const baseInventory = watch("inventory");
-    const optionsV2 = watch("details.options_v2");
+    // Removed optionsV2 watch as it's now managed externally
 
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const { ref: rhfRef, ...captionProps } = register("caption");
@@ -77,46 +80,8 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
             const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
 
-            // Ensure details.options_v2 exists and is an array, and ensure is_default/isSelected are present
-            const initialDetails = product.details || { type: 'generic' };
-            if (!initialDetails.options_v2) {
-                initialDetails.options_v2 = [];
-            } else {
-                initialDetails.options_v2 = initialDetails.options_v2.map((opt: any) => {
-                    let hasExistingDefault = false;
-                    
-                    // 1. Check if any value already has is_default set to true
-                    opt.values.forEach((val: any) => {
-                        if (val.is_default) {
-                            hasExistingDefault = true;
-                        }
-                    });
-
-                    // 2. Process values, applying conversion and setting default only if needed
-                    const processedValues = opt.values.map((val: any, index: number) => {
-                        // CRITICAL FIX: Use product.currency as source for conversion
-                        const priceDiffInDisplayCurrency = convertCurrency(val.price_difference, product.currency, shopDetails.currency);
-                        
-                        let isDefault = val.is_default;
-                        
-                        // FIX: Only set the first item as default if NO existing default was found AND the list is not empty.
-                        if (!hasExistingDefault && index === 0 && opt.values.length > 0) {
-                            isDefault = true; 
-                        }
-
-                        return {
-                            ...val,
-                            price_difference: priceDiffInDisplayCurrency, // <-- CONVERTED HERE
-                            is_default: isDefault || false, // Ensure it's boolean
-                            isSelected: false, // Always reset selection state on load
-                        };
-                    });
-
-                    return { ...opt, values: processedValues };
-                });
-            }
-
-            // 1. Initialize form with base product data
+            // NOTE: We no longer initialize options_v2 here. It is fetched and managed by OptionsManager.
+            
             form.reset({
                 name: product.name || "",
                 status: product.status || "Draft",
@@ -128,7 +93,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 tags: Array.isArray(product.tags) ? product.tags : [],
                 pricing_type: product.pricing_type || 'one_time',
                 billing_interval: product.billing_interval,
-                details: initialDetails,
+                details: product.details || { type: 'generic' }, // Keep details for specs
                 product_type: product.product_type || 'physical',
             });
             const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
@@ -168,21 +133,14 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         fetchTypesAndAttributes();
     }, [categoryValue, typeValue]);
 
-    // --- Auto-Update Status/Inventory ---
+    // --- Auto-Update Status/Inventory (Simplified for base product only) ---
     useEffect(() => {
         if (pricingType === 'one_time') {
-            let totalStock = baseInventory || 0;
+            // If options are managed externally, base inventory is just the base inventory field
+            // We rely on the OptionsManager to update the base inventory field if variants exist.
             
-            if (optionsV2 && optionsV2.length > 0) {
-                totalStock = optionsV2.reduce((sum: number, option: any) => 
-                    sum + (option.values?.reduce((vSum: number, val: any) => vSum + (val.inventory || 0), 0) || 0), 0);
-            }
-            
-            // Update base inventory field to reflect total variant stock
-            setValue('inventory', totalStock, { shouldDirty: true });
-
-            // Update status based on total stock
-            const newStatus = totalStock > 0 ? 'Active' : 'Out of Stock';
+            // Update status based on base stock (if no variants exist, or if variants are managed externally)
+            const newStatus = (baseInventory || 0) > 0 ? 'Active' : 'Out of Stock';
             if (statusValue !== newStatus) {
                 setValue('status', newStatus, { shouldDirty: true });
             }
@@ -192,7 +150,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 setValue('inventory', 0, { shouldDirty: true });
             }
         }
-    }, [optionsV2, baseInventory, pricingType, statusValue, setValue]);
+    }, [baseInventory, pricingType, statusValue, setValue]);
 
 
     // --- Handlers ---
@@ -214,39 +172,18 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             if (analysis.categoryName) setValue('category', analysis.categoryName, { shouldDirty: true });
             if (analysis.typeName) setValue('details.type', analysis.typeName, { shouldDirty: true });
             
-            // Update specifications and options (which are now combined in the details object)
-            const newDetails: { [key: string]: any } = { type: analysis.typeName, options_v2: [] };
+            // Update specifications
+            const newDetails: { [key: string]: any } = { type: analysis.typeName };
             
-            // Merge specifications and options into newDetails
             if (analysis.specifications) {
                 for (const [key, value] of Object.entries(analysis.specifications)) {
                     newDetails[key] = value;
                 }
             }
             
-            // Convert old options structure (simple array of values) into new options_v2 structure
-            if (analysis.options) {
-                const newOptionsV2: any[] = [];
-                for (const [name, values] of Object.entries(analysis.options)) {
-                    if (Array.isArray(values) && values.length > 0) {
-                        newOptionsV2.push({
-                            name: toTitleCase(name),
-                            values: values.map((v, index) => ({
-                                value: v,
-                                price_difference: 0,
-                                inventory: 10, // Default inventory
-                                is_active: true,
-                                is_default: index === 0, // Set the first value as default
-                                isSelected: false, // Reset selection state
-                            }))
-                        });
-                    }
-                }
-                newDetails.options_v2 = newOptionsV2;
-            }
-
-            // Update the form's details object
-            setValue('details', newDetails, { shouldDirty: true });
+            // Update the form's details object (excluding options_v2)
+            const currentDetails = getValues('details');
+            setValue('details', { ...currentDetails, ...newDetails }, { shouldDirty: true });
 
             toast.success("AI analysis complete! Product details have been updated.", { id: toastId });
         } catch (err: any) {
@@ -261,39 +198,27 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         let error = null;
         
         try {
-            // 1. Prepare details payload: only include fields present in the form/type attributes
+            // 1. Save Options (Variants) first
+            const optionsSaved = await optionsManagerRef.current?.handleSaveOptions();
+            if (!optionsSaved) {
+                throw new Error("Failed to save product options.");
+            }
+
+            // 2. Prepare details payload: only include fields present in the form/type attributes
             const cleanedDetails: { [key: string]: any } = { type: data.details.type };
             
-            // Add all dynamic attributes (specs + options_v2)
+            // Add all dynamic attributes (specs)
             Object.entries(data.details).forEach(([key, value]) => {
-                if (key !== 'type') {
-                    if (key === 'options_v2' && Array.isArray(value)) {
-                        // FIX: Filter out any options groups that somehow became empty
-                        const filteredOptions = value.filter((option: any) => Array.isArray(option.values) && option.values.length > 0);
-
-                        cleanedDetails[key] = filteredOptions.map((option: any) => ({
-                            ...option,
-                            values: option.values.map((val: any) => {
-                                // Destructure to exclude temporary fields
-                                const { isSelected, ...rest } = val;
-                                
-                                // CONVERT price_difference back from display currency (data.currency) to ALL before saving
-                                const priceDiffInALL = convertCurrency(val.price_difference, data.currency, 'ALL');
-                                
-                                return { ...rest, price_difference: priceDiffInALL };
-                            })
-                        }));
-                    } else {
-                        cleanedDetails[key] = value;
-                    }
+                // Exclude options_v2 and internal keys, only keep specs
+                if (key !== 'type' && key !== 'options_v2') {
+                    cleanedDetails[key] = value;
                 }
             });
 
-            // 2. Convert price from form's display currency (data.currency) to ALL for storage
-            // The price in the form is in the display currency. We must convert it back to ALL.
+            // 3. Convert price from form's display currency (data.currency) to ALL for storage
             const priceInALL = convertCurrency(data.price, data.currency, 'ALL');
 
-            // 3. Update Supabase
+            // 4. Update Supabase
             const { error: updateError } = await supabase.from('products').update({
                 name: data.name, status: data.status, caption: data.caption, category: data.category,
                 price: priceInALL, // Save price in ALL
@@ -301,7 +226,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 inventory: data.pricing_type === 'one_time' ? data.inventory : 0,
                 tags: data.tags, pricing_type: data.pricing_type,
                 billing_interval: data.pricing_type === 'subscription' ? data.billing_interval : null,
-                details: cleanedDetails,
+                details: cleanedDetails, // Save cleaned details (specs only)
                 media_gallery: mediaItems,
                 media_url: mediaItems[0] || null,
                 thumbnail_url: mediaItems[0] || null,
@@ -465,8 +390,17 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 </Card>
               )}
 
-              {/* Options Manager */}
-              <OptionsManager />
+              {/* Options Manager (Now manages persistence internally) */}
+              <OptionsManager
+                ref={optionsManagerRef}
+                productId={product.id}
+                productCurrency={product.currency || 'ALL'} // Pass the stored currency (ALL)
+                displayCurrency={currencyCode} // Pass the display currency
+                convertCurrency={convertCurrency}
+                isSubmitting={isSubmitting}
+                setIsSubmitting={setIsSubmitting}
+                onUpdate={onUpdate}
+              />
             </div>
           </ScrollArea>
           <DialogFooter className="p-4 border-t"><Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button></DialogFooter>

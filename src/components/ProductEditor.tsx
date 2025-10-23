@@ -78,6 +78,8 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
       const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
 
+      // NOTE: We no longer initialize options_v2 here. It is fetched and managed by OptionsManager.
+      
       form.reset({
         name: product.name || "",
         status: product.status || "Draft",
@@ -169,6 +171,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       }
     }
 
+    // Delete from products table (cascades to product_options and option_values)
     const { error } = await supabase.from('products').delete().eq('id', product!.id);
     if (error) { 
       showError(`Failed to delete product: ${error.message}`); 

@@ -1,12 +1,14 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, AlertTriangle } from "lucide-react";
+import { Edit, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { Checkbox } from "./ui/checkbox";
 import { formatCurrency } from "@/lib/formatters";
 import { ProductStatusDropdown } from "./ProductStatusDropdown"; // Import ProductStatusDropdown
 import { useShop } from "@/contexts/ShopContext"; // Import useShop
 import { Badge } from "./ui/badge"; // Import Badge
 import { cn } from "@/lib/utils"; // Import cn
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect, useCallback } from "react";
 
 interface Product {
   id: string;
@@ -18,7 +20,7 @@ interface Product {
   media_url: string;
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
-  details: { [key: string]: any }; // Include details to check for options_v2
+  details: { [key: string]: any }; // Keep details for specs
 }
 
 interface ProductWithSales extends Product {
@@ -36,8 +38,72 @@ interface ProductTableViewProps {
   showStatusColumn?: boolean; // New prop to control visibility of the status column
 }
 
+// Cache for variant stock summaries to avoid re-fetching constantly
+const variantStockCache = new Map<string, { total: number, inStock: number, outOfStock: number, isLoading: boolean }>();
+
 export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSelectOne, onEdit, onDelete, showStatusColumn = true }: ProductTableViewProps) => {
   const { shopDetails, convertCurrency } = useShop();
+  const [stockSummaries, setStockSummaries] = useState(new Map<string, { total: number, inStock: number, outOfStock: number, isLoading: boolean }>());
+
+  const fetchVariantStockSummary = useCallback(async (productId: string) => {
+    if (variantStockCache.has(productId) && !variantStockCache.get(productId)?.isLoading) {
+      return variantStockCache.get(productId);
+    }
+
+    // Set loading state in cache
+    variantStockCache.set(productId, { total: 0, inStock: 0, outOfStock: 0, isLoading: true });
+    setStockSummaries(new Map(variantStockCache));
+
+    try {
+      const { data, error } = await supabase
+        .from('product_options')
+        .select('option_values(inventory)')
+        .eq('product_id', productId);
+
+      if (error) throw error;
+
+      let totalVariants = 0;
+      let totalStock = 0;
+      let outOfStockCount = 0;
+
+      data.forEach(option => {
+        (option.option_values || []).forEach((val: any) => {
+          totalVariants++;
+          totalStock += val.inventory;
+          if (val.inventory <= 0) {
+            outOfStockCount++;
+          }
+        });
+      });
+
+      const summary = {
+        total: totalVariants,
+        inStock: totalVariants - outOfStockCount,
+        outOfStock: outOfStockCount,
+        isLoading: false,
+      };
+      
+      variantStockCache.set(productId, summary);
+      return summary;
+
+    } catch (e) {
+      console.error(`Failed to fetch variant stock for ${productId}:`, e);
+      variantStockCache.set(productId, { total: 0, inStock: 0, outOfStock: 0, isLoading: false });
+      return variantStockCache.get(productId);
+    } finally {
+      setStockSummaries(new Map(variantStockCache));
+    }
+  }, []);
+
+  useEffect(() => {
+    // Trigger fetch for all products that might have variants
+    products.forEach(p => {
+      // Only fetch if we haven't already fetched and it's not a subscription product
+      if (p.pricing_type === 'one_time' && !variantStockCache.has(p.id)) {
+        fetchVariantStockSummary(p.id);
+      }
+    });
+  }, [products, fetchVariantStockSummary]);
 
   const getStockBadge = (inventory: number | null, pricingType: 'one_time' | 'subscription') => {
     if (pricingType === 'subscription') {
@@ -55,36 +121,28 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
     return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">Out of Stock</Badge>;
   };
 
-  const getVariantStockSummary = (details: any) => {
-    const optionsV2 = details?.options_v2 || [];
-    if (optionsV2.length === 0) return null;
+  const renderVariantStockSummary = (productId: string, pricingType: 'one_time' | 'subscription') => {
+    if (pricingType === 'subscription') return 'N/A';
+    
+    const summary = stockSummaries.get(productId);
 
-    let totalStock = 0;
-    let outOfStockCount = 0;
-    let totalVariants = 0;
+    if (summary?.isLoading) {
+      return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
+    }
 
-    optionsV2.forEach((option: any) => {
-      (option.values || []).forEach((val: any) => {
-        totalVariants++;
-        if (val.inventory <= 0) {
-          outOfStockCount++;
-        }
-        totalStock += val.inventory;
-      });
-    });
-
-    if (totalVariants === 0) return null;
-
-    const inStockCount = totalVariants - outOfStockCount;
-
-    return (
-      <div className="text-xs text-muted-foreground">
-        <p className="font-medium">{totalVariants} variants</p>
-        <p className={cn(inStockCount > 0 ? 'text-emerald-600' : 'text-destructive')}>
-          {inStockCount} in stock / {outOfStockCount} out of stock
-        </p>
-      </div>
-    );
+    if (summary && summary.total > 0) {
+      return (
+        <div className="text-xs text-muted-foreground">
+          <p className="font-medium">{summary.total} variants</p>
+          <p className={cn(summary.inStock > 0 ? 'text-emerald-600' : 'text-destructive')}>
+            {summary.inStock} in stock / {summary.outOfStock} out of stock
+          </p>
+        </div>
+      );
+    }
+    
+    // If no options are found, display N/A
+    return 'N/A';
   };
 
   if (!shopDetails) {
@@ -107,7 +165,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
           {showStatusColumn && <TableHead>Status</TableHead>}
           <TableHead>Price</TableHead>
           <TableHead>Inventory</TableHead>
-          <TableHead>Variant Stock</TableHead> {/* New Column */}
+          <TableHead>Variant Stock</TableHead>
           <TableHead>Total Earned</TableHead>
           <TableHead className="text-right w-[150px]">Actions</TableHead>
         </TableRow>
@@ -160,7 +218,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
               </div>
             </TableCell>
             <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
-              {getVariantStockSummary(product.details)}
+              {renderVariantStockSummary(product.id, product.pricing_type)}
             </TableCell>
             <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
               <div className="flex-1 text-sm font-medium">

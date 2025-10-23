@@ -5,14 +5,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Package, Banknote, XCircle, Settings, CheckCircle, Archive, Minus, Plus, Eye } from "lucide-react";
+import { Edit, Trash2, Package, Banknote, XCircle, Settings, CheckCircle, Archive, Minus, Plus, Eye, Loader2 } from "lucide-react";
 import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { MediaItem } from "../MediaItem";
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState, useEffect } from "react";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { showError } from "@/utils/toast";
 
 const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
@@ -31,31 +33,62 @@ const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, tx
 
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
     const { shopDetails, convertCurrency } = useShop();
+    const [options, setOptions] = useState<any[]>([]);
+    const [isLoadingOptions, setIsLoadingOptions] = useState(true);
     
     // CRITICAL FIX: Handle null product early to prevent crash
     if (!product) return null;
 
     const currencyCode = shopDetails?.currency || 'USD';
 
+    // Fetch options and values
+    useEffect(() => {
+        const fetchOptions = async () => {
+            setIsLoadingOptions(true);
+            const { data, error } = await supabase
+                .from('product_options')
+                .select(`
+                    id,
+                    name,
+                    option_values (
+                        value,
+                        price_difference,
+                        inventory,
+                        is_active,
+                        is_default
+                    )
+                `)
+                .eq('product_id', product.id)
+                .order('display_order');
+
+            if (error) {
+                showError("Failed to load product options for view.");
+                console.error("Error fetching product options for view:", error);
+                setOptions([]);
+            } else {
+                setOptions(data || []);
+            }
+            setIsLoadingOptions(false);
+        };
+        fetchOptions();
+    }, [product.id]);
+
+
     // Convert product price from its stored currency (now always ALL) to the shop's display currency
     const displayPrice = useMemo(() => {
         if (product.price == null || !shopDetails) return null;
+        // Use product.currency as source (which is 'ALL' after refactor)
         const converted = convertCurrency(product.price, product.currency, shopDetails.currency);
         return converted;
     }, [product.price, product.currency, convertCurrency, shopDetails]);
 
-    // Filter details into options (multi-value attributes) and specifications (single-value attributes)
-    const allDetails = useMemo(() => {
-        // Explicitly exclude internal/legacy keys from being displayed as specifications
+    // Filter details into specifications (excluding options_v2 which is now deprecated)
+    const specifications = useMemo(() => {
         const reservedKeys = new Set(['type', 'options_v2', 'options', 'variants']); 
         return Object.entries(product.details || {})
             .filter(([key]) => !reservedKeys.has(key))
-            .map(([key, value]) => ({ name: key, value, isOption: Array.isArray(value) }));
+            .map(([key, value]) => ({ name: key, value }));
     }, [product.details]);
-
-    // Options are now read from options_v2
-    const optionsV2 = product.details?.options_v2 || [];
-    const specifications = allDetails.filter(d => !d.isOption);
 
     return (
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -134,8 +167,10 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </Card>
             )}
 
-            {/* Options V2 Display */}
-            {optionsV2.length > 0 && (
+            {/* Options V2 Display (Now using new tables) */}
+            {isLoadingOptions ? (
+                <Card><CardHeader><CardTitleComponent className="text-base">Customer Options</CardTitleComponent></CardHeader><CardContent className="p-4"><Loader2 className="h-6 w-6 animate-spin" /></CardContent></Card>
+            ) : options.length > 0 && (
                 <Card>
                     <CardHeader>
                         <CardTitleComponent className="text-base flex items-center gap-2">
@@ -144,11 +179,11 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                         </CardTitleComponent>
                     </CardHeader>
                     <CardContent className="p-4 space-y-4">
-                        {optionsV2.map((option: any) => (
-                            <div key={option.name} className="space-y-2 border-b pb-3 last:border-b-0 last:pb-0">
+                        {options.map((option: any) => (
+                            <div key={option.id} className="space-y-2 border-b pb-3 last:border-b-0 last:pb-0">
                                 <Label className="font-semibold capitalize text-base">{option.name}</Label>
                                 <div className="flex flex-wrap gap-2 pt-1">
-                                    {option.values.map((val: any) => {
+                                    {(option.option_values || []).map((val: any) => {
                                         // CRITICAL FIX: Use product.currency as source for conversion
                                         const priceDiff = convertCurrency(val.price_difference, product.currency, currencyCode); 
                                         const priceDiffFormatted = formatCurrency(priceDiff, currencyCode, 'en-US', true);
@@ -157,15 +192,15 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                                         
                                         return (
                                             <div 
-                                                key={val.value} 
+                                                key={val.id} 
                                                 className={cn(
                                                     "flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium transition-colors",
                                                     // Determine base color based on active/stock status
                                                     isActive 
                                                         ? (isOOS 
-                                                            ? "bg-slate-100 text-slate-800 border border-slate-300" // Out of Stock (slate-600 requested, using slate-800 for contrast)
-                                                            : "bg-emerald-100 text-emerald-800 border border-emerald-300") // Active/In Stock
-                                                        : "bg-gray-100 text-gray-600 border border-gray-300", // Inactive (grayed out requested)
+                                                            ? "bg-slate-100 text-slate-800 border border-slate-300"
+                                                            : "bg-emerald-100 text-emerald-800 border border-emerald-300")
+                                                        : "bg-gray-100 text-gray-600 border border-gray-300",
                                                     val.is_default && "ring-2 ring-primary ring-offset-1 ring-offset-background"
                                                 )}
                                                 title={val.is_default ? "Default Selection" : undefined}

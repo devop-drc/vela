@@ -16,6 +16,7 @@ import { Separator } from "./ui/separator";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 
 interface OptionValue {
+  id: string;
   value: string;
   price_difference: number;
   inventory: number;
@@ -24,6 +25,7 @@ interface OptionValue {
 }
 
 interface ProductOption {
+  id: string;
   name: string;
   values: OptionValue[];
 }
@@ -36,22 +38,34 @@ interface Product {
   inventory: number;
   pricing_type: 'one_time' | 'subscription';
   details: {
-    options_v2?: ProductOption[];
+    // options_v2 is now deprecated, but we keep the structure for simple products
   };
+}
+
+// Internal type for form state
+interface FormProduct {
+  id: string;
+  name: string;
+  media_url: string;
+  media_type: string | null;
+  pricing_type: 'one_time' | 'subscription';
+  baseInventory: number;
+  options: ProductOption[];
 }
 
 const stockSchema = z.object({
   products: z.array(z.object({
     id: z.string(),
     baseInventory: z.coerce.number().int().min(0, "Inventory must be a non-negative integer").optional(),
-    variants: z.array(z.object({
-      optionIndex: z.number(),
-      valueIndex: z.number(),
-      value: z.string(),
-      inventory: z.coerce.number().int().min(0, "Inventory must be a non-negative integer"),
+    options: z.array(z.object({
+      id: z.string(),
+      values: z.array(z.object({
+        id: z.string(),
+        inventory: z.coerce.number().int().min(0, "Inventory must be a non-negative integer"),
+      })),
     })).optional(),
   })),
-  batchStockValue: z.string().optional(), // Added for batch input
+  batchStockValue: z.string().optional(),
 });
 
 type StockFormData = z.infer<typeof stockSchema>;
@@ -60,48 +74,111 @@ interface StockAdjustmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
-  products: Product[]; // Array of selected products
+  products: Product[]; // Array of selected products (base product data)
 }
 
-export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: StockAdjustmentModalProps) => {
-  const defaultValues = useMemo(() => ({
-    products: products.map(p => {
-      const variants = p.details?.options_v2?.flatMap((option, optionIndex) => 
-        option.values.map((value, valueIndex) => ({
-          optionIndex,
-          valueIndex,
-          value: value.value,
-          inventory: value.inventory || 0,
-        }))
-      ) || [];
-      return {
+export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products: baseProducts }: StockAdjustmentModalProps) => {
+  const [formProducts, setFormProducts] = useState<FormProduct[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [batchStockValue, setBatchStockValue] = useState<string>('');
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // 1. Fetch user and detailed product data (including options/values)
+  useEffect(() => {
+    const fetchDetails = async () => {
+      setIsLoadingData(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+      if (!user || baseProducts.length === 0) {
+        setIsLoadingData(false);
+        return;
+      }
+
+      const productIds = baseProducts.map(p => p.id);
+
+      // Fetch all options and values for the selected products
+      const { data: optionsData, error: optionsError } = await supabase
+        .from('product_options')
+        .select(`
+          product_id,
+          id,
+          name,
+          option_values (
+            id,
+            value,
+            price_difference,
+            inventory,
+            is_active,
+            is_default
+          )
+        `)
+        .in('product_id', productIds)
+        .order('display_order')
+        .order('created_at', { foreignTable: 'option_values', ascending: true });
+
+      if (optionsError) {
+        showError("Failed to load product variants.");
+        console.error("Error fetching variants:", optionsError);
+        setIsLoadingData(false);
+        return;
+      }
+
+      const optionsMap = new Map<string, ProductOption[]>();
+      (optionsData || []).forEach(opt => {
+        const productId = opt.product_id;
+        if (!optionsMap.has(productId)) {
+          optionsMap.set(productId, []);
+        }
+        optionsMap.get(productId)!.push({
+          id: opt.id,
+          name: opt.name,
+          values: opt.option_values as OptionValue[],
+        });
+      });
+
+      const initialFormProducts: FormProduct[] = baseProducts.map(p => ({
         id: p.id,
+        name: p.name,
+        media_url: p.media_url,
+        media_type: p.media_type,
+        pricing_type: p.pricing_type,
         baseInventory: p.inventory || 0,
-        variants: variants,
-      };
-    }),
-  }), [products]);
+        options: optionsMap.get(p.id) || [],
+      }));
+
+      setFormProducts(initialFormProducts);
+      setIsLoadingData(false);
+    };
+
+    fetchDetails();
+  }, [baseProducts]);
+
+  // 2. Prepare default values for RHF
+  const defaultValues = useMemo(() => ({
+    products: formProducts.map(p => ({
+      id: p.id,
+      baseInventory: p.baseInventory,
+      options: p.options.map(opt => ({
+        id: opt.id,
+        values: opt.values.map(val => ({
+          id: val.id,
+          inventory: val.inventory,
+        })),
+      })),
+    })),
+  }), [formProducts]);
 
   const { register, handleSubmit, reset, setValue, control, getValues, formState: { errors, isSubmitting } } = useForm<StockFormData>({
     resolver: zodResolver(stockSchema),
     defaultValues,
   });
 
-  const [batchStockValue, setBatchStockValue] = useState<string>('');
-  const [userId, setUserId] = useState<string | null>(null);
-
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id || null);
-    };
-    fetchUser();
-  }, []);
-
-  useEffect(() => {
-    reset(defaultValues);
-    setBatchStockValue('');
-  }, [defaultValues, reset]);
+    if (!isLoadingData) {
+      reset(defaultValues);
+      setBatchStockValue('');
+    }
+  }, [isLoadingData, defaultValues, reset]);
 
   const handleBatchStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -109,21 +186,19 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
     const numValue = parseInt(value);
 
     if (!isNaN(numValue) && numValue >= 0) {
-      products.forEach((product, productIndex) => {
+      formProducts.forEach((product, productIndex) => {
         // 1. Update Base Inventory (if applicable)
-        if (product.pricing_type === 'one_time' && !product.details?.options_v2?.length) {
+        if (product.pricing_type === 'one_time' && product.options.length === 0) {
           setValue(`products.${productIndex}.baseInventory`, numValue, { shouldDirty: true });
         }
 
         // 2. Update Variant Inventory (if applicable)
-        if (product.details?.options_v2?.length) {
-          // We need to iterate through the form's variant structure, not the product's original structure
-          const formVariants = getValues(`products.${productIndex}.variants`);
-          if (formVariants) {
-            formVariants.forEach((_, variantIndex) => {
-              setValue(`products.${productIndex}.variants.${variantIndex}.inventory`, numValue, { shouldDirty: true });
+        if (product.options.length > 0) {
+          product.options.forEach((option, optionIndex) => {
+            option.values.forEach((_, valueIndex) => {
+              setValue(`products.${productIndex}.options.${optionIndex}.values.${valueIndex}.inventory`, numValue, { shouldDirty: true });
             });
-          }
+          });
         }
       });
     }
@@ -136,83 +211,82 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
     }
 
     try {
-      const updatePromises = data.products.map(async (productData, productIndex) => {
-        const product = products[productIndex];
-        
-        // 1. Prepare base product update payload
-        const updatePayload: { inventory?: number; status?: string; details?: any } = {};
-        
-        if (product.pricing_type === 'one_time' && !product.details?.options_v2?.length) {
-          // Update base inventory only if it's a simple product
-          updatePayload.inventory = productData.baseInventory;
-          updatePayload.status = (productData.baseInventory || 0) > 0 ? 'Active' : 'Out of Stock';
-        }
+      const baseProductUpdates: { id: string; inventory: number; status: string }[] = [];
+      const optionValueUpdates: { id: string; inventory: number; is_active: boolean }[] = [];
 
-        // 2. Handle Variant Updates
-        if (product.details?.options_v2?.length && productData.variants) {
-          // Deep clone existing structure to modify options_v2
-          const newOptionsV2 = JSON.parse(JSON.stringify(product.details.options_v2)); 
+      data.products.forEach((productData) => {
+        const product = formProducts.find(p => p.id === productData.id);
+        if (!product) return;
+
+        if (product.options.length > 0 && productData.options) {
+          // Product with variants: calculate total stock and collect variant updates
           let totalVariantStock = 0;
-          
-          productData.variants.forEach(variantData => {
-            const option = newOptionsV2[variantData.optionIndex];
-            if (option) {
-              const value = option.values[variantData.valueIndex];
-              if (value) {
-                value.inventory = variantData.inventory;
-                totalVariantStock += variantData.inventory;
-              }
-            }
+          productData.options.forEach((optionData) => {
+            optionData.values.forEach((valueData) => {
+              totalVariantStock += valueData.inventory;
+              optionValueUpdates.push({
+                id: valueData.id,
+                inventory: valueData.inventory,
+                is_active: valueData.inventory > 0, // Set active if stock > 0
+              });
+            });
           });
 
-          updatePayload.details = { ...product.details, options_v2: newOptionsV2 };
-          
-          // Update base inventory to reflect total variant stock
-          updatePayload.inventory = totalVariantStock;
-          updatePayload.status = totalVariantStock > 0 ? 'Active' : 'Out of Stock';
-        }
+          baseProductUpdates.push({
+            id: product.id,
+            inventory: totalVariantStock,
+            status: totalVariantStock > 0 ? 'Active' : 'Out of Stock',
+          });
 
-        // 3. Execute update
-        if (Object.keys(updatePayload).length > 0) {
-          const { error: individualError } = await supabase
-            .from('products')
-            .update(updatePayload)
-            .eq('id', productData.id);
-          if (individualError) throw individualError;
+        } else if (product.pricing_type === 'one_time' && productData.baseInventory !== undefined) {
+          // Simple product: update base inventory
+          baseProductUpdates.push({
+            id: product.id,
+            inventory: productData.baseInventory,
+            status: productData.baseInventory > 0 ? 'Active' : 'Out of Stock',
+          });
         }
       });
 
-      await Promise.all(updatePromises);
+      // 1. Update Option Values (if any)
+      if (optionValueUpdates.length > 0) {
+        const { error: valuesError } = await supabase
+          .from('option_values')
+          .upsert(optionValueUpdates, { onConflict: 'id' });
+        if (valuesError) throw new Error(`Failed to update variant stock: ${valuesError.message}`);
+      }
 
-      showSuccess(`Stock updated for ${products.length === 1 ? '1 product' : `${products.length} products` }!`);
+      // 2. Update Base Products (inventory and status)
+      if (baseProductUpdates.length > 0) {
+        const { error: productsError } = await supabase
+          .from('products')
+          .upsert(baseProductUpdates, { onConflict: 'id' });
+        if (productsError) throw new Error(`Failed to update base product stock/status: ${productsError.message}`);
+      }
+
+      showSuccess(`Stock updated for ${baseProducts.length === 1 ? '1 product' : `${baseProducts.length} products` }!`);
       onSave();
-      onClose();
     } catch (err: any) {
       console.error("Failed to update stock:", err);
       showError(`Failed to update stock: ${err.message || "An unexpected error occurred."}`);
     }
   };
 
-  const renderVariantInputs = (productIndex: number, product: Product) => {
-    if (!product.details?.options_v2?.length) return null;
+  const renderVariantInputs = (productIndex: number, product: FormProduct) => {
+    if (product.options.length === 0) return null;
 
-    const optionsV2 = product.details.options_v2;
-    
     return (
       <Accordion type="multiple" className="w-full mt-3 border rounded-md">
-        {optionsV2.map((option, optionIndex) => (
-          <AccordionItem key={option.name} value={option.name}>
+        {product.options.map((option, optionIndex) => (
+          <AccordionItem key={option.id} value={option.id}>
             <AccordionTrigger className="px-3 py-2 text-sm font-semibold capitalize">{option.name}</AccordionTrigger>
             <AccordionContent className="p-0">
               <div className="divide-y divide-muted">
                 {option.values.map((value, valueIndex) => {
-                  // Calculate the flat index for RHF form array access
-                  // This calculation must match the flattening logic in defaultValues
-                  const variantIndex = product.details.options_v2!.slice(0, optionIndex).reduce((sum, opt) => sum + opt.values.length, 0) + valueIndex;
-                  const fieldName = `products.${productIndex}.variants.${variantIndex}`;
+                  const fieldName = `products.${productIndex}.options.${optionIndex}.values.${valueIndex}`;
                   
                   return (
-                    <div key={value.value} className="flex items-center justify-between gap-4 p-3 bg-background">
+                    <div key={value.id} className="flex items-center justify-between gap-4 p-3 bg-background">
                       <Label className="text-sm font-medium flex-1">{value.value}</Label>
                       <div className="flex items-center gap-2">
                         <Package className="h-4 w-4 text-muted-foreground" />
@@ -242,27 +316,38 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
     );
   };
 
+  if (isLoadingData) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md flex flex-col h-auto">
+          <DialogHeader><DialogTitle>Adjust Stock</DialogTitle></DialogHeader>
+          <div className="flex justify-center items-center py-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={cn("max-w-md flex flex-col", products.length > 1 ? "h-[90vh]" : "h-auto")}>
+      <DialogContent className={cn("max-w-md flex flex-col", formProducts.length > 1 ? "h-[90vh]" : "h-auto")}>
         <DialogHeader className="flex-shrink-0">
-        {products.length > 1 ? (
-            <DialogTitle>Adjust Stock for {products.length} Products</DialogTitle>
+        {formProducts.length > 1 ? (
+            <DialogTitle>Adjust Stock for {formProducts.length} Products</DialogTitle>
           ) : (
             <DialogTitle>Adjust Stock for 1 Product</DialogTitle>
           )}
           <DialogDescription>
-            Set the new inventory level for the selected products and their variants. Products with stock > 0 will be set as active.
+            Set the new inventory level for the selected products and their variants. Products with stock &gt; 0 will be set as active.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
-          {products.length > 1 && (
+          {formProducts.length > 1 && (
             <div className="flex-shrink-0 p-4 border-b">
               <Label htmlFor="batch-stock" className="font-medium">Set all stock to:</Label>
               <Input
                 id="batch-stock"
                 type="number"
-                {...register("batchStockValue")} // Register the batch input to prevent uncontrolled component warning
+                {...register("batchStockValue")}
                 value={batchStockValue}
                 onChange={handleBatchStockChange}
                 className="w-full mt-1"
@@ -273,7 +358,7 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
           )}
           <ScrollArea className="flex-1 py-4">
             <div className="space-y-4 pr-4">
-              {products.map((product, index) => (
+              {formProducts.map((product, index) => (
                 <div key={product.id} className="flex flex-col gap-3 p-3 border rounded-md bg-muted/50">
                   <div className="flex items-center gap-4">
                     <MediaItem src={product.media_url} alt={product.name} type={product.media_type} className="h-16 w-16 object-cover rounded-md flex-shrink-0" />
@@ -283,16 +368,24 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products }: Stoc
                     </div>
                   </div>
                   
-                  {/* Base Inventory Input (Only for simple products) */}
-                  {product.pricing_type === 'one_time' && !product.details?.options_v2?.length && (
+                  {/* Base Inventory Input (Only for simple products without variants) */}
+                  {product.pricing_type === 'one_time' && product.options.length === 0 && (
                     <div className="space-y-2">
                       <Label htmlFor={`products.${index}.baseInventory`} className="font-medium">Base Inventory</Label>
-                      <Input
-                        id={`products.${index}.baseInventory`}
-                        type="number"
-                        {...register(`products.${index}.baseInventory`, { valueAsNumber: true })}
-                        className="w-24 mt-1"
-                        min={0}
+                      <Controller
+                        name={`products.${index}.baseInventory`}
+                        control={control}
+                        render={({ field }) => (
+                          <Input
+                            id={`products.${index}.baseInventory`}
+                            type="number"
+                            {...field}
+                            className="w-24 mt-1"
+                            min={0}
+                            value={field.value === 0 ? '0' : field.value}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          />
+                        )}
                       />
                       {errors.products?.[index]?.baseInventory && <p className="text-sm text-destructive mt-1">{errors.products[index]?.baseInventory?.message}</p>}
                     </div>
