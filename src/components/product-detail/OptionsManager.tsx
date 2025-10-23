@@ -695,7 +695,7 @@ export const OptionsManager = React.forwardRef(({ productId, productCurrency, di
                 option={option}
                 index={index}
                 removeOption={() => setOptions(prev => prev.map((opt, i) => i === index ? { ...opt, is_deleted: true } : opt))}
-                setOptions={setOptionsWrapper}
+                setOptions={setOptions} // Pass the actual state setter
                 currencyCode={displayCurrency}
                 convertCurrency={convertCurrency}
                 isSubmitting={isSubmitting}
