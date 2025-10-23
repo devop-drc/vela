@@ -25,6 +25,7 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../ui/carousel";
 import { showError, showSuccess } from "@/utils/toast";
 import { OptionsManager } from "./OptionsManager";
+import CombinedVariantManager from "./CombinedVariantManager";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -57,8 +58,10 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     const [typeAttributes, setTypeAttributes] = useState<any[]>([]);
     const [isReanalyzing, setIsReanalyzing] = useState(false);
     
-    // Ref for the OptionsManager component to call its save function
+    // Refs for child managers
     const optionsManagerRef = useRef<{ handleSaveOptions: () => Promise<boolean> }>(null);
+    const variantMatrixRef = useRef<{ handleSaveVariants: () => Promise<boolean> }>(null);
+    const combinedManagerRef = useRef<{ handleSaveCombined: () => Promise<boolean> }>(null);
 
     const pricingType = watch("pricing_type");
     const categoryValue = watch("category");
@@ -154,6 +157,28 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
 
 
     // --- Handlers ---
+    const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+        e.dataTransfer.setData('text/plain', String(index));
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
+        e.preventDefault();
+        const dragIndexStr = e.dataTransfer.getData('text/plain');
+        const dragIndex = parseInt(dragIndexStr, 10);
+        if (isNaN(dragIndex) || dragIndex === dropIndex) return;
+        setMediaItems((prev: string[]) => {
+            const next = [...prev];
+            const [moved] = next.splice(dragIndex, 1);
+            next.splice(dropIndex, 0, moved);
+            return next;
+        });
+    };
     const handleReanalyze = async () => {
         setIsReanalyzing(true);
         const toastId = toast.loading("AI is analyzing your description...");
@@ -198,10 +223,10 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         let error = null;
         
         try {
-            // 1. Save Options (Variants) first
-            const optionsSaved = await optionsManagerRef.current?.handleSaveOptions();
-            if (!optionsSaved) {
-                throw new Error("Failed to save product options.");
+            // Save combined options + variants in one go
+            const combinedSaved = await combinedManagerRef.current?.handleSaveCombined?.();
+            if (combinedSaved === false) {
+                throw new Error("Failed to save product options/variants.");
             }
 
             // 2. Prepare details payload: only include fields present in the form/type attributes
@@ -302,7 +327,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                               {mediaItems.map((url: string, index: number) => (
                                   <CarouselItem key={index}>
                                       <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
-                                          <MediaItem src={url} alt={`${product.name} - media ${index + 1}`} type={index === 0 ? product.media_type : null} />
+                                          <MediaItem src={url} alt={`${product?.name ?? 'Product'} - media ${index + 1}`} type={index === 0 ? (product?.media_type ?? undefined) : undefined} />
                                       </div>
                                   </CarouselItem>
                               ))}
@@ -315,9 +340,17 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                           )}
                       </Carousel>
                   )}
-                  <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
-                    {mediaItems.map((url: string) => (
-                      <div key={url} className="relative group">
+                  <div className="flex flex-wrap gap-1 overflow-x-auto py-2 -m-0.5">
+                    {mediaItems.map((url: string, index: number) => (
+                      <div
+                        key={url}
+                        className="relative group m-0.5 cursor-move"
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, index)}
+                        title="Drag to reorder"
+                      >
                         <MediaItem src={url} alt="Thumbnail" className="h-16 w-16 rounded-md object-cover border" />
                         <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleImageDelete(url); }}><XCircle className="h-4 w-4" /></Button>
                       </div>
@@ -390,17 +423,16 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 </Card>
               )}
 
-              {/* Options Manager (Now manages persistence internally) */}
-              <OptionsManager
-                ref={optionsManagerRef}
-                productId={product.id}
-                productCurrency={product.currency || 'ALL'} // Pass the stored currency (ALL)
-                displayCurrency={currencyCode} // Pass the display currency
-                convertCurrency={convertCurrency}
-                isSubmitting={isSubmitting}
-                setIsSubmitting={setIsSubmitting}
-                onUpdate={onUpdate}
-              />
+              {/* Combined Options + Variants Manager */}
+              {product?.id && (
+                <CombinedVariantManager
+                  ref={combinedManagerRef}
+                  productId={product.id}
+                  basePriceALL={product.price}
+                  displayCurrency={currencyCode}
+                  convertCurrency={convertCurrency}
+                />
+              )}
             </div>
           </ScrollArea>
           <DialogFooter className="p-4 border-t"><Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button></DialogFooter>

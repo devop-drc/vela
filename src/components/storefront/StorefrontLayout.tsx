@@ -100,38 +100,34 @@ const applyStorefrontSettingsToDOM = (settings: any, shopDetails: any) => {
     ogImageTag.setAttribute('content', shopDetails.logo_url || '');
 
     const setFavicon = (url: string | null) => {
-      let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-      if (url) {
-        if (link) {
-          link.href = url;
-        } else {
-          link = document.createElement('link');
-          link.rel = 'icon';
-          link.href = url;
-          document.head.appendChild(link);
-        }
-      } else {
-        if (link) link.href = '/favicon.ico';
-        else {
-          link = document.createElement('link');
-          link.rel = 'icon';
-          link.href = '/favicon.ico';
-          document.head.appendChild(link);
-        }
-      }
+      // Remove existing icon links to avoid browser caching the wrong one
+      document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]').forEach(e => e.parentNode?.removeChild(e));
+
+      const addIcon = (rel: string, href: string, type?: string) => {
+        const link = document.createElement('link');
+        link.rel = rel as any;
+        link.href = href;
+        if (type) link.type = type;
+        document.head.appendChild(link);
+      };
+
+      const pickType = (href: string) => href.endsWith('.png') ? 'image/png' : href.endsWith('.jpg') || href.endsWith('.jpeg') ? 'image/jpeg' : undefined;
+
+      const href = url || '/favicon.ico';
+      const type = pickType(href);
+      addIcon('icon', href, type);
+      addIcon('shortcut icon', href, type);
+      addIcon('apple-touch-icon', href, type);
     };
 
-    if (shopDetails.favicon_url) {
-      setFavicon(shopDetails.favicon_url);
-    } else {
-      setFavicon(null);
-    }
+    // Prefer favicon_url; fallback to logo_url if missing
+    setFavicon(shopDetails.favicon_url || shopDetails.logo_url || null);
     
   } else {
     document.title = "Storefront";
-    let metaDescriptionTag = document.querySelector('meta[name="description"]');
+    const metaDescriptionTag = document.querySelector('meta[name="description"]');
     if (metaDescriptionTag) metaDescriptionTag.setAttribute('content', "Discover unique products from various shops.");
-    let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
     if (link) link.remove();
   }
 };

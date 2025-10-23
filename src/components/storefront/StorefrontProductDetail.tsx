@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Loader2, ShoppingCart, Minus, Plus, Home, ArrowLeft, Star, Truck, Sparkles, User, Mail, MapPin, City, Globe, StickyNote, Calendar, Lock, CreditCard, DollarSign } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,8 +40,12 @@ const StorefrontProductDetail = () => {
   const { addToCart } = useCart();
   const { addRecentlyViewed } = useRecentlyViewed(); // Use the new hook
   const [quantity, setQuantity] = useState(1);
-  const [selectedColor, setSelectedColor] = useState<string | null>(null); // Placeholder for variant selection
-  const [selectedSize, setSelectedSize] = useState<string | null>(null); // Placeholder for variant selection
+  // Options from DB
+  type OptionValue = { id: string; value: string; price_difference: number; inventory: number; is_active: boolean; is_default: boolean };
+  type ProductOption = { id: string; name: string; values: OptionValue[] };
+  const [options, setOptions] = useState<ProductOption[]>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  const [selectedValues, setSelectedValues] = useState<Record<string, string>>({});
 
   const [api, setApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -56,6 +62,82 @@ const StorefrontProductDetail = () => {
       setCurrentSlide(api.selectedScrollSnap());
     });
   }, [api]);
+
+  // Load product options/values (moved above early returns to satisfy React hooks rules)
+  useEffect(() => {
+    const loadOptions = async () => {
+      if (!productId) return;
+      setIsLoadingOptions(true);
+      // Find product once to get id; guard if products not loaded yet
+      const p = products.find(pp => pp.id === productId);
+      if (!p) return;
+      // Try edge function first (may require JWT). On failure, fallback to direct select.
+      let loaded: ProductOption[] = [];
+      try {
+        const { data, error } = await supabase.functions.invoke('get-public-product-options', { body: { product_id: p.id } });
+        if (error || data?.error) throw new Error(error?.message || data?.error || 'Edge error');
+        const raw = (data?.options ?? []) as Array<{ id: string; name: string; option_values: { id: string; value: string; price_difference: number; inventory: number; is_active: boolean; is_default: boolean }[] }>;
+        loaded = raw.map(opt => ({
+          id: opt.id,
+          name: opt.name,
+          values: (opt.option_values || []).map(v => ({
+            id: v.id,
+            value: v.value,
+            price_difference: convertCurrency(v.price_difference, 'ALL'),
+            inventory: v.inventory,
+            is_active: v.is_active,
+            is_default: v.is_default,
+          }))
+        }));
+      } catch (_) {
+        const { data: tableData, error: tableErr } = await supabase
+          .from('product_options')
+          .select(`
+            id,
+            name,
+            display_order,
+            option_values (
+              id,
+              value,
+              price_difference,
+              inventory,
+              is_active,
+              is_default
+            )
+          `)
+          .eq('product_id', p.id)
+          .order('display_order')
+          .order('created_at', { foreignTable: 'option_values', ascending: true });
+        if (tableErr) {
+          console.error('StorefrontProductDetail: failed to load options (fallback)', tableErr);
+          loaded = [];
+        } else {
+          loaded = (tableData || []).map((opt: any) => ({
+            id: opt.id,
+            name: opt.name,
+            values: (opt.option_values || []).map((v: any) => ({
+              id: v.id,
+              value: v.value,
+              price_difference: convertCurrency(v.price_difference, 'ALL'),
+              inventory: v.inventory,
+              is_active: v.is_active,
+              is_default: v.is_default,
+            }))
+          }));
+        }
+      }
+
+      setOptions(loaded);
+      const defaults: Record<string, string> = {};
+      loaded.forEach(opt => {
+        const def = opt.values.find(v => v.is_default && v.is_active && v.inventory > 0) || opt.values.find(v => v.is_active && v.inventory > 0) || opt.values[0];
+        if (def) defaults[opt.name] = def.value;
+      });
+      setSelectedValues(defaults);
+      setIsLoadingOptions(false);
+    };
+    loadOptions();
+  }, [productId, products, convertCurrency]);
 
   if (isLoading) {
     return <div className="container py-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -110,7 +192,16 @@ const StorefrontProductDetail = () => {
   const blurEnabled = appearanceSettings?.blurEnabled;
 
   // Convert product price to shop's display currency
-  const originalDisplayPrice = convertCurrency(product.price, product.currency);
+  const baseDisplayPrice = convertCurrency(product.price, product.currency);
+  // Compute delta inline to avoid conditional hook concerns
+  let optionsPriceDelta = 0;
+  options.forEach(opt => {
+    const sel = selectedValues[opt.name];
+    if (!sel) return;
+    const val = opt.values.find(v => v.value === sel);
+    if (val) optionsPriceDelta += val.price_difference || 0;
+  });
+  const originalDisplayPrice = baseDisplayPrice != null ? (baseDisplayPrice + optionsPriceDelta) : null;
 
   const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && product.inventory <= 0);
 
@@ -169,10 +260,7 @@ const StorefrontProductDetail = () => {
       return;
     }
 
-    const selectedOptions: { [key: string]: string | string[] } = {};
-    if (selectedColor) selectedOptions.color = selectedColor;
-    if (selectedSize) selectedOptions.size = selectedSize;
-    // Add other selected options here if they were part of the UI
+    const selectedOptions: { [key: string]: string | string[] } = { ...selectedValues };
 
     addToCart({
       productId: product.id,
@@ -185,16 +273,14 @@ const StorefrontProductDetail = () => {
       media_type: product.media_type,
       slug: shopDetails.slug,
       selectedOptions: Object.keys(selectedOptions).length > 0 ? selectedOptions : undefined, // Pass selected options
-      pricing_type: product.pricing_type, // Pass pricing_type
-      product_type: product.product_type, // Pass product_type
-      billing_interval: product.billing_interval, // Pass billing_interval
     }, quantity);
   };
 
   const allDetails = Object.entries(product.details || {}).filter(([key, value]) => key !== 'type' && value && (!Array.isArray(value) || value.length > 0));
-  const colors = allDetails.find(([key]) => key === 'color')?.[1] as string[] || [];
-  const sizes = allDetails.find(([key]) => key === 'size')?.[1] as string[] || [];
-  const otherOptions = allDetails.filter(([key]) => ['material'].includes(key)); // Example other options
+  // Treat all details as specifications now (options come from DB)
+  const colors: string[] = [];
+  const sizes: string[] = [];
+  const otherOptions: [string, any][] = [];
   const specifications = allDetails.filter(([key]) => !['color', 'size', 'material', 'type'].includes(key)); // Example specs
 
   const relatedProducts = useMemo(() => {
@@ -246,8 +332,8 @@ const StorefrontProductDetail = () => {
           )}
         </div>
 
-        {/* Product Details */}
-        <div className="space-y-4 md:space-y-6">
+        {/* Product Details (sticky on large screens) */}
+        <div className="space-y-4 md:space-y-6 lg:sticky lg:top-24 self-start">
           <div>
             <p className="text-sm font-medium text-muted-foreground mb-1">
               <span>{product.category || 'Uncategorized'}</span>
@@ -299,6 +385,17 @@ const StorefrontProductDetail = () => {
                     <span className="ml-1 md:ml-2 text-sm text-muted-foreground">(4.0 / 5.0)</span>
                 </div>
             </div>
+
+            {/* Price breakdown */}
+            {baseDisplayPrice != null && (
+              <div className="text-xs md:text-sm text-muted-foreground -mt-2">
+                <span>Base {formatCurrency(baseDisplayPrice, shopDetails?.currency)}</span>
+                <span className="mx-1">+</span>
+                <span>Options {formatCurrency(optionsPriceDelta, shopDetails?.currency)}</span>
+                <span className="mx-1">=</span>
+                <span className="font-medium text-foreground">Total {formatCurrency(originalDisplayPrice ?? baseDisplayPrice, shopDetails?.currency)}</span>
+              </div>
+            )}
           </div>
 
           <p className="text-sm md:text-base text-muted-foreground leading-relaxed">{product.caption || "No description provided."}</p>
@@ -309,64 +406,60 @@ const StorefrontProductDetail = () => {
             </div>
           )}
 
-          {/* Variant Selection (Placeholder) */}
-          {(colors.length > 0 || sizes.length > 0 || otherOptions.length > 0) && (
-            <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-md")}>
-              <CardHeader><CardTitle className="text-lg md:text-xl">Options</CardTitle></CardHeader>
-              <CardContent className="p-4 space-y-4">
-                {colors.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm">Color</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {colors.map(color => (
-                        <Button
-                          key={color}
-                          variant={selectedColor === color ? "default" : "outline"}
-                          onClick={() => setSelectedColor(color)}
-                          className={cn("capitalize text-sm md:text-base", selectedColor === color && "ring-2 ring-primary ring-offset-2")}
-                        >
-                          {color}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {sizes.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm">Size</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {sizes.map(size => (
-                        <Button
-                          key={size}
-                          variant={selectedSize === size ? "default" : "outline"}
-                          onClick={() => setSelectedSize(size)}
-                          className={cn("text-sm md:text-base", selectedSize === size && "ring-2 ring-primary ring-offset-2")}
-                        >
-                          {size}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {otherOptions.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 md:gap-x-6 gap-y-3 md:gap-y-4">
-                    {otherOptions.map(([key, value]) => {
-                      const Icon = getAttributeIcon(key);
+          {/* Options (from DB) and details */}
+          <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-md")}> 
+            <CardHeader><CardTitle className="text-lg md:text-xl">Options</CardTitle></CardHeader>
+            <CardContent className="p-4 space-y-4">
+              {isLoadingOptions && (
+                <div className="text-sm text-muted-foreground">Loading options...</div>
+              )}
+              {!isLoadingOptions && options.length === 0 && (
+                <div className="text-sm text-muted-foreground">No options available for this product.</div>
+              )}
+              {options.length > 0 && options.map(opt => (
+                <div key={opt.id} className="space-y-2">
+                  <Label className="text-sm capitalize">{opt.name}</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {opt.values.map(val => {
+                      const isOOS = val.inventory <= 0 || !val.is_active;
+                      const isSelected = selectedValues[opt.name] === val.value;
+                      const diffText = val.price_difference ? `(${val.price_difference > 0 ? '+' : ''}${formatCurrency(val.price_difference, shopDetails?.currency)})` : '';
                       return (
-                        <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
-                          {Array.isArray(value) ? (
-                            value.map(item => <Badge key={item} variant="outline" className="text-xs md:text-sm bg-primary/10 text-primary border-primary/30">{item}</Badge>)
-                          ) : (
-                            <p className="text-sm md:text-base">{String(value)}</p>
-                          )}
-                        </DetailDisplayRow>
+                        <Button
+                          key={val.id || val.value}
+                          variant={isSelected ? "default" : "outline"}
+                          onClick={() => !isOOS && setSelectedValues(prev => ({ ...prev, [opt.name]: val.value }))}
+                          disabled={isOOS}
+                          className={cn("text-sm md:text-base h-9 px-3", isSelected && "ring-2 ring-primary ring-offset-2", isOOS && "opacity-60 cursor-not-allowed")}
+                          title={isOOS ? "Out of stock / inactive" : (val.is_default ? "Default" : undefined)}
+                        >
+                          <span className="capitalize">{val.value}</span>
+                          {diffText && <span className="ml-1 text-xs opacity-80">{diffText}</span>}
+                          <span className="ml-2 text-[10px] opacity-70">{val.inventory}</span>
+                        </Button>
                       );
                     })}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                </div>
+              ))}
+              {otherOptions.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 md:gap-x-6 gap-y-3 md:gap-y-4">
+                  {otherOptions.map(([key, value]) => {
+                    const Icon = getAttributeIcon(key);
+                    return (
+                      <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
+                        {Array.isArray(value) ? (
+                          value.map(item => <Badge key={item} variant="outline" className="text-xs md:text-sm bg-primary/10 text-primary border-primary/30">{item}</Badge>)
+                        ) : (
+                          <p className="text-sm md:text-base">{String(value)}</p>
+                        )}
+                      </DetailDisplayRow>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Specifications */}
           {specifications.length > 0 && (

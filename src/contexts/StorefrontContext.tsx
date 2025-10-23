@@ -182,7 +182,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
       console.log("StorefrontContext: Fetched shopDetails from get-public-shop-data:", data.shopDetails); // Debug log
       console.log("StorefrontContext: Fetched appearanceSettings from get-public-shop-data:", data.appearanceSettings); // Debug log
 
-      setShopDetails({
+      const incomingDetails = {
         id: data.shopDetails.id,
         userId: data.shopDetails.user_id, // Set the user ID here
         name: data.shopDetails.name,
@@ -197,7 +197,68 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         followers_count: data.shopDetails.followers_count,
         media_count: data.shopDetails.media_count,
         instagram_url: data.shopDetails.instagram_url, // Set Instagram URL
-      });
+      } as ShopDetails;
+
+      // Backfill branding if missing (incognito or older records) using public storage URLs
+      if (!incomingDetails.logo_url || !incomingDetails.favicon_url) {
+          const candidates = [
+            { key: `${shopSlug}/logo.png` },
+            { key: `${shopSlug}/logo.jpg` },
+            { key: `${shopSlug}/logo.jpeg` },
+          ];
+          const favCandidates = [
+            { key: `${shopSlug}/favicon.ico` },
+            { key: `${shopSlug}/favicon.png` },
+          ];
+          const probe = async (key: string) => {
+            const { data } = supabase.storage.from('shop-assets').getPublicUrl(key);
+            try {
+              const res = await fetch(data.publicUrl, { method: 'GET', headers: { 'Range': 'bytes=0-0' } });
+              if (res.ok || res.status === 206) return data.publicUrl;
+            } catch (e) { /* ignore */ }
+            return null;
+          };
+          if (!incomingDetails.logo_url) {
+            for (const c of candidates) {
+              const url = await probe(c.key);
+              if (url) { incomingDetails.logo_url = url; break; }
+            }
+          }
+          if (!incomingDetails.favicon_url) {
+            for (const c of favCandidates) {
+              const url = await probe(c.key);
+              if (url) { incomingDetails.favicon_url = url; break; }
+            }
+          }
+
+          // If still missing, attempt to list files in userId directory (public bucket policies required)
+          if ((!incomingDetails.logo_url || !incomingDetails.favicon_url) && incomingDetails.userId) {
+            try {
+              const dir = incomingDetails.userId as string;
+              const { data: files, error: listErr } = await supabase.storage.from('shop-assets').list(dir, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+              if (!listErr && files && files.length > 0) {
+                const imageFiles = files.filter(f => /\.(png|jpg|jpeg|webp|ico)$/i.test(f.name));
+                const makeUrl = (name: string) => supabase.storage.from('shop-assets').getPublicUrl(`${dir}/${name}`).data.publicUrl;
+
+                // Prefer favicon.* for favicon_url
+                if (!incomingDetails.favicon_url) {
+                  const fav = imageFiles.find(f => /favicon\.(ico|png)$/i.test(f.name));
+                  if (fav) incomingDetails.favicon_url = makeUrl(fav.name);
+                }
+
+                // Pick the most recent image for logo if still missing
+                if (!incomingDetails.logo_url && imageFiles.length > 0) {
+                  incomingDetails.logo_url = makeUrl(imageFiles[0].name);
+                }
+              }
+            } catch (e) {
+              console.warn('Branding directory list failed', e);
+            }
+          }
+      }
+
+      setShopDetails(incomingDetails);
+
       setAppearanceSettings(data.appearanceSettings);
 
       if (pageToFetch === 1) {

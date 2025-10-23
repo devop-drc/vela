@@ -29,6 +29,7 @@ export const MediaItem = ({ src, alt, type, className }: MediaItemProps) => {
       src={src}
       alt={alt}
       className={cn("h-full w-full object-contain", className)}
+      referrerPolicy="no-referrer"
     />
   );
 };

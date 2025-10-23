@@ -35,9 +35,6 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     const { shopDetails, convertCurrency } = useShop();
     const [options, setOptions] = useState<any[]>([]);
     const [isLoadingOptions, setIsLoadingOptions] = useState(true);
-    
-    // CRITICAL FIX: Handle null product early to prevent crash
-    if (!product) return null;
 
     const currencyCode = shopDetails?.currency || 'USD';
 
@@ -45,6 +42,11 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     useEffect(() => {
         const fetchOptions = async () => {
             setIsLoadingOptions(true);
+            if (!product?.id) {
+                setOptions([]);
+                setIsLoadingOptions(false);
+                return;
+            }
             const { data, error } = await supabase
                 .from('product_options')
                 .select(`
@@ -71,24 +73,27 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
             setIsLoadingOptions(false);
         };
         fetchOptions();
-    }, [product.id]);
+    }, [product?.id]);
 
 
     // Convert product price from its stored currency (now always ALL) to the shop's display currency
     const displayPrice = useMemo(() => {
-        if (product.price == null || !shopDetails) return null;
+        if (!product || product.price == null || !shopDetails) return null;
         // Use product.currency as source (which is 'ALL' after refactor)
         const converted = convertCurrency(product.price, product.currency, shopDetails.currency);
         return converted;
-    }, [product.price, product.currency, convertCurrency, shopDetails]);
+    }, [product?.price, product?.currency, convertCurrency, shopDetails]);
 
     // Filter details into specifications (excluding options_v2 which is now deprecated)
     const specifications = useMemo(() => {
         const reservedKeys = new Set(['type', 'options_v2', 'options', 'variants']); 
-        return Object.entries(product.details || {})
+        return Object.entries(product?.details || {})
             .filter(([key]) => !reservedKeys.has(key))
             .map(([key, value]) => ({ name: key, value }));
-    }, [product.details]);
+    }, [product?.details]);
+
+    // After hooks: if product is not available, render nothing
+    if (!product) return null;
 
     return (
       <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -101,7 +106,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                     {mediaItems.map((url: string, index: number) => (
                       <CarouselItem key={index}>
                         <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
-                          <MediaItem src={url} alt={`${product.name} - image ${index + 1}`} />
+                          <MediaItem src={url} alt={`${product?.name ?? 'Product'} - image ${index + 1}`} />
                         </div>
                       </CarouselItem>
                     ))}

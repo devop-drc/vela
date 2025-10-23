@@ -127,8 +127,20 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
       return;
     }
 
-    const filePath = `${user.id}/${product!.id}/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from('product-media').upload(filePath, file);
+    // Sanitize filename to avoid spaces and special characters that can break public URLs
+    const rawName = file.name;
+    const safeName = rawName
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9._-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const filePath = `${user.id}/${product!.id}/${Date.now()}-${safeName}`;
+    const { error } = await supabase.storage.from('product-media').upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type || undefined,
+    });
 
     if (error) {
       showError(`Upload failed: ${error.message}`);

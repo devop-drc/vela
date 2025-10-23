@@ -152,13 +152,11 @@ export const InstagramCheckoutForm = ({
 
   // Effect to reset form when checkout step changes
   useEffect(() => {
-    console.log("CheckoutForm: selectedAddressId changed to", selectedAddressId);
     if (selectedAddressId !== 'new') {
       const address = savedAddresses.find(addr => addr.id === selectedAddressId);
       if (address) {
         fillFormWithAddress(address);
         setCheckoutStep('payment'); // Go directly to payment for existing address
-        console.log("CheckoutForm: Existing address selected, setting checkoutStep to 'payment'");
       }
     } else {
       // Otherwise, clear the form for a new address
@@ -172,7 +170,6 @@ export const InstagramCheckoutForm = ({
         addressLabel: "",
       });
       setCheckoutStep('contact-shipping'); // Show contact-shipping for new address
-      console.log("CheckoutForm: New address selected, setting checkoutStep to 'contact-shipping'");
     }
   }, [selectedAddressId, savedAddresses, reset, fillFormWithAddress, setCheckoutStep, watch]);
 

@@ -104,6 +104,7 @@ serve(async (req) => {
         return Response.redirect(redirectUrl.toString(), 302);
       }
 
+      const instagram_account_id = igAccount.id;
       const instagram_username = igAccount.username;
       const instagram_profile_picture_url = igAccount.profile_picture_url;
       const instagram_shop_name = igAccount.name;
@@ -119,21 +120,23 @@ serve(async (req) => {
         user_id: userIdFromState,
         provider: 'facebook',
         access_token: longLivedToken,
+        ig_account_id: instagram_account_id,
       }, { onConflict: 'user_id,provider' });
+
       if (upsertError) {
         console.error("Supabase DB: Error upserting integration:", upsertError);
         throw upsertError;
       }
 
-      // 5. Upload Instagram profile picture to Supabase Storage
+      // 5. Upload Instagram profile picture to Supabase Storage (deterministic path)
       let uploadedLogoUrl: string | null = null;
       if (instagram_profile_picture_url) {
         try {
           const imageResponse = await fetch(instagram_profile_picture_url);
           if (!imageResponse.ok) throw new Error(`Failed to fetch profile picture: ${imageResponse.statusText}`);
           const imageBlob = await imageResponse.blob();
-          const fileName = `${userIdFromState}/profile_pic_${Date.now()}.jpg`;
-          const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+          const fileName = `${userIdFromState}/profile.jpg`;
+          const { error: uploadError } = await supabaseAdmin.storage
             .from('shop-assets')
             .upload(fileName, imageBlob, {
               contentType: imageResponse.headers.get('content-type') || 'image/jpeg',
@@ -198,6 +201,7 @@ serve(async (req) => {
         media_count: instagram_media_count,
         website: instagram_website || null,
         username: instagram_username,
+        ig_account_id: instagram_account_id,
       };
 
       const { error: shopDetailsUpsertError } = await supabaseAdmin.from('shop_details').upsert(shopDetailsPayload, { onConflict: 'business_id' });

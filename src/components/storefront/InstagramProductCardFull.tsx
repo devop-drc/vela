@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, forwardRef } from "react";
+
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +17,8 @@ import { toast } from "sonner";
 import { useCart, CartItem } from "@/contexts/CartContext"; // Import CartItem type
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { ShopDetails as StorefrontShopDetails, Promotion as StorefrontPromotion } from "@/contexts/StorefrontContext";
+import { supabase } from "@/integrations/supabase/client";
+
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
 import { InstagramCartDrawer } from "./InstagramCartDrawer"; // Import the drawer
@@ -60,17 +63,16 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     const { addToCart } = useCart();
     const { shopSlug } = useParams<{ shopSlug: string }>();
     const [quantity, setQuantity] = useState(1);
-    const [selectedColor, setSelectedColor] = useState<string | null>(null);
-    const [selectedSize, setSelectedSize] = useState<string | null>(null);
+    // New: options fetched from DB
+    const [options, setOptions] = useState<Array<{ id: string; name: string; values: Array<{ id: string; value: string; price_difference: number; inventory: number; is_active: boolean; is_default: boolean }> }>>([]);
+    const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+    const [selectedValues, setSelectedValues] = useState<Record<string, string>>({});
+
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const isMobile = useIsMobile(); // Use the mobile hook
 
     const [api, setApi] = useState<CarouselApi>();
     const [currentSlide, setCurrentSlide] = useState(0);
-
-    // State for Buy Now drawer
-    const [isBuyNowDrawerOpen, setIsBuyNowDrawerOpen] = useState(false);
-    const [buyNowProduct, setBuyNowProduct] = useState<CartItem | null>(null);
 
     useEffect(() => {
       if (!api) return;
@@ -82,7 +84,75 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
     const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
 
-    const originalDisplayPrice = convertCurrency(product.price, product.currency);
+    // Fetch options/values from DB for this product
+    useEffect(() => {
+      const loadOptions = async () => {
+        if (!product?.id) return;
+        setIsLoadingOptions(true);
+        const { data, error } = await supabase
+          .from('product_options')
+          .select(`
+            id,
+            name,
+            display_order,
+            option_values (
+              id,
+              value,
+              price_difference,
+              inventory,
+              is_active,
+              is_default
+            )
+          `)
+          .eq('product_id', product.id)
+          .order('display_order')
+          .order('created_at', { foreignTable: 'option_values', ascending: true });
+
+        if (error) {
+          console.error('Failed to load product options for storefront:', error);
+          setOptions([]);
+        } else {
+          const mapped = (data || []).map((opt: any) => ({
+            id: opt.id,
+            name: opt.name,
+            values: (opt.option_values || []).map((v: any) => ({
+              id: v.id,
+              value: v.value,
+              // price_difference stored in ALL; convert on the fly for display math
+              price_difference: convertCurrency(v.price_difference, 'ALL'),
+              inventory: v.inventory,
+              is_active: v.is_active,
+              is_default: v.is_default,
+            })),
+          }));
+          setOptions(mapped);
+          // Initialize defaults
+          const defaults: Record<string, string> = {};
+          mapped.forEach(opt => {
+            const def = opt.values.find(v => v.is_default && v.is_active && v.inventory > 0) || opt.values.find(v => v.is_active && v.inventory > 0) || opt.values[0];
+            if (def) defaults[opt.name] = def.value;
+          });
+          setSelectedValues(defaults);
+        }
+        setIsLoadingOptions(false);
+      };
+      loadOptions();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [product?.id]);
+
+    const baseDisplayPrice = convertCurrency(product.price, product.currency);
+    const optionsPriceDelta = useMemo(() => {
+      if (!options.length) return 0;
+      let delta = 0;
+      options.forEach(opt => {
+        const sel = selectedValues[opt.name];
+        if (!sel) return;
+        const val = opt.values.find(v => v.value === sel);
+        if (val) delta += val.price_difference || 0;
+      });
+      return delta;
+    }, [options, selectedValues]);
+    const originalDisplayPrice = baseDisplayPrice != null ? (baseDisplayPrice + optionsPriceDelta) : null;
 
     const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && product.inventory <= 0);
 
@@ -128,9 +198,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
         return;
       }
 
-      const selectedOptions: { [key: string]: string | string[] } = {};
-      if (selectedColor) selectedOptions.color = selectedColor;
-      if (selectedSize) selectedOptions.size = selectedSize;
+      const selectedOptions: { [key: string]: string | string[] } = { ...selectedValues };
 
       addToCart({
         productId: product.id,
@@ -159,9 +227,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
         return;
       }
 
-      const selectedOptions: { [key: string]: string | string[] } = {};
-      if (selectedColor) selectedOptions.color = selectedColor;
-      if (selectedSize) selectedOptions.size = selectedSize;
+      const selectedOptions: { [key: string]: string | string[] } = { ...selectedValues };
 
       const itemToBuy: CartItem = {
         productId: product.id,
@@ -185,12 +251,9 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     };
 
     const allDetails = Object.entries(product.details || {}).filter(([key, value]) => key !== 'type' && value && (!Array.isArray(value) || value.length > 0));
-    
-    // Safely extract colors and sizes
-    const colors = getDetailArray(product.details, 'color');
-    const sizes = getDetailArray(product.details, 'size');
-    
-    const otherOptions = allDetails.filter(([key]) => !['color', 'size', 'type'].includes(key)); // All other details are specs
+
+    // Legacy details-derived options (kept as specs only). Real options now come from DB.
+    const otherOptions = allDetails.filter(([key]) => key !== 'type');
 
     const getPromotionBadge = (promo: StorefrontPromotion) => {
       switch (promo.type) {
@@ -316,48 +379,38 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
           )}
 
           {/* Options */}
-          {(colors.length > 0 || sizes.length > 0 || otherOptions.length > 0) && (
+          {(options.length > 0 || otherOptions.length > 0) && (
             <div className="space-y-4 pt-2">
-              {colors.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-sm text-gray-700">Colors</Label>
+              {options.length > 0 && options.map((opt) => (
+                <div key={opt.id} className="space-y-2">
+                  <Label className="text-sm text-gray-700 capitalize">{opt.name}</Label>
                   <div className="flex flex-wrap gap-2">
-                    {colors.map(color => (
-                      <Button
-                        key={color}
-                        variant={selectedColor === color ? "default" : "outline"}
-                        onClick={() => setSelectedColor(color)}
-                        className={cn(
-                          "capitalize text-sm h-9 px-4",
-                          selectedColor === color ? "bg-red-500 text-white border-red-500 hover:bg-red-600" : "bg-gray-50 text-gray-800 border-gray-300 hover:bg-gray-100"
-                        )}
-                      >
-                        {color}
-                      </Button>
-                    ))}
+                    {opt.values.map(val => {
+                      const isOOS = val.inventory <= 0 || !val.is_active;
+                      const isSelected = selectedValues[opt.name] === val.value;
+                      const diffText = val.price_difference ? `(${val.price_difference > 0 ? '+' : ''}${formatCurrency(val.price_difference, shopDetails?.currency)})` : '';
+                      return (
+                        <Button
+                          key={val.id || val.value}
+                          variant={isSelected ? "default" : "outline"}
+                          onClick={() => !isOOS && setSelectedValues(prev => ({ ...prev, [opt.name]: val.value }))}
+                          disabled={isOOS}
+                          className={cn(
+                            "text-sm h-9 px-3",
+                            isSelected ? "bg-red-500 text-white border-red-500 hover:bg-red-600" : "bg-gray-50 text-gray-800 border-gray-300 hover:bg-gray-100",
+                            isOOS && "opacity-60 cursor-not-allowed"
+                          )}
+                          title={isOOS ? "Out of stock" : undefined}
+                        >
+                          <span className="capitalize">{val.value}</span>
+                          {diffText && <span className="ml-1 text-xs opacity-80">{diffText}</span>}
+                          <span className="ml-2 text-[10px] opacity-70">{val.inventory}</span>
+                        </Button>
+                      );
+                    })}
                   </div>
                 </div>
-              )}
-              {sizes.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-sm text-gray-700">Sizes</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {sizes.map(size => (
-                      <Button
-                        key={size}
-                        variant={selectedSize === size ? "default" : "outline"}
-                        onClick={() => setSelectedSize(size)}
-                        className={cn(
-                          "text-sm border-gray-300 bg-gray-50 text-gray-800 hover:bg-gray-100",
-                          selectedSize === size && "bg-red-500 text-white hover:bg-red-600 border-red-500"
-                        )}
-                      >
-                        {size}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              ))}
               {otherOptions.length > 0 && (
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                   {otherOptions.map(([key, value]) => {

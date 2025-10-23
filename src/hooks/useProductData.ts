@@ -10,6 +10,9 @@ export interface Product {
   currency: string | null;
   inventory: number;
   media_url: string;
+  media_gallery: string[] | null;
+  media_type?: string | null;
+  thumbnail_url?: string | null;
   created_at: string;
   category: string;
   tags: string[];
@@ -52,8 +55,8 @@ export const useProductData = (): UseProductDataResult => {
     console.log("useProductData: Fetching products for user ID:", user.id);
 
     const [productsRes, categoriesRes, typesRes] = await Promise.all([
-      // ADDED inventory to the select list
-      supabase.from("products").select("id, name, status, price, currency, inventory, media_url, created_at, category, tags, details, pricing_type, billing_interval, product_type").eq('user_id', user.id).order('created_at', { ascending: false }),
+      // Include gallery and media metadata so editors can show all images
+      supabase.from("products").select("id, name, status, price, currency, inventory, media_url, media_gallery, media_type, thumbnail_url, created_at, category, tags, details, pricing_type, billing_interval, product_type").eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from("categories").select("name").eq('user_id', user.id),
       supabase.from("types").select("name, attributes").eq('user_id', user.id),
     ]);

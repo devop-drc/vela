@@ -27,6 +27,7 @@ interface OptionValue {
   is_deleted?: boolean; // For tracking deletions before saving
   is_new?: boolean; // For tracking new records
   isSelected?: boolean; // UI state
+  display_order?: number;
 }
 
 interface ProductOption {
@@ -46,6 +47,10 @@ interface OptionsManagerProps {
   isSubmitting: boolean;
   setIsSubmitting: (isSubmitting: boolean) => void;
   onUpdate: () => void;
+  // New: seed options from product.details/type schema when DB has none
+  seedDetails?: Record<string, any> | null;
+  seedAttributes?: Array<{ name: string; inputType?: string; isOption?: boolean }>;
+  baseInventory?: number;
 }
 
 const statusOptions = [
@@ -68,9 +73,46 @@ const mapDbToUi = (dbOptions: any[], productCurrency: string, displayCurrency: s
       inventory: val.inventory,
       is_active: val.is_active,
       is_default: val.is_default,
+      display_order: val.display_order ?? 0,
       isSelected: false,
-    })),
+    })).sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0)),
   }));
+};
+
+// Helper: derive initial options from product.details according to type attributes marked isOption
+const deriveOptionsFromDetails = (
+  details: Record<string, any> | null | undefined,
+  attributes: Array<{ name: string; inputType?: string; isOption?: boolean }> | undefined,
+  baseInventory: number | undefined
+): ProductOption[] => {
+  if (!details || !attributes) return [];
+  const result: ProductOption[] = [];
+  attributes.forEach(attr => {
+    if (!attr?.name || !attr.isOption) return;
+    const raw = (details as any)[attr.name];
+    if (raw == null) return;
+    // Normalize values array
+    let values: string[] = [];
+    if (Array.isArray(raw)) {
+      values = raw.map(v => String(v));
+    } else if (typeof raw === 'string') {
+      values = raw.split(',').map(s => s.trim()).filter(Boolean);
+    } else {
+      values = [String(raw)];
+    }
+    if (values.length === 0) return;
+    const vals: OptionValue[] = values.map((v, i) => ({
+      value: v,
+      price_difference: 0,
+      inventory: typeof baseInventory === 'number' ? baseInventory : 10,
+      is_active: true,
+      is_default: i === 0,
+      is_new: true,
+      isSelected: false,
+    }));
+    result.push({ name: attr.name, display_order: result.length, values: vals, is_new: true });
+  });
+  return result;
 };
 
 // Helper to convert UI state to DB payload
@@ -191,7 +233,34 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, value, setOptions
 
   return (
     <div
-      className="grid grid-cols-12 gap-2 items-center py-3 px-4 border-b last:border-b-0 hover:bg-muted/50 transition-colors"
+      className="grid grid-cols-12 gap-2 items-center py-3 px-4 border-b last:border-b-0 hover:bg-muted/50 transition-colors cursor-move"
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/plain', String(valueIndex));
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        const fromIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+        if (isNaN(fromIndex) || fromIndex === valueIndex) return;
+        setOptions((prev: ProductOption[]) => prev.map((opt, i) => {
+          if (i !== optionIndex) return opt;
+          const vals = [...opt.values];
+          const visible = vals.filter(v => !v.is_deleted);
+          // Map visible index to actual index
+          const actualFrom = vals.findIndex((v, idx) => !v.is_deleted && visible.indexOf(v) === visible.indexOf(vals[fromIndex] as any));
+          const [moved] = vals.splice(actualFrom >= 0 ? actualFrom : fromIndex, 1);
+          const actualTo = vals.findIndex((v) => v === visible[valueIndex]);
+          vals.splice(actualTo >= 0 ? actualTo : valueIndex, 0, moved);
+          // Reassign display_order sequentially
+          const newVals = vals.map((v, idx) => ({ ...v, display_order: idx }));
+          return { ...opt, values: newVals };
+        }));
+      }}
     >
       {/* Bulk Select Checkbox (Col 1) */}
       <div className="col-span-1 flex justify-center">
@@ -389,6 +458,7 @@ const OptionSection = ({ option, index, setOptions, currencyCode, convertCurrenc
         is_default: option.values.filter((v: OptionValue) => !v.is_deleted).length === 0, // Set as default if no other visible values exist
         is_new: true,
         isSelected: false,
+        display_order: option.values.length,
       }
     ]);
   };
@@ -542,7 +612,7 @@ OptionSection.displayName = 'OptionSection';
 
 
 // --- Main OptionsManager Component ---
-export const OptionsManager = React.forwardRef(({ productId, productCurrency, displayCurrency, convertCurrency, isSubmitting, setIsSubmitting, onUpdate }: OptionsManagerProps, ref) => {
+export const OptionsManager = React.forwardRef(({ productId, productCurrency, displayCurrency, convertCurrency, isSubmitting, setIsSubmitting, onUpdate, seedDetails, seedAttributes, baseInventory }: OptionsManagerProps, ref) => {
   const [options, setOptions] = useState<ProductOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newOptionName, setNewOptionName] = useState('');
@@ -566,7 +636,8 @@ export const OptionsManager = React.forwardRef(({ productId, productCurrency, di
           price_difference,
           inventory,
           is_active,
-          is_default
+          is_default,
+          display_order
         )
       `)
       .eq('product_id', productId)
@@ -579,10 +650,15 @@ export const OptionsManager = React.forwardRef(({ productId, productCurrency, di
       setOptions([]);
     } else {
       const uiOptions = mapDbToUi(data || [], productCurrency, displayCurrency, convertCurrency);
-      setOptions(uiOptions);
+      if ((uiOptions?.length ?? 0) === 0) {
+        const derived = deriveOptionsFromDetails(seedDetails || {}, seedAttributes || [], baseInventory);
+        setOptions(derived);
+      } else {
+        setOptions(uiOptions);
+      }
     }
     setIsLoading(false);
-  }, [productId, userId, productCurrency, displayCurrency, convertCurrency]);
+  }, [productId, userId, productCurrency, displayCurrency, convertCurrency, seedDetails, seedAttributes, baseInventory]);
 
   useEffect(() => {
     fetchOptions();
@@ -616,7 +692,7 @@ export const OptionsManager = React.forwardRef(({ productId, productCurrency, di
 
       const { data: upsertedOptions, error: optionsError } = await supabase
         .from('product_options')
-        .upsert(optionsPayloadForUpsert, { onConflict: 'id', defaultToInsert: true })
+        .upsert(optionsPayloadForUpsert, { onConflict: 'id' })
         .select('id, name');
       if (optionsError) throw new Error(`Failed to save options: ${optionsError.message}`);
 
@@ -644,7 +720,7 @@ export const OptionsManager = React.forwardRef(({ productId, productCurrency, di
       // --- Step 4: Upsert Values ---
       const { error: valuesError } = await supabase
         .from('option_values')
-        .upsert(finalValuesToUpsert, { onConflict: 'id', defaultToInsert: true });
+        .upsert(finalValuesToUpsert, { onConflict: 'id' });
       if (valuesError) throw new Error(`Failed to save option values: ${valuesError.message}`);
 
       // showSuccess("Product options saved successfully!"); // Suppress success toast here, let parent handle it
