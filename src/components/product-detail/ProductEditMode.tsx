@@ -64,6 +64,8 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     const captionValue = watch("caption");
     const productType = watch("product_type");
     const currencyCode = watch("currency");
+    const baseInventory = watch("inventory");
+    const optionsV2 = watch("details.options_v2");
 
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const { ref: rhfRef, ...captionProps } = register("caption");
@@ -165,6 +167,33 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         };
         fetchTypesAndAttributes();
     }, [categoryValue, typeValue]);
+
+    // --- Auto-Update Status/Inventory ---
+    useEffect(() => {
+        if (pricingType === 'one_time') {
+            let totalStock = baseInventory || 0;
+            
+            if (optionsV2 && optionsV2.length > 0) {
+                totalStock = optionsV2.reduce((sum: number, option: any) => 
+                    sum + (option.values?.reduce((vSum: number, val: any) => vSum + (val.inventory || 0), 0) || 0), 0);
+            }
+            
+            // Update base inventory field to reflect total variant stock
+            setValue('inventory', totalStock, { shouldDirty: true });
+
+            // Update status based on total stock
+            const newStatus = totalStock > 0 ? 'Active' : 'Out of Stock';
+            if (statusValue !== newStatus) {
+                setValue('status', newStatus, { shouldDirty: true });
+            }
+        } else {
+            // For subscriptions, inventory is always 0 and status is always Active/Draft
+            if (baseInventory !== 0) {
+                setValue('inventory', 0, { shouldDirty: true });
+            }
+        }
+    }, [optionsV2, baseInventory, pricingType, statusValue, setValue]);
+
 
     // --- Handlers ---
     const handleReanalyze = async () => {
