@@ -372,7 +372,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
               <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
                 <div className="md:col-span-4">
                   {mediaItems.length > 0 && (
-                      <Carousel className="w-full rounded-lg overflow-hidden border mb-4">
+                      <Carousel className="w-full rounded-lg overflow-hidden group">
                           <CarouselContent>
                               {mediaItems.map((url: string, index: number) => (
                                   <CarouselItem key={index}>
@@ -452,6 +452,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                   <CardHeader><CardTitleComponent className="text-base flex items-center gap-2"><Settings className="h-5 w-5" /> Specifications (Fixed Details)</CardTitleComponent></CardHeader>
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {specificationsToRender.map((attr: any) => {
+                      if (!attr || !attr.name) return null; // Added null check guard
                       const Icon = getAttributeIcon(attr.name);
                       return (
                         <div key={attr.name} className="space-y-2">
