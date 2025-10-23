@@ -264,7 +264,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
 
     // Filter attributes to only include those defined by the current type
     const attributesToRender = useMemo(() => {
-        const attributeNames = new Set(typeAttributes.map(attr => attr?.name).filter(Boolean)); // ADDED SAFETY CHECK
+        const attributeNames = new Set(typeAttributes.map(attr => attr?.name).filter(Boolean));
         
         // Include all attributes defined in the type, plus any existing custom ones in details
         const existingDetailsKeys = Object.keys(getValues('details') || {}).filter(key => key !== 'type' && key !== 'options_v2');
@@ -286,7 +286,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     }, [typeAttributes, getValues]);
 
     // Filter out attributes that are now handled by options_v2 (Color, Size, etc.)
-    const specificationsToRender = attributesToRender.filter(attr => !attr.isOption);
+    const specificationsToRender = attributesToRender.filter(attr => !attr.isOption && attr.name); // Added final check for attr.name
 
     return (
       <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
