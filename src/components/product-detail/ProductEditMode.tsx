@@ -131,42 +131,6 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             });
             const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
             setMediaItems(gallery);
-        } else if (product) {
-            // Fallback if shopDetails not loaded yet
-            const initialDetails = product.details || { type: 'generic' };
-            if (!initialDetails.options_v2) {
-                initialDetails.options_v2 = [];
-            } else {
-                initialDetails.options_v2 = initialDetails.options_v2.map((opt: any) => {
-                    let hasExistingDefault = false;
-                    opt.values.forEach((val: any) => { if (val.is_default) hasExistingDefault = true; });
-                    
-                    return {
-                        ...opt,
-                        values: opt.values.map((val: any, index: number) => ({
-                            ...val,
-                            is_default: !hasExistingDefault && index === 0 ? true : val.is_default || false,
-                            isSelected: false,
-                        }))
-                    };
-                });
-            }
-            form.reset({
-                name: product.name || "",
-                status: product.status || "Draft",
-                caption: product.caption || "",
-                category: product.category || "",
-                price: product.price || 0,
-                currency: product.currency || 'ALL',
-                inventory: product.inventory || 0,
-                tags: product.tags || [],
-                pricing_type: product.pricing_type || 'one_time',
-                billing_interval: product.billing_interval,
-                details: initialDetails,
-                product_type: product.product_type || 'physical',
-            });
-        } else {
-            setMediaItems([]);
         }
     }, [product, form.reset, shopDetails, convertCurrency, setMediaItems]);
 

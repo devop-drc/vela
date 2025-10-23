@@ -49,10 +49,11 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
     return currencies.find(c => c.code === currencyCode)?.symbol || currencyCode;
   }, [currencyCode]);
 
-  const displayPriceDiff = useMemo(() => {
-    // Price difference is already in display currency (set in ProductEditMode on load)
-    return formatCurrency(priceDiff, currencyCode, 'en-US', true);
-  }, [priceDiff, currencyCode]);
+  const currentStatus = useMemo(() => {
+    if (!isActive) return statusOptions.find(s => s.value === 'Draft')!;
+    if (inventory <= 0) return statusOptions.find(s => s.value === 'Out of Stock')!;
+    return statusOptions.find(s => s.value === 'Active')!;
+  }, [isActive, inventory]);
 
   const handleSetDefault = useCallback(() => {
     if (isDefault) return;
@@ -69,23 +70,16 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
 
   const handleToggleSelect = useCallback((checked: boolean) => {
     setValue(`${fieldName}.isSelected`, checked, { shouldDirty: true });
-    // Trigger the parent array to force re-evaluation of selectedCount in OptionSection
     trigger(`details.options_v2.${optionIndex}.values`);
   }, [fieldName, setValue, optionIndex, trigger]);
 
   const handleStatusChange = useCallback((statusValue: string) => {
-    const status = statusOptions.find(s => s.value === statusValue);
+    const status = statusOptions.find(s => status.value === statusValue);
     if (status) {
       setValue(`${fieldName}.is_active`, status.isActive, { shouldDirty: true });
       setValue(`${fieldName}.inventory`, status.inventory, { shouldDirty: true });
     }
   }, [fieldName, setValue]);
-
-  const currentStatus = useMemo(() => {
-    if (!isActive) return statusOptions.find(s => s.value === 'Draft')!;
-    if (inventory <= 0) return statusOptions.find(s => s.value === 'Out of Stock')!;
-    return statusOptions.find(s => s.value === 'Active')!;
-  }, [isActive, inventory]);
 
   return (
     <div
@@ -155,9 +149,9 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
         </div>
       </div>
 
-      {/* Inventory (Col 9-11) */}
-      <div className="col-span-3 flex items-center">
-        <div className="relative w-full">
+      {/* Inventory & Status (Col 9-11) */}
+      <div className="col-span-3 flex items-center gap-1">
+        <div className="relative flex-1">
           <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Controller
             name={`${fieldName}.inventory`}
@@ -169,20 +163,34 @@ const OptionValueRow = ({ optionIndex, valueIndex, optionName, control, currency
                 type="number"
                 step="1"
                 placeholder="0"
-                className="h-9 text-sm text-right pl-9 pr-3"
+                className={cn(
+                  "h-9 text-sm text-right pl-9 pr-3",
+                  currentStatus.value === 'Out of Stock' && 'border-destructive/50 bg-destructive/5'
+                )}
+                min={0}
                 value={field.value === 0 ? '0' : field.value}
                 onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
               />
             )}
           />
         </div>
+        <Badge 
+            variant="outline" 
+            className={cn(
+                "text-xs font-semibold h-6 px-2 py-0 flex-shrink-0", 
+                currentStatus.color.replace('text-', 'border-').replace('-600', '-300'), 
+                currentStatus.color.replace('-600', '-800')
+            )}
+        >
+            {currentStatus.label}
+        </Badge>
       </div>
 
       {/* Actions (Col 12) - Status Dropdown + Delete Button */}
       <div className="col-span-1 flex items-center justify-end gap-1">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className={cn("h-8 w-8", currentStatus.color)} title={currentStatus.label}>
+            <Button variant="ghost" size="icon" className={cn("h-8 w-8", currentStatus.color)} title={`Change Status: ${currentStatus.label}`}>
               <currentStatus.icon className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -255,6 +263,11 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
     if (action === 'delete') {
       // Delete in reverse order to maintain correct indices
       selectedIndices.sort((a, b) => b - a).forEach(idx => removeValue(idx));
+      // After deletion, check if the default value was removed and set a new one if needed
+      const remainingValues = getValues(`details.options_v2.${index}.values`);
+      if (remainingValues.length > 0 && !remainingValues.some((v: OptionValue) => v.is_default)) {
+          setValue(`details.options_v2.${index}.values.0.is_default`, true, { shouldDirty: true });
+      }
     } else if (action === 'activate' || action === 'deactivate') {
       const isActive = action === 'activate';
       selectedIndices.forEach(idx => {
@@ -333,7 +346,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                       <div className="col-span-1 flex justify-center">Default</div>
                       <div className="col-span-3 pl-3">Value</div>
                       <div className="col-span-3 text-right pr-14">Price Diff</div>
-                      <div className="col-span-3 text-right pr-3">Inventory</div>
+                      <div className="col-span-3 text-left pl-3">Inventory & Status</div>
                       <div className="col-span-1 text-center">Actions</div>
                   </div>
 
@@ -423,7 +436,7 @@ const OptionSection = ({ option, index, removeOption, control, watch, setValue, 
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => appendValue({ value: 'Option Value', price_difference: 0, inventory: 10, is_active: true, is_default: false, isSelected: false })}
+                          onClick={() => appendValue({ value: 'New Value', price_difference: 0, inventory: 10, is_active: true, is_default: false, isSelected: false })}
                           className="w-full"
                       >
                           <PlusCircle className="mr-2 h-4 w-4" />
@@ -455,10 +468,10 @@ export const OptionsManager = () => {
 
   const handleAddOption = () => {
     if (newOptionName.trim()) {
+      // When adding a new option group, ensure the first value is the default.
       appendOption({
         name: newOptionName.trim(),
-        // CRITICAL FIX: Ensure the default value is explicitly set to a non-empty string
-        values: [{ value: 'Option Value', price_difference: 0, inventory: 10, is_active: true, is_default: true, isSelected: false }],
+        values: [{ value: 'New Value', price_difference: 0, inventory: 10, is_active: true, is_default: true, isSelected: false }],
       });
       setNewOptionName('');
     }
