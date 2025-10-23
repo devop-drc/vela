@@ -111,6 +111,7 @@ const mapUiToDb = (uiOptions: ProductOption[], displayCurrency: string, convertC
 
       // Prepare value payload (insert/update)
       const valuePayload: any = {
+        id: val.id,
         option_id: opt.id, // This will be null for new options, handled by the save logic
         user_id: userId,
         value: val.value,
@@ -118,10 +119,9 @@ const mapUiToDb = (uiOptions: ProductOption[], displayCurrency: string, convertC
         inventory: val.inventory,
         is_active: val.is_active,
         is_default: val.is_default,
+        // Store the parent option name temporarily for linking in Step 3
+        _parent_option_name: opt.name, 
       };
-      if (val.id) {
-        valuePayload.id = val.id;
-      }
       valuesToUpsert.push(valuePayload);
     });
   });
@@ -607,9 +607,16 @@ export const OptionsManager = React.forwardRef(({ productId, productCurrency, di
       }
 
       // --- Step 2: Upsert Options (Groups) ---
+      // We must omit 'id' for new records in the upsert payload
+      const optionsPayloadForUpsert = optionsToUpsert.map(opt => {
+        const payload = { ...opt };
+        if (!payload.id) delete payload.id;
+        return payload;
+      });
+
       const { data: upsertedOptions, error: optionsError } = await supabase
         .from('product_options')
-        .upsert(optionsToUpsert, { onConflict: 'id', defaultToInsert: true })
+        .upsert(optionsPayloadForUpsert, { onConflict: 'id', defaultToInsert: true })
         .select('id, name');
       if (optionsError) throw new Error(`Failed to save options: ${optionsError.message}`);
 
@@ -617,14 +624,21 @@ export const OptionsManager = React.forwardRef(({ productId, productCurrency, di
 
       // --- Step 3: Prepare Values for Upsert (linking new values to new option IDs) ---
       const finalValuesToUpsert = valuesToUpsert.map(val => {
-        if (!val.option_id) {
-          // Find the ID of the newly created parent option
-          const parentOption = optionsToUpsert.find(opt => opt.name === options.find(o => o.values.includes(val))?.name);
-          if (parentOption) {
-            val.option_id = optionIdMap.get(parentOption.name);
+        const payload = { ...val };
+        
+        // If the value is new (no ID) or its parent option was new (no option_id), link it now
+        if (!payload.option_id) {
+          const parentOptionName = payload._parent_option_name;
+          if (parentOptionName) {
+            payload.option_id = optionIdMap.get(parentOptionName);
           }
         }
-        return val;
+        
+        // Clean up temporary key and omit ID if new
+        delete payload._parent_option_name;
+        if (!payload.id) delete payload.id;
+        
+        return payload;
       });
 
       // --- Step 4: Upsert Values ---
