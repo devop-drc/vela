@@ -264,7 +264,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
 
     // Filter attributes to only include those defined by the current type
     const attributesToRender = useMemo(() => {
-        const attributeNames = new Set(typeAttributes.map(attr => attr.name));
+        const attributeNames = new Set(typeAttributes.map(attr => attr?.name).filter(Boolean)); // ADDED SAFETY CHECK
         
         // Include all attributes defined in the type, plus any existing custom ones in details
         const existingDetailsKeys = Object.keys(getValues('details') || {}).filter(key => key !== 'type' && key !== 'options_v2');
