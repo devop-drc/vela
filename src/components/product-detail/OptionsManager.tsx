@@ -88,13 +88,15 @@ const mapUiToDb = (uiOptions: ProductOption[], displayCurrency: string, convertC
     if (opt.is_deleted) return;
 
     // Prepare option payload (insert/update)
-    const optionPayload = {
-      id: opt.id,
+    const optionPayload: any = {
       product_id: productId,
       user_id: userId,
       name: opt.name,
       display_order: optIndex,
     };
+    if (opt.id) {
+      optionPayload.id = opt.id;
+    }
     optionsToUpsert.push(optionPayload);
 
     opt.values.forEach(val => {
@@ -108,8 +110,7 @@ const mapUiToDb = (uiOptions: ProductOption[], displayCurrency: string, convertC
       const priceDiffInALL = convertCurrency(val.price_difference, displayCurrency, 'ALL');
 
       // Prepare value payload (insert/update)
-      const valuePayload = {
-        id: val.id,
+      const valuePayload: any = {
         option_id: opt.id, // This will be null for new options, handled by the save logic
         user_id: userId,
         value: val.value,
@@ -118,6 +119,9 @@ const mapUiToDb = (uiOptions: ProductOption[], displayCurrency: string, convertC
         is_active: val.is_active,
         is_default: val.is_default,
       };
+      if (val.id) {
+        valuePayload.id = val.id;
+      }
       valuesToUpsert.push(valuePayload);
     });
   });
@@ -695,7 +699,7 @@ export const OptionsManager = React.forwardRef(({ productId, productCurrency, di
                 option={option}
                 index={index}
                 removeOption={() => setOptions(prev => prev.map((opt, i) => i === index ? { ...opt, is_deleted: true } : opt))}
-                setOptions={setOptions} // Pass the actual state setter
+                setOptions={setOptions}
                 currencyCode={displayCurrency}
                 convertCurrency={convertCurrency}
                 isSubmitting={isSubmitting}
