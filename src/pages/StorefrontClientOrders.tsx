@@ -111,72 +111,23 @@ const StorefrontClientOrders = () => {
     }
 
     try {
-      const { data: shopData, error: shopError } = await supabase
-        .from('shop_details')
-        .select('business_id')
-        .eq('slug', urlShopSlug)
-        .single();
-
-      if (shopError || !shopData) {
-        throw new Error("Shop not found or inaccessible.");
+      // Use edge function which returns customerOrders for the given email
+      const { data, error } = await supabase.functions.invoke('get-public-shop-data', {
+        body: { shopSlug: urlShopSlug, customerEmail: customerEmailInput }
+      });
+      if (error) throw error;
+      let fetched = (data?.customerOrders || []) as OrderDetails[];
+      if (orderIdInput) fetched = fetched.filter(o => o.id === orderIdInput);
+      setOrders(fetched);
+      if (orderIdInput && fetched.length > 0) {
+        setSelectedOrder(fetched[0]);
+        setIsOrderDetailModalOpen(true);
       }
-      const businessId = shopData.business_id;
-
-      let query = supabase
-        .from('orders')
-        .select(`
-          id,
-          customer_name,
-          customer_email,
-          status,
-          total_amount,
-          created_at,
-          updated_at,
-          currency,
-          payment_method,
-          payment_status,
-          shipping_address,
-          shipping_city,
-          shipping_state,
-          shipping_zip,
-          shipping_country,
-          order_notes,
-          order_items (
-            quantity,
-            price_at_purchase,
-            products (
-              name,
-              media_url,
-              currency
-            )
-          )
-        `)
-        .eq('customer_email', customerEmailInput)
-        .eq('business_id', businessId)
-        .order('created_at', { ascending: false });
-
-      if (orderIdInput) {
-        query = query.eq('id', orderIdInput);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Error fetching orders:", error);
-        setOrders([]);
-      } else if (data) {
-        setOrders(data as OrderDetails[]);
-        if (orderIdInput && data.length > 0) {
-          setSelectedOrder(data[0] as OrderDetails);
-          setIsOrderDetailModalOpen(true);
-        }
-        localStorage.setItem(LOCAL_STORAGE_EMAIL_KEY, customerEmailInput);
-      } else {
-        setOrders([]);
-      }
-    } catch (err: any) {
+      localStorage.setItem(LOCAL_STORAGE_EMAIL_KEY, customerEmailInput);
+    } catch (err: unknown) {
       console.error("Order fetching failed:", err);
-      showError(`Failed to fetch orders: ${err.message || "An unexpected error occurred."}`);
+      const msg = typeof err === 'object' && err && 'message' in err ? (err as { message?: string }).message || 'An unexpected error occurred.' : 'An unexpected error occurred.';
+      showError(`Failed to fetch orders: ${msg}`);
       setOrders([]);
     } finally {
       setIsLoading(false);
@@ -317,7 +268,7 @@ const StorefrontClientOrders = () => {
                         </TableCell>
                         <TableCell>{new Date(order.updated_at).toLocaleString()}</TableCell>
                         <TableCell className="text-right font-medium">
-                          {formatCurrency(convertCurrency(order.total_amount, order.currency, contextShopDetails.currency), contextShopDetails.currency)}
+                          {formatCurrency(convertCurrency(order.total_amount, order.currency), contextShopDetails.currency)}
                           {order.currency !== contextShopDetails.currency && (
                             <div className="text-xs font-normal text-muted-foreground">
                               (~{formatCurrency(order.total_amount, order.currency)})

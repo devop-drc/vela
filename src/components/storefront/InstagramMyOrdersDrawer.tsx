@@ -118,26 +118,27 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
     }
 
     try {
-      // The get-public-shop-data function already fetches customer orders if customerEmail is provided.
-      // We can leverage that data from the context.
-      // However, if orderIdInput is present, we need to filter the context orders or re-fetch specifically.
-      let filteredContextOrders = contextCustomerOrders.filter(order => order.customer_email === customerEmailInput);
-
+      // Fetch orders via edge function to avoid RLS issues on anon client
+      const { data, error } = await supabase.functions.invoke('get-public-shop-data', {
+        body: { shopSlug: shopDetails.slug, customerEmail: customerEmailInput }
+      });
+      if (error) throw error;
+      let fetched = (data?.customerOrders || []) as OrderDetails[];
       if (orderIdInput) {
-        filteredContextOrders = filteredContextOrders.filter(order => order.id === orderIdInput);
+        fetched = fetched.filter(o => o.id === orderIdInput);
       }
-
-      setOrders(filteredContextOrders);
+      setOrders(fetched);
       localStorage.setItem(LOCAL_STORAGE_EMAIL_KEY, customerEmailInput);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Order fetching failed:", err);
-      showError(`Failed to fetch orders: ${err.message || "An unexpected error occurred."}`);
+      const msg = typeof err === 'object' && err && 'message' in err ? (err as any).message : 'An unexpected error occurred.';
+      showError(`Failed to fetch orders: ${msg}`);
       setOrders([]);
     } finally {
       setIsLoading(false);
     }
-  }, [customerEmailInput, orderIdInput, shopDetails?.slug, contextCustomerOrders]); // Add contextCustomerOrders to dependencies
+  }, [customerEmailInput, orderIdInput, shopDetails?.slug]);
 
   useEffect(() => {
     if (isOpen && customerEmailInput && shopDetails?.slug) {
@@ -238,7 +239,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
                               <Calendar className="h-4 w-4 text-red-500" /> {new Date(order.created_at).toLocaleDateString()}
                             </p>
                             <p className="font-semibold text-gray-800">
-                              {formatCurrency(convertCurrency(order.total_amount, order.currency, shopDetails?.currency), shopDetails?.currency)}
+                              {formatCurrency(convertCurrency(order.total_amount, order.currency), shopDetails?.currency)}
                             </p>
                           </div>
                           <Button variant="outline" size="sm" className="w-full mt-3 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200">View Details</Button>
