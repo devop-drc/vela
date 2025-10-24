@@ -4,6 +4,9 @@
 
 @layer base {
   :root {
+    /* Mobile Viewport Units */
+    --vh: 1vh;
+    --bottom-nav-height: 3.5rem;
     /* Color Palette */
     --background: 220 10% 98%; /* Light, cool grey */
     --foreground: 220 10% 20%; /* Charcoal grey */
