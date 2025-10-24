@@ -250,7 +250,7 @@ export const InstagramCheckoutForm = ({
       </Dialog>
 
       <form onSubmit={handleSubmit(onSubmit)} id="instagram-checkout-form" className="flex-1 flex flex-col overflow-hidden">
-        <ScrollArea className="flex-1 p-4 pr-6">
+        <ScrollArea className="flex-1 p-4 pr-6" style={{ overscrollBehavior: 'contain' }}>
           <div className="space-y-6">
             {/* Address Selection Card */}
             {savedAddresses.length > 0 && (
@@ -415,7 +415,7 @@ export const InstagramCheckoutForm = ({
                     <Textarea id="shippingNotesCourier" {...register("shippingNotesCourier")} rows={2} placeholder="e.g., Leave package at the back door." className="border-gray-300 bg-gray-50 text-gray-800" />
                   </div>
                 </CardContent>
-              </Card>
+              </motion.div>
               </motion.div>
             )}
 

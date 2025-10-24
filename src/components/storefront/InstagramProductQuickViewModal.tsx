@@ -46,6 +46,11 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
   const [api, setApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  // New: options fetched from DB
+  const [options, setOptions] = useState<Array<{ id: string; name: string; values: Array<{ id: string; value: string; price_difference: number; inventory: number; is_active: boolean; is_default: boolean }> }>>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  const [selectedValues, setSelectedValues] = useState<Record<string, string>>({});
+
   useEffect(() => {
     if (!api) return;
     setCurrentSlide(api.selectedScrollSnap());
@@ -56,22 +61,77 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
 
   const product = products.find(p => p.id === productId);
 
+  // Fetch options/values from DB for this product
+  useEffect(() => {
+    const loadOptions = async () => {
+      if (!product?.id) return;
+      setIsLoadingOptions(true);
+      const { data, error } = await supabase
+        .from('product_options')
+        .select(`
+          id,
+          name,
+          display_order,
+          option_values (
+            id,
+            value,
+            price_difference,
+            inventory,
+            is_active,
+            is_default
+          )
+        `)
+        .eq('product_id', product.id)
+        .order('display_order')
+        .order('created_at', { foreignTable: 'option_values', ascending: true });
+
+      if (error) {
+        console.error('Failed to load product options for storefront:', error);
+        setOptions([]);
+      } else {
+        const mapped = (data || []).map((opt: any) => ({
+          id: opt.id,
+          name: opt.name,
+          values: (opt.option_values || []).map((v: any) => ({
+            id: v.id,
+            value: v.value,
+            // price_difference stored in ALL; convert on the fly for display math
+            price_difference: convertCurrency(v.price_difference, 'ALL'),
+            inventory: v.inventory,
+            is_active: v.is_active,
+            is_default: v.is_default,
+          })),
+        }));
+        setOptions(mapped);
+        // Initialize defaults
+        const defaults: Record<string, string> = {};
+        mapped.forEach(opt => {
+          const def = opt.values.find(v => v.is_default && v.is_active && v.inventory > 0) || opt.values.find(v => v.is_active && v.inventory > 0) || opt.values[0];
+          if (def) defaults[opt.name] = def.value;
+        });
+        setSelectedValues(defaults);
+      }
+      setIsLoadingOptions(false);
+    };
+    loadOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id]);
+
   useEffect(() => {
     if (product) {
       setQuantity(1); // Reset quantity when product changes
-      setSelectedColor(null); // Reset selected options
-      setSelectedSize(null);
+      // Note: selectedValues is now managed by the options useEffect
     }
   }, [product]);
 
   if (isLoading || !shopDetails) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md bg-white text-black rounded-lg">
-          <DialogHeader className="border-b border-gray-200 pb-4">
+        <DialogContent className="max-w-md bg-white text-black rounded-lg h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-4 border-b border-gray-200 pb-4 flex-shrink-0">
             <DialogTitle className="text-xl font-bold text-gray-800">Product Details</DialogTitle>
           </DialogHeader>
-          <div className="flex justify-center items-center py-8">
+          <div className="flex justify-center items-center py-8 flex-1">
             <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
           </div>
         </DialogContent>
@@ -82,11 +142,11 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
   if (error || !product) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md bg-white text-black rounded-lg">
-          <DialogHeader className="border-b border-gray-200 pb-4">
+        <DialogContent className="max-w-md bg-white text-black rounded-lg h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-4 border-b border-gray-200 pb-4 flex-shrink-0">
             <DialogTitle className="text-xl font-bold text-gray-800">Product Not Found</DialogTitle>
           </DialogHeader>
-          <div className="text-center py-8 text-gray-600">
+          <div className="text-center py-8 text-gray-600 flex-1">
             <p>The product you are looking for does not exist or is no longer available.</p>
           </div>
         </DialogContent>
@@ -95,7 +155,21 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
   }
 
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
-  const originalDisplayPrice = convertCurrency(product.price, product.currency);
+  
+  const baseDisplayPrice = convertCurrency(product.price, product.currency);
+  const optionsPriceDelta = useMemo(() => {
+    if (!options.length) return 0;
+    let delta = 0;
+    options.forEach(opt => {
+      const sel = selectedValues[opt.name];
+      if (!sel) return;
+      const val = opt.values.find(v => v.value === sel);
+      if (val) delta += val.price_difference || 0;
+    });
+    return delta;
+  }, [options, selectedValues]);
+  const originalDisplayPrice = baseDisplayPrice != null ? (baseDisplayPrice + optionsPriceDelta) : null;
+
   const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && product.inventory <= 0);
 
   const activePromotions = promotions.filter(promo => {
@@ -153,10 +227,9 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
       return;
     }
 
-    const selectedOptions: { [key: string]: string | string[] } = {};
-    if (selectedColor) selectedOptions.color = selectedColor;
-    if (selectedSize) selectedOptions.size = selectedSize;
+    const selectedOptions: { [key: string]: string | string[] } = { ...selectedValues };
 
+    const mediaType: 'image' | 'video' | undefined = product.media_type === 'VIDEO' ? 'video' : (product.media_type === 'IMAGE' ? 'image' : undefined);
     addToCart({
       productId: product.id,
       name: product.name,
@@ -165,7 +238,7 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
       isDiscounted: hasDiscount,
       currency: shopDetails.currency || 'USD',
       media_url: product.media_url,
-      media_type: product.media_type,
+      media_type: mediaType,
       slug: shopDetails.slug,
       selectedOptions: Object.keys(selectedOptions).length > 0 ? selectedOptions : undefined,
       pricing_type: product.pricing_type,
@@ -176,15 +249,13 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
   };
 
   const allDetails = Object.entries(product.details || {}).filter(([key, value]) => key !== 'type' && value && (!Array.isArray(value) || value.length > 0));
-  const colors = allDetails.find(([key]) => key === 'color')?.[1] as string[] || [];
-  const sizes = allDetails.find(([key]) => key === 'size')?.[1] as string[] || [];
-  const otherOptions = allDetails.filter(([key]) => !['color', 'size', 'type'].includes(key));
+  const otherOptions = allDetails.filter(([key]) => !options.some(opt => opt.name.toLowerCase() === key.toLowerCase()) && key !== 'type');
 
   const primaryColorClass = hasDiscount ? "bg-green-600 hover:bg-green-700 text-white" : "bg-red-700 hover:bg-red-800 text-white";
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md h-[90vh] flex flex-col p-0 bg-white text-black rounded-lg">
+      <DialogContent className="max-w-md bg-white text-black rounded-lg h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-4 border-b border-gray-200 flex-shrink-0">
           <DialogTitle className="text-xl font-bold text-gray-800">Product Details</DialogTitle>
           <DialogDescription className="text-sm text-gray-500">Quick view of {product.name}</DialogDescription>
@@ -212,18 +283,15 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
               </Carousel>
               {mediaItems.length > 1 && (
                 <ScrollArea className="mt-2 pb-2">
-                  <div className="flex gap-2 justify-center">
+                  <div className="flex gap-1 justify-center">
                     {mediaItems.map((url: string, index: number) => (
-                      <button
+                      <span
                         key={index}
-                        onClick={() => api?.scrollTo(index)}
                         className={cn(
-                          "h-16 w-16 rounded-md overflow-hidden border-2 transition-all flex-shrink-0",
-                          index === currentSlide ? "border-red-500" : "border-gray-300 hover:border-gray-400"
+                          "h-1.5 w-1.5 rounded-full",
+                          index === currentSlide ? "bg-red-500" : "bg-gray-300"
                         )}
-                      >
-                        <MediaItem src={url} alt={`Thumbnail ${index + 1}`} className="object-cover h-full w-full" />
-                      </button>
+                      />
                     ))}
                   </div>
                   <ScrollBar orientation="horizontal" />
@@ -287,50 +355,38 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
             )}
 
             {/* Options */}
-            {(colors.length > 0 || sizes.length > 0 || otherOptions.length > 0) && (
+            {(options.length > 0 || otherOptions.length > 0) && (
               <div className="space-y-4 pt-2">
-                {colors.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm text-gray-700">Colors</Label>
+                {options.length > 0 && options.map((opt) => (
+                  <div key={opt.id} className="space-y-2">
+                    <Label className="text-sm text-gray-700 capitalize">{opt.name}</Label>
                     <div className="flex flex-wrap gap-2">
-                      {colors.map(color => (
-                        <Button
-                          key={color}
-                          variant="outline"
-                          onClick={() => setSelectedColor(color)}
-                          className={cn(
-                            "capitalize text-sm h-9 w-9 rounded-full p-0 border-2",
-                            selectedColor === color ? "border-red-500" : "border-gray-300",
-                            "hover:border-red-500"
-                          )}
-                          style={{ backgroundColor: color.toLowerCase() }}
-                        >
-                          <span className="sr-only">{color}</span>
-                        </Button>
-                      ))}
+                      {opt.values.map(val => {
+                        const isOOS = val.inventory <= 0 || !val.is_active;
+                        const isSelected = selectedValues[opt.name] === val.value;
+                        const diffText = val.price_difference ? `(${val.price_difference > 0 ? '+' : ''}${formatCurrency(val.price_difference, shopDetails?.currency)})` : '';
+                        return (
+                          <Button
+                            key={val.id || val.value}
+                            variant={isSelected ? "default" : "outline"}
+                            onClick={() => !isOOS && setSelectedValues(prev => ({ ...prev, [opt.name]: val.value }))}
+                            disabled={isOOS}
+                            className={cn(
+                              "text-sm h-9 px-3",
+                              isSelected ? "bg-red-500 text-white border-red-500 hover:bg-red-600" : "bg-gray-50 text-gray-800 border-gray-300 hover:bg-gray-100",
+                              isOOS && "opacity-60 cursor-not-allowed"
+                            )}
+                            title={isOOS ? "Out of stock / inactive" : undefined}
+                          >
+                            <span className="capitalize">{val.value}</span>
+                            {diffText && <span className="ml-1 text-xs opacity-80">{diffText}</span>}
+                            <span className="ml-2 text-[10px] opacity-70">{val.inventory}</span>
+                          </Button>
+                        );
+                      })}
                     </div>
                   </div>
-                )}
-                {sizes.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm text-gray-700">Sizes</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {sizes.map(size => (
-                        <Button
-                          key={size}
-                          variant={selectedSize === size ? "default" : "outline"}
-                          onClick={() => setSelectedSize(size)}
-                          className={cn(
-                            "text-sm border-gray-300 bg-gray-50 text-gray-800 hover:bg-gray-100",
-                            selectedSize === size && "bg-red-500 text-white hover:bg-red-600 border-red-500"
-                          )}
-                        >
-                          {size}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                ))}
                 {otherOptions.length > 0 && (
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                     {otherOptions.map(([key, value]) => {

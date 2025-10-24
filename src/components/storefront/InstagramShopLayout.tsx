@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { Outlet, useSearchParams, useLocation } from 'react-router-dom'; // Import useSearchParams
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import { InstagramShopHeader } from './InstagramShopHeader'; // Custom header
