@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { MessageSquareWarning } from "lucide-react";
 import { PageTitleProvider } from "./contexts/PageTitleContext";
 import { AppearanceProvider } from "./contexts/AppearanceContext";
+import { CurrencyProvider } from "./contexts/CurrencyContext";
 import { StorefrontCartModal } from "./components/storefront/StorefrontCartModal"; // Ensure this is imported for /shop routes
 
 const queryClient = new QueryClient();
@@ -150,14 +151,16 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <PageTitleProvider>
-            <ShopProvider>
-              <IntegrationProvider>
-                <SyncProvider>
-                  <AppContent />
-                  <IntegrationPrompt />
-                </SyncProvider>
-              </IntegrationProvider>
-            </ShopProvider>
+            <CurrencyProvider>
+              <ShopProvider>
+                <IntegrationProvider>
+                  <SyncProvider>
+                    <AppContent />
+                    <IntegrationPrompt />
+                  </SyncProvider>
+                </IntegrationProvider>
+              </ShopProvider>
+            </CurrencyProvider>
           </PageTitleProvider>
         </BrowserRouter>
       </TooltipProvider>

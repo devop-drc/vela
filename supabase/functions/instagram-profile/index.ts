@@ -82,7 +82,6 @@ serve(async (req) => {
     }
     const igProfileData = await igProfileResponse.json();
 
-    console.log(`Instagram Profile Data fetched for user ${user_id}:`, igProfileData);
 
     const shopData = {
       shop_name: igProfileData.name || igAccount.name,

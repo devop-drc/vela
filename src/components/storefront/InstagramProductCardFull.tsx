@@ -74,6 +74,9 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     const [api, setApi] = useState<CarouselApi>();
     const [currentSlide, setCurrentSlide] = useState(0);
 
+    const [isBuyNowDrawerOpen, setIsBuyNowDrawerOpen] = useState(false);
+    const [buyNowProduct, setBuyNowProduct] = useState<CartItem | null>(null);
+
     useEffect(() => {
       if (!api) return;
       setCurrentSlide(api.selectedScrollSnap());
@@ -200,16 +203,15 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
       const selectedOptions: { [key: string]: string | string[] } = { ...selectedValues };
 
+      const mediaType: 'image' | 'video' | undefined = product.media_type === 'video' ? 'video' : (product.media_type === 'image' ? 'image' : undefined);
       addToCart({
         productId: product.id,
         name: product.name,
         price: hasDiscount ? discountedPrice : originalDisplayPrice,
         originalPrice: originalDisplayPrice,
-        isDiscounted: hasDiscount,
         currency: shopDetails.currency || 'USD',
         media_url: product.media_url,
-        media_type: product.media_type,
-        slug: shopDetails.slug,
+        media_type: mediaType,
         selectedOptions: Object.keys(selectedOptions).length > 0 ? selectedOptions : undefined,
         pricing_type: product.pricing_type,
         product_type: product.product_type,
@@ -229,6 +231,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
       const selectedOptions: { [key: string]: string | string[] } = { ...selectedValues };
 
+      const mediaType: 'image' | 'video' | undefined = product.media_type === 'video' ? 'video' : (product.media_type === 'image' ? 'image' : undefined);
       const itemToBuy: CartItem = {
         productId: product.id,
         name: product.name,
@@ -237,8 +240,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
         isDiscounted: hasDiscount,
         currency: shopDetails.currency || 'EUR',
         media_url: product.media_url,
-        media_type: product.media_type,
-        slug: shopDetails.slug,
+        media_type: mediaType,
         selectedOptions: Object.keys(selectedOptions).length > 0 ? selectedOptions : undefined,
         pricing_type: product.pricing_type,
         product_type: product.product_type,

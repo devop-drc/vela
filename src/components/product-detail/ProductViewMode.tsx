@@ -53,6 +53,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                     id,
                     name,
                     option_values (
+                        id,
                         value,
                         price_difference,
                         inventory,
@@ -104,7 +105,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 <Carousel className="w-full rounded-lg overflow-hidden group">
                   <CarouselContent>
                     {mediaItems.map((url: string, index: number) => (
-                      <CarouselItem key={index}>
+                      <CarouselItem key={url || `media-${index}`}>
                         <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
                           <MediaItem src={url} alt={`${product?.name ?? 'Product'} - image ${index + 1}`} />
                         </div>
@@ -131,7 +132,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 <p className="text-base text-muted-foreground flex-1">{product.caption || 'No description provided.'}</p>
                 {product.tags?.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {product.tags.map((t: string, i: number) => <Badge key={i} variant="secondary">{t}</Badge>)}
+                    {product.tags.map((t: string, i: number) => <Badge key={`${t}-${i}`} variant="secondary">{t}</Badge>)}
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-4 pt-2">

@@ -206,7 +206,11 @@ export const InstagramFilterDrawer = ({
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose} shouldScaleBackground>
-      <DrawerContent side="bottom" className="max-h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl">
+      <DrawerContent
+        side="bottom"
+        className="p-0 flex flex-col bg-white text-black rounded-t-xl"
+        style={{ maxHeight: 'calc(100dvh - var(--sat))' }}
+      >
         <DrawerHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
           <DrawerTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
             <Filter className="h-6 w-6 text-red-500" />
@@ -215,7 +219,7 @@ export const InstagramFilterDrawer = ({
           {/* Removed X button */}
         </DrawerHeader>
 
-        <ScrollArea className="flex-1 px-4 py-6">
+        <ScrollArea className="flex-1 px-4 py-6" style={{ overscrollBehavior: 'contain' }}>
           <Accordion type="multiple" defaultValue={["Categories", "Price Range"]} className="w-full">
             {uniqueCategories.length > 0 && (
               <FilterSection title="Categories" icon={Info} filterKey="categories">
@@ -302,7 +306,7 @@ export const InstagramFilterDrawer = ({
             })}
           </Accordion>
         </ScrollArea>
-        <DrawerFooter className="p-4 border-t border-gray-200 flex-shrink-0">
+        <DrawerFooter className="p-4 border-t border-gray-200 flex-shrink-0" style={{ paddingBottom: 'calc(1rem + var(--sab))' }}>
           <Button variant="outline" onClick={handleClearAll} className="flex-1 text-base bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200">Clear All</Button>
           <Button onClick={onClose} className="flex-1 text-base bg-red-500 hover:bg-red-600 text-white">Apply Filters</Button>
         </DrawerFooter>

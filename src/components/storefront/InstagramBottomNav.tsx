@@ -30,7 +30,11 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 50 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center w-full h-[70px]" // Use CSS variable for height
+      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center w-full"
+      style={{
+        height: `calc(var(--instagram-bottom-nav-height) + var(--sab))`,
+        paddingBottom: 'var(--sab)'
+      }}
     >
       <nav className="bg-white text-gray-800 border-t border-gray-200 shadow-lg h-full w-full max-w-md">
         <div className="flex justify-around items-center h-full">

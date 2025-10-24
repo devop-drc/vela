@@ -210,7 +210,6 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
           repeat_interval: payload.repeat_interval,
         };
 
-        console.log("PromotionEditorModal: Announcement Payload being sent:", announcementPayload); // NEW LOG
 
         const { data: existingAnnouncement, error: fetchAnnounceError } = await supabase
           .from('marquee_elements')

@@ -238,12 +238,12 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
           shopSlug={productToQuickView.shopSlug}
         />
       )}
-
       <Drawer open={isOpen} onOpenChange={onClose} shouldScaleBackground>
         <DrawerContent
           side="bottom"
-          className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl"
-          aria-describedby="instagram-cart-description" // Added aria-describedby
+          className="p-0 flex flex-col bg-white text-black rounded-t-xl"
+          style={{ maxHeight: 'calc(100dvh - var(--sat))' }}
+          aria-describedby="instagram-cart-description"
         >
           <DrawerHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
             <DrawerTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
@@ -255,7 +255,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
             {checkoutStep === 'cart' ? 'Review your items, then proceed to checkout.' : 'Enter your details to complete your order.'}
           </span>
 
-          <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-hidden flex flex-col" style={{ overscrollBehavior: 'contain' }}>
             {(checkoutStep === 'cart' && !initialCartItems) ? (
               <>
                 {currentCartItems.length === 0 && savedItems.length === 0 ? (
@@ -273,7 +273,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                     <Button onClick={onClose} className="text-base bg-red-500 hover:bg-red-600 text-white">Start Shopping</Button>
                   </motion.div>
                 ) : (
-                  <ScrollArea className="flex-1">
+                  <ScrollArea className="flex-1" style={{ overscrollBehavior: 'contain' }}>
                     <div>
                       {currentCartItems.length > 0 && (
                         <Accordion type="single" collapsible defaultValue="items-in-cart" className="w-full">
@@ -527,7 +527,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
               />
             )}
           </div>
-          <DrawerFooter className="p-4 border-t border-gray-200 flex-shrink-0">
+          <DrawerFooter className="p-4 border-t border-gray-200 flex-shrink-0" style={{ paddingBottom: 'calc(1rem + var(--sab))' }}>
             <div className="flex flex-col w-full space-y-2">
               <div className="flex justify-between text-sm text-gray-800">
                 <span>Subtotal ({totalItems} items):</span>

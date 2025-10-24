@@ -28,7 +28,6 @@ interface InstagramPost {
 
 const processUser = async (supabaseAdmin: SupabaseClient, integration: Integration) => {
   const { user_id, access_token } = integration;
-  console.log(`Starting sync for user: ${user_id}`);
 
   try {
     // Step 1: Get business ID
@@ -53,7 +52,6 @@ const processUser = async (supabaseAdmin: SupabaseClient, integration: Integrati
     
     const allPosts = postsData.posts || [];
     if (allPosts.length === 0) {
-      console.log(`No posts found for user ${user_id}. Sync complete.`);
       return;
     }
 
@@ -67,7 +65,6 @@ const processUser = async (supabaseAdmin: SupabaseClient, integration: Integrati
 
     // Step 4: Parallel analysis of new posts
     if (newPosts.length > 0) {
-      console.log(`Found ${newPosts.length} new posts for user ${user_id}. Analyzing...`);
       const analysisPromises = newPosts
         .filter(post => post.caption)
         .map(post => 
@@ -91,7 +88,6 @@ const processUser = async (supabaseAdmin: SupabaseClient, integration: Integrati
       if (productsToInsert.length > 0) {
         const { error: insertError } = await supabaseAdmin.from('products').insert(productsToInsert);
         if (insertError) console.error(`Failed to insert products for user ${user_id}:`, insertError);
-        else console.log(`Successfully inserted ${productsToInsert.length} new products for user ${user_id}.`);
       }
     }
 
@@ -103,10 +99,8 @@ const processUser = async (supabaseAdmin: SupabaseClient, integration: Integrati
         const idsToUpdate = productsToArchive.map(p => p.id);
         const { error: updateError } = await supabaseAdmin.from('products').update({ status: 'Draft' }).in('id', idsToUpdate);
         if (updateError) console.error(`Failed to archive products for user ${user_id}:`, updateError);
-        else console.log(`Archived ${idsToUpdate.length} products for user ${user_id}.`);
     }
 
-    console.log(`Sync complete for user: ${user_id}`);
 
   } catch (error) {
     console.error(`Error processing user ${user_id}:`, error.message);
@@ -135,8 +129,6 @@ serve(async (req) => {
     const { data: integrations, error } = await supabaseAdmin.from('integrations').select('*').eq('provider', 'facebook');
     if (error) throw error;
 
-    console.log(`Found ${integrations.length} integrations to process.`);
-    
     // Process each user's sync sequentially to avoid overwhelming the system,
     // but the analysis for each user's posts will be parallel.
     for (const integration of integrations) {

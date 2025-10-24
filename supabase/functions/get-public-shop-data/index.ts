@@ -120,7 +120,6 @@ serve(async (req) => {
 
     const businessId = shopDetails.businesses.id;
     const userId = shopDetails.businesses.user_id;
-    console.log(`[get-public-shop-data] Fetching data for shopSlug: ${shopSlug}, userId: ${userId}, businessId: ${businessId}`);
 
     // Fetch design settings for the business owner
     const { data: designSettings, error: designSettingsError } = await supabaseAdmin

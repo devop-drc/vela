@@ -34,8 +34,6 @@ serve(async (req) => {
     }
 
     if (cachedData && (new Date().getTime() - new Date(cachedData.last_fetched_at).getTime()) < CACHE_DURATION_MS) {
-      // 2. Return cached data if it's fresh
-      console.log("Exchange Rate Function: Returning cached ALL-based rates.");
       return new Response(JSON.stringify({ rates: cachedData.rates, source: 'cache' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -48,7 +46,6 @@ serve(async (req) => {
       throw new Error("Exchange Rate API key is not configured in Supabase secrets.");
     }
 
-    console.log("Exchange Rate Function: Fetching new USD-based rates from API.");
     const response = await fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/latest/USD`);
     if (!response.ok) {
       throw new Error(`Failed to fetch exchange rates. Status: ${response.status}`);
@@ -64,7 +61,6 @@ serve(async (req) => {
     // Ensure ALL is present, add fallback if needed
     if (!usdBasedRates['ALL']) {
       usdBasedRates['ALL'] = 93.5; // Fallback rate: 1 USD = 93.5 ALL
-      console.log("Exchange Rate Function: Added fallback rate for ALL (Albanian Lek) to USD-based rates.");
     }
 
     // 4. Convert USD-based rates to ALL-based rates
@@ -78,8 +74,6 @@ serve(async (req) => {
       }
     }
     allBasedRates['ALL'] = 1; // 1 ALL = 1 ALL
-
-    console.log("Exchange Rate Function: Converted to ALL-based rates:", allBasedRates);
 
     // 5. Update the cache in the database
     const { error: upsertError } = await supabaseAdmin

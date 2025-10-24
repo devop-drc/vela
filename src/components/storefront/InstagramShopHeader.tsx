@@ -50,7 +50,7 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, isProducts
     <header className={cn(
       "sticky top-0 left-0 right-0 z-40 transition-all duration-200",
       "bg-white text-gray-800 border-b border-gray-200"
-    )}>
+    )} style={{ top: 'var(--sat)' }}>
       {isProfilePage ? (
         <div className="container flex h-full items-center justify-between px-4 py-3">
           <div className="flex items-center space-x-2 flex-shrink-0">

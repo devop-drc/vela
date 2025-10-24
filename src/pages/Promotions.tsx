@@ -78,7 +78,6 @@ const Promotions = () => {
   }, []);
 
   useEffect(() => {
-    console.log("Promotions Page: Storefront Announcements state:", storefrontAnnouncements); // NEW LOG
   }, [storefrontAnnouncements]);
 
   const handlePromotionSave = () => {

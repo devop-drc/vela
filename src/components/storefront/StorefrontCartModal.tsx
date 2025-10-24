@@ -41,14 +41,8 @@ export const StorefrontCartModal = ({ isOpen, onClose }: StorefrontCartModalProp
 
   useEffect(() => {
     if (isOpen && cartItems.length > 0) {
-      console.log("--- Cart Modal Currency Debugging ---");
-      console.log("Shop Details Currency:", shopDetails?.currency);
       cartItems.forEach(item => {
-        console.log(`Product ID: ${item.productId}, Name: ${item.name}`);
-        console.log(`  Item Price (from cart state): ${item.price} ${item.currency}`);
-        console.log(`  Converted Price (for display): ${convertCurrency(item.price, item.currency, shopDetails?.currency)} ${shopDetails?.currency}`);
       });
-      console.log("--- End Debugging ---");
     }
   }, [isOpen, cartItems, shopDetails, convertCurrency]);
 

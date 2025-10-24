@@ -8,8 +8,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, Grid3X3, Package, Banknote, Tag, Search, ChevronDown, Settings2, Check } from "lucide-react";
+import { Plus, Trash2, Grid3X3, Package, Banknote, Tag, Search, ChevronDown, Settings2, Check, GripVertical } from "lucide-react";
+import { formatCurrency } from "@/lib/formatters";
 
 export type OptionValue = { id?: string; value: string; price_difference: number; is_active: boolean; is_default: boolean; inventory?: number };
 export type ProductOption = { id?: string; name: string; values: OptionValue[]; display_order?: number };
@@ -51,6 +53,9 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<ProductOption[]>([]);
   const [variants, setVariants] = useState<VariantRow[]>([]);
+  // Track initially loaded IDs for delete detection
+  const initialOptionIdsRef = React.useRef<Set<string>>(new Set());
+  const initialValueIdsRef = React.useRef<Set<string>>(new Set());
 
   // Load initial options and variants
   React.useEffect(() => {
@@ -62,7 +67,8 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
         .from('product_options')
         .select(`id, name, display_order, option_values(id, value, price_difference, is_active, is_default, inventory, display_order)`) // inventory stored on value for preview
         .eq('product_id', productId)
-        .order('display_order');
+        .order('display_order')
+        .order('display_order', { foreignTable: 'option_values' });
       const mapped: ProductOption[] = (optRows || []).map((o: any) => ({
         id: o.id,
         name: o.name,
@@ -78,6 +84,11 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
       const mappedVars: VariantRow[] = (varRows||[]).map((r:any)=>({ id: r.id, product_id: r.product_id, combination_key: r.combination_key, option_values: r.option_values||{}, price_difference: r.price_difference||0, inventory: r.inventory??0, is_active: r.is_active??true, is_default: r.is_default??false, sku: r.sku||null }));
 
       setOptions(mapped);
+      // capture initial ids
+      initialOptionIdsRef.current = new Set((optRows||[]).map((o:any)=>o.id).filter(Boolean));
+      const valIds: string[] = [];
+      (optRows||[]).forEach((o:any)=> (o.option_values||[]).forEach((v:any)=> v.id && valIds.push(v.id)));
+      initialValueIdsRef.current = new Set(valIds);
       setVariants(mappedVars);
       setLoading(false);
     };
@@ -89,6 +100,33 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
   const addValue = (idx: number) => setOptions(prev => { const next=[...prev]; next[idx] = { ...next[idx], values: [...next[idx].values, { value: '', price_difference: 0, is_active: true, is_default: next[idx].values.length===0 }]}; return next; });
   const removeOption = (idx: number) => setOptions(prev => prev.filter((_,i)=>i!==idx));
   const removeValue = (iOpt: number, iVal: number) => setOptions(prev => { const next=[...prev]; next[iOpt] = { ...next[iOpt], values: next[iOpt].values.filter((_,j)=>j!==iVal) }; return next; });
+  // Drag & drop reordering
+  const [dragOptIndex, setDragOptIndex] = useState<number | null>(null);
+  const [dragVal, setDragVal] = useState<{ opt: number; idx: number } | null>(null);
+  const onOptionDragStart = (idx: number) => setDragOptIndex(idx);
+  const onOptionDrop = (idx: number) => {
+    if (dragOptIndex === null || dragOptIndex === idx) return;
+    setOptions(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(dragOptIndex, 1);
+      next.splice(idx, 0, moved);
+      return next;
+    });
+    setDragOptIndex(null);
+  };
+  const onValueDragStart = (optIdx: number, valIdx: number) => setDragVal({ opt: optIdx, idx: valIdx });
+  const onValueDrop = (optIdx: number, valIdx: number) => {
+    if (!dragVal || dragVal.opt !== optIdx || dragVal.idx === valIdx) return;
+    setOptions(prev => {
+      const next = [...prev];
+      const vals = [...next[optIdx].values];
+      const [moved] = vals.splice(dragVal.idx, 1);
+      vals.splice(valIdx, 0, moved);
+      next[optIdx] = { ...next[optIdx], values: vals };
+      return next;
+    });
+    setDragVal(null);
+  };
 
   // Build combinations from active values
   const activeOptionNames = useMemo(()=> options.filter(o=>o.values.length>0).map(o=>o.name), [options]);
@@ -135,12 +173,17 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
       if (sortKey === 'inventory') return (sortDir==='asc'?1:-1) * cmp(a.inventory, b.inventory);
       if (sortKey === 'sku') return (sortDir==='asc'?1:-1) * cmp(a.sku||'', b.sku||'');
       if (sortKey === 'price') {
-        const pa = rowDisplayPrice(a); const pb = rowDisplayPrice(b);
+        const pa = rowDisplayPrice(a) ?? 0; const pb = rowDisplayPrice(b) ?? 0;
         return (sortDir==='asc'?1:-1) * cmp(pa, pb);
       }
       if (sortKey.startsWith('opt:')) {
         const name = sortKey.slice(4);
-        return (sortDir==='asc'?1:-1) * cmp(a.option_values[name]||'', b.option_values[name]||'');
+        const av = a.option_values[name]||'';
+        const bv = b.option_values[name]||'';
+        const an = parseFloat(av as string);
+        const bn = parseFloat(bv as string);
+        const bothNumeric = !isNaN(an) && !isNaN(bn);
+        return (sortDir==='asc'?1:-1) * (bothNumeric ? cmp(an, bn) : cmp((av as string).toLowerCase(), (bv as string).toLowerCase()));
       }
       return 0;
     });
@@ -171,42 +214,67 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
 
   // Save handler
   const handleSave = useCallback(async ()=>{
+    // Require auth user for tables with NOT NULL user_id
+    const { data: { user } = {} } = await supabase.auth.getUser();
+    if (!user) throw new Error("You're not signed in. Please sign in to save options and variants.");
     // 1) Save options and values
     // Upsert options
-    const { data: { user } = {} } = await supabase.auth.getUser();
-    const optionPayload = options.map((o, idx) => ({ id: o.id, product_id: productId, name: o.name, display_order: idx, ...(user ? { user_id: user.id } : {}) }));
-    const cleanOptions = optionPayload.map(o=>{ const c:any={...o}; if(!c.id) delete c.id; return c; });
-    // Explicit onConflict for id; select ids back for mapping
-    let { data: upsertedOptions, error: optErr } = await supabase.from('product_options').upsert(cleanOptions, { onConflict: 'id' }).select('id, name');
-    if (optErr && user) {
-      // Retry without user_id field in case the column doesn't exist
-      const retryOptions = options.map((o, idx) => ({ id: o.id, product_id: productId, name: o.name, display_order: idx }));
-      const retryClean = retryOptions.map(o=>{ const c:any={...o}; if(!c.id) delete c.id; return c; });
-      const retry = await supabase.from('product_options').upsert(retryClean, { onConflict: 'id' }).select('id, name');
-      upsertedOptions = retry.data as any;
-      optErr = retry.error as any;
+    // Split: updates (with id) vs inserts (without id)
+    const toUpdateOpts = options.filter(o=>!!o.id).map((o, idx)=> ({ id: o.id!, product_id: productId, name: o.name, display_order: idx }));
+    const toInsertOpts = options.filter(o=>!o.id).map((o, idx)=> ({ product_id: productId, name: o.name, display_order: idx }));
+
+    if (toUpdateOpts.length) {
+      const { error } = await supabase.from('product_options').upsert(toUpdateOpts, { onConflict: 'id' });
+      if (error) throw error;
     }
-    if (optErr) throw optErr;
+    let insertedOpts: Array<{ id: string; name: string }> = [];
+    if (toInsertOpts.length) {
+      // Use upsert on unique (product_id, name) to avoid duplicate conflicts
+      const { data, error } = await supabase.from('product_options').upsert(toInsertOpts, { onConflict: 'product_id,name' }).select('id, name');
+      if (error) throw error;
+      insertedOpts = data as Array<{ id: string; name: string }>;
+    }
+    const upsertedOptions = [
+      ...options.filter(o=>!!o.id).map(o=> ({ id: o.id!, name: o.name })),
+      ...insertedOpts,
+    ];
     const idMap: Record<string,string> = {};
     upsertedOptions?.forEach((r: { id: string; name: string })=>{ idMap[r.name]=r.id });
 
     // Upsert values
-    const valueRows: Array<{ id?: string; option_id: string; value: string; price_difference: number; is_active: boolean; is_default: boolean; display_order: number; product_id?: string; user_id?: string }>= [];
+    const valueRows: Array<{ id?: string; option_id: string; value: string; price_difference: number; is_active: boolean; is_default: boolean; display_order: number }>= [];
     options.forEach((o, idx) => {
       const option_id = idMap[o.name] || o.id;
       o.values.forEach((v, vidx) => {
-        valueRows.push({ id: v.id, option_id: option_id as string, value: v.value, price_difference: v.price_difference, is_active: v.is_active, is_default: v.is_default, display_order: vidx, ...(user ? { user_id: user.id } : {}), product_id: productId });
+        valueRows.push({ id: v.id, option_id: option_id as string, value: v.value, price_difference: v.price_difference, is_active: v.is_active, is_default: v.is_default, display_order: vidx });
       });
     });
-    const cleanValues = valueRows.map(v=>{ const c:any={...v}; if(!c.id) delete c.id; return c; });
-    let { error: valErr } = await supabase.from('option_values').upsert(cleanValues, { onConflict: 'id' });
-    if (valErr && user) {
-      // Retry without user_id/product_id columns if RLS/schema mismatches
-      const retryValues = valueRows.map(({ id, option_id, value, price_difference, is_active, is_default, display_order }) => ({ id, option_id, value, price_difference, is_active, is_default, display_order })) as any[];
-      const retry = await supabase.from('option_values').upsert(retryValues, { onConflict: 'id' });
-      valErr = retry.error as any;
+    // Deletes: values removed
+    const currentValueIds = new Set(valueRows.map(v=>v.id).filter(Boolean) as string[]);
+    const toDeleteValueIds = Array.from(initialValueIdsRef.current).filter(id => !currentValueIds.has(id));
+    if (toDeleteValueIds.length) {
+      const { error } = await supabase.from('option_values').delete().in('id', toDeleteValueIds);
+      if (error) throw error;
     }
-    if (valErr) throw valErr;
+    const toUpdateVals = valueRows.filter(v=>!!v.id) as Array<Required<typeof valueRows[number]>>;
+    const toInsertVals = valueRows.filter(v=>!v.id).map(({ id, ...rest })=> rest);
+    if (toUpdateVals.length) {
+      const { error } = await supabase.from('option_values').upsert(toUpdateVals as any[], { onConflict: 'id' });
+      if (error) throw error;
+    }
+    if (toInsertVals.length) {
+      // Avoid duplicates by upserting on (option_id, value)
+      const { error } = await supabase.from('option_values').upsert(toInsertVals as any[], { onConflict: 'option_id,value' });
+      if (error) throw error;
+    }
+
+    // Deletes: options removed (after values to avoid FK issues)
+    const currentOptionIds = new Set(Object.values(idMap));
+    const toDeleteOptionIds = Array.from(initialOptionIdsRef.current).filter(id => !currentOptionIds.has(id));
+    if (toDeleteOptionIds.length) {
+      const { error } = await supabase.from('product_options').delete().in('id', toDeleteOptionIds);
+      if (error) throw error;
+    }
 
     // 2) Save variants: enforce single default
     const orderedRows = [...rows];
@@ -224,17 +292,20 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
       is_active: r.is_active,
       is_default: r.is_default,
       sku: r.sku || autoSku('SKU', r.option_values),
-      ...(user ? { user_id: user.id } : {}),
     }));
     const cleanVariants = variantPayload.map(v=>{ const c:any={...v}; if(!c.id) delete c.id; return c; });
     let { error: varErr } = await supabase.from('product_variants').upsert(cleanVariants, { onConflict: 'id' });
     if (varErr && user) {
-      const retryVariants = orderedRows.map(r => ({ id: r.id, product_id: r.product_id, combination_key: r.combination_key, option_values: r.option_values, price_difference: r.price_difference, inventory: r.inventory, is_active: r.is_active, is_default: r.is_default, sku: r.sku || autoSku('SKU', r.option_values) }));
+      const retryVariantsRaw = orderedRows.map(r => ({ id: r.id, product_id: r.product_id, combination_key: r.combination_key, option_values: r.option_values, price_difference: r.price_difference, inventory: r.inventory, is_active: r.is_active, is_default: r.is_default, sku: r.sku || autoSku('SKU', r.option_values) }));
+      const retryVariants = retryVariantsRaw.map(v=>{ const c:any={...v}; if(!c.id) delete c.id; return c; });
       const retry = await supabase.from('product_variants').upsert(retryVariants as any[], { onConflict: 'id' });
       varErr = retry.error as any;
     }
     if (varErr) throw varErr;
 
+    // refresh initial IDs after successful save
+    initialOptionIdsRef.current = new Set(currentOptionIds);
+    initialValueIdsRef.current = new Set((await (async()=>{ return valueRows.map(v=>v.id).filter(Boolean) as string[]; })()));
     return true;
   }, [options, rows, productId, convertCurrency, displayCurrency, basePriceALL]);
 
@@ -243,63 +314,106 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
   // Price computations for display
   const rowDisplayPrice = (r: VariantRow) => {
     // Sum price diffs by matching selected values in options list
-    let deltaALL = 0;
-    Object.entries(r.option_values).forEach(([optName, val]) => {
-      const opt = options.find(o=>o.name===optName);
-      const v = opt?.values.find(x=>x.value===val);
-      if (v) deltaALL += v.price_difference||0;
-    });
-    const totalALL = basePriceALL + deltaALL + (r.price_difference||0);
-    return convertCurrency(totalALL, 'ALL', displayCurrency);
+    try {
+      let deltaALL = 0;
+      Object.entries(r.option_values||{}).forEach(([optName, val]) => {
+        const opt = options.find(o=>o.name===optName);
+        const v = opt?.values.find(x=>x.value===val);
+        if (v) deltaALL += v.price_difference||0;
+      });
+      const totalALL = (basePriceALL||0) + deltaALL + (r.price_difference||0);
+      const converted = convertCurrency(totalALL, 'ALL', displayCurrency);
+      return isFinite(converted) ? converted : 0;
+    } catch {
+      return 0;
+    }
   };
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Settings2 className="h-5 w-5" /> Options</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
+      <Tabs defaultValue="options" className="w-full">
+        <TabsList className="grid grid-cols-2 w-full md:w-auto">
+          <TabsTrigger value="options" className="text-sm">Options</TabsTrigger>
+          <TabsTrigger value="variants" className="text-sm">Variants</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="options">
+          <Card>
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Settings2 className="h-5 w-5" /> Options</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
           {options.map((opt, idx)=>(
-            <div key={idx} className="border rounded-md p-3 space-y-3">
+            <div key={idx}
+                 className="border rounded-md p-3 space-y-3 bg-muted/20"
+                 draggable
+                 onDragStart={()=>onOptionDragStart(idx)}
+                 onDragOver={(e)=>e.preventDefault()}
+                 onDrop={()=>onOptionDrop(idx)}
+            >
               <div className="flex items-center gap-2">
+                <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
                 <Label className="w-20">Name</Label>
                 <div className="relative max-w-xs flex-1">
                   <Tag className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input value={opt.name} onChange={(e)=> setOptions(prev=>{ const next=[...prev]; next[idx] = { ...next[idx], name: e.target.value }; return next; })} className="pl-8" placeholder="e.g., Color" />
                 </div>
-                <Button variant="ghost" size="icon" onClick={()=>removeOption(idx)} title="Delete option"><Trash2 className="h-4 w-4" /></Button>
+                <Button type="button" variant="ghost" size="icon" onClick={()=>removeOption(idx)} title="Delete option"><Trash2 className="h-4 w-4" /></Button>
               </div>
               <div className="space-y-2">
                 {opt.values.map((v, vidx)=>(
-                  <div key={vidx} className="flex items-center gap-2">
+                  <div key={vidx}
+                       className="flex items-center gap-2"
+                       draggable
+                       onDragStart={()=>onValueDragStart(idx, vidx)}
+                       onDragOver={(e)=>e.preventDefault()}
+                       onDrop={()=>onValueDrop(idx, vidx)}
+                  >
+                    <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
                     <div className="relative max-w-[220px] w-full">
                       <Tag className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input placeholder="Value" value={v.value} onChange={(e)=> setOptions(prev=>{ const next=[...prev]; const vals=[...next[idx].values]; vals[vidx] = { ...vals[vidx], value: e.target.value }; next[idx] = { ...next[idx], values: vals }; return next; })} className="pl-8" />
                     </div>
                     <div className="relative w-44">
                       <Banknote className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input type="number" step="0.01" placeholder="Price Δ (ALL)" value={v.price_difference} onChange={(e)=> setOptions(prev=>{ const next=[...prev]; const vals=[...next[idx].values]; vals[vidx] = { ...vals[vidx], price_difference: parseFloat(e.target.value||'0') }; next[idx] = { ...next[idx], values: vals }; return next; })} className="pl-8" />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder={`Price Δ (${displayCurrency})`}
+                        value={convertCurrency(v.price_difference||0, 'ALL', displayCurrency)}
+                        onChange={(e)=> setOptions(prev=>{
+                          const next=[...prev];
+                          const vals=[...next[idx].values];
+                          const entered = parseFloat(e.target.value||'0');
+                          const backToALL = convertCurrency(entered, displayCurrency, 'ALL');
+                          vals[vidx] = { ...vals[vidx], price_difference: isFinite(backToALL) ? backToALL : 0 };
+                          next[idx] = { ...next[idx], values: vals };
+                          return next;
+                        })}
+                        className="pl-8"
+                      />
                     </div>
                     <Switch checked={v.is_active} onCheckedChange={(c)=> setOptions(prev=>{ const next=[...prev]; const vals=[...next[idx].values]; vals[vidx] = { ...vals[vidx], is_active: !!c }; next[idx] = { ...next[idx], values: vals }; return next; })} />
                     <Label>Active</Label>
                     <Checkbox checked={v.is_default} onCheckedChange={(c)=> setOptions(prev=>{ const next=[...prev]; const vals=next[idx].values.map((vv, i)=> ({ ...vv, is_default: i===vidx })); next[idx] = { ...next[idx], values: vals }; return next; })} />
                     <Label>Default</Label>
-                    <Button variant="ghost" size="icon" onClick={()=>removeValue(idx, vidx)} title="Delete value"><Trash2 className="h-4 w-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" onClick={()=>removeValue(idx, vidx)} title="Delete value"><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
-                <Button size="sm" variant="outline" onClick={()=>addValue(idx)}><Plus className="h-4 w-4 mr-1" />Add value</Button>
+                <Button type="button" size="sm" variant="outline" onClick={()=>addValue(idx)}><Plus className="h-4 w-4 mr-1" />Add value</Button>
               </div>
             </div>
           ))}
-          <Button onClick={addOption}><Plus className="h-4 w-4 mr-1" />Add option</Button>
-          <div className="text-xs text-muted-foreground">Enter price differences in ALL. Variants table will reflect total in {displayCurrency}.</div>
-        </CardContent>
-      </Card>
+          <Button type="button" onClick={addOption}><Plus className="h-4 w-4 mr-1" />Add option</Button>
+          <div className="text-xs text-muted-foreground">Enter price differences in ALL. Variants tab will reflect totals in {displayCurrency}.</div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2"><Grid3X3 className="h-5 w-5" /> Variants</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+        <TabsContent value="variants">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><Grid3X3 className="h-5 w-5" /> Variants</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -334,11 +448,13 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
                 </SelectContent>
               </Select>
             </div>
-            <div className="ml-auto flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={()=>bulkSet({ is_active: true })}>Activate</Button>
-              <Button variant="outline" size="sm" onClick={()=>bulkSet({ is_active: false })}>Deactivate</Button>
-              <Button variant="outline" size="sm" onClick={()=>bulkSet({ inventory: 0 })}>Set Inv 0</Button>
-            </div>
+            {Object.values(selected).some(Boolean) && (
+              <div className="ml-auto flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={()=>bulkSet({ is_active: true })}>Activate</Button>
+                <Button variant="outline" size="sm" onClick={()=>bulkSet({ is_active: false })}>Deactivate</Button>
+                <Button variant="outline" size="sm" onClick={()=>bulkSet({ inventory: 0 })}>Set Inv 0</Button>
+              </div>
+            )}
           </div>
 
           <div className="overflow-auto">
@@ -369,7 +485,7 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
                       <TableCell className="w-10"><Checkbox checked={!!selected[r.combination_key]} onCheckedChange={(c)=> setSelected(prev=>({ ...prev, [r.combination_key]: !!c }))} /></TableCell>
                       {activeOptionNames.map(n=> (<TableCell key={n} className="capitalize">{r.option_values[n]}</TableCell>))}
                       <TableCell className="w-[110px]"><Input type="number" min={0} value={r.inventory} onChange={(e)=>{ const val=parseInt(e.target.value||'0',10); setVariants(prev=>{ const next=[...prev]; const i=next.findIndex(v=>v.combination_key===r.combination_key); if(i>=0) next[i]={...next[i], inventory: val}; else next.push({...r, inventory: val}); return next; }); }} /></TableCell>
-                      <TableCell className="w-[140px] font-medium">{priceDisp.toFixed(2)} {displayCurrency}</TableCell>
+                      <TableCell className="w-[160px] font-medium">{formatCurrency(priceDisp, displayCurrency)}</TableCell>
                       <TableCell className="w-[180px]"><Input value={r.sku||''} onChange={(e)=>{ const val=e.target.value; setVariants(prev=>{ const next=[...prev]; const i=next.findIndex(v=>v.combination_key===r.combination_key); if(i>=0) next[i]={...next[i], sku: val}; else next.push({...r, sku: val}); return next; }); }} placeholder="SKU" /></TableCell>
                       <TableCell className="w-[90px]"><Switch checked={r.is_active} onCheckedChange={(c)=> setVariants(prev=>{ const next=[...prev]; const i=next.findIndex(v=>v.combination_key===r.combination_key); if(i>=0) next[i]={...next[i], is_active: !!c}; else next.push({...r, is_active: !!c}); return next; })} /></TableCell>
                       <TableCell className="w-[120px]"><Checkbox checked={r.is_default} onCheckedChange={(c)=> setVariants(prev=>{ // unique default
@@ -383,8 +499,10 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
             </Table>
           </div>
           <div className="text-xs text-muted-foreground">Price shown = Base + option diffs (+ variant-specific diff if any), converted to {displayCurrency}.</div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 });

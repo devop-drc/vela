@@ -36,12 +36,13 @@ interface ProductTableViewProps {
   onEdit: (product: Product) => void;
   onDelete: (productId: string) => void;
   showStatusColumn?: boolean; // New prop to control visibility of the status column
+  selectableRowsMode?: 'checkbox' | 'row';
 }
 
 // Cache for variant stock summaries to avoid re-fetching constantly
 const variantStockCache = new Map<string, { total: number, inStock: number, outOfStock: number, isLoading: boolean }>();
 
-export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSelectOne, onEdit, onDelete, showStatusColumn = true }: ProductTableViewProps) => {
+export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSelectOne, onEdit, onDelete, showStatusColumn = true, selectableRowsMode = 'checkbox' }: ProductTableViewProps) => {
   const { shopDetails, convertCurrency } = useShop();
   const [stockSummaries, setStockSummaries] = useState(new Map<string, { total: number, inStock: number, outOfStock: number, isLoading: boolean }>());
 
@@ -149,17 +150,21 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
     return null; // Or a loading indicator
   }
 
+  const isRowSelect = selectableRowsMode === 'row';
+
   return (
-    <Table>
+    <Table className="rounded-md border overflow-hidden">
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[50px]">
-            <Checkbox
-              checked={products.length > 0 && selectedProducts.length === products.length}
-              onCheckedChange={(checked) => onSelectAll(!!checked)}
-              aria-label="Select all rows"
-            />
-          </TableHead>
+          {!isRowSelect && (
+            <TableHead className="w-[50px]">
+              <Checkbox
+                checked={products.length > 0 && selectedProducts.length === products.length}
+                onCheckedChange={(checked) => onSelectAll(!!checked)}
+                aria-label="Select all rows"
+              />
+            </TableHead>
+          )}
           <TableHead className="w-[80px]">Image</TableHead>
           <TableHead>Name</TableHead>
           {showStatusColumn && <TableHead>Status</TableHead>}
@@ -171,25 +176,35 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
         </TableRow>
       </TableHeader><TableBody>
         {products.length > 0 ? products.map((product) => (
-          <TableRow key={product.id} data-state={selectedProducts.includes(product.id) && "selected"} className="group">
-            <TableCell onClick={(e) => e.stopPropagation()}>
-              <Checkbox
-                checked={selectedProducts.includes(product.id)}
-                onCheckedChange={() => onSelectOne(product.id)}
-                aria-label={`Select row for ${product.name}`}
-              />
-            </TableCell>
-            <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+          <TableRow
+            key={product.id}
+            data-state={selectedProducts.includes(product.id) && "selected"}
+            className={cn(
+              "group transition-colors",
+              selectedProducts.includes(product.id) && "bg-primary/10"
+            )}
+            onClick={() => onSelectOne(product.id)}
+          >
+            {!isRowSelect && (
+              <TableCell onClick={(e) => { e.stopPropagation(); }}>
+                <Checkbox
+                  checked={selectedProducts.includes(product.id)}
+                  onCheckedChange={() => onSelectOne(product.id)}
+                  aria-label={`Select row for ${product.name}`}
+                />
+              </TableCell>
+            )}
+            <TableCell className="cursor-pointer py-3">
               <img src={product.media_url} alt={product.name} className="h-12 w-12 object-cover rounded-md" />
             </TableCell>
-            <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+            <TableCell className="cursor-pointer py-3">
               <div className="font-medium flex items-center gap-2">
                 {product.name}
                 {getStockBadge(product.inventory, product.pricing_type)}
               </div>
             </TableCell>
             {showStatusColumn && (
-              <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+              <TableCell className="cursor-pointer py-3">
                 <Badge variant="outline" className={cn("font-normal", {
                   'bg-emerald-100 text-emerald-800 border-emerald-300': product.status === 'Active',
                   'bg-amber-100 text-amber-800 border-amber-300': product.status === 'Draft',
@@ -199,7 +214,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
                 </Badge>
               </TableCell>
             )}
-            <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+            <TableCell className="cursor-pointer py-3">
               <div className="flex-1 text-sm text-muted-foreground">
                 {product.price != null ? (
                   (() => {
@@ -212,15 +227,15 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
                 )}
               </div>
             </TableCell>
-            <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+            <TableCell className="cursor-pointer py-3">
               <div className="flex-1 text-sm text-muted-foreground">
                 {product.pricing_type === 'one_time' ? (product.inventory !== null ? product.inventory : 'N/A') : 'N/A'}
               </div>
             </TableCell>
-            <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+            <TableCell className="cursor-pointer py-3">
               {renderVariantStockSummary(product.id, product.pricing_type)}
             </TableCell>
-            <TableCell className="cursor-pointer" onClick={() => onSelectOne(product.id)}>
+            <TableCell className="cursor-pointer py-3">
               <div className="flex-1 text-sm font-medium">
                 {product.total_earned !== undefined && product.total_earned !== null
                   ? formatCurrency(convertCurrency(product.total_earned, product.currency, shopDetails.currency), shopDetails.currency)

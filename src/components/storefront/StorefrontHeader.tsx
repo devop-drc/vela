@@ -83,8 +83,6 @@ export const StorefrontHeader = ({ onToggleFilterSidebar, onOpenCart, isDesktopS
     });
   };
   
-  console.log("SHOP LOGO:", shopDetails);
-
   const desktopHeaderStyle: React.CSSProperties = {};
   if (!isMobile && isDesktopSidebarOpen && isOnProductsPage) {
     desktopHeaderStyle.left = DESKTOP_SIDEBAR_WIDTH;

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { Outlet, useSearchParams, useLocation } from 'react-router-dom'; // Import useSearchParams and useLocation
+import { useEffect, useState, useRef } from 'react';
+import { Outlet, useSearchParams, useLocation } from 'react-router-dom'; // Import useSearchParams
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import { InstagramShopHeader } from './InstagramShopHeader'; // Custom header
 import { defaultSettings } from '@/contexts/AppearanceContext';
@@ -268,15 +268,26 @@ const InstagramShopLayoutContent = () => {
         :root {
           --instagram-header-height: ${HEADER_HEIGHT};
           --instagram-bottom-nav-height: ${BOTTOM_NAV_HEIGHT};
+          --sat: env(safe-area-inset-top, 0px);
+          --sab: env(safe-area-inset-bottom, 0px);
+          --sal: env(safe-area-inset-left, 0px);
+          --sar: env(safe-area-inset-right, 0px);
+          --vh: 100dvh;
         }
       `}</style>
       <InstagramShopHeader
         onOpenCart={() => setIsCartModalOpen(true)}
         onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)}
         isProductsFeedPage={isProductsFeedPage}
-        onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)} // Pass the setter
+        onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)}
       />
-      <main className="flex-1 overflow-y-auto">
+      <main
+        className="flex-1 overflow-y-auto"
+        style={{ 
+          paddingTop: `calc(var(--instagram-header-height) + var(--sat))`, // Add top padding to clear fixed header
+          paddingBottom: `calc(var(--instagram-bottom-nav-height) + var(--sab))` // Add bottom padding to clear fixed bottom nav
+        }}
+      >
         <Outlet context={{
           isFilterDrawerOpen,
           setIsFilterDrawerOpen,
@@ -290,18 +301,14 @@ const InstagramShopLayoutContent = () => {
       </main>
       <Sonner />
       <InstagramCartDrawer isOpen={isCartModalOpen} onClose={() => setIsCartModalOpen(false)} />
-      
-      {/* My Orders Drawer */}
       <Drawer open={isMyOrdersDrawerOpen} onOpenChange={setIsMyOrdersDrawerOpen} shouldScaleBackground>
         <InstagramMyOrdersDrawer
           isOpen={isMyOrdersDrawerOpen}
           onClose={() => setIsMyOrdersDrawerOpen(false)}
-          initialOrderId={initialOrderIdForDrawer} // Pass the initial order ID
-          onOrderOpened={() => setInitialOrderIdForDrawer(null)} // Clear after order is opened
+          initialOrderId={initialOrderIdForDrawer}
+          onOrderOpened={() => setInitialOrderIdForDrawer(null)}
         />
       </Drawer>
-
-      {/* Instagram Filter Drawer */}
       <InstagramFilterDrawer
         isOpen={isFilterDrawerOpen}
         onClose={() => setIsFilterDrawerOpen(false)}
@@ -310,8 +317,6 @@ const InstagramShopLayoutContent = () => {
         onFilterChange={handleFilterChange}
         onResetFilters={handleResetFilters}
       />
-
-      {/* New Instagram Bottom Nav */}
       <InstagramBottomNav onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} myOrdersCount={myOrdersCount} />
     </div>
   );

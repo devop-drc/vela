@@ -161,8 +161,9 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
       )}
 
       <DrawerContent
-        className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl"
-        aria-describedby="instagram-my-orders-description" // Added aria-describedby
+        className="p-0 flex flex-col bg-white text-black rounded-t-xl"
+        style={{ maxHeight: 'calc(100dvh - var(--sat))' }}
+        aria-describedby="instagram-my-orders-description"
       >
         <DrawerHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
           <DrawerTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
@@ -174,7 +175,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
           Enter your email and optionally an order ID to view your orders.
         </span>
 
-        <ScrollArea className="flex-1 p-4 pr-6">
+        <ScrollArea className="flex-1 p-4 pr-6" style={{ overscrollBehavior: 'contain' }}>
           <div className="space-y-4">
             <form onSubmit={fetchOrders} className="space-y-4">
               <div className="space-y-2">
@@ -256,7 +257,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
             )}
           </div>
         </ScrollArea>
-        <DrawerFooter className="p-4 border-t border-gray-200 flex-shrink-0">
+        <DrawerFooter className="p-4 border-t border-gray-200 flex-shrink-0" style={{ paddingBottom: 'calc(1rem + var(--sab))' }}>
           <Button variant="ghost" className="w-full text-base text-gray-800 hover:bg-gray-100" onClick={onClose}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Shop

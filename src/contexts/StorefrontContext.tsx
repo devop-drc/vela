@@ -179,9 +179,6 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
       if (invokeError) throw invokeError;
       if (data.error) throw new Error(data.error);
 
-      console.log("StorefrontContext: Fetched shopDetails from get-public-shop-data:", data.shopDetails); // Debug log
-      console.log("StorefrontContext: Fetched appearanceSettings from get-public-shop-data:", data.appearanceSettings); // Debug log
-
       const incomingDetails = {
         id: data.shopDetails.id,
         userId: data.shopDetails.user_id, // Set the user ID here
@@ -268,7 +265,6 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         setPromotions(data.promotions || []); // Set promotions
         setMarqueeElements(data.marqueeElements || []); // Set marquee elements
         setCustomerOrders(data.customerOrders || []); // Set customer orders
-        console.log("StorefrontContext: Marquee elements received from Edge Function:", data.marqueeElements); // NEW LOG
       } else {
         setProducts(prevProducts => [...prevProducts, ...data.products]);
       }
