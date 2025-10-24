@@ -85,23 +85,27 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
       const fetchOrderData = async () => {
         setIsLoadingItems(true);
         setIsLoadingDispute(true);
-        
-        const { data: itemsData, error: itemsError } = await supabase
-          .from('order_items')
-          .select(`
-            quantity,
-            price_at_purchase,
-            products (
-              name,
-              media_url
-            )
-          `)
-          .eq('order_id', order.id);
-
-        if (itemsError) {
-          showError("Failed to fetch order items.");
+        // Prefer items provided by the public edge function to avoid RLS issues
+        if (order.order_items && Array.isArray(order.order_items) && order.order_items.length > 0) {
+          setItems(order.order_items as any);
         } else {
-          setItems(itemsData || []);
+          const { data: itemsData, error: itemsError } = await supabase
+            .from('order_items')
+            .select(`
+              quantity,
+              price_at_purchase,
+              products (
+                name,
+                media_url
+              )
+            `)
+            .eq('order_id', order.id);
+
+          if (itemsError) {
+            showError("Failed to fetch order items.");
+          } else {
+            setItems(itemsData || []);
+          }
         }
         setIsLoadingItems(false);
 

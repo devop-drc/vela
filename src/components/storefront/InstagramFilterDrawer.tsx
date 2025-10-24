@@ -219,7 +219,7 @@ export const InstagramFilterDrawer = ({
           {/* Removed X button */}
         </DrawerHeader>
 
-        <ScrollArea className="flex-1 px-4 py-6" style={{ overscrollBehavior: 'contain' }}>
+        <ScrollArea className="flex-1 px-4 py-6" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' as any }}>
           <Accordion type="multiple" defaultValue={["Categories", "Price Range"]} className="w-full">
             {uniqueCategories.length > 0 && (
               <FilterSection title="Categories" icon={Info} filterKey="categories">

@@ -176,7 +176,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
           Enter your email and optionally an order ID to view your orders.
         </span>
 
-        <ScrollArea className="flex-1 p-4 pr-6" style={{ overscrollBehavior: 'contain' }}>
+        <ScrollArea className="flex-1 p-4 pr-6" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
           <div className="space-y-4">
             <form onSubmit={fetchOrders} className="space-y-4">
               <div className="space-y-2">
@@ -258,7 +258,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
             )}
           </div>
         </ScrollArea>
-        <DrawerFooter className="p-4 border-t border-gray-200 flex-shrink-0" style={{ paddingBottom: 'calc(1rem + var(--sab))' }}>
+        <DrawerFooter className="pt-1 border-t border-gray-200 flex-shrink-0" style={{ paddingBottom: 'calc(1rem + var(--sab))' }}>
           <Button variant="ghost" className="w-full text-base text-gray-800 hover:bg-gray-100" onClick={onClose}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Shop

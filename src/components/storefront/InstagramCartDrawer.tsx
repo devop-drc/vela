@@ -273,7 +273,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                     <Button onClick={onClose} className="text-base bg-red-500 hover:bg-red-600 text-white">Start Shopping</Button>
                   </motion.div>
                 ) : (
-                  <ScrollArea className="flex-1" style={{ overscrollBehavior: 'contain' }}>
+                  <ScrollArea className="flex-1" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' as any }}>
                     <div>
                       {currentCartItems.length > 0 && (
                         <Accordion type="single" collapsible defaultValue="items-in-cart" className="w-full">
@@ -550,20 +550,21 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                 <span>Total:</span>
                 <span>{formatCurrency(total, shopDetails?.currency)}</span>
               </div>
+              <div className="flex flex-row-reverse align-middle justify-center mt-1 gap-2">
               {checkoutStep === 'cart' && !initialCartItems && ( // Only show if it's the persistent cart
-                <Button className="w-full text-base bg-red-500 hover:bg-red-600 text-white mt-4" onClick={handleProceedToCheckout} disabled={currentCartItems.length === 0}>
+                <Button className="w-full text-base bg-red-500 hover:bg-red-600 text-white" onClick={handleProceedToCheckout} disabled={currentCartItems.length === 0}>
                   Proceed to Checkout
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               )}
               {checkoutStep === 'contact-shipping' && (
-                <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-red-500 hover:bg-red-600 text-white mt-4" disabled={isSubmittingOrder}>
+                <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-red-500 hover:bg-red-600 text-white" disabled={isSubmittingOrder}>
                   Continue to Payment
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               )}
               {checkoutStep === 'payment' && (
-                <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-red-500 hover:bg-red-600 text-white mt-4" disabled={isSubmittingOrder}>
+                <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-red-500 hover:bg-red-600 text-white" disabled={isSubmittingOrder}>
                   {isSubmittingOrder ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -577,10 +578,11 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                   )}
                 </Button>
               )}
-              <Button variant="ghost" className="w-full text-base text-gray-800 hover:bg-gray-100 mt-2" onClick={handleBack}>
+              <Button variant="ghost" className="w-half text-base text-gray-800 bg-gray-100 hover:bg-gray-100" onClick={handleBack}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>
+              </div>
             </div>
           </DrawerFooter>
         </DrawerContent>

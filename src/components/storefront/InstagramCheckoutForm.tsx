@@ -250,7 +250,7 @@ export const InstagramCheckoutForm = ({
       </Dialog>
 
       <form onSubmit={handleSubmit(onSubmit)} id="instagram-checkout-form" className="flex-1 flex flex-col overflow-hidden">
-        <ScrollArea className="flex-1 p-4 pr-6" style={{ overscrollBehavior: 'contain' }}>
+        <ScrollArea className="flex-1 p-4 pr-6" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' as any }}>
           <div className="space-y-6">
             {/* Address Selection Card */}
             {savedAddresses.length > 0 && (

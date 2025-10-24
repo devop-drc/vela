@@ -45,9 +45,7 @@ const applyInstagramShopSettingsToDOM = () => {
   root.style.setProperty('--input', '0 0% 90%'); // Light gray input background
   root.style.setProperty('--radius', '0.5rem'); // Slightly rounded corners
 
-  // Use system fonts for Instagram-like feel
-  root.style.setProperty('--font-sans', 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif');
-  root.style.setProperty('--font-heading', 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif');
+  // Fonts will be applied dynamically based on appearanceSettings below
 
   // Ensure no background overlay for InstagramShop
   const bgOverlay = document.getElementById('background-overlay');
@@ -59,7 +57,7 @@ const applyInstagramShopSettingsToDOM = () => {
 };
 
 const InstagramShopLayoutContent = () => {
-  const { shopDetails, products: allProducts, isLoading, error, convertCurrency } = useStorefront(); // Removed appearanceSettings as it's ignored here
+  const { shopDetails, products: allProducts, isLoading, error, convertCurrency, appearanceSettings } = useStorefront();
   const isMobile = useIsMobile();
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
   const [isMyOrdersDrawerOpen, setIsMyOrdersDrawerOpen] = useState(false); // New state for My Orders drawer
@@ -79,6 +77,17 @@ const InstagramShopLayoutContent = () => {
 
   useEffect(() => {
     applyInstagramShopSettingsToDOM();
+    // Apply admin-selected fonts if available (fallback to Montserrat)
+    try {
+      const root = document.documentElement;
+      const heading = (appearanceSettings as any)?.typography?.headings || (appearanceSettings as any)?.fonts?.headings || 'Montserrat';
+      const body = (appearanceSettings as any)?.typography?.body || (appearanceSettings as any)?.fonts?.body || 'Montserrat';
+      if (heading) loadGoogleFont(heading);
+      if (body) loadGoogleFont(body);
+      const fallback = 'Montserrat, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif';
+      if (body) root.style.setProperty('--font-sans', `"${body}", ${fallback}`);
+      if (heading) root.style.setProperty('--font-heading', `"${heading}", ${fallback}`);
+    } catch {}
     // Clean up styles when component unmounts or path changes away from instagramShop
     return () => {
       const root = document.documentElement;
@@ -92,7 +101,7 @@ const InstagramShopLayoutContent = () => {
       root.classList.remove('blur-enabled');
       // Re-apply default settings or main app settings if needed elsewhere
     };
-  }, []);
+  }, [appearanceSettings]);
 
   // Dynamically set page title and meta description
   useEffect(() => {

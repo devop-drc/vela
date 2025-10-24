@@ -72,7 +72,7 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
         isActiveByRecurrence = currentDay >= startDay || currentDay <= endDay;
       }
       break;
-    case 'yearly':
+    case 'yearly': {
       // Check if today's month and day fall within the recurring yearly window
       const isAfterStartMonth = currentMonth > startMonth || (currentMonth === startMonth && currentDay >= startDay);
       const isBeforeEndMonth = currentMonth < endMonth || (currentMonth === endMonth && currentDay <= endDay);
@@ -83,6 +83,7 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
         isActiveByRecurrence = isAfterStartMonth || isBeforeEndMonth;
       }
       break;
+    }
     default:
       isActiveByRecurrence = false;
   }
@@ -234,6 +235,7 @@ serve(async (req) => {
           order_items (
             quantity,
             price_at_purchase,
+            selected_options,
             products (
               name,
               media_url,

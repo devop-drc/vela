@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
 import { InstagramCartDrawer } from "./InstagramCartDrawer"; // Import the drawer
+import { InstagramVariantDrawer } from "./InstagramVariantDrawer";
 
 interface Product {
   id: string;
@@ -76,6 +77,8 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
     const [isBuyNowDrawerOpen, setIsBuyNowDrawerOpen] = useState(false);
     const [buyNowProduct, setBuyNowProduct] = useState<CartItem | null>(null);
+    const [isVariantDrawerOpen, setIsVariantDrawerOpen] = useState(false);
+    const [variants, setVariants] = useState<Array<{ combination_key: string; option_values: Record<string,string>; inventory: number; is_active: boolean }>>([]);
 
     useEffect(() => {
       if (!api) return;
@@ -143,6 +146,23 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [product?.id]);
 
+    // Fetch variant rows for availability computation
+    useEffect(() => {
+      const loadVariants = async () => {
+        if (!product?.id) return;
+        const { data, error } = await supabase
+          .from('product_variants')
+          .select('combination_key, option_values, inventory, is_active')
+          .eq('product_id', product.id);
+        if (!error && data) {
+          setVariants(data as any);
+        } else {
+          setVariants([]);
+        }
+      };
+      loadVariants();
+    }, [product?.id]);
+
     const baseDisplayPrice = convertCurrency(product.price, product.currency);
     const optionsPriceDelta = useMemo(() => {
       if (!options.length) return 0;
@@ -191,7 +211,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
       }
     }
 
-    const handleAddToCart = () => {
+    const actuallyAddToCart = () => {
       if (!shopDetails?.slug) {
         toast.error("Shop details not available.");
         return;
@@ -219,7 +239,15 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
       }, quantity);
     };
 
-    const handleBuyNow = () => {
+    const handleAddToCart = () => {
+      if (options.length > 0) {
+        setIsVariantDrawerOpen(true);
+        return;
+      }
+      actuallyAddToCart();
+    };
+
+    const actuallyBuyNow = () => {
       if (!shopDetails?.slug) {
         toast.error("Shop details not available.");
         return;
@@ -250,6 +278,14 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
       setBuyNowProduct(itemToBuy);
       setIsBuyNowDrawerOpen(true);
+    };
+
+    const handleBuyNow = () => {
+      if (options.length > 0) {
+        setIsVariantDrawerOpen(true);
+        return;
+      }
+      actuallyBuyNow();
     };
 
     const allDetails = Object.entries(product.details || {}).filter(([key, value]) => key !== 'type' && value && (!Array.isArray(value) || value.length > 0));
@@ -388,7 +424,13 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                   <Label className="text-sm text-gray-700 capitalize">{opt.name}</Label>
                   <div className="flex flex-wrap gap-2">
                     {opt.values.map(val => {
-                      const isOOS = val.inventory <= 0 || !val.is_active;
+                      // Determine if selecting this value with current other selections yields any active in-stock variant
+                      const hypothetical = { ...selectedValues, [opt.name]: val.value };
+                      const matches = variants.filter(v => v.is_active && (v.inventory||0) > 0).some(v => {
+                        // v.option_values must include all selected keys with same values
+                        return Object.entries(hypothetical).every(([k, sv]) => v.option_values?.[k] === sv);
+                      });
+                      const isOOS = val.inventory <= 0 || !val.is_active || !matches;
                       const isSelected = selectedValues[opt.name] === val.value;
                       const diffText = val.price_difference ? `(${val.price_difference > 0 ? '+' : ''}${formatCurrency(val.price_difference, shopDetails?.currency)})` : '';
                       return (
@@ -406,7 +448,11 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                         >
                           <span className="capitalize">{val.value}</span>
                           {diffText && <span className="ml-1 text-xs opacity-80">{diffText}</span>}
-                          <span className="ml-2 text-[10px] opacity-70">{val.inventory}</span>
+                          {isOOS ? (
+                            <span className="ml-2 text-[10px] px-1 rounded bg-gray-200 text-gray-700">Sold out</span>
+                          ) : (
+                            <span className="ml-2 text-[10px] opacity-70">{val.inventory}</span>
+                          )}
                         </Button>
                       );
                     })}
@@ -535,6 +581,29 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
             onClose={() => setIsBuyNowDrawerOpen(false)}
             initialCartItems={[buyNowProduct]}
             onOrderPlaced={() => setIsBuyNowDrawerOpen(false)}
+          />
+        )}
+        {/* Variant Drawer */}
+        {options.length > 0 && (
+          <InstagramVariantDrawer
+            isOpen={isVariantDrawerOpen}
+            onClose={() => setIsVariantDrawerOpen(false)}
+            options={options}
+            selectedValues={selectedValues}
+            setSelectedValues={setSelectedValues}
+            quantity={quantity}
+            setQuantity={setQuantity}
+            currency={shopDetails?.currency}
+            basePrice={baseDisplayPrice}
+            variants={variants}
+            onConfirm={(action) => {
+              setIsVariantDrawerOpen(false);
+              if (action === 'add') {
+                actuallyAddToCart();
+              } else {
+                actuallyBuyNow();
+              }
+            }}
           />
         )}
       </div>

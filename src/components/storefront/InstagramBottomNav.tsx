@@ -40,7 +40,7 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
       <nav
         className="bg-white text-gray-800 border-t border-gray-200 shadow-lg w-full max-w-md"
         style={{
-          height: '56px',
+          height: '50px',
           paddingBottom: 'var(--sab, env(safe-area-inset-bottom, 0px))',
           // Prevent content behind safe area from peeking when toolbars collapse/expand
           boxSizing: 'content-box',
@@ -51,8 +51,8 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
             onClick={onOpenMyOrders}
             className="flex flex-row gap-1 items-center justify-center text-gray-800 w-full h-full transition-colors text-xs relative hover:bg-gray-50 b"
           >
-            <ShoppingBag className="h-6 w-6" />
-            <p className="font-semibold text-base mt-1">My Orders</p>
+            <ShoppingBag className="h-5 w-5" />
+            <p className="font-semibold text-sm mt-1">My Orders</p>
             {myOrdersCount > 0 && (
               <span className="absolute top-1 right-1/2 translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white font-bold">
                 {myOrdersCount}
@@ -72,14 +72,14 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
               transition={{ duration: 0.3 }}
               className="relative"
             >
-              <ShoppingBag className="h-6 w-6" />
+              <ShoppingBag className="h-5 w-5" />
               {totalItems > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white font-bold">
                   {totalItems}
                 </span>
               )}
             </motion.span>
-            <span className="font-semibold text-base mt-1">Cart</span>
+            <span className="font-semibold text-sm mt-1">Cart</span>
           </button>
         </div>
       </nav>
