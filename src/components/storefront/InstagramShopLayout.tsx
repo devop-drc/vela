@@ -263,7 +263,7 @@ const InstagramShopLayoutContent = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-white text-black" style={{ height: '100dvh' }}>
+    <div className="flex flex-col min-h-[100dvh] bg-white text-black mb-[--instagram-bottom-nav-height]">
       <style>{`
         :root {
           --instagram-header-height: ${HEADER_HEIGHT};
@@ -282,11 +282,7 @@ const InstagramShopLayoutContent = () => {
         onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)}
       />
       <main
-        className="flex-1 overflow-y-auto"
-        style={{ 
-          paddingTop: `calc(var(--instagram-header-height) + var(--sat))`, // Add top padding to clear fixed header
-          paddingBottom: `calc(var(--instagram-bottom-nav-height) + var(--sab))` // Add bottom padding to clear fixed bottom nav
-        }}
+        className="flex-1"
       >
         <Outlet context={{
           isFilterDrawerOpen,

@@ -160,7 +160,6 @@ serve(async (req) => {
       await supabaseAdmin.from('orders').update({ status: 'Problematic', message: 'Failed to add items' }).eq('id', orderId);
       throw new Error(`Order created, but failed to add items: ${orderItemsInsertError.message}`);
     }
-    console.log("create-order: Order items inserted successfully.");
 
     return new Response(JSON.stringify({ message: "Order placed successfully!", order: newOrder }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

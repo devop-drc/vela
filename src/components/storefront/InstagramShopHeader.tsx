@@ -52,15 +52,14 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, isProducts
       "bg-white text-gray-800 border-b border-gray-200"
     )} style={{ top: 'var(--sat)' }}>
       {isProfilePage ? (
-        <div className="container flex h-full items-center justify-between px-4 py-3">
-          <div className="flex items-center space-x-2 flex-shrink-0">
-            <h1 className="text-lg font-bold">InstaShop</h1>
+        <div className="container flex h-full items-center justify-between px-4 py-1">
+          <div className="flex items-center flex-shrink-0">
+            <p className="text-md font-bold">InstaShop</p>
           </div>
-          
           <div className="flex items-center flex-shrink-0">
             <Button variant="ghost" size="sm" asChild className="text-gray-800 hover:bg-gray-100 px-0">
               <Link to={`/instagramShop/${shopSlug}/products`}>
-                <p className="text-lg">Products</p> <ChevronDown className="ml-1 h-6 w-6 rotate-[-90deg]" />
+                <p className="text-md font-bold">Products</p> <ChevronDown className="h-5 w-5 rotate-[-90deg]" />
               </Link>
             </Button>
           </div>
@@ -68,15 +67,16 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, isProducts
       ) : (
         <div className="flex flex-col h-full">
           {/* Row 1 */}
-          <div className="container flex items-center justify-between px-4 py-2">
-            <Button variant="ghost" size="icon" onClick={handleBack} className="text-gray-800 hover:bg-gray-100">
-              <ChevronDown className="mr-1 h-6 w-6 rotate-[+90deg]" />
-              <span className="sr-only">Back</span>
+          <div className="container flex items-center justify-between pl-1 py-1">
+            <div className="flex items-center flex-shrink-0">
+            <Button variant="ghost" size="sm" onClick={handleBack} className="text-gray-800 hover:bg-gray-100">
+              <ChevronDown className="h-5 w-5 rotate-[90deg]" />
+                <p className="text-md font-bold">Homepage</p> 
             </Button>
-            <h1 className="text-lg font-bold">Products</h1>
+          </div>
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={onOpenCart}
               className="relative text-gray-800 hover:bg-gray-100"
             >
@@ -97,7 +97,7 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, isProducts
             </Button>
           </div>
           {/* Row 2: Filter and Sort */}
-          <div className="container flex items-center justify-center gap-2 py-2 px-4 border-t border-gray-200">
+          <div className="flex items-center justify-center gap-2 pb-2 px-2">
             <Button
               variant="outline"
               size="sm"

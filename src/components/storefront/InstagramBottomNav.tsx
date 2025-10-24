@@ -30,21 +30,16 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 50 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center w-full"
-      style={{
-        height: `calc(var(--instagram-bottom-nav-height) + var(--sab))`,
-        paddingBottom: 'var(--sab)'
-      }}
+      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center w-full h-12"
     >
       <nav className="bg-white text-gray-800 border-t border-gray-200 shadow-lg h-full w-full max-w-md">
         <div className="flex justify-around items-center h-full">
-          {/* My Orders Button */}
           <button
             onClick={onOpenMyOrders}
-            className="flex flex-col items-center justify-center text-gray-800 w-full h-full transition-colors text-xs relative hover:bg-gray-50"
+            className="flex flex-row gap-1 items-center justify-center text-gray-800 w-full h-full transition-colors text-xs relative hover:bg-gray-50 b"
           >
             <ShoppingBag className="h-6 w-6" />
-            <span className="font-semibold mt-1">My Orders</span>
+            <p className="font-semibold text-base mt-1">My Orders</p>
             {myOrdersCount > 0 && (
               <span className="absolute top-1 right-1/2 translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white font-bold">
                 {myOrdersCount}
@@ -55,7 +50,7 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
           {/* Cart Button */}
           <button
             onClick={onOpenCart}
-            className="flex flex-col items-center justify-center text-gray-800 w-full h-full transition-colors text-xs relative hover:bg-gray-50"
+            className="flex flex-row-reverse gap-1 items-center justify-center text-gray-800 w-full h-full transition-colors text-xs relative hover:bg-gray-50"
           >
             <motion.span
               key={totalItems}
@@ -66,12 +61,12 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
             >
               <ShoppingBag className="h-6 w-6" />
               {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white font-bold">
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white font-bold">
                   {totalItems}
                 </span>
               )}
             </motion.span>
-            <span className="font-semibold mt-1">Cart</span>
+            <span className="font-semibold text-base mt-1">Cart</span>
           </button>
         </div>
       </nav>

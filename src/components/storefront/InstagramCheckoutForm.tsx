@@ -415,7 +415,7 @@ export const InstagramCheckoutForm = ({
                     <Textarea id="shippingNotesCourier" {...register("shippingNotesCourier")} rows={2} placeholder="e.g., Leave package at the back door." className="border-gray-300 bg-gray-50 text-gray-800" />
                   </div>
                 </CardContent>
-              </motion.div>
+                </Card>
               </motion.div>
             )}
 
