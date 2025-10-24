@@ -337,12 +337,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {mediaItems.length > 1 && (
-              <>
-                <CarouselPrevious className="left-2" />
-                <CarouselNext className="right-2" />
-              </>
-            )}
+            
           </Carousel>
           {mediaItems.length > 1 && (
             <div className="flex justify-center gap-1 mt-2">
