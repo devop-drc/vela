@@ -4,6 +4,7 @@ import { useStorefront } from './StorefrontContext';
 import { showError, showSuccess } from '@/utils/toast';
 
 export interface CartItem {
+  uid: string; // stable identifier for a unique line (product + variant options)
   productId: string;
   name: string;
   price: number;
@@ -14,6 +15,7 @@ export interface CartItem {
   media_type: 'image' | 'video';
   isDiscounted: boolean;
   selectedOptions?: { [key: string]: string | string[] };
+  variantKey?: string; // normalized key derived from selectedOptions
   pricing_type: 'one_time' | 'subscription';
   product_type: 'physical' | 'digital';
   billing_interval: 'month' | 'year' | null;
@@ -27,13 +29,13 @@ interface CartContextType {
   shipping: number;
   total: number;
   totalSaved: number;
-  addToCart: (item: Omit<CartItem, 'quantity' | 'isDiscounted'>, quantity?: number) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
-  removeFromCart: (productId: string) => void;
+  addToCart: (item: Omit<CartItem, 'quantity' | 'uid' | 'variantKey'>, quantity?: number) => void;
+  updateQuantity: (uid: string, quantity: number) => void;
+  removeFromCart: (uid: string) => void;
   clearCart: () => void;
   saveForLater: (item: CartItem) => void;
-  moveToCart: (productId: string) => void;
-  removeSavedItem: (productId: string) => void;
+  moveToCart: (uid: string) => void;
+  removeSavedItem: (uid: string) => void;
   hasSubscriptionProducts: boolean;
 }
 
@@ -46,15 +48,31 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [savedItems, setSavedItems] = useState<CartItem[]>([]);
   const { shopDetails, convertCurrency } = useStorefront();
 
-  // Load cart from localStorage on mount
+  // Load cart from localStorage on mount and migrate legacy items to uid/variantKey
   useEffect(() => {
     const storedCart = localStorage.getItem('cartItems');
     if (storedCart) {
-      setCartItems(JSON.parse(storedCart));
+      const parsed = JSON.parse(storedCart) as Array<Partial<CartItem> & Record<string, unknown>>;
+      const migrated: CartItem[] = parsed.map((it) => {
+        const variantKey = it.selectedOptions && typeof it.selectedOptions === 'object'
+          ? JSON.stringify(Object.entries(it.selectedOptions).sort(([a],[b]) => a.localeCompare(b)))
+          : undefined;
+        const uid = it.uid || `${it.productId}::${variantKey || 'base'}`;
+        return { ...(it as CartItem), uid, variantKey } as CartItem;
+      });
+      setCartItems(migrated);
     }
     const storedSaved = localStorage.getItem('savedItems');
     if (storedSaved) {
-      setSavedItems(JSON.parse(storedSaved));
+      const parsed = JSON.parse(storedSaved) as Array<Partial<CartItem> & Record<string, unknown>>;
+      const migrated: CartItem[] = parsed.map((it) => {
+        const variantKey = it.selectedOptions && typeof it.selectedOptions === 'object'
+          ? JSON.stringify(Object.entries(it.selectedOptions).sort(([a],[b]) => a.localeCompare(b)))
+          : undefined;
+        const uid = it.uid || `${it.productId}::${variantKey || 'base'}`;
+        return { ...(it as CartItem), uid, variantKey } as CartItem;
+      });
+      setSavedItems(migrated);
     }
   }, []);
 
@@ -67,7 +85,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('savedItems', JSON.stringify(savedItems));
   }, [savedItems]);
 
-  const addToCart = useCallback(async (item: Omit<CartItem, 'quantity' | 'isDiscounted'>, quantity: number = 1) => {
+  const addToCart = useCallback(async (item: Omit<CartItem, 'quantity' | 'uid' | 'variantKey'>, quantity: number = 1) => {
     if (!shopDetails) {
       setTimeout(() => showError("Shop details not loaded. Cannot add to cart."), 0);
       return;
@@ -95,54 +113,58 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const isDiscounted = item.isDiscounted; // Trust the `isDiscounted` flag passed from the product card/detail
 
     setCartItems(prevItems => {
-      const existingItemIndex = prevItems.findIndex(cartItem => cartItem.productId === item.productId);
-
-      if (existingItemIndex > -1) {
-        const updatedItems = [...prevItems];
-        updatedItems[existingItemIndex] = {
-          ...updatedItems[existingItemIndex],
-          quantity: updatedItems[existingItemIndex].quantity + quantity,
-          price: priceInDisplayCurrency, // Use the price from the `item` argument
-          originalPrice: originalPriceInDisplayCurrency, // Use the originalPrice from the `item` argument
-          isDiscounted: isDiscounted,
-          pricing_type: productDbData.pricing_type, // Use from DB fetch
-          product_type: productDbData.product_type, // Use from DB fetch
-          billing_interval: productDbData.billing_interval, // Use from DB fetch
-          currency: shopDetails.currency, // Ensure currency is shop's display currency
+      const variantKey = item.selectedOptions && typeof item.selectedOptions === 'object'
+        ? JSON.stringify(Object.entries(item.selectedOptions).sort(([a],[b]) => a.localeCompare(b)))
+        : undefined;
+      const uid = `${item.productId}::${variantKey || 'base'}`;
+      const existingIndex = prevItems.findIndex(ci => ci.productId === item.productId && ci.variantKey === variantKey);
+      if (existingIndex > -1) {
+        const updated = [...prevItems];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: updated[existingIndex].quantity + quantity,
+          price: priceInDisplayCurrency,
+          originalPrice: originalPriceInDisplayCurrency,
+          isDiscounted,
+          pricing_type: productDbData.pricing_type,
+          product_type: productDbData.product_type,
+          billing_interval: productDbData.billing_interval,
+          currency: shopDetails.currency,
         };
         setTimeout(() => showSuccess(`${item.name} quantity updated in cart!`), 0);
-        return updatedItems;
-      } else {
-        setTimeout(() => showSuccess(`${item.name} added to cart!`), 0);
-        return [
-          ...prevItems,
-          {
-            ...item, // Spread existing item properties (media_url, name, selectedOptions, etc.)
-            quantity,
-            price: priceInDisplayCurrency, // Use the price from the `item` argument
-            originalPrice: originalPriceInDisplayCurrency, // Use the originalPrice from the `item` argument
-            isDiscounted: isDiscounted,
-            pricing_type: productDbData.pricing_type, // Use from DB fetch
-            product_type: productDbData.product_type, // Use from DB fetch
-            billing_interval: productDbData.billing_interval, // Use from DB fetch
-            currency: shopDetails.currency, // Ensure currency is shop's display currency
-          },
-        ];
+        return updated;
       }
+      setTimeout(() => showSuccess(`${item.name} added to cart!`), 0);
+      return [
+        ...prevItems,
+        {
+          ...item,
+          uid,
+          variantKey,
+          quantity,
+          price: priceInDisplayCurrency,
+          originalPrice: originalPriceInDisplayCurrency,
+          isDiscounted,
+          pricing_type: productDbData.pricing_type,
+          product_type: productDbData.product_type,
+          billing_interval: productDbData.billing_interval,
+          currency: shopDetails.currency,
+        },
+      ];
     });
   }, [shopDetails]);
 
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
+  const updateQuantity = useCallback((uid: string, quantity: number) => {
     setCartItems(prevItems => {
       const updatedItems = prevItems.map(item =>
-        item.productId === productId ? { ...item, quantity: Math.max(1, quantity) } : item
+        item.uid === uid ? { ...item, quantity: Math.max(1, quantity) } : item
       );
       return updatedItems.filter(item => item.quantity > 0);
     });
   }, []);
 
-  const removeFromCart = useCallback((productId: string) => {
-    setCartItems(prevItems => prevItems.filter(item => item.productId !== productId));
+  const removeFromCart = useCallback((uid: string) => {
+    setCartItems(prevItems => prevItems.filter(item => item.uid !== uid));
     setTimeout(() => showSuccess("Item removed from cart."), 0);
   }, []);
 
@@ -152,9 +174,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const saveForLater = useCallback((item: CartItem) => {
-    setCartItems(prevItems => prevItems.filter(cartItem => cartItem.productId !== item.productId));
+    setCartItems(prevItems => prevItems.filter(cartItem => cartItem.uid !== item.uid));
     setSavedItems(prevItems => {
-      if (!prevItems.some(savedItem => savedItem.productId === item.productId)) {
+      if (!prevItems.some(savedItem => savedItem.uid === item.uid)) {
         setTimeout(() => showSuccess(`${item.name} saved for later.`), 0);
         return [...prevItems, item];
       }
@@ -162,20 +184,20 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, []);
 
-  const moveToCart = useCallback((productId: string) => {
+  const moveToCart = useCallback((uid: string) => {
     setSavedItems(prevItems => {
-      const itemToMove = prevItems.find(item => item.productId === productId);
+      const itemToMove = prevItems.find(item => item.uid === uid);
       if (itemToMove) {
         addToCart(itemToMove, itemToMove.quantity);
         setTimeout(() => showSuccess(`${itemToMove.name} moved to cart.`), 0);
-        return prevItems.filter(item => item.productId !== productId);
+        return prevItems.filter(item => item.uid !== uid);
       }
       return prevItems;
     });
   }, [addToCart]);
 
-  const removeSavedItem = useCallback((productId: string) => {
-    setSavedItems(prevItems => prevItems.filter(item => item.productId !== productId));
+  const removeSavedItem = useCallback((uid: string) => {
+    setSavedItems(prevItems => prevItems.filter(item => item.uid !== uid));
     setTimeout(() => showSuccess("Saved item removed."), 0);
   }, []);
 
@@ -184,15 +206,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const subtotal = useMemo(() => {
     if (!shopDetails) return 0;
     return cartItems.reduce((sum, item) => {
-      const convertedPrice = convertCurrency(item.price, item.currency, shopDetails.currency);
+      const convertedPrice = convertCurrency(item.price, item.currency);
       return sum + (convertedPrice * item.quantity);
     }, 0);
   }, [cartItems, shopDetails, convertCurrency]);
 
   const shipping = useMemo(() => {
     if (!shopDetails) return 0;
-    const convertedThreshold = convertCurrency(FREE_SHIPPING_THRESHOLD, 'USD', shopDetails.currency);
-    return subtotal >= convertedThreshold ? 0 : convertCurrency(5, 'USD', shopDetails.currency); // Example: $5 shipping, converted
+    const convertedThreshold = convertCurrency(FREE_SHIPPING_THRESHOLD, 'USD');
+    return subtotal >= convertedThreshold ? 0 : convertCurrency(5, 'USD');
   }, [subtotal, shopDetails, convertCurrency]);
 
   const total = useMemo(() => subtotal + shipping, [subtotal, shipping]);
@@ -200,8 +222,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const totalSaved = useMemo(() => {
     if (!shopDetails) return 0;
     return cartItems.reduce((sum, item) => {
-      const convertedOriginalPrice = convertCurrency(item.originalPrice, item.currency, shopDetails.currency);
-      const convertedCurrentPrice = convertCurrency(item.price, item.currency, shopDetails.currency);
+      const convertedOriginalPrice = convertCurrency(item.originalPrice, item.currency);
+      const convertedCurrentPrice = convertCurrency(item.price, item.currency);
       return sum + ((convertedOriginalPrice - convertedCurrentPrice) * item.quantity);
     }, 0);
   }, [cartItems, shopDetails, convertCurrency]);

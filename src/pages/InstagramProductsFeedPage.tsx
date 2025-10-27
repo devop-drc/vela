@@ -222,10 +222,11 @@ const InstagramProductsFeedPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white text-black flex flex-col">
+    <div className="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))] flex flex-col">
       {/* InstagramFilterDrawer is now rendered in InstagramShopLayout */}
 
-      <main className="flex-1 pt-0">
+      <main className="flex-1 pt-0 flex justify-center">
+        <div className="w-full md:max-w-[630px]">
         {/* Product Grid */}
         <section className="mt-0">
           {filteredAndSortedProducts.length === 0 ? (
@@ -263,6 +264,7 @@ const InstagramProductsFeedPage = () => {
             </motion.div>
           )}
         </section>
+        </div>
       </main>
     </div>
   );

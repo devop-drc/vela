@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
+import type { CartItem } from "@/contexts/CartContext";
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight, ArrowRight, User, Mail, MapPin, Phone, StickyNote, Info, Wallet, ShieldCheck, Lock, Banknote, Hash, XCircle, Truck } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
@@ -14,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -54,7 +57,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
   const subtotal = useMemo(() => {
     if (!shopDetails) return 0;
     return currentCartItems.reduce((sum, item) => {
-      const convertedPrice = convertCurrency(item.price, item.currency, shopDetails.currency);
+      const convertedPrice = convertCurrency(item.price, item.currency);
       return sum + (convertedPrice * item.quantity);
     }, 0);
   }, [currentCartItems, shopDetails, convertCurrency]);
@@ -62,8 +65,8 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
   const FREE_SHIPPING_THRESHOLD = 50; // Define free shipping threshold in USD
   const shipping = useMemo(() => {
     if (!shopDetails) return 0;
-    const convertedThreshold = convertCurrency(FREE_SHIPPING_THRESHOLD, 'USD', shopDetails.currency);
-    return subtotal >= convertedThreshold ? 0 : convertCurrency(5, 'USD', shopDetails.currency); // Example: $5 shipping, converted
+    const convertedThreshold = convertCurrency(FREE_SHIPPING_THRESHOLD, 'USD');
+    return subtotal >= convertedThreshold ? 0 : convertCurrency(5, 'USD');
   }, [subtotal, shopDetails, convertCurrency]);
 
   const total = useMemo(() => subtotal + shipping, [subtotal, shipping]);
@@ -71,8 +74,8 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
   const totalSaved = useMemo(() => {
     if (!shopDetails) return 0;
     return currentCartItems.reduce((sum, item) => {
-      const convertedOriginalPrice = convertCurrency(item.originalPrice, item.currency, shopDetails.currency);
-      const convertedCurrentPrice = convertCurrency(item.price, item.currency, shopDetails.currency);
+      const convertedOriginalPrice = convertCurrency(item.originalPrice, item.currency);
+      const convertedCurrentPrice = convertCurrency(item.price, item.currency);
       return sum + ((convertedOriginalPrice - convertedCurrentPrice) * item.quantity);
     }, 0);
   }, [currentCartItems, shopDetails, convertCurrency]);
@@ -80,6 +83,18 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
   const hasSubscriptionProducts = useMemo(() => {
     return currentCartItems.some(item => item.pricing_type === 'subscription');
   }, [currentCartItems]);
+
+  // Group lines by productId for variant breakdowns
+  const variantsByProduct = useMemo(() => {
+    const map = new Map<string, typeof currentCartItems>();
+    currentCartItems.forEach(ci => {
+      const arr = map.get(ci.productId) || [] as typeof currentCartItems;
+      (arr as any).push(ci);
+      map.set(ci.productId, arr as any);
+    });
+    return map;
+  }, [currentCartItems]);
+  const [openVariantFor, setOpenVariantFor] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -158,13 +173,13 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
           quantity: item.quantity,
           price: item.price,
           currency: item.currency,
+          selectedOptions: item.selectedOptions || null,
         })),
         totalAmount: total, // Use calculated total
         currency: shopDetails.currency,
         paymentMethod: data.paymentMethod,
         shippingAddress: data.shippingAddress,
         shippingCity: data.shippingCity,
-        shippingState: data.shippingState,
         shippingZip: data.shippingZip,
         shippingCountry: data.shippingCountry,
         shippingNotesSeller: data.shippingNotesSeller,
@@ -228,34 +243,21 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
     }
   };
 
-  return (
-    <>
-      {isProductQuickViewModalOpen && productToQuickView && (
-        <InstagramProductQuickViewModal
-          isOpen={isProductQuickViewModalOpen}
-          onClose={() => setIsProductQuickViewModalOpen(false)}
-          productId={productToQuickView.productId}
-          shopSlug={productToQuickView.shopSlug}
-        />
-      )}
-      <Drawer open={isOpen} onOpenChange={onClose} shouldScaleBackground>
-        <DrawerContent
-          side="bottom"
-          className="p-0 flex flex-col bg-white text-black rounded-t-xl"
-          style={{ maxHeight: 'calc(100dvh - var(--sat))' }}
-          aria-describedby="instagram-cart-description"
-        >
-          <DrawerHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
-            <DrawerTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
-              <ShoppingBag className="h-6 w-6 text-red-500" />
-              {getDrawerTitle()}
-            </DrawerTitle>
-          </DrawerHeader>
-          <span id="instagram-cart-description" className="sr-only">
-            {checkoutStep === 'cart' ? 'Review your items, then proceed to checkout.' : 'Enter your details to complete your order.'}
-          </span>
+  const isMobile = useIsMobile();
 
-          <div className="flex-1 overflow-hidden flex flex-col" style={{ overscrollBehavior: 'contain' }}>
+  const inner = (
+    <>
+      <div className="p-4 border-b flex-row items-center justify-between flex-shrink-0" style={{borderColor:'hsl(var(--border))'}}>
+        <div className="flex items-center gap-2 text-xl font-bold">
+          <ShoppingBag className="h-6 w-6 text-red-500" />
+          {getDrawerTitle()}
+        </div>
+      </div>
+      <span id="instagram-cart-description" className="sr-only">
+        {checkoutStep === 'cart' ? 'Review your items, then proceed to checkout.' : 'Enter your details to complete your order.'}
+      </span>
+
+      <div className="flex-1 overflow-hidden flex flex-col" style={{ overscrollBehavior: 'contain' }}>
             {(checkoutStep === 'cart' && !initialCartItems) ? (
               <>
                 {currentCartItems.length === 0 && savedItems.length === 0 ? (
@@ -277,8 +279,8 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                     <div>
                       {currentCartItems.length > 0 && (
                         <Accordion type="single" collapsible defaultValue="items-in-cart" className="w-full">
-                          <AccordionItem value="items-in-cart" className="border-b px-5">
-                            <AccordionTrigger className="text-lg font-bold text-gray-800">Items in Cart ({currentCartItems.length})</AccordionTrigger>
+                          <AccordionItem value="items-in-cart" className="border-b px-5" style={{borderColor:'hsl(var(--border))'}}>
+                            <AccordionTrigger className="text-lg font-bold">Items in Cart ({currentCartItems.length})</AccordionTrigger>
                             <AccordionContent>
                               {hasSubscriptionProducts && (
                                 <div className="flex items-center gap-2 p-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md mb-4">
@@ -305,7 +307,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
 
                                   return (
                                     <motion.div
-                                      key={item.productId}
+                                      key={item.uid}
                                       layout
                                       initial={{ opacity: 0, y: 20 }}
                                       animate={{ opacity: 1, y: 0 }}
@@ -313,12 +315,12 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                       transition={{ duration: 0.2 }}
                                       className="mb-3 last:mb-0"
                                     >
-                                      <Card className="flex flex-col p-2 gap-2 shadow-sm border border-gray-200 bg-white">
+                                      <Card className="flex flex-col p-2 gap-2 shadow-sm border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
                                         {/* Row 1 */}
                                         <div className="grid grid-cols-[auto_1fr_auto] gap-2 items-center">
                                           {/* Col 1: Thumbnail */}
                                           <button onClick={() => handleOpenProductQuickView(item.productId)} className="flex-shrink-0">
-                                            <div className="h-16 w-16 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                                            <div className="h-16 w-16 rounded-md overflow-hidden bg-[hsl(var(--muted))] border border-[hsl(var(--border))]">
                                               <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                             </div>
                                           </button>
@@ -326,18 +328,23 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                           {/* Col 2: Name, Price, Offer */}
                                           <div className="flex flex-col justify-center min-w-0">
                                             <button onClick={() => handleOpenProductQuickView(item.productId)} className="text-left">
-                                              <h3 className="font-semibold text-sm hover:underline leading-tight text-gray-800 truncate">{item.name}</h3>
+                                              <h3 className="font-semibold text-sm hover:underline leading-tight truncate">{item.name}</h3>
                                             </button>
                                             <div className="flex items-baseline gap-1 mt-0.5">
                                               {item.isDiscounted && (
-                                                <p className="text-xs text-gray-500 line-through">
-                                                  {formatCurrency(convertCurrency(item.originalPrice, item.currency, shopDetails?.currency), shopDetails?.currency)}
+                                                <p className="text-xs opacity-70 line-through">
+                                                  {formatCurrency(convertCurrency(item.originalPrice, item.currency), shopDetails?.currency)}
                                                 </p>
                                               )}
                                               <p className={cn("font-semibold text-sm", item.isDiscounted && "text-green-600")}>
-                                                {formatCurrency(convertCurrency(item.price, item.currency, shopDetails?.currency), shopDetails?.currency)}
+                                                {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
                                               </p>
                                             </div>
+                                            {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                                              <div className="text-xs opacity-80 mt-0.5 truncate">
+                                                {Object.entries(item.selectedOptions).map(([k,v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join(" · ")}
+                                              </div>
+                                            )}
                                             {(firstDiscount || hasOffer) && (
                                               <div className="flex gap-1 mt-0.5">
                                                 {firstDiscount && (
@@ -355,49 +362,41 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                           </div>
 
                                           {/* Col 3: Counter */}
-                                          <div className="flex items-center border border-gray-300 rounded-md w-32 h-10 flex-shrink-0">
-                                            <motion.button
+                                          <div className="flex items-center border border-[hsl(var(--border))] rounded-md w-32 h-10 flex-shrink-0">
+                                            <button
                                               type="button"
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                                              onClick={() => updateQuantity(item.uid, item.quantity - 1)}
                                               disabled={item.quantity <= 1}
-                                              className="h-full w-10 rounded-r-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
-                                              whileHover={{ scale: 1.1 }}
-                                              whileTap={{ scale: 0.9 }}
+                                              className="h-full w-10 rounded-r-none flex items-center justify-center hover:bg-[hsl(var(--muted))]"
                                             >
                                               <Minus className="h-3 w-3" />
-                                            </motion.button>
+                                            </button>
                                             <Input
                                               type="number"
                                               value={item.quantity}
-                                              onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
-                                              className="w-12 text-center border-y-0 border-x border-gray-300 focus-visible:ring-0 text-xs h-full rounded-none bg-white p-0"
+                                              onChange={(e) => updateQuantity(item.uid, parseInt(e.target.value) || 1)}
+                                              className="w-12 text-center border-y-0 border-x border-[hsl(var(--border))] focus-visible:ring-0 text-xs h-full rounded-none bg-[hsl(var(--card))] p-0"
                                               min={1}
                                             />
-                                            <motion.button
+                                            <button
                                               type="button"
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                                              onClick={() => updateQuantity(item.uid, item.quantity + 1)}
                                               disabled={item.quantity >= 99}
-                                              className="h-full w-10 rounded-l-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
-                                              whileHover={{ scale: 1.1 }}
-                                              whileTap={{ scale: 0.9 }}
+                                              className="h-full w-10 rounded-l-none flex items-center justify-center hover:bg-[hsl(var(--muted))]"
                                             >
                                               <Plus className="h-3 w-3" />
-                                            </motion.button>
+                                            </button>
                                           </div>
                                         </div>
 
                                         {/* Row 2: Save/Remove */}
-                                        <div className="flex justify-end gap-1 pt-2 border-t border-gray-100">
+                                        <div className="flex justify-end gap-1 pt-2 border-t" style={{borderColor:'hsl(var(--border))'}}>
                                           <Button
                                             type="button"
                                             variant="outline"
                                             size="sm"
                                             onClick={() => saveForLater(item)}
-                                            className="text-xs w-[50%] h-9 px-2 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                                            className="text-xs w-[50%] h-9 px-2 bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]"
                                           >
                                               <Bookmark className="mr-1 h-3 w-3" />
                                               Save
@@ -406,8 +405,8 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                             type="button"
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => removeFromCart(item.productId)}
-                                            className="text-xs w-[50%] h-9 px-2 text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100"
+                                            onClick={() => removeFromCart(item.uid)}
+                                            className="text-xs w-[50%] h-9 px-2 text-red-600 hover:text-red-700 bg-transparent hover:bg-[hsl(var(--muted))] border-[hsl(var(--border))]"
                                           >
                                               <XCircle className="h-3 w-3 mr-2" />
                                               Remove
@@ -425,8 +424,8 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
 
                       {savedItems.length > 0 && (
                         <Accordion type="single" collapsible className="w-full">
-                          <AccordionItem value="saved-for-later" className="border-b px-5">
-                            <AccordionTrigger className="text-lg font-bold text-gray-800">Saved for Later ({savedItems.length})</AccordionTrigger>
+                          <AccordionItem value="saved-for-later" className="border-b px-5" style={{borderColor:'hsl(var(--border))'}}>
+                            <AccordionTrigger className="text-lg font-bold">Saved for Later ({savedItems.length})</AccordionTrigger>
                             <AccordionContent>
                               <AnimatePresence>
                                 {savedItems.map(item => (
@@ -451,19 +450,6 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
 
                                         {/* Col 2: Name, Price */}
                                         <div className="flex-1 flex flex-col justify-center min-w-0">
-                                          <button onClick={() => handleOpenProductQuickView(item.productId)} className="text-left">
-                                            <h3 className="font-semibold text-sm hover:underline leading-tight text-gray-800 truncate">{item.name}</h3>
-                                          </button>
-                                          <div className="flex items-baseline gap-1 mt-0.5">
-                                            {item.isDiscounted && (
-                                              <p className="text-xs text-gray-500 line-through">
-                                                {formatCurrency(convertCurrency(item.originalPrice, item.currency, shopDetails?.currency), shopDetails?.currency)}
-                                              </p>
-                                            )}
-                                            <p className={cn("font-semibold text-sm", item.isDiscounted && "text-green-600")}>
-                                              {formatCurrency(convertCurrency(item.price, item.currency, shopDetails?.currency), shopDetails?.currency)}
-                                            </p>
-                                          </div>
                                         </div>
 
                                         {/* Col 3: Empty (no counter for saved items) */}
@@ -471,27 +457,27 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                       </div>
 
                                       {/* Row 2: Move to Cart, Remove */}
-                                      <div className="flex justify-end gap-1 pt-2 border-t border-gray-1000">
-                                          <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => moveToCart(item.productId)}
-                                            className="text-xs w-[50%] h-9 px-2 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
-                                          >
-                                              <MoveRight className="mr-1 h-3 w-3 rotate-[-90deg]" />
-                                              Move to Cart
-                                          </Button>
-                                          <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => removeSavedItem(item.productId)}
-                                            className="text-xs w-[50%] h-9 px-2 text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100"
-                                          >
-                                              <XCircle className="h-3 w-3 mr-2" />
-                                              Remove
-                                          </Button>
+                                      <div className="flex justify-end gap-1 pt-2 border-t" style={{borderColor:'hsl(var(--border))'}}>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => moveToCart(item.uid)}
+                                          className="text-xs w-[50%] h-9 px-2 bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]"
+                                        >
+                                          <MoveRight className="mr-1 h-3 w-3 rotate-[-90deg]" />
+                                          Move to Cart
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => removeSavedItem(item.uid)}
+                                          className="text-xs w-[50%] h-9 px-2 text-red-600 hover:text-red-700 bg-transparent hover:bg-[hsl(var(--muted))] border-[hsl(var(--border))]"
+                                        >
+                                          <XCircle className="h-3 w-3 mr-2" />
+                                          Remove
+                                        </Button>
                                       </div>
                                     </Card>
                                   </motion.div>
@@ -517,7 +503,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                 shopDetails={shopDetails}
                 convertCurrency={convertCurrency}
                 hasSubscriptionProducts={hasSubscriptionProducts} // Pass calculated hasSubscriptionProducts
-                checkoutStep={checkoutStep}
+                checkoutStep={checkoutStep === 'payment' ? 'payment' : 'contact-shipping'}
                 setCheckoutStep={setCheckoutStep}
                 onContinue={() => setCheckoutStep('payment')}
                 savedAddresses={savedAddresses} // Pass saved addresses
@@ -527,13 +513,13 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
               />
             )}
           </div>
-          <DrawerFooter className="p-4 border-t border-gray-200 flex-shrink-0" style={{ paddingBottom: 'calc(1rem + var(--sab))' }}>
+          <div className="p-4 border-t flex-shrink-0" style={{ paddingBottom: 'calc(1rem + var(--sab))', borderColor:'hsl(var(--border))' }}>
             <div className="flex flex-col w-full space-y-2">
-              <div className="flex justify-between text-sm text-gray-800">
+              <div className="flex justify-between text-sm">
                 <span>Subtotal ({totalItems} items):</span>
                 <span className="font-semibold">{formatCurrency(subtotal, shopDetails?.currency)}</span>
               </div>
-              <div className="flex justify-between text-sm text-gray-800">
+              <div className="flex justify-between text-sm">
                 <span>Shipping:</span>
                 <span className={cn("font-semibold", shipping === 0 && "text-green-600")}>
                   {shipping === 0 ? "FREE" : formatCurrency(shipping, shopDetails?.currency)}
@@ -546,7 +532,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                 </div>
               )}
               <Separator className="my-2" />
-              <div className="flex justify-between text-lg font-bold pt-2 text-gray-800">
+              <div className="flex justify-between text-lg font-bold pt-2">
                 <span>Total:</span>
                 <span>{formatCurrency(total, shopDetails?.currency)}</span>
               </div>
@@ -578,15 +564,39 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                   )}
                 </Button>
               )}
-              <Button variant="ghost" className="w-half text-base text-gray-800 bg-gray-100 hover:bg-gray-100" onClick={handleBack}>
+              <Button variant="outline" className="w-half text-base bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]" onClick={handleBack}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>
               </div>
             </div>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+          </div>
+    </>
+  );
+
+  return (
+    <>
+      {isProductQuickViewModalOpen && productToQuickView && (
+        <InstagramProductQuickViewModal
+          isOpen={isProductQuickViewModalOpen}
+          onClose={() => setIsProductQuickViewModalOpen(false)}
+          productId={productToQuickView.productId}
+          shopSlug={productToQuickView.shopSlug}
+        />
+      )}
+      {isMobile ? (
+        <Drawer open={isOpen} onOpenChange={onClose} shouldScaleBackground>
+          <DrawerContent className="p-0 flex flex-col bg-[hsl(var(--card))] text-[hsl(var(--foreground))] rounded-t-xl" style={{ maxHeight: 'calc(100dvh - var(--sat))' }} aria-describedby="instagram-cart-description">
+            {inner}
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Sheet open={isOpen} onOpenChange={onClose}>
+          <SheetContent side="right" className="p-0 flex flex-col w-[680px] max-w-[95vw] bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-l-[hsl(var(--border))]">
+            {inner}
+          </SheetContent>
+        </Sheet>
+      )}
     </>
   );
 };

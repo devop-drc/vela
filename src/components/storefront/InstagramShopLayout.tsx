@@ -17,10 +17,12 @@ import { InstagramMyOrdersDrawer } from './InstagramMyOrdersDrawer'; // Import I
 import { supabase } from '@/integrations/supabase/client'; // Import supabase for order count
 import { Drawer } from '@/components/ui/drawer'; // Import Drawer.Root
 import { InstagramBottomNav } from './InstagramBottomNav'; // Import new bottom nav
+import { InstagramDesktopSidebar } from './InstagramDesktopSidebar';
 import { InstagramFilterDrawer } from './InstagramFilterDrawer'; // Import InstagramFilterDrawer
+import { FloatingCartPill } from './FloatingCartPill';
 
 // Function to apply fixed Instagram-like settings to the DOM
-const applyInstagramShopSettingsToDOM = () => {
+const applyInstagramShopSettingsToDOM = (isDark: boolean) => {
   const root = document.documentElement;
 
   // Reset any custom properties from AppearanceContext
@@ -33,16 +35,32 @@ const applyInstagramShopSettingsToDOM = () => {
   root.style.removeProperty('--font-heading');
   root.classList.remove('blur-enabled');
 
-  // Apply fixed Instagram-like styles
-  root.style.setProperty('--background', '0 0% 100%'); // White background
-  root.style.setProperty('--foreground', '0 0% 10%'); // Near-black text
-  root.style.setProperty('--primary', '210 90% 50%'); // Instagram blue-ish
-  root.style.setProperty('--primary-foreground', '0 0% 100%'); // White text
-  root.style.setProperty('--muted', '0 0% 95%'); // Light gray for muted elements
-  root.style.setProperty('--muted-foreground', '0 0% 45%'); // Darker gray for muted text
-  root.style.setProperty('--border', '0 0% 85%'); // Light gray border
-  root.style.setProperty('--card', '0 0% 100%'); // White card background
-  root.style.setProperty('--input', '0 0% 90%'); // Light gray input background
+  // Mark root so other code can detect we own the theme while in InstagramShop
+  root.setAttribute('data-instagram-shop-theme', isDark ? 'dark' : 'light');
+  root.classList.add('instagram-shop-theme');
+
+  // Apply fixed Instagram-like styles (light/dark)
+  if (isDark) {
+    root.style.setProperty('--background', '0 0% 0%');
+    root.style.setProperty('--foreground', '0 0% 98%');
+    root.style.setProperty('--primary', '210 90% 56%');
+    root.style.setProperty('--primary-foreground', '0 0% 100%');
+    root.style.setProperty('--muted', '0 0% 12%');
+    root.style.setProperty('--muted-foreground', '0 0% 70%');
+    root.style.setProperty('--border', '0 0% 20%');
+    root.style.setProperty('--card', '0 0% 7%');
+    root.style.setProperty('--input', '0 0% 12%');
+  } else {
+    root.style.setProperty('--background', '0 0% 100%');
+    root.style.setProperty('--foreground', '0 0% 10%');
+    root.style.setProperty('--primary', '210 90% 50%');
+    root.style.setProperty('--primary-foreground', '0 0% 100%');
+    root.style.setProperty('--muted', '0 0% 95%');
+    root.style.setProperty('--muted-foreground', '0 0% 45%');
+    root.style.setProperty('--border', '0 0% 85%');
+    root.style.setProperty('--card', '0 0% 100%');
+    root.style.setProperty('--input', '0 0% 90%');
+  }
   root.style.setProperty('--radius', '0.5rem'); // Slightly rounded corners
 
   // Fonts will be applied dynamically based on appearanceSettings below
@@ -54,9 +72,46 @@ const applyInstagramShopSettingsToDOM = () => {
     bgOverlay.style.backgroundColor = 'transparent';
     bgOverlay.style.filter = 'none';
   }
+
+  // Inject/update a style tag with !important variables to prevent overrides
+  const existing = document.getElementById('instagram-shop-theme-style') as HTMLStyleElement | null;
+  const vars = getComputedStyle(root);
+  const css = `:root{--background:${vars.getPropertyValue('--background').trim()} !important;--foreground:${vars.getPropertyValue('--foreground').trim()} !important;--primary:${vars.getPropertyValue('--primary').trim()} !important;--primary-foreground:${vars.getPropertyValue('--primary-foreground').trim()} !important;--muted:${vars.getPropertyValue('--muted').trim()} !important;--muted-foreground:${vars.getPropertyValue('--muted-foreground').trim()} !important;--border:${vars.getPropertyValue('--border').trim()} !important;--card:${vars.getPropertyValue('--card').trim()} !important;--input:${vars.getPropertyValue('--input').trim()} !important;--radius:${vars.getPropertyValue('--radius').trim()} !important;--font-sans:${vars.getPropertyValue('--font-sans').trim() || 'Montserrat, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif'} !important;--font-heading:${vars.getPropertyValue('--font-heading').trim() || 'Montserrat, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif'} !important;} body{font-family:var(--font-sans) !important;} h1,h2,h3,h4,h5,h6{font-family:var(--font-heading) !important;}`;
+  if (existing) {
+    existing.textContent = css;
+  } else {
+    const styleEl = document.createElement('style');
+    styleEl.id = 'instagram-shop-theme-style';
+    styleEl.textContent = css;
+    document.head.appendChild(styleEl);
+  }
 };
 
 const InstagramShopLayoutContent = () => {
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    const saved = localStorage.getItem('instagram_shop_theme');
+    if (saved === 'light') return false;
+    if (saved === 'dark') return true;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => {
+      const saved = localStorage.getItem('instagram_shop_theme');
+      if (!saved) setIsDark(e.matches);
+    };
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setIsDark(prev => {
+      const next = !prev;
+      localStorage.setItem('instagram_shop_theme', next ? 'dark' : 'light');
+      return next;
+    });
+  }, []);
   const { shopDetails, products: allProducts, isLoading, error, convertCurrency, appearanceSettings } = useStorefront();
   const isMobile = useIsMobile();
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
@@ -76,7 +131,28 @@ const InstagramShopLayoutContent = () => {
   const BOTTOM_NAV_HEIGHT = '56px'; // h-14
 
   useEffect(() => {
-    applyInstagramShopSettingsToDOM();
+    let applying = false;
+    const safeApply = () => {
+      if (applying) return;
+      applying = true;
+      applyInstagramShopSettingsToDOM(isDark);
+      requestAnimationFrame(() => { applying = false; });
+    };
+
+    safeApply();
+    // Notify listeners (e.g., bottom nav) that theme has been updated
+    try { window.dispatchEvent(new CustomEvent('instagram-shop-theme-updated')); } catch {}
+    const reapply = () => safeApply();
+    const storageHandler = (e: StorageEvent) => {
+      if (e.key === 'instagram_shop_theme') reapply();
+    };
+
+    window.addEventListener('focus', reapply);
+    document.addEventListener('visibilitychange', reapply);
+    window.addEventListener('storage', storageHandler);
+    const toggleListener = () => toggleTheme();
+    window.addEventListener('instagram-shop-toggle-theme', toggleListener as EventListener);
+
     // Apply admin-selected fonts if available (fallback to Montserrat)
     try {
       const root = document.documentElement;
@@ -99,9 +175,27 @@ const InstagramShopLayoutContent = () => {
       root.style.removeProperty('--font-sans');
       root.style.removeProperty('--font-heading');
       root.classList.remove('blur-enabled');
+      window.removeEventListener('focus', reapply);
+      document.removeEventListener('visibilitychange', reapply);
+      window.removeEventListener('storage', storageHandler);
+      window.removeEventListener('instagram-shop-toggle-theme', toggleListener as EventListener);
+      const styleEl = document.getElementById('instagram-shop-theme-style');
+      if (styleEl && styleEl.parentElement) styleEl.parentElement.removeChild(styleEl);
       // Re-apply default settings or main app settings if needed elsewhere
     };
-  }, [appearanceSettings]);
+  }, [appearanceSettings, isDark]);
+
+  // Global events to open drawers from anywhere (e.g., floating pill / sidebar)
+  useEffect(() => {
+    const openCart = () => setIsCartModalOpen(true);
+    const openOrders = () => setIsMyOrdersDrawerOpen(true);
+    window.addEventListener('open-instagram-cart', openCart as EventListener);
+    window.addEventListener('open-instagram-orders', openOrders as EventListener);
+    return () => {
+      window.removeEventListener('open-instagram-cart', openCart as EventListener);
+      window.removeEventListener('open-instagram-orders', openOrders as EventListener);
+    };
+  }, []);
 
   // Dynamically set page title and meta description
   useEffect(() => {
@@ -237,7 +331,7 @@ const InstagramShopLayoutContent = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col min-h-screen bg-white text-black" style={{ height: '100dvh' }}>
+      <div className="flex flex-col min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))]" style={{ height: '100dvh' }}>
         <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} isProductsFeedPage={isProductsFeedPage} onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)} />
         <main className="flex-1 container py-4 mt-14">
           <div className="flex flex-col items-center mb-8">
@@ -263,7 +357,7 @@ const InstagramShopLayoutContent = () => {
 
   if (error) {
     return (
-      <div className="flex flex-col min-h-screen items-center justify-center text-center p-8 bg-white text-black" style={{ height: '100dvh' }}>
+      <div className="flex flex-col min-h-screen items-center justify-center text-center p-8 bg-[hsl(var(--background))] text-[hsl(var(--foreground))]" style={{ height: '100dvh' }}>
         <h1 className="text-xl md:text-2xl font-bold text-red-600">Error Loading Instagram Shop</h1>
         <p className="text-sm md:text-base text-gray-600 mt-2">{error}</p>
         <p className="text-xs md:text-sm text-gray-500 mt-4">Please check the URL or contact support.</p>
@@ -272,7 +366,7 @@ const InstagramShopLayoutContent = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-white text-black mb-[--instagram-bottom-nav-height]">
+    <div className="flex min-h-[100dvh] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] mb-[--instagram-bottom-nav-height]">
       <style>{`
         :root {
           --instagram-header-height: ${HEADER_HEIGHT};
@@ -284,15 +378,17 @@ const InstagramShopLayoutContent = () => {
           --vh: 100dvh;
         }
       `}</style>
-      <InstagramShopHeader
-        onOpenCart={() => setIsCartModalOpen(true)}
-        onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)}
-        isProductsFeedPage={isProductsFeedPage}
-        onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)}
-      />
-      <main
-        className="flex-1"
-      >
+      <InstagramDesktopSidebar onToggleTheme={toggleTheme} isDark={isDark} />
+      <div className="flex flex-col flex-1 md:pl-[244px]">
+        <div className="md:hidden">
+          <InstagramShopHeader
+            onOpenCart={() => setIsCartModalOpen(true)}
+            onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)}
+            isProductsFeedPage={isProductsFeedPage}
+            onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)}
+          />
+        </div>
+        <main className="flex-1 flex justify-center">
         <Outlet context={{
           isFilterDrawerOpen,
           setIsFilterDrawerOpen,
@@ -303,17 +399,16 @@ const InstagramShopLayoutContent = () => {
           allProducts,
           convertCurrency,
         }} />
-      </main>
+        </main>
+      </div>
       <Sonner />
       <InstagramCartDrawer isOpen={isCartModalOpen} onClose={() => setIsCartModalOpen(false)} />
-      <Drawer open={isMyOrdersDrawerOpen} onOpenChange={setIsMyOrdersDrawerOpen} shouldScaleBackground>
-        <InstagramMyOrdersDrawer
-          isOpen={isMyOrdersDrawerOpen}
-          onClose={() => setIsMyOrdersDrawerOpen(false)}
-          initialOrderId={initialOrderIdForDrawer}
-          onOrderOpened={() => setInitialOrderIdForDrawer(null)}
-        />
-      </Drawer>
+      <InstagramMyOrdersDrawer
+        isOpen={isMyOrdersDrawerOpen}
+        onClose={() => setIsMyOrdersDrawerOpen(false)}
+        initialOrderId={initialOrderIdForDrawer}
+        onOrderOpened={() => setInitialOrderIdForDrawer(null)}
+      />
       <InstagramFilterDrawer
         isOpen={isFilterDrawerOpen}
         onClose={() => setIsFilterDrawerOpen(false)}
@@ -322,7 +417,11 @@ const InstagramShopLayoutContent = () => {
         onFilterChange={handleFilterChange}
         onResetFilters={handleResetFilters}
       />
-      <InstagramBottomNav onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} myOrdersCount={myOrdersCount} />
+      {/* Floating cart pill for quick access to cart/checkout */}
+      <FloatingCartPill label="Checkout" />
+      <div className="md:hidden">
+        <InstagramBottomNav onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} myOrdersCount={myOrdersCount} />
+      </div>
     </div>
   );
 };

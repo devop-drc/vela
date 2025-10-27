@@ -9,10 +9,9 @@ import {
   Image as ImageIcon,
   Share2,
   ShoppingCart as ShoppingCartIcon,
+  LayoutGrid,
   Filter,
   ArrowUpNarrowWide,
-  LayoutGrid,
-  List,
   XCircle,
   Sparkles,
 } from "lucide-react";
@@ -78,8 +77,9 @@ const containerVariants = {
 };
 
 const getIconComponent = (iconName: keyof typeof LucideIcons) => {
-  const Icon = LucideIcons[iconName];
-  return Icon ? <Icon className="h-5 w-5 text-red-500" /> : <Sparkles className="h-5 w-5 text-red-500" />;
+  const Icon = LucideIcons[iconName] as unknown as React.ElementType | undefined;
+  const Comp = Icon ?? Sparkles;
+  return <Comp className="h-5 w-5 text-red-500" />;
 };
 
 const InstagramProfilePage = () => {
@@ -208,74 +208,102 @@ const InstagramProfilePage = () => {
   const totalFollowing = 1; // Placeholder for 'following' count as it's not in shopDetails
 
   return (
-    <div className="min-h-screen bg-white text-black flex flex-col">
+    <div className="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))] flex flex-col">
       {/* InstagramFilterDrawer is now rendered in InstagramShopLayout */}
 
-      <main className="flex-1">
+      <main className="flex-1 flex justify-center">
+        <div className="w-full md:max-w-[935px] mx-auto px-4 md:px-0">
         {/* Profile Section */}
-        <section className="flex flex-col items-center mb-8 md:mb-10 px-4 pt-4">
-          <div className="flex items-center w-full max-w-md md:max-w-none md:justify-start gap-4 md:gap-8 mb-4">
-            <Avatar className="h-24 w-24 md:h-28 md:w-28 border-2 border-gray-300 flex-shrink-0">
+        <section className="flex flex-col md:flex-row md:items-start md:gap-10 mb-6 md:mb-8 px-0 pt-6 md:pt-10">
+          <div className="flex items-start gap-4 md:gap-8 w-full">
+            <Avatar className="h-24 w-24 md:h-36 md:w-36 border-2 flex-shrink-0 mx-0" style={{borderColor:'hsl(var(--border))'}}>
               <AvatarImage src={shopDetails.logo_url || undefined} alt={shopDetails.shop_name} />
-              <AvatarFallback className="text-3xl md:text-4xl font-bold bg-gray-100 text-gray-600">
+              <AvatarFallback className="text-3xl md:text-4xl font-bold" style={{backgroundColor:'hsl(var(--muted))', color:'hsl(var(--foreground))'}}>
                 {shopDetails.shop_name?.[0]}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1"> {/* This div will contain the two rows */}
-                <h2 className="text-base md:text-lg font-semibold mb-1">{shopDetails.shop_name}</h2> {/* Shop Name */}
-                <div className="grid grid-cols-3 text-center gap-2"> {/* Counters row */}
-                    <div>
-                        <p className="text-lg md:text-xl font-bold">{formatLargeNumber(totalPosts)}</p>
-                        <p className="text-xs md:text-sm text-gray-500">posts</p>
-                    </div>
-                    <div>
-                        <p className="text-lg md:text-xl font-bold">{formatLargeNumber(totalFollowers)}</p>
-                        <p className="text-xs md:text-sm text-gray-500">followers</p>
-                    </div>
-                    <div>
-                        <p className="text-lg md:text-xl font-bold">{formatLargeNumber(totalFollowing)}</p>
-                        <p className="text-xs md:text-sm text-gray-500">following</p>
-                    </div>
+
+            <div className="flex-1">
+              {/* Handle */}
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="text-xl md:text-2xl font-semibold leading-tight">
+                  {(() => {
+                    const fromUrl = shopDetails.instagram_url?.replace(/^(https?:\/\/)?(www\.)?/i, '').split('/')[1];
+                    return fromUrl || shopDetails.shop_name?.toLowerCase().replace(/\s+/g,'_') || '';
+                  })()}
+                </h1>
+              </div>
+
+              {/* Name */}
+              <p className="text-sm md:text-base" style={{color:'hsl(var(--muted-foreground))'}}>{shopDetails.shop_name}</p>
+
+              {/* Counts row */}
+              <div className="flex items-center gap-6 md:gap-8 mt-2">
+                <div className="flex items-center gap-2 text-sm md:text-base">
+                  <span className="font-semibold">{formatLargeNumber(totalPosts)}</span>
+                  <span style={{color:'hsl(var(--muted-foreground))'}}>posts</span>
                 </div>
+                <div className="flex items-center gap-2 text-sm md:text-base">
+                  <span className="font-semibold">{formatLargeNumber(totalFollowers)}</span>
+                  <span style={{color:'hsl(var(--muted-foreground))'}}>followers</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm md:text-base">
+                  <span className="font-semibold">{formatLargeNumber(totalFollowing)}</span>
+                  <span style={{color:'hsl(var(--muted-foreground))'}}>following</span>
+                </div>
+              </div>
+
+              {/* Category */}
+              <p className="mt-2 text-sm md:text-base font-medium" style={{color:'hsl(var(--muted-foreground))'}}>Advertising/Marketing</p>
+
+              {/* Bio */}
+              {shopDetails.headline && (
+                <p className="text-sm md:text-base" style={{color:'hsl(var(--foreground))'}}>{shopDetails.headline}</p>
+              )}
+              {shopDetails.about && (
+                <p className="text-sm md:text-base" style={{color:'hsl(var(--foreground))'}}>{shopDetails.about}</p>
+              )}
+
+              {/* Website link */}
+              {shopDetails.instagram_url && (
+                <a
+                  href={shopDetails.instagram_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:underline text-sm md:text-base inline-flex items-center gap-1 mt-1"
+                >
+                  <LinkIcon className="h-4 w-4" />
+                  {shopDetails.instagram_url.replace(/^(https?:\/\/)?(www\.)?/i, '')}
+                </a>
+              )}
             </div>
           </div>
-
-          <div className="w-full max-w-md md:max-w-none md:pl-0 space-y-1 text-left">
-            <p className="text-sm md:text-base text-gray-600">Advertising/marketing</p>
-            {shopDetails.headline && <p className="text-sm md:text-base text-gray-600">{shopDetails.headline}</p>}
-            {shopDetails.about && <p className="text-sm md:text-base text-gray-600">{shopDetails.about}</p>}
-            {shopDetails.instagram_url && (
-              <a href={shopDetails.instagram_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm md:text-base flex items-center justify-start gap-1">
-                {shopDetails.instagram_url.replace(/^(https?:\/\/)?(www\.)?/i, '').split('/')[0]}
-              </a>
-            )}
-          </div>
         </section>
-
-        {/* Storefront Announcements */}
+        
         {marqueeElements.length > 0 && (
-          <section className="my-4">
-            <Marquee pauseOnHover className="py-2 border-y border-gray-200 bg-gray-50">
-              {marqueeElements.map(element => (
-                <div key={element.id} className="flex items-center gap-4 text-sm font-semibold text-gray-800 px-4">
-                  {getIconComponent(element.icon_name)}
-                  <span>{element.message}</span>
-                </div>
-              ))}
-            </Marquee>
+          <section className="my-2">
+            <div className="border-y bg-[hsl(var(--card))]" style={{borderColor: 'hsl(var(--border))'}}>
+              <Marquee pauseOnHover className="py-1">
+                {marqueeElements.map(element => (
+                  <div key={element.id} className="flex items-center gap-4 text-sm font-semibold px-4 text-[hsl(var(--foreground))]">
+                    {getIconComponent(element.icon_name)}
+                    <span>{element.message}</span>
+                  </div>
+                ))}
+              </Marquee>
+            </div>
           </section>
         )}
 
-        {/* Filter, Sort, and Grid Icon for Profile Page */}
-        <div className="flex flex-col items-center justify-center py-2 mb-6 px-4">
-          <div className="flex items-center justify-center gap-2 w-full max-w-md mb-2">
+        <div className="flex flex-col items-center justify-center py-1 mb-4 px-4">
+          <div className="flex items-center justify-center gap-2 w-full max-w-md mb-1">
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
-                setIsFilterDrawerOpen(true); // Open the filter drawer directly
+                setIsFilterDrawerOpen(true);
               }}
-              className="flex-1 text-gray-800 bg-gray-50 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
+              className="flex-1 bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] rounded-xl h-10 px-4 font-semibold"
             >
               <Filter className="mr-2 h-4 w-4" />
               Filter {hasActiveFilters && <span className="ml-1 text-xs text-red-500">(Active)</span>}
@@ -285,30 +313,30 @@ const InstagramProfilePage = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 text-gray-800 bg-gray-50 border-gray-300 hover:bg-gray-100 rounded-xl h-10 px-4 font-semibold" // Updated styling
+                  className="flex-1 bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] rounded-xl h-10 px-4 font-semibold"
                 >
                   Sort <ArrowUpNarrowWide className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleSortChange("newest")} className="text-sm">Newest</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSortChange("oldest")} className="text-sm">Oldest</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSortChange("price-asc")} className="text-sm">Price: Low to High</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSortChange("price-desc")} className="text-sm">Price: High to Low</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSortChange("name-asc")} className="text-sm">Name: A-Z</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSortChange("name-desc")} className="text-sm">Name: Z-A</DropdownMenuItem>
+              <DropdownMenuContent align="end" className="bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))]">
+                <DropdownMenuItem onClick={() => handleSortChange("newest")} className="text-sm hover:bg-[hsl(var(--muted))]">Newest</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("oldest")} className="text-sm hover:bg-[hsl(var(--muted))]">Oldest</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("price-asc")} className="text-sm hover:bg-[hsl(var(--muted))]">Price: Low to High</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("price-desc")} className="text-sm hover:bg-[hsl(var(--muted))]">Price: High to Low</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("name-asc")} className="text-sm hover:bg-[hsl(var(--muted))]">Name: A-Z</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("name-desc")} className="text-sm hover:bg-[hsl(var(--muted))]">Name: Z-A</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <div className="flex items-center justify-center w-full max-w-md">
-            <span className="p-2 rounded-md text-gray-800">
+          <div className="flex items-center justify-center w-full max-w-md mt-1">
+            <span className="p-2 rounded-md">
                 <LayoutGrid className="h-4 w-4" />
             </span>
           </div>
         </div>
 
         {/* Product Grid */}
-        <section className="mt-4">
+        <section className="mt-4 px-2 md:px-0">
           {filteredAndSortedProducts.length === 0 ? (
             <div className="text-center py-16 text-gray-600 border-2 border-dashed rounded-lg mx-4">
               <h3 className="text-xl md:text-2xl font-semibold">No Products Found</h3>
@@ -329,7 +357,7 @@ const InstagramProfilePage = () => {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-3 gap-1"
+              className="grid grid-cols-3 gap-1 md:gap-1"
             >
               {filteredAndSortedProducts.map((product) => (
                 <InstagramProductCard
@@ -345,6 +373,7 @@ const InstagramProfilePage = () => {
             </motion.div>
           )}
         </section>
+        </div>
       </main>
     </div>
   );

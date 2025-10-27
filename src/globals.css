@@ -45,7 +45,33 @@
   }
 
   .dark {
-    /* Dark theme variables can be defined here */
+    /* Dark theme variables */
+    --background: 220 10% 8%;
+    --foreground: 220 10% 96%;
+    --muted: 220 10% 14%;
+    --muted-foreground: 220 10% 70%;
+
+    --card: 220 10% 10%;
+    --card-foreground: 220 10% 96%;
+
+    --popover: 220 10% 10%;
+    --popover-foreground: 220 10% 96%;
+
+    --primary: 220 10% 92%;
+    --primary-foreground: 220 10% 10%;
+
+    --secondary: 220 10% 16%;
+    --secondary-foreground: 220 10% 92%;
+
+    --accent: 220 10% 16%;
+    --accent-foreground: 220 10% 92%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 10% 22%;
+    --input: 220 10% 22%;
+    --ring: 220 10% 65%;
   }
 }
 

@@ -1,12 +1,11 @@
 "use client";
 
-import React from 'react';
-import { NavLink, useParams, useLocation } from 'react-router-dom';
-import { ShoppingBag, Truck } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useParams, useLocation } from 'react-router-dom';
+import { ShoppingBag, Sun, Moon, Truck, Box } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useCart } from '@/contexts/CartContext';
-import { cn } from '@/lib/utils';
-import { DrawerTrigger } from '@/components/ui/drawer'; // Import DrawerTrigger
+//
 
 interface InstagramBottomNavProps {
   onOpenCart: () => void;
@@ -18,6 +17,26 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
   const { totalItems } = useCart();
   const { shopSlug } = useParams<{ shopSlug: string }>();
   const location = useLocation();
+
+  const [isDark, setIsDark] = useState(false);
+  useEffect(() => {
+    const root = document.documentElement;
+    const updateFromAttr = () => {
+      const mode = root.getAttribute('data-instagram-shop-theme');
+      setIsDark(mode === 'dark');
+    };
+    updateFromAttr();
+    const onThemeUpdated = () => updateFromAttr();
+    window.addEventListener('instagram-shop-theme-updated', onThemeUpdated as EventListener);
+    document.addEventListener('visibilitychange', updateFromAttr);
+    return () => {
+      window.removeEventListener('instagram-shop-theme-updated', onThemeUpdated as EventListener);
+      document.removeEventListener('visibilitychange', updateFromAttr);
+    };
+  }, []);
+  const toggleTheme = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('instagram-shop-toggle-theme'));
+  }, []);
 
   // Only show this bottom nav for InstagramShop routes
   if (!location.pathname.startsWith(`/instagramShop/${shopSlug}`)) {
@@ -38,7 +57,7 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
       }}
     >
       <nav
-        className="bg-white text-gray-800 border-t border-gray-200 shadow-lg w-full max-w-md"
+        className="w-full max-w-md bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-t border-[hsl(var(--border))] shadow-lg"
         style={{
           height: '50px',
           paddingBottom: 'var(--sab, env(safe-area-inset-bottom, 0px))',
@@ -49,7 +68,7 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
         <div className="flex justify-around items-center h-full">
           <button
             onClick={onOpenMyOrders}
-            className="flex flex-row gap-1 items-center justify-center text-gray-800 w-full h-full transition-colors text-xs relative hover:bg-gray-50 b"
+            className="flex flex-row gap-1 items-center justify-center w-full h-full transition-colors text-xs relative hover:bg-[hsl(var(--muted))]"
           >
             <ShoppingBag className="h-5 w-5" />
             <p className="font-semibold text-sm mt-1">My Orders</p>
@@ -60,10 +79,19 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
             )}
           </button>
 
+          {/* Theme toggle (icon only) */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-center w-full h-full hover:bg-[hsl(var(--muted))]"
+            aria-label="Toggle theme"
+          >
+            {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+          </button>
+
           {/* Cart Button */}
           <button
             onClick={onOpenCart}
-            className="flex flex-row-reverse gap-1 items-center justify-center text-gray-800 w-full h-full transition-colors text-xs relative hover:bg-gray-50"
+            className="flex flex-row-reverse gap-1 items-center justify-center w-full h-full transition-colors text-xs relative hover:bg-[hsl(var(--muted))]"
           >
             <motion.span
               key={totalItems}
