@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Link as LinkIcon, LogOut, User as UserIcon, Settings } from "lucide-react"; // Import LogOut, UserIcon, and Settings
+import { Search, Link as LinkIcon, LogOut, User as UserIcon, Settings, Sparkles } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { useShop } from "@/contexts/ShopContext";
 import { showSuccess, showError } from "@/utils/toast";
 import { useState, useEffect } from "react"; // Import useState and useEffect
@@ -28,7 +29,9 @@ const Header = ({ title }: HeaderProps) => {
   const { shopDetails } = useShop();
   const isFloating = settings.layoutStyle === 'floating';
   const blurEnabled = settings.blurEnabled;
-  const [user, setUser] = useState<any>(null); // State to hold user info
+  const [user, setUser] = useState<any>(null);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [tokenStats, setTokenStats] = useState<{ prompt: number; candidates: number; jobs: { created_at: string; prompt: number; candidates: number }[] }>({ prompt: 0, candidates: 0, jobs: [] });
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -37,6 +40,22 @@ const Header = ({ title }: HeaderProps) => {
     };
     fetchUser();
   }, []);
+
+  useEffect(() => {
+    const fetchTokenUsage = async () => {
+      if (!user) return;
+      const { data } = await supabase.from('sync_jobs').select('created_at, summary').eq('user_id', user.id).order('created_at', { ascending: false });
+      const jobs = (data || []).map((r: any) => ({
+        created_at: r.created_at,
+        prompt: Number(r.summary?.total_ai_tokens_used?.prompt || 0),
+        candidates: Number(r.summary?.total_ai_tokens_used?.candidates || 0),
+      }));
+      const prompt = jobs.reduce((a, b) => a + b.prompt, 0);
+      const candidates = jobs.reduce((a, b) => a + b.candidates, 0);
+      setTokenStats({ prompt, candidates, jobs });
+    };
+    fetchTokenUsage();
+  }, [user]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -86,6 +105,59 @@ const Header = ({ title }: HeaderProps) => {
         </div>
       </div>
       <div className="flex items-center gap-4">
+        <Dialog open={aiOpen} onOpenChange={setAiOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Sparkles className="mr-2 h-4 w-4" />
+              {((tokenStats.prompt + tokenStats.candidates) / 1000).toFixed(1)}k • {(() => {
+                const INPUT_PER_MILLION = 1.25; // USD per 1,000,000 input tokens
+                const OUTPUT_PER_MILLION = 10.0; // USD per 1,000,000 output tokens
+                const cost = (tokenStats.prompt / 1_000_000) * INPUT_PER_MILLION + (tokenStats.candidates / 1_000_000) * OUTPUT_PER_MILLION;
+                return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(cost);
+              })()}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[520px]">
+            <DialogHeader>
+              <DialogTitle>AI Usage</DialogTitle>
+              <DialogDescription>Total tokens and estimated cost using Gemini 2.5 Pro pricing (USD): $1.25 per 1M input tokens, $10.00 per 1M output tokens.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">Prompt tokens</span>
+                <span>{tokenStats.prompt.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">Output tokens</span>
+                <span>{tokenStats.candidates.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">Estimated cost</span>
+                <span>{(() => {
+                  const INPUT_PER_MILLION = 1.25; // USD per 1,000,000 input tokens
+                  const OUTPUT_PER_MILLION = 10.0; // USD per 1,000,000 output tokens
+                  const cost = (tokenStats.prompt / 1_000_000) * INPUT_PER_MILLION + (tokenStats.candidates / 1_000_000) * OUTPUT_PER_MILLION;
+                  return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(cost);
+                })()}</span>
+              </div>
+              <div className="h-px bg-border my-2" />
+              <div className="max-h-64 overflow-auto space-y-1 text-sm">
+                {tokenStats.jobs.map((j, idx) => {
+                  const inputCost = (j.prompt / 1_000_000) * 1.25;
+                  const outputCost = (j.candidates / 1_000_000) * 10.0;
+                  const total = inputCost + outputCost;
+                  return (
+                    <div key={idx} className="flex items-center justify-between">
+                      <span>{new Date(j.created_at).toLocaleString()}</span>
+                      <span>{(j.prompt + j.candidates).toLocaleString()} tokens • {new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(total)}</span>
+                    </div>
+                  );
+                })}
+                {tokenStats.jobs.length === 0 && <div className="text-muted-foreground">No sync jobs yet.</div>}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
         <Button 
           variant="outline" 
           size="sm"

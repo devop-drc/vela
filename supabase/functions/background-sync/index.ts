@@ -108,6 +108,109 @@ const convertCurrencyServer = async (amount: number, fromCurrency: string, toCur
 
 
 // Database Functions
+// Variant helpers: create product_options, option_values, and product_variants from AI options
+const upsertProductOption = async (supabase: SupabaseClient, productId: string, name: string, position: number) => {
+  const normalized = toTitleCase(name);
+  const { data: existing, error: selErr } = await supabase
+    .from('product_options')
+    .select('id')
+    .eq('product_id', productId)
+    .eq('name', normalized)
+    .maybeSingle();
+  if (selErr && selErr.code !== 'PGRST116') throw selErr;
+  if (existing) return existing.id;
+  const { data: inserted, error: insErr } = await supabase
+    .from('product_options')
+    .insert({ product_id: productId, name: normalized, position, is_active: true })
+    .select('id')
+    .single();
+  if (insErr) throw insErr;
+  return inserted!.id;
+};
+
+const upsertOptionValue = async (supabase: SupabaseClient, optionId: string, value: string) => {
+  const val = String(value).trim();
+  const { data: existing, error: selErr } = await supabase
+    .from('option_values')
+    .select('id')
+    .eq('option_id', optionId)
+    .eq('value', val)
+    .maybeSingle();
+  if (selErr && selErr.code !== 'PGRST116') throw selErr;
+  if (existing) return existing.id;
+  const { data: inserted, error: insErr } = await supabase
+    .from('option_values')
+    .insert({ option_id: optionId, value: val, is_active: true })
+    .select('id')
+    .single();
+  if (insErr) throw insErr;
+  return inserted!.id;
+};
+
+const combinations = <T,>(arrays: T[][]): T[][] => {
+  if (arrays.length === 0) return [];
+  return arrays.reduce<T[][]>((acc, curr) => {
+    if (acc.length === 0) return curr.map(v => [v]);
+    const next: T[][] = [];
+    for (const prev of acc) {
+      for (const v of curr) next.push([...prev, v]);
+    }
+    return next;
+  }, []);
+};
+
+const buildVariantKey = (orderedOptionNames: string[], valueLabels: string[]) => {
+  const parts = orderedOptionNames.map((name, idx) => `${name}=${valueLabels[idx]}`);
+  return parts.join('|');
+};
+
+const upsertVariantsFromOptions = async (supabase: SupabaseClient, productId: string, aiOptions: Record<string, string[]>) => {
+  const optionEntries = Object.entries(aiOptions || {}).filter(([_, vals]) => Array.isArray(vals) && vals.length > 0);
+  if (optionEntries.length === 0) return;
+
+  const orderedNames = optionEntries.map(([name]) => toTitleCase(name));
+  const optionIds: string[] = [];
+  for (let i = 0; i < orderedNames.length; i++) {
+    const optionId = await upsertProductOption(supabase, productId, orderedNames[i], i);
+    optionIds.push(optionId);
+  }
+
+  const valueIdMatrix: string[][] = [];
+  const valueLabelMatrix: string[][] = [];
+  for (let i = 0; i < optionEntries.length; i++) {
+    const [, values] = optionEntries[i];
+    const ids: string[] = [];
+    const labels: string[] = [];
+    for (const raw of values) {
+      const val = String(raw).trim();
+      const id = await upsertOptionValue(supabase, optionIds[i], val);
+      ids.push(id);
+      labels.push(val);
+    }
+    valueIdMatrix.push(ids);
+    valueLabelMatrix.push(labels);
+  }
+
+  const combosIds = combinations(valueIdMatrix);
+  const combosLabels = combinations(valueLabelMatrix);
+
+  const { data: existingVariants } = await supabase
+    .from('product_variants')
+    .select('id, combination_key')
+    .eq('product_id', productId);
+  const existingKeys = new Set((existingVariants || []).map(v => v.combination_key));
+
+  const toInsert: any[] = [];
+  for (let i = 0; i < combosIds.length; i++) {
+    const variantKey = buildVariantKey(orderedNames, combosLabels[i]);
+    if (existingKeys.has(variantKey)) continue;
+    toInsert.push({ product_id: productId, combination_key: variantKey, is_active: true });
+  }
+  if (toInsert.length > 0) {
+    const { error } = await supabase.from('product_variants').insert(toInsert);
+    if (error) throw error;
+  }
+};
 const upsertCategory = async (supabase: SupabaseClient, name: string, userId: string): Promise<string> => {
   const normalizedName = toTitleCase(name);
   let { data, error } = await supabase.from('categories').select('id').eq('name', normalizedName).eq('user_id', userId).single();
@@ -250,6 +353,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
     // --- Step 2: Process and Upsert Products ---
     const productsToUpsert: ProductPayload[] = [];
+    const postOptionsMap = new Map<string, Record<string, string[]>>();
     const categoriesToUpsert = new Map<string, { id: string, name: string }>();
     const typesToUpsert = new Map<string, { categoryId: string, name: string, attributes: any[] }>();
     let progress = 0;
@@ -370,6 +474,26 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         summary.created_items.push(productPayload);
       }
       productsToUpsert.push(productPayload);
+
+      // Prefer explicit options; otherwise, derive from array-valued specifications
+      const derivedFromSpecs: Record<string, string[]> = {};
+      if (!options || Object.keys(options || {}).length === 0) {
+        if (specifications && typeof specifications === 'object') {
+          for (const [k, v] of Object.entries(specifications)) {
+            if (Array.isArray(v) && v.length > 0) {
+              const stringVals = v.map(x => String(x).trim()).filter(Boolean);
+              if (stringVals.length > 0) derivedFromSpecs[k] = stringVals;
+            }
+          }
+        }
+      }
+      const finalOptions = (options && Object.keys(options).length > 0)
+        ? (options as Record<string, string[]>)
+        : derivedFromSpecs;
+      if (finalOptions && Object.keys(finalOptions).length > 0) {
+        // Store options by instagram_post_id for variant creation after upsert
+        postOptionsMap.set(post.id, finalOptions);
+      }
     }
     
     // --- Step 3: Batch Upsert Categories and Types ---
@@ -405,6 +529,25 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       if (upsertError) {
         console.error("CRITICAL: Failed to upsert products batch:", upsertError);
         throw upsertError;
+      }
+      // Build variants for products with options
+      const postIds = Array.from(postOptionsMap.keys());
+      if (postIds.length > 0) {
+        const { data: productsForVariants, error: fetchErr } = await supabaseAdmin
+          .from('products')
+          .select('id, instagram_post_id')
+          .in('instagram_post_id', postIds);
+        if (fetchErr) throw fetchErr;
+        for (const p of productsForVariants || []) {
+          const aiOpts = postOptionsMap.get(p.instagram_post_id);
+          if (aiOpts) {
+            try {
+              await upsertVariantsFromOptions(supabaseAdmin, p.id, aiOpts);
+            } catch (e) {
+              console.error(`Failed to upsert variants for product ${p.id}:`, (e as any).message || e);
+            }
+          }
+        }
       }
     }
 

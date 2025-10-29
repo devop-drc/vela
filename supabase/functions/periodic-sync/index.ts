@@ -26,6 +26,113 @@ interface InstagramPost {
   media_type: string;
 }
 
+// ---------- Variant helpers ----------
+const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+
+const normalizeOptions = (raw: any): Record<string, string[]> => {
+  if (!raw) return {};
+  if (typeof raw === 'object' && !Array.isArray(raw)) {
+    return Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, Array.isArray(v) ? v : []]));
+  }
+  if (Array.isArray(raw)) {
+    const out: Record<string, string[]> = {};
+    for (const item of raw) {
+      const key = (item?.name ?? '').toString();
+      const vals = Array.isArray(item?.values) ? item.values : [];
+      if (key && vals.length) out[key] = vals.map((x: any) => String(x));
+    }
+    return out;
+  }
+  return {};
+};
+
+const upsertProductOption = async (supabase: SupabaseClient, productId: string, name: string, position: number) => {
+  const normalized = toTitleCase(name);
+  const { data: existing } = await supabase
+    .from('product_options')
+    .select('id')
+    .eq('product_id', productId)
+    .eq('name', normalized)
+    .maybeSingle();
+  if (existing) return existing.id as string;
+  const { data: inserted, error: insErr } = await supabase
+    .from('product_options')
+    .insert({ product_id: productId, name: normalized, position, is_active: true })
+    .select('id')
+    .single();
+  if (insErr) throw insErr;
+  return (inserted as any).id as string;
+};
+
+const upsertOptionValue = async (supabase: SupabaseClient, optionId: string, value: string) => {
+  const val = String(value).trim();
+  const { data: existing } = await supabase
+    .from('option_values')
+    .select('id')
+    .eq('option_id', optionId)
+    .eq('value', val)
+    .maybeSingle();
+  if (existing) return existing.id as string;
+  const { data: inserted, error: insErr } = await supabase
+    .from('option_values')
+    .insert({ option_id: optionId, value: val, is_active: true })
+    .select('id')
+    .single();
+  if (insErr) throw insErr;
+  return (inserted as any).id as string;
+};
+
+const combinations = <T,>(arrays: T[][]): T[][] => {
+  if (arrays.length === 0) return [];
+  return arrays.reduce<T[][]>((acc, curr) => {
+    if (acc.length === 0) return curr.map(v => [v]);
+    const next: T[][] = [];
+    for (const prev of acc) {
+      for (const v of curr) next.push([...prev, v]);
+    }
+    return next;
+  }, []);
+};
+
+const buildVariantKey = (orderedOptionNames: string[], valueLabels: string[]) => {
+  const parts = orderedOptionNames.map((name, idx) => `${name}=${valueLabels[idx]}`);
+  return parts.join('|');
+};
+
+const upsertVariantsFromOptions = async (supabase: SupabaseClient, productId: string, aiOptions: Record<string, string[]>) => {
+  const entries = Object.entries(aiOptions || {}).filter(([_, vals]) => Array.isArray(vals) && vals.length > 0);
+  if (entries.length === 0) return;
+  const orderedNames = entries.map(([name]) => toTitleCase(name));
+  const optionIds: string[] = [];
+  for (let i = 0; i < orderedNames.length; i++) {
+    const id = await upsertProductOption(supabase, productId, orderedNames[i], i);
+    optionIds.push(id);
+  }
+  const valueLabelMatrix: string[][] = [];
+  for (let i = 0; i < entries.length; i++) {
+    const [, values] = entries[i];
+    const labels: string[] = [];
+    for (const raw of values) labels.push(String(raw).trim());
+    valueLabelMatrix.push(labels);
+  }
+  const combosLabels = combinations(valueLabelMatrix);
+  const { data: existingVariants } = await supabase
+    .from('product_variants')
+    .select('combination_key')
+    .eq('product_id', productId);
+  const existing = new Set((existingVariants || []).map((v: any) => v.combination_key));
+  const toInsert: any[] = [];
+  for (let i = 0; i < combosLabels.length; i++) {
+    const key = buildVariantKey(orderedNames, combosLabels[i]);
+    if (existing.has(key)) continue;
+    toInsert.push({ product_id: productId, combination_key: key, is_active: true });
+  }
+  if (toInsert.length > 0) {
+    const { error } = await supabase.from('product_variants').insert(toInsert);
+    if (error) throw error;
+  }
+};
+
 const processUser = async (supabaseAdmin: SupabaseClient, integration: Integration) => {
   const { user_id, access_token } = integration;
 
@@ -86,8 +193,27 @@ const processUser = async (supabaseAdmin: SupabaseClient, integration: Integrati
         });
 
       if (productsToInsert.length > 0) {
-        const { error: insertError } = await supabaseAdmin.from('products').insert(productsToInsert);
+        // Insert products and return ids with instagram_post_id for matching
+        const { data: inserted, error: insertError } = await supabaseAdmin
+          .from('products')
+          .insert(productsToInsert)
+          .select('id, instagram_post_id');
         if (insertError) console.error(`Failed to insert products for user ${user_id}:`, insertError);
+
+        // Create variants where options are present
+        const byPostId = new Map<string, any>();
+        for (const r of analysisResults) {
+          if (!r.error && r.analysis && r.analysis.isProductPost) {
+            const norm = normalizeOptions(r.analysis.options);
+            if (Object.keys(norm).length > 0) byPostId.set(r.post.id, norm);
+          }
+        }
+        for (const prod of inserted || []) {
+          const opts = byPostId.get(prod.instagram_post_id);
+          if (opts) {
+            try { await upsertVariantsFromOptions(supabaseAdmin, prod.id, opts); } catch (_) {}
+          }
+        }
       }
     }
 

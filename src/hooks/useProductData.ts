@@ -54,7 +54,7 @@ export const useProductData = (): UseProductDataResult => {
 
     const [productsRes, categoriesRes, typesRes] = await Promise.all([
       // Include gallery and media metadata so editors can show all images
-      supabase.from("products").select("id, name, status, price, currency, inventory, media_url, media_gallery, media_type, thumbnail_url, created_at, category, tags, details, pricing_type, billing_interval, product_type").eq('user_id', user.id).order('created_at', { ascending: false }),
+      supabase.from("products").select("id, name, status, price, currency, inventory, media_url, media_gallery, media_type, thumbnail_url, created_at, category, caption, tags, details, pricing_type, billing_interval, product_type").eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from("categories").select("name").eq('user_id', user.id),
       supabase.from("types").select("name, attributes").eq('user_id', user.id),
     ]);
