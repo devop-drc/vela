@@ -26,9 +26,19 @@ import { toast } from "sonner";
 import { useSync } from "@/hooks/useSync";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { useAppearance } from "@/contexts/AppearanceContext";
+import { useShop } from "@/contexts/ShopContext";
 import { useProductData } from "@/hooks/useProductData"; // Import useProductData
 import { useProductFilters } from "@/hooks/useProductFilters"; // Import useProductFilters
 import { ProductFilterDrawer } from "@/components/dashboard/ProductFilterDrawer"; // Import new drawer
+import { FilterVisibilitySheet } from "@/components/dashboard/FilterVisibilitySheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { getAttributeIcon } from "@/lib/attributeIcons";
+import { Info, Tag as TagIcon, DollarSign, Layers, Monitor, Cpu, Gamepad, HardDrive, Baby, Package, Globe, Sparkles } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { formatCurrency } from "@/lib/formatters";
+import { GripVertical } from "lucide-react";
+import { Sortable, SortableItem, SortableItemHandle } from "@/components/ui/sortable";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 type GridSizeType = 'sm' | 'md' | 'lg';
@@ -53,12 +63,12 @@ interface Product {
 }
 
 const gridSizeClasses: { [key: string]: string } = {
-  sm: "lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7",
+  sm: "lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5",
   md: "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5",
   lg: "lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4",
 };
 
-const sizeLabels: { [key in GridSizeType]: string } = { sm: 'Small', md: 'Medium', lg: 'Large' };
+const sizeLabels: { [key in GridSizeType]: string } = { sm: 'Less Detail', md: 'More Detail', lg: 'Large' };
 const sizeCycle: GridSizeType[] = ['sm', 'md', 'lg'];
 
 const containerVariants = {
@@ -93,6 +103,24 @@ const Products = () => {
   const [gridSize, setGridSize] = useState<GridSizeType>('md');
   const [grouping, setGrouping] = useState<GroupingType>('none');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false); // New state for filter drawer
+  const [isVisibilitySheetOpen, setIsVisibilitySheetOpen] = useState(false);
+  const [visibilityMap, setVisibilityMap] = useState<Record<string, boolean>>({});
+  const [order, setOrder] = useState<string[]>([]);
+  const [dragKey, setDragKey] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [orderMode, setOrderMode] = useState<'alpha' | 'useful' | 'manual'>(() => {
+    const s = localStorage.getItem('instagram_filter_order_mode');
+    return (s === 'alpha' || s === 'useful' || s === 'manual') ? s : 'manual';
+  });
+  const [visQuery, setVisQuery] = useState("");
+
+  const { shopDetails } = useShop();
+
+  const toTitle = (s: string) =>
+    s
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2') // split camelCase
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
 
   // Use Product Data Hook
   const {
@@ -128,6 +156,171 @@ const Products = () => {
     allDetailsAttributes,
     maxPrice,
   });
+
+  // Compute the exact filter group keys shown in Instagram drawer
+  const visibilityKeys = useMemo(() => {
+    const keys: string[] = [];
+    // Order should mirror InstagramFilterDrawer: Categories, Price Range, Tags, then attributes
+    if (allCategories.length > 0) keys.push('categories');
+    keys.push('priceRange');
+    if (allTags.length > 0) keys.push('tags');
+
+    const attrSet = new Set<string>();
+    // include attributes present in definitions with any values
+    allDetailsAttributes.forEach(a => { if ((a.values?.length || 0) > 0) attrSet.add(a.name); });
+    // Also include attributes derived from products' details
+    allProducts.forEach(p => {
+      Object.keys(p.details || {}).forEach(k => { if (k !== 'type') attrSet.add(k); });
+    });
+    // Remove reference code/ref code style attributes
+    const isRefCode = (name: string) => {
+      const n = name.toLowerCase();
+      return n.includes('reference code') || n.includes('ref code') || n === 'ref' || n.includes('refcode') || n.includes('reference');
+    };
+    const attrs = Array.from(attrSet).filter(a => !isRefCode(a)).sort((a,b)=>a.localeCompare(b));
+    return [...keys, ...attrs];
+  }, [allCategories, allTags, allDetailsAttributes, allProducts]);
+
+  // Read admin-persisted order/visibility to drive Instagram Shop drawer ordering
+  const drawerKeysFromAdmin = useMemo(() => {
+    let orderLs: string[] = [];
+    let visMap: Record<string, boolean> = {};
+    try {
+      const s = localStorage.getItem('instagram_filter_order');
+      if (s) orderLs = JSON.parse(s);
+    } catch {}
+    try {
+      const v = localStorage.getItem('instagram_filter_visibility');
+      if (v) visMap = JSON.parse(v);
+    } catch {}
+    const base = orderLs.length > 0 ? orderLs : visibilityKeys;
+    return base.filter(k => visibilityKeys.includes(k) && visMap[k] !== false);
+  }, [visibilityKeys, isVisibilitySheetOpen]);
+
+  // Load persisted visibility
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('instagram_filter_visibility');
+      if (raw) {
+        setVisibilityMap(JSON.parse(raw));
+      } else {
+        setVisibilityMap({});
+      }
+    } catch {
+      setVisibilityMap({});
+    }
+  }, []);
+
+  // Initialize and persist order
+  useEffect(() => {
+    // initialize from storage when keys first known
+    const stored = localStorage.getItem('instagram_filter_order');
+    const keysSet = new Set(visibilityKeys);
+    if (stored) {
+      try {
+        const parsed: string[] = JSON.parse(stored);
+        const filtered = parsed.filter(k => keysSet.has(k));
+        const missing = visibilityKeys.filter(k => !filtered.includes(k));
+        setOrder([...filtered, ...missing]);
+        return;
+      } catch { void 0; }
+    }
+    setOrder(visibilityKeys);
+  }, [visibilityKeys]);
+
+  useEffect(() => {
+    if (order.length > 0) {
+      localStorage.setItem('instagram_filter_order', JSON.stringify(order));
+    }
+  }, [order]);
+
+  useEffect(() => {
+    localStorage.setItem('instagram_filter_order_mode', orderMode);
+  }, [orderMode]);
+
+  const setVisibility = (key: string, val: boolean) => {
+    setVisibilityMap(prev => {
+      const next = { ...prev, [key]: val };
+      localStorage.setItem('instagram_filter_visibility', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleToggleKey = (key: string) => {
+    const isOn = visibilityMap[key] !== false;
+    setVisibility(key, !isOn);
+  };
+
+  const onDragStart = (key: string, e: React.DragEvent) => {
+    setDragKey(key);
+    setIsDragging(true);
+    e.dataTransfer.setData('text/plain', key);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const moveAfter = (movingKey: string, targetKey: string) => {
+    setOrder(prev => {
+      const next = prev.filter(k => k !== movingKey);
+      const idx = next.indexOf(targetKey);
+      if (idx === -1) return prev; // shouldn't happen
+      next.splice(idx + 1, 0, movingKey);
+      return [...next];
+    });
+  };
+
+  const dropOnKey = (e: React.DragEvent, targetKey: string, targetEnabled: boolean) => {
+    if (!dragKey) return;
+    e.preventDefault();
+    e.stopPropagation();
+    // toggle if section differs
+    const dragEnabled = visibilityMap[dragKey] !== false;
+    if (dragEnabled !== targetEnabled) setVisibility(dragKey, targetEnabled);
+    // decide before/after based on cursor position within target
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const placeBefore = e.clientY < rect.top + rect.height / 2;
+    setOrder(prev => {
+      const list = prev.filter(k => k !== dragKey);
+      const idx = list.indexOf(targetKey);
+      if (idx === -1) return prev;
+      const insertIdx = placeBefore ? idx : idx + 1;
+      list.splice(insertIdx, 0, dragKey);
+      return [...list];
+    });
+    setDragKey(null);
+    setIsDragging(false);
+  };
+
+  const dropOnSectionEnd = (targetEnabled: boolean) => {
+    if (!dragKey) return;
+    const dragEnabled = visibilityMap[dragKey] !== false;
+    if (dragEnabled !== targetEnabled) setVisibility(dragKey, targetEnabled);
+    setOrder(prev => {
+      const list = prev.filter(k => k !== dragKey);
+      // compute effective enabled with dragKey moved
+      const isEnabledEff = (k: string) => (k === dragKey ? targetEnabled : visibilityMap[k] !== false);
+      let insertIdx = list.length;
+      if (targetEnabled) {
+        // insert after last enabled
+        insertIdx = -1;
+        list.forEach((k, i) => { if (isEnabledEff(k)) insertIdx = i; });
+        insertIdx = insertIdx + 1; // after last enabled
+      } else {
+        // insert at end (after all items)
+        insertIdx = list.length;
+      }
+      list.splice(Math.max(0, insertIdx), 0, dragKey);
+      return [...list];
+    });
+    setDragKey(null);
+    setIsDragging(false);
+  };
+
+  const resetVisibility = () => {
+    localStorage.removeItem('instagram_filter_visibility');
+    setVisibilityMap({});
+  };
+
+  
 
 
   useEffect(() => { setTitle("Products"); }, [setTitle]);
@@ -371,19 +564,29 @@ const Products = () => {
         handlePriceRangeChange={handlePriceRangeChange}
         statusFilter={statusFilter}
         handleToggleStatusFilter={handleToggleStatusFilter}
+        drawerKeys={drawerKeysFromAdmin}
       />
 
-      <div className="space-y-4">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
-            {/* Search Input */}
-            <div className="relative w-full sm:w-auto sm:flex-1 md:max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search products..." className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            </div>
-            
+      {/* Filter Visibility Sheet */}
+      <FilterVisibilitySheet
+        open={isVisibilitySheetOpen}
+        onOpenChange={setIsVisibilitySheetOpen}
+        allCategories={allCategories}
+        allTags={allTags}
+        allDetailsAttributes={allDetailsAttributes}
+        allProducts={allProducts}
+      />
+      
+      <div className="sticky top-[0px] z-50 flex mb-3 items-center justify-between">
+          <div className="flex items-center gap-1">
+            {/* Filter Management Button */}
+            <Button className="bg-primary text-primary-foreground border-none justify-start flex-1 md:flex-none hover:bg-primary/90 shadow-lg" onClick={() => setIsVisibilitySheetOpen(true)}>
+              <List className="mr-2 h-4 w-4" />
+              Filter Management
+            </Button>
+
             {/* Filter Button (Opens Drawer) */}
-            <Button variant="outline" className="justify-start flex-1 md:flex-none" onClick={() => setIsFilterDrawerOpen(true)}>
+            <Button variant="outline" className="justify-start flex-1 md:flex-none shadow-lg" onClick={() => setIsFilterDrawerOpen(true)}>
               <FilterIcon className="mr-2 h-4 w-4" />
               Filter
               {hasActiveFilters && <span className="ml-1 text-xs text-primary">(Active)</span>}
@@ -391,7 +594,7 @@ const Products = () => {
             
             {/* Sort Select */}
             <Select value={sortOption} onValueChange={setSortOption}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px] shadow-lg">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
@@ -407,10 +610,10 @@ const Products = () => {
             {/* View/Grouping/Selection Controls (Desktop Only) */}
             <AnimatePresence>
               {!isMobile && (
-                <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 'auto', opacity: 1 }} exit={{ width: 0, opacity: 0 }} className="flex items-center gap-2 overflow-hidden">
+                <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 'auto', opacity: 1 }} exit={{ width: 0, opacity: 0 }} className="flex items-center gap-2 overflow-visible">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline"><Group className="mr-2 h-4 w-4" />Group</Button>
+                      <Button variant="outline" className="shadow-lg"><Group className="mr-2 h-4 w-4" />Group</Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       <DropdownMenuRadioGroup value={grouping} onValueChange={(v) => setGrouping(v as GroupingType)}>
@@ -419,16 +622,16 @@ const Products = () => {
                       </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <Button variant="outline" size="icon" onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}>
+                  <Button variant="outline" size="icon" onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')} className="shadow-lg">
                     {viewMode === 'grid' ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
                   </Button>
                   {viewMode === 'grid' && (
-                    <Button variant="outline" onClick={cycleGridSize} className="w-28 justify-start">
+                    <Button variant="outline" onClick={cycleGridSize} className="w-28 justify-start shadow-lg">
                       <LayoutGrid className="mr-2 h-4 w-4" />{sizeLabels[gridSize]}
                     </Button>
                   )}
                   {viewMode === 'grid' && (
-                    <Button variant={isSelectionModeActive ? "secondary" : "outline"} onClick={toggleSelectionMode}>
+                    <Button variant={isSelectionModeActive ? "secondary" : "outline"} onClick={toggleSelectionMode} className="shadow-lg">
                       <CheckSquare className="mr-2 h-4 w-4" />{isSelectionModeActive ? 'Cancel' : 'Select'}
                     </Button>
                   )}
@@ -439,15 +642,17 @@ const Products = () => {
           
           {/* Sync Actions */}
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <Button variant="outline" onClick={() => runWithIntegrationCheck(() => setIsImporterOpen(true))} className="flex-1 md:flex-none"><Import className="mr-2 h-4 w-4" />Import</Button>
-            {hasDoneFullSync === null ? <Skeleton className="h-10 w-32" /> : !hasDoneFullSync ? <Button onClick={() => handleSync('full')} disabled={isSyncing} className="flex-1"><RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />Full Sync</Button> : <div className="flex items-center"><Button onClick={() => handleSync('quick')} disabled={isSyncing} className="rounded-r-none flex-1"><RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />Quick Sync</Button><DropdownMenu><DropdownMenuTrigger asChild><Button disabled={isSyncing} className="rounded-l-none px-2 border-l border-primary-foreground/20"><ChevronDown className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleSync('full')} disabled={isSyncing}>Run Full Sync</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>}
+            <Button variant="outline" onClick={() => runWithIntegrationCheck(() => setIsImporterOpen(true))} className="flex-1 md:flex-none shadow-lg">
+              <Import className="mr-2 h-4 w-4" />Import
+            </Button>
+            {hasDoneFullSync === null ? <Skeleton className="h-10 w-32" /> : !hasDoneFullSync ? <Button onClick={() => handleSync('full')} disabled={isSyncing} className="flex-1 shadow-lg"><RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />Full Sync</Button> : <div className="flex items-center"><Button onClick={() => handleSync('quick')} disabled={isSyncing} className="rounded-r-none flex-1 shadow-lg"><RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />Quick Sync</Button><DropdownMenu><DropdownMenuTrigger asChild><Button disabled={isSyncing} className="rounded-l-none px-2 border-l border-primary-foreground/20 shadow-lg"><ChevronDown className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleSync('full')} disabled={isSyncing}>Run Full Sync</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>}
           </div>
         </div>
 
         {/* Product List/Grid */}
         {isProductDataLoading ? (currentView === 'grid' ? <div className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>{Array.from({ length: 12 }).map((_, i) => <div key={i} className="space-y-2"><Skeleton className="aspect-square w-full rounded-lg" /><Skeleton className="h-4 w-2/3" /><Skeleton className="h-4 w-1/2" /></div>)}</div> : <div className="p-6 space-y-2"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>) : Object.keys(groupedProducts).length > 0 ? (currentView === 'grid' ? <div className="space-y-8">{Object.entries(groupedProducts).map(([groupName, products]) => (<div key={groupName}><div className="flex items-center gap-4 mb-4"><h2 className={cn("text-xl font-bold capitalize inline-block", settings.backgroundImageUrl && "bg-card/60 backdrop-blur-[20px] px-3 py-1 rounded-md")}>{groupName} ({products.length})</h2>{grouping === 'category' && products.length > 0 && (<Button variant="outline" size="sm" onClick={() => handleSelectAllInGroup(products)}><CheckSquare className="mr-2 h-4 w-4" />{products.every(p => selectedProducts.includes(p.id)) ? 'Deselect All' : 'Select All'}</Button>)}</div><motion.div variants={containerVariants} initial="hidden" animate="visible" className={cn("grid grid-cols-2 md:grid-cols-3 gap-4 items-stretch", gridSizeClasses[gridSize])}>{products.map((product) => <motion.div key={product.id} variants={itemVariants} className="h-full"><ProductCard product={product} gridSize={gridSize} isSelected={selectedProducts.includes(product.id)} isSelectionModeActive={isSelectionModeActive || selectedProducts.length > 0} onSelect={handleSelectProduct} onEdit={setSelectedProduct} onStatusChange={handleStatusChange} /></motion.div>)}</motion.div></div>))}</div> : <Card><CardContent className="p-0"><ProductTableView products={filteredAndSortedProducts} selectedProducts={selectedProducts} onSelectAll={(checked) => setSelectedProducts(checked ? filteredAndSortedProducts.map(p => p.id) : [])} onSelectOne={handleSelectProduct} onEdit={setSelectedProduct} onDelete={handleBulkDelete} /></CardContent></Card>) : <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg"><h3 className="lg:text-lg font-semibold">No Products Found</h3><p className="text-sm mt-1">Try adjusting your search or filters, or import from Instagram.</p></div>}
-      </div>
-      <AnimatePresence>{selectedProducts.length > 0 && <BulkActionsToolbar selectedCount={selectedProducts.length} onClear={() => { setSelectedProducts([]); setIsSelectionModeActive(false); }} onSetStatus={handleBulkStatusChange} onDelete={() => setBulkDeleteConfirm(true)} onAddSale={() => setIsSaleModalOpen(true)} />}</AnimatePresence>
+      <AnimatePresence>
+        {selectedProducts.length > 0 && <BulkActionsToolbar selectedCount={selectedProducts.length} onClear={() => { setSelectedProducts([]); setIsSelectionModeActive(false); }} onSetStatus={handleBulkStatusChange} onDelete={() => setBulkDeleteConfirm(true)} onAddSale={() => setIsSaleModalOpen(true)} />}</AnimatePresence>
     </>
   );
 };

@@ -249,7 +249,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
     <>
       <div className="p-4 border-b flex-row items-center justify-between flex-shrink-0" style={{borderColor:'hsl(var(--border))'}}>
         <div className="flex items-center gap-2 text-xl font-bold">
-          <ShoppingBag className="h-6 w-6 text-red-500" />
+          <ShoppingBag className="h-6 w-6 text-[hsl(var(--primary))]" />
           {getDrawerTitle()}
         </div>
       </div>
@@ -272,7 +272,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                     <ShoppingBag className="h-20 w-20 text-gray-400 mb-6" />
                     <h3 className="text-2xl font-bold mb-4">Your cart is empty</h3>
                     <p className="text-base text-gray-500 mb-8">Looks like you haven't added anything to your cart yet.</p>
-                    <Button onClick={onClose} className="text-base bg-red-500 hover:bg-red-600 text-white">Start Shopping</Button>
+                    <Button onClick={onClose} className="text-base bg-[hsl(var(--primary))] text-white">Start Shopping</Button>
                   </motion.div>
                 ) : (
                   <ScrollArea className="flex-1" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' as any }}>
@@ -327,10 +327,10 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
 
                                           {/* Col 2: Name, Price, Offer */}
                                           <div className="flex flex-col justify-center min-w-0">
-                                            <button onClick={() => handleOpenProductQuickView(item.productId)} className="text-left">
+                                            <button onClick={() => handleOpenProductQuickView(item.productId)} className="text-left text-[hsl(var(--foreground))]">
                                               <h3 className="font-semibold text-sm hover:underline leading-tight truncate">{item.name}</h3>
                                             </button>
-                                            <div className="flex items-baseline gap-1 mt-0.5">
+                                            <div className="flex items-baseline gap-1 mt-0.5 text-[hsl(var(--foreground))]">
                                               {item.isDiscounted && (
                                                 <p className="text-xs opacity-70 line-through">
                                                   {formatCurrency(convertCurrency(item.originalPrice, item.currency), shopDetails?.currency)}
@@ -341,12 +341,12 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                               </p>
                                             </div>
                                             {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                                              <div className="text-xs opacity-80 mt-0.5 truncate">
+                                              <div className="text-xs opacity-80 mt-0.5 truncate text-[hsl(var(--foreground))]">
                                                 {Object.entries(item.selectedOptions).map(([k,v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join(" · ")}
                                               </div>
                                             )}
                                             {(firstDiscount || hasOffer) && (
-                                              <div className="flex gap-1 mt-0.5">
+                                              <div className="flex gap-1 mt-0.5 text-[hsl(var(--foreground))]">
                                                 {firstDiscount && (
                                                   <Badge className="bg-green-600 text-white text-xs px-1.5 py-0.5">
                                                     {getPromotionBadge(firstDiscount)}
@@ -362,29 +362,29 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                           </div>
 
                                           {/* Col 3: Counter */}
-                                          <div className="flex items-center border border-[hsl(var(--border))] rounded-md w-32 h-10 flex-shrink-0">
+                                          <div className="flex items-center border border-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-md w-32 h-10 flex-shrink-0">
                                             <button
                                               type="button"
                                               onClick={() => updateQuantity(item.uid, item.quantity - 1)}
                                               disabled={item.quantity <= 1}
-                                              className="h-full w-10 rounded-r-none flex items-center justify-center hover:bg-[hsl(var(--muted))]"
+                                              className="h-full w-10 rounded-r-none flex items-center justify-center hover:bg-[hsl(var(--muted))] cursor-pointer"
                                             >
-                                              <Minus className="h-3 w-3" />
+                                              <Minus className="h-4 w-4" />
                                             </button>
                                             <Input
                                               type="number"
                                               value={item.quantity}
                                               onChange={(e) => updateQuantity(item.uid, parseInt(e.target.value) || 1)}
-                                              className="w-12 text-center border-y-0 border-x border-[hsl(var(--border))] focus-visible:ring-0 text-xs h-full rounded-none bg-[hsl(var(--card))] p-0"
+                                              className="w-12 text-center justify-center border-y-0 border-x border-[hsl(var(--border))] focus-visible:ring-0 text-sm h-full rounded-none bg-[hsl(var(--card))] p-0"
                                               min={1}
                                             />
                                             <button
                                               type="button"
                                               onClick={() => updateQuantity(item.uid, item.quantity + 1)}
                                               disabled={item.quantity >= 99}
-                                              className="h-full w-10 rounded-l-none flex items-center justify-center hover:bg-[hsl(var(--muted))]"
+                                              className="h-full w-10 rounded-l-none flex items-center justify-center hover:bg-[hsl(var(--muted))] cursor-pointer"
                                             >
-                                              <Plus className="h-3 w-3" />
+                                              <Plus className="h-4 w-4" />
                                             </button>
                                           </div>
                                         </div>
@@ -396,9 +396,9 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                             variant="outline"
                                             size="sm"
                                             onClick={() => saveForLater(item)}
-                                            className="text-xs w-[50%] h-9 px-2 bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]"
+                                            className="text-sm w-[50%] h-9 px-2 bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] hover:border-[hsl(var(--foreground))]"
                                           >
-                                              <Bookmark className="mr-1 h-3 w-3" />
+                                              <Bookmark className="mr-1 h-4 w-4" />
                                               Save
                                           </Button>
                                           <Button
@@ -406,9 +406,9 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                             variant="outline"
                                             size="sm"
                                             onClick={() => removeFromCart(item.uid)}
-                                            className="text-xs w-[50%] h-9 px-2 text-red-600 hover:text-red-700 bg-transparent hover:bg-[hsl(var(--muted))] border-[hsl(var(--border))]"
+                                            className="text-sm w-[50%] h-9 px-2 text-red-600 hover:text-red-700 bg-transparent hover:bg-[hsl(var(--destructive))] hover:text-[hsl(var(--foreground))]"
                                           >
-                                              <XCircle className="h-3 w-3 mr-2" />
+                                              <XCircle className="h-4 w-4 mr-2" />
                                               Remove
                                           </Button>
                                         </div>
@@ -438,22 +438,35 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                     transition={{ duration: 0.2 }}
                                     className="mb-3 last:mb-0"
                                   >
-                                    <Card className="flex flex-col p-2 gap-2 shadow-sm border border-gray-200 bg-white">
+                                    <Card className="flex flex-col p-2 gap-2 shadow-sm border">
                                       {/* Row 1 */}
                                       <div className="grid grid-cols-[auto_1fr_auto] gap-2 items-center">
                                         {/* Col 1: Thumbnail */}
                                         <button onClick={() => handleOpenProductQuickView(item.productId)} className="flex-shrink-0">
-                                          <div className="h-16 w-16 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                                          <div className="h-16 w-16 rounded-md overflow-hidden">
                                             <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                           </div>
                                         </button>
 
                                         {/* Col 2: Name, Price */}
                                         <div className="flex-1 flex flex-col justify-center min-w-0">
+                                          <button onClick={() => handleOpenProductQuickView(item.productId)} className="text-left text-[hsl(var(--foreground))]">
+                                            <h3 className="font-semibold text-sm hover:underline leading-tight truncate">{item.name}</h3>
+                                          </button>
+                                          <div className="flex items-baseline gap-1 mt-0.5 text-[hsl(var(--foreground))]">
+                                            {item.isDiscounted && (
+                                              <p className="text-xs opacity-70 line-through">
+                                                {formatCurrency(convertCurrency(item.originalPrice, item.currency), shopDetails?.currency)}
+                                              </p>
+                                            )}
+                                            <p className={cn("font-semibold text-sm", item.isDiscounted && "text-green-600")}>
+                                              {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
+                                            </p>
+                                          </div>
                                         </div>
 
                                         {/* Col 3: Empty (no counter for saved items) */}
-                                        <div className="w-16 flex-shrink-0" /> {/* Placeholder to align with cart items */}
+                                        <div className="w-16 flex-shrink-0" />
                                       </div>
 
                                       {/* Row 2: Move to Cart, Remove */}
@@ -463,7 +476,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                           variant="outline"
                                           size="sm"
                                           onClick={() => moveToCart(item.uid)}
-                                          className="text-xs w-[50%] h-9 px-2 bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]"
+                                          className="text-sm w-[50%] h-9 px-2 bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] hover:border-[hsl(var(--foreground))]"
                                         >
                                           <MoveRight className="mr-1 h-3 w-3 rotate-[-90deg]" />
                                           Move to Cart
@@ -473,7 +486,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                           variant="outline"
                                           size="sm"
                                           onClick={() => removeSavedItem(item.uid)}
-                                          className="text-xs w-[50%] h-9 px-2 text-red-600 hover:text-red-700 bg-transparent hover:bg-[hsl(var(--muted))] border-[hsl(var(--border))]"
+                                          className="text-sm w-[50%] h-9 px-2 text-red-600 hover:text-red-700 bg-transparent hover:bg-[hsl(var(--destructive))] hover:text-[hsl(var(--foreground))]"
                                         >
                                           <XCircle className="h-3 w-3 mr-2" />
                                           Remove
@@ -538,19 +551,19 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
               </div>
               <div className="flex flex-row-reverse align-middle justify-center mt-1 gap-2">
               {checkoutStep === 'cart' && !initialCartItems && ( // Only show if it's the persistent cart
-                <Button className="w-full text-base bg-red-500 hover:bg-red-600 text-white" onClick={handleProceedToCheckout} disabled={currentCartItems.length === 0}>
+                <Button className="w-full text-base bg-[hsl(var(--primary))] text-white" onClick={handleProceedToCheckout} disabled={currentCartItems.length === 0}>
                   Proceed to Checkout
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               )}
               {checkoutStep === 'contact-shipping' && (
-                <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-red-500 hover:bg-red-600 text-white" disabled={isSubmittingOrder}>
+                <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-[hsl(var(--primary))] text-white" disabled={isSubmittingOrder}>
                   Continue to Payment
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               )}
               {checkoutStep === 'payment' && (
-                <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-red-500 hover:bg-red-600 text-white" disabled={isSubmittingOrder}>
+                <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-[hsl(var(--primary))] text-white" disabled={isSubmittingOrder}>
                   {isSubmittingOrder ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -564,7 +577,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                   )}
                 </Button>
               )}
-              <Button variant="outline" className="w-half text-base bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]" onClick={handleBack}>
+              <Button variant="outline" className="w-half text-base bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] hover:border-[hsl(var(--foreground))]" onClick={handleBack}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>

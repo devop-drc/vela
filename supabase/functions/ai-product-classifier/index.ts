@@ -25,6 +25,7 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
 
   **Primary Objectives:**
   1. **Product Identification:** Determine if the post is selling a product. If not, return \`{"isProductPost": false}\`.
+     - If the post is primarily about a sale, discount, promotion, event, or offer (e.g., lists multiple products with prices, or general promo without a specific product), set \`"isSaleOrPromotion": true\` and provide a summary \`promotion\` object.
   2. **Product Name:** Extract the clearest and most concise product name directly from the caption (max 10 words).
   3. **Category & Type:** Determine the most specific category and type based on the product name and caption content.
   4. **Pricing Model:**
@@ -37,6 +38,10 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
      - **Options (Variants):** A key-value object where values are arrays of customer-selectable variants (e.g., Color, Size, Storage). Use arrays of strings for values. Extract these directly from the caption. Use snake_case for keys.
   8. **Description:** Generate a compelling, detailed 3-4 sentence description highlighting key features, benefits, and materials, based on the caption and inferred specifications.
   9. **Tags:** Generate 3-5 relevant tags.
+
+  10. **Multi-Product Posts:** If the caption lists multiple products (e.g., separated by blank lines, each with name and price/stock/ref code), output them in a `products` array. Each item should include `productName`, `price`, `currency`, `inventory` (if available), and any specifications/options that are specific to that item. Also set `isProductPost` to true.
+
+  11. **Sales/Promotions (Non-product posts):** If the post is primarily a sale/discount/offer announcement without specific product details, set `isSaleOrPromotion` to true and include a `promotion` object with fields: `{ title: string, summary: string, discount_type?: 'percent'|'amount'|null, discount_value?: number|null, currency?: string|null, valid_until?: string|null }`.
 
   **Currency Handling:**
   - If the caption includes "ALL", "Lek", or "Lekë", use "ALL" as currency.
@@ -51,9 +56,10 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   **Output Format:**
   Respond ONLY with a single, valid JSON object. Do not include any explanation or markdown.
 
-  **EXAMPLE JSON OUTPUT:**
+  **EXAMPLE JSON OUTPUT (Single product):**
   {
     "isProductPost": true,
+    "isSaleOrPromotion": false,
     "productName": "Vintage Sunset Tee",
     "description": "A soft, vintage-style t-shirt made from 100% organic cotton. Features a stunning, faded sunset graphic print. Perfect for casual wear and sustainable fashion enthusiasts.",
     "categoryName": "Clothing",
@@ -71,6 +77,31 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
     "options": {
       "color": ["Cream", "Faded Blue"],
       "size": ["S", "M", "L", "XL"]
+    }
+  }
+  
+  **EXAMPLE JSON OUTPUT (Multiple products):**
+  {
+    "isProductPost": true,
+    "isSaleOrPromotion": false,
+    "products": [
+      { "productName": "Kufje Smart", "price": 250, "currency": "EUR", "inventory": 150, "specifications": { "ref_code": "x3185794" } },
+      { "productName": "Kabell USB-C", "price": 10, "currency": "EUR", "inventory": 250, "specifications": { "ref_code": "x3185494" } },
+      { "productName": "Laptop HP", "price": 1010, "currency": "EUR", "inventory": 5, "specifications": { "ref_code": "x31854d94" } }
+    ]
+  }
+
+  **EXAMPLE JSON OUTPUT (Promotion only):**
+  {
+    "isProductPost": false,
+    "isSaleOrPromotion": true,
+    "promotion": {
+      "title": "Back to School Sale",
+      "summary": "Up to 20% off on laptops and accessories",
+      "discount_type": "percent",
+      "discount_value": 20,
+      "currency": "EUR",
+      "valid_until": null
     }
   }
   

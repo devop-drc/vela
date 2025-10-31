@@ -96,20 +96,12 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
   };
 
   return (
-    <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative h-full">
-      <div className={cn("absolute top-3 right-3 z-20 transition-opacity", isSelectionModeActive ? "opacity-100" : "opacity-0 pointer-events-none")}>
-        <Checkbox
-          checked={isSelected}
-          onCheckedChange={() => onSelect(product.id)}
-          className="h-6 w-6 bg-white/80 backdrop-blur-[20px] border-gray-400 rounded-md"
-          aria-label={`Select ${product.name}`}
-        />
-      </div>
+    <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative h-full overflow-visible">
       <Card 
         className={cn(
-          "group w-full overflow-hidden rounded-lg transition-all duration-300 flex flex-col cursor-pointer h-full",
-          isSelectionModeActive && "shadow-md",
-          isSelected && "ring-2 ring-primary ring-offset-2"
+          "group w-full overflow-hidden rounded-lg transition-all duration-300 flex flex-col cursor-pointer h-full shadow-sm",
+          isSelectionModeActive && "ring-2 ring-gray-400 shadow-md",
+          isSelected && "ring-primary ring-offset-2 shadow-2xl"
         )}
       >
         <Carousel 

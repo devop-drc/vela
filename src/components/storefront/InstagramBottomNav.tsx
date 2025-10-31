@@ -49,7 +49,7 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 50 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed left-0 right-0 z-50 flex justify-center w-full"
+      className="fixed left-0 right-0 bottom-0 z-50 flex w-[100vw]"
       style={{
         bottom: 0,
         // Keep the bar visually flush with the bottom while allowing safe-area padding inside
@@ -61,7 +61,6 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
         style={{
           height: '50px',
           paddingBottom: 'var(--sab, env(safe-area-inset-bottom, 0px))',
-          // Prevent content behind safe area from peeking when toolbars collapse/expand
           boxSizing: 'content-box',
         }}
       >

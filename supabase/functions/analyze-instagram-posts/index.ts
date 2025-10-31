@@ -135,7 +135,69 @@ const analyzeAndEnrichPost = async (post: any, supabase: SupabaseClient, userId:
             throw new Error("AI returned invalid JSON format.");
         }
 
+        // Heuristic helpers
+        const parseMultiProducts = (caption?: string): Array<{ productName: string; price?: number; currency?: string; inventory?: number; specifications?: Record<string, string> }> => {
+            if (!caption) return [];
+            const blocks = caption.split(/\n\s*\n+/).map(b => b.trim()).filter(Boolean);
+            const items: Array<{ productName: string; price?: number; currency?: string; inventory?: number; specifications?: Record<string, string> }> = [];
+            for (const block of blocks) {
+              const lines = block.split(/\n+/).map(l => l.trim()).filter(Boolean);
+              if (lines.length === 0) continue;
+              const name = lines[0];
+              let refCode: string | undefined;
+              let price: number | undefined;
+              let currency: string | undefined;
+              let inventory: number | undefined;
+              for (const line of lines.slice(1)) {
+                const refMatch = line.match(/ref\.?\s*code\s*:\s*([A-Za-z0-9\-]+)/i);
+                if (refMatch) refCode = refMatch[1];
+                const priceMatch = line.match(/çmimi\s*:\s*([0-9]+(?:[\.,][0-9]+)?)\s*([A-Za-z]{3})/i) || line.match(/price\s*:\s*([0-9]+(?:[\.,][0-9]+)?)\s*([A-Za-z]{3})/i);
+                if (priceMatch) { price = parseFloat(priceMatch[1].replace(',', '.')); currency = priceMatch[2].toUpperCase(); }
+                const stockMatch = line.match(/stock\s*:\s*([0-9]+)/i);
+                if (stockMatch) inventory = parseInt(stockMatch[1]);
+              }
+              const hasSignal = (price !== undefined && !!currency) || inventory !== undefined;
+              if (hasSignal) {
+                items.push({ productName: name, price, currency, inventory, specifications: refCode ? { ref_code: refCode } : undefined });
+              }
+            }
+            return items;
+        };
+
+        const looksLikePromotion = (caption?: string) => {
+            if (!caption) return false;
+            return /(sale|discount|offer|%\s*off|black\s*friday|promo)/i.test(caption);
+        };
+
         if (!analysis.isProductPost) {
+            // Fallback: parse list-style multi-product captions
+            const parsed = parseMultiProducts(post.caption);
+            if (parsed.length > 0) {
+                const first = parsed[0];
+                const details: Record<string, any> = { type: { value: 'Generic' } };
+                if (first.specifications) {
+                    for (const [k, v] of Object.entries(first.specifications)) details[k] = { value: v };
+                }
+                return {
+                    skipped: false,
+                    product: {
+                        name: { value: first.productName },
+                        description: { value: post.caption?.slice(0, 180) || '' },
+                        price: { value: first.price },
+                        currency: { value: first.currency || 'ALL' },
+                        inventory: { value: first.inventory ?? 10 },
+                        pricing_type: { value: 'one_time' },
+                        billing_interval: { value: null },
+                        tags: { value: [] },
+                        category: { value: 'Generic Product' },
+                        details: details,
+                    }
+                };
+            }
+            // Mark explicit promotions
+            if (looksLikePromotion(post.caption)) {
+                return { skipped: true, reason: 'Promotion post detected' };
+            }
             return { skipped: true, reason: "AI determined this is not a product post." };
         }
 

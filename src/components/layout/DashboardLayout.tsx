@@ -93,7 +93,7 @@ const DashboardLayout = () => {
       <Sidebar />
       <Header title={title} />
       <main className={cn(
-        "absolute inset-0 overflow-y-auto pt-28 px-4 pb-24 md:pb-4 transition-all",
+        "absolute inset-0 overflow-y-auto pl-4 pr-1 md:pb-4 transition-all pt-24",
         mainPaddingClasses[settings.sidebarWidth || 'default']
       )}>
         {content}

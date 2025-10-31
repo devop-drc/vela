@@ -165,7 +165,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
       )}
       <div className="p-4 border-b" style={{borderColor:'hsl(var(--border))'}}>
         <div className="flex items-center gap-2 text-xl font-bold">
-          <ShoppingBag className="h-6 w-6 text-red-500" />
+          <ShoppingBag className="h-6 w-6 text-[hsl(var(--primary))]" />
           My Orders
         </div>
       </div>
@@ -188,7 +188,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
                 <Input id="orderId" placeholder="e.g., 12345" value={orderIdInput} onChange={(e) => setOrderIdInput(e.target.value)} className="pl-10 text-sm bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))]" />
               </div>
             </div>
-            <Button type="submit" className="w-full text-base bg-red-500 hover:bg-red-600 text-white" disabled={isLoading}>
+            <Button type="submit" className="w-full text-base bg-[hsl(var(--primary))] text-white" disabled={isLoading}>
               {isLoading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading Orders...</>) : "View Orders"}
             </Button>
           </form>
@@ -199,26 +199,31 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
                 <h2 className="text-lg font-bold">Your Orders ({orders.length})</h2>
                 <div className="space-y-3">
                   {orders.map(order => (
-                    <Card key={order.id} onClick={() => { setSelectedOrder(order); setIsOrderDetailModalOpen(true); }} className="cursor-pointer hover:bg-[hsl(var(--muted))] shadow-sm border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+                    <Card key={order.id} onClick={() => { setSelectedOrder(order); setIsOrderDetailModalOpen(true); }} className="cursor-pointer hover:bg-[hsl(var(--muted))] shadow-sm border-2 border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))]">
                       <CardContent className="p-4 space-y-2">
                         <div className="flex items-center justify-between">
                           <p className="font-semibold flex items-center gap-2 text-base">
-                            <Hash className="h-4 w-4 text-red-500" /> Order #{order.id.substring(0, 8)}
+                            <Hash className="h-4 w-4 text-[hsl(var(--primary))]" /> Order #{order.id.substring(0, 8)}
                           </p>
-                          <Badge className={cn("font-normal text-xs", getStatusColorClass(order.status))}>
+                          <Badge className={cn("font-normal text-md", getStatusColorClass(order.status))}>
                             {getStatusIcon(order.status)}
                             <span className="ml-1">{order.status}</span>
                           </Badge>
                         </div>
-                        <div className="flex items-center justify-between text-sm opacity-80">
-                          <p className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4 text-red-500" /> {new Date(order.created_at).toLocaleDateString()}
+                        <div className="flex items-center justify-between text-xs opacity-80">
+                          <p className="flex items-center gap-1 text-[hsl(var(--muted-foreground))]">
+                            <Calendar className="h-4 w-4 text-[hsl(var(--primary))]" /> {new Date(order.created_at).toLocaleDateString()}
                           </p>
-                          <p className="font-semibold">
+                          <p className={cn("font-bold text-xl", {
+                            "text-green-500": order.status === "Fulfilled",
+                            "text-blue-500": order.status === "Given to Courier" || order.status === "Order Packaged",
+                            "text-amber-500": order.status === "Order Seen" || order.status === "Pending",
+                            "text-red-500": order.status === "Problematic" || order.status === "Cancelled",
+                            "text-gray-500": !["Fulfilled", "Given to Courier", "Order Packaged", "Order Seen", "Pending", "Problematic", "Cancelled"].includes(order.status),
+                          })}>
                             {formatCurrency(convertCurrency(order.total_amount, order.currency), shopDetails?.currency)}
                           </p>
                         </div>
-                        <Button variant="outline" size="sm" className="w-full mt-3 bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]">View Details</Button>
                       </CardContent>
                     </Card>
                   ))}
@@ -235,7 +240,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
         </div>
       </ScrollArea>
       <div className="pt-1 border-t flex-shrink-0 p-4" style={{ paddingBottom: 'calc(1rem + var(--sab))', borderColor:'hsl(var(--border))' }}>
-        <Button variant="outline" className="w-full text-base bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]" onClick={onClose}>
+        <Button variant="outline" className="w-full text-base bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-none hover:bg-[hsl(var(--muted))]" onClick={onClose}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Shop
         </Button>

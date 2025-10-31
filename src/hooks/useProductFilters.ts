@@ -152,16 +152,33 @@ export const useProductFilters = ({
       return price >= filters.priceRange[0] && price <= filters.priceRange[1];
     });
 
+    const normalize = (s: string) => s.toLowerCase().replace(/\s|_/g, '');
+    const normVal = (v: unknown) => String(v).trim().toLowerCase();
     for (const key in filters) {
       if (key !== 'categories' && key !== 'tags' && key !== 'priceRange' && key !== 'status' && Array.isArray(filters[key]) && (filters[key] as string[]).length > 0) {
-        const selectedValues = filters[key] as string[];
+        const selectedValues = (filters[key] as string[]).map(v => v.trim().toLowerCase());
         filtered = filtered.filter(p => {
-          const productDetailValue = p.details?.[key];
-          if (!productDetailValue) return false;
-          if (Array.isArray(productDetailValue)) {
-            return productDetailValue.some(val => selectedValues.includes(String(val)));
+          const details = p.details || {} as Record<string, unknown>;
+          // resolve the actual details key by normalization (handles Brand vs brand vs BRAND, spaces, underscores)
+          const matchKey = Object.keys(details).find(k => normalize(k) === normalize(key));
+          if (!matchKey) {
+            // Fallback for Brand: infer from product name and tags when details.brand is missing
+            if (normalize(key) === 'brand') {
+              const nameLower = (p.name || '').toLowerCase();
+              const tagsLower = (p.tags || []).map(t => String(t).toLowerCase());
+              // If any selected brand appears in the name or in any tag, consider it a match
+              const matchesName = selectedValues.some(val => nameLower.includes(val));
+              if (matchesName) return true;
+              const matchesTags = selectedValues.some(val => tagsLower.some(tag => tag.includes(val)));
+              if (matchesTags) return true;
+            }
+            return false;
           }
-          return selectedValues.includes(String(productDetailValue));
+          const value = details[matchKey];
+          if (Array.isArray(value)) {
+            return value.some(val => selectedValues.includes(normVal(val)));
+          }
+          return selectedValues.includes(normVal(value));
         });
       }
     }

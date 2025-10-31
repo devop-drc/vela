@@ -27,7 +27,7 @@ interface Product {
   tags: string[];
   price: number | null;
   currency: string | null;
-  details: { [key: string]: any };
+  details: { [key: string]: unknown };
 }
 
 interface FilterState {
@@ -59,11 +59,22 @@ export const InstagramFilterDrawer = ({
 
   const [localFilters, setLocalFilters] = useState<FilterState>(currentFilters);
   const [localPriceRange, setLocalPriceRange] = useState<[number, number]>(currentFilters.priceRange);
+  const [filterSearch, setFilterSearch] = useState("");
+  const [visibilityMap, setVisibilityMap] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setLocalFilters(currentFilters);
     setLocalPriceRange(currentFilters.priceRange);
   }, [currentFilters]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('instagram_filter_visibility');
+      if (raw) setVisibilityMap(JSON.parse(raw));
+    } catch {
+      setVisibilityMap({});
+    }
+  }, []);
 
   const handleToggleFilter = (filterKey: keyof FilterState, value: string) => {
     setLocalFilters(prev => {
@@ -166,21 +177,30 @@ export const InstagramFilterDrawer = ({
     });
   }, [maxPrice]);
 
+  const toTitle = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  const isVisible = (key: string) => {
+    if (key === 'priceRange') return visibilityMap['priceRange'] !== false;
+    // default visible if not set
+    return visibilityMap[key] !== false;
+  };
+
   const FilterSection = ({ title, icon: Icon, filterKey, children }: { title: string; icon: React.ElementType; filterKey: keyof FilterState; children: React.ReactNode }) => {
-    const isFilterApplied = useMemo(() => {
-      const filterValue = localFilters[filterKey];
-      if (filterKey === 'priceRange') {
-        return filterValue[0] !== 0 || filterValue[1] !== maxPrice;
-      }
-      return Array.isArray(filterValue) && filterValue.length > 0;
-    }, [localFilters, filterKey, maxPrice]);
+    const fv = localFilters[filterKey];
+    let isFilterApplied = false;
+    if (filterKey === 'priceRange') {
+      const pr = fv as [number, number];
+      isFilterApplied = pr[0] !== 0 || pr[1] !== maxPrice;
+    } else if (Array.isArray(fv)) {
+      isFilterApplied = fv.length > 0;
+    }
 
     return (
-      <AccordionItem value={title} className="border-b border-gray-200">
+      <AccordionItem value={title} className="border-b" style={{borderColor:'hsl(var(--border))'}}>
         <div className="flex items-center justify-between py-3 text-base font-semibold">
-          <AccordionTrigger className="flex-1 py-0 pr-3 text-base text-gray-800">
+          <AccordionTrigger className="flex-1 py-0 pr-3 text-base text-[hsl(var(--foreground))]">
             <div className="flex items-center gap-2">
-              <Icon className="h-5 w-5 text-red-500" />
+              <Icon className="h-5 w-5 text-[hsl(var(--primary))]" />
               {title}
             </div>
           </AccordionTrigger>
@@ -192,7 +212,7 @@ export const InstagramFilterDrawer = ({
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.15 }}
                 onClick={(e) => { e.stopPropagation(); handleClearSection(filterKey); }}
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-800"
+                className="p-1 rounded-full hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
                 aria-label={`Clear ${title} filters`}
               >
                 <XCircle className="h-4 w-4" />
@@ -207,106 +227,166 @@ export const InstagramFilterDrawer = ({
     );
   };
 
+  // Build ordered keys list from admin order with fallbacks
+  const orderedKeys = useMemo(() => {
+    const normalize = (s: string) => s.toLowerCase().replace(/\s|_/g, '');
+    const attrByName = new Map(uniqueDetailsAttributes.map(a => [a.name, a] as const));
+    const defaults: string[] = [
+      ...(uniqueCategories.length > 0 ? ['categories'] : []),
+      'priceRange',
+      ...(uniqueTags.length > 0 ? ['tags'] : []),
+      ...uniqueDetailsAttributes.map(a => a.name),
+    ];
+    let orderLs: string[] = [];
+    try { const s = localStorage.getItem('instagram_filter_order'); if (s) orderLs = JSON.parse(s); } catch {}
+    const base = orderLs.length > 0 ? orderLs : defaults;
+    // filter by availability and visibility
+    const available = (k: string) => {
+      if (k === 'categories') return uniqueCategories.length > 0;
+      if (k === 'tags') return uniqueTags.length > 0;
+      if (k === 'priceRange') return true;
+      const a = attrByName.get(k) || uniqueDetailsAttributes.find(x => normalize(x.name) === normalize(k));
+      return !!a && a.values.length > 0;
+    };
+    return base.filter(k => available(k) && isVisible(k));
+  }, [uniqueCategories, uniqueTags, uniqueDetailsAttributes, visibilityMap]);
+
   const inner = (
     <>
       <div className="p-4 border-b flex-row items-center justify-between flex-shrink-0" style={{borderColor:'hsl(var(--border))'}}>
         <div className="flex items-center gap-2 text-xl font-bold">
-          <Filter className="h-6 w-6 text-red-500" />
+          <Filter className="h-6 w-6 text-[hsl(var(--primary))]" />
           Filters
+        </div>
+        <div className="mt-3">
+          <input
+            value={filterSearch}
+            onChange={(e) => setFilterSearch(e.target.value)}
+            placeholder="Search filters..."
+            className="w-full h-9 px-3 rounded-md bg-[hsl(var(--input))] text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))] border" 
+            style={{borderColor:'hsl(var(--border))'}}
+          />
         </div>
       </div>
 
-      <ScrollArea className="flex-1 px-4 py-6" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' as any }}>
+      <ScrollArea className="flex-1 px-4 py-6" style={{ overscrollBehavior: 'contain' }}>
         <Accordion type="multiple" defaultValue={["Categories", "Price Range"]} className="w-full">
-            {uniqueCategories.length > 0 && (
-              <FilterSection title="Categories" icon={Info} filterKey="categories">
-                <div className="flex flex-wrap gap-2">
-                  {uniqueCategories.map(category => (
-                    <Button
-                      key={category}
-                      variant={localFilters.categories.includes(category) ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleToggleFilter('categories', category)}
-                      className={cn(
-                        "text-sm bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]",
-                        localFilters.categories.includes(category) && "bg-red-500 text-white border-red-500 hover:bg-red-600"
-                      )}
-                    >
-                      {category}
-                    </Button>
-                  ))}
-                </div>
-              </FilterSection>
-            )}
-
-            <FilterSection title="Price Range" icon={DollarSign} filterKey="priceRange">
-              <div className="px-2 space-y-4">
-                <Slider
-                  min={0}
-                  max={maxPrice > 0 ? maxPrice : 100}
-                  step={1}
-                  value={localPriceRange}
-                  onValueChange={handlePriceRangeChange}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-sm font-medium">
-                  <span>{formatCurrency(localPriceRange[0], shopDetails?.currency)}</span>
-                  <span>{formatCurrency(localPriceRange[1], shopDetails?.currency)}</span>
-                </div>
-              </div>
-            </FilterSection>
-
-            {uniqueTags.length > 0 && (
-              <FilterSection title="Tags" icon={Tag} filterKey="tags">
-                <div className="flex flex-wrap gap-2">
-                  {uniqueTags.map(tag => (
-                    <Button
-                      key={tag}
-                      variant={(localFilters.tags as string[] || []).includes(tag) ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleToggleFilter('tags', tag)}
-                      className={cn(
-                        "text-sm bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]",
-                        (localFilters.tags as string[] || []).includes(tag) && "bg-red-500 text-white border-red-500 hover:bg-red-600"
-                      )}
-                    >
-                      {tag}
-                    </Button>
-                  ))}
-                </div>
-              </FilterSection>
-            )}
-
-            {uniqueDetailsAttributes.map(attr => {
-              const Icon = getAttributeIcon(attr.name);
-              const filterKey = attr.name;
-              return attr.values.length > 0 ? (
-                <FilterSection key={attr.name} title={attr.name.replace(/_/g, ' ')} icon={Icon} filterKey={filterKey}>
+          {orderedKeys.map((k) => {
+            if (k === 'categories') {
+              if (uniqueCategories.length === 0) return null;
+              return (
+                <FilterSection key="categories" title="Categories" icon={Info} filterKey="categories">
                   <div className="flex flex-wrap gap-2">
-                    {attr.values.map(value => (
+                    {uniqueCategories.filter(c => !filterSearch || c.toLowerCase().includes(filterSearch.toLowerCase())).map(category => (
                       <Button
-                        key={value}
-                        variant={(localFilters[filterKey] as string[] || []).includes(value) ? "default" : "outline"}
+                        key={category}
+                        variant={localFilters.categories.includes(category) ? "default" : "outline"}
                         size="sm"
-                        onClick={() => handleToggleFilter(filterKey, value)}
+                        onClick={() => handleToggleFilter('categories', category)}
                         className={cn(
                           "text-sm bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]",
-                          (localFilters[filterKey] as string[] || []).includes(value) && "bg-red-500 text-white border-red-500 hover:bg-red-600"
+                          localFilters.categories.includes(category) && "bg-[hsl(var(--primary))] text-white border-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]"
                         )}
                       >
-                        {value}
+                        {toTitle(category)}
                       </Button>
                     ))}
                   </div>
                 </FilterSection>
-              ) : null;
-            })}
-          </Accordion>
-        </ScrollArea>
+              );
+            }
+            if (k === 'priceRange') {
+              return (
+                <FilterSection key="priceRange" title="Price Range" icon={DollarSign} filterKey="priceRange">
+                  <div className="px-2 space-y-4">
+                    <div
+                      data-vaul-no-drag
+                      onPointerDownCapture={(e)=>{ e.stopPropagation(); }}
+                      onPointerDown={(e)=>{ e.stopPropagation(); }}
+                      onPointerMove={(e)=>{ e.stopPropagation(); }}
+                      onPointerUp={(e)=>{ e.stopPropagation(); }}
+                      onTouchStart={(e)=>{ e.stopPropagation(); }}
+                      onTouchMove={(e)=>{ e.stopPropagation(); }}
+                      onTouchEnd={(e)=>{ e.stopPropagation(); }}
+                      onMouseDown={(e)=>{ e.stopPropagation(); }}
+                      onMouseMove={(e)=>{ e.stopPropagation(); }}
+                      onMouseUp={(e)=>{ e.stopPropagation(); }}
+                      style={{ touchAction: 'none' }}
+                    >
+                      <Slider
+                        min={0}
+                        max={maxPrice > 0 ? maxPrice : 100}
+                        step={1}
+                        value={localPriceRange}
+                        onValueChange={handlePriceRangeChange}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="flex justify-between text-sm font-medium">
+                      <span>{formatCurrency(localPriceRange[0], shopDetails?.currency)}</span>
+                      <span>{formatCurrency(localPriceRange[1], shopDetails?.currency)}</span>
+                    </div>
+                  </div>
+                </FilterSection>
+              );
+            }
+            if (k === 'tags') {
+              if (uniqueTags.length === 0) return null;
+              return (
+                <FilterSection key="tags" title="Tags" icon={Tag} filterKey="tags">
+                  <div className="flex flex-wrap gap-2">
+                    {uniqueTags.filter(t => !filterSearch || t.toLowerCase().includes(filterSearch.toLowerCase())).map(tag => (
+                      <Button
+                        key={tag}
+                        variant={(localFilters.tags as string[] || []).includes(tag) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleToggleFilter('tags', tag)}
+                        className={cn(
+                          "text-sm bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]",
+                          (localFilters.tags as string[] || []).includes(tag) && "bg-red-500 text-white border-red-500 hover:bg-red-600"
+                        )}
+                      >
+                        {toTitle(tag)}
+                      </Button>
+                    ))}
+                  </div>
+                </FilterSection>
+              );
+            }
+            // attribute
+            const attr = uniqueDetailsAttributes.find(a => a.name === k) || uniqueDetailsAttributes.find(a => a.name.toLowerCase().replace(/\s|_/g,'') === k.toLowerCase().replace(/\s|_/g,''));
+            if (!attr || attr.values.length === 0) return null;
+            const Icon = getAttributeIcon(attr.name);
+            const filterKey = attr.name as keyof FilterState;
+            const values = attr.values.filter(v => !filterSearch || v.toLowerCase().includes(filterSearch.toLowerCase()));
+            if (values.length === 0) return null;
+            return (
+              <FilterSection key={attr.name} title={toTitle(attr.name)} icon={Icon} filterKey={filterKey}>
+                <div className="flex flex-wrap gap-2">
+                  {values.map(value => (
+                    <Button
+                      key={value}
+                      variant={(localFilters[filterKey] as string[] || []).includes(value) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleToggleFilter(filterKey, value)}
+                      className={cn(
+                        "text-sm bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]",
+                        (localFilters[filterKey] as string[] || []).includes(value) && "bg-red-500 text-white border-red-500 hover:bg-red-600"
+                      )}
+                    >
+                      {toTitle(value)}
+                    </Button>
+                  ))}
+                </div>
+              </FilterSection>
+            );
+          })}
+        </Accordion>
+      </ScrollArea>
         <div className="p-4 border-t flex-shrink-0" style={{ paddingBottom: 'calc(1rem + var(--sab))', borderColor:'hsl(var(--border))' }}>
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleClearAll} className="flex-1 text-base bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]">Clear All</Button>
-            <Button onClick={onClose} className="flex-1 text-base bg-red-500 hover:bg-red-600 text-white">Apply Filters</Button>
+            {/* <Button onClick={onClose} className="flex-1 text-base bg-red-500 hover:bg-red-600 text-white">Apply Filters</Button> */}
           </div>
         </div>
     </>

@@ -186,9 +186,9 @@ const InstagramProfilePage = () => {
           <Skeleton className="h-4 w-64 mb-2" />
           <Skeleton className="h-4 w-48" />
         </div>
-        <div className="grid grid-cols-3 gap-1 w-full max-w-md">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-square w-full" />
+        <div className="grid grid-cols-5 gap-1 w-full max-w-md">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <Skeleton key={i} className="aspect-[3/4] w-full" />
           ))}
         </div>
       </div>
@@ -212,70 +212,104 @@ const InstagramProfilePage = () => {
       {/* InstagramFilterDrawer is now rendered in InstagramShopLayout */}
 
       <main className="flex-1 flex justify-center">
-        <div className="w-full md:max-w-[935px] mx-auto px-4 md:px-0">
+        <div className="w-full md:max-w-[1080px] mx-auto">
         {/* Profile Section */}
-        <section className="flex flex-col md:flex-row md:items-start md:gap-10 mb-6 md:mb-8 px-0 pt-6 md:pt-10">
-          <div className="flex items-start gap-4 md:gap-8 w-full">
-            <Avatar className="h-24 w-24 md:h-36 md:w-36 border-2 flex-shrink-0 mx-0" style={{borderColor:'hsl(var(--border))'}}>
-              <AvatarImage src={shopDetails.logo_url || undefined} alt={shopDetails.shop_name} />
-              <AvatarFallback className="text-3xl md:text-4xl font-bold" style={{backgroundColor:'hsl(var(--muted))', color:'hsl(var(--foreground))'}}>
-                {shopDetails.shop_name?.[0]}
-              </AvatarFallback>
-            </Avatar>
+        <section className="flex flex-col md:flex-row md:items-start md:gap-10 mb-6 md:mb-8 px-3 pt-6 md:pt-10 md:w-[70%] mx-auto justify-center">
+          <div className="flex-1 gap-4 md:gap-8 w-full">
+            <div className="flex justify-center flex-col md:flex-row">
+              <div className="flex flex-row gap-4">
+                  <Avatar className="h-24 w-24 md:h-36 md:w-36 border-2 flex-shrink-0 mx-0" style={{borderColor:'hsl(var(--border))'}}>
+                    <AvatarImage src={shopDetails.logo_url || undefined} alt={shopDetails.shop_name} />
+                    <AvatarFallback className="text-3xl md:text-4xl font-bold" style={{backgroundColor:'hsl(var(--muted))', color:'hsl(var(--foreground))'}}>
+                      {shopDetails.shop_name?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                <div className="flex-col">
+                    {/* Handle */}
+                    <div className="flex items-center gap-3 mb-1">
+                      <h1 className="text-xl md:text-2xl font-semibold leading-tight">
+                        {(() => {
+                          const fromUrl = shopDetails.instagram_url?.replace(/^(https?:\/\/)?(www\.)?/i, '').split('/')[1];
+                          return fromUrl || shopDetails.shop_name?.toLowerCase().replace(/\s+/g,'_') || '';
+                        })()}
+                      </h1>
+                    </div>
 
-            <div className="flex-1">
-              {/* Handle */}
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-xl md:text-2xl font-semibold leading-tight">
-                  {(() => {
-                    const fromUrl = shopDetails.instagram_url?.replace(/^(https?:\/\/)?(www\.)?/i, '').split('/')[1];
-                    return fromUrl || shopDetails.shop_name?.toLowerCase().replace(/\s+/g,'_') || '';
-                  })()}
-                </h1>
+                    {/* Name */}
+                    <p className="text-sm md:text-base" style={{color:'hsl(var(--muted-foreground))'}}>{shopDetails.shop_name}</p>
+
+                    {/* Counts row */}
+                    <div className="flex items-center gap-3 md:gap-8 mt-2">
+                      <div className="flex flex-col items-center gap-0 text-sm md:text-base">
+                        <span className="font-semibold">{formatLargeNumber(totalPosts)}</span>
+                        <span style={{color:'hsl(var(--muted-foreground))'}}>posts</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1 text-sm md:text-base">
+                        <span className="font-semibold">{formatLargeNumber(totalFollowers)}</span>
+                        <span style={{color:'hsl(var(--muted-foreground))'}}>followers</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1 text-sm md:text-base">
+                        <span className="font-semibold">{formatLargeNumber(totalFollowing)}</span>
+                        <span style={{color:'hsl(var(--muted-foreground))'}}>following</span>
+                      </div>
+                    </div>
+
+                  <div className="hidden md:block">
+                    {/* Category */}
+                  <p className="mt-2 text-sm md:text-base font-normal" style={{color:'hsl(var(--muted-foreground))'}}>Advertising/Marketing</p>
+
+                  {/* Bio */}
+                  {shopDetails.headline && (
+                    <p className="text-sm md:text-base" style={{color:'hsl(var(--foreground))'}}>{shopDetails.headline}</p>
+                  )}
+                  {shopDetails.about && (
+                    <p className="text-sm md:text-base" style={{color:'hsl(var(--foreground))'}}>{shopDetails.about}</p>
+                  )}
+
+                    <p className="text-sm font-medium text-[hsl(var(--muted-foreground))] md:text-base">Test{shopDetails.location}</p>
+
+                  {/* Website link */}
+                  {shopDetails.instagram_url && (
+                    <a
+                      href={shopDetails.instagram_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline text-sm md:text-base inline-flex items-center gap-1 mt-1"
+                    >
+                      <LinkIcon className="h-4 w-4" />
+                      {shopDetails.instagram_url.replace(/^(https?:\/\/)?(www\.)?/i, '')}
+                    </a>
+                  )}
+                  </div>
+                </div>
               </div>
+              <div className="flex-1 xs:mx-auto md:hidden">
+                  {/* Category */}
+                  <p className="mt-2 text-sm md:text-base font-normal" style={{color:'hsl(var(--muted-foreground))'}}>Advertising/Marketing</p>
 
-              {/* Name */}
-              <p className="text-sm md:text-base" style={{color:'hsl(var(--muted-foreground))'}}>{shopDetails.shop_name}</p>
+                  {/* Bio */}
+                  {shopDetails.headline && (
+                    <p className="text-sm md:text-base" style={{color:'hsl(var(--foreground))'}}>{shopDetails.headline}</p>
+                  )}
+                  {shopDetails.about && (
+                    <p className="text-sm md:text-base" style={{color:'hsl(var(--foreground))'}}>{shopDetails.about}</p>
+                  )}
 
-              {/* Counts row */}
-              <div className="flex items-center gap-6 md:gap-8 mt-2">
-                <div className="flex items-center gap-2 text-sm md:text-base">
-                  <span className="font-semibold">{formatLargeNumber(totalPosts)}</span>
-                  <span style={{color:'hsl(var(--muted-foreground))'}}>posts</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm md:text-base">
-                  <span className="font-semibold">{formatLargeNumber(totalFollowers)}</span>
-                  <span style={{color:'hsl(var(--muted-foreground))'}}>followers</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm md:text-base">
-                  <span className="font-semibold">{formatLargeNumber(totalFollowing)}</span>
-                  <span style={{color:'hsl(var(--muted-foreground))'}}>following</span>
-                </div>
+                    <p className="text-sm font-medium text-[hsl(var(--muted-foreground))] md:text-base">Test{shopDetails.location}</p>
+
+                  {/* Website link */}
+                  {shopDetails.instagram_url && (
+                    <a
+                      href={shopDetails.instagram_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline text-sm md:text-base inline-flex items-center gap-1 mt-1"
+                    >
+                      <LinkIcon className="h-4 w-4" />
+                      {shopDetails.instagram_url.replace(/^(https?:\/\/)?(www\.)?/i, '')}
+                    </a>
+                  )}
               </div>
-
-              {/* Category */}
-              <p className="mt-2 text-sm md:text-base font-medium" style={{color:'hsl(var(--muted-foreground))'}}>Advertising/Marketing</p>
-
-              {/* Bio */}
-              {shopDetails.headline && (
-                <p className="text-sm md:text-base" style={{color:'hsl(var(--foreground))'}}>{shopDetails.headline}</p>
-              )}
-              {shopDetails.about && (
-                <p className="text-sm md:text-base" style={{color:'hsl(var(--foreground))'}}>{shopDetails.about}</p>
-              )}
-
-              {/* Website link */}
-              {shopDetails.instagram_url && (
-                <a
-                  href={shopDetails.instagram_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-500 hover:underline text-sm md:text-base inline-flex items-center gap-1 mt-1"
-                >
-                  <LinkIcon className="h-4 w-4" />
-                  {shopDetails.instagram_url.replace(/^(https?:\/\/)?(www\.)?/i, '')}
-                </a>
-              )}
             </div>
           </div>
         </section>
@@ -285,7 +319,7 @@ const InstagramProfilePage = () => {
             <div className="border-y bg-[hsl(var(--card))]" style={{borderColor: 'hsl(var(--border))'}}>
               <Marquee pauseOnHover className="py-1">
                 {marqueeElements.map(element => (
-                  <div key={element.id} className="flex items-center gap-4 text-sm font-semibold px-4 text-[hsl(var(--foreground))]">
+                  <div key={element.id} className="flex items-center gap-4 text-lg font-semibold px-4 text-[hsl(var(--foreground))]">
                     {getIconComponent(element.icon_name)}
                     <span>{element.message}</span>
                   </div>
@@ -295,17 +329,17 @@ const InstagramProfilePage = () => {
           </section>
         )}
 
-        <div className="flex flex-col items-center justify-center py-1 mb-4 px-4">
-          <div className="flex items-center justify-center gap-2 w-full max-w-md mb-1">
+        <div className="flex flex-col items-center justify-center pt-1 mb-0 px-4">
+          <div className="flex items-center justify-center gap-2 w-full md:w-[60%] px-2 md:px-0">
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
                 setIsFilterDrawerOpen(true);
               }}
-              className="flex-1 bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] rounded-xl h-10 px-4 font-semibold"
+              className="flex-1 bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] border-none hover:bg-[hsl(var(--muted))] rounded-xl px-4 py-2 md:px-24 md:py-5 font-semibold"
             >
-              <Filter className="mr-2 h-4 w-4" />
+              <Filter className="mr-2 h-4 w-4 md:h-5 md:w-5" />
               Filter {hasActiveFilters && <span className="ml-1 text-xs text-red-500">(Active)</span>}
             </Button>
             <DropdownMenu>
@@ -313,7 +347,7 @@ const InstagramProfilePage = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] rounded-xl h-10 px-4 font-semibold"
+                  className="flex-1 bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] border-none hover:bg-[hsl(var(--muted))] rounded-xl px-4 py-2 md:px-24 md:py-5 font-semibold"
                 >
                   Sort <ArrowUpNarrowWide className="ml-2 h-4 w-4" />
                 </Button>
@@ -328,15 +362,16 @@ const InstagramProfilePage = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <div className="flex items-center justify-center w-full max-w-md mt-1">
-            <span className="p-2 rounded-md">
-                <LayoutGrid className="h-4 w-4" />
+          <div className="flex items-center justify-center w-full max-w-md mt-5">
+            <span className="flex flex-col justify-center items-center">
+                <LucideIcons.Grid3X3 className="h-7 w-7" stroke-weight="1" />
+                <hr className="mt-1 border-[hsl(var(--foreground))] border-solid border-[1px] w-28" />
             </span>
           </div>
         </div>
 
         {/* Product Grid */}
-        <section className="mt-4 px-2 md:px-0">
+        <section className="mt-[1px] md:px-0">
           {filteredAndSortedProducts.length === 0 ? (
             <div className="text-center py-16 text-gray-600 border-2 border-dashed rounded-lg mx-4">
               <h3 className="text-xl md:text-2xl font-semibold">No Products Found</h3>
@@ -357,14 +392,14 @@ const InstagramProfilePage = () => {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-3 gap-1 md:gap-1"
+              className="grid grid-cols-3 lg:grid-cols-5 gap-[1px]"
             >
               {filteredAndSortedProducts.map((product) => (
                 <InstagramProductCard
                   key={product.id}
                   product={product}
                   shopSlug={shopSlug}
-                  className="aspect-square"
+                  className="aspect-[3/4]"
                   externalShopDetails={shopDetails}
                   externalConvertCurrency={convertCurrency}
                   externalPromotions={promotions}

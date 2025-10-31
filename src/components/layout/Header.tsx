@@ -70,7 +70,7 @@ const Header = ({ title }: HeaderProps) => {
 
   const handleCopyStorefrontUrl = async () => {
     if (shopDetails?.slug) {
-      const storefrontUrl = `${window.location.origin}/shop/${shopDetails.slug}`;
+      const storefrontUrl = `${window.location.origin}/instagramShop/${shopDetails.slug}`;
       try {
         await navigator.clipboard.writeText(storefrontUrl);
         showSuccess("Storefront URL copied to clipboard!");
@@ -85,13 +85,13 @@ const Header = ({ title }: HeaderProps) => {
 
   return (
     <header className={cn(
-      "fixed top-0 left-0 right-0 z-30 flex items-center justify-between h-16 px-6 transition-all",
+      "fixed top-0 left-0 right-0 z-30 flex items-center justify-between h-[60px] px-6 transition-all shadow-md",
       isFloating
         ? "top-4 right-4 left-4 border rounded-lg"
-        : "border-b", // Docked layout has border-b and expands
+        : "border-b",
       isFloating && (headerLeftMarginClasses[settings.sidebarWidth || 'default']),
       blurEnabled ? "bg-card/80 backdrop-blur-[20px]" : "bg-card",
-      !isFloating && "md:ml-[calc(var(--sidebar-width)+2rem)] md:pr-8" // Ensure full width for docked
+      !isFloating && "md:ml-[var(--sidebar-width)] md:pr-8" // Ensure full width for docked
     )} style={{ '--sidebar-width': settings.sidebarWidth === 'compact' ? '14rem' : settings.sidebarWidth === 'spacious' ? '18rem' : '16rem' } as React.CSSProperties}>
       <div className="flex items-center gap-4">
         <h1 className="text-xl font-bold hidden md:block">{title}</h1>
@@ -172,9 +172,9 @@ const Header = ({ title }: HeaderProps) => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.user_metadata?.avatar_url || undefined} alt={user.user_metadata?.first_name || "User"} />
+                  <AvatarImage src={shopDetails?.logo_url || undefined} alt={shopDetails?.shop_name || "User"} />
                   <AvatarFallback>
-                    {user.user_metadata?.first_name?.[0] || <UserIcon className="h-4 w-4" />}
+                    {shopDetails?.shop_name?.[0] || <UserIcon className="h-4 w-4" />}
                   </AvatarFallback>
                 </Avatar>
               </Button>

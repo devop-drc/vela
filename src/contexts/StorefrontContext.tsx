@@ -6,6 +6,7 @@ import { DesignSettings } from './AppearanceContext'; // Re-use DesignSettings t
 import { StorefrontAnnouncement } from '@/types/storefront';
 
 interface ShopDetails {
+  location: any;
   id: string;
   userId: string; // Added user ID here
   name: string;

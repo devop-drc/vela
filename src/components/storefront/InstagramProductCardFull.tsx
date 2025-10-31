@@ -42,6 +42,7 @@ interface Product {
   billing_interval: 'month' | 'year' | null;
   details: { [key: string]: any };
   product_type: 'physical' | 'digital';
+  instagram_post_id?: string | null;
 }
 
 interface InstagramProductCardFullProps {
@@ -80,6 +81,19 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     const [isVariantDrawerOpen, setIsVariantDrawerOpen] = useState(false);
     const [variants, setVariants] = useState<Array<{ combination_key: string; option_values: Record<string,string>; inventory: number; is_active: boolean }>>([]);
 
+    // Combo state
+    const [comboId, setComboId] = useState<string | null>(null);
+    const [comboItems, setComboItems] = useState<Array<{
+      id: string;
+      name: string;
+      base_price: number | null;
+      required: boolean;
+      min_qty: number;
+      max_qty: number;
+      options: Array<{ id: string; name: string; values: Array<{ id: string; value: string; price_difference: number; inventory: number; is_active: boolean; is_default: boolean }> }>;
+      variants: Array<{ combination_key: string; option_values: Record<string,string>; inventory: number; is_active: boolean }>;
+    }>>([]);
+
     useEffect(() => {
       if (!api) return;
       setCurrentSlide(api.selectedScrollSnap());
@@ -90,7 +104,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
     const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
 
-    // Fetch options/values from DB for this product
+    // Fetch options/values from DB for this product (single-product mode)
     useEffect(() => {
       const loadOptions = async () => {
         if (!product?.id) return;
@@ -146,7 +160,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [product?.id]);
 
-    // Fetch variant rows for availability computation
+    // Fetch variant rows for availability computation (single-product mode)
     useEffect(() => {
       const loadVariants = async () => {
         if (!product?.id) return;
@@ -161,6 +175,72 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
         }
       };
       loadVariants();
+    }, [product?.id]);
+
+    // Fetch combo for this instagram post, then load combo items/options/variants
+    useEffect(() => {
+      const loadCombo = async () => {
+        // Determine instagram_post_id
+        let postId = product.instagram_post_id as string | null | undefined;
+        if (!postId) {
+          const { data: p } = await supabase.from('products').select('instagram_post_id').eq('id', product.id).maybeSingle();
+          postId = p?.instagram_post_id ?? null;
+        }
+        if (!postId) {
+          setComboId(null);
+          setComboItems([]);
+          return;
+        }
+        const { data: combo } = await supabase.from('combo_products').select('id').eq('instagram_post_id', postId).maybeSingle();
+        if (!combo?.id) {
+          setComboId(null);
+          setComboItems([]);
+          return;
+        }
+        setComboId(combo.id);
+        const { data: items } = await supabase
+          .from('combo_items')
+          .select('id, item_name, base_price, required, min_qty, max_qty, display_order')
+          .eq('combo_id', combo.id)
+          .order('display_order');
+        const result: any[] = [];
+        for (const it of (items || [])) {
+          const { data: opts } = await supabase
+            .from('combo_item_options')
+            .select(`id, name, display_order, combo_option_values (id, value, price_difference, inventory, is_active, is_default)`) 
+            .eq('combo_item_id', it.id)
+            .order('display_order');
+          const mappedOptions = (opts || []).map((o: any) => ({
+            id: o.id,
+            name: o.name,
+            values: (o.combo_option_values || []).map((v: any) => ({
+              id: v.id,
+              value: v.value,
+              price_difference: convertCurrency(v.price_difference, 'ALL'),
+              inventory: v.inventory,
+              is_active: v.is_active,
+              is_default: v.is_default,
+            }))
+          }));
+          const { data: vars } = await supabase
+            .from('combo_item_variants')
+            .select('combination_key, option_values, inventory, is_active')
+            .eq('combo_item_id', it.id);
+          result.push({
+            id: it.id,
+            name: it.item_name,
+            base_price: convertCurrency(it.base_price, product.currency || 'ALL'),
+            required: !!it.required,
+            min_qty: it.min_qty ?? 0,
+            max_qty: it.max_qty ?? 1,
+            options: mappedOptions,
+            variants: (vars || []) as any,
+          });
+        }
+        setComboItems(result);
+      };
+      loadCombo();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [product?.id]);
 
     const baseDisplayPrice = convertCurrency(product.price, product.currency);
@@ -241,7 +321,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     };
 
     const handleAddToCart = () => {
-      if (isLoadingOptions || options.length > 0) {
+      if ((comboId && comboItems.length > 0) || isLoadingOptions || options.length > 0) {
         setIsVariantDrawerOpen(true);
         return;
       }
@@ -287,7 +367,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     };
 
     const handleBuyNow = () => {
-      if (isLoadingOptions || options.length > 0) {
+      if ((comboId && comboItems.length > 0) || isLoadingOptions || options.length > 0) {
         setIsVariantDrawerOpen(true);
         return;
       }
@@ -312,13 +392,13 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
       }
     };
 
-    const primaryColorClass = hasDiscount ? "bg-green-600 hover:bg-green-700 text-white" : "bg-red-700 hover:bg-red-800 text-white";
-    const outlineColorClass = hasDiscount ? "border-green-600 text-green-600 hover:bg-green-100 hover:border-green-800 hover:text-green-800" : "border-red-700 text-red-700 hover:bg-red-100 hover:text-red-800 hover:border-red-800";
+    const primaryColorClass = hasDiscount ? "bg-green-600 hover:bg-green-700 text-white" : "bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/70 text-white";
+    const outlineColorClass = hasDiscount ? "bg-transparent border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-transparent" : "bg-transparent hover:bg-transparent border-[hsl(var(--primary))] text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]/70 hover:border-[hsl(var(--primary))]/70";
 
     return (
-      <div ref={ref} id={`product-${product.id}`} className="bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-b pb-4 mb-4" style={{borderColor: 'hsl(var(--border))'}}>
+      <div ref={ref} id={`product-${product.id}`} className="bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-b pb-4">
         {/* Product Header */}
-        <div className="flex items-center gap-3 px-4 py-2">
+        <div className="flex items-center gap-3 p-4">
           <div className="h-8 w-8 rounded-full overflow-hidden flex-shrink-0" style={{backgroundColor: 'hsl(var(--muted))'}}>
             <MediaItem src={shopDetails?.logo_url || undefined} alt={shopDetails?.shop_name || "Shop"} className={cn("object-cover", isOutOfStock && "grayscale")} />
           </div>
@@ -352,7 +432,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                   key={index}
                   className={cn(
                     "h-1.5 w-1.5 rounded-full",
-                    index === currentSlide ? "bg-red-500" : "bg-[hsl(var(--border))]"
+                    index === currentSlide ? "bg-[hsl(var(--primary))]" : "bg-[hsl(var(--border))]"
                   )}
                 />
               ))}
@@ -363,25 +443,27 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
         {/* Product Details & Actions */}
         <div className="p-4 space-y-3">
           {/* Price and Discount */}
-          <div className="flex items-baseline gap-3">
+          <div className="flex items-center gap-3">
             {hasDiscount && originalDisplayPrice !== null ? (
               <>
-                <p className="text-base text-[hsl(var(--muted-foreground))] line-through">
-                  {formatCurrency(originalDisplayPrice, shopDetails?.currency)}
-                </p>
+                {activePromotions[0] && (
+                  <Badge className={cn("bg-green-600 text-white text-sm font-semibold px-2 py-1 rounded-md", isOutOfStock && "text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))]")}>
+                    {getPromotionBadge(activePromotions[0])}
+                  </Badge>
+                )}
                 <p className={cn("text-2xl font-bold text-[hsl(var(--foreground))]", isOutOfStock && "opacity-70")}>
-                  <span className={cn("text-green-600", isOutOfStock && "opacity-70")}>{formatCurrency(discountedPrice, shopDetails?.currency)}</span>
+                  <span className={cn("text-green-600", isOutOfStock && "text-[hsl(var(--muted-foreground))]")}>{formatCurrency(discountedPrice, shopDetails?.currency)}</span>
                   {product.pricing_type === 'subscription' && (
                     <span className="text-base font-light text-green-500">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                   )}
                 </p>
-                {activePromotions[0] && (
-                  <Badge className={cn("bg-green-600 text-white text-sm font-semibold px-2 py-1 rounded-md", isOutOfStock && "bg-gray-500")}>
-                    {getPromotionBadge(activePromotions[0])}
-                  </Badge>
-                )}
-                {product.pricing_type === 'one_time' && (product.inventory === null || product.inventory <= 0) && (
-                  <Badge className="bg-gray-500 text-white text-sm font-semibold px-2 py-1 rounded-md">
+                <p className="text-base text-[hsl(var(--muted-foreground))] line-through">
+                  {formatCurrency(originalDisplayPrice, shopDetails?.currency)}
+                </p>
+                
+                
+                {product.pricing_type === 'one_time' && (product.inventory === null || product.inventory <= 0 || isOutOfStock) && (
+                  <Badge className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] text-sm font-semibold px-2 py-1 rounded-md">
                     Out of Stock
                   </Badge>
                 )}
@@ -412,6 +494,24 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
             )}
           </div>
 
+          {/* Combo Badges (under description) */}
+          {comboId && comboItems.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {comboItems.map(ci => (
+                <Badge
+                  key={ci.id}
+                  variant="outline"
+                  className="text-xs border cursor-pointer hover:bg-[hsl(var(--muted))]"
+                  onClick={() => setIsVariantDrawerOpen(true)}
+                  title={`Configure ${ci.name}`}
+                >
+                  <span className="font-semibold mr-1">{ci.name}</span>
+                  {ci.base_price != null && <span>{formatCurrency(ci.base_price, shopDetails?.currency)}</span>}
+                </Badge>
+              ))}
+            </div>
+          )}
+
           {/* Tags */}
           {product.tags && product.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -419,70 +519,8 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
             </div>
           )}
 
-          {/* Options */}
-          {/* {(options.length > 0 || otherOptions.length > 0) && (
-            <div className="space-y-4 pt-2">
-              {options.length > 0 && options.map((opt) => (
-                <div key={opt.id} className="space-y-2">
-                  <Label className="text-sm text-[hsl(var(--foreground))] capitalize">{opt.name}</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {opt.values.map(val => {
-                      // Determine if selecting this value with current other selections yields any active in-stock variant
-                      const hypothetical = { ...selectedValues, [opt.name]: val.value };
-                      const matches = variants.filter(v => v.is_active && (v.inventory||0) > 0).some(v => {
-                        // v.option_values must include all selected keys with same values
-                        return Object.entries(hypothetical).every(([k, sv]) => v.option_values?.[k] === sv);
-                      });
-                      const isOOS = val.inventory <= 0 || !val.is_active || !matches;
-                      const isSelected = selectedValues[opt.name] === val.value;
-                      const diffText = val.price_difference ? `(${val.price_difference > 0 ? '+' : ''}${formatCurrency(val.price_difference, shopDetails?.currency)})` : '';
-                      return (
-                        <Button
-                          key={val.id || val.value}
-                          variant={isSelected ? "default" : "outline"}
-                          onClick={() => !isOOS && setSelectedValues(prev => ({ ...prev, [opt.name]: val.value }))}
-                          disabled={isOOS}
-                          className={cn(
-                            "text-sm h-9 px-3",
-                            isSelected ? "bg-red-500 text-white border-red-500 hover:bg-red-600" : "bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]",
-                            isOOS && "opacity-60 cursor-not-allowed"
-                          )}
-                          title={isOOS ? "Out of stock" : undefined}
-                        >
-                          <span className="capitalize">{val.value}</span>
-                          {diffText && <span className="ml-1 text-xs opacity-80">{diffText}</span>}
-                          {isOOS ? (
-                            <span className="ml-2 text-[10px] px-1 rounded" style={{backgroundColor:'hsl(var(--muted))', color:'hsl(var(--foreground))'}}>Sold out</span>
-                          ) : (
-                            <span className="ml-2 text-[10px] opacity-70">{val.inventory}</span>
-                          )}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-              {otherOptions.length > 0 && (
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                  {otherOptions.map(([key, value]) => {
-                    const Icon = getAttributeIcon(key);
-                    return (
-                      <div key={key} className="flex flex-col">
-                        <Label className="text-xs text-[hsl(var(--muted-foreground))] flex items-center gap-1">
-                          <Icon className="h-3 w-3 text-[hsl(var(--foreground))]" />
-                          {key.replace(/_/g, ' ')}
-                        </Label>
-                        <p className="font-medium text-sm text-[hsl(var(--foreground))] pt-1">{Array.isArray(value) ? value.join(', ') : String(value)}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )} */}
-
           {/* Quantity & Add to Cart / Buy Now - Responsive */}
-          {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && (
+          {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && !isOutOfStock && (
             <div className="flex items-stretch gap-3 pt-3"> {/* Changed to items-stretch for vertical alignment */}
               {/* Quantity Counter */}
               <div className="flex flex-col border rounded-md overflow-hidden flex-shrink-0 w-16" style={{borderColor:'hsl(var(--border))'}}> {/* Fixed width for counter */}
@@ -547,7 +585,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
               </div>
             </div>
           )}
-          {product.pricing_type === 'one_time' && (product.inventory === null || product.inventory <= 0) && (
+          {product.pricing_type === 'one_time' && (product.inventory === null || product.inventory <= 0 || isOutOfStock) && (
             <Button size="lg" className="w-full text-base bg-gray-500 hover:bg-gray-600 text-white rounded-md" disabled>
               Out of Stock
             </Button>
@@ -555,7 +593,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
           {product.pricing_type === 'subscription' && (
               <div className="flex flex-col gap-2 flex-1 w-full">
                 {/* Buy Now Button */}
-                <Button size="lg" className="w-full text-base bg-red-500 hover:bg-red-600 text-white rounded-md" onClick={handleBuyNow} disabled={isOutOfStock}>
+                <Button size="lg" className="w-full text-base bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/70 rounded-md" onClick={handleBuyNow} disabled={isOutOfStock}>
                 <ShoppingCart className="mr-2 h-5 w-5" />
                 Subscribe Now
               </Button>
@@ -588,7 +626,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
           />
         )}
         {/* Variant Drawer */}
-        {(isVariantDrawerOpen || options.length > 0) && (
+        {(isVariantDrawerOpen || options.length > 0 || (comboId && comboItems.length > 0)) && (
           <InstagramVariantDrawer
             isOpen={isVariantDrawerOpen}
             onClose={() => setIsVariantDrawerOpen(false)}
@@ -602,13 +640,15 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
             variants={variants}
             productName={product.name}
             productMediaUrl={product.media_url}
-            onConfirm={(action) => {
+            comboItems={comboId ? comboItems : undefined}
+            onConfirm={(action, payload) => {
               setIsVariantDrawerOpen(false);
-              if (action === 'add') {
-                actuallyAddToCart();
-              } else {
-                actuallyBuyNow();
+              if (comboId && payload) {
+                // TODO: Integrate bundled cart add/buy later. For now, just notify selection.
+                toast.success(`Selected ${payload?.selected?.length || 0} item(s) from combo.`);
+                return;
               }
+              if (action === 'add') actuallyAddToCart(); else actuallyBuyNow();
             }}
           />
         )}

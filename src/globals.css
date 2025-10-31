@@ -1,6 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Galada&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+.fancyFont{
+  font-family: 'Galada', cursive;
+}
 
 @layer base {
   :root {
@@ -16,11 +23,11 @@
     --popover: 220 10% 100%;
     --popover-foreground: 220 10% 20%;
 
-    --primary: 220 10% 15%; /* Near-black / very dark charcoal for buttons/accents */
-    --primary-foreground: 0 0% 100%; /* White text on primary buttons */
+    --primary: 220 10% 15%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 10% 95%; /* Light grey for secondary button background */
-    --secondary-foreground: 220 10% 15%; /* Dark text for secondary buttons */
+    --secondary: 220 10% 95%;
+    --secondary-foreground: 220 10% 15%;
 
     --accent: 220 10% 92%;
     --accent-foreground: 220 10% 15%;
@@ -35,6 +42,12 @@
     --border: 220 10% 85%; /* Subtle border for inputs */
     --input: 220 10% 85%; /* Input line color */
     --ring: 220 10% 15%; /* Focus ring color */
+
+    /* Safe area insets */
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
 
     /* Corner Radius */
     --radius: 1.5rem; /* 24px for generously rounded corners */

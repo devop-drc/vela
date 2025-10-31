@@ -201,15 +201,6 @@ const Orders = () => {
         onUpdate={() => { fetchOrders(); setSelectedOrder(null); }}
       />
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row justify-between gap-4">
-          <div className="flex flex-col sm:flex-row items-center gap-2">
-            <div className="relative w-full sm:w-auto">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search by customer..." className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            </div>
-            <DateRangePicker date={dateRange} onDateChange={setDateRange} />
-          </div>
-        </div>
         {isLoading || !shopDetails ? (
           <div className="grid gap-4 md:grid-cols-3">
             <Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" />
@@ -221,8 +212,17 @@ const Orders = () => {
             <StatCard title="Avg. Order Value" value={formatCurrency(stats.aov, shopDetails.currency)} icon={FileBarChart} />
           </div>
         )}
+        
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
+          <div className="sticky top-0 z-50 flex flex-col md:flex-row justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <div className="relative w-full sm:w-auto">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search by customer..." className="pl-10 shadow-md" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </div>
+            <DateRangePicker date={dateRange} onDateChange={setDateRange}/>
+          </div>
+          <TabsList className="z-50 shadow-md">
             <TabsTrigger value="All">All</TabsTrigger>
             <TabsTrigger value="Pending">Pending</TabsTrigger>
             <TabsTrigger value="Order Seen">Order Seen</TabsTrigger>
@@ -231,6 +231,7 @@ const Orders = () => {
             <TabsTrigger value="Fulfilled">Fulfilled</TabsTrigger>
             <TabsTrigger value="Problematic">Problematic</TabsTrigger>
           </TabsList>
+          </div>
           <Card className="mt-4">
             <CardContent className="p-0">
               {isLoading || !shopDetails ? (

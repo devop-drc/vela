@@ -32,16 +32,38 @@ const Slider = React.forwardRef<
       value={localValue}
       onValueChange={handleValueChange}
       data-vaul-no-drag
+      onPointerDownCapture={(e)=>{ e.stopPropagation(); }}
+      onPointerDown={(e)=>{ e.stopPropagation(); }}
+      onPointerMove={(e)=>{ e.stopPropagation(); }}
+      onPointerUp={(e)=>{ e.stopPropagation(); }}
+      onTouchStart={(e)=>{ e.stopPropagation(); }}
+      onTouchMove={(e)=>{ e.stopPropagation(); }}
+      onTouchEnd={(e)=>{ e.stopPropagation(); }}
+      onMouseDown={(e)=>{ e.stopPropagation(); }}
+      onMouseMove={(e)=>{ e.stopPropagation(); }}
+      onMouseUp={(e)=>{ e.stopPropagation(); }}
+      style={{ touchAction: 'none' }}
       {...props}
     >
-      <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-secondary">
-        <SliderPrimitive.Range className="absolute h-full bg-primary" />
+      <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-secondary" data-vaul-no-drag>
+        <SliderPrimitive.Range className="absolute h-full bg-primary" data-vaul-no-drag />
       </SliderPrimitive.Track>
       {localValue.map((_, index) => (
         <SliderPrimitive.Thumb
           key={index}
           className="block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
           data-vaul-no-drag
+          onPointerDownCapture={(e)=>{ e.stopPropagation(); }}
+          onPointerDown={(e)=>{ e.stopPropagation(); }}
+          onPointerMove={(e)=>{ e.stopPropagation(); }}
+          onPointerUp={(e)=>{ e.stopPropagation(); }}
+          onTouchStart={(e)=>{ e.stopPropagation(); }}
+          onTouchMove={(e)=>{ e.stopPropagation(); }}
+          onTouchEnd={(e)=>{ e.stopPropagation(); }}
+          onMouseDown={(e)=>{ e.stopPropagation(); }}
+          onMouseMove={(e)=>{ e.stopPropagation(); }}
+          onMouseUp={(e)=>{ e.stopPropagation(); }}
+          style={{ touchAction: 'none' }}
         />
       ))}
     </SliderPrimitive.Root>

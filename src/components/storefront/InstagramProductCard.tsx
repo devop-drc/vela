@@ -7,7 +7,7 @@ import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { ShopDetails as StorefrontShopDetails, Promotion as StorefrontPromotion } from "@/contexts/StorefrontContext";
+// Use generic types for external props to avoid tight coupling to context types
 
 interface Product {
   id: string;
@@ -33,9 +33,9 @@ interface InstagramProductCardProps {
   product: Product;
   shopSlug: string;
   className?: string;
-  externalShopDetails?: StorefrontShopDetails | null;
+  externalShopDetails?: any | null;
   externalConvertCurrency?: (amount: number | null | undefined, fromCurrency?: string) => number;
-  externalPromotions?: StorefrontPromotion[];
+  externalPromotions?: any[];
 }
 
 const itemVariants = {
@@ -95,7 +95,7 @@ export const InstagramProductCard = ({
     }
   }
 
-  const getPromotionBadge = (promo: StorefrontPromotion) => {
+  const getPromotionBadge = (promo: any) => {
     switch (promo.type) {
       case 'discount':
         if (promo.value?.discountType === 'percentage') return `${promo.value.discountValue}% OFF`;
@@ -125,12 +125,12 @@ export const InstagramProductCard = ({
           isOutOfStock && "opacity-80"
         )}>
           <CardContent className={cn("p-0 relative")}>
-            <div className="aspect-square w-full overflow-hidden bg-gray-100">
+            <div className="aspect-[3/4] w-full overflow-hidden bg-gray-100">
               <MediaItem
                 src={mediaUrl}
                 alt={product.name}
                 type={product.media_type}
-                className={cn("object-cover transition-transform duration-300 group-hover:scale-105", isOutOfStock && "grayscale")}
+                className={cn("w-full h-full object-cover transition-transform duration-300 group-hover:scale-105", isOutOfStock && "grayscale")}
               />
             </div>
             {isOutOfStock && (

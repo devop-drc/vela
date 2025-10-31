@@ -16,7 +16,7 @@ import OutOfStock from "./pages/OutOfStock";
 import { IntegrationProvider } from "./contexts/IntegrationContext";
 import { IntegrationPrompt } from "./components/layout/IntegrationPrompt";
 import { ShopProvider } from "./contexts/ShopContext";
-import { SyncProvider } from "./contexts/SyncContext";
+import { SyncProvider } from "./contexts/syncContext";
 import Demo from "./pages/Demo";
 import Keywords from "./pages/Keywords";
 import StorefrontLayout from "./components/storefront/StorefrontLayout";
@@ -28,6 +28,7 @@ import InstagramProfilePage from "./pages/InstagramProfilePage"; // Updated impo
 import InstagramProductsFeedPage from "./pages/InstagramProductsFeedPage"; // New import
 import InstagramShopLayout from "./components/storefront/InstagramShopLayout";
 import Promotions from "./pages/Promotions";
+import FilterVisibility from "./pages/FilterVisibility";
 import { useEffect } from "react";
 import { supabase } from "./integrations/supabase/client";
 import { toast } from "sonner";
@@ -66,7 +67,8 @@ const AppContent = () => {
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'order_disputes' },
           (payload) => {
-            const newDispute = payload.new as any;
+            interface NewDispute { order_id: string; reason?: string }
+            const newDispute = payload.new as NewDispute;
             supabase.from('orders').select('business_id').eq('id', newDispute.order_id).single()
               .then(({ data: orderData, error: orderError }) => {
                 if (orderError) {
@@ -136,6 +138,7 @@ const AppContent = () => {
           <Route path="/keywords" element={<Keywords />} />
           <Route path="/out-of-stock" element={<OutOfStock />} />
           <Route path="/promotions" element={<Promotions />} />
+          <Route path="/filters" element={<FilterVisibility />} />
         </Route>
       </Route>
       <Route path="*" element={<NotFound />} />

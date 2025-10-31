@@ -325,12 +325,64 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     const liveAnalysisResults: LiveAnalysisResult[] = await Promise.all(analysisPromises);
     const newCacheEntries: any[] = [];
 
+    const inferBrand = (name?: string, tags?: string[]): string | null => {
+      const cands: string[] = [];
+      if (Array.isArray(tags)) {
+        for (const t of tags) {
+          const m = String(t).match(/^([A-Za-z0-9][A-Za-z0-9\-]*)\s+/);
+          if (m) cands.push(m[1]);
+        }
+      }
+      if (name) {
+        const m = String(name).match(/^([A-Za-z0-9][A-Za-z0-9\-]*)\b/);
+        if (m) cands.push(m[1]);
+      }
+      return cands.length ? toTitleCase(cands[0]) : null;
+    };
+
+    // Heuristic parser for multi-product captions of the form:
+    // Name\nRef. Code: XXX (optional)\nÇmimi: 250EUR\nStock: 5 units
+    const parseMultiProducts = (caption?: string): Array<{ productName: string; price?: number; currency?: string; inventory?: number; specifications?: Record<string, string> }> => {
+      if (!caption) return [];
+      const blocks = caption.split(/\n\s*\n+/).map(b => b.trim()).filter(Boolean);
+      const items: Array<{ productName: string; price?: number; currency?: string; inventory?: number; specifications?: Record<string, string> }> = [];
+      for (const block of blocks) {
+        const lines = block.split(/\n+/).map(l => l.trim()).filter(Boolean);
+        if (lines.length === 0) continue;
+        const name = lines[0];
+        let refCode: string | undefined;
+        let price: number | undefined;
+        let currency: string | undefined;
+        let inventory: number | undefined;
+        for (const line of lines.slice(1)) {
+          const refMatch = line.match(/ref\.?\s*code\s*:\s*([A-Za-z0-9\-]+)/i);
+          if (refMatch) refCode = refMatch[1];
+          const priceMatch = line.match(/çmimi\s*:\s*([0-9]+(?:[\.,][0-9]+)?)\s*([A-Za-z]{3})/i) || line.match(/price\s*:\s*([0-9]+(?:[\.,][0-9]+)?)\s*([A-Za-z]{3})/i);
+          if (priceMatch) { price = parseFloat(priceMatch[1].replace(',', '.')); currency = priceMatch[2].toUpperCase(); }
+          const stockMatch = line.match(/stock\s*:\s*([0-9]+)/i);
+          if (stockMatch) inventory = parseInt(stockMatch[1]);
+        }
+        const hasSignal = (price !== undefined && !!currency) || inventory !== undefined;
+        if (hasSignal) {
+          items.push({ productName: name, price, currency, inventory, specifications: refCode ? { ref_code: refCode } : undefined });
+        }
+      }
+      return items;
+    };
+
     for (const { post, analysis, error } of liveAnalysisResults) {
       const captionSnippet = `"${post.caption?.substring(0, 30) || ''}..."`;
-      if (error || !analysis) {
-        summary.skipped++;
-        summary.skipped_items.push({ name: captionSnippet, reason: error?.message || "Analysis function failed.", thumbnail_url: post.thumbnail_url || post.media_url });
-        continue;
+      let effectiveAnalysis = analysis as AnalysisResult | undefined;
+      if (error || !effectiveAnalysis) {
+        // Heuristic fallback: if caption contains price or currency signals, mark as product
+        const hasPriceSignal = /\b(ALL|EUR|USD|GBP|Lek|Lekë)\b|\d+[\.,]?\d*\s?(ALL|EUR|USD|GBP)/i.test(post.caption || '');
+        if (hasPriceSignal) {
+          effectiveAnalysis = { isProductPost: true, productName: post.caption?.split('\n')[0]?.slice(0, 40) || 'Product' } as AnalysisResult;
+        } else {
+          summary.skipped++;
+          summary.skipped_items.push({ name: captionSnippet, reason: error?.message || "Analysis function failed.", thumbnail_url: post.thumbnail_url || post.media_url });
+          continue;
+        }
       }
 
       if (analysis.tokenUsage) {
@@ -338,12 +390,12 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         summary.total_ai_tokens_used.candidates += analysis.tokenUsage.candidatesTokenCount || 0;
       }
       
-      analysisFromCache.set(post.id, analysis);
+      analysisFromCache.set(post.id, effectiveAnalysis);
       newCacheEntries.push({
         instagram_post_id: post.id,
         user_id: user.id,
         caption_hash: post.captionHash,
-        analysis_result: analysis
+        analysis_result: effectiveAnalysis
       });
     }
 
@@ -356,6 +408,9 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     const postOptionsMap = new Map<string, Record<string, string[]>>();
     const categoriesToUpsert = new Map<string, { id: string, name: string }>();
     const typesToUpsert = new Map<string, { categoryId: string, name: string, attributes: any[] }>();
+    const multiItemMap = new Map<string, Array<{ name: string; priceALL: number | null }>>();
+    const promotionsToInsert: Array<{ title: string; summary: string; discount_type?: 'percent'|'amount'|null; discount_value?: number|null; currency?: string|null; valid_until?: string|null; post_id: string }>
+      = [];
     let progress = 0;
     
     for (const post of postsToProcess) {
@@ -370,13 +425,42 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         await updateJobProgress(supabaseAdmin, jobId, { progress, total, message: `Processing ${progress} of ${total} posts...` });
       }
 
+      // If AI marks as non-product: try promotion branch, else try parsing products; else skip
       if (!analysis.isProductPost) {
-        summary.skipped++;
-        summary.skipped_items.push({ name: `"${post.caption?.substring(0, 30) || ''}..."`, reason: "AI determined this is not a product post.", thumbnail_url: post.thumbnail_url || post.media_url });
-        continue;
+        const anyAnalysis: any = analysis as any;
+        if (anyAnalysis.isSaleOrPromotion && anyAnalysis.promotion) {
+          const promo = anyAnalysis.promotion as { title: string; summary?: string; discount_type?: 'percent'|'amount'|null; discount_value?: number|null; currency?: string|null; valid_until?: string|null };
+          promotionsToInsert.push({
+            title: promo.title || 'Promotion',
+            summary: promo.summary || (post.caption?.slice(0, 180) || ''),
+            discount_type: promo.discount_type ?? null,
+            discount_value: promo.discount_value ?? null,
+            currency: promo.currency ?? null,
+            valid_until: promo.valid_until ?? null,
+            post_id: post.id,
+          });
+          continue;
+        }
+        const parsed = parseMultiProducts(post.caption);
+        if (parsed.length > 0) {
+          // Emulate minimal analysis so downstream logic creates products from parsed items
+          (analysis as any).isProductPost = true;
+          (analysis as any).products = parsed;
+        } else {
+          summary.skipped++;
+          summary.skipped_items.push({ name: `"${post.caption?.substring(0, 30) || ''}..."`, reason: "AI determined this is not a product post.", thumbnail_url: post.thumbnail_url || post.media_url });
+          continue;
+        }
       }
 
       const { categoryName, typeName, specifications, options, pricingType, billingInterval, inventory: aiInventory, ...productInfo } = analysis;
+
+      // If AI returned products array (multi-product), expand them; otherwise, try parser; else fall back to single product
+      const multiProducts: Array<any> = (analysis as any).products && Array.isArray((analysis as any).products)
+        ? (analysis as any).products
+        : [];
+      const parsedProducts = multiProducts.length === 0 ? parseMultiProducts(post.caption) : [];
+      const itemsToCreate = multiProducts.length > 0 ? multiProducts : parsedProducts.length > 0 ? parsedProducts : [null];
       
       // 1. Collect Category and Type data for batch upsert later
       if (categoryName && typeName) {
@@ -417,63 +501,85 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         });
       }
 
-      // 2. Construct the new 'details' object for the product table
-      const details: { [key: string]: any } = { type: toTitleCase(typeName || '') };
-      
-      // Merge specifications and options into the single details object
-      if (specifications) {
-          for (const [key, value] of Object.entries(specifications)) {
-              details[key] = value;
+      for (const item of itemsToCreate) {
+        const itemName = item ? item.productName || item.name || productInfo.productName : productInfo.productName;
+        const itemPrice = item && typeof item.price === 'number' ? item.price : productInfo.price;
+        const itemCurrency = (item && item.currency) ? item.currency : productInfo.currency;
+        const itemInventory = item && typeof item.inventory === 'number' ? item.inventory : aiInventory;
+        const itemSpecifications = item && item.specifications ? item.specifications : specifications;
+        const itemOptions = item && item.options ? item.options : options;
+        const itemCategoryName = categoryName || 'Generic Product';
+        const itemTypeName = typeName || 'Generic';
+
+        // 2. Construct the new 'details' object for the product table
+        const details: { [key: string]: any } = { type: toTitleCase(itemTypeName || '') };
+        if (itemSpecifications) {
+          for (const [key, value] of Object.entries(itemSpecifications)) {
+            details[key] = value as any;
           }
-      }
-      if (options) {
-          for (const [key, value] of Object.entries(options)) {
-              details[key] = value;
+        }
+        if (itemOptions) {
+          for (const [key, value] of Object.entries(itemOptions)) {
+            details[key] = value as any;
           }
+        }
+
+        // Brand inference
+        const hasBrand = Object.keys(details).some(k => k.toLowerCase() === 'brand');
+        if (!hasBrand) {
+          const inferred = inferBrand(itemName, productInfo.tags);
+          if (inferred) details['Brand'] = inferred;
+        }
+
+        // Determine pricing and inventory
+        const finalPricingType = pricingType || 'one_time';
+        const finalBillingInterval = finalPricingType === 'subscription' ? (billingInterval || 'month') : null;
+        const inventory = finalPricingType === 'subscription' ? 0 : (itemInventory ?? 10);
+
+        // Convert to ALL
+        let priceInALL = itemPrice ?? 0;
+        if (itemPrice && itemCurrency && itemCurrency !== 'ALL') {
+          priceInALL = await convertCurrencyServer(itemPrice, itemCurrency, 'ALL');
+        }
+
+        const productPayload: ProductPayload = {
+          name: itemName,
+          caption: productInfo.description,
+          price: priceInALL,
+          currency: 'ALL',
+          tags: productInfo.tags,
+          category: toTitleCase(itemCategoryName || ''),
+          details: details,
+          business_id: business.id,
+          user_id: user.id,
+          status: inventory === 0 ? 'Out of Stock' : 'Draft',
+          instagram_post_id: post.id,
+          media_url: post.media_url,
+          thumbnail_url: post.thumbnail_url || post.media_url,
+          media_type: post.media_type,
+          inventory: inventory,
+          pricing_type: finalPricingType,
+          billing_interval: finalBillingInterval,
+        };
+
+        // If a single existing product was mapped to this post, update just the first
+        const existingId = existingProductMap.get(post.id);
+        if (existingId && itemsToCreate.length === 1) {
+          productPayload.id = existingId;
+          summary.updated++;
+          summary.updated_items.push(productPayload);
+        } else {
+          productPayload.product_type = 'physical';
+          summary.created++;
+          summary.created_items.push(productPayload);
+        }
+        productsToUpsert.push(productPayload);
+
+        // Track for combo creation
+        const list = multiItemMap.get(post.id) || [];
+        list.push({ name: itemName || 'Item', priceALL: priceInALL });
+        multiItemMap.set(post.id, list);
       }
-
-      // Determine final pricing and inventory
-      const finalPricingType = pricingType || 'one_time';
-      const finalBillingInterval = finalPricingType === 'subscription' ? (billingInterval || 'month') : null;
-      const inventory = finalPricingType === 'subscription' ? 0 : (aiInventory ?? 10); 
-
-      // Convert AI-suggested price to ALL for storage
-      let priceInALL = productInfo.price ?? 0;
-      if (productInfo.price && productInfo.currency && productInfo.currency !== 'ALL') {
-        priceInALL = await convertCurrencyServer(productInfo.price, productInfo.currency, 'ALL');
-      }
-
-      const productPayload: ProductPayload = {
-        name: productInfo.productName,
-        caption: productInfo.description,
-        price: priceInALL, // Store price in ALL
-        currency: 'ALL', // Always store currency as ALL
-        tags: productInfo.tags,
-        category: toTitleCase(categoryName || ''),
-        details: details,
-        business_id: business.id, 
-        user_id: user.id, 
-        status: inventory === 0 ? 'Out of Stock' : 'Draft', // Set status based on inventory
-        instagram_post_id: post.id, 
-        media_url: post.media_url, 
-        thumbnail_url: post.thumbnail_url || post.media_url, 
-        media_type: post.media_type,
-        inventory: inventory, // Include inventory in payload
-        pricing_type: finalPricingType, // Include pricing_type
-        billing_interval: finalBillingInterval, // Include billing_interval
-      };
-
-      const existingId = existingProductMap.get(post.id);
-      if (existingId) {
-        productPayload.id = existingId;
-        summary.updated++;
-        summary.updated_items.push(productPayload);
-      } else {
-        productPayload.product_type = 'physical'; // Default product_type for new products
-        summary.created++;
-        summary.created_items.push(productPayload);
-      }
-      productsToUpsert.push(productPayload);
 
       // Prefer explicit options; otherwise, derive from array-valued specifications
       const derivedFromSpecs: Record<string, string[]> = {};
@@ -548,6 +654,76 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             }
           }
         }
+      }
+    }
+
+    // --- Step 5: Create Combo Products for multi-item posts ---
+    for (const [postId, items] of multiItemMap.entries()) {
+      if (!items || items.length < 2) continue;
+      try {
+        // Ensure a combo_products row exists per instagram_post_id
+        const { data: existingCombo } = await supabaseAdmin
+          .from('combo_products')
+          .select('id')
+          .eq('instagram_post_id', postId)
+          .maybeSingle();
+        let comboId = existingCombo?.id;
+        if (!comboId) {
+          const { data: insertedCombo } = await supabaseAdmin
+            .from('combo_products')
+            .insert({ instagram_post_id: postId, user_id: user.id, business_id: (await supabaseAdmin.from('businesses').select('id').eq('user_id', user.id).single()).data.id })
+            .select('id')
+            .single();
+          comboId = insertedCombo?.id;
+        }
+        if (!comboId) continue;
+        // Upsert combo_items
+        let order = 0;
+        for (const it of items) {
+          await supabaseAdmin.from('combo_items').insert({
+            combo_id: comboId,
+            item_name: it.name,
+            base_price: it.priceALL ?? null,
+            required: false,
+            min_qty: 0,
+            max_qty: 1,
+            display_order: order++
+          });
+        }
+      } catch (e) {
+        console.error('Failed to create combo for post', postId, (e as any).message || e);
+      }
+    }
+
+    // --- Step 6: Insert Promotions and Announcements (best-effort) ---
+    if (promotionsToInsert.length > 0) {
+      try {
+        // Insert promotions
+        const promotionsPayload = promotionsToInsert.map(p => ({
+          user_id: user.id,
+          business_id: (await supabaseAdmin.from('businesses').select('id').eq('user_id', user.id).single()).data.id,
+          title: p.title,
+          summary: p.summary,
+          discount_type: p.discount_type,
+          discount_value: p.discount_value,
+          currency: p.currency,
+          valid_until: p.valid_until,
+          instagram_post_id: p.post_id,
+        }));
+        const { data: insertedPromos } = await supabaseAdmin.from('promotions').insert(promotionsPayload).select('id, title');
+        if (insertedPromos && insertedPromos.length > 0) {
+          const announcements = insertedPromos.map((pr: any) => ({
+            user_id: user.id,
+            business_id: promotionsPayload[0].business_id,
+            title: pr.title,
+            message: 'New promotion: ' + pr.title,
+            promotion_id: pr.id,
+            status: 'active',
+          }));
+          await supabaseAdmin.from('storefront_announcements').insert(announcements);
+        }
+      } catch (e) {
+        console.error('Failed to insert promotions/announcements (missing tables or RLS?):', (e as any).message || e);
       }
     }
 

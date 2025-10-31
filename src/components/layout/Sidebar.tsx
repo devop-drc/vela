@@ -57,11 +57,11 @@ const Sidebar = () => {
 
   return (
     <aside className={cn(
-      "z-30 hidden md:flex flex-col transition-all",
+      "z-30 hidden md:flex flex-col transition-all shadow-md",
       sidebarWidthClasses[settings.sidebarWidth || 'default'],
       isFloating 
         ? "fixed top-4 left-4 bottom-4 border rounded-lg" 
-        : "h-full border-r",
+        : "h-full border-r z-50",
       isPrimary
         ? cn(
             "text-primary-foreground border-primary-foreground/20",

@@ -10,10 +10,17 @@ interface FloatingCartPillProps {
 }
 
 export const FloatingCartPill: React.FC<FloatingCartPillProps> = ({ label = "Cart" }) => {
-  const { totalItems } = useCart();
+  const { totalItems, cartItems } = useCart();
   const handleClick = () => {
     window.dispatchEvent(new CustomEvent("open-instagram-cart"));
   };
+
+  const thumbs = Array.isArray(cartItems)
+    ? [...cartItems]
+        .filter(it => it && (it.media_url || it.productId))
+        .slice(-3)
+        .reverse()
+    : [];
 
   return (
     <div
@@ -40,6 +47,28 @@ export const FloatingCartPill: React.FC<FloatingCartPillProps> = ({ label = "Car
           )}
         </span>
         <span className="font-semibold">{label}</span>
+        {thumbs.length > 0 && (
+          <span className="ml-1 flex items-center">
+            {thumbs.map((it, idx) => (
+              <span
+                key={`${it.productId || idx}-${idx}`}
+                className={cn(
+                  "h-7 w-7 rounded-full overflow-hidden border border-[hsl(var(--border))] bg-[hsl(var(--muted))]",
+                  idx > 0 ? "-ml-2" : ""
+                )}
+              >
+                {it.media_url ? (
+                  // eslint-disable-next-line jsx-a11y/alt-text
+                  <img src={it.media_url} className="h-full w-full object-cover" />
+                ) : (
+                  <span className="h-full w-full flex items-center justify-center text-[10px]">
+                    {String(it.name || 'P').slice(0,1).toUpperCase()}
+                  </span>
+                )}
+              </span>
+            ))}
+          </span>
+        )}
       </button>
     </div>
   );

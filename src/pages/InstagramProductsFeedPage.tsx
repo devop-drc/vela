@@ -2,14 +2,13 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Link, useParams, useNavigate, useSearchParams, useOutletContext } from "react-router-dom"; // Import useOutletContext
-import {
+import { 
   Link as LinkIcon,
   Package,
   Users,
   Image as ImageIcon,
   Share2,
   ShoppingCart as ShoppingCartIcon,
-  Filter,
   ArrowUpNarrowWide,
   LayoutGrid,
   List,
@@ -26,7 +25,7 @@ import { formatLargeNumber } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import { Marquee } from "@/components/ui/marquee";
 import * as LucideIcons from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// Select UI not needed here; header handles sorting controls on all viewports
 import { debounce } from 'lodash';
 import { InstagramShopHeader } from "@/components/storefront/InstagramShopHeader"; // Import the updated header
 
@@ -249,7 +248,7 @@ const InstagramProductsFeedPage = () => {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="flex flex-col gap-4" // Changed to flex-col for feed-like layout
+              className="flex flex-col" // Changed to flex-col for feed-like layout
             >
               {filteredAndSortedProducts.map((product) => (
                 <InstagramProductCardFull

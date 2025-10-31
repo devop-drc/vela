@@ -33,6 +33,8 @@ interface ProductFilterDrawerProps {
   handlePriceRangeChange: (range: [number, number]) => void;
   statusFilter: string[];
   handleToggleStatusFilter: (status: string) => void;
+  // Optional: render order and visibility for sections (from admin Filter Visibility)
+  drawerKeys?: string[]; // e.g., ['categories','priceRange','tags','Brand','Color']
 }
 
 export const ProductFilterDrawer = ({
@@ -50,6 +52,7 @@ export const ProductFilterDrawer = ({
   handlePriceRangeChange,
   statusFilter,
   handleToggleStatusFilter,
+  drawerKeys,
 }: ProductFilterDrawerProps) => {
   const { shopDetails, convertCurrency } = useShop();
 
@@ -133,80 +136,109 @@ export const ProductFilterDrawer = ({
               </div>
             </FilterSection>
 
-            {allCategories.length > 0 && (
-              <FilterSection title="Categories" icon={Info} filterKey="categories">
-                <div className="flex flex-wrap gap-2">
-                  {allCategories.map(category => (
-                    <Button
-                      key={category}
-                      variant={filters.categories.includes(category) ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleToggleFilter('categories', category)}
-                      className={cn("text-sm", filters.categories.includes(category) && "ring-2 ring-primary ring-offset-2")}
-                    >
-                      {category}
-                    </Button>
-                  ))}
-                </div>
-              </FilterSection>
-            )}
+            {(() => {
+              const normalize = (s: string) => s.toLowerCase().replace(/\s|_/g, '');
+              const attrByName = new Map(allDetailsAttributes.map(a => [a.name, a] as const));
+              const defaultKeys: string[] = [
+                ...(allCategories.length > 0 ? ['categories'] : []),
+                'priceRange',
+                ...(allTags.length > 0 ? ['tags'] : []),
+                ...allDetailsAttributes.filter(a => a.values.length > 0).map(a => a.name),
+              ];
+              const keys = (drawerKeys && drawerKeys.length > 0 ? drawerKeys : defaultKeys).filter((k) => {
+                if (k === 'categories') return allCategories.length > 0;
+                if (k === 'tags') return allTags.length > 0;
+                if (k === 'priceRange') return true;
+                const a = attrByName.get(k) || allDetailsAttributes.find(x => normalize(x.name) === normalize(k));
+                return !!a && a.values.length > 0;
+              });
 
-            <FilterSection title="Price Range" icon={DollarSign} filterKey="priceRange">
-              <div className="px-2 space-y-4">
-                <Slider
-                  min={0}
-                  max={maxPrice > 0 ? maxPrice : 100}
-                  step={1}
-                  value={localPriceRange}
-                  onValueChange={handlePriceRangeChange}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-sm font-medium">
-                  <span>{formatCurrency(localPriceRange[0], shopDetails?.currency)}</span>
-                  <span>{formatCurrency(localPriceRange[1], shopDetails?.currency)}</span>
-                </div>
-              </div>
-            </FilterSection>
-
-            {allTags.length > 0 && (
-              <FilterSection title="Tags" icon={Tag} filterKey="tags">
-                <div className="flex flex-wrap gap-2">
-                  {allTags.map(tag => (
-                    <Button
-                      key={tag}
-                      variant={(filters.tags as string[] || []).includes(tag) ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleToggleFilter('tags', tag)}
-                      className={cn("text-sm", (filters.tags as string[] || []).includes(tag) && "ring-2 ring-primary ring-offset-2")}
-                    >
-                      {tag}
-                    </Button>
-                  ))}
-                </div>
-              </FilterSection>
-            )}
-
-            {allDetailsAttributes.map(attr => {
-              const Icon = getAttributeIcon(attr.name);
-              const filterKey = attr.name;
-              return attr.values.length > 0 ? (
-                <FilterSection key={attr.name} title={attr.name.replace(/_/g, ' ')} icon={Icon} filterKey={filterKey}>
-                  <div className="flex flex-wrap gap-2">
-                    {attr.values.map(value => (
-                      <Button
-                        key={value}
-                        variant={(filters[filterKey as keyof FilterState] as string[] || []).includes(value) ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handleToggleFilter(filterKey as keyof FilterState, value)}
-                        className={cn("text-sm", (filters[filterKey as keyof FilterState] as string[] || []).includes(value) && "ring-2 ring-primary ring-offset-2")}
-                      >
-                        {value}
-                      </Button>
-                    ))}
-                  </div>
-                </FilterSection>
-              ) : null;
-            })}
+              return keys.map((k) => {
+                if (k === 'categories') {
+                  return (
+                    allCategories.length > 0 ? (
+                      <FilterSection key="categories" title="Categories" icon={Info} filterKey="categories">
+                        <div className="flex flex-wrap gap-2">
+                          {allCategories.map(category => (
+                            <Button
+                              key={category}
+                              variant={filters.categories.includes(category) ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleToggleFilter('categories', category)}
+                              className={cn("text-sm", filters.categories.includes(category) && "ring-2 ring-primary ring-offset-2")}
+                            >
+                              {category}
+                            </Button>
+                          ))}
+                        </div>
+                      </FilterSection>
+                    ) : null
+                  );
+                }
+                if (k === 'priceRange') {
+                  return (
+                    <FilterSection key="priceRange" title="Price Range" icon={DollarSign} filterKey="priceRange">
+                      <div className="px-2 space-y-4">
+                        <Slider
+                          min={0}
+                          max={maxPrice > 0 ? maxPrice : 100}
+                          step={1}
+                          value={localPriceRange}
+                          onValueChange={handlePriceRangeChange}
+                          className="w-full"
+                        />
+                        <div className="flex justify-between text-sm font-medium">
+                          <span>{formatCurrency(localPriceRange[0], shopDetails?.currency)}</span>
+                          <span>{formatCurrency(localPriceRange[1], shopDetails?.currency)}</span>
+                        </div>
+                      </div>
+                    </FilterSection>
+                  );
+                }
+                if (k === 'tags') {
+                  return (
+                    allTags.length > 0 ? (
+                      <FilterSection key="tags" title="Tags" icon={Tag} filterKey="tags">
+                        <div className="flex flex-wrap gap-2">
+                          {allTags.map(tag => (
+                            <Button
+                              key={tag}
+                              variant={(filters.tags as string[] || []).includes(tag) ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleToggleFilter('tags', tag)}
+                              className={cn("text-sm", (filters.tags as string[] || []).includes(tag) && "ring-2 ring-primary ring-offset-2")}
+                            >
+                              {tag}
+                            </Button>
+                          ))}
+                        </div>
+                      </FilterSection>
+                    ) : null
+                  );
+                }
+                const attr = attrByName.get(k) || allDetailsAttributes.find(x => normalize(x.name) === normalize(k));
+                if (!attr || attr.values.length === 0) return null;
+                const Icon = getAttributeIcon(attr.name);
+                const filterKey = attr.name;
+                return (
+                  <FilterSection key={attr.name} title={attr.name.replace(/_/g, ' ')} icon={Icon} filterKey={filterKey}>
+                    <div className="flex flex-wrap gap-2">
+                      {attr.values.map(value => (
+                        <Button
+                          key={value}
+                          variant={(filters[filterKey as keyof FilterState] as string[] || []).includes(value) ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleToggleFilter(filterKey as keyof FilterState, value)}
+                          className={cn("text-sm", (filters[filterKey as keyof FilterState] as string[] || []).includes(value) && "ring-2 ring-primary ring-offset-2")}
+                        >
+                          {value}
+                        </Button>
+                      ))}
+                    </div>
+                  </FilterSection>
+                );
+              });
+            })()}
           </Accordion>
         </ScrollArea>
         <DrawerFooter className="p-4 border-t flex gap-2 flex-shrink-0">

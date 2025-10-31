@@ -275,7 +275,7 @@ export const CheckoutForm = ({
         <ScrollArea className="flex-1 p-4 md:p-6 pr-6 max-h-full">
           <div className="space-y-6">
             {user && savedAddresses.length > 0 && (
-              <Card className={cn("shadow-lg", blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card")}>
+              <Card className={cn("shadow-lg bg-[hsl(var(--card))]", blurEnabled ? "backdrop-blur-[20px] bg-[hsl(var(--card)/70)]" : "bg-[hsl(var(--card))]")}>
                 <CardHeader>
                   <CardTitle className="text-xl md:text-2xl flex items-center gap-2">
                     <MapPin className="h-6 w-6 text-primary" />
@@ -417,7 +417,7 @@ export const CheckoutForm = ({
                 transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
-                <Card className={cn("shadow-lg", blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card")}>
+                <Card className={cn("shadow-lg", blurEnabled ? "bg-[hsl(var(--card)/70)] backdrop-blur-[20px]" : "bg-[hsl(var(--card))]")}>
                   <CardHeader>
                     <CardTitle className="text-xl md:text-2xl flex items-center gap-2">
                       <CreditCard className="h-6 w-6 text-primary" />

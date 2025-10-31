@@ -231,17 +231,17 @@ export const InstagramCheckoutForm = ({
   return (
     <>
       <Dialog open={isSaveAddressModalOpen} onOpenChange={setIsSaveAddressModalOpen}>
-        <DialogContent className="bg-white text-black rounded-lg">
-          <DialogHeader className="border-b border-gray-200 pb-4">
-            <DialogTitle className="text-xl font-bold text-gray-800">Save Shipping Address</DialogTitle>
-            <DialogDescription className="text-sm text-gray-500">Give a name to this address for future use.</DialogDescription>
+        <DialogContent className={`bg-[var(--card)] text-[hsl(var(--foreground))] rounded-lg border-[hsl(var(--border))]`}>
+          <DialogHeader className="border-b border-[hsl(var(--border))] pb-4">
+            <DialogTitle className="text-xl font-bold">Save Shipping Address</DialogTitle>
+            <DialogDescription className="text-sm text-[hsl(var(--muted-foreground))]">Give a name to this address for future use.</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-4">
-            <Label htmlFor="addressLabel" className="text-sm text-gray-700">Address Label</Label>
-            <Input id="addressLabel" value={newAddressLabel} onChange={(e) => setNewAddressLabel(e.target.value)} placeholder="e.g., Home, Work, My Apartment" className="border-gray-300 bg-gray-50 text-gray-800" />
+            <Label htmlFor="addressLabel" className="text-sm text-[hsl(var(--foreground))]">Address Label</Label>
+            <Input id="addressLabel" value={newAddressLabel} onChange={(e) => setNewAddressLabel(e.target.value)} placeholder="e.g., Home, Work, My Apartment" className="border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))]" />
           </div>
-          <DialogFooter className="border-t border-gray-200 pt-4">
-            <Button variant="ghost" onClick={() => setIsSaveAddressModalOpen(false)} className="text-gray-800 hover:bg-gray-100">Cancel</Button>
+          <DialogFooter className="border-t border-[hsl(var(--border))] pt-4">
+            <Button variant="ghost" onClick={() => setIsSaveAddressModalOpen(false)} className="text-[hsl(var(--foreground))] hover:bg-[hsl(var(--card))]">Cancel</Button>
             <Button onClick={handleSaveAddressToLocal} disabled={!newAddressLabel.trim()} className="bg-red-500 hover:bg-red-600 text-white">
               <Save className="mr-2 h-4 w-4" /> Save Address
             </Button>
@@ -254,47 +254,47 @@ export const InstagramCheckoutForm = ({
           <div className="space-y-6">
             {/* Address Selection Card */}
             {savedAddresses.length > 0 && (
-              <Card className="shadow-sm border border-gray-200 bg-white">
+              <Card className="shadow-sm border border-gray-200 bg-[var(--card)] border-[hsl(var(--border))]">
                 <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2 text-gray-800">
-                    <MapPin className="h-6 w-6 text-red-500" />
+                  <CardTitle className="text-xl flex items-center gap-2 text-[hsl(var(--foreground))]">
+                    <MapPin className="h-6 w-6 text-[hsl(var(--primary))]" />
                     Choose Address
                   </CardTitle>
-                  <CardDescription className="text-sm text-gray-500">Select a saved address or enter a new one.</CardDescription>
+                  <CardDescription className="text-sm text-[hsl(var(--muted-foreground))]">Select a saved address or enter a new one.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Select value={selectedAddressId} onValueChange={setSelectedAddressId}>
-                    <SelectTrigger className="border-gray-300 bg-gray-50 text-gray-800 h-auto min-h-[40px] py-2"> {/* Added h-auto and py-2 */}
-                      <SelectValue placeholder="Select an address" className="text-left">
+                    <SelectTrigger className="bg-[hsl(var(--card))] text-[hsl(var(--foreground))] h-auto min-h-[40px] py-2">
+                      <SelectValue placeholder="Select an address" className="text-left bg-[hsl(var(--card))]">
                         {selectedAddressId === 'new' ? (
-                          <div className="flex flex-col items-start w-full">
-                            <span className="font-medium text-gray-800 text-sm">New Address</span>
-                            <span className="text-xs text-gray-500 text-wrap break-words max-w-full min-w-0">Enter details below</span>
+                          <div className="flex flex-col items-start w-full bg-[hsl(var(--card))]">
+                            <span className="font-medium text-[hsl(var(--foreground))] text-sm">New Address</span>
+                            <span className="text-xs text-[hsl(var(--muted-foreground))] text-wrap break-words max-w-full min-w-0">Enter details below</span>
                           </div>
                         ) : selectedAddress ? (
-                          <div className="flex flex-col items-start w-full">
-                            <span className="font-medium text-gray-800 text-sm text-left">{selectedAddress.label}</span>
-                            <span className="text-xs text-gray-500 text-wrap break-words max-w-full min-w-0 text-left">
+                          <div className="flex flex-col items-start w-full bg-[hsl(var(--card))]">
+                            <span className="font-medium text-[hsl(var(--foreground))] text-sm text-left">{selectedAddress.label}</span>
+                            <span className="text-xs text-[hsl(var(--muted-foreground))] text-wrap break-words max-w-full min-w-0 text-left">
                               {selectedAddress.address}, {selectedAddress.city}, {selectedAddress.zip_code}, {selectedAddress.country}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-gray-500 text-left">Select an address</span>
+                          <span className="text-[hsl(var(--muted-foreground))] text-left">Select an address</span>
                         )}
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent className="bg-white text-gray-800 w-[--radix-select-trigger-width] max-w-[calc(100vw-2rem)] sm:max-w-xs md:max-w-sm"> {/* Added responsive max-width */}
-                      <SelectItem value="new" className="py-2">
-                        <div className="flex flex-col items-start w-full">
-                          <span className="font-medium text-gray-800 text-sm">New Address</span>
-                          <span className="text-xs text-gray-500 text-wrap break-words max-w-full min-w-0">Enter details below</span>
+                    <SelectContent className="text-[hsl(var(--foreground))] bg-[hsl(var(--card))] w-[--radix-select-trigger-width] max-w-[calc(100vw-2rem)] sm:max-w-xs md:max-w-sm">
+                      <SelectItem value="new" className="py-2 bg-[hsl(var(--card))]">
+                        <div className="flex flex-col items-start w-full bg-[hsl(var(--card))]">
+                          <span className="font-medium text-[hsl(var(--foreground))] text-sm">New Address</span>
+                          <span className="text-xs text-[var(--muted)] text-wrap break-words max-w-full min-w-0">Enter details below</span>
                         </div>
                       </SelectItem>
-                      <Separator className="bg-gray-200" />
+                      <Separator className="bg-[hsl(var(--primary))]" />
                       {savedAddresses.map(address => (
-                        <SelectItem key={address.id} value={address.id} className="py-2 overflow-hidden">
-                          <div className="flex flex-col items-start w-full">
-                            <span className="font-medium text-gray-800 text-sm">{address.label}</span>
+                        <SelectItem key={address.id} value={address.id} className="py-2 overflow-hidden bg-[hsl(var(--card))]">
+                          <div className="flex flex-col items-start w-full bg-[hsl(var(--card))]">
+                            <span className="font-medium text-[hsl(var(--foreground))] text-sm">{address.label}</span>
                             <span className="text-xs text-gray-500 text-wrap break-words max-w-full min-w-0">
                               {address.address}, {address.city}, {address.zip_code}, {address.country}
                             </span>
@@ -316,19 +316,19 @@ export const InstagramCheckoutForm = ({
                 transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
-                <Card className="shadow-sm border border-gray-200 bg-white">
+                <Card className="shadow-sm border border-[hsl(var(--border))] bg-[var(--card)]">
                   <CardHeader>
-                    <CardTitle className="text-xl flex items-center gap-2 text-gray-800">
-                      <User className="h-6 w-6 text-red-500" />
+                    <CardTitle className="text-xl flex items-center gap-2 text-[hsl(var(--foreground))]">
+                      <User className="h-6 w-6 text-[hsl(var(--primary))]" />
                       Contact & Shipping Information
                     </CardTitle>
-                    <CardDescription className="text-sm text-gray-500">Enter your details for delivery.</CardDescription>
+                    <CardDescription className="text-sm text-[hsl(var(--muted-foreground))]">Enter your details for delivery.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="flex items-center justify-between rounded-lg">
                         <div className="space-y-0.5">
-                          <Label htmlFor="saveAddress" className="text-base">Save Address</Label>
-                          <p className="text-sm text-gray-500">Save this address for future orders.</p>
+                          <Label htmlFor="saveAddress" className="text-base text-[hsl(var(--foreground))]">Save Address</Label>
+                          <p className="text-sm text-[hsl(var(--muted-foreground))]">Save this address for future orders.</p>
                         </div>
                         <Controller
                           name="saveAddress"
@@ -345,56 +345,56 @@ export const InstagramCheckoutForm = ({
                       <Separator></Separator>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="firstName">First Name</Label>
-                        <Input placeholder="First Name" id="firstName" {...register("firstName")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        <Label htmlFor="firstName" className="text-base text-[hsl(var(--foreground))]">First Name</Label>
+                        <Input placeholder="First Name" id="firstName" {...register("firstName")} className="border-[hsl(var(--border))] bg-[var(--card)] text-[hsl(var(--foreground))]" />
                         {errors.firstName && <p className="text-sm text-red-500 mt-1">{errors.firstName.message}</p>}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="lastName">Last Name</Label>
-                        <Input placeholder="Last Name" id="lastName" {...register("lastName")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        <Label htmlFor="lastName" className="text-base text-[hsl(var(--foreground))]">Last Name</Label>
+                        <Input placeholder="Last Name" id="lastName" {...register("lastName")} className="border-[hsl(var(--border))] bg-[var(--card)] text-[hsl(var(--foreground))]" />
                         {errors.lastName && <p className="text-sm text-red-500 mt-1">{errors.lastName.message}</p>}
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input placeholder="Email" id="email" type="email" {...register("email")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        <Label htmlFor="email" className="text-base text-[hsl(var(--foreground))]">Email</Label>
+                        <Input placeholder="Email" id="email" type="email" {...register("email")} className="border-[hsl(var(--border))] bg-[var(--card)] text-[hsl(var(--foreground))]" />
                         {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Phone (Optional)</Label>
-                        <Input placeholder="Phone" id="phone" type="tel" {...register("phone")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                        <Label htmlFor="phone" className="text-base text-[hsl(var(--foreground))]">Phone (Optional)</Label>
+                        <Input placeholder="Phone" id="phone" type="tel" {...register("phone")} className="border-[hsl(var(--border))] bg-[var(--card)] text-[hsl(var(--foreground))]" />
                       </div>
                     </div>
                     <Separator className="bg-gray-200" />
                     <div className="space-y-2">
-                      <Label htmlFor="shippingAddress" className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Shipping Address</Label>
-                      <Input placeholder="Shipping Address" id="shippingAddress" {...register("shippingAddress")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                      <Label htmlFor="shippingAddress" className="flex items-center gap-2 text-base text-[hsl(var(--foreground))]"><MapPin className="h-4 w-4" /> Shipping Address</Label>
+                      <Input placeholder="Shipping Address" id="shippingAddress" {...register("shippingAddress")} className="border-[hsl(var(--border))] bg-[var(--card)] text-[hsl(var(--foreground))]" />
                       {errors.shippingAddress && <p className="text-sm text-red-500 mt-1">{errors.shippingAddress.message}</p>}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="shippingCity" className="flex items-center gap-2"><Building2 className="h-4 w-4" /> City</Label>
-                      <Input placeholder="City" id="shippingCity" {...register("shippingCity")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                      <Label htmlFor="shippingCity" className="flex items-center gap-2 text-base text-[hsl(var(--foreground))]"><Building2 className="h-4 w-4" /> City</Label>
+                      <Input placeholder="City" id="shippingCity" {...register("shippingCity")} className="border-[hsl(var(--border))] bg-[var(--card)] text-[hsl(var(--foreground))]" />
                       {errors.shippingCity && <p className="text-sm text-red-500 mt-1">{errors.shippingCity.message}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="shippingZip">Zip/Postal Code</Label>
-                      <Input placeholder="Zip/Postal Code" id="shippingZip" {...register("shippingZip")} className="border-gray-300 bg-gray-50 text-gray-800" />
+                      <Label htmlFor="shippingZip" className="flex items-center gap-2 text-base text-[hsl(var(--foreground))]">Zip/Postal Code</Label>
+                      <Input placeholder="Zip/Postal Code" id="shippingZip" {...register("shippingZip")} className="border-[hsl(var(--border))] bg-[var(--card)] text-[hsl(var(--foreground))]" />
                       {errors.shippingZip && <p className="text-sm text-red-500 mt-1">{errors.shippingZip.message}</p>}
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="shippingCountry" className="flex items-center gap-2"><Globe className="h-4 w-4" /> Country</Label>
+                    <Label htmlFor="shippingCountry" className="flex items-center gap-2 text-base text-[hsl(var(--foreground))]"><Globe className="h-4 w-4" /> Country</Label>
                     <Controller
                       name="shippingCountry"
                       control={control}
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value} disabled>
-                          <SelectTrigger id="shippingCountry" className="border-gray-300 bg-gray-50 text-gray-800">
+                          <SelectTrigger id="shippingCountry" className="border-[hsl(var(--border))] bg-[var(--card)] text-[hsl(var(--foreground))]">
                             <SelectValue placeholder="Select country" />
                           </SelectTrigger>
-                          <SelectContent className="bg-white text-gray-800">
+                          <SelectContent className="bg-[var(--card)] border-[hsl(var(--border))] text-[hsl(var(--foreground))]">
                             {countries.map(country => (
                               <SelectItem key={country.code} value={country.code}>
                                 {country.name}
@@ -407,12 +407,12 @@ export const InstagramCheckoutForm = ({
                     {errors.shippingCountry && <p className="text-sm text-red-500 mt-1">{errors.shippingCountry.message}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="shippingNotesSeller" className="flex items-center gap-2"><StickyNote className="h-4 w-4" /> Notes for Seller (Optional)</Label>
-                    <Textarea id="shippingNotesSeller" {...register("shippingNotesSeller")} rows={2} placeholder="e.g., Please wrap as a gift." className="border-gray-300 bg-gray-50 text-gray-800" />
+                    <Label htmlFor="shippingNotesSeller" className="flex items-center gap-2 text-base text-[hsl(var(--foreground))]"><StickyNote className="h-4 w-4" /> Notes for Seller (Optional)</Label>
+                    <Textarea id="shippingNotesSeller" {...register("shippingNotesSeller")} rows={2} placeholder="e.g., Please wrap as a gift." className="border-[hsl(var(--border))] bg-[var(--card)] text-[hsl(var(--foreground))]" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="shippingNotesCourier" className="flex items-center gap-2"><Truck className="h-4 w-4" /> Notes for Courier (Optional)</Label>
-                    <Textarea id="shippingNotesCourier" {...register("shippingNotesCourier")} rows={2} placeholder="e.g., Leave package at the back door." className="border-gray-300 bg-gray-50 text-gray-800" />
+                    <Label htmlFor="shippingNotesCourier" className="flex items-center gap-2 text-base text-[hsl(var(--foreground))]"><Truck className="h-4 w-4" /> Notes for Courier (Optional)</Label>
+                    <Textarea id="shippingNotesCourier" {...register("shippingNotesCourier")} rows={2} placeholder="e.g., Leave package at the back door." className="border-[hsl(var(--border))] bg-[var(--card)] text-[hsl(var(--foreground))]" />
                   </div>
                 </CardContent>
                 </Card>
@@ -428,13 +428,13 @@ export const InstagramCheckoutForm = ({
                 transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
-                <Card className="shadow-sm border border-gray-200 bg-white">
+                <Card className="shadow-sm border border-[hsl(var(--border))] bg-[var(--card)]">
                   <CardHeader>
-                    <CardTitle className="text-xl flex items-center gap-2 text-gray-800">
-                      <CreditCard className="h-6 w-6 text-red-500" />
+                    <CardTitle className="text-xl flex items-center gap-2 text-[hsl(var(--foreground))]">
+                      <CreditCard className="h-6 w-6 text-[hsl(var(--primary))]" />
                       Payment Method
                     </CardTitle>
-                    <CardDescription className="text-sm text-gray-500">Choose how you'd like to pay.</CardDescription>
+                    <CardDescription className="text-sm text-[hsl(var(--muted-foreground))]">Choose how you'd like to pay.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <Controller
@@ -442,13 +442,13 @@ export const InstagramCheckoutForm = ({
                       control={control}
                       render={({ field }) => (
                         <RadioGroup onValueChange={field.onChange} value={field.value} className="space-y-3">
-                          <Label htmlFor="cash_on_delivery" className={cn("flex items-center gap-3 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-red-500 flex-1", hasSubscriptionProducts && "opacity-50 cursor-not-allowed")}>
+                          <Label htmlFor="cash_on_delivery" className={cn("flex items-center gap-3 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-[hsl(var(--primary))] flex-1", hasSubscriptionProducts && "opacity-50 cursor-not-allowed")}>
                             <RadioGroupItem value="cash_on_delivery" id="cash_on_delivery" disabled={hasSubscriptionProducts} />
                             <div>
-                              <p className="font-medium flex items-center gap-2 text-gray-800">
+                              <p className="font-medium flex items-center gap-2 text-[hsl(var(--foreground))]">
                                 <Banknote className="h-5 w-5" /> Cash on Delivery
                               </p>
-                              <p className="text-sm text-gray-500">Pay with cash when your order is delivered.</p>
+                              <p className="text-sm text-[hsl(var(--muted-foreground))]">Pay with cash when your order is delivered.</p>
                               {hasSubscriptionProducts && <p className="text-xs text-red-500 mt-1">Not available for subscriptions.</p>}
                             </div>
                           </Label>
@@ -457,26 +457,26 @@ export const InstagramCheckoutForm = ({
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: 'auto' }}
                               exit={{ opacity: 0, height: 0 }}
-                              className="p-3 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-md"
+                              className="text-md text-[hsl(var(--primary))] bg-[hsl(var(--card))] items-center justify-center flex rounded-md"
                             >
                               <Info className="h-4 w-4 inline-block mr-2" />
-                              Please have the exact amount ready for the courier.
+                              Please have the exact amount of&nbsp;<strong>${parseFloat((total + parseFloat(shipping)).toFixed(2))}</strong>&nbsp;ready for the courier.
                             </motion.div>
                         )}
-                        <Label htmlFor="card" className="flex items-center gap-3 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-red-500 flex-1">
+                        <Label htmlFor="card" className="flex items-center gap-3 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-[hsl(var(--primary))] flex-1">
                           <RadioGroupItem value="card" id="card" />
                           <div>
-                            <p className="font-medium flex items-center gap-2 text-gray-800">
+                            <p className="font-medium flex items-center gap-2 text-[hsl(var(--foreground))]">
                               <CreditCard className="h-5 w-5" /> Credit/Debit Card
                             </p>
-                            <p className="text-sm text-gray-500">Secure payment via Stripe (placeholder).</p>
+                            <p className="text-sm text-[hsl(var(--muted-foreground))]">Secure payment via RaiAccept.</p>
                           </div>
                         </Label>
                       </RadioGroup>
                     )}
                   />
                   {errors.paymentMethod && <p className="text-sm text-red-500 mt-1">{errors.paymentMethod.message}</p>}
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))]">
                     <ShieldCheck className="h-4 w-4" />
                     Your payment information is securely processed.
                   </div>

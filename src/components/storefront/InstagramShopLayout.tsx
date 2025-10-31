@@ -127,8 +127,51 @@ const InstagramShopLayoutContent = () => {
   const [initialOrderIdForDrawer, setInitialOrderIdForDrawer] = useState<string | null>(null);
 
   // Define header and bottom nav heights as CSS variables
-  const HEADER_HEIGHT = '56px'; // h-14
+  // Products feed has an extra row (filter/sort), so increase height on that page
+  // Compute directly from current path via regex (avoids needing shopSlug)
+  const isProductsPath = /\/instagramShop\/[^/]+\/products(\b|\/|\?)/.test(location.pathname);
+  const HEADER_HEIGHT = isProductsPath ? '100px' : '56px';
   const BOTTOM_NAV_HEIGHT = '56px'; // h-14
+
+  useEffect(() => {
+    // Polyfill safe-area and dvh CSS variables for browsers that don't fully support env()
+    const updateViewportVars = () => {
+      try {
+        const vv = (window as any).visualViewport as VisualViewport | undefined;
+        const root = document.documentElement;
+        if (vv) {
+          // Compute safe-area top/bottom using the difference between layout viewport and visual viewport
+          const sat = Math.max(0, vv.offsetTop || 0);
+          const sab = Math.max(0, (window.innerHeight - vv.height - (vv.offsetTop || 0)) || 0);
+          const sal = Math.max(0, vv.offsetLeft || 0);
+          const sar = Math.max(0, (window.innerWidth - vv.width - (vv.offsetLeft || 0)) || 0);
+          root.style.setProperty('--sat', `${sat}px`);
+          root.style.setProperty('--sab', `${sab}px`);
+          root.style.setProperty('--sal', `${sal}px`);
+          root.style.setProperty('--sar', `${sar}px`);
+          root.style.setProperty('--vh', `${vv.height}px`);
+        } else {
+          // Fallbacks
+          root.style.setProperty('--vh', `${window.innerHeight}px`);
+        }
+      } catch {}
+    };
+    updateViewportVars();
+    window.addEventListener('resize', updateViewportVars);
+    window.addEventListener('orientationchange', updateViewportVars as any);
+    if ((window as any).visualViewport) {
+      (window as any).visualViewport.addEventListener('resize', updateViewportVars);
+      (window as any).visualViewport.addEventListener('scroll', updateViewportVars);
+    }
+    return () => {
+      window.removeEventListener('resize', updateViewportVars);
+      window.removeEventListener('orientationchange', updateViewportVars as any);
+      if ((window as any).visualViewport) {
+        (window as any).visualViewport.removeEventListener('resize', updateViewportVars);
+        (window as any).visualViewport.removeEventListener('scroll', updateViewportVars);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let applying = false;
@@ -189,11 +232,14 @@ const InstagramShopLayoutContent = () => {
   useEffect(() => {
     const openCart = () => setIsCartModalOpen(true);
     const openOrders = () => setIsMyOrdersDrawerOpen(true);
+    const openFilter = () => setIsFilterDrawerOpen(true);
     window.addEventListener('open-instagram-cart', openCart as EventListener);
     window.addEventListener('open-instagram-orders', openOrders as EventListener);
+    window.addEventListener('open-instagram-filter', openFilter as EventListener);
     return () => {
       window.removeEventListener('open-instagram-cart', openCart as EventListener);
       window.removeEventListener('open-instagram-orders', openOrders as EventListener);
+      window.removeEventListener('open-instagram-filter', openFilter as EventListener);
     };
   }, []);
 
@@ -366,7 +412,7 @@ const InstagramShopLayoutContent = () => {
   }
 
   return (
-    <div className="flex min-h-[100dvh] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] mb-[--instagram-bottom-nav-height]">
+    <div className="flex min-h-[100dvh] mx-auto bg-[hsl(var(--background))] text-[hsl(var(--foreground))] md:mb-0 mb-[--instagram-bottom-nav-height]">
       <style>{`
         :root {
           --instagram-header-height: ${HEADER_HEIGHT};
@@ -379,7 +425,7 @@ const InstagramShopLayoutContent = () => {
         }
       `}</style>
       <InstagramDesktopSidebar onToggleTheme={toggleTheme} isDark={isDark} />
-      <div className="flex flex-col flex-1 md:pl-[244px]">
+      <div className="flex flex-col flex-1 md:pl-[335px] pt-[calc(var(--instagram-header-height)+var(--sat))] md:pt-0">
         <div className="md:hidden">
           <InstagramShopHeader
             onOpenCart={() => setIsCartModalOpen(true)}
@@ -388,7 +434,7 @@ const InstagramShopLayoutContent = () => {
             onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)}
           />
         </div>
-        <main className="flex-1 flex justify-center">
+        <main className="flex-1 flex mx-auto">
         <Outlet context={{
           isFilterDrawerOpen,
           setIsFilterDrawerOpen,
