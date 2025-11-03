@@ -2,7 +2,7 @@
 
 import React from "react";
 import { NavLink, useParams, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Home, Grid3X3, ShoppingBag, User, SunMedium, Moon } from "lucide-react";
+import { Home, Grid3X3, ShoppingBag, User, SunMedium, Moon, Filter, ArrowDownWideNarrow } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -85,26 +85,29 @@ export const InstagramDesktopSidebar: React.FC<SidebarProps> = ({ onToggleTheme,
           ))}
         </nav>
         {onProductsPage && (
-          <div className="mt-auto px-2 py-3 border-t" style={{borderColor:'hsl(var(--border))'}}>
-            <div className="text-xs mb-2 opacity-80">Products Tools</div>
-            <div className="flex items-center gap-2">
+          <div className="mt-auto px-8 py-3">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-sm font-semibold">Filter & Sort Products</h2>
               <button
                 onClick={() => window.dispatchEvent(new CustomEvent('open-instagram-filter'))}
                 className={cn(
-                  "flex-1 flex items-center gap-2 px-4 py-3 rounded-lg text-base",
-                  "transition-colors hover:bg-[hsl(var(--muted))]"
+                  "flex items-center gap-2 px-4 py-3 rounded-lg text-base border border-[hsl(var(--border))]",
+                  "transition-colors",
+                  "hover:bg-[hsl(var(--muted))]"
                 )}
               >
+                <Filter className="h-6 w-6" />
                 Filter
               </button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     className={cn(
-                      "flex-1 flex items-center gap-2 px-4 py-3 rounded-lg text-base",
+                      "flex items-center gap-2 px-4 py-3 rounded-lg text-base border border-[hsl(var(--border))]",
                       "transition-colors hover:bg-[hsl(var(--muted))]"
                     )}
                   >
+                    <ArrowDownWideNarrow className="h-6 w-6" />
                     {(() => {
                       const sort = searchParams.get('sort');
                       switch (sort) {

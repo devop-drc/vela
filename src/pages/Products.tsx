@@ -112,6 +112,7 @@ const Products = () => {
     const s = localStorage.getItem('instagram_filter_order_mode');
     return (s === 'alpha' || s === 'useful' || s === 'manual') ? s : 'manual';
   });
+
   const [visQuery, setVisQuery] = useState("");
 
   const { shopDetails } = useShop();
@@ -156,6 +157,15 @@ const Products = () => {
     allDetailsAttributes,
     maxPrice,
   });
+
+  // Open ProductEditor when openProduct param is present (use filteredAndSortedProducts for matching type)
+  useEffect(() => {
+    const openId = searchParams.get('openProduct');
+    if (openId && filteredAndSortedProducts && filteredAndSortedProducts.length > 0) {
+      const p = filteredAndSortedProducts.find(p => p.id === openId);
+      if (p) setSelectedProduct(p);
+    }
+  }, [searchParams, filteredAndSortedProducts]);
 
   // Compute the exact filter group keys shown in Instagram drawer
   const visibilityKeys = useMemo(() => {
@@ -544,7 +554,19 @@ const Products = () => {
   return (
     <>
       {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={() => {}} />}
-      <ProductEditor isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={() => {}} />
+      <ProductEditor
+        isOpen={!!selectedProduct}
+        onClose={() => {
+          setSelectedProduct(null);
+          setSearchParams(prev => {
+            const sp = new URLSearchParams(prev);
+            sp.delete('openProduct');
+            return sp;
+          });
+        }}
+        product={selectedProduct}
+        onUpdate={() => {}}
+      />
       {isSaleModalOpen && <SaleModal isOpen={isSaleModalOpen} onClose={() => setIsSaleModalOpen(false)} onApply={handleApplySale} productCount={selectedProducts.length} />}
       <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {selectedProducts.length} products?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       

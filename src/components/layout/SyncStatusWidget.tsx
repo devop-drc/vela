@@ -193,7 +193,7 @@ export const SyncStatusWidget = () => {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-4 left-4 z-50 w-80"
+            className="fixed bottom-4 left-4 z-40 w-80"
           >
             <Card className="shadow-lg">
               <CardContent className="p-4 space-y-3">
