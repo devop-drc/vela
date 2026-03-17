@@ -2,7 +2,7 @@
 
 import React from "react";
 import { NavLink, useParams, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Home, Grid3X3, ShoppingBag, User, SunMedium, Moon, Filter, ArrowDownWideNarrow } from "lucide-react";
+import { Home, Grid3X3, ShoppingBag, User, SunMedium, Moon, Filter, ArrowDownWideNarrow, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ interface SidebarProps {
   onToggleTheme?: () => void;
   isDark?: boolean;
 }
+
+let sortExpanded = false;
 
 export const InstagramDesktopSidebar: React.FC<SidebarProps> = ({ onToggleTheme, isDark }) => {
   const { shopSlug } = useParams<{ shopSlug: string }>();
@@ -85,15 +87,15 @@ export const InstagramDesktopSidebar: React.FC<SidebarProps> = ({ onToggleTheme,
           ))}
         </nav>
         {onProductsPage && (
-          <div className="mt-auto px-8 py-3">
+          <div className="mt-auto px-8 py-3 bg-[hsl(var(--muted))] rounded-lg">
             <div className="flex flex-col gap-2">
               <h2 className="text-sm font-semibold">Filter & Sort Products</h2>
               <button
                 onClick={() => window.dispatchEvent(new CustomEvent('open-instagram-filter'))}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-3 rounded-lg text-base border border-[hsl(var(--border))]",
+                  "flex items-center gap-2 px-4 py-3 rounded-lg text-base bg-[hsl(var(--card))]",
                   "transition-colors",
-                  "hover:bg-[hsl(var(--muted))]"
+                  "hover:bg-[hsl(var(--muted))] border border-[hsl(var(--border))]"
                 )}
               >
                 <Filter className="h-6 w-6" />
@@ -103,8 +105,9 @@ export const InstagramDesktopSidebar: React.FC<SidebarProps> = ({ onToggleTheme,
                 <DropdownMenuTrigger asChild>
                   <button
                     className={cn(
-                      "flex items-center gap-2 px-4 py-3 rounded-lg text-base border border-[hsl(var(--border))]",
-                      "transition-colors hover:bg-[hsl(var(--muted))]"
+                      "flex items-center gap-2 px-4 py-3 rounded-lg text-base bg-[hsl(var(--card))]",
+                      "transition-colors",
+                      "hover:bg-[hsl(var(--muted))] border border-[hsl(var(--border))]"
                     )}
                   >
                     <ArrowDownWideNarrow className="h-6 w-6" />
@@ -119,6 +122,13 @@ export const InstagramDesktopSidebar: React.FC<SidebarProps> = ({ onToggleTheme,
                         default: return 'Sort: Newest';
                       }
                     })()}
+                    <ChevronDown
+                      className={cn(
+                        "h-6 w-6 transition-transform",
+                        searchParams.get('sort') ? 'rotate-180' : 'rotate-0'
+                      )}
+                    />
+                    
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))]">

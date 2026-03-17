@@ -38,6 +38,7 @@ interface ComboItem {
   max_qty: number;
   options: ComboItemOption[];
   variants: Array<{ combination_key: string; option_values: Record<string,string>; inventory: number; is_active: boolean }>;
+  product_id?: string;
 }
 
 interface InstagramVariantDrawerProps {
@@ -51,7 +52,7 @@ interface InstagramVariantDrawerProps {
   currency?: string;
   basePrice: number | null;
   variants?: Array<{ combination_key: string; option_values: Record<string,string>; inventory: number; is_active: boolean }>;
-  onConfirm: (action: "add" | "buy", payload?: { selected: Array<{ itemId: string; name: string; selectedOptions: Record<string,string>; combinationKey: string; price: number | null }> }) => void;
+  onConfirm: (action: "add" | "buy", payload?: { selected: Array<{ itemId: string; productId?: string; name: string; selectedOptions: Record<string,string>; combinationKey: string; price: number | null; quantity: number }> }) => void;
   productName?: string;
   productMediaUrl?: string;
   comboItems?: ComboItem[];
@@ -78,6 +79,7 @@ export const InstagramVariantDrawer: React.FC<InstagramVariantDrawerProps> = ({
   const isCombo = Array.isArray(comboItems) && comboItems.length > 0;
   const [comboSelectedValues, setComboSelectedValues] = useState<Record<string, Record<string,string>>>({});
   const [comboIncluded, setComboIncluded] = useState<Record<string, boolean>>({});
+  const [comboQuantities, setComboQuantities] = useState<Record<string, number>>({});
 
   // Sort values: defaults first, then in-stock, then alphabetical
   const sortedOptions = useMemo(() => {
@@ -100,9 +102,15 @@ export const InstagramVariantDrawer: React.FC<InstagramVariantDrawerProps> = ({
         // Initialize combo inclusion (required items included by default)
         const inc: Record<string, boolean> = {};
         const vals: Record<string, Record<string,string>> = {};
-        (comboItems || []).forEach((ci) => { inc[ci.id] = !!ci.required; vals[ci.id] = {}; });
+        const qty: Record<string, number> = {};
+        (comboItems || []).forEach((ci) => { 
+          inc[ci.id] = !!ci.required; 
+          vals[ci.id] = {}; 
+          qty[ci.id] = Math.max(ci.min_qty ?? 0, 1);
+        });
         setComboIncluded(inc);
         setComboSelectedValues(vals);
+        setComboQuantities(qty);
       } else {
         // Clear any incoming selections when opening to avoid preselect
         setSelectedValues(() => ({} as Record<string, string>));
@@ -142,7 +150,7 @@ export const InstagramVariantDrawer: React.FC<InstagramVariantDrawerProps> = ({
   // Combo helpers
   const comboComputed = useMemo(() => {
     if (!isCombo) return null;
-    const selected: Array<{ itemId: string; name: string; selectedOptions: Record<string,string>; combinationKey: string; price: number | null }> = [];
+    const selected: Array<{ itemId: string; productId?: string; name: string; selectedOptions: Record<string,string>; combinationKey: string; price: number | null; quantity: number }> = [];
     let total: number | null = 0;
     for (const item of comboItems!) {
       if (!comboIncluded[item.id]) continue;
@@ -157,8 +165,9 @@ export const InstagramVariantDrawer: React.FC<InstagramVariantDrawerProps> = ({
         if (v) delta += v.price_difference || 0;
       }
       const price = item.base_price != null ? item.base_price + delta : null;
-      selected.push({ itemId: item.id, name: item.name, selectedOptions: opts, combinationKey: key, price });
-      if (total != null) total += price || 0;
+      const qty = Math.max(item.min_qty ?? 0, Math.min(item.max_qty ?? 1, comboQuantities[item.id] ?? Math.max(item.min_qty ?? 0, 1)));
+      selected.push({ itemId: item.id, productId: item.product_id, name: item.name, selectedOptions: opts, combinationKey: key, price, quantity: qty });
+      if (total != null) total += (price || 0) * (qty || 0);
     }
     // Validate required selections
     const requiredOk = comboItems!.every(ci => !ci.required || comboIncluded[ci.id]);
@@ -176,7 +185,7 @@ export const InstagramVariantDrawer: React.FC<InstagramVariantDrawerProps> = ({
       return !!match && (match.inventory || 0) > 0;
     });
     return { selected, total, canConfirm: requiredOk && optionsOk && inventoryOk };
-  }, [isCombo, comboItems, comboIncluded, comboSelectedValues]);
+  }, [isCombo, comboItems, comboIncluded, comboSelectedValues, comboQuantities]);
 
   const inner = (
     <>
@@ -259,6 +268,18 @@ export const InstagramVariantDrawer: React.FC<InstagramVariantDrawerProps> = ({
                     {item.required && <Badge>Required</Badge>}
                   </div>
                 </div>
+                {include && (
+                  <div className="px-3 py-2 border-b" style={{borderColor:'hsl(var(--border))'}}>
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-[hsl(var(--muted-foreground))]">Quantity</div>
+                      <div className="flex items-center border rounded-md overflow-hidden" style={{borderColor:'hsl(var(--border))'}}>
+                        <button className="h-8 w-8 hover:bg-[hsl(var(--muted))]" onClick={() => setComboQuantities(prev => ({...prev, [item.id]: Math.max(item.min_qty ?? 0, (prev[item.id]||Math.max(item.min_qty ?? 0,1)) - 1)}))}>-</button>
+                        <div className="px-3 text-sm select-none">{Math.max(item.min_qty ?? 0, Math.min(item.max_qty ?? 1, comboQuantities[item.id] ?? Math.max(item.min_qty ?? 0,1)))}</div>
+                        <button className="h-8 w-8 hover:bg-[hsl(var(--muted))]" onClick={() => setComboQuantities(prev => ({...prev, [item.id]: Math.min(item.max_qty ?? 1, (prev[item.id]||Math.max(item.min_qty ?? 0,1)) + 1)}))}>+</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {include && itemOptions.map(opt => (
                   <div key={opt.id} className="px-3 py-3 border-b last:border-b-0" style={{borderColor:'hsl(var(--border))'}}>
                     <Label className="text-sm capitalize text-[hsl(var(--foreground))] opacity-80">{opt.name}</Label>

@@ -56,7 +56,14 @@ export const ShopSettings = () => {
       setIsRefreshing(false);
       return;
     }
-    const { data, error } = await supabase.functions.invoke('instagram-profile', { body: { user_id: shopDetails.userId } });
+    const { data: { session } } = await supabase.auth.getSession();
+    const invokeOptions: any = { body: { user_id: shopDetails.userId } };
+    if (session?.access_token) {
+      invokeOptions.headers = {
+        Authorization: `Bearer ${session.access_token}`
+      };
+    }
+    const { data, error } = await supabase.functions.invoke('instagram-profile', invokeOptions);
     if (error || data.error) {
       console.error("Failed to refresh IG data", error || data.error);
     } else {

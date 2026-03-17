@@ -45,8 +45,11 @@ export const IntegrationPrompt = () => {
     }
     closePrompt();
     const origin = `${window.location.origin}/`; // Redirect back to dashboard
-    // Pass the current user's ID to the Instagram auth function
-    window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?origin=${encodeURIComponent(origin)}&userId=${userId}`;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+
+    // Pass user ID and apikey to the Instagram auth function
+    window.location.href = `${supabaseUrl}/functions/v1/instagram-auth?origin=${encodeURIComponent(origin)}&userId=${userId}&apikey=${apikey}`;
   };
 
   return (

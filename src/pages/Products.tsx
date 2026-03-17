@@ -42,7 +42,7 @@ import { Sortable, SortableItem, SortableItemHandle } from "@/components/ui/sort
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 type GridSizeType = 'sm' | 'md' | 'lg';
-type GroupingType = 'none' | 'category';
+type GroupingType = 'none' | 'category' | 'type';
 
 interface Product {
   id: string;
@@ -52,7 +52,7 @@ interface Product {
   currency: string | null;
   inventory: number;
   media_url: string;
-  caption: string;
+  caption?: string;
   category: string;
   tags: string[];
   pricing_type: 'one_time' | 'subscription';
@@ -419,7 +419,14 @@ const Products = () => {
     runWithIntegrationCheck(async () => {
       toast.loading("Initiating sync job...", { id: 'sync-initiating' });
       try {
-        const { data, error } = await supabase.functions.invoke('background-sync', { body: { syncType } });
+        const { data: { session } } = await supabase.auth.getSession();
+        const invokeOptions: any = { body: { syncType } };
+        if (session?.access_token) {
+          invokeOptions.headers = {
+            Authorization: `Bearer ${session.access_token}`
+          };
+        }
+        const { data, error } = await supabase.functions.invoke('background-sync', invokeOptions);
         toast.dismiss('sync-initiating');
         if (error) throw error;
         if (data.error) throw new Error(data.error);
@@ -547,6 +554,18 @@ const Products = () => {
         return acc;
       }, {} as { [key: string]: Product[] });
     }
+    if (grouping === 'type') {
+      const singles: Product[] = [];
+      const multis: Product[] = [];
+      filteredAndSortedProducts.forEach(p => {
+        const isMulti = Boolean(p.details?.multi_product);
+        if (isMulti) multis.push(p); else singles.push(p);
+      });
+      const result: { [key: string]: Product[] } = {};
+      if (multis.length > 0) result['Multi-Products'] = multis;
+      if (singles.length > 0) result['Products'] = singles;
+      return Object.keys(result).length > 0 ? result : { 'All Products': filteredAndSortedProducts };
+    }
     // If no grouping, return a single group or handle as flat list
     return { 'All Products': filteredAndSortedProducts };
   }, [filteredAndSortedProducts, grouping]);
@@ -641,6 +660,7 @@ const Products = () => {
                       <DropdownMenuRadioGroup value={grouping} onValueChange={(v) => setGrouping(v as GroupingType)}>
                         <DropdownMenuRadioItem value="none">None</DropdownMenuRadioItem>
                         <DropdownMenuRadioItem value="category">By Category</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="type">By Type</DropdownMenuRadioItem>
                       </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
                   </DropdownMenu>

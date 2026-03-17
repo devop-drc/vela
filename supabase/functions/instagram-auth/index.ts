@@ -91,7 +91,7 @@ serve(async (req) => {
         console.error("Failed to fetch Facebook user profile:", profileData.error?.message || profileData);
         throw new Error(profileData.error?.message || 'Failed to fetch Facebook user profile.');
       }
-      
+
       const { email, first_name, last_name, picture, accounts } = profileData;
 
       const igAccount = accounts?.data?.find((page: any) => page.instagram_business_account)?.instagram_business_account;
@@ -144,7 +144,7 @@ serve(async (req) => {
             });
 
           if (uploadError) throw uploadError;
-          
+
           const { data: publicUrlData } = supabaseAdmin.storage.from('shop-assets').getPublicUrl(fileName);
           uploadedLogoUrl = publicUrlData.publicUrl;
         } catch (uploadErr: any) {
@@ -228,15 +228,15 @@ serve(async (req) => {
       const statePayload = JSON.stringify({ origin, userId }); // Include userId in state
       const encodedState = btoa(statePayload);
       // Ensure these scopes match or are a subset of what's requested in Login.tsx
-      const scopes = 'public_profile,email,pages_show_list,instagram_basic,instagram_manage_insights,instagram_manage_comments,instagram_content_publish,pages_read_engagement,pages_manage_posts,pages_manage_metadata';
-      
+      const scopes = 'public_profile,email,pages_show_list,instagram_basic,pages_read_engagement';
+
       const authUrl = new URL('https://www.facebook.com/v19.0/dialog/oauth');
       authUrl.searchParams.set('client_id', FACEBOOK_APP_ID);
       authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
       authUrl.searchParams.set('scope', scopes);
       authUrl.searchParams.set('state', encodedState);
       authUrl.searchParams.set('auth_type', 'rerequest'); // Always re-request permissions
-      
+
       return Response.redirect(authUrl.toString(), 302);
     } catch (error) {
       console.error('Initial OAuth Redirect Error:', error.message);

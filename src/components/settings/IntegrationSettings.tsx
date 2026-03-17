@@ -22,7 +22,7 @@ export const IntegrationSettings = () => {
         .eq('user_id', user.id)
         .eq('provider', 'facebook')
         .maybeSingle();
-      
+
       if (error) {
         showError("Failed to check integration status.");
       } else {
@@ -42,8 +42,11 @@ export const IntegrationSettings = () => {
       return;
     }
     const origin = `${window.location.origin}/settings`;
-    // Pass the current user's ID to the Instagram auth function
-    window.location.href = `https://ixiafbgaqszlokmzjjio.supabase.co/functions/v1/instagram-auth?origin=${encodeURIComponent(origin)}&userId=${user.id}`;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+
+    // Pass user ID and apikey to the Instagram auth function
+    window.location.href = `${supabaseUrl}/functions/v1/instagram-auth?origin=${encodeURIComponent(origin)}&userId=${user.id}&apikey=${apikey}`;
   };
 
   const handleDisconnect = async () => {

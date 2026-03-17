@@ -66,7 +66,14 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
     }
 
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke('analyze-instagram-posts');
+      const { data: { session } } = await supabase.auth.getSession();
+      const invokeOptions: any = {};
+      if (session?.access_token) {
+        invokeOptions.headers = {
+          Authorization: `Bearer ${session.access_token}`
+        };
+      }
+      const { data, error: invokeError } = await supabase.functions.invoke('analyze-instagram-posts', invokeOptions);
       if (invokeError) throw invokeError;
       if (data.error) throw new Error(data.error);
       

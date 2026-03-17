@@ -17,9 +17,14 @@ export const QuickActions = () => {
     runWithIntegrationCheck(async () => {
       toast.loading("Initiating quick sync...", { id: 'sync-initiating' });
       try {
-        const { data, error } = await supabase.functions.invoke('background-sync', {
-          body: { syncType: 'quick' },
-        });
+        const { data: { session } } = await supabase.auth.getSession();
+        const invokeOptions: any = { body: { syncType: 'quick' } };
+        if (session?.access_token) {
+          invokeOptions.headers = {
+            Authorization: `Bearer ${session.access_token}`
+          };
+        }
+        const { data, error } = await supabase.functions.invoke('background-sync', invokeOptions);
         toast.dismiss('sync-initiating');
         if (error) throw error;
         if (data.error) throw new Error(data.error);

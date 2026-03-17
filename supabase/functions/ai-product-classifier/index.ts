@@ -39,9 +39,26 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   8. **Description:** Generate a compelling, detailed 3-4 sentence description highlighting key features, benefits, and materials, based on the caption and inferred specifications.
   9. **Tags:** Generate 3-5 relevant tags.
 
-  10. **Multi-Product Posts:** If the caption lists multiple products (e.g., separated by blank lines, each with name and price/stock/ref code), output them in a `products` array. Each item should include `productName`, `price`, `currency`, `inventory` (if available), and any specifications/options that are specific to that item. Also set `isProductPost` to true.
+  10. **Multi-Product Posts:** If the caption lists multiple products (e.g., separated by blank lines, each with name and price/stock/ref code), output them in a products array and set isProductPost to true. Each products[] item should follow this schema:
+      {
+        "productName": string,
+        "price": number | null,
+        "currency": string | null,
+        "inventory": number | null,
+        "specifications": Record<string, string | number | string[]>,
+        "options": Record<string, string[]>,
+        "variants": Array<{
+          "option_values": Record<string, string>,
+          "inventory"?: number,
+          "is_active"?: boolean
+        }>,
+        "required"?: boolean,
+        "min_qty"?: number,
+        "max_qty"?: number,
+        "media_url"?: string | null
+      }
 
-  11. **Sales/Promotions (Non-product posts):** If the post is primarily a sale/discount/offer announcement without specific product details, set `isSaleOrPromotion` to true and include a `promotion` object with fields: `{ title: string, summary: string, discount_type?: 'percent'|'amount'|null, discount_value?: number|null, currency?: string|null, valid_until?: string|null }`.
+  11. **Sales/Promotions (Non-product posts):** If the post is primarily a sale/discount/offer announcement without specific product details, set isSaleOrPromotion to true and include a promotion object with fields: { title: string, summary: string, discount_type?: 'percent'|'amount'|null, discount_value?: number|null, currency?: string|null, valid_until?: string|null }.
 
   **Currency Handling:**
   - If the caption includes "ALL", "Lek", or "Lekë", use "ALL" as currency.
@@ -85,9 +102,35 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
     "isProductPost": true,
     "isSaleOrPromotion": false,
     "products": [
-      { "productName": "Kufje Smart", "price": 250, "currency": "EUR", "inventory": 150, "specifications": { "ref_code": "x3185794" } },
-      { "productName": "Kabell USB-C", "price": 10, "currency": "EUR", "inventory": 250, "specifications": { "ref_code": "x3185494" } },
-      { "productName": "Laptop HP", "price": 1010, "currency": "EUR", "inventory": 5, "specifications": { "ref_code": "x31854d94" } }
+      {
+        "productName": "Kufje Smart",
+        "price": 250,
+        "currency": "ALL",
+        "inventory": 150,
+        "specifications": { "ref_code": "x3185794" },
+        "options": { "color": ["Black", "White"], "size": ["S", "M", "L"] },
+        "variants": [
+          { "option_values": { "color": "Black", "size": "M" }, "inventory": 10, "is_active": true },
+          { "option_values": { "color": "White", "size": "M" }, "inventory": 8, "is_active": true }
+        ],
+        "required": true,
+        "min_qty": 1,
+        "max_qty": 2,
+        "media_url": null
+      },
+      {
+        "productName": "Kabell USB-C",
+        "price": 10,
+        "currency": "ALL",
+        "inventory": 250,
+        "specifications": { "ref_code": "x3185494" },
+        "options": {},
+        "variants": [],
+        "required": false,
+        "min_qty": 0,
+        "max_qty": 3,
+        "media_url": null
+      }
     ]
   }
 
@@ -178,7 +221,7 @@ serve(async (req) => {
     }
 
     const analysisText = geminiData.candidates[0].content.parts[0].text;
-    let analysis;
+    let analysis: any;
     try {
         analysis = JSON.parse(analysisText);
     } catch (e) {
@@ -186,9 +229,64 @@ serve(async (req) => {
         throw new Error("AI returned invalid JSON format.");
     }
 
+    // Heuristic parser for multi-product captions of the form:
+    // Name\nRef. Code: XXX (optional)\nÇmimi: 250EUR\nStock: 5 units
+    const parseMultiProducts = (cap?: string): Array<{ productName: string; price?: number; currency?: string; inventory?: number; specifications?: Record<string, string> }> => {
+      if (!cap) return [];
+      const blocks = cap.split(/\n\s*\n+/).map(b => b.trim()).filter(Boolean);
+      const items: Array<{ productName: string; price?: number; currency?: string; inventory?: number; specifications?: Record<string, string> }> = [];
+      for (const block of blocks) {
+        const lines = block.split(/\n+/).map(l => l.trim()).filter(Boolean);
+        if (lines.length === 0) continue;
+        const name = lines[0];
+        let refCode: string | undefined;
+        let price: number | undefined;
+        let currency: string | undefined;
+        let inventory: number | undefined;
+        for (const line of lines.slice(1)) {
+          const refMatch = line.match(/ref\.?\s*code\s*:\s*([A-Za-z0-9\-]+)/i);
+          if (refMatch) refCode = refMatch[1];
+          const priceMatch = line.match(/çmimi\s*:\s*([0-9]+(?:[\.,][0-9]+)?)\s*([A-Za-z]{3})/i) || line.match(/price\s*:\s*([0-9]+(?:[\.,][0-9]+)?)\s*([A-Za-z]{3})/i);
+          if (priceMatch) { price = parseFloat(priceMatch[1].replace(',', '.')); currency = priceMatch[2].toUpperCase(); }
+          const stockMatch = line.match(/stock\s*:\s*([0-9]+)/i);
+          if (stockMatch) inventory = parseInt(stockMatch[1]);
+        }
+        const hasSignal = (price !== undefined && !!currency) || inventory !== undefined;
+        if (hasSignal) {
+          items.push({ productName: name, price, currency, inventory, specifications: refCode ? { ref_code: refCode } : undefined });
+        }
+      }
+      return items;
+    };
+
+    // Normalize: convert numeric-keyed items ("0","1",...) into products[]
+    if (!Array.isArray(analysis.products)) {
+      const numericKeys = Object.keys(analysis).filter(k => /^\d+$/.test(k));
+      if (numericKeys.length > 0) {
+        const products = numericKeys
+          .map(k => analysis[k])
+          .filter((v: any) => v && (v.productName || v.name));
+        if (products.length > 0) analysis.products = products;
+      }
+    }
+    // Fallback: if AI missed products[] or set isProductPost false, try heuristic parser
+    if (!Array.isArray(analysis.products) || analysis.products.length === 0 || analysis.isProductPost === false) {
+      const parsed = parseMultiProducts(caption);
+      if (parsed.length > 1) {
+        analysis.products = parsed;
+        analysis.isProductPost = true;
+      }
+    }
+    // Flags: ensure isProductPost when products exist, and set isMultiProductPost
+    const hasProducts = Array.isArray(analysis.products) && analysis.products.length > 0;
+    if (hasProducts) analysis.isProductPost = true;
+    const isMultiProductPost = hasProducts && analysis.products.length > 1;
+
     // Map the new fields to the expected output structure
     const result = {
       ...analysis,
+      isProductPost: Boolean(analysis.isProductPost),
+      isMultiProductPost,
       original_price: analysis.price,
       original_currency: analysis.currency,
       pricing_type: analysis.pricingType || 'one_time',

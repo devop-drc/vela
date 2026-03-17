@@ -51,7 +51,14 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const fetchRates = async () => {
-      const { data, error } = await supabase.functions.invoke('exchange-rates');
+      const { data: { session } } = await supabase.auth.getSession();
+      const invokeOptions: any = {};
+      if (session?.access_token) {
+        invokeOptions.headers = {
+          Authorization: `Bearer ${session.access_token}`
+        };
+      }
+      const { data, error } = await supabase.functions.invoke('exchange-rates', invokeOptions);
       if (error || (data && data.error)) {
         const errorMessage = error?.message || (data && data.error) || "An unknown error occurred.";
         console.error("ShopContext: Failed to fetch exchange rates:", errorMessage);
@@ -88,7 +95,14 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     let igDetails: any = null;
     const { data: integration } = await supabase.from('integrations').select('id').eq('user_id', user.id).eq('provider', 'facebook').maybeSingle();
     if (integration) {
-      const { data: fetchedIgDetails, error: igError } = await supabase.functions.invoke('instagram-profile', { body: { user_id: user.id } });
+      const { data: { session } } = await supabase.auth.getSession();
+      const invokeOptions: any = { body: { user_id: user.id } };
+      if (session?.access_token) {
+        invokeOptions.headers = {
+          Authorization: `Bearer ${session.access_token}`
+        };
+      }
+      const { data: fetchedIgDetails, error: igError } = await supabase.functions.invoke('instagram-profile', invokeOptions);
       if (igError || fetchedIgDetails.error) {
         console.error("ShopContext: Failed to fetch Instagram details:", igError || fetchedIgDetails.error);
       } else {

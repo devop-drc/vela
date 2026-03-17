@@ -78,6 +78,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
     const [isBuyNowDrawerOpen, setIsBuyNowDrawerOpen] = useState(false);
     const [buyNowProduct, setBuyNowProduct] = useState<CartItem | null>(null);
+    const [buyNowItems, setBuyNowItems] = useState<CartItem[] | null>(null);
     const [isVariantDrawerOpen, setIsVariantDrawerOpen] = useState(false);
     const [variants, setVariants] = useState<Array<{ combination_key: string; option_values: Record<string,string>; inventory: number; is_active: boolean }>>([]);
 
@@ -92,6 +93,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
       max_qty: number;
       options: Array<{ id: string; name: string; values: Array<{ id: string; value: string; price_difference: number; inventory: number; is_active: boolean; is_default: boolean }> }>;
       variants: Array<{ combination_key: string; option_values: Record<string,string>; inventory: number; is_active: boolean }>;
+      product_id?: string;
     }>>([]);
 
     useEffect(() => {
@@ -200,7 +202,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
         setComboId(combo.id);
         const { data: items } = await supabase
           .from('combo_items')
-          .select('id, item_name, base_price, required, min_qty, max_qty, display_order')
+          .select('id, item_name, base_price, required, min_qty, max_qty, display_order, product_id')
           .eq('combo_id', combo.id)
           .order('display_order');
         const result: any[] = [];
@@ -235,6 +237,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
             max_qty: it.max_qty ?? 1,
             options: mappedOptions,
             variants: (vars || []) as any,
+            product_id: it.product_id,
           });
         }
         setComboItems(result);
@@ -519,8 +522,18 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
             </div>
           )}
 
-          {/* Quantity & Add to Cart / Buy Now - Responsive */}
-          {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && !isOutOfStock && (
+          {/* Quantity & Actions */}
+          {comboId && comboItems.length > 0 ? (
+            <div className="flex items-stretch gap-3 pt-3">
+              <Button
+                size="lg"
+                className={cn("w-full text-base rounded-md h-12", primaryColorClass)}
+                onClick={() => setIsVariantDrawerOpen(true)}
+              >
+                View Products
+              </Button>
+            </div>
+          ) : product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && !isOutOfStock && (
             <div className="flex items-stretch gap-3 pt-3"> {/* Changed to items-stretch for vertical alignment */}
               {/* Quantity Counter */}
               <div className="flex flex-col border rounded-md overflow-hidden flex-shrink-0 w-16" style={{borderColor:'hsl(var(--border))'}}> {/* Fixed width for counter */}
@@ -625,6 +638,14 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
             onOrderPlaced={() => setIsBuyNowDrawerOpen(false)}
           />
         )}
+        {buyNowItems && (
+          <InstagramCartDrawer
+            isOpen={isBuyNowDrawerOpen}
+            onClose={() => { setIsBuyNowDrawerOpen(false); setBuyNowItems(null); }}
+            initialCartItems={buyNowItems}
+            onOrderPlaced={() => { setIsBuyNowDrawerOpen(false); setBuyNowItems(null); }}
+          />
+        )}
         {/* Variant Drawer */}
         {(isVariantDrawerOpen || options.length > 0 || (comboId && comboItems.length > 0)) && (
           <InstagramVariantDrawer
@@ -641,11 +662,64 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
             productName={product.name}
             productMediaUrl={product.media_url}
             comboItems={comboId ? comboItems : undefined}
-            onConfirm={(action, payload) => {
+            onConfirm={async (action, payload) => {
               setIsVariantDrawerOpen(false);
-              if (comboId && payload) {
-                // TODO: Integrate bundled cart add/buy later. For now, just notify selection.
-                toast.success(`Selected ${payload?.selected?.length || 0} item(s) from combo.`);
+              if (comboId && payload && payload.selected?.length) {
+                const sel = payload.selected;
+                // fetch minimal product info for each selected item
+                const ids = Array.from(new Set(sel.map(s => s.productId).filter(Boolean))) as string[];
+                let productMap: Record<string, any> = {};
+                if (ids.length > 0) {
+                  const { data } = await supabase.from('products').select('id, name, pricing_type, product_type, billing_interval, media_url, media_type').in('id', ids);
+                  for (const p of (data || [])) productMap[p.id] = p;
+                }
+
+                if (action === 'add') {
+                  for (const s of sel) {
+                    const p = s.productId ? productMap[s.productId] : null;
+                    addToCart({
+                      productId: s.productId || product.id,
+                      name: s.name,
+                      price: s.price,
+                      originalPrice: s.price,
+                      isDiscounted: false,
+                      currency: shopDetails?.currency || 'USD',
+                      media_url: p?.media_url || product.media_url,
+                      media_type: p?.media_type || product.media_type,
+                      selectedOptions: Object.keys(s.selectedOptions).length ? s.selectedOptions : undefined,
+                      pricing_type: p?.pricing_type || product.pricing_type,
+                      product_type: p?.product_type || product.product_type,
+                      billing_interval: p?.billing_interval || product.billing_interval,
+                    }, s.quantity || 1);
+                  }
+                  toast.success(`Added ${sel.length} item(s) to cart.`);
+                } else {
+                  const items: CartItem[] = sel.map((s) => {
+                    const p = s.productId ? productMap[s.productId] : null;
+                    const variantKey = Object.keys(s.selectedOptions || {}).length > 0
+                      ? JSON.stringify(Object.entries(s.selectedOptions).sort(([a],[b]) => a.localeCompare(b)))
+                      : undefined;
+                    return {
+                      uid: `${s.productId || product.id}::${variantKey || 'base'}`,
+                      productId: s.productId || product.id,
+                      name: s.name,
+                      price: s.price,
+                      originalPrice: s.price,
+                      isDiscounted: false,
+                      currency: shopDetails?.currency || 'USD',
+                      media_url: p?.media_url || product.media_url,
+                      media_type: p?.media_type || product.media_type,
+                      selectedOptions: Object.keys(s.selectedOptions).length ? s.selectedOptions : undefined,
+                      variantKey,
+                      pricing_type: p?.pricing_type || product.pricing_type,
+                      product_type: p?.product_type || product.product_type,
+                      billing_interval: p?.billing_interval || product.billing_interval,
+                      quantity: s.quantity || 1,
+                    } as CartItem;
+                  });
+                  setBuyNowItems(items);
+                  setIsBuyNowDrawerOpen(true);
+                }
                 return;
               }
               if (action === 'add') actuallyAddToCart(); else actuallyBuyNow();

@@ -12,23 +12,35 @@ serve(async (req) => {
   }
 
   try {
-    const { user_id } = await req.json();
-    if (!user_id) {
-      console.error('Instagram Profile Function Error: User ID is required in request body.');
-      return new Response(JSON.stringify({ error: 'User ID is required.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const supabase = createClient(
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { persistSession: false } }
     );
 
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing Authorization header' }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+
+    if (authError || !user) {
+      console.error('Invalid token:', authError?.message);
+      return new Response(JSON.stringify({ error: 'Invalid or expired token' }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+
+    const user_id = user.id;
+
     // 1. Fetch user's Instagram access token from integrations table
-    const { data: integration, error: integrationError } = await supabase
+    const { data: integration, error: integrationError } = await supabaseAdmin
       .from('integrations')
       .select('access_token')
       .eq('user_id', user_id)

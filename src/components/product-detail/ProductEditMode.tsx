@@ -328,12 +328,14 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             if (analysis.error) throw new Error(analysis.error);
             if (!analysis.isProductPost) throw new Error("No accurate info found for this product. Please verify the product name/caption and try again.");
 
-            // If multiple items detected, create a combo product with nested items/options/variants.
-            if (Array.isArray(analysis.items) && analysis.items.length > 1) {
-              const comboMeta = analysis.combo || { title: name, description: caption };
-              await generateComboFromAI(supabase, user.id, product.instagram_post_id ?? null, comboMeta, analysis.items);
-              toast.success(`Created combo with ${analysis.items.length} items.`, { id: toastId });
-              // No variants for the current single product in this path.
+            // If multiple items detected, call Edge Function to upsert combo with nested items/options/variants.
+            const multi = Array.isArray(analysis.products) ? analysis.products : (Array.isArray(analysis.items) ? analysis.items : []);
+            if (multi.length > 1) {
+              const payload = { instagram_post_id: product.instagram_post_id ?? null, user_id: user.id, analysis: { ...analysis, products: multi, combo: { title: name, description: caption, ...(analysis.combo || {}) } } };
+              const { data: comboRes, error: comboErr } = await supabase.functions.invoke('upsert-combo-from-analysis', { body: payload });
+              if (comboErr) throw comboErr;
+              if (comboRes?.error) throw new Error(comboRes.error);
+              toast.success(`Created combo with ${multi.length} items.`, { id: toastId });
               setRefreshKey(k => k + 1);
               if (typeof onUpdate === 'function') onUpdate();
               return;

@@ -47,7 +47,7 @@ interface ProductPayload {
   business_id: string;
   user_id: string;
   status: string;
-  instagram_post_id: string;
+  instagram_post_id: string | null;
   media_url: string;
   thumbnail_url?: string;
   media_type: string;
@@ -60,6 +60,7 @@ interface ProductPayload {
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 // Helper Functions
@@ -223,7 +224,7 @@ const upsertCategory = async (supabase: SupabaseClient, name: string, userId: st
 };
 
 // Updated upsertTypeAndMergeAttributes to handle the new attribute structure
-const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, categoryId: string, typeName: string, newAttributes: any[]): Promise<void> => {
+const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, categoryId: string, typeName: string, newAttributes: any[], userId: string): Promise<void> => {
   const normalizedTypeName = toTitleCase(typeName);
   const { data: existingType, error } = await supabase.from('types').select('id, attributes').eq('category_id', categoryId).eq('name', normalizedTypeName).single();
   if (error && error.code !== 'PGRST116') throw error;
@@ -242,7 +243,12 @@ const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, categoryId
     if (updateError) throw updateError;
   } else {
     const attributesToInsert = Array.from(newAttributesMap.values());
-    const { error: insertError } = await supabase.from('types').insert({ category_id: categoryId, name: normalizedTypeName, attributes: attributesToInsert, user_id: supabase.auth.getUser().id }); // Assuming user_id is available via RLS or context
+    const { error: insertError } = await supabase.from('types').insert({ 
+      category_id: categoryId, 
+      name: normalizedTypeName, 
+      attributes: attributesToInsert, 
+      user_id: userId 
+    });
     if (insertError) throw insertError;
   }
 };
@@ -256,6 +262,7 @@ const updateJobProgress = async (supabase: SupabaseClient, jobId: string, update
 const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; token: string }, jobId: string, syncType: 'quick' | 'full') => {
   const summary = {
     created: 0, updated: 0, skipped: 0, cache_hits: 0,
+    combo_created: 0,
     skipped_items: [] as { name: string; reason: string; thumbnail_url?: string }[],
     created_items: [] as ProductPayload[],
     updated_items: [] as ProductPayload[],
@@ -282,7 +289,16 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     if (productsError) throw productsError;
     const existingProductMap = new Map((existingProducts || []).map(p => [p.instagram_post_id, p.id]));
 
-    const postsToProcess: InstagramPost[] = syncType === 'quick' ? allPosts.filter(p => !existingProductMap.has(p.id)) : allPosts;
+    // Also fetch existing combos to decide if a post needs processing for multi-products
+    const { data: existingCombos } = await supabaseAdmin
+      .from('combo_products')
+      .select('instagram_post_id');
+    const comboPostIds = new Set((existingCombos || []).map((c: any) => c.instagram_post_id));
+
+    // In quick sync: process posts that either don't have a product yet OR don't have a combo yet
+    const postsToProcess: InstagramPost[] = syncType === 'quick'
+      ? allPosts.filter(p => !existingProductMap.has(p.id) || !comboPostIds.has(p.id))
+      : allPosts;
     const total = postsToProcess.length;
 
     if (total === 0) {
@@ -292,7 +308,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
     const { data: cacheEntries, error: cacheError } = await supabaseAdmin.from('ai_analysis_cache').select('*').eq('user_id', user.id);
     if (cacheError) throw cacheError;
-    const cacheMap = new Map((cacheEntries || []).map((entry: any) => [entry.instagram_post_id, entry]));
+    const cacheMap = new Map<string, any>((cacheEntries || []).map((entry: any) => [entry.instagram_post_id, entry]));
 
     const postsNeedingAnalysis: (InstagramPost & { captionHash: string })[] = [];
     const analysisFromCache = new Map<string, AnalysisResult>();
@@ -319,7 +335,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
     const analysisPromises = postsNeedingAnalysis.map(post => 
       supabaseAdmin.functions.invoke('ai-product-classifier', { body: { caption: post.caption, user_id: user.id } })
-        .then(({ data, error }) => ({ post, analysis: data as AnalysisResult, error }))
+        .then(({ data, error }) => ({ post, analysis: data as AnalysisResult, error } as LiveAnalysisResult))
     );
     
     const liveAnalysisResults: LiveAnalysisResult[] = await Promise.all(analysisPromises);
@@ -370,9 +386,31 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       return items;
     };
 
+    // Normalize AI analysis that may come as a numeric-keyed object ("0","1",...) into analysis.products[]
+    const normalizeAnalysis = (raw: any, caption?: string): any => {
+      const a: any = raw || {};
+      // Already normalized
+      if (Array.isArray(a.products)) {
+        if (a.products.length > 0) a.isProductPost = true;
+        return a;
+      }
+      // Convert numeric-keyed object entries into an array of items
+      const numericKeys = Object.keys(a).filter(k => /^\d+$/.test(k));
+      if (numericKeys.length > 0) {
+        const products = numericKeys
+          .map(k => a[k])
+          .filter((v: any) => v && (v.productName || v.name));
+        if (products.length > 0) {
+          a.products = products;
+          a.isProductPost = true;
+        }
+      }
+      return a;
+    };
+
     for (const { post, analysis, error } of liveAnalysisResults) {
       const captionSnippet = `"${post.caption?.substring(0, 30) || ''}..."`;
-      let effectiveAnalysis = analysis as AnalysisResult | undefined;
+      let effectiveAnalysis = normalizeAnalysis(analysis, post.caption) as AnalysisResult | undefined;
       if (error || !effectiveAnalysis) {
         // Heuristic fallback: if caption contains price or currency signals, mark as product
         const hasPriceSignal = /\b(ALL|EUR|USD|GBP|Lek|Lekë)\b|\d+[\.,]?\d*\s?(ALL|EUR|USD|GBP)/i.test(post.caption || '');
@@ -414,7 +452,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     let progress = 0;
     
     for (const post of postsToProcess) {
-      const analysis = analysisFromCache.get(post.id);
+      const analysis = normalizeAnalysis(analysisFromCache.get(post.id), post.caption);
       if (!analysis) { // Post was skipped during analysis, so we skip it here too.
         continue;
       }
@@ -461,6 +499,28 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         : [];
       const parsedProducts = multiProducts.length === 0 ? parseMultiProducts(post.caption) : [];
       const itemsToCreate = multiProducts.length > 0 ? multiProducts : parsedProducts.length > 0 ? parsedProducts : [null];
+      const isMultiPost = itemsToCreate.filter(Boolean).length > 1;
+
+      // If multiple items were detected (AI or parser), call the dedicated Edge Function to upsert the combo fully
+      if ((analysis as any).isMultiProductPost === true || itemsToCreate.filter(Boolean).length > 1) {
+        try {
+          const enrichedAnalysis: any = { ...analysis, products: itemsToCreate };
+          const { error: comboErr, data: comboRes } = await supabaseAdmin.functions.invoke('upsert-combo-from-analysis', {
+            body: { instagram_post_id: post.id, user_id: user.id, analysis: enrichedAnalysis },
+          });
+          if (comboErr) {
+            console.error('upsert-combo-from-analysis failed:', comboErr.message);
+          } else if ((comboRes as any)?.error) {
+            console.error('upsert-combo-from-analysis error:', (comboRes as any).error);
+          } else {
+            summary.combo_created++;
+          }
+        } catch (e) {
+          console.error('Error invoking upsert-combo-from-analysis:', (e as any).message || e);
+        }
+        // Avoid creating duplicate item products or combos here; the edge function handles it
+        continue;
+      }
       
       // 1. Collect Category and Type data for batch upsert later
       if (categoryName && typeName) {
@@ -544,13 +604,13 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
         const productPayload: ProductPayload = {
           name: itemName,
-          caption: productInfo.description,
+          caption: (productInfo as any).description,
           price: priceInALL,
           currency: 'ALL',
-          tags: productInfo.tags,
+          tags: (productInfo as any).tags,
           category: toTitleCase(itemCategoryName || ''),
           details: details,
-          business_id: business.id,
+          business_id: (business as any).id,
           user_id: user.id,
           status: inventory === 0 ? 'Out of Stock' : 'Draft',
           instagram_post_id: post.id,
@@ -621,8 +681,8 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         const categoryId = categoriesToUpsert.get(categoryName)?.id;
         if (categoryId) {
             try {
-                await upsertTypeAndMergeAttributes(supabaseAdmin, categoryId, typeName, typeData.attributes);
-            } catch (e) {
+                await upsertTypeAndMergeAttributes(supabaseAdmin, categoryId, typeName, typeData.attributes, user.id);
+            } catch (e: any) {
                 console.error(`Failed to upsert type ${typeName} in category ${categoryName}:`, e.message);
             }
         }
@@ -690,71 +750,131 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             display_order: order++
           });
         }
-      } catch (e) {
-        console.error('Failed to create combo for post', postId, (e as any).message || e);
+      } catch (e: any) {
+        console.error('Failed to create combo for post', postId, e.message || e);
       }
     }
 
     // --- Step 6: Insert Promotions and Announcements (best-effort) ---
     if (promotionsToInsert.length > 0) {
       try {
-        // Insert promotions
-        const promotionsPayload = promotionsToInsert.map(p => ({
-          user_id: user.id,
-          business_id: (await supabaseAdmin.from('businesses').select('id').eq('user_id', user.id).single()).data.id,
-          title: p.title,
-          summary: p.summary,
-          discount_type: p.discount_type,
-          discount_value: p.discount_value,
-          currency: p.currency,
-          valid_until: p.valid_until,
-          instagram_post_id: p.post_id,
-        }));
-        const { data: insertedPromos } = await supabaseAdmin.from('promotions').insert(promotionsPayload).select('id, title');
-        if (insertedPromos && insertedPromos.length > 0) {
-          const announcements = insertedPromos.map((pr: any) => ({
+        const { data: businessData } = await supabaseAdmin.from('businesses').select('id').eq('user_id', user.id).single();
+        const businessId = businessData?.id;
+
+        if (businessId) {
+          // Insert promotions
+          const promotionsPayload = promotionsToInsert.map(p => ({
             user_id: user.id,
-            business_id: promotionsPayload[0].business_id,
-            title: pr.title,
-            message: 'New promotion: ' + pr.title,
-            promotion_id: pr.id,
-            status: 'active',
+            business_id: businessId,
+            title: p.title,
+            summary: p.summary,
+            discount_type: p.discount_type,
+            discount_value: p.discount_value,
+            currency: p.currency,
+            valid_until: p.valid_until,
+            instagram_post_id: p.post_id,
           }));
-          await supabaseAdmin.from('storefront_announcements').insert(announcements);
+          const { data: insertedPromos } = await supabaseAdmin.from('promotions').insert(promotionsPayload).select('id, title');
+          if (insertedPromos && insertedPromos.length > 0) {
+            const announcements = insertedPromos.map((pr: any) => ({
+              user_id: user.id,
+              business_id: businessId,
+              title: pr.title,
+              message: 'New promotion: ' + pr.title,
+              promotion_id: pr.id,
+              status: 'active',
+            }));
+            await supabaseAdmin.from('storefront_announcements').insert(announcements);
+          }
         }
-      } catch (e) {
-        console.error('Failed to insert promotions/announcements (missing tables or RLS?):', (e as any).message || e);
+      } catch (e: any) {
+        console.error('Failed to insert promotions/announcements (missing tables or RLS?):', e.message || e);
       }
     }
 
-    const finalMessage = `Sync complete. Created ${summary.created}, updated ${summary.updated}, skipped ${summary.skipped}.`;
+    const finalMessage = `Sync complete. Created ${summary.created}, updated ${summary.updated}, skipped ${summary.skipped}, combos ${summary.combo_created}.`;
     await updateJobProgress(supabaseAdmin, jobId, { status: 'completed', progress: total, total, message: finalMessage, summary });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Background Sync Error:', error.message);
     await updateJobProgress(supabaseAdmin, jobId, { status: 'failed', message: error.message, summary });
   }
 };
-
-// Server Entry Point
 serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   try {
     const supabaseAdmin = getSupabaseAdmin();
-    const { syncType } = await req.json();
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-    if (!user) throw new Error('User not found');
+    
+    // Guard JSON parsing
+    let syncType = 'quick';
+    try {
+      const body = await req.json();
+      syncType = body?.syncType || 'quick';
+    } catch (e) {
+      console.warn('Could not parse JSON body, defaulting to quick sync');
+    }
 
-    const { data: job, error: jobError } = await supabaseAdmin.from('sync_jobs').insert({ user_id: user.id, status: 'starting', message: 'Initiating sync...' }).select('id').single();
-    if (jobError) throw jobError;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing Authorization header' }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Invalid or expired token' }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+
+    // Ensure the sync_jobs table exists and is accessible
+    const { data: job, error: jobError } = await supabaseAdmin
+      .from('sync_jobs')
+      .insert({ 
+        user_id: user.id, 
+        status: 'starting', 
+        message: 'Initiating sync...' 
+      })
+      .select('id')
+      .single();
+
+    if (jobError) {
+      console.error('Error creating sync job:', jobError);
+      return new Response(JSON.stringify({ error: `Failed to create sync job: ${jobError.message}` }), { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
 
     // Run the sync process asynchronously
-    syncProcess(supabaseAdmin, { ...user, token }, job.id, syncType);
+    // Use setTimeout to ensure the response is returned immediately while the process continues
+    (async () => {
+      try {
+        await syncProcess(supabaseAdmin, { ...user, token }, job.id, syncType as 'quick' | 'full');
+      } catch (e) {
+        console.error('Background sync process failed:', e);
+      }
+    })();
 
-    return new Response(JSON.stringify({ jobId: job.id }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ jobId: job.id }), { 
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
+
+  } catch (error: unknown) {
+    console.error('Outer handler error:', (error as Error).message);
+    return new Response(JSON.stringify({ error: (error as Error).message }), { 
+      status: 500, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
   }
 });

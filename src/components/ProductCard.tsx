@@ -2,7 +2,8 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Checkbox } from "./ui/checkbox";
-import { AlertTriangle, Palette, Ruler, Tag, Frame, ScanText, Cog, Package } from "lucide-react"; // Import Package icon
+import { AlertTriangle, Palette, Ruler, Tag, Frame, ScanText, Cog, Package, Layers } from "lucide-react"; // Import Package & Layers icons
+
 import { ProductStatusDropdown } from "./ProductStatusDropdown";
 import { Badge } from "./ui/badge";
 import { formatCurrency } from "@/lib/formatters";
@@ -137,6 +138,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
             </div>
 
             <h3 className="font-semibold tracking-tight leading-snug flex items-center gap-2">
+              {product.details?.multi_product && <Layers className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />}
               {product.name}
               {getStockBadge(product.inventory)}
             </h3>
@@ -166,32 +168,41 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
           </div>
 
           <div className="flex items-end justify-between pt-2">
-            {product.price != null && shopDetails ? ( // Ensure shopDetails is available
-              <div className="flex flex-col">
-                <p className="font-semibold text-lg">
-                  {displayPrice != null ? (
-                    <>
-                      {new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: shopDetails.currency
-                      }).format(displayPrice)}
-                      {product.pricing_type === 'subscription' && (
-                        <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
-                      )}
-                    </>
-                  ) : 'N/A'}
-                </p>
-                {product.currency && product.currency !== shopDetails.currency && (
-                  <span className="text-xs text-muted-foreground">
-                    {originalPriceFormatted}
-                  </span>
-                )}
+            {product.details?.multi_product ? (
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-[hsl(var(--muted-foreground))]">
+                <Layers className="h-4 w-4" />
+                Multi-Product
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-600">
-                <AlertTriangle className="h-4 w-4" />
-                Set Price
-              </div>
+              <>
+                {product.price != null && shopDetails ? ( // Ensure shopDetails is available
+                  <div className="flex flex-col">
+                    <p className="font-semibold text-lg">
+                      {displayPrice != null ? (
+                        <>
+                          {new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: shopDetails.currency
+                          }).format(displayPrice)}
+                          {product.pricing_type === 'subscription' && (
+                            <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                          )}
+                        </>
+                      ) : 'N/A'}
+                    </p>
+                    {product.currency && product.currency !== shopDetails.currency && (
+                      <span className="text-xs text-muted-foreground">
+                        {originalPriceFormatted}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-600">
+                    <AlertTriangle className="h-4 w-4" />
+                    Set Price
+                  </div>
+                )}
+              </>
             )}
             <ProductStatusDropdown 
               currentStatus={product.status} 
