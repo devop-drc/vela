@@ -145,14 +145,26 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
   }, [options]);
 
   // Merge to variant rows
-  const rows = useMemo(()=>{
+  const rows = useMemo((): VariantRow[] =>{
     return combinations.map(combo => {
       const key = normalizeKey(combo);
       const ex = variants.find(v=>v.combination_key===key);
-      if (ex) return ex;
+      if (ex) return { ...ex }; // spread to ensure new object reference on variant changes
       return { product_id: productId, combination_key: key, option_values: combo, price_difference: 0, inventory: 0, is_active: true, is_default: false, sku: autoSku('SKU', combo) } as VariantRow;
     });
   }, [combinations, variants, productId]);
+
+  // Precompute option value stock from variant rows (used by options tab)
+  const optionStockMap = useMemo(() => {
+    const map: Record<string, Record<string, number>> = {};
+    options.forEach(opt => {
+      map[opt.name] = {};
+      opt.values.forEach(v => {
+        map[opt.name][v.value] = rows.reduce((sum, r) => r.option_values[opt.name] === v.value ? sum + r.inventory : sum, 0);
+      });
+    });
+    return map;
+  }, [options, rows]);
 
   // Regenerate variants from current options (force rebuild)
   const regenerateVariants = () => {
@@ -449,7 +461,7 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
                     </div>
                     <div className="divide-y">
                       {opt.values.map((v, vidx) => {
-                        const derivedStock = rows.reduce((sum, r) => r.option_values[opt.name] === v.value ? sum + r.inventory : sum, 0);
+                        const derivedStock = optionStockMap[opt.name]?.[v.value] ?? 0;
                         const isOOS = derivedStock <= 0;
                         const isCrit = derivedStock > 0 && derivedStock < 5;
                         const isLow = derivedStock >= 5 && derivedStock < 10;
