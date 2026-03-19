@@ -246,6 +246,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
                 onEdit={() => setIsEditing(true)}
                 onDelete={() => setIsDeleting(true)}
                 isSubmitting={isSubmitting}
+                specs={specs}
               />
             )}
           </AnimatePresence>

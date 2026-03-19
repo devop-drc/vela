@@ -5,33 +5,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Package, Banknote, XCircle, Settings, CheckCircle, Archive, Minus, Plus, Eye, Loader2 } from "lucide-react";
+import { Edit, Trash2, Package, Banknote, XCircle, Settings, CheckCircle, Archive, Minus, Plus, Eye, Loader2, Wrench } from "lucide-react";
 import { DialogFooter } from "../ui/dialog";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { MediaItem } from "../MediaItem";
-import { useMemo, useCallback, useState, useEffect } from "react";
-import { getAttributeIcon } from "@/lib/attributeIcons";
+import { useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 
-const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
-    <div className="flex flex-col">
-        <Label className="text-sm text-muted-foreground flex items-center gap-1.5">
-          <Icon className="h-3.5 w-3.5" />
-          {label}
-        </Label>
-        <div className="font-medium flex flex-wrap items-center gap-1.5 text-base pt-1">
-            {children}
-        </div>
-    </div>
-);
-
 // Helper to convert snake_case to Title Case for display
 const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
-export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting }: any) => {
+export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting, specs }: { product: any; mediaItems: any[]; onEdit: () => void; onDelete: () => void; isSubmitting: boolean; specs?: any[] }) => {
     const { shopDetails, convertCurrency } = useShop();
     const [options, setOptions] = useState<any[]>([]);
     const [isLoadingOptions, setIsLoadingOptions] = useState(true);
@@ -85,13 +72,6 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
         return converted;
     }, [product?.price, product?.currency, convertCurrency, shopDetails]);
 
-    // Filter details into specifications (excluding options_v2 which is now deprecated)
-    const specifications = useMemo(() => {
-        const reservedKeys = new Set(['type', 'options_v2', 'options', 'variants']); 
-        return Object.entries(product?.details || {})
-            .filter(([key]) => !reservedKeys.has(key))
-            .map(([key, value]) => ({ name: key, value }));
-    }, [product?.details]);
 
     // After hooks: if product is not available, render nothing
     if (!product) return null;
@@ -154,23 +134,22 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </div>
             </div>
 
-            {/* Specifications (Fixed Details) */}
-            {specifications.length > 0 && (
-              <Card>
-                <CardHeader><CardTitleComponent className="text-base">Specifications</CardTitleComponent></CardHeader>
-                <CardContent className="p-4 space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                    {specifications.map(field => {
-                        const Icon = getAttributeIcon(field.name);
-                        return (
-                            <DetailDisplayRow key={field.name} label={toTitleCase(field.name)} icon={Icon}>
-                                <p className="text-base">{Array.isArray(field.value) ? field.value.join(', ') : String(field.value)}</p>
-                            </DetailDisplayRow>
-                        );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Specifications from product_specifications table */}
+            {specs && specs.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Wrench className="h-4 w-4" />
+                  Specifications
+                </h3>
+                <div className="rounded-lg border">
+                  {specs.map((spec: any, i: number) => (
+                    <div key={spec.key || i} className={`flex justify-between px-4 py-2.5 text-sm ${i !== specs.length - 1 ? 'border-b' : ''}`}>
+                      <span className="text-muted-foreground capitalize">{spec.key.replace(/_/g, ' ')}</span>
+                      <span className="font-medium">{spec.value}{spec.unit ? ` ${spec.unit}` : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* Options V2 Display (Now using new tables) */}
