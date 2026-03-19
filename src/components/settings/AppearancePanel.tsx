@@ -135,7 +135,16 @@ export const AppearancePanel = () => {
               </RadioGroup>
             </div>
             <div className="space-y-3">
-                <Label>Corner Radius: {radiusValue.toFixed(0)}px</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Corner Radius</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">{radiusValue.toFixed(0)}px</span>
+                    <div
+                      className="w-6 h-6 border-2 border-primary bg-primary/20 shrink-0"
+                      style={{ borderRadius: `${radiusValue}px` }}
+                    />
+                  </div>
+                </div>
                 <Slider
                     min={0}
                     max={32}
@@ -143,6 +152,10 @@ export const AppearancePanel = () => {
                     value={[radiusValue]}
                     onValueChange={(value) => updateSetting('--radius', `${value[0] / 16}rem`)}
                 />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Sharp</span>
+                  <span>Round</span>
+                </div>
             </div>
           </CardContent>
         </Card>
