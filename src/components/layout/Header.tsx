@@ -1,6 +1,9 @@
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Link as LinkIcon, LogOut, User as UserIcon, Settings, Sparkles, Package, FileText, LayoutDashboard } from "lucide-react";
+import {
+  Search, Link as LinkIcon, LogOut, User as UserIcon, Settings, Sparkles,
+  Package, LayoutDashboard, ShoppingCart,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,12 +20,44 @@ import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { useShop } from "@/contexts/ShopContext";
 import { showSuccess, showError } from "@/utils/toast";
-import { useState, useEffect, useMemo, useRef } from "react"; // Import useState and useEffect
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 
 interface HeaderProps {
   title: string;
 }
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type PageResult   = { kind: 'page';    id: string; label: string; subtitle: string; path: string };
+type ProductResult = { kind: 'product'; id: string; label: string; subtitle: string; path: string };
+type OrderResult  = { kind: 'order';   id: string; label: string; subtitle: string; path: string };
+
+type SearchResult = PageResult | ProductResult | OrderResult;
+
+interface GroupedResults {
+  pages:    PageResult[];
+  products: ProductResult[];
+  orders:   OrderResult[];
+}
+
+// ─── Static page list ─────────────────────────────────────────────────────────
+
+const STATIC_PAGES: Array<{ label: string; subtitle: string; path: string }> = [
+  { label: 'Dashboard',      subtitle: 'Overview & stats',          path: '/'                      },
+  { label: 'Products',       subtitle: 'Manage your products',      path: '/products'              },
+  { label: 'Out of Stock',   subtitle: 'Products needing restock',  path: '/out-of-stock'          },
+  { label: 'Orders',         subtitle: 'Customer orders',           path: '/orders'                },
+  { label: 'Customers',      subtitle: 'Customer list',             path: '/customers'             },
+  { label: 'Categories',     subtitle: 'Product categories',        path: '/categories'            },
+  { label: 'Keywords',       subtitle: 'Keyword management',        path: '/keywords'              },
+  { label: 'Promotions',     subtitle: 'Discount & promo codes',    path: '/promotions'            },
+  { label: 'Store Settings', subtitle: 'General store settings',    path: '/settings'              },
+  { label: 'Appearance',     subtitle: 'Theme & layout options',    path: '/settings/appearance'   },
+  { label: 'Payments',       subtitle: 'Payment method settings',   path: '/settings/payments'     },
+];
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const Header = ({ title }: HeaderProps) => {
   const navigate = useNavigate();
@@ -30,142 +65,152 @@ const Header = ({ title }: HeaderProps) => {
   const { shopDetails } = useShop();
   const isFloating = settings.layoutStyle === 'floating';
   const blurEnabled = settings.blurEnabled;
+
   const [user, setUser] = useState<any>(null);
   const [aiOpen, setAiOpen] = useState(false);
-  const [tokenStats, setTokenStats] = useState<{ prompt: number; candidates: number; jobs: { created_at: string; prompt: number; candidates: number }[] }>({ prompt: 0, candidates: 0, jobs: [] });
-  const [query, setQuery] = useState("");
-  const [openSearch, setOpenSearch] = useState(false);
-  const [loadingSearch, setLoadingSearch] = useState(false);
-  const [results, setResults] = useState<{
-    pages: Array<{ title: string; path: string }>;
-    products: Array<{ id: string; name: string; media_url?: string | null }>;
-    options: Array<{ product_id: string; option_name: string; value: string }>;
-    settings: Array<{ title: string; path: string }>;
-  } | null>(null);
-  const activeIndexRef = useRef<number>(-1);
-  const listRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const [tokenStats, setTokenStats] = useState<{
+    prompt: number;
+    candidates: number;
+    jobs: { created_at: string; prompt: number; candidates: number }[];
+  }>({ prompt: 0, candidates: 0, jobs: [] });
+
+  // ── Search state ────────────────────────────────────────────────────────────
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [grouped, setGrouped] = useState<GroupedResults | null>(null);
+  const [activeIndex, setActiveIndex] = useState(-1);
+
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
   const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
+  // ── Auth ────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    fetchUser();
+    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
   }, []);
 
   useEffect(() => {
-    const fetchTokenUsage = async () => {
-      if (!user) return;
-      const { data } = await supabase.from('sync_jobs').select('created_at, summary').eq('user_id', user.id).order('created_at', { ascending: false });
-      const jobs = (data || []).map((r: any) => ({
-        created_at: r.created_at,
-        prompt: Number(r.summary?.total_ai_tokens_used?.prompt || 0),
-        candidates: Number(r.summary?.total_ai_tokens_used?.candidates || 0),
-      }));
-      const prompt = jobs.reduce((a, b) => a + b.prompt, 0);
-      const candidates = jobs.reduce((a, b) => a + b.candidates, 0);
-      setTokenStats({ prompt, candidates, jobs });
-    };
-    fetchTokenUsage();
+    if (!user) return;
+    supabase
+      .from('sync_jobs')
+      .select('created_at, summary')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        const jobs = (data || []).map((r: any) => ({
+          created_at: r.created_at,
+          prompt: Number(r.summary?.total_ai_tokens_used?.prompt || 0),
+          candidates: Number(r.summary?.total_ai_tokens_used?.candidates || 0),
+        }));
+        setTokenStats({
+          prompt: jobs.reduce((a, b) => a + b.prompt, 0),
+          candidates: jobs.reduce((a, b) => a + b.candidates, 0),
+          jobs,
+        });
+      });
   }, [user]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/login");
-  };
+  // ── Flatten results for keyboard nav ────────────────────────────────────────
+  const flat = useMemo<SearchResult[]>(() => {
+    if (!grouped) return [];
+    return [
+      ...grouped.pages,
+      ...grouped.products,
+      ...grouped.orders,
+    ];
+  }, [grouped]);
 
-  // Static pages and settings
-  const staticPages = useMemo(() => [
-    { title: "Dashboard", path: "/" },
-    { title: "Products", path: "/products" },
-    { title: "Out of Stock", path: "/out-of-stock" },
-    { title: "Orders", path: "/orders" },
-    { title: "Customers", path: "/customers" },
-  ], []);
-
-  const settingsPages = useMemo(() => [
-    { title: "Store Settings", path: "/settings" },
-    { title: "Appearance", path: "/settings/appearance" },
-    { title: "Payments", path: "/settings/payments" },
-  ], []);
-
-  // Debounced search combining static groups with Supabase-backed resources
+  // ── Debounced search (300 ms) ────────────────────────────────────────────────
   useEffect(() => {
-    if (!query) { setResults(null); setOpenSearch(false); return; }
+    if (!query.trim()) {
+      setGrouped(null);
+      setOpen(false);
+      setActiveIndex(-1);
+      return;
+    }
+
     let cancelled = false;
-    setLoadingSearch(true);
-    const t = setTimeout(async () => {
+    setLoading(true);
+
+    const timer = setTimeout(async () => {
       try {
         const lower = query.toLowerCase();
-        const pages = staticPages.filter(p => p.title.toLowerCase().includes(lower)).slice(0, 5);
-        const settings = settingsPages.filter(p => p.title.toLowerCase().includes(lower)).slice(0, 5);
 
-        // Prefer trigram RPCs; fallback to ilike if RPCs not present
-        let products: Array<{ id: string; name: string; media_url?: string | null }> = [];
-        let options: Array<{ product_id: string; option_name: string; value: string }> = [];
-        let rpcWorked = true;
+        // Pages — static, client-side filter
+        const pages: PageResult[] = STATIC_PAGES
+          .filter(p => p.label.toLowerCase().includes(lower))
+          .slice(0, 5)
+          .map(p => ({ kind: 'page', id: p.path, label: p.label, subtitle: p.subtitle, path: p.path }));
+
+        // Products — Supabase ilike on name, category, tags
+        let products: ProductResult[] = [];
         try {
-          const [{ data: pRpc }, { data: oRpc }] = await Promise.all([
-            supabase.rpc('admin_search_products', { q: query, limit_count: 5 }),
-            supabase.rpc('admin_search_options', { q: query, limit_count: 8 }),
-          ]);
-          if (Array.isArray(pRpc)) {
-            products = pRpc.map((p: any) => ({ id: p.id, name: p.name, media_url: p.media_url }));
+          // Try the RPC first (trigram search)
+          const { data: rpcData, error: rpcErr } = await supabase.rpc('admin_search_products', {
+            q: query,
+            limit_count: 5,
+          });
+          if (!rpcErr && Array.isArray(rpcData)) {
+            products = rpcData.map((p: any) => ({
+              kind: 'product',
+              id: p.id,
+              label: p.name,
+              subtitle: p.category || 'Product',
+              path: `/products?openProduct=${p.id}`,
+            }));
           } else {
-            rpcWorked = false;
-          }
-          if (Array.isArray(oRpc)) {
-            options = oRpc.map((r: any) => ({ product_id: r.product_id, option_name: r.option_name, value: r.value }));
-          } else {
-            rpcWorked = false;
+            throw new Error('rpc not available');
           }
         } catch {
-          rpcWorked = false;
-        }
-
-        if (!rpcWorked) {
+          // Fallback: ilike on name, category, tags
           const { data: prodData } = await supabase
             .from('products')
-            .select('id,name,media_url')
-            .or(`name.ilike.%${query}%,caption.ilike.%${query}%`)
+            .select('id, name, category, tags')
+            .or(`name.ilike.%${query}%,category.ilike.%${query}%,tags.cs.{${query}}`)
             .limit(5);
-          products = (prodData || []).map((p: any) => ({ id: p.id, name: p.name, media_url: p.media_url }));
-
-          const { data: optionVals } = await supabase
-            .from('option_values')
-            .select('id,value,option_id')
-            .ilike('value', `%${query}%`)
-            .limit(16);
-          if (optionVals && optionVals.length > 0) {
-            const optionIds = Array.from(new Set(optionVals.map((v: any) => v.option_id)));
-            const { data: optRows } = await supabase
-              .from('product_options')
-              .select('id, product_id, name')
-              .in('id', optionIds);
-            const optMap = new Map((optRows || []).map((o: any) => [o.id, o]));
-            options = optionVals
-              .map((v: any) => ({ product_id: optMap.get(v.option_id)?.product_id, option_name: optMap.get(v.option_id)?.name, value: v.value }))
-              .filter(x => !!x.product_id)
-              .slice(0, 8) as any;
-          }
+          products = (prodData || []).map((p: any) => ({
+            kind: 'product',
+            id: p.id,
+            label: p.name,
+            subtitle: p.category || 'Product',
+            path: `/products?openProduct=${p.id}`,
+          }));
         }
+
+        // Orders — ilike on customer_name, customer_email
+        let orders: OrderResult[] = [];
+        const { data: orderData } = await supabase
+          .from('orders')
+          .select('id, customer_name, customer_email, status')
+          .or(`customer_name.ilike.%${query}%,customer_email.ilike.%${query}%`)
+          .limit(5);
+        orders = (orderData || []).map((o: any) => ({
+          kind: 'order',
+          id: o.id,
+          label: o.customer_name || o.customer_email,
+          subtitle: o.status || 'Order',
+          path: `/orders?orderId=${o.id}`,
+        }));
 
         if (!cancelled) {
-          setResults({ pages, products, options, settings });
-          setOpenSearch(true);
-          activeIndexRef.current = -1;
-          listRefs.current = [];
+          setGrouped({ pages, products, orders });
+          setOpen(true);
+          setActiveIndex(-1);
+          itemRefs.current.clear();
         }
       } finally {
-        if (!cancelled) setLoadingSearch(false);
+        if (!cancelled) setLoading(false);
       }
-    }, 200);
-    return () => { cancelled = true; clearTimeout(t); };
-  }, [query, staticPages, settingsPages]);
+    }, 300);
 
-  // Keep dropdown positioned above everything using portal + fixed coordinates
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query]);
+
+  // ── Dropdown position (portal) ───────────────────────────────────────────────
   useEffect(() => {
     const updateRect = () => {
       const el = searchContainerRef.current;
@@ -173,7 +218,7 @@ const Header = ({ title }: HeaderProps) => {
       const r = el.getBoundingClientRect();
       setDropdownRect({ top: r.bottom + 8, left: r.left, width: r.width });
     };
-    if (openSearch) {
+    if (open) {
       updateRect();
       window.addEventListener('scroll', updateRect, true);
       window.addEventListener('resize', updateRect);
@@ -182,176 +227,201 @@ const Header = ({ title }: HeaderProps) => {
         window.removeEventListener('resize', updateRect);
       };
     }
-  }, [openSearch, results, loadingSearch]);
+  }, [open, grouped, loading]);
 
-  const allItemsFlat = useMemo(() => {
-    const items: Array<{ kind: 'page'|'product'|'option'|'setting'; label: string; path: string }> = [];
-    if (results?.pages) results.pages.forEach(p => items.push({ kind: 'page', label: p.title, path: p.path }));
-    if (results?.products) results.products.forEach(p => items.push({ kind: 'product', label: p.name, path: `/products?openProduct=${p.id}` }));
-    if (results?.options) results.options.forEach(o => items.push({ kind: 'option', label: `${o.option_name}: ${o.value}`, path: `/products?openProduct=${o.product_id}` }));
-    if (results?.settings) results.settings.forEach(s => items.push({ kind: 'setting', label: s.title, path: s.path }));
-    return items;
-  }, [results]);
+  // ── Navigation ───────────────────────────────────────────────────────────────
+  const navigateToResult = useCallback((item: SearchResult) => {
+    navigate(item.path);
+    setOpen(false);
+    setQuery('');
+  }, [navigate]);
 
-  const onKeyDownSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!openSearch || allItemsFlat.length === 0) return;
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!open) return;
+
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      activeIndexRef.current = Math.min(allItemsFlat.length - 1, activeIndexRef.current + 1);
-      listRefs.current[activeIndexRef.current]?.scrollIntoView({ block: 'nearest' });
-      setOpenSearch(true);
+      const next = Math.min(flat.length - 1, activeIndex + 1);
+      setActiveIndex(next);
+      itemRefs.current.get(next)?.scrollIntoView({ block: 'nearest' });
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      activeIndexRef.current = Math.max(0, activeIndexRef.current - 1);
-      listRefs.current[activeIndexRef.current]?.scrollIntoView({ block: 'nearest' });
-      setOpenSearch(true);
+      const prev = Math.max(0, activeIndex - 1);
+      setActiveIndex(prev);
+      itemRefs.current.get(prev)?.scrollIntoView({ block: 'nearest' });
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      const item = allItemsFlat[activeIndexRef.current] || allItemsFlat[0];
-      if (item?.path) navigate(item.path);
-      setOpenSearch(false);
+      const item = activeIndex >= 0 ? flat[activeIndex] : flat[0];
+      if (item) navigateToResult(item);
     } else if (e.key === 'Escape') {
-      setOpenSearch(false);
+      e.preventDefault();
+      setOpen(false);
     }
   };
 
-  const headerLeftMarginClasses = {
-    compact: 'md:left-[calc(14rem+2rem)]', // 224px + 32px
-    default: 'md:left-[calc(16rem+2rem)]', // 256px + 32px
-    spacious: 'md:left-[calc(18rem+2rem)]', // 288px + 32px
+  // ── Auth actions ─────────────────────────────────────────────────────────────
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/login');
   };
 
   const handleCopyStorefrontUrl = async () => {
     if (shopDetails?.slug) {
-      const storefrontUrl = `${window.location.origin}/instagramShop/${shopDetails.slug}`;
+      const url = `${window.location.origin}/instagramShop/${shopDetails.slug}`;
       try {
-        await navigator.clipboard.writeText(storefrontUrl);
-        showSuccess("Storefront URL copied to clipboard!");
-      } catch (err) {
-        showError("Failed to copy URL. Please try again manually.");
-        console.error("Failed to copy storefront URL:", err);
+        await navigator.clipboard.writeText(url);
+        showSuccess('Storefront URL copied to clipboard!');
+      } catch {
+        showError('Failed to copy URL. Please try again manually.');
       }
     } else {
-      showError("Your shop URL is not available yet. Please set your shop name in settings.");
+      showError('Your shop URL is not available yet. Please set your shop name in settings.');
     }
   };
 
+  // ── Layout helpers ───────────────────────────────────────────────────────────
+  const headerLeftMarginClasses: Record<string, string> = {
+    compact:  'md:left-[calc(14rem+2rem)]',
+    default:  'md:left-[calc(16rem+2rem)]',
+    spacious: 'md:left-[calc(18rem+2rem)]',
+  };
+
+  // ── Flat index counter for refs (rebuilt each render) ────────────────────────
+  let flatIdx = 0;
+
+  const renderGroup = (
+    label: string,
+    items: SearchResult[],
+    icon: React.ReactNode,
+  ) => {
+    if (items.length === 0) return null;
+    return (
+      <div key={label}>
+        <div className="px-2 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {label}
+        </div>
+        {items.map((item) => {
+          const idx = flatIdx++;
+          return (
+            <div
+              key={item.id}
+              ref={(el) => {
+                if (el) itemRefs.current.set(idx, el);
+              }}
+              className={cn(
+                'flex items-center gap-2.5 px-2 py-2 rounded-md cursor-pointer transition-colors',
+                idx === activeIndex
+                  ? 'bg-accent text-accent-foreground'
+                  : 'hover:bg-muted',
+              )}
+              onMouseEnter={() => setActiveIndex(idx)}
+              onMouseDown={(e) => {
+                e.preventDefault(); // prevent input blur
+                navigateToResult(item);
+              }}
+            >
+              {icon}
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium truncate">{item.label}</div>
+                {item.subtitle && (
+                  <div className="text-xs text-muted-foreground truncate">{item.subtitle}</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const hasResults = grouped && (
+    grouped.pages.length > 0 || grouped.products.length > 0 || grouped.orders.length > 0
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
   return (
-    <header className={cn(
-      "fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-[60px] px-6 transition-all shadow-md",
-      isFloating
-        ? "top-4 right-4 left-4 border rounded-lg"
-        : "border-b",
-      isFloating && (headerLeftMarginClasses[settings.sidebarWidth || 'default']),
-      blurEnabled ? "bg-card/80 backdrop-blur-[20px]" : "bg-card",
-      !isFloating && "md:ml-[var(--sidebar-width)] md:pr-8" // Ensure full width for docked
-    )} style={{ '--sidebar-width': settings.sidebarWidth === 'compact' ? '14rem' : settings.sidebarWidth === 'spacious' ? '18rem' : '16rem' } as React.CSSProperties}>
-      <div className="flex items-center gap-4">
-        <h1 className="text-xl font-bold hidden md:block">{title}</h1>
-        <div ref={searchContainerRef} className="relative flex-1 max-w-md">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+    <header
+      className={cn(
+        'fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-[60px] px-6 transition-all shadow-md',
+        isFloating
+          ? 'top-4 right-4 left-4 border rounded-lg'
+          : 'border-b',
+        isFloating && (headerLeftMarginClasses[settings.sidebarWidth || 'default']),
+        blurEnabled ? 'bg-card/80 backdrop-blur-[20px]' : 'bg-card',
+        !isFloating && 'md:ml-[var(--sidebar-width)] md:pr-8',
+      )}
+      style={{
+        '--sidebar-width':
+          settings.sidebarWidth === 'compact'  ? '14rem' :
+          settings.sidebarWidth === 'spacious' ? '18rem' :
+          '16rem',
+      } as React.CSSProperties}
+    >
+      {/* Left: title + search */}
+      <div className="flex items-center gap-4 min-w-0">
+        <h1 className="text-xl font-bold hidden md:block shrink-0">{title}</h1>
+
+        {/* Search bar */}
+        <div ref={searchContainerRef} className="relative w-72">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             type="search"
-            placeholder="Search pages, products, options, settings..."
+            placeholder="Search products, orders, pages…"
             className="pl-8 w-full"
             value={query}
-            onChange={(e)=> setQuery(e.target.value)}
-            onKeyDown={onKeyDownSearch}
-            onFocus={() => { if (results) setOpenSearch(true); }}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onKeyDown}
+            onFocus={() => { if (grouped) setOpen(true); }}
+            onBlur={() => setTimeout(() => setOpen(false), 150)}
           />
-          {openSearch && (results || loadingSearch) && dropdownRect && createPortal(
-            <div
-              style={{
-                position: 'fixed',
-                top: dropdownRect.top,
-                left: dropdownRect.left,
-                width: dropdownRect.width,
-                zIndex: 9999,
-              }}
-              className="max-h-96 overflow-auto rounded-md border bg-card shadow-lg"
-            >
-              {loadingSearch && <div className="p-3 text-sm text-muted-foreground">Searching…</div>}
-              {!loadingSearch && results && (
-                <div className="p-2 space-y-3">
-                  {results.pages.length > 0 && (
-                    <div>
-                      <div className="px-2 pb-1 text-xs uppercase text-muted-foreground">Pages</div>
-                      {results.pages.map((p, idx) => (
-                        <div
-                          key={`page-${p.path}`}
-                          ref={(el)=>{listRefs.current.push(el);}}
-                          className="px-2 py-2 rounded cursor-pointer hover:bg-muted"
-                          onMouseDown={()=>{ navigate(p.path); setOpenSearch(false); }}
-                        >
-                          <div className="flex items-center gap-2"><LayoutDashboard className="h-4 w-4" />{p.title}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {results.products.length > 0 && (
-                    <div>
-                      <div className="px-2 pb-1 text-xs uppercase text-muted-foreground">Products</div>
-                      {results.products.map((p) => (
-                        <div
-                          key={`prod-${p.id}`}
-                          ref={(el)=>{listRefs.current.push(el);}}
-                          className="px-2 py-2 rounded cursor-pointer hover:bg-muted"
-                          onMouseDown={()=>{ navigate(`/products?openProduct=${p.id}`); setOpenSearch(false); }}
-                        >
-                          <div className="flex items-center gap-2"><Package className="h-4 w-4" /><span className="font-medium">{p.name}</span></div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {results.options.length > 0 && (
-                    <div>
-                      <div className="px-2 pb-1 text-xs uppercase text-muted-foreground">Options</div>
-                      {results.options.map((o, i) => (
-                        <div
-                          key={`opt-${i}-${o.product_id}`}
-                          ref={(el)=>{listRefs.current.push(el);}}
-                          className="px-2 py-2 rounded cursor-pointer hover:bg-muted"
-                          onMouseDown={()=>{ navigate(`/products?openProduct=${o.product_id}`); setOpenSearch(false); }}
-                        >
-                          <div className="flex items-center gap-2"><FileText className="h-4 w-4" /><span className="font-medium">{o.option_name}</span><span className="text-muted-foreground">{o.value}</span></div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {results.settings.length > 0 && (
-                    <div>
-                      <div className="px-2 pb-1 text-xs uppercase text-muted-foreground">Settings</div>
-                      {results.settings.map((s) => (
-                        <div
-                          key={`set-${s.path}`}
-                          ref={(el)=>{listRefs.current.push(el);}}
-                          className="px-2 py-2 rounded cursor-pointer hover:bg-muted"
-                          onMouseDown={()=>{ navigate(s.path); setOpenSearch(false); }}
-                        >
-                          <div className="flex items-center gap-2"><Settings className="h-4 w-4" />{s.title}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {results.pages.length===0 && results.products.length===0 && results.options.length===0 && results.settings.length===0 && (
-                    <div className="px-2 py-2 text-sm text-muted-foreground">No results</div>
-                  )}
-                </div>
-              )}
-            </div>,
-            document.body
-          )}
         </div>
       </div>
-      <div className="flex items-center gap-4">
+
+      {/* Search dropdown — portal so z-index is never clipped */}
+      {open && dropdownRect && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: dropdownRect.top,
+            left: dropdownRect.left,
+            width: Math.max(dropdownRect.width, 320),
+            zIndex: 9999,
+          }}
+          className="max-h-[420px] overflow-y-auto rounded-lg border bg-card shadow-xl"
+        >
+          {loading && (
+            <div className="p-3 text-sm text-muted-foreground">Searching…</div>
+          )}
+
+          {!loading && grouped && (
+            <div className="p-2 space-y-3">
+              {renderGroup('Pages',    grouped.pages,    <LayoutDashboard className="h-4 w-4 shrink-0 text-muted-foreground" />)}
+              {renderGroup('Products', grouped.products, <Package         className="h-4 w-4 shrink-0 text-muted-foreground" />)}
+              {renderGroup('Orders',   grouped.orders,   <ShoppingCart    className="h-4 w-4 shrink-0 text-muted-foreground" />)}
+
+              {!hasResults && (
+                <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                  No results for &ldquo;{query}&rdquo;
+                </div>
+              )}
+            </div>
+          )}
+        </div>,
+        document.body,
+      )}
+
+      {/* Right: AI stats, storefront link, avatar */}
+      <div className="flex items-center gap-4 shrink-0">
+        {/* AI usage */}
         <Dialog open={aiOpen} onOpenChange={setAiOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
               <Sparkles className="mr-2 h-4 w-4" />
-              {((tokenStats.prompt + tokenStats.candidates) / 1000).toFixed(1)}k • {(() => {
-                const INPUT_PER_MILLION = 1.25; // USD per 1,000,000 input tokens
-                const OUTPUT_PER_MILLION = 10.0; // USD per 1,000,000 output tokens
-                const cost = (tokenStats.prompt / 1_000_000) * INPUT_PER_MILLION + (tokenStats.candidates / 1_000_000) * OUTPUT_PER_MILLION;
+              {((tokenStats.prompt + tokenStats.candidates) / 1000).toFixed(1)}k &bull; {(() => {
+                const cost =
+                  (tokenStats.prompt     / 1_000_000) * 1.25 +
+                  (tokenStats.candidates / 1_000_000) * 10.0;
                 return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(cost);
               })()}
             </Button>
@@ -359,7 +429,9 @@ const Header = ({ title }: HeaderProps) => {
           <DialogContent className="sm:max-w-[520px]">
             <DialogHeader>
               <DialogTitle>AI Usage</DialogTitle>
-              <DialogDescription>Total tokens and estimated cost using Gemini 2.5 Pro pricing (USD): $1.25 per 1M input tokens, $10.00 per 1M output tokens.</DialogDescription>
+              <DialogDescription>
+                Total tokens and estimated cost using Gemini 2.5 Pro pricing (USD): $1.25 per 1M input tokens, $10.00 per 1M output tokens.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
@@ -373,32 +445,37 @@ const Header = ({ title }: HeaderProps) => {
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium">Estimated cost</span>
                 <span>{(() => {
-                  const INPUT_PER_MILLION = 1.25; // USD per 1,000,000 input tokens
-                  const OUTPUT_PER_MILLION = 10.0; // USD per 1,000,000 output tokens
-                  const cost = (tokenStats.prompt / 1_000_000) * INPUT_PER_MILLION + (tokenStats.candidates / 1_000_000) * OUTPUT_PER_MILLION;
+                  const cost =
+                    (tokenStats.prompt     / 1_000_000) * 1.25 +
+                    (tokenStats.candidates / 1_000_000) * 10.0;
                   return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(cost);
                 })()}</span>
               </div>
               <div className="h-px bg-border my-2" />
               <div className="max-h-64 overflow-auto space-y-1 text-sm">
                 {tokenStats.jobs.map((j, idx) => {
-                  const inputCost = (j.prompt / 1_000_000) * 1.25;
-                  const outputCost = (j.candidates / 1_000_000) * 10.0;
-                  const total = inputCost + outputCost;
+                  const total = (j.prompt / 1_000_000) * 1.25 + (j.candidates / 1_000_000) * 10.0;
                   return (
                     <div key={idx} className="flex items-center justify-between">
                       <span>{new Date(j.created_at).toLocaleString()}</span>
-                      <span>{(j.prompt + j.candidates).toLocaleString()} tokens • {new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(total)}</span>
+                      <span>
+                        {(j.prompt + j.candidates).toLocaleString()} tokens &bull;{' '}
+                        {new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(total)}
+                      </span>
                     </div>
                   );
                 })}
-                {tokenStats.jobs.length === 0 && <div className="text-muted-foreground">No sync jobs yet.</div>}
+                {tokenStats.jobs.length === 0 && (
+                  <div className="text-muted-foreground">No sync jobs yet.</div>
+                )}
               </div>
             </div>
           </DialogContent>
         </Dialog>
-        <Button 
-          variant="outline" 
+
+        {/* Storefront link */}
+        <Button
+          variant="outline"
           size="sm"
           onClick={handleCopyStorefrontUrl}
           disabled={!shopDetails?.slug}
@@ -406,12 +483,14 @@ const Header = ({ title }: HeaderProps) => {
           <LinkIcon className="mr-2 h-4 w-4" />
           Get Storefront URL
         </Button>
+
+        {/* Avatar / user menu */}
         {user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={shopDetails?.logo_url || undefined} alt={shopDetails?.shop_name || "User"} />
+                  <AvatarImage src={shopDetails?.logo_url || undefined} alt={shopDetails?.shop_name || 'User'} />
                   <AvatarFallback>
                     {shopDetails?.shop_name?.[0] || <UserIcon className="h-4 w-4" />}
                   </AvatarFallback>
@@ -421,7 +500,9 @@ const Header = ({ title }: HeaderProps) => {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user.user_metadata?.full_name || user.email}</p>
+                  <p className="text-sm font-medium leading-none">
+                    {user.user_metadata?.full_name || user.email}
+                  </p>
                   <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                 </div>
               </DropdownMenuLabel>
