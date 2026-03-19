@@ -436,6 +436,9 @@ const Orders = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "amount_high" | "amount_low" | "name">("newest");
+  const [paymentFilter, setPaymentFilter] = useState<"all" | "card" | "cash_on_delivery">("all");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<"all" | "pending" | "processing" | "completed" | "failed">("all");
 
   useEffect(() => {
     setTitle("Orders");
@@ -501,9 +504,9 @@ const Orders = () => {
     );
   }, []);
 
-  // Filtered orders
+  // Filtered + sorted orders
   const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
+    let result = orders.filter((order) => {
       // Tab filter
       if (activeTab === "In Progress") {
         if (!IN_PROGRESS_STATUSES.includes(order.status)) return false;
@@ -513,29 +516,42 @@ const Orders = () => {
 
       // Search
       const lowerSearch = searchTerm.toLowerCase();
-      if (
-        lowerSearch &&
-        !(
-          order.customer_name.toLowerCase().includes(lowerSearch) ||
-          order.customer_email.toLowerCase().includes(lowerSearch)
-        )
-      )
-        return false;
+      if (lowerSearch && !(
+        order.customer_name?.toLowerCase().includes(lowerSearch) ||
+        order.customer_email?.toLowerCase().includes(lowerSearch) ||
+        order.id.toLowerCase().includes(lowerSearch)
+      )) return false;
 
       // Date range
       if (dateRange?.from) {
         const orderDate = new Date(order.created_at);
         if (orderDate < dateRange.from) return false;
-        if (
-          dateRange.to &&
-          orderDate > new Date(new Date(dateRange.to).setHours(23, 59, 59, 999))
-        )
-          return false;
+        if (dateRange.to && orderDate > new Date(new Date(dateRange.to).setHours(23, 59, 59, 999))) return false;
       }
+
+      // Payment method filter
+      if (paymentFilter !== "all" && order.payment_method !== paymentFilter) return false;
+
+      // Payment status filter
+      if (paymentStatusFilter !== "all" && order.payment_status !== paymentStatusFilter) return false;
 
       return true;
     });
-  }, [orders, activeTab, searchTerm, dateRange]);
+
+    // Sort
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case "newest": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "oldest": return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case "amount_high": return b.total_amount - a.total_amount;
+        case "amount_low": return a.total_amount - b.total_amount;
+        case "name": return (a.customer_name || "").localeCompare(b.customer_name || "");
+        default: return 0;
+      }
+    });
+
+    return result;
+  }, [orders, activeTab, searchTerm, dateRange, paymentFilter, paymentStatusFilter, sortBy]);
 
   // Stats — computed from ALL orders (not filtered) for the top cards
   const stats = useMemo(() => {
@@ -617,7 +633,7 @@ const Orders = () => {
     exportOrdersCSV(toExport, shopDetails?.currency ?? "USD");
   };
 
-  const hasFilters = !!(searchTerm || dateRange?.from || activeTab !== "All");
+  const hasFilters = !!(searchTerm || dateRange?.from || activeTab !== "All" || paymentFilter !== "all" || paymentStatusFilter !== "all" || sortBy !== "newest");
 
   return (
     <>
@@ -702,6 +718,9 @@ const Orders = () => {
                     setDateRange(undefined);
                     setActiveTab("All");
                     setSelectedIds(new Set());
+                    setSortBy("newest");
+                    setPaymentFilter("all");
+                    setPaymentStatusFilter("all");
                   }}
                 >
                   <X className="h-3 w-3" />
@@ -710,19 +729,57 @@ const Orders = () => {
               )}
             </div>
 
-            {/* Status tabs */}
-            <TabsList className="shadow-md flex-wrap h-auto gap-1">
-              {STATUS_TABS.map((tab) => (
-                <TabsTrigger key={tab.value} value={tab.value} className="text-xs gap-1.5">
-                  {tab.label}
-                  {tabCounts[tab.value] !== undefined && tabCounts[tab.value] > 0 && (
-                    <span className="ml-0.5 rounded-full bg-muted px-1.5 py-0 text-[10px] font-medium text-muted-foreground">
-                      {tabCounts[tab.value]}
-                    </span>
-                  )}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            {/* Status tabs + sort/filters row */}
+            <div className="flex flex-wrap items-center gap-2">
+              <TabsList className="shadow-md flex-wrap h-auto gap-1">
+                {STATUS_TABS.map((tab) => (
+                  <TabsTrigger key={tab.value} value={tab.value} className="text-xs gap-1.5">
+                    {tab.label}
+                    {tabCounts[tab.value] !== undefined && tabCounts[tab.value] > 0 && (
+                      <span className="ml-0.5 rounded-full bg-muted px-1.5 py-0 text-[10px] font-medium text-muted-foreground">
+                        {tabCounts[tab.value]}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              <div className="flex items-center gap-1.5 ml-auto">
+                {/* Sort */}
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                  <SelectTrigger className="h-8 w-32 text-xs"><SelectValue placeholder="Sort" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest first</SelectItem>
+                    <SelectItem value="oldest">Oldest first</SelectItem>
+                    <SelectItem value="amount_high">Amount high→low</SelectItem>
+                    <SelectItem value="amount_low">Amount low→high</SelectItem>
+                    <SelectItem value="name">Customer A→Z</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Payment method */}
+                <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
+                  <SelectTrigger className="h-8 w-28 text-xs"><SelectValue placeholder="Payment" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All methods</SelectItem>
+                    <SelectItem value="card">Card</SelectItem>
+                    <SelectItem value="cash_on_delivery">Cash</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Payment status */}
+                <Select value={paymentStatusFilter} onValueChange={(v) => setPaymentStatusFilter(v as any)}>
+                  <SelectTrigger className="h-8 w-28 text-xs"><SelectValue placeholder="Pay status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="processing">Processing</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
 
           {/* Bulk action bar */}
