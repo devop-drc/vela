@@ -1,53 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { showError, showSuccess } from "@/utils/toast";
 import { AppearancePanel } from "@/components/settings/AppearancePanel";
 import { AccountSettings } from "@/components/settings/AccountSettings";
 import { ShopSettings } from "@/components/settings/ShopSettings";
 import { usePageTitle } from "@/contexts/PageTitleContext";
-import { User, Store, Palette, ChevronDown } from "lucide-react";
+import { User, Store, Palette } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
-interface SectionProps {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-  color: string;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-}
-
-const Section = ({ icon: Icon, title, description, color, children, defaultOpen = true }: SectionProps) => {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="rounded-lg border bg-card overflow-hidden">
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-accent/30 transition-colors"
-      >
-        <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0", color)}>
-          <Icon className="h-4.5 w-4.5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-semibold">{title}</h2>
-          <p className="text-xs text-muted-foreground">{description}</p>
-        </div>
-        <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
-      </button>
-      {open && (
-        <div className="px-5 pb-5 border-t">
-          <div className="pt-4">
-            {children}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+const tabs = [
+  { id: "account", label: "Account", icon: User, color: "text-blue-600" },
+  { id: "shop", label: "Shop", icon: Store, color: "text-emerald-600" },
+  { id: "appearance", label: "Appearance", icon: Palette, color: "text-violet-600" },
+] as const;
 
 export default function Settings() {
   const { setTitle } = usePageTitle();
   const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "account";
 
   useEffect(() => { setTitle("Settings"); }, [setTitle]);
 
@@ -59,38 +30,39 @@ export default function Settings() {
   }, [searchParams, setSearchParams]);
 
   return (
-    <div className="space-y-4 max-w-5xl">
-      {/* Account + Shop side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Section
-          icon={User}
-          title="Account"
-          description="Profile, integrations & preferences"
-          color="bg-blue-500/10 text-blue-600"
-        >
+    <div className="max-w-5xl">
+      <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v }, { replace: true })}>
+        {/* Tab bar */}
+        <TabsList className="w-full grid grid-cols-3 h-12 mb-6">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                className="flex items-center gap-2 data-[state=active]:shadow-sm h-10"
+              >
+                <Icon className={cn("h-4 w-4", isActive ? tab.color : "text-muted-foreground")} />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+
+        {/* Content */}
+        <TabsContent value="account" className="mt-0">
           <AccountSettings />
-        </Section>
+        </TabsContent>
 
-        <Section
-          icon={Store}
-          title="Shop"
-          description="Store name, currency & contact info"
-          color="bg-emerald-500/10 text-emerald-600"
-        >
+        <TabsContent value="shop" className="mt-0">
           <ShopSettings />
-        </Section>
-      </div>
+        </TabsContent>
 
-      {/* Appearance — full width */}
-      <Section
-        icon={Palette}
-        title="Appearance"
-        description="Themes, fonts, colors & layout"
-        color="bg-violet-500/10 text-violet-600"
-        defaultOpen={false}
-      >
-        <AppearancePanel />
-      </Section>
+        <TabsContent value="appearance" className="mt-0">
+          <AppearancePanel />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
