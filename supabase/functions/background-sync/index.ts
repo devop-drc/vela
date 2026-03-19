@@ -449,12 +449,19 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         summary
       });
 
+      // AI analysis with 30s timeout per post to prevent hanging
+      const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
+        Promise.race([promise, new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`AI analysis timed out after ${ms/1000}s`)), ms))]);
+
       const aiResults = await Promise.all(
         batchNeedsAnalysis.map(post =>
-          supabaseAdmin.functions.invoke('ai-product-classifier', {
-            body: { caption: post.caption || '', user_id: user.id, include_images: post.captionInsufficient, post_media: { media_url: post.media_url, thumbnail_url: post.thumbnail_url, media_type: post.media_type, post_id: post.id }, access_token: accessToken }
-          })
-            .then(({data, error}) => ({post, analysis: data as AnalysisResult, error}))
+          withTimeout(
+            supabaseAdmin.functions.invoke('ai-product-classifier', {
+              body: { caption: post.caption || '', user_id: user.id, include_images: post.captionInsufficient, post_media: { media_url: post.media_url, thumbnail_url: post.thumbnail_url, media_type: post.media_type, post_id: post.id }, access_token: accessToken }
+            }),
+            30000
+          )
+            .then(({data, error}: any) => ({post, analysis: data as AnalysisResult, error}))
             .catch(error => ({post, analysis: null as any, error}))
         )
       );

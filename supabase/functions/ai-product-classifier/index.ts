@@ -321,15 +321,20 @@ serve(async (req) => {
 
     const requestParts = [{ text: finalPrompt }, ...imageParts];
 
+    // Call Gemini WITHOUT Google Search grounding for speed (grounding adds 5-15s per call)
+    // Specs are found later via the find-product-specs waterfall
+    const abortController = new AbortController();
+    const geminiTimeout = setTimeout(() => abortController.abort(), 25000); // 25s timeout
     const geminiResponse = await fetch(getGeminiUrl('flash'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: requestParts }],
-        tools: [{ google_search: {} }], // Enable grounding
         generationConfig: { responseMimeType: "application/json" }
       }),
+      signal: abortController.signal,
     });
+    clearTimeout(geminiTimeout);
 
     if (!geminiResponse.ok) throw new Error(`Gemini API error: ${await geminiResponse.text()}`);
     const geminiData = await geminiResponse.json();
