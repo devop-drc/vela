@@ -163,30 +163,20 @@ const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => {
                             end={item.to === "/"}
                             className={({ isActive }) =>
                               cn(
-                                "relative flex items-center justify-center h-10 w-10 mx-auto rounded-lg transition-all duration-150",
+                                "flex items-center justify-center h-10 rounded-lg transition-all duration-150",
                                 isPrimary
                                   ? cn(
                                       "text-primary-foreground/50 hover:text-primary-foreground hover:bg-primary-foreground/10",
-                                      isActive && "text-primary-foreground bg-primary-foreground/20"
+                                      isActive && "text-primary-foreground bg-primary-foreground/20 border-l-[3px] border-primary-foreground rounded-l-none"
                                     )
                                   : cn(
                                       "text-muted-foreground hover:text-foreground hover:bg-accent",
-                                      isActive && "text-primary bg-primary/10"
+                                      isActive && "text-primary bg-primary/10 border-l-[3px] border-primary rounded-l-none"
                                     )
                               )
                             }
                           >
-                            {({ isActive }) => (
-                              <>
-                                {isActive && (
-                                  <span className={cn(
-                                    "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full",
-                                    isPrimary ? "bg-primary-foreground" : "bg-primary"
-                                  )} />
-                                )}
-                                <item.icon className="h-[18px] w-[18px] shrink-0" />
-                              </>
-                            )}
+                            <item.icon className="h-[18px] w-[18px] shrink-0" />
                           </NavLink>
                         </TooltipTrigger>
                         <TooltipContent side="right" sideOffset={8}>
