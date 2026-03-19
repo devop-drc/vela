@@ -196,7 +196,15 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </h3>
               <div className="space-y-2">
                 {variants.slice(0, 16).map((v: any) => {
-                  const optVals = v.option_values || {};
+                  // Use option_values JSONB, or parse from combination_key as fallback
+                  let optVals = v.option_values || {};
+                  if (Object.keys(optVals).length === 0 && v.combination_key) {
+                    // Parse "Color=Red|Size=M" format
+                    v.combination_key.split('|').forEach((part: string) => {
+                      const [key, val] = part.split('=');
+                      if (key && val) optVals[key] = val;
+                    });
+                  }
                   const totalPriceALL = (product.price || 0) + (v.price_difference || 0);
                   const displayTotal = convertCurrency(totalPriceALL, 'ALL', currencyCode);
                   const isOOS = v.inventory <= 0;

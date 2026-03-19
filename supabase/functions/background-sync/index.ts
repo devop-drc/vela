@@ -207,7 +207,10 @@ const upsertVariantsFromOptions = async (supabase: SupabaseClient, productId: st
   for (let i = 0; i < combosIds.length; i++) {
     const variantKey = buildVariantKey(orderedNames, combosLabels[i]);
     if (existingKeys.has(variantKey)) continue;
-    toInsert.push({ product_id: productId, combination_key: variantKey, is_active: true });
+    // Build option_values JSONB: { "Color": "Red", "Size": "M" }
+    const optionValuesObj: Record<string, string> = {};
+    orderedNames.forEach((name, idx) => { optionValuesObj[name] = combosLabels[i][idx]; });
+    toInsert.push({ product_id: productId, combination_key: variantKey, option_values: optionValuesObj, is_active: true });
   }
   if (toInsert.length > 0) {
     const { error } = await supabase.from('product_variants').insert(toInsert);
