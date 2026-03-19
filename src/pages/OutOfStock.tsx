@@ -248,6 +248,18 @@ const ProductAccordionRow = ({
         }
         return { ...v, option_values: optVals } as VariantRow;
       });
+
+      // If ALL variants have 0 stock but product has base inventory, distribute evenly
+      const allZero = rows.length > 0 && rows.every((v: VariantRow) => v.inventory === 0);
+      const baseInventory = product.inventory ?? 0;
+      if (allZero && baseInventory > 0) {
+        const perVariant = Math.floor(baseInventory / rows.length);
+        const remainder = baseInventory % rows.length;
+        rows.forEach((v: VariantRow, i: number) => {
+          v.inventory = perVariant + (i < remainder ? 1 : 0);
+        });
+      }
+
       setLocalVariants(rows);
       onVariantsLoaded(product.id, rows);
       setFetched(true);
