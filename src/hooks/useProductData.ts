@@ -44,8 +44,8 @@ export const useProductData = (): UseProductDataResult => {
   const [allDetailsAttributes, setAllDetailsAttributes] = useState<DetailsAttribute[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchProductsAndMetadata = async () => {
-    setIsLoading(true);
+  const fetchProductsAndMetadata = async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setIsLoading(false);
@@ -98,8 +98,8 @@ export const useProductData = (): UseProductDataResult => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // 1. Initial fetch
-        await fetchProductsAndMetadata();
+        // 1. Initial fetch (show loading spinner)
+        await fetchProductsAndMetadata(true);
 
         // 2. Setup Realtime Listener
         channel = supabase
@@ -112,21 +112,18 @@ export const useProductData = (): UseProductDataResult => {
                     
                     setAllProducts(prevProducts => {
                         if (payload.eventType === 'INSERT') {
-                            // Add new product to the start
                             return [newProduct, ...prevProducts];
                         } else if (payload.eventType === 'UPDATE') {
-                            // Replace updated product
-                            return prevProducts.map(p => p.id === newProduct.id ? newProduct : p);
+                            return prevProducts.map(p => p.id === newProduct.id ? { ...p, ...newProduct } : p);
                         } else if (payload.eventType === 'DELETE') {
-                            // Remove deleted product
                             return prevProducts.filter(p => p.id !== payload.old.id);
                         }
                         return prevProducts;
                     });
-                    
-                    // Re-fetch metadata (categories, tags, attributes) on any change, especially INSERT/DELETE
-                    if (payload.eventType !== 'UPDATE' || payload.new.category !== payload.old.category || payload.new.tags !== payload.old.tags) {
-                        // Debounce this if performance becomes an issue, but for now, immediate update is safer.
+
+                    // Only re-fetch full metadata on INSERT/DELETE (new categories/tags)
+                    // UPDATE events are handled inline above — no full refetch needed
+                    if (payload.eventType === 'INSERT' || payload.eventType === 'DELETE') {
                         fetchProductsAndMetadata();
                     }
                 }
