@@ -369,78 +369,39 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 </div>
               </div>
               
-              {/* Specifications (from product_specifications table) */}
-              <Card>
-                <CardHeader>
-                  <CardTitleComponent className="text-base flex items-center justify-between">
-                    <span className="flex items-center gap-2"><Settings className="h-5 w-5" /> Specifications</span>
-                    <Button type="button" variant="outline" size="sm" onClick={handleFindSpecs} disabled={isReanalyzing}>
-                      {isReanalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-amber-400" />}Find specs with AI
-                    </Button>
-                  </CardTitleComponent>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {specs && specs.length > 0 ? (
-                    <div className="grid gap-2">
-                      {/* Header row */}
-                      <div className="grid grid-cols-[1fr_1.5fr_80px_32px] gap-2 text-xs font-medium text-muted-foreground px-1 pb-1 border-b">
-                        <span>Key</span><span>Value</span><span>Unit</span><span>Actions</span>
-                      </div>
-                      {specs.map((spec: any, idx: number) => (
-                        <div key={spec.id || spec.key} className="grid grid-cols-[1fr_1.5fr_80px_32px] items-center gap-2">
-                          <Input
-                            value={spec.key}
-                            placeholder="e.g. weight"
-                            onChange={(e) => {
-                              const updated = specs.map((s: any, i: number) => i === idx ? { ...s, key: e.target.value } : s);
-                              setSpecs(updated);
-                            }}
-                            className="h-8 text-sm capitalize"
-                          />
-                          <Input
-                            value={spec.value}
-                            placeholder="e.g. 500"
-                            onChange={(e) => {
-                              const updated = specs.map((s: any, i: number) => i === idx ? { ...s, value: e.target.value } : s);
-                              setSpecs(updated);
-                            }}
-                            className="h-8 text-sm"
-                          />
-                          <Input
-                            value={spec.unit || ''}
-                            placeholder="e.g. g"
-                            onChange={(e) => {
-                              const updated = specs.map((s: any, i: number) => i === idx ? { ...s, unit: e.target.value } : s);
-                              setSpecs(updated);
-                            }}
-                            className="h-8 text-sm"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => setSpecs(specs.filter((_: any, i: number) => i !== idx))}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No specifications yet. Click "Find specs with AI" or add one manually.</p>
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mt-2 w-full border-dashed"
-                    onClick={() => setSpecs([...(specs || []), { key: '', value: '', unit: '' }])}
-                  >
-                    <PlusCircle className="mr-2 h-4 w-4" />Add Spec
+              {/* Specifications */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <Settings className="h-4 w-4" />
+                    Specifications
+                    {specs && specs.length > 0 && <Badge variant="secondary" className="text-[10px] h-5">{specs.length}</Badge>}
+                  </h3>
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleFindSpecs} disabled={isReanalyzing}>
+                    {isReanalyzing ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1.5 h-3 w-3 text-amber-400" />}Find with AI
                   </Button>
-                </CardContent>
-              </Card>
+                </div>
+                {specs && specs.length > 0 ? (
+                  <div className="rounded-lg border overflow-hidden">
+                    {specs.map((spec: any, idx: number) => (
+                      <div key={spec.id || idx} className={cn("grid grid-cols-[1fr_1.5fr_70px_28px] items-center gap-1.5 px-2 py-1.5", idx % 2 === 0 ? "bg-muted/30" : "bg-card")}>
+                        <Input value={spec.key} placeholder="e.g. material" onChange={(e) => setSpecs(specs.map((s: any, i: number) => i === idx ? { ...s, key: e.target.value } : s))} className="h-7 text-xs border-0 bg-transparent capitalize focus-visible:ring-1 px-2" />
+                        <Input value={spec.value} placeholder="e.g. Cotton" onChange={(e) => setSpecs(specs.map((s: any, i: number) => i === idx ? { ...s, value: e.target.value } : s))} className="h-7 text-xs border-0 bg-transparent focus-visible:ring-1 px-2" />
+                        <Input value={spec.unit || ''} placeholder="unit" onChange={(e) => setSpecs(specs.map((s: any, i: number) => i === idx ? { ...s, unit: e.target.value } : s))} className="h-7 text-[10px] border-0 bg-transparent text-muted-foreground focus-visible:ring-1 px-2" />
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground/50 hover:text-destructive" onClick={() => setSpecs(specs.filter((_: any, i: number) => i !== idx))}><Trash2 className="h-3 w-3" /></Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed p-6 text-center">
+                    <p className="text-sm text-muted-foreground">No specifications yet</p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">Click "Find with AI" or add manually below</p>
+                  </div>
+                )}
+                <Button type="button" variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => setSpecs([...(specs || []), { key: '', value: '', unit: '' }])}>
+                  <PlusCircle className="mr-1.5 h-3 w-3" />Add specification
+                </Button>
+              </div>
 
               {/* Combined Options + Variants Manager */}
               {product?.id && (
