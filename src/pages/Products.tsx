@@ -30,6 +30,7 @@ import { useShop } from "@/contexts/ShopContext";
 import { useProductData } from "@/hooks/useProductData"; // Import useProductData
 import { useProductFilters } from "@/hooks/useProductFilters"; // Import useProductFilters
 import { ProductFilterDrawer } from "@/components/dashboard/ProductFilterDrawer"; // Import new drawer
+import { ProductFilterPanel } from "@/components/products/ProductFilterPanel"; // Import inline filter panel
 import { FilterVisibilitySheet } from "@/components/dashboard/FilterVisibilitySheet";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -102,7 +103,8 @@ const Products = () => {
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
   const [gridSize, setGridSize] = useState<GridSizeType>('md');
   const [grouping, setGrouping] = useState<GroupingType>('none');
-  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false); // New state for filter drawer
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false); // New state for filter drawer (mobile)
+  const [showFilters, setShowFilters] = useState(!isMobile); // Inline filter panel (desktop default true)
   const [isVisibilitySheetOpen, setIsVisibilitySheetOpen] = useState(false);
   const [visibilityMap, setVisibilityMap] = useState<Record<string, boolean>>({});
   const [order, setOrder] = useState<string[]>([]);
@@ -636,6 +638,45 @@ const Products = () => {
         allProducts={allProducts}
       />
 
+      {/* ── Main layout: filter panel + content ── */}
+      <div
+        className={cn(
+          "grid transition-all duration-300",
+          !isMobile && showFilters
+            ? "grid-cols-[260px_1fr]"
+            : "grid-cols-[1fr]"
+        )}
+      >
+        {/* Inline filter panel (desktop only) */}
+        {!isMobile && (
+          <div
+            className={cn(
+              "overflow-hidden transition-all duration-300 h-[calc(100vh-80px)] sticky top-0",
+              showFilters ? "w-[260px] opacity-100" : "w-0 opacity-0"
+            )}
+          >
+            {showFilters && (
+              <ProductFilterPanel
+                allCategories={allCategories}
+                allTags={allTags}
+                maxPrice={maxPrice}
+                filters={filters}
+                statusFilter={statusFilter}
+                localPriceRange={localPriceRange}
+                handleToggleFilter={handleToggleFilter}
+                handleToggleStatusFilter={handleToggleStatusFilter}
+                handleClearSection={handleClearSection}
+                handleResetAllFilters={handleResetAllFilters}
+                handlePriceRangeChange={handlePriceRangeChange}
+                hasActiveFilters={hasActiveFilters}
+                onClose={() => setShowFilters(false)}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Main content column */}
+        <div className="min-w-0">
       {/* ── Stats summary bar ── */}
       {!isProductDataLoading && (
         <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -671,10 +712,20 @@ const Products = () => {
               Filter Management
             </Button>
 
-            {/* Filter Button (Opens Drawer) */}
-            <Button variant="outline" className="justify-start flex-1 md:flex-none shadow-lg" onClick={() => setIsFilterDrawerOpen(true)}>
+            {/* Filter Button — toggles inline panel on desktop, opens drawer on mobile */}
+            <Button
+              variant={showFilters && !isMobile ? "secondary" : "outline"}
+              className="justify-start flex-1 md:flex-none shadow-lg"
+              onClick={() => {
+                if (isMobile) {
+                  setIsFilterDrawerOpen(true);
+                } else {
+                  setShowFilters(prev => !prev);
+                }
+              }}
+            >
               <FilterIcon className="mr-2 h-4 w-4" />
-              Filter
+              Filters
               {hasActiveFilters && <span className="ml-1 text-xs text-primary">(Active)</span>}
             </Button>
 
@@ -940,6 +991,9 @@ const Products = () => {
             )}
           </div>
         )}
+
+        </div>{/* end main content column */}
+      </div>{/* end grid layout */}
 
       <AnimatePresence>
         {selectedProducts.length > 0 && (
