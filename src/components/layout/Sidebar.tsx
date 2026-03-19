@@ -124,7 +124,7 @@ const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => {
 
         {/* Nav — relative so the overflow gradient can be positioned inside */}
         <div className="relative flex-1 min-h-0">
-          <nav className={cn("h-full overflow-y-auto overflow-x-hidden space-y-1", collapsed ? "p-2 pt-4" : "p-3 pt-4")}>
+          <nav className={cn("h-full overflow-y-auto overflow-x-hidden", collapsed ? "p-1.5 pt-3 space-y-1" : "p-3 pt-4 space-y-1")}>
             {navGroups.map((group, groupIndex) => (
               <div key={group.name}>
                 {/* Divider between groups (skip before first group) */}
@@ -146,10 +146,10 @@ const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => {
                   </h2>
                 ) : (
                   <div className={cn(
-                    "flex justify-center mb-1",
-                    isPrimary ? "text-primary-foreground/30" : "text-muted-foreground/30"
+                    "flex justify-center my-1.5",
+                    isPrimary ? "text-primary-foreground/25" : "text-muted-foreground/25"
                   )}>
-                    <group.icon className="h-3 w-3" />
+                    <span className="h-[1px] w-6 bg-current rounded-full" />
                   </div>
                 )}
 
@@ -246,32 +246,38 @@ const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => {
           )} />
         </div>
 
-        {/* Collapse toggle — more visible with border + bg */}
+        {/* Collapse/Expand toggle */}
         <div className={cn(
-          "shrink-0 border-t p-2 flex",
-          collapsed ? "justify-center" : "justify-end",
+          "shrink-0 border-t p-2",
           isPrimary ? "border-primary-foreground/20" : "border-border"
         )}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
+              <button
                 onClick={onToggleCollapsed}
                 className={cn(
-                  "h-8 w-8 shrink-0 border transition-all duration-150",
+                  "w-full flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition-all duration-150",
                   isPrimary
-                    ? "border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground/80 hover:bg-primary-foreground/20 hover:text-primary-foreground hover:border-primary-foreground/40"
-                    : "border-border bg-muted/60 text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:border-border"
+                    ? "bg-primary-foreground/10 text-primary-foreground/70 hover:bg-primary-foreground/20 hover:text-primary-foreground"
+                    : "bg-muted/50 text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
                 aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
-                {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-              </Button>
+                {collapsed ? (
+                  <ChevronRight className="h-4 w-4" />
+                ) : (
+                  <>
+                    <ChevronLeft className="h-4 w-4" />
+                    <span>Collapse</span>
+                  </>
+                )}
+              </button>
             </TooltipTrigger>
-            <TooltipContent side="right">
-              {collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            </TooltipContent>
+            {collapsed && (
+              <TooltipContent side="right" sideOffset={8}>
+                Expand sidebar
+              </TooltipContent>
+            )}
           </Tooltip>
         </div>
       </aside>
