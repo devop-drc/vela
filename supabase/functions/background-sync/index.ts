@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { crypto } from "https://deno.land/std@0.190.0/crypto/mod.ts";
+import { isCaptionInsufficient, extractProductName, normalizeProductName } from "../_shared/heuristics.ts";
 
 // Types
 interface InstagramPost {
@@ -310,31 +311,50 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     if (cacheError) throw cacheError;
     const cacheMap = new Map<string, any>((cacheEntries || []).map((entry: any) => [entry.instagram_post_id, entry]));
 
-    const postsNeedingAnalysis: (InstagramPost & { captionHash: string })[] = [];
+    // Fetch the Instagram access token for image analysis
+    const { data: integration } = await supabaseAdmin
+      .from('integrations')
+      .select('access_token')
+      .eq('user_id', user.id)
+      .eq('provider', 'facebook')
+      .maybeSingle();
+    const accessToken: string | null = integration?.access_token || null;
+
+    const postsNeedingAnalysis: (InstagramPost & { captionHash: string; captionInsufficient: boolean })[] = [];
     const analysisFromCache = new Map<string, AnalysisResult>();
 
     for (const post of postsToProcess) {
-      if (!post.caption) {
-        summary.skipped++;
-        summary.skipped_items.push({ name: `Post without caption`, reason: "Post has no caption to analyze.", thumbnail_url: post.thumbnail_url || post.media_url });
-        continue;
-      }
-      const captionHash = await sha256(post.caption);
+      // Allow captionless posts to proceed with image analysis flag
+      const captionInsufficient = isCaptionInsufficient(post.caption ?? null);
+      const captionHash = await sha256(post.caption || post.id);
       const cached = cacheMap.get(post.id);
 
       if (cached && cached.caption_hash === captionHash) {
         analysisFromCache.set(post.id, cached.analysis_result as AnalysisResult);
         summary.cache_hits++;
       } else {
-        postsNeedingAnalysis.push({ ...post, captionHash });
+        postsNeedingAnalysis.push({ ...post, captionHash, captionInsufficient });
       }
     }
 
     // --- Step 1: Live Analysis ---
     await updateJobProgress(supabaseAdmin, jobId, { progress: 0, total, message: `Analyzing ${postsNeedingAnalysis.length} new posts...` });
 
-    const analysisPromises = postsNeedingAnalysis.map(post => 
-      supabaseAdmin.functions.invoke('ai-product-classifier', { body: { caption: post.caption, user_id: user.id } })
+    const analysisPromises = postsNeedingAnalysis.map(post =>
+      supabaseAdmin.functions.invoke('ai-product-classifier', {
+        body: {
+          caption: post.caption || '',
+          user_id: user.id,
+          include_images: post.captionInsufficient,
+          post_media: {
+            media_url: post.media_url,
+            thumbnail_url: post.thumbnail_url,
+            media_type: post.media_type,
+            post_id: post.id
+          },
+          access_token: accessToken
+        }
+      })
         .then(({ data, error }) => ({ post, analysis: data as AnalysisResult, error } as LiveAnalysisResult))
     );
     
