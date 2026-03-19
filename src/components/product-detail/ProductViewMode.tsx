@@ -121,7 +121,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 </div>
               )}
 
-              {/* Options with typed badges */}
+              {/* Options */}
               {!isLoadingOptions && hasOptions && (
                 <div className="space-y-2.5 pt-2 border-t">
                   {options.map((option: any) => {
@@ -135,22 +135,27 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                             const priceDiff = convertCurrency(val.price_difference, product.currency, currencyCode);
                             const priceDiffFormatted = formatCurrency(priceDiff, currencyCode, 'en-US', true);
                             const isActive = val.is_active;
-                            const isOOS = val.inventory <= 0;
+                            const stock = val.inventory || 0;
+                            const isOOS = stock <= 0;
+                            const isLow = stock > 0 && stock <= 5;
                             return (
                               <div
                                 key={val.id}
                                 className={cn(
-                                  "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs border transition-colors",
-                                  isActive
-                                    ? (isOOS
-                                        ? "bg-slate-50 text-slate-600 border-slate-200"
-                                        : "bg-card text-foreground border-border")
-                                    : "bg-muted/50 text-muted-foreground border-border/50 line-through",
-                                  val.is_default && "ring-1 ring-primary/50 border-primary/30 bg-primary/5"
+                                  "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border transition-colors",
+                                  !isActive
+                                    ? "bg-muted/50 text-muted-foreground border-border/50 opacity-50"
+                                    : isOOS
+                                      ? "bg-red-50 text-red-700 border-red-200"
+                                      : isLow
+                                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                                        : "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                  val.is_default && "ring-1 ring-primary ring-offset-1"
                                 )}
                               >
                                 <span className="font-medium">{val.value}</span>
-                                {priceDiff !== 0 && <span className="text-muted-foreground">({priceDiffFormatted})</span>}
+                                {priceDiff !== 0 && <span className="opacity-60">({priceDiffFormatted})</span>}
+                                <span className="opacity-60 tabular-nums">{isOOS ? '0' : stock}</span>
                               </div>
                             );
                           })}
@@ -215,8 +220,20 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   }
                   const totalPriceALL = (product.price || 0) + (v.price_difference || 0);
                   const displayTotal = convertCurrency(totalPriceALL, 'ALL', currencyCode);
-                  const isOOS = v.inventory <= 0;
-                  const isLow = v.inventory > 0 && v.inventory <= 5;
+                  // Compute effective stock: use variant's own inventory, or derive from option values
+                  let effectiveStock = v.inventory || 0;
+                  if (effectiveStock === 0 && Object.keys(optVals).length > 0) {
+                    // Derive from min of matching option value inventories
+                    let minStock = Infinity;
+                    Object.entries(optVals).forEach(([optName, optVal]) => {
+                      const opt = options.find((o: any) => o.name === optName);
+                      const val = opt?.option_values?.find((ov: any) => ov.value === optVal);
+                      if (val) minStock = Math.min(minStock, val.inventory || 0);
+                    });
+                    if (isFinite(minStock)) effectiveStock = minStock;
+                  }
+                  const isOOS = effectiveStock <= 0;
+                  const isLow = effectiveStock > 0 && effectiveStock <= 5;
                   return (
                     <div key={v.id || i} className={cn(
                       "grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2.5 items-center",
@@ -245,7 +262,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                         )}
                       >
                         <Package className="h-3 w-3" />
-                        {isOOS ? 'Out of stock' : isLow ? `${v.inventory} low` : `${v.inventory} in stock`}
+                        {isOOS ? 'Out of stock' : isLow ? `${effectiveStock} low` : `${effectiveStock} in stock`}
                       </button>
                     </div>
                   );
@@ -287,7 +304,18 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                     if (key && val) optVals[key] = val;
                   });
                 }
-                const currentStock = stockEdits[v.id] ?? v.inventory;
+                // Derive stock from option values if variant has 0
+                let baseStock = v.inventory || 0;
+                if (baseStock === 0 && Object.keys(optVals).length > 0) {
+                  let minS = Infinity;
+                  Object.entries(optVals).forEach(([oN, oV]) => {
+                    const opt = options.find((o: any) => o.name === oN);
+                    const val = opt?.option_values?.find((ov: any) => ov.value === oV);
+                    if (val) minS = Math.min(minS, val.inventory || 0);
+                  });
+                  if (isFinite(minS)) baseStock = minS;
+                }
+                const currentStock = stockEdits[v.id] ?? baseStock;
                 const isOOS = currentStock <= 0;
                 return (
                   <div key={v.id || i} className={cn(
