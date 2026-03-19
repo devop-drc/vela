@@ -115,162 +115,273 @@ The `ai_analysis_cache` uses `instagram_post_id` as PK, so only one cache entry 
 
 ---
 
-## 3. Enhanced "Find Specs with AI" System
+## 3. Enhanced "Find Specs with AI" System (Cost-Optimized)
 
-The current spec-finding uses `ai-product-classifier` with Google Search grounding, but only when manually triggered or during background sync. The `analyze-instagram-posts` function (used for import preview) has NO grounding. This section improves spec-finding across the board.
+### 3.1 Cost Problem
 
-### 3.1 Enable Google Search Grounding Everywhere
+Google Search grounding costs **$35 per 1,000 requests**. A naive two-pass approach (classify + spec search) would cost ~$0.07/product. For 100 products synced, that's $7 in grounding alone, plus token costs for images and text.
 
-**Problem:** `analyze-instagram-posts` does not include `tools: [{ google_search: {} }]` in its Gemini call, so import preview analysis lacks real-world specs.
+### 3.2 Solution: Spec Resolution Waterfall
 
-**Fix:** Add `tools: [{ google_search: {} }]` to the Gemini call in `analyze-instagram-posts/index.ts`. All AI analysis paths should use grounding:
+Instead of always hitting Google Search, use a 4-level waterfall that resolves specs from cheapest to most expensive. Stop at the first level that produces sufficient results.
 
-| Function | Currently Has Grounding | After |
-|----------|------------------------|-------|
-| `ai-product-classifier` | Yes | Yes |
-| `analyze-instagram-posts` | **No** | **Yes** |
-| `background-sync` (calls classifier) | Yes (inherited) | Yes |
+```
+┌─────────────────────────────────────────────────────────┐
+│ Product classified (name, category, type from Pass 1)    │
+└──────────────────────┬──────────────────────────────────┘
+                       ▼
+            ┌──────────────────┐
+  Level 1   │  User Product    │  FREE — Query user's own products
+            │  Reuse           │  for same product name + category
+            └────────┬─────────┘
+                     │ no match
+                     ▼
+            ┌──────────────────┐
+  Level 2   │  Global Spec     │  FREE — Query shared cache of
+            │  Cache           │  previously-searched product specs
+            └────────┬─────────┘
+                     │ no match
+                     ▼
+            ┌──────────────────┐
+  Level 3   │  Category        │  FREE — Fill from category_templates
+            │  Template        │  default specs + common values
+            │  Defaults        │
+            └────────┬─────────┘
+                     │ insufficient (novel/unknown product)
+                     ▼
+            ┌──────────────────┐
+  Level 4   │  Gemini +        │  PAID — Single Gemini call with
+            │  Dynamic         │  dynamic retrieval (only charges
+            │  Retrieval       │  if Gemini actually searches)
+            └──────────────────┘
+```
 
-### 3.2 Category Template-Guided Spec Search
+### 3.3 Level 1: User Product Reuse (Free)
 
-Once the product's category/type is identified (either from caption analysis or image analysis), include the matching `category_templates` expected spec keys in the prompt so Gemini knows exactly what to look for.
+When a new product matches an existing product in the user's catalog, copy its specs and options.
+
+**Matching logic (in `background-sync` after classification):**
+
+```sql
+SELECT p.id, p.name, p.category,
+       array_agg(json_build_object('key', ps.key, 'value', ps.value, 'unit', ps.unit)) as specs
+FROM products p
+LEFT JOIN product_specifications ps ON ps.product_id = p.id
+WHERE p.user_id = :userId
+  AND p.category = :categoryName
+  AND (
+    p.name ILIKE '%' || :productName || '%'
+    OR :productName ILIKE '%' || p.name || '%'
+  )
+  AND p.id != :currentProductId
+  AND EXISTS (SELECT 1 FROM product_specifications WHERE product_id = p.id)
+GROUP BY p.id
+LIMIT 1
+```
+
+Also query `product_options` + `option_values` for the matched product.
+
+**If match found with specs:**
+- Copy all `product_specifications` rows to the new product
+- Copy option structure (option names and common values)
+- Mark spec source as `'user_reuse'`
+- Done — skip Levels 2-4
+
+### 3.4 Level 2: Global Spec Cache (Free)
+
+A shared cache of product specs that have been previously searched via Google, available across all users. This means if ANY user has already searched for "iPhone 16 Pro" specs, no other user needs to pay for that search again.
+
+**New table: `global_spec_cache`**
+
+```sql
+CREATE TABLE public.global_spec_cache (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    normalized_name text NOT NULL,         -- lowercase, trimmed, brand-normalized
+    category_name text NOT NULL,
+    type_name text NOT NULL,
+    specifications jsonb NOT NULL,          -- [{key, value, unit}, ...]
+    options jsonb,                          -- [{name, common_values}, ...]
+    source text DEFAULT 'google_search',    -- 'google_search' | 'manual'
+    search_count integer DEFAULT 1,         -- how many times this was reused
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    UNIQUE(normalized_name, category_name, type_name)
+);
+
+CREATE INDEX idx_global_spec_cache_lookup
+    ON public.global_spec_cache(normalized_name, category_name);
+
+-- Readable by all authenticated users, writable only via service role
+ALTER TABLE public.global_spec_cache ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated users can read global spec cache"
+    ON public.global_spec_cache
+    FOR SELECT
+    USING (auth.role() = 'authenticated');
+```
+
+**Name normalization function:**
+```typescript
+function normalizeProductName(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')           // collapse whitespace
+    .replace(/[^\w\s-]/g, '')       // remove special chars
+    .replace(/\b(the|a|an)\b/g, '') // remove articles
+    .trim();
+}
+```
+
+**Lookup:**
+```sql
+SELECT specifications, options
+FROM global_spec_cache
+WHERE normalized_name = :normalizedName
+  AND category_name = :categoryName
+ORDER BY updated_at DESC
+LIMIT 1
+```
+
+**If match found:**
+- Copy specs to `product_specifications` for the new product
+- Increment `search_count` on the cache row
+- Mark spec source as `'global_cache'`
+- Done — skip Levels 3-4
+
+**Cache population:** Whenever Level 4 (Google Search) returns results, insert/update the global cache.
+
+### 3.5 Level 3: Category Template Defaults (Free)
+
+If no existing product or cache match, use the `category_templates` seed data to pre-fill specs with common values.
 
 **Flow:**
-1. First, the AI identifies `categoryName` and `typeName` from the caption/image
-2. Look up matching `category_templates` row (custom first, then system)
-3. Include the template's `default_specifications` keys in a follow-up instruction:
+1. Look up `category_templates` for the classified `(categoryName, typeName)` — custom templates first, then system
+2. For each `default_specifications` entry that has `common_values`:
+   - Use the first common value as a placeholder (e.g., material → "Cotton" for T-shirts)
+3. For specifications without common values (e.g., weight, dimensions):
+   - Leave empty — these need real data from Level 4 or manual input
 
+**Result:** A partial spec fill. Good for generic attributes (material, gender, season) but insufficient for product-specific specs (exact processor, battery capacity).
+
+**Sufficiency check:** If the template provides values for ≥80% of its own spec keys, consider it "sufficient" and skip Level 4. Otherwise, proceed to Level 4 to fill the gaps.
+
+**Mark spec source as `'template_default'`** — these specs should be visually distinguished in the UI (e.g., lighter text, "estimated" badge) so the user knows they're defaults, not verified.
+
+### 3.6 Level 4: Single Gemini Call with Dynamic Retrieval (Paid, Last Resort)
+
+Only reached for novel products with insufficient template coverage. Uses **dynamic retrieval** instead of always-on grounding to minimize cost.
+
+**Dynamic retrieval:** Instead of `tools: [{ google_search: {} }]`, use:
+```json
+{
+  "tools": [{ "google_search": {} }],
+  "tool_config": {
+    "google_search_retrieval": {
+      "dynamic_retrieval_config": {
+        "mode": "MODE_DYNAMIC",
+        "dynamic_threshold": 0.5
+      }
+    }
+  }
+}
 ```
-For this product type "{typeName}" in category "{categoryName}", find these specific specifications:
-- processor: The CPU/chipset model
-- gpu: The graphics processor
-- battery_mah: Battery capacity in milliampere-hours
-- screen_size: Display diagonal in inches
-- resolution: Screen resolution (e.g., 2796x1290)
-- weight: Device weight
-- os: Operating system version
-...
-Also find any additional specifications not listed above that are relevant to this product.
+
+This tells Gemini to only use Google Search when it determines the query actually needs real-time data. Grounding charges only apply when Gemini actually searches and returns grounding URLs. For well-known products where Gemini's training data already has specs, it may skip the search entirely.
+
+**Single call prompt (combines classification context + spec search):**
 ```
-
-**Implementation:** The template lookup happens inside the edge function before the Gemini call. Fetch templates using the service role client. If no template matches, use the generic prompt (current behavior).
-
-### 3.3 Better Search Context with Images
-
-When "Find specs with AI" is triggered (manual button or during sync), send richer context to Gemini:
-
-1. **Product name as explicit search hint** — Prepend to the prompt: `"Product to search for: {productName}"`
-2. **Product images** — Include up to 3 images (reusing the image analysis infrastructure from Section 2) so Gemini can identify the exact product model, variant, and color from the image
-3. **Existing partial specs** — Include any specs already known so Gemini can fill gaps rather than re-derive everything
-
-**Updated prompt structure for "Find specs" calls:**
-```
-Search for the exact specifications of this product.
+Find the exact specifications for this product.
 
 Product name: {productName}
 Category: {categoryName}
 Type: {typeName}
-Known specifications: {existingSpecs as key-value pairs}
 Caption/description: {caption}
+Already known specs: {specs from Level 3 template, if any}
 
-[Images attached if available]
+[Images attached if available — up to 3]
 
-Expected specifications for this product type: {templateSpecKeys}
+Expected specifications for this product type:
+{templateSpecKeys with descriptions from category_templates}
 
-Use Google Search to find the most accurate and complete specifications.
-Return ONLY the specifications as a JSON array: [{"key": "...", "value": "...", "unit": "..."}]
-Do not re-classify the product. Focus entirely on finding accurate specifications.
+Fill in accurate values for each specification. Use Google Search ONLY if the product
+is not well-known or if the caption lacks specific details.
+Return JSON array: [{"key": "...", "value": "...", "unit": "..."}]
 ```
 
-### 3.4 Write Results to `product_specifications` Table
+**After response:**
+1. Upsert results into `product_specifications` for this product
+2. **Populate `global_spec_cache`** with the results so future lookups for this product name are free
+3. Mark spec source as `'google_search'`
 
-After the spec-finding call returns, write results directly to the new `product_specifications` table instead of the `details` JSONB blob.
+### 3.7 Write Results to `product_specifications` Table
+
+All four levels write to the same destination:
 
 **In `ProductEditMode.tsx` (`handleReanalyze`):**
 - Current: writes specs to `details` JSONB via `setValue('details', ...)`
-- New: upsert each spec to `product_specifications` table via Supabase client
+- New: calls `find-product-specs` edge function which runs the waterfall and writes to `product_specifications`
 - Then refresh the specs display from the table
 
 **In `background-sync`:**
-- After product creation, insert specs into `product_specifications` from the analysis result
+- After product creation, run the waterfall for each product
 - Use `INSERT ... ON CONFLICT (product_id, key) DO UPDATE SET value = EXCLUDED.value, unit = EXCLUDED.unit`
 
 **In `upsert-combo-from-analysis`:**
-- For each combo item product, insert its specs into `product_specifications`
+- For each combo item product, run the waterfall and insert specs
 
-### 3.5 Two-Pass Analysis for Accurate Specs
+### 3.8 Grounding in `analyze-instagram-posts`
 
-For the manual "Find specs with AI" button and during background sync, use a two-pass approach:
+**Problem:** `analyze-instagram-posts` (import preview) currently has no Google Search grounding.
 
-**Pass 1 — Classification (existing behavior):**
-- Analyze caption (+ images if needed per Section 2)
-- Extract: product name, category, type, price, options, basic specs
-- This is the current `ai-product-classifier` call
+**Fix:** Do NOT add grounding to `analyze-instagram-posts`. The import preview should stay fast and cheap — it's for quick preview, not final spec accuracy. Instead:
+- Import preview uses Gemini WITHOUT grounding (current behavior) for classification only
+- After the user confirms import and the product is created, `background-sync` or the manual "Find specs" button runs the waterfall to get accurate specs
+- This keeps import preview fast (~1-2s per post) and free of grounding charges
 
-**Pass 2 — Dedicated Spec Search (new):**
-- Triggered automatically after Pass 1 completes
-- Uses the identified product name + category/type
-- Loads the matching `category_templates` to know what specs to search for
-- Sends a focused prompt (see Section 3.3) asking ONLY for specifications
-- Includes product images for exact model identification
-- Google Search grounding finds real-world specs (dimensions, battery, processor, etc.)
-- Results merged with Pass 1 specs (Pass 2 wins on conflicts)
+### 3.9 New Edge Function: `find-product-specs`
 
-**When to run Pass 2:**
-- **Background sync:** Always run both passes (the second pass is cheap and greatly improves spec quality)
-- **Manual "Find specs" button:** Always run (this is what the user explicitly asked for)
-- **Import preview (`analyze-instagram-posts`):** Only Pass 1 (speed matters for preview; user can run Pass 2 later)
+A dedicated function that runs the waterfall:
 
-**New edge function: `find-product-specs`**
+```typescript
+// Input
+{
+  product_id: string,
+  product_name: string,
+  category: string,
+  type: string,
+  user_id: string,
+  caption?: string,
+  media_urls?: string[],     // for Level 4 image context
+  force_search?: boolean     // skip Levels 1-3, go straight to Level 4
+}
 
-A dedicated function for Pass 2 that:
-1. Accepts: `{ product_id, product_name, category, type, caption?, media_urls?, existing_specs? }`
-2. Fetches matching `category_templates`
-3. Builds a spec-focused prompt with template keys
-4. Calls Gemini with Google Search grounding + optional images
-5. Returns: `{ specifications: [{ key, value, unit }] }`
-6. Upserts results into `product_specifications` table
+// Output
+{
+  specifications: [{ key: string, value: string, unit: string | null }],
+  options?: [{ name: string, common_values: string[] }],
+  source: 'user_reuse' | 'global_cache' | 'template_default' | 'google_search',
+  cost: { grounding_used: boolean, tokens_used?: number }
+}
+```
 
-This function can also be called independently from the product editor UI to re-fetch specs at any time.
+- `force_search: true` is used by the manual "Find specs with AI" button when the user explicitly wants fresh Google Search results regardless of cache
 
-### 3.6 Spec Reuse for Known Products
+### 3.10 Cost Projections
 
-When a new product is added that matches an existing product (e.g., another "iPhone 16 Pro" listing), reuse the already-extracted specifications and options instead of re-searching from scratch.
+**Scenario: User syncs 100 Instagram posts**
 
-**Matching logic (in `ai-product-classifier` and `background-sync`):**
+| Level | Expected Hit Rate | Cost per Product | Products | Total Cost |
+|-------|------------------|-----------------|----------|------------|
+| L1: User Reuse | ~20% (20 products) | $0 | 20 | $0 |
+| L2: Global Cache | ~40% (40 products) | $0 | 40 | $0 |
+| L3: Template Defaults | ~20% (20 products sufficient) | $0 | 20 | $0 |
+| L4: Dynamic Retrieval | ~20% (20 novel products) | ~$0.035 | 20 | ~$0.70 |
+| **Total** | | | **100** | **~$0.70** |
 
-1. After Pass 1 classifies the product (name, category, type), before running Pass 2:
-2. Query `products` joined with `product_specifications` to find existing products with a similar name and same category/type:
-   ```sql
-   SELECT p.id, p.name, p.category,
-          array_agg(json_build_object('key', ps.key, 'value', ps.value, 'unit', ps.unit)) as specs
-   FROM products p
-   LEFT JOIN product_specifications ps ON ps.product_id = p.id
-   WHERE p.user_id = :userId
-     AND p.category = :categoryName
-     AND (
-       p.name ILIKE '%' || :productName || '%'
-       OR :productName ILIKE '%' || p.name || '%'
-     )
-     AND p.id != :currentProductId  -- exclude self
-   GROUP BY p.id
-   LIMIT 3
-   ```
-3. Also query `product_options` + `option_values` for the matched products to get existing options.
+Compare to naive two-pass approach: **$7.00** — a **10x cost reduction**.
 
-**If a match is found:**
-- Copy specifications from the matched product into the new product's `product_specifications` rows
-- Copy option structure (option names and common values) from matched product
-- Skip Pass 2 (no need to Google Search for specs we already have)
-- Still allow the AI to adjust price, inventory, and specific option values (e.g., different color selection) from the caption
-
-**If no match is found:**
-- Proceed with Pass 2 as normal (Google Search for specs)
-
-**Benefits:**
-- Avoids redundant Gemini API calls for well-known products
-- Ensures consistency across multiple listings of the same product
-- Faster sync when re-importing similar products
+As the global cache grows, Level 4 hits decrease further. Popular products (iPhones, Nike shoes, Samsung TVs) get cached quickly and never need paid search again
 
 ---
 
@@ -672,10 +783,10 @@ When a user navigates from the Instagram Shop layout back to the dashboard, the 
 
 ### Modified Files
 - `supabase/functions/ai-product-classifier/index.ts` — Image analysis, template-guided prompts, new spec output format, Pass 1 classification
-- `supabase/functions/analyze-instagram-posts/index.ts` — Add Google Search grounding (`tools: [{ google_search: {} }]`)
-- `supabase/functions/background-sync/index.ts` — Caption heuristic, retry logic, image fetching, two-pass analysis (calls `find-product-specs` after classification), write specs to `product_specifications` table
+- `supabase/functions/analyze-instagram-posts/index.ts` — No grounding change (stays fast for preview)
+- `supabase/functions/background-sync/index.ts` — Caption heuristic, retry logic, image fetching, calls `find-product-specs` waterfall after classification, write specs to `product_specifications` table
 - `supabase/functions/upsert-combo-from-analysis/index.ts` — Write specs to `product_specifications` table
-- `supabase/recreate_db.sql` — New tables (`product_specifications`, `category_templates`), seed data, indexes, RLS policies, triggers
+- `supabase/recreate_db.sql` — New tables (`product_specifications`, `category_templates`, `global_spec_cache`), seed data, indexes, RLS policies, triggers
 - `src/App.tsx` — New `/categories` route
 - `src/components/layout/Sidebar.tsx` — Add categories link
 - `src/components/layout/BottomNav.tsx` — Add categories link (if applicable)
