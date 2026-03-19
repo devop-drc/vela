@@ -703,23 +703,23 @@ export default function NotificationSidebar() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <button className="fixed top-1/2 -translate-y-1/2 right-0 z-50 flex flex-col items-center gap-1 rounded-l-lg bg-card border border-r-0 border-border px-2 py-3 shadow-md hover:bg-accent transition-colors focus:outline-none focus:ring-2 focus:ring-ring">
+        <button className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2.5 shadow-lg hover:bg-primary/90 transition-all focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
           <Bell className="h-4 w-4" />
-          <span className="text-[10px] font-medium" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>Notifications</span>
-          {/* Per-tab colored dot badges */}
-          <div className="flex flex-col items-center gap-0.5 mt-0.5">
+          <span className="text-sm font-medium hidden sm:inline">Notifications</span>
+          {/* Colored dot badges */}
+          <div className="flex items-center gap-1">
             {unreadCounts.orders > 0 && (
-              <span className="flex items-center justify-center h-4 min-w-[16px] rounded-full bg-blue-500 text-white text-[9px] font-bold px-1">
+              <span className="flex items-center justify-center h-5 min-w-[20px] rounded-full bg-blue-500 text-white text-[10px] font-bold px-1">
                 {unreadCounts.orders > 99 ? "99+" : unreadCounts.orders}
               </span>
             )}
             {unreadCounts.disputes > 0 && (
-              <span className="flex items-center justify-center h-4 min-w-[16px] rounded-full bg-red-500 text-white text-[9px] font-bold px-1">
+              <span className="flex items-center justify-center h-5 min-w-[20px] rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
                 {unreadCounts.disputes > 99 ? "99+" : unreadCounts.disputes}
               </span>
             )}
             {unreadCounts.activity > 0 && (
-              <span className="flex items-center justify-center h-4 min-w-[16px] rounded-full bg-green-500 text-white text-[9px] font-bold px-1">
+              <span className="flex items-center justify-center h-5 min-w-[20px] rounded-full bg-green-500 text-white text-[10px] font-bold px-1">
                 {unreadCounts.activity > 99 ? "99+" : unreadCounts.activity}
               </span>
             )}
@@ -727,7 +727,7 @@ export default function NotificationSidebar() {
         </button>
       </SheetTrigger>
 
-      <SheetContent className="w-full sm:max-w-md p-0 flex flex-col">
+      <SheetContent side="bottom" className="h-[80vh] rounded-t-xl p-0 flex flex-col">
         <div className="px-4 pt-4 pb-2">
           <h2 className="text-lg font-semibold">Notifications</h2>
         </div>
