@@ -134,6 +134,15 @@ serve(async (req) => {
     }
 
     // 4. Upload media to Supabase Storage and replace URLs
+    // Skip upload if called with skip_upload flag (e.g., during sync — uses Instagram CDN URLs directly)
+    const skipUpload = body?.skip_upload === true;
+    if (skipUpload) {
+      return new Response(JSON.stringify({ posts: allMedia }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
+
     const supabaseAdmin = getSupabaseAdmin();
     const uploadedMediaPromises = allMedia.map(async (post: any) => {
       let uploadedMediaUrl = post.media_url;

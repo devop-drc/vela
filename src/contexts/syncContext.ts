@@ -105,23 +105,20 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
   }, []);
 
   const startNewSync = useCallback(async (jobId: string) => {
-    try {
-      setIsSyncing(true);
-      const { data, error } = await supabase
-        .from('sync_jobs')
-        .select('*')
-        .eq('id', jobId)
-        .single();
-
-      if (error) throw error;
-      if (data) {
-        setActiveJob(data);
-      }
-    } catch (error) {
-      console.error('Error starting new sync:', error);
-      setIsSyncing(false);
-    }
-  }, []);
+    // Optimistic: show the widget immediately with a placeholder job
+    setIsSyncing(true);
+    setActiveJob({
+      id: jobId,
+      user_id: user?.id || '',
+      status: 'starting',
+      progress: 0,
+      total: 0,
+      message: 'Initiating sync...',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    // Real-time subscription will replace this with actual data from DB
+  }, [user]);
 
   const contextValue: SyncContextType = {
     activeJob,

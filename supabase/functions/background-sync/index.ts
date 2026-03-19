@@ -277,9 +277,9 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
     await fetchExchangeRates(supabaseAdmin);
 
-    await updateJobProgress(supabaseAdmin, jobId, { progress: 0, total: 100, message: "Fetching Instagram posts...", status: 'in_progress' });
-    
-    const { data: postsData, error: postsError } = await supabaseAdmin.functions.invoke('instagram-posts', { headers: { Authorization: `Bearer ${user.token}` } });
+    await updateJobProgress(supabaseAdmin, jobId, { progress: 0, total: 0, message: "Fetching Instagram posts...", status: 'in_progress', summary });
+
+    const { data: postsData, error: postsError } = await supabaseAdmin.functions.invoke('instagram-posts', { headers: { Authorization: `Bearer ${user.token}` }, body: { skip_upload: true } });
     if (postsError) throw postsError;
     if (postsData.error) throw new Error(postsData.error);
 
@@ -288,6 +288,8 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       await updateJobProgress(supabaseAdmin, jobId, { status: 'completed', message: 'No posts found to sync.', summary });
       return;
     }
+
+    await updateJobProgress(supabaseAdmin, jobId, { message: `Found ${allPosts.length} posts. Checking for new content...`, summary });
 
     const { data: existingProducts, error: productsError } = await supabaseAdmin.from('products').select('id, instagram_post_id').eq('business_id', business.id);
     if (productsError) throw productsError;

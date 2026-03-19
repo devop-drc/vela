@@ -15,26 +15,23 @@ export const QuickActions = () => {
 
   const handleQuickSync = () => {
     runWithIntegrationCheck(async () => {
-      toast.loading("Initiating quick sync...", { id: 'sync-initiating' });
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        const invokeOptions: any = { body: { syncType: 'quick' } };
-        if (session?.access_token) {
-          invokeOptions.headers = {
-            Authorization: `Bearer ${session.access_token}`
-          };
-        }
-        const { data, error } = await supabase.functions.invoke('background-sync', invokeOptions);
-        toast.dismiss('sync-initiating');
+        if (!session?.access_token) throw new Error('Not authenticated');
+
+        // Show widget immediately
+        startNewSync('pending');
+
+        const { data, error } = await supabase.functions.invoke('background-sync', {
+          body: { syncType: 'quick' },
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        });
+
         if (error) throw error;
-        if (data.error) throw new Error(data.error);
-        if (data.jobId) {
-          await startNewSync(data.jobId);
-        }
+        if (data?.error) throw new Error(data.error);
+        if (data?.jobId) startNewSync(data.jobId);
       } catch (err) {
-        toast.dismiss('sync-initiating');
-        const errorMessage = err instanceof Error ? err.message : 'Failed to start quick sync.';
-        showError(errorMessage);
+        showError(err instanceof Error ? err.message : 'Failed to start quick sync.');
       }
     });
   };

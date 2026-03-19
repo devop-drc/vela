@@ -418,33 +418,33 @@ const Products = () => {
 
   const handleSync = async (syncType: 'quick' | 'full') => {
     runWithIntegrationCheck(async () => {
-      toast.loading("Initiating sync job...", { id: 'sync-initiating' });
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        const invokeOptions: any = { body: { syncType } };
-        if (session?.access_token) {
-          invokeOptions.headers = {
-            Authorization: `Bearer ${session.access_token}`
-          };
-        }
-        const { data, error } = await supabase.functions.invoke('background-sync', invokeOptions);
-        toast.dismiss('sync-initiating');
+        if (!session?.access_token) throw new Error('Not authenticated');
+
+        // Show widget immediately with optimistic state (before edge function responds)
+        startNewSync('pending');
+
+        // Fire the edge function
+        const { data, error } = await supabase.functions.invoke('background-sync', {
+          body: { syncType },
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        });
+
         if (error) throw error;
-        if (data.error) throw new Error(data.error);
-        if (data.jobId) {
-          await startNewSync(data.jobId);
-          // If it was a full sync, update last_full_sync_at
-          if (syncType === 'full') {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-              const { error: updateError } = await supabase.from('businesses').update({ last_full_sync_at: new Date().toISOString() }).eq('user_id', user.id);
-              if (updateError) console.error("Error updating last_full_sync_at:", updateError);
-              else setHasDoneFullSync(true);
-            }
-          }
+        if (data?.error) throw new Error(data.error);
+
+        // Update widget with real job ID (real-time subscription takes over from here)
+        if (data?.jobId) {
+          startNewSync(data.jobId);
+        }
+
+        // Update full sync timestamp (non-blocking)
+        if (syncType === 'full') {
+          supabase.from('businesses').update({ last_full_sync_at: new Date().toISOString() }).eq('user_id', session.user.id)
+            .then(() => setHasDoneFullSync(true));
         }
       } catch (err: any) {
-        toast.dismiss('sync-initiating');
         showError(err.message || `Failed to start ${syncType} sync.`);
       }
     });
