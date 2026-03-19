@@ -345,11 +345,11 @@ const Header = ({ title }: HeaderProps) => {
       className={cn(
         'z-50 flex items-center justify-between h-[60px] px-6 transition-all duration-300',
         isFloating
-          ? 'fixed top-4 right-4 border rounded-lg shadow-md'
+          ? 'fixed top-3 right-3 border rounded-lg shadow-lg'
           : 'sticky top-0 border-b shadow-sm',
         blurEnabled ? 'bg-card/80 backdrop-blur-[20px]' : 'bg-card',
       )}
-      style={isFloating ? { left: `calc(var(--sidebar-width, 16rem) + 1rem)` } : undefined}
+      style={isFloating ? { left: `calc(var(--sidebar-width, 16rem) + 2rem)` } : undefined}
     >
       {/* Left: title + search */}
       <div className="flex items-center gap-4 min-w-0">

@@ -48,7 +48,7 @@ const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => {
         className={cn(
           "z-40 hidden md:flex flex-col transition-all duration-300 ease-in-out overflow-hidden shrink-0",
           collapsed ? "w-[56px]" : (settings.sidebarWidth === 'compact' ? 'w-52' : settings.sidebarWidth === 'spacious' ? 'w-72' : 'w-60'),
-          isFloating ? "fixed top-3 left-3 bottom-3 rounded-xl border shadow-lg" : "h-full border-r",
+          isFloating ? "fixed top-3 left-3 bottom-3 rounded-lg border shadow-lg" : "h-full border-r",
           isPrimary
             ? cn(blurEnabled ? "bg-primary/90 backdrop-blur-xl" : "bg-primary", "text-primary-foreground")
             : cn(blurEnabled ? "bg-card/90 backdrop-blur-xl" : "bg-card", "border-border")
@@ -57,7 +57,7 @@ const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => {
         {/* Logo */}
         <div className={cn("shrink-0 flex items-center border-b px-3", borderColor, collapsed ? "justify-center h-14" : "h-14 gap-2.5")}>
           <div className={cn(
-            "flex items-center justify-center shrink-0 rounded-lg font-bold text-xs select-none",
+            "flex items-center justify-center shrink-0 rounded-md font-bold text-xs select-none",
             collapsed ? "h-8 w-8" : "h-8 w-8",
             isPrimary ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary text-primary-foreground"
           )}>
