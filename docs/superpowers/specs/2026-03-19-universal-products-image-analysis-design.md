@@ -98,13 +98,20 @@ Combine image analysis with any caption text available to produce the most accur
 All changes in `supabase/functions/ai-product-classifier/index.ts` and `supabase/functions/background-sync/index.ts`:
 
 - New helper: `fetchImageAsBase64(url: string): Promise<{data: string, mimeType: string}>`
+  - 10 second timeout per image fetch
+  - Skip images larger than 4MB
+  - Returns null on failure (graceful degradation)
 - New helper: `getPostMedia(post, accessToken): Promise<ImagePart[]>` — handles carousel children
 - Modified: `callGemini()` to accept optional image parts
 - Modified: `background-sync` loop to check caption quality and handle retries
 
+**Critical:** The existing `!post.caption` early-return skip in `background-sync` (line ~317) must be replaced with the `isCaptionInsufficient` check. Posts without captions should proceed to image analysis, not be skipped.
+
+**Price signal regex** should align with existing pattern in `background-sync`: `/\b(ALL|EUR|USD|GBP|Lek|Leke)\b|\d+[\.,]?\d*\s?(ALL|EUR|USD|GBP)/i`
+
 ### 2.7 Caching
 
-The `ai_analysis_cache` key changes: when images were used in analysis, append `_with_images` to the `caption_hash` so cache distinguishes between caption-only and caption+image analyses.
+The `ai_analysis_cache` uses `instagram_post_id` as PK, so only one cache entry exists per post. When an image-enhanced analysis is performed, it overwrites any prior caption-only analysis (the image analysis is strictly better). No schema change needed — the cache simply stores the best available analysis.
 
 ---
 
@@ -116,7 +123,7 @@ The `ai_analysis_cache` key changes: when images were used in analysis, append `
 CREATE TABLE public.product_specifications (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id uuid NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
-    user_id uuid REFERENCES auth.users(id),
+    user_id uuid NOT NULL REFERENCES auth.users(id),
     key text NOT NULL,
     value text NOT NULL,
     unit text,
@@ -125,6 +132,24 @@ CREATE TABLE public.product_specifications (
     UNIQUE(product_id, key)
 );
 
+CREATE INDEX idx_product_specifications_user_id ON public.product_specifications(user_id);
+CREATE INDEX idx_product_specifications_product_id ON public.product_specifications(product_id);
+
+-- Auto-populate user_id from product owner (for edge function inserts that only know product_id)
+CREATE OR REPLACE FUNCTION set_spec_user_id()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.user_id IS NULL THEN
+        SELECT user_id INTO NEW.user_id FROM public.products WHERE id = NEW.product_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_spec_user_id_trigger
+    BEFORE INSERT ON public.product_specifications
+    FOR EACH ROW EXECUTE FUNCTION set_spec_user_id();
+
 -- RLS
 ALTER TABLE public.product_specifications ENABLE ROW LEVEL SECURITY;
 
@@ -132,6 +157,16 @@ CREATE POLICY "Users can manage own product specifications"
     ON public.product_specifications
     FOR ALL
     USING (user_id = auth.uid());
+
+-- Public storefront can read specs for active products
+CREATE POLICY "Public read product specifications for active products"
+    ON public.product_specifications
+    FOR SELECT TO anon
+    USING (EXISTS (
+        SELECT 1 FROM public.products p
+        WHERE p.id = product_specifications.product_id
+        AND p.status = 'Active'
+    ));
 ```
 
 ### 3.2 New Table: `category_templates`
@@ -147,23 +182,37 @@ CREATE TABLE public.category_templates (
     default_options jsonb NOT NULL DEFAULT '[]',
     is_system boolean DEFAULT true,
     user_id uuid REFERENCES auth.users(id),
-    created_at timestamp with time zone DEFAULT now(),
-    UNIQUE(category_name, type_name, user_id)
+    created_at timestamp with time zone DEFAULT now()
 );
 
--- RLS: system templates readable by all, custom templates by owner
+-- Separate unique indexes to handle NULL user_id correctly
+CREATE UNIQUE INDEX idx_category_templates_system
+    ON public.category_templates (category_name, type_name)
+    WHERE user_id IS NULL;
+
+CREATE UNIQUE INDEX idx_category_templates_user
+    ON public.category_templates (category_name, type_name, user_id)
+    WHERE user_id IS NOT NULL;
+
+CREATE INDEX idx_category_templates_is_system ON public.category_templates(is_system, category_name);
+CREATE INDEX idx_category_templates_user_id ON public.category_templates(user_id);
+
+-- RLS
 ALTER TABLE public.category_templates ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "System templates are readable by all authenticated users"
+-- System templates readable by all (including anon for storefront)
+CREATE POLICY "System templates are readable by all"
     ON public.category_templates
     FOR SELECT
-    USING (is_system = true AND auth.role() = 'authenticated');
+    USING (is_system = true);
 
 CREATE POLICY "Users can manage their own custom templates"
     ON public.category_templates
     FOR ALL
     USING (user_id = auth.uid());
 ```
+
+**Relationship with existing `categories` and `types` tables:** The existing per-user `categories` and `types` tables remain for product categorization (the actual category/type assigned to each product). `category_templates` is a separate reference library that provides default specs and options. When AI classifies a product, it looks up `category_templates` to know what to extract, then writes the category name to `products.category` and upserts into `categories`/`types` as before. The template is consulted, not replaced.
 
 #### `default_specifications` format:
 ```json
@@ -328,7 +377,10 @@ A one-time migration script that:
 1. For each product with non-empty `details` JSONB:
    - Extract key-value pairs that are NOT `type`, `options`, `options_v2`, `variants`, `Brand`
    - Skip array values (those are legacy options, already in `product_options`)
-   - Insert each remaining key-value as a `product_specifications` row
+   - Skip null values and nested object values
+   - Coerce numeric values to text via `::text`
+   - Insert using `INSERT ... ON CONFLICT (product_id, key) DO NOTHING`
+   - Set `user_id` from the product's `user_id` column
 2. Keep `details` column for backward compatibility but stop writing specs to it
 3. Update all frontend reads to use `product_specifications` instead of `details`
 
@@ -440,9 +492,10 @@ When a user navigates from the Instagram Shop layout back to the dashboard, the 
 
 ### 5.2 Fix
 
-1. **`InstagramShopLayout.tsx`**: On unmount (cleanup function in `useEffect`), restore the user's saved design settings by calling `applySettingsToDOM(settings)` from `AppearanceContext`.
-2. **Remove the `!important`** from the injected `<style>` tag — the inline styles on `documentElement` already have sufficient specificity.
-3. **`AppearanceContext.tsx`**: Ensure `applySettingsToDOM` is called on mount and after any navigation that could have overridden CSS variables.
+1. **`AppearanceContext.tsx`**: Export a `restoreSettings()` method via context (or export `applySettingsToDOM` directly). Currently `applySettingsToDOM` is a module-level function not exposed to other components.
+2. **`InstagramShopLayout.tsx`**: On unmount (cleanup function in `useEffect`), call the exported `restoreSettings()` to re-apply the user's saved design settings.
+3. **Remove the `!important`** from the injected `<style>` tag — the inline styles on `documentElement` already have sufficient specificity.
+4. **`AppearanceContext.tsx`**: Ensure `applySettingsToDOM` is called on mount and after any navigation that could have overridden CSS variables.
 
 ---
 
