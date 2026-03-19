@@ -78,7 +78,16 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
 
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
   
-  const detailsToDisplay = Object.entries(details || {}).filter(([key, value]) => key !== 'type' && value && (!Array.isArray(value) || value.length > 0));
+  const EXCLUDED_DETAIL_KEYS = ['type', 'options', 'multi_product'];
+  const detailsToDisplay = Object.entries(details || {})
+    .filter(([key, value]) =>
+      !EXCLUDED_DETAIL_KEYS.includes(key) &&
+      value !== null &&
+      value !== undefined &&
+      value !== '' &&
+      (!Array.isArray(value) || value.length > 0)
+    )
+    .slice(0, 3);
 
   const getStockBadge = (inventory: number | null) => {
     if (product.pricing_type === 'subscription') {
@@ -132,9 +141,11 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
 
         <div className="bg-card p-3 flex-1 flex flex-col justify-between space-y-3" onClick={handleCardClick}>
           <div className="space-y-2">
-            <div className="text-xs text-muted-foreground font-medium">
-              <span>{product.category || 'Uncategorized'}</span>
-              {product.details?.type && <span> &middot; {product.details.type}</span>}
+            <div className="text-xs text-muted-foreground font-medium flex flex-wrap gap-x-2">
+              <span><span className="font-semibold text-foreground/60">Category:</span> {product.category || 'Uncategorized'}</span>
+              {product.details?.type && (
+                <span><span className="font-semibold text-foreground/60">Type:</span> {product.details.type}</span>
+              )}
             </div>
 
             <h3 className="font-semibold tracking-tight leading-snug flex items-center gap-2">
@@ -157,7 +168,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
 
             {gridSize === 'lg' && detailsToDisplay.length > 0 && (
               <div className="space-y-1.5 pt-1">
-                {detailsToDisplay.slice(0, 2).map(([key, value]) => (
+                {detailsToDisplay.map(([key, value]) => (
                   <DetailRow key={key} icon={Cog}>
                     <span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span>
                     <span className="truncate">{Array.isArray(value) ? value.join(', ') : String(value)}</span>
