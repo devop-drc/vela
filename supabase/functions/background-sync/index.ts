@@ -81,31 +81,27 @@ const getSupabaseAdmin = () => createClient(
 
 const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
-// Currency conversion helper (assumes rates are ALL-based)
-const convertCurrencyServer = async (amount: number, fromCurrency: string, toCurrency: string = 'ALL'): Promise<number> => {
-  if (fromCurrency === toCurrency) return amount;
+// Cache exchange rates - fetched once per sync, used for all conversions
+let cachedExchangeRates: Record<string, number> | null = null;
 
-  const supabaseAdmin = getSupabaseAdmin();
+const fetchExchangeRates = async (supabaseAdmin: SupabaseClient): Promise<Record<string, number>> => {
+  if (cachedExchangeRates) return cachedExchangeRates;
   const { data, error } = await supabaseAdmin.functions.invoke('exchange-rates');
-  if (error || data.error) {
-    console.error("Server-side currency conversion: Failed to fetch exchange rates.", error || data.error);
-    return amount; // Return original amount on error
+  if (error || data?.error || !data?.rates) {
+    console.error("Failed to fetch exchange rates:", error || data?.error);
+    cachedExchangeRates = { ALL: 1, EUR: 0.0094, USD: 0.01 }; // Safe fallback
+    return cachedExchangeRates;
   }
-  const exchangeRates = data.rates;
+  cachedExchangeRates = data.rates;
+  return cachedExchangeRates;
+};
 
-  const fromRate = exchangeRates[fromCurrency];
-  const toRate = exchangeRates[toCurrency];
-
-  if (!fromRate || !toRate) {
-    console.warn(`Server-side currency conversion: Missing exchange rate for conversion from ${fromCurrency} to ${toCurrency}.`);
-    return amount; // Return original amount if rates are missing
-  }
-
-  // Rates are ALL-based: rate[X] means 1 ALL = X of currency X
-  // To convert from A to B: amount_in_B = amount_in_A * (rate[B] / rate[A])
-  const convertedAmount = amount * (toRate / fromRate);
-  
-  return Math.round(convertedAmount * 100) / 100;
+const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string = 'ALL'): number => {
+  if (fromCurrency === toCurrency || !cachedExchangeRates) return amount;
+  const fromRate = cachedExchangeRates[fromCurrency];
+  const toRate = cachedExchangeRates[toCurrency];
+  if (!fromRate || !toRate) return amount;
+  return Math.round((amount * (toRate / fromRate)) * 100) / 100;
 };
 
 
@@ -285,6 +281,8 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     const { data: business, error: businessError } = await supabaseAdmin.from('businesses').select('id').eq('user_id', user.id).single();
     if (businessError || !business) throw new Error("Could not find business profile.");
 
+    await fetchExchangeRates(supabaseAdmin);
+
     await updateJobProgress(supabaseAdmin, jobId, { progress: 0, total: 100, message: "Fetching Instagram posts...", status: 'in_progress' });
     
     const { data: postsData, error: postsError } = await supabaseAdmin.functions.invoke('instagram-posts', { headers: { Authorization: `Bearer ${user.token}` } });
@@ -307,9 +305,9 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       .select('instagram_post_id');
     const comboPostIds = new Set((existingCombos || []).map((c: any) => c.instagram_post_id));
 
-    // In quick sync: process posts that either don't have a product yet OR don't have a combo yet
+    // In quick sync: only process posts that don't have a product yet
     const postsToProcess: InstagramPost[] = syncType === 'quick'
-      ? allPosts.filter(p => !existingProductMap.has(p.id) || !comboPostIds.has(p.id))
+      ? allPosts.filter(p => !existingProductMap.has(p.id))
       : allPosts;
     const total = postsToProcess.length;
 
@@ -518,7 +516,6 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     const postOptionsMap = new Map<string, Record<string, string[]>>();
     const categoriesToUpsert = new Map<string, { id: string, name: string }>();
     const typesToUpsert = new Map<string, { categoryId: string, name: string, attributes: any[] }>();
-    const multiItemMap = new Map<string, Array<{ name: string; priceALL: number | null }>>();
     const promotionsToInsert: Array<{ title: string; summary: string; discount_type?: 'percent'|'amount'|null; discount_value?: number|null; currency?: string|null; valid_until?: string|null; post_id: string }>
       = [];
     let progress = 0;
@@ -531,7 +528,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
       progress++;
       // Update progress for EVERY post to give real-time feel, but throttle DB calls slightly if total is huge
-      if (total < 20 || progress % 2 === 0 || progress === total) {
+      if (total <= 10 || progress % Math.max(1, Math.floor(total / 10)) === 0 || progress === total) {
         await updateJobProgress(supabaseAdmin, jobId, { 
           progress, 
           total, 
@@ -700,7 +697,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         // Convert to ALL
         let priceInALL = itemPrice ?? 0;
         if (itemPrice && itemCurrency && itemCurrency !== 'ALL') {
-          priceInALL = await convertCurrencyServer(itemPrice, itemCurrency, 'ALL');
+          priceInALL = convertCurrency(itemPrice, itemCurrency, 'ALL');
         }
 
         const productPayload: ProductPayload = {
@@ -735,11 +732,6 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
           summary.created_items.push(productPayload);
         }
         productsToUpsert.push(productPayload);
-
-        // Track for combo creation
-        const list = multiItemMap.get(post.id) || [];
-        list.push({ name: itemName || 'Item', priceALL: priceInALL });
-        multiItemMap.set(post.id, list);
       }
 
       // Prefer explicit options; otherwise, derive from array-valued specifications
@@ -805,16 +797,14 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
           .select('id, instagram_post_id')
           .in('instagram_post_id', postIds);
         if (fetchErr) throw fetchErr;
-        for (const p of productsForVariants || []) {
-          const aiOpts = postOptionsMap.get(p.instagram_post_id);
-          if (aiOpts) {
-            try {
-              await upsertVariantsFromOptions(supabaseAdmin, p.id, aiOpts);
-            } catch (e) {
-              console.error(`Failed to upsert variants for product ${p.id}:`, (e as any).message || e);
-            }
-          }
-        }
+        const variantPromises = (productsForVariants || [])
+          .filter(p => postOptionsMap.has(p.instagram_post_id))
+          .map(p => {
+            const aiOpts = postOptionsMap.get(p.instagram_post_id)!;
+            return upsertVariantsFromOptions(supabaseAdmin, p.id, aiOpts)
+              .catch(e => console.error(`Failed to upsert variants for product ${p.id}:`, (e as any).message || e));
+          });
+        await Promise.allSettled(variantPromises);
       }
 
       // Run spec waterfall for all upserted products
@@ -824,11 +814,12 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
           .from('products')
           .select('id, name, category, instagram_post_id')
           .in('instagram_post_id', allUpsertedPostIds);
-        for (const createdProduct of upsertedProducts || []) {
-          const postAnalysis = analysisFromCache.get(createdProduct.instagram_post_id);
-          const postCaption = postsToProcess.find(p => p.id === createdProduct.instagram_post_id)?.caption;
-          try {
-            await supabaseAdmin.functions.invoke('find-product-specs', {
+        // Run spec waterfall in parallel for all products (non-blocking)
+        if (upsertedProducts && upsertedProducts.length > 0) {
+          const specPromises = upsertedProducts.map(createdProduct => {
+            const postAnalysis = analysisFromCache.get(createdProduct.instagram_post_id);
+            const postCaption = postsToProcess.find(p => p.id === createdProduct.instagram_post_id)?.caption;
+            return supabaseAdmin.functions.invoke('find-product-specs', {
               body: {
                 product_id: createdProduct.id,
                 product_name: createdProduct.name,
@@ -837,53 +828,14 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
                 user_id: user.id,
                 caption: postCaption || ''
               }
-            });
-          } catch (e) {
-            console.error('find-product-specs failed for', createdProduct.name, e);
-          }
-        }
-      }
-    }
-
-    // --- Step 5: Create Combo Products for multi-item posts ---
-    for (const [postId, items] of multiItemMap.entries()) {
-      if (!items || items.length < 2) continue;
-      try {
-        // Ensure a combo_products row exists per instagram_post_id
-        const { data: existingCombo } = await supabaseAdmin
-          .from('combo_products')
-          .select('id')
-          .eq('instagram_post_id', postId)
-          .maybeSingle();
-        let comboId = existingCombo?.id;
-        if (!comboId) {
-          const { data: insertedCombo } = await supabaseAdmin
-            .from('combo_products')
-            .insert({ instagram_post_id: postId, user_id: user.id, business_id: (await supabaseAdmin.from('businesses').select('id').eq('user_id', user.id).single()).data.id })
-            .select('id')
-            .single();
-          comboId = insertedCombo?.id;
-        }
-        if (!comboId) continue;
-        // Upsert combo_items
-        let order = 0;
-        for (const it of items) {
-          await supabaseAdmin.from('combo_items').insert({
-            combo_id: comboId,
-            item_name: it.name,
-            base_price: it.priceALL ?? null,
-            required: false,
-            min_qty: 0,
-            max_qty: 1,
-            display_order: order++
+            }).catch(e => console.error('find-product-specs failed for', createdProduct.name, e));
           });
+          await Promise.allSettled(specPromises);
         }
-      } catch (e: any) {
-        console.error('Failed to create combo for post', postId, e.message || e);
       }
     }
 
-    // --- Step 6: Insert Promotions and Announcements (best-effort) ---
+    // --- Step 5: Insert Promotions and Announcements (best-effort) ---
     if (promotionsToInsert.length > 0) {
       try {
         const { data: businessData } = await supabaseAdmin.from('businesses').select('id').eq('user_id', user.id).single();
