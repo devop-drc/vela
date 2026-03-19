@@ -58,4 +58,5 @@ export interface SyncContextType {
   activeJob: SyncJob | null;
   isSyncing: boolean;
   dismissJob: () => void;
+  startNewSync: (jobId: string) => Promise<void>;
 }
