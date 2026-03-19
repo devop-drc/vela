@@ -1,7 +1,5 @@
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
 import { X, SlidersHorizontal, CircleDot, Layers, DollarSign, Tag, XCircle } from "lucide-react";
@@ -26,11 +24,11 @@ interface ProductFilterPanelProps {
   onClose: () => void;
 }
 
-const statusColors: Record<string, string> = {
-  Active: "bg-emerald-500",
-  Draft: "bg-amber-500",
-  "Out of Stock": "bg-red-500",
-};
+const statusConfig = [
+  { value: "Active", color: "bg-emerald-500", activeClass: "border-emerald-500 bg-emerald-50 text-emerald-700" },
+  { value: "Draft", color: "bg-amber-500", activeClass: "border-amber-500 bg-amber-50 text-amber-700" },
+  { value: "Out of Stock", color: "bg-red-500", activeClass: "border-red-500 bg-red-50 text-red-700" },
+];
 
 export const ProductFilterPanel = ({
   allCategories, allTags, maxPrice, filters, statusFilter, localPriceRange,
@@ -57,7 +55,7 @@ export const ProductFilterPanel = ({
   return (
     <div className="flex flex-col h-full bg-card rounded-lg border shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b bg-muted/30 shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30 shrink-0">
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold">Filters</span>
@@ -69,50 +67,65 @@ export const ProductFilterPanel = ({
         </div>
         <div className="flex items-center gap-1">
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={handleResetAllFilters} className="h-6 text-xs px-2">
-              Clear all
-            </Button>
+            <Button variant="ghost" size="sm" onClick={handleResetAllFilters} className="h-6 text-xs px-2">Clear all</Button>
           )}
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6">
-            <X className="h-3.5 w-3.5" />
-          </Button>
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6"><X className="h-3.5 w-3.5" /></Button>
         </div>
       </div>
 
-      {/* Filter sections */}
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-5">
 
-          {/* Status */}
+          {/* Status — toggle pills */}
           <Section icon={CircleDot} title="Status" active={isSectionActive("status")} onClear={() => handleClearSection("status")}>
-            <div className="space-y-1.5">
-              {["Active", "Draft", "Out of Stock"].map((status) => (
-                <label key={status} className="flex items-center gap-2 cursor-pointer py-1 px-1 rounded hover:bg-muted/50 transition-colors">
-                  <Checkbox checked={statusFilter.includes(status)} onCheckedChange={() => handleToggleStatusFilter(status)} className="h-4 w-4" />
-                  <span className={cn("h-2 w-2 rounded-full shrink-0", statusColors[status])} />
-                  <span className="text-sm">{status}</span>
-                </label>
-              ))}
+            <div className="flex flex-wrap gap-1.5">
+              {statusConfig.map(({ value, color, activeClass }) => {
+                const isOn = statusFilter.includes(value);
+                return (
+                  <button
+                    key={value}
+                    onClick={() => handleToggleStatusFilter(value)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-all",
+                      isOn ? activeClass : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+                    )}
+                  >
+                    <span className={cn("h-2 w-2 rounded-full shrink-0", isOn ? color : "bg-muted-foreground/30")} />
+                    {value}
+                  </button>
+                );
+              })}
             </div>
           </Section>
 
-          {/* Categories */}
+          {/* Categories — toggle pills */}
           {allCategories.length > 0 && (
             <Section icon={Layers} title="Categories" active={isSectionActive("categories")} onClear={() => handleClearSection("categories")}>
-              <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                {allCategories.map((cat) => (
-                  <label key={cat} className="flex items-center gap-2 cursor-pointer py-1 px-1 rounded hover:bg-muted/50 transition-colors">
-                    <Checkbox checked={filters.categories.includes(cat)} onCheckedChange={() => handleToggleFilter("categories", cat)} className="h-4 w-4" />
-                    <span className="text-sm truncate">{cat}</span>
-                  </label>
-                ))}
+              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+                {allCategories.map((cat) => {
+                  const isOn = filters.categories.includes(cat);
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => handleToggleFilter("categories", cat)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md text-xs font-medium border transition-all truncate max-w-full",
+                        isOn
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+                      )}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
               </div>
             </Section>
           )}
 
-          {/* Price Range */}
-          <Section icon={DollarSign} title="Price Range" active={isSectionActive("priceRange")} onClear={() => handleClearSection("priceRange")}>
-            <div className="space-y-3">
+          {/* Price Range — dual slider */}
+          <Section icon={DollarSign} title="Price" active={isSectionActive("priceRange")} onClear={() => handleClearSection("priceRange")}>
+            <div className="space-y-3 px-1">
               <Slider
                 min={0}
                 max={maxPrice > 0 ? maxPrice : 1000}
@@ -120,23 +133,35 @@ export const ProductFilterPanel = ({
                 value={[localPriceRange[0], localPriceRange[1]]}
                 onValueChange={(val) => handlePriceRangeChange([val[0], val[1]])}
               />
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{formatCurrency(localPriceRange[0], currency)}</span>
-                <span>{formatCurrency(localPriceRange[1], currency)}</span>
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium">{formatCurrency(localPriceRange[0], currency)}</span>
+                <span className="text-muted-foreground">—</span>
+                <span className="font-medium">{formatCurrency(localPriceRange[1], currency)}</span>
               </div>
             </div>
           </Section>
 
-          {/* Tags */}
+          {/* Tags — toggle pills */}
           {allTags.length > 0 && (
             <Section icon={Tag} title="Tags" active={isSectionActive("tags")} onClear={() => handleClearSection("tags")}>
-              <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                {allTags.map((tag) => (
-                  <label key={tag} className="flex items-center gap-2 cursor-pointer py-1 px-1 rounded hover:bg-muted/50 transition-colors">
-                    <Checkbox checked={(filters.tags as string[]).includes(tag)} onCheckedChange={() => handleToggleFilter("tags", tag)} className="h-4 w-4" />
-                    <span className="text-sm truncate">{tag}</span>
-                  </label>
-                ))}
+              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+                {allTags.map((tag) => {
+                  const isOn = (filters.tags as string[]).includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => handleToggleFilter("tags", tag)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md text-xs font-medium border transition-all truncate max-w-full",
+                        isOn
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+                      )}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
               </div>
             </Section>
           )}
