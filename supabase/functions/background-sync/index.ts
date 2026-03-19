@@ -423,7 +423,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         }
       }
 
-      if (analysis.tokenUsage) {
+      if (analysis?.tokenUsage) {
         summary.total_ai_tokens_used.prompt += analysis.tokenUsage.promptTokenCount || 0;
         summary.total_ai_tokens_used.candidates += analysis.tokenUsage.candidatesTokenCount || 0;
       }
@@ -458,9 +458,15 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       }
 
       progress++;
-      // Batch progress updates: only update every 10 posts or on the last post
-      if (progress % 10 === 0 || progress === total) {
-        await updateJobProgress(supabaseAdmin, jobId, { progress, total, message: `Processing ${progress} of ${total} posts...` });
+      // Update progress for EVERY post to give real-time feel, but throttle DB calls slightly if total is huge
+      if (total < 20 || progress % 2 === 0 || progress === total) {
+        await updateJobProgress(supabaseAdmin, jobId, { 
+          progress, 
+          total, 
+          message: `Processing post ${progress} of ${total}: ${analysis?.productName || 'Analyzing...'}`,
+          thumbnail_url: post.thumbnail_url || post.media_url,
+          analysis_result: analysis
+        });
       }
 
       // If AI marks as non-product: try promotion branch, else try parsing products; else skip

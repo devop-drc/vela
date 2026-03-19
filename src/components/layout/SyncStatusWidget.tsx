@@ -210,11 +210,40 @@ export const SyncStatusWidget = () => {
                 
                 <div className="space-y-2">
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{activeJob?.message || 'Initializing...'}</span>
+                      <span className="truncate max-w-[200px]">{activeJob?.message || 'Initializing...'}</span>
                       <span>{timeRemaining}</span>
                     </div>
                     <Progress value={percentage} indicatorClassName="bg-primary" />
                 </div>
+
+                {isRunning && activeJob?.thumbnail_url && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="pt-2 border-t border-border mt-2 space-y-3"
+                  >
+                    <div className="flex gap-3">
+                      <div className="relative h-16 w-16 rounded-md overflow-hidden bg-muted flex-shrink-0 border border-border">
+                        <img 
+                          src={activeJob.thumbnail_url} 
+                          alt="Processing..." 
+                          className="h-full w-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/10 animate-pulse" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="flex h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Live AI Analysis</span>
+                        </div>
+                        <div className="max-h-32 overflow-hidden relative">
+                          <AnalysisDetails analysisResult={activeJob.analysis_result || null} />
+                          <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-card to-transparent" />
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
 
                 {isFinished ? (
                   <div className="flex gap-2 pt-2">
@@ -223,8 +252,8 @@ export const SyncStatusWidget = () => {
                   </div>
                 ) : (
                   <div className="pt-2">
-                    <Button variant="destructive" className="w-full" onClick={handleAbort} disabled={isAborting}>
-                      {isAborting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}Abort Sync
+                    <Button variant="destructive" className="w-full h-8 text-xs" onClick={handleAbort} disabled={isAborting}>
+                      {isAborting ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <XCircle className="mr-2 h-3 w-3" />}Abort Sync
                     </Button>
                   </div>
                 )}

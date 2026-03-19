@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-const GEMINI_PRO_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_PRO_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,37 +31,38 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   4. **Pricing Model:**
      - Determine \`pricingType\`: "one_time" or "subscription". Default to "one_time".
      - If "subscription", determine \`billingInterval\`: "month" or "year". Default to "month".
-  5. **Price Extraction:** Extract the numerical price and the currency code (e.g., USD, EUR, ALL). **Crucially, if a price and currency are present in the caption, use them.** Default currency to "ALL" if none is specified.
-  6. **Inventory/Stock:** Infer \`inventory\` as an integer. If stock is mentioned (e.g., "only 5 left"), use that number. If it's clearly a product post but stock is not mentioned, default to 10. If explicitly "sold out" or "out of stock", default to 0.
+  5. **Price Extraction:** Extract the numerical base price and the currency code (e.g., USD, EUR, ALL). **If a price and currency are present in the caption, use them.** Default currency to "ALL" if none is specified.
+  6. **Inventory/Stock:** Infer \`inventory\` (base stock) as an integer. If stock is mentioned (e.g., "only 5 left"), use that number. Defaults to 10 if not mentioned but clearly a product.
   7. **Attributes Extraction (Crucial):**
-     - **Specifications (Fixed Details):** A key-value object of fixed, unchangeable attributes (e.g., Material, Dimensions, Weight). Use string or number values. **If the caption is sparse, use your general knowledge about the product name and category to infer 2-3 relevant specifications (e.g., for a scooter: Max Speed, Battery Life, Weight).** Use snake_case for keys.
-     - **Options (Variants):** A key-value object where values are arrays of customer-selectable variants (e.g., Color, Size, Storage). Use arrays of strings for values. Extract these directly from the caption. Use snake_case for keys.
-  8. **Description:** Generate a compelling, detailed 3-4 sentence description highlighting key features, benefits, and materials, based on the caption and inferred specifications.
+     - **Specifications (Fixed Details):** A key-value object of fixed, unchangeable attributes (e.g., Material, Dimensions). Use snake_case for keys.
+     - **Options (Metadata-Rich Variants):** A map of customer-selectable options (e.g., Color, Size). Each option should be an object containing values and their specific impact on price and stock:
+       \`\`\`json
+       "options": {
+         "color": [
+           { "value": "Red", "price_difference": 0, "inventory": 10 },
+           { "value": "Gold", "price_difference": 500, "inventory": 2 }
+         ]
+       }
+       \`\`\`
+     - **Individual Variants (Optional):** If the caption specifies exact combinations (e.g., "XL Blue only"), provide them in the \`variants\` array.
+  8. **Description:** Generate a compelling, detailed 3-4 sentence description.
   9. **Tags:** Generate 3-5 relevant tags.
 
-  10. **Multi-Product Posts:** If the caption lists multiple products (e.g., separated by blank lines, each with name and price/stock/ref code), output them in a products array and set isProductPost to true. Each products[] item should follow this schema:
-      {
-        "productName": string,
-        "price": number | null,
-        "currency": string | null,
-        "inventory": number | null,
-        "specifications": Record<string, string | number | string[]>,
-        "options": Record<string, string[]>,
-        "variants": Array<{
-          "option_values": Record<string, string>,
-          "inventory"?: number,
-          "is_active"?: boolean
-        }>,
-        "required"?: boolean,
-        "min_qty"?: number,
-        "max_qty"?: number,
-        "media_url"?: string | null
-      }
+  **Multi-Product Posts:** If the caption lists multiple products, output them in a \`products\` array. Each item follows this schema:
+  {
+    "productName": string,
+    "price": number | null,
+    "currency": string | null,
+    "inventory": number | null,
+    "specifications": Record<string, string | number>,
+    "options": Record<string, Array<{ value: string, price_difference: number, inventory: number }>>,
+    "variants": Array<{ option_values: Record<string, string>, price_difference: number, inventory: number, is_active: boolean }>
+  }
 
-  11. **Sales/Promotions (Non-product posts):** If the post is primarily a sale/discount/offer announcement without specific product details, set isSaleOrPromotion to true and include a promotion object with fields: { title: string, summary: string, discount_type?: 'percent'|'amount'|null, discount_value?: number|null, currency?: string|null, valid_until?: string|null }.
+  **Sales/Promotions:** If the post is primarily a sale/discount without specific product details, include a \`promotion\` object.
 
   **Currency Handling:**
-  - If the caption includes "ALL", "Lek", or "Lekë", use "ALL" as currency.
+  - If the caption includes "ALL", "Lek", or "Lekë", use "ALL".
   - For other currencies, use standard codes: USD, EUR, GBP, etc.
   - If no currency is specified, default to "ALL".
 
@@ -73,29 +74,27 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   **Output Format:**
   Respond ONLY with a single, valid JSON object. Do not include any explanation or markdown.
 
-  **EXAMPLE JSON OUTPUT (Single product):**
+  **Example JSON (Single Product with options):**
   {
     "isProductPost": true,
-    "isSaleOrPromotion": false,
-    "productName": "Vintage Sunset Tee",
-    "description": "A soft, vintage-style t-shirt made from 100% organic cotton. Features a stunning, faded sunset graphic print. Perfect for casual wear and sustainable fashion enthusiasts.",
-    "categoryName": "Clothing",
-    "typeName": "T-Shirt",
-    "pricingType": "one_time",
-    "billingInterval": null,
-    "price": 35.00,
+    "productName": "Titanium Smartwatch Pro",
+    "categoryName": "Electronics",
+    "typeName": "Smartwatch",
+    "price": 199,
     "currency": "USD",
-    "inventory": 50,
-    "tags": ["vintage", "sunset", "graphic tee", "organic cotton"],
-    "specifications": {
-      "material": "100% Organic Cotton",
-      "fit": "Regular"
-    },
     "options": {
-      "color": ["Cream", "Faded Blue"],
-      "size": ["S", "M", "L", "XL"]
-    }
+      "strap_material": [
+        { "value": "Silicone", "price_difference": 0, "inventory": 20 },
+        { "value": "Titanium Link", "price_difference": 50, "inventory": 5 }
+      ],
+      "color": [
+        { "value": "Midnight Black", "price_difference": 0, "inventory": 15 },
+        { "value": "Starlight Silver", "price_difference": 0, "inventory": 10 }
+      ]
+    },
+    "specifications": { "water_resistance": "5ATM", "battery_life": "14 days" }
   }
+
   
   **EXAMPLE JSON OUTPUT (Multiple products):**
   {
@@ -209,7 +208,11 @@ serve(async (req) => {
     const geminiResponse = await fetch(GEMINI_PRO_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: requestParts }], generationConfig: { responseMimeType: "application/json" } }),
+      body: JSON.stringify({ 
+        contents: [{ parts: requestParts }], 
+        tools: [{ google_search: {} }], // Enable grounding
+        generationConfig: { responseMimeType: "application/json" } 
+      }),
     });
 
     if (!geminiResponse.ok) throw new Error(`Gemini API error: ${await geminiResponse.text()}`);

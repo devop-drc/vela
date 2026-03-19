@@ -26,7 +26,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { showError, showSuccess } from "@/utils/toast";
 import { OptionsManager } from "./OptionsManager";
 import CombinedVariantManager from "./CombinedVariantManager";
-import { generateOptionsAndVariantsFromDetails } from "@/lib/variantGeneration";
+import { generateOptionsAndVariantsFromDetails, upsertEnrichedOptionsAndVariants, EnrichedOptionMap } from "@/lib/variantGeneration";
 import { generateComboFromAI } from "@/lib/comboGeneration";
 
 const statusConfig = {
@@ -35,21 +35,29 @@ const statusConfig = {
   'Out of Stock': { icon: Package, color: "text-slate-600", label: "Out of Stock" }, // Changed icon to Package
 };
 
-const normalizeOptions = (raw: any): Record<string, string[]> => {
+const normalizeOptions = (raw: any): Record<string, any[]> => {
   if (!raw) return {};
   // Case 1: Already an object map
   if (typeof raw === 'object' && !Array.isArray(raw)) {
     return Object.fromEntries(
-      Object.entries(raw).map(([k, v]) => [k, Array.isArray(v) ? v : []])
+      Object.entries(raw).map(([k, v]) => {
+          // Flatten simple string arrays to enriched format if needed
+          if (Array.isArray(v)) {
+              return [k, v.map(x => typeof x === 'string' ? { value: x, price_difference: 0, inventory: 10 } : x)];
+          }
+          return [k, []];
+      })
     );
   }
-  // Case 2: Array of { name, values }
+  // Case 2: Array of { name, values } (legacy support)
   if (Array.isArray(raw)) {
-    const out: Record<string, string[]> = {};
+    const out: Record<string, any[]> = {};
     for (const item of raw) {
       const key = (item?.name ?? '').toString();
       const vals = Array.isArray(item?.values) ? item.values : [];
-      if (key && vals.length) out[key] = vals.map((x: any) => String(x));
+      if (key && vals.length) {
+          out[key] = vals.map((x: any) => typeof x === 'string' ? { value: x, price_difference: 0, inventory: 10 } : x);
+      }
     }
     return out;
   }
@@ -113,46 +121,8 @@ const buildVariantKey = (orderedOptionNames: string[], valueLabels: string[]) =>
   return parts.join('|');
 };
 
-const upsertVariantsFromOptions = async (productId: string, aiOptions: Record<string, string[]>) => {
-  const entries = Object.entries(aiOptions || {}).filter(([_, vals]) => Array.isArray(vals) && vals.length > 0);
-  if (entries.length === 0) return;
-  const orderedNames = entries.map(([name]) => toTitleCase(name));
-  const optionIds: string[] = [];
-  for (let i = 0; i < orderedNames.length; i++) {
-    const id = await upsertProductOption(productId, orderedNames[i], i);
-    optionIds.push(id);
-  }
-  const valueIdMatrix: string[][] = [];
-  const valueLabelMatrix: string[][] = [];
-  for (let i = 0; i < entries.length; i++) {
-    const [, values] = entries[i];
-    const ids: string[] = [];
-    const labels: string[] = [];
-    for (const raw of values) {
-      const val = String(raw).trim();
-      const id = await upsertOptionValue(optionIds[i], val);
-      ids.push(id);
-      labels.push(val);
-    }
-    valueIdMatrix.push(ids);
-    valueLabelMatrix.push(labels);
-  }
-  const combosLabels = combinations(valueLabelMatrix);
-  const { data: existingVariants } = await supabase
-    .from('product_variants')
-    .select('combination_key')
-    .eq('product_id', productId);
-  const existing = new Set((existingVariants || []).map((v: any) => v.combination_key));
-  const toInsert = [] as any[];
-  for (let i = 0; i < combosLabels.length; i++) {
-    const key = buildVariantKey(orderedNames, combosLabels[i]);
-    if (existing.has(key)) continue;
-    toInsert.push({ product_id: productId, combination_key: key, is_active: true });
-  }
-  if (toInsert.length > 0) {
-    const { error } = await supabase.from('product_variants').insert(toInsert);
-    if (error) throw error;
-  }
+const upsertVariantsFromOptions = async (productId: string, aiOptions: EnrichedOptionMap, explicitVariants?: any[]) => {
+    return upsertEnrichedOptionsAndVariants(supabase, productId, aiOptions, explicitVariants);
 };
 
 const AttributeInput = ({ control, fieldName, inputType }: any) => {
@@ -365,37 +335,41 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
 
             // Create options/variants (support both shapes). If no explicit options, derive from array-valued specifications or existing details
             let createdSummary = '';
-            let candidate: Record<string, string[]> = {};
+            let candidate: Record<string, any[]> = {};
             if (analysis.options) {
               candidate = normalizeOptions(analysis.options);
             }
-            if (!candidate || Object.keys(candidate).length === 0) {
-              const derived: Record<string, string[]> = {};
-              if (analysis.specifications && typeof analysis.specifications === 'object') {
-                for (const [k, v] of Object.entries(analysis.specifications)) {
-                  if (Array.isArray(v) && v.length > 0) {
-                    const stringVals = v.map(x => String(x).trim()).filter(Boolean);
-                    if (stringVals.length > 0) derived[k] = stringVals;
+              if (!candidate || Object.keys(candidate).length === 0) {
+                const derived: Record<string, any[]> = {};
+                if (analysis.specifications && typeof analysis.specifications === 'object') {
+                  for (const [k, v] of Object.entries(analysis.specifications)) {
+                    if (Array.isArray(v) && v.length > 0) {
+                      const stringVals = v.map(x => String(x).trim()).filter(Boolean);
+                      if (stringVals.length > 0) {
+                          derived[k] = stringVals.map(val => ({ value: val, price_difference: 0, inventory: 10 }));
+                      }
+                    }
                   }
                 }
-              }
-              // Fallback to existing details arrays
-              if ((!derived || Object.keys(derived).length === 0) && details && typeof details === 'object') {
-                for (const [k, v] of Object.entries(details)) {
-                  if (k === 'type') continue;
-                  if (Array.isArray(v) && v.length > 1) {
-                    const vs = v.map(x => String(x).trim()).filter(Boolean);
-                    if (vs.length > 1) derived[k] = Array.from(new Set(vs));
+                // Fallback to existing details arrays
+                if ((!derived || Object.keys(derived).length === 0) && details && typeof details === 'object') {
+                  for (const [k, v] of Object.entries(details)) {
+                    if (k === 'type') continue;
+                    if (Array.isArray(v) && v.length > 1) {
+                      const vs = v.map(x => String(x).trim()).filter(Boolean);
+                      if (vs.length > 1) {
+                        derived[k] = Array.from(new Set(vs)).map(val => ({ value: val, price_difference: 0, inventory: 10 }));
+                      }
+                    }
                   }
                 }
+                candidate = derived;
               }
-              candidate = derived;
-            }
             const keys = Object.keys(candidate || {});
             if (keys.length > 0) {
               const optionCount = keys.length;
               const variantCount = keys.reduce((prod, k) => prod * (Array.isArray(candidate[k]) ? candidate[k].length : 0), 1) || 0;
-              await upsertVariantsFromOptions(product.id, candidate);
+              await upsertVariantsFromOptions(product.id, candidate as EnrichedOptionMap, analysis.variants);
               createdSummary = ` • ${optionCount} option(s), ${variantCount} variant(s)`;
               // Force-refresh the variant manager without closing
               setRefreshKey(k => k + 1);

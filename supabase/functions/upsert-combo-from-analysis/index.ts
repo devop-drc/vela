@@ -12,8 +12,8 @@ interface AnalysisItem {
   currency?: string | null;
   inventory?: number | null;
   specifications?: Record<string, any>;
-  options?: Record<string, string[]>;
-  variants?: Array<{ option_values: Record<string, string>; inventory?: number; is_active?: boolean }>;
+  options?: Record<string, Array<{ value: string; price_difference: number; inventory: number }>>;
+  variants?: Array<{ option_values: Record<string, string>; price_difference?: number; inventory?: number; is_active?: boolean }>;
   required?: boolean;
   min_qty?: number;
   max_qty?: number;
@@ -212,18 +212,34 @@ serve(async (req) => {
 
         const values = Array.isArray(options[optName]) ? options[optName] : [];
         for (let vi = 0; vi < values.length; vi++) {
-          const val = String(values[vi]);
+          const item = values[vi];
+          const val = typeof item === 'object' ? item.value : String(item);
+          const priceDiffRaw = typeof item === 'object' ? item.price_difference : 0;
+          const inventory = typeof item === 'object' ? item.inventory : 10;
+          
+          const priceDiffConverted = convertToALL(priceDiffRaw, it.currency || 'ALL');
+
           const { data: existingVal } = await supabase
             .from('combo_option_values')
             .select('id')
             .eq('item_option_id', itemOptionId)
             .eq('value', val)
             .maybeSingle();
-          if (!existingVal?.id) {
-            const { error: insValErr } = await supabase
-              .from('combo_option_values')
-              .insert({ item_option_id: itemOptionId, value: val, display_order: vi, is_active: true });
-            if (insValErr) throw insValErr;
+            
+          const valPayload = { 
+              item_option_id: itemOptionId, 
+              value: val, 
+              display_order: vi, 
+              is_active: true,
+              price_difference: priceDiffConverted,
+              inventory
+          };
+
+          if (existingVal?.id) {
+              await supabase.from('combo_option_values').update(valPayload).eq('id', existingVal.id);
+          } else {
+              const { error: insValErr } = await supabase.from('combo_option_values').insert(valPayload);
+              if (insValErr) throw insValErr;
           }
         }
       }
@@ -242,26 +258,27 @@ serve(async (req) => {
             .eq('combo_item_id', comboItemId)
             .eq('combination_key', combination_key)
             .maybeSingle();
+          const varPriceDiff = typeof v.price_difference === 'number' ? convertToALL(v.price_difference, it.currency || 'ALL') : 0;
+
+          const varPayload = {
+            combo_item_id: comboItemId,
+            combination_key,
+            inventory: v.inventory ?? null,
+            price_difference: varPriceDiff,
+            is_active: v.is_active ?? true,
+            option_values,
+          };
+
           if (existingVar?.id) {
             const { error: upVarErr } = await supabase
               .from('combo_item_variants')
-              .update({
-                inventory: v.inventory ?? null,
-                is_active: v.is_active ?? true,
-                option_values,
-              })
+              .update(varPayload)
               .eq('id', existingVar.id);
             if (upVarErr) throw upVarErr;
           } else {
             const { error: insVarErr } = await supabase
               .from('combo_item_variants')
-              .insert({
-                combo_item_id: comboItemId,
-                combination_key,
-                inventory: v.inventory ?? null,
-                is_active: v.is_active ?? true,
-                option_values,
-              });
+              .insert(varPayload);
             if (insVarErr) throw insVarErr;
           }
         }
