@@ -163,31 +163,20 @@ const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => {
                             end={item.to === "/"}
                             className={({ isActive }) =>
                               cn(
-                                "relative flex items-center justify-center p-2 rounded-md text-sm font-medium transition-all duration-150",
+                                "relative flex items-center justify-center h-9 w-9 mx-auto rounded-lg text-sm font-medium transition-all duration-150",
                                 isPrimary
                                   ? cn(
                                       "text-primary-foreground/60 hover:bg-primary-foreground/15 hover:text-primary-foreground",
-                                      isActive && "bg-primary-foreground/15 text-primary-foreground"
+                                      isActive && "bg-primary-foreground/20 text-primary-foreground shadow-sm"
                                     )
                                   : cn(
                                       "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                                      isActive && "bg-accent text-accent-foreground"
+                                      isActive && "bg-primary text-primary-foreground shadow-sm"
                                     )
                               )
                             }
                           >
-                            {({ isActive }) => (
-                              <>
-                                {/* Active indicator — left bar */}
-                                {isActive && (
-                                  <span className={cn(
-                                    "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full",
-                                    isPrimary ? "bg-primary-foreground" : "bg-primary"
-                                  )} />
-                                )}
-                                <item.icon className="h-5 w-5 shrink-0" />
-                              </>
-                            )}
+                            <item.icon className="h-4.5 w-4.5 shrink-0" />
                           </NavLink>
                         </TooltipTrigger>
                         <TooltipContent side="right">
