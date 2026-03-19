@@ -216,18 +216,17 @@ const ProductAccordionRow = ({
   const [setAllValue, setSetAllValue] = useState("");
   const [addAllValue, setAddAllValue] = useState("");
   const [quickMode, setQuickMode] = useState<"set" | "add">("set");
-  const hasFetchedRef = useRef(false);
+  const [fetched, setFetched] = useState(false);
 
-  // Sync from cache
+  // Sync from cache only if we haven't fetched ourselves
   useEffect(() => {
-    if (variantCache[product.id]) {
+    if (!fetched && variantCache[product.id]?.length > 0) {
       setLocalVariants(variantCache[product.id]);
     }
-  }, [variantCache, product.id]);
+  }, [variantCache, product.id, fetched]);
 
   const fetchVariants = useCallback(async () => {
-    if (hasFetchedRef.current) return;
-    hasFetchedRef.current = true;
+    if (fetched) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("product_variants")
@@ -237,14 +236,24 @@ const ProductAccordionRow = ({
 
     if (error) {
       showError(`Failed to load variants: ${error.message}`);
-      hasFetchedRef.current = false;
     } else {
-      const rows = (data ?? []) as VariantRow[];
+      // Parse option_values from combination_key if empty
+      const rows = (data ?? []).map((v: any) => {
+        let optVals = v.option_values || {};
+        if (Object.keys(optVals).length === 0 && v.combination_key) {
+          v.combination_key.split("|").forEach((part: string) => {
+            const [key, val] = part.split("=");
+            if (key && val) optVals[key] = val;
+          });
+        }
+        return { ...v, option_values: optVals } as VariantRow;
+      });
       setLocalVariants(rows);
       onVariantsLoaded(product.id, rows);
+      setFetched(true);
     }
     setLoading(false);
-  }, [product.id, onVariantsLoaded]);
+  }, [product.id, onVariantsLoaded, fetched]);
 
   const handleToggle = () => {
     if (!expanded) fetchVariants();
@@ -421,8 +430,14 @@ const ProductAccordionRow = ({
                 ))}
               </div>
             ) : localVariants.length === 0 ? (
-              <div className="px-6 py-4 text-sm text-muted-foreground italic">
-                No variants found for this product.
+              <div className="flex items-center gap-3 px-4 py-3 bg-muted/20">
+                <div className="pl-8 flex-1 min-w-0">
+                  <span className="text-sm text-muted-foreground">Base product stock (no variants)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-medium tabular-nums w-12 text-right">{product.inventory ?? 0}</span>
+                </div>
+                <StatusBadge status={getStockStatus(product.inventory ?? 0)} />
               </div>
             ) : (
               localVariants.map((variant) => (
