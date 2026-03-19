@@ -132,6 +132,7 @@ const Products = () => {
     maxPrice,
     isLoading: isProductDataLoading,
     refetch,
+    updateProduct,
   } = useProductData();
 
   // Use Product Filters Hook
@@ -454,15 +455,23 @@ const Products = () => {
   };
 
   const handleStatusChange = async (productId: string, newStatus: ProductStatus) => {
+    // Optimistic update — instant UI change
+    updateProduct(productId, { status: newStatus });
     const { error } = await supabase.from('products').update({ status: newStatus }).eq('id', productId);
-    if (error) showError(`Failed to update status: ${error.message}`);
-    else { showSuccess(`Product is now ${newStatus.toLowerCase()}.`); refetch(); }
+    if (error) {
+      showError(`Failed to update status: ${error.message}`);
+      refetch(); // revert on failure
+    }
   };
 
   const handleBulkStatusChange = async (status: ProductStatus) => {
+    // Optimistic update
+    selectedProducts.forEach(id => updateProduct(id, { status }));
+    const count = selectedProducts.length;
+    setSelectedProducts([]);
     const { error } = await supabase.from('products').update({ status }).in('id', selectedProducts);
-    if (error) showError(`Failed to update products: ${error.message}`);
-    else { showSuccess(`Successfully updated ${selectedProducts.length} products.`); setSelectedProducts([]); refetch(); }
+    if (error) { showError(`Failed to update products: ${error.message}`); refetch(); }
+    else showSuccess(`Updated ${count} products.`);
   };
   const handleBulkDelete = async () => {
     const { data: productsToDelete, error: fetchError } = await supabase

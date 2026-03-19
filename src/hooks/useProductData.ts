@@ -156,6 +156,10 @@ export const useProductData = (): UseProductDataResult => {
     return Math.ceil(currentMax / 10) * 10 || 100;
   }, [allProducts, convertCurrency]);
 
+  const updateProduct = (productId: string, updates: Partial<Product>) => {
+    setAllProducts(prev => prev.map(p => p.id === productId ? { ...p, ...updates } : p));
+  };
+
   return {
     allProducts,
     allCategories,
@@ -164,5 +168,6 @@ export const useProductData = (): UseProductDataResult => {
     maxPrice,
     isLoading,
     refetch: fetchProductsAndMetadata,
+    updateProduct,
   };
 };
