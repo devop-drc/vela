@@ -1,500 +1,597 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageTitle } from "@/contexts/PageTitleContext";
+import { useProductData } from "@/hooks/useProductData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ProductTableView } from "@/components/ProductTableView";
-import { ProductEditor } from "@/components/ProductEditor";
-import { SaleModal, SaleFormData } from "@/components/SaleModal";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { OutOfStockActionsToolbar } from "@/components/OutOfStockActionsToolbar";
-import { AnimatePresence } from "framer-motion";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AnimatePresence, motion } from "framer-motion";
+import { Search, Package, Layers, X, Plus, RefreshCw, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
 import { cn } from "@/lib/utils";
-import { StockAdjustmentModal } from "@/components/StockAdjustmentModal"; // Import new modal
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StockAdjustmentModal } from "@/components/StockAdjustmentModal";
 
-type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
+type StockFilter = "all" | "in-stock" | "low-stock" | "out-of-stock";
 
-interface Product {
-  id: string;
-  name: string;
-  status: ProductStatus;
-  price: number | null;
-  currency: string | null;
-  inventory: number;
-  media_url: string;
-  caption: string;
-  category: string;
-  tags: string[];
-  pricing_type: 'one_time' | 'subscription';
-  billing_interval: 'month' | 'year' | null;
-  created_at: string;
-  details: any; // Added details
-  media_type: string | null; // Added media_type
+const getStockStatus = (inventory: number): "in-stock" | "low-stock" | "out-of-stock" => {
+  if (inventory <= 0) return "out-of-stock";
+  if (inventory < 10) return "low-stock";
+  return "in-stock";
+};
+
+const StatusBadge = ({ inventory }: { inventory: number }) => {
+  const status = getStockStatus(inventory);
+  if (status === "out-of-stock") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600">
+        <XCircle className="h-3.5 w-3.5" /> Out of Stock
+      </span>
+    );
+  }
+  if (status === "low-stock") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
+        <AlertTriangle className="h-3.5 w-3.5" /> Low Stock
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
+      <CheckCircle2 className="h-3.5 w-3.5" /> In Stock
+    </span>
+  );
+};
+
+interface RestockModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (amount: number, mode: "add" | "set") => Promise<void>;
+  productCount: number;
 }
 
-interface ProductWithSales extends Product {
-  total_earned?: number;
-  total_sold?: number;
-}
+const RestockModal = ({ isOpen, onClose, onSave, productCount }: RestockModalProps) => {
+  const [amount, setAmount] = useState<string>("10");
+  const [mode, setMode] = useState<"add" | "set">("add");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    const num = parseInt(amount, 10);
+    if (isNaN(num) || num < 0) return;
+    setIsSaving(true);
+    await onSave(num, mode);
+    setIsSaving(false);
+    setAmount("10");
+    setMode("add");
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Quick Restock</DialogTitle>
+          <DialogDescription>
+            Update inventory for {productCount} selected product{productCount !== 1 ? "s" : ""}.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="flex gap-2">
+            <Button
+              variant={mode === "add" ? "default" : "outline"}
+              size="sm"
+              className="flex-1"
+              onClick={() => setMode("add")}
+            >
+              Add to current
+            </Button>
+            <Button
+              variant={mode === "set" ? "default" : "outline"}
+              size="sm"
+              className="flex-1"
+              onClick={() => setMode("set")}
+            >
+              Set exact amount
+            </Button>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="restock-amount">Amount</Label>
+            <Input
+              id="restock-amount"
+              type="number"
+              min={0}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="Enter quantity"
+            />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {[10, 25, 50, 100].map((preset) => (
+              <Button
+                key={preset}
+                variant="outline"
+                size="sm"
+                onClick={() => setAmount(String(preset))}
+              >
+                +{preset}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={isSaving}>Cancel</Button>
+          <Button onClick={handleSave} disabled={isSaving || amount === "" || parseInt(amount, 10) < 0}>
+            {isSaving ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const OutOfStock = () => {
   const { setTitle } = usePageTitle();
-  const [products, setProducts] = useState<ProductWithSales[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const { allProducts, allCategories, isLoading, updateProduct, refetch } = useProductData() as any;
+
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortOption, setSortOption] = useState("newest");
-  const [isSaleModalOpen, setIsSaleModalOpen] = useState(false); // Keep for now, might be removed later
-  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
-  const [isStockModalOpen, setIsStockModalOpen] = useState(false); // New state for stock modal
-  const [variantsByProduct, setVariantsByProduct] = useState<Record<string, Array<{ id: string; product_id: string; option_values: Record<string,string>; inventory: number; is_active: boolean; sku: string | null }>>>({});
-  const [variantEdits, setVariantEdits] = useState<Record<string, Record<string, { inventory: number; is_active: boolean }>>>({});
-  const [variantSelected, setVariantSelected] = useState<Record<string, Record<string, boolean>>>({});
-  const [optionNamesByProduct, setOptionNamesByProduct] = useState<Record<string, string[]>>({});
-  const [defaultOptionValueByProduct, setDefaultOptionValueByProduct] = useState<Record<string, Record<string, string>>>({});
+  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [editingInventory, setEditingInventory] = useState<Record<string, string>>({});
+  const [savingInventory, setSavingInventory] = useState<Record<string, boolean>>({});
+  const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
+  const [isStockAdjustModalOpen, setIsStockAdjustModalOpen] = useState(false);
+  const [bulkMarkConfirm, setBulkMarkConfirm] = useState<"active" | "out-of-stock" | null>(null);
 
   useEffect(() => {
-    setTitle("Out of Stock");
+    setTitle("Stock Management");
   }, [setTitle]);
 
-  const fetchProducts = useCallback(async () => {
-    setIsLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
+  // Only physical, one-time products are relevant for stock management
+  const physicalProducts = useMemo(
+    () => allProducts.filter((p: any) => p.pricing_type === "one_time"),
+    [allProducts]
+  );
 
-    const { data, error } = await supabase
-      .from("products")
-      .select("*, details") // Select details field
-      .eq('user_id', user.id); // Ensure RLS is respected
+  const stats = useMemo(() => {
+    const inStock = physicalProducts.filter((p: any) => (p.inventory ?? 0) >= 10).length;
+    const lowStock = physicalProducts.filter((p: any) => (p.inventory ?? 0) > 0 && (p.inventory ?? 0) < 10).length;
+    const outOfStock = physicalProducts.filter((p: any) => (p.inventory ?? 0) <= 0).length;
+    const totalUnits = physicalProducts.reduce((sum: number, p: any) => sum + (p.inventory ?? 0), 0);
+    return { total: physicalProducts.length, inStock, lowStock, outOfStock, totalUnits };
+  }, [physicalProducts]);
 
-    if (error) {
-      showError("Could not fetch out of stock products.");
-      setProducts([]);
-    } else {
-      const fetchedProducts = data as Product[];
-      const productIds = fetchedProducts.map(p => p.id);
-
-      // Fetch sales summary for these products
-      const { data: salesSummary, error: salesError } = await supabase.rpc('get_products_sales_summary', { p_product_ids: productIds });
-
-      if (salesError) {
-        console.error("Error fetching sales summary:", salesError);
-        // Proceed without sales data if there's an error
-        setProducts(fetchedProducts);
-      } else {
-        const productsWithSales = fetchedProducts.map(p => {
-          const summary = salesSummary?.find((s: any) => s.product_id === p.id);
-          return {
-            ...p,
-            total_earned: summary?.total_earned || 0,
-            total_sold: summary?.total_sold || 0,
-          };
-        });
-        setProducts(productsWithSales);
-      }
-
-      // Fetch variants for these products and group by product
-      if (productIds.length > 0) {
-        const { data: variants, error: varErr } = await supabase
-          .from('product_variants')
-          .select('id, product_id, option_values, inventory, is_active, sku')
-          .in('product_id', productIds);
-        if (!varErr && variants) {
-          const grouped: Record<string, any[]> = {};
-          for (const v of variants as any[]) {
-            if (!grouped[v.product_id]) grouped[v.product_id] = [];
-            grouped[v.product_id].push(v);
-          }
-          setVariantsByProduct(grouped);
-          // seed edit state
-          const editsSeed: Record<string, Record<string, { inventory: number; is_active: boolean }>> = {};
-          const selectedSeed: Record<string, Record<string, boolean>> = {};
-          Object.entries(grouped).forEach(([pid, list]) => {
-            editsSeed[pid] = {};
-            selectedSeed[pid] = {};
-            list.forEach((vr: any) => { editsSeed[pid][vr.id] = { inventory: vr.inventory ?? 0, is_active: !!vr.is_active }; selectedSeed[pid][vr.id] = false; });
-          });
-          setVariantEdits(editsSeed);
-          setVariantSelected(selectedSeed);
-          // fetch option names for headers
-          const { data: opts, error: optsErr } = await supabase
-            .from('product_options')
-            .select('id, product_id, name, display_order')
-            .in('product_id', productIds)
-            .order('display_order');
-          if (!optsErr && opts) {
-            const namesMap: Record<string, string[]> = {};
-            const optionIdToName: Record<string, { product_id: string, name: string }> = {};
-            (opts as any[]).forEach((o:any)=>{
-              if (!namesMap[o.product_id]) namesMap[o.product_id] = [];
-              namesMap[o.product_id].push(o.name);
-              optionIdToName[o.id] = { product_id: o.product_id, name: o.name };
-            });
-            setOptionNamesByProduct(namesMap);
-            // Fetch default values per option
-            const { data: defaultVals } = await supabase
-              .from('option_values')
-              .select('option_id, value, is_default')
-              .in('option_id', Object.keys(optionIdToName))
-              .eq('is_default', true);
-            const defaultsMap: Record<string, Record<string, string>> = {};
-            (defaultVals as any[] | null || []).forEach((dv:any)=>{
-              const meta = optionIdToName[dv.option_id];
-              if (!meta) return;
-              if (!defaultsMap[meta.product_id]) defaultsMap[meta.product_id] = {};
-              defaultsMap[meta.product_id][meta.name] = dv.value;
-            });
-            setDefaultOptionValueByProduct(defaultsMap);
-          } else {
-            setOptionNamesByProduct({});
-            setDefaultOptionValueByProduct({});
-          }
-        } else {
-          setVariantsByProduct({});
-          setVariantEdits({});
-          setVariantSelected({});
-          setOptionNamesByProduct({});
-          setDefaultOptionValueByProduct({});
-        }
-      } else {
-        setVariantsByProduct({});
-        setVariantEdits({});
-        setVariantSelected({});
-        setOptionNamesByProduct({});
-        setDefaultOptionValueByProduct({});
-      }
-    }
-    setIsLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  const filteredAndSortedProducts = useMemo(() => {
-    return products
-      .filter(p => {
-        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-        if (!matchesSearch) return false;
-        if (p.pricing_type !== 'one_time') return false; // exclude digital/subscription products
-        const variants = variantsByProduct[p.id] || [];
-        const hasOOSVariant = variants.some(v => (v.inventory || 0) <= 0);
-        const isProductOOS = (p.inventory || 0) <= 0;
-        return isProductOOS || hasOOSVariant;
-      })
-      .sort((a, b) => {
-        switch (sortOption) {
-          case 'price-asc': return (a.price || 0) - (b.price || 0);
-          case 'price-desc': return (b.price || 0) - (a.price || 0);
-          case 'name-asc': return a.name.localeCompare(b.name);
-          case 'name-desc': return b.name.localeCompare(a.name);
-          case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        }
-      });
-  }, [products, searchTerm, sortOption, variantsByProduct]);
-
-  // Split into: products with no variants vs products with variants
-  const productsWithVariants = useMemo(() => filteredAndSortedProducts.filter(p => (variantsByProduct[p.id]?.length || 0) > 0), [filteredAndSortedProducts, variantsByProduct]);
-  const productsWithoutVariants = useMemo(() => filteredAndSortedProducts.filter(p => !variantsByProduct[p.id] || variantsByProduct[p.id].length === 0), [filteredAndSortedProducts, variantsByProduct]);
-
-  const updateVariantEdit = (productId: string, variantId: string, patch: Partial<{ inventory: number; is_active: boolean }>) => {
-    setVariantEdits(prev => ({
-      ...prev,
-      [productId]: {
-        ...(prev[productId] || {}),
-        [variantId]: { ...(prev[productId]?.[variantId] || { inventory: 0, is_active: true }), ...patch }
-      }
-    }));
-  };
-
-  const saveVariantsForProduct = async (productId: string) => {
-    const edits = variantEdits[productId] || {};
-    const payload = Object.entries(edits).map(([id, v]) => ({ id, product_id: productId, inventory: v.inventory, is_active: v.is_active }));
-    if (payload.length === 0) return;
-    const { error } = await supabase.from('product_variants').upsert(payload, { onConflict: 'id' });
-    if (error) {
-      showError(`Failed to save variants: ${error.message}`);
-    } else {
-      showSuccess('Variants updated');
-      fetchProducts();
-    }
-  };
-
-  const handleProductUpdate = useCallback(() => { fetchProducts(); }, [fetchProducts]);
-
-  const handleBulkDelete = async () => {
-    const { error } = await supabase.from('products').delete().in('id', selectedProducts);
-    if (error) { showError(`Failed to delete products: ${error.message}`); } 
-    else { showSuccess(`Successfully deleted ${selectedProducts.length} products.`); setSelectedProducts([]); fetchProducts(); }
-    setBulkDeleteConfirm(false);
-  };
-
-  const handleApplySale = async (saleData: SaleFormData) => {
-    const updates = products.filter(p => selectedProducts.includes(p.id) && p.price != null).map(p => ({ id: p.id, price: Math.max(0, saleData.type === 'percentage' ? p.price! * (1 - saleData.value / 100) : p.price! - saleData.value) }));
-    if (updates.length > 0) {
-      const { error } = await supabase.from('products').upsert(updates);
-      if (error) { showError(`Failed to apply sale: ${error.message}`); } 
-      else { showSuccess(`Sale applied to ${updates.length} products.`); fetchProducts(); }
-    }
-    setSelectedProducts([]);
-    setIsSaleModalOpen(false);
-  };
-
-  const handleOpenStockModal = () => {
-    setIsStockModalOpen(true);
-  };
-
-  const handleStockAdjustmentSave = () => {
-    fetchProducts(); // Re-fetch products to update status and inventory
-    setSelectedProducts([]); // Clear selection
-    setIsStockModalOpen(false);
-  };
-
-  // Count selected variants across all products
-  const countSelectedVariants = useMemo(() => {
-    return Object.values(variantSelected).reduce((acc, map) => acc + Object.values(map || {}).filter(Boolean).length, 0);
-  }, [variantSelected]);
-
-  // Add stock to all selected products and variants
-  const handleAddStockSelected = useCallback(async (amount: number) => {
-    if (amount <= 0) return;
-    // Update selected products (without variants)
-    const productIdsToUpdate = selectedProducts;
-    if (productIdsToUpdate.length > 0) {
-      const selected = products.filter(p => productIdsToUpdate.includes(p.id));
-      await Promise.all(selected.map(async (p) => {
-        const newInv = Math.max(0, (p.inventory || 0) + amount);
-        const { error } = await supabase.from('products').update({ inventory: newInv }).eq('id', p.id);
-        if (error) throw error;
-      })).catch((e) => { showError(`Failed to add stock to products: ${e.message || e}`); });
-    }
-    // Update selected variants
-    const variantIdsToUpdate: Array<{ product_id: string, id: string }> = [];
-    Object.entries(variantSelected).forEach(([pid, map]) => {
-      Object.entries(map || {}).forEach(([vid, sel]) => { if (sel) variantIdsToUpdate.push({ product_id: pid, id: vid }); });
+  const filteredProducts = useMemo(() => {
+    return physicalProducts.filter((p: any) => {
+      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
+      let matchesStock = true;
+      if (stockFilter === "in-stock") matchesStock = (p.inventory ?? 0) >= 10;
+      else if (stockFilter === "low-stock") matchesStock = (p.inventory ?? 0) > 0 && (p.inventory ?? 0) < 10;
+      else if (stockFilter === "out-of-stock") matchesStock = (p.inventory ?? 0) <= 0;
+      return matchesSearch && matchesCategory && matchesStock;
     });
-    if (variantIdsToUpdate.length > 0) {
-      try {
-        for (const { product_id, id } of variantIdsToUpdate) {
-          const v = (variantsByProduct[product_id] || []).find(x => x.id === id);
-          const current = v?.inventory ?? 0;
-          const newInv = Math.max(0, current + amount);
-          const { error } = await supabase.from('product_variants').update({ inventory: newInv }).eq('id', id);
-          if (error) throw error;
-        }
-      } catch (e: any) {
-        showError(`Failed to add stock to variants: ${e.message || e}`);
-        return;
-      }
-    }
-    showSuccess('Stock added');
-    setSelectedProducts([]);
-    setVariantSelected({});
-    fetchProducts();
-  }, [products, selectedProducts, variantSelected, variantsByProduct, fetchProducts]);
+  }, [physicalProducts, searchTerm, stockFilter, categoryFilter]);
 
-  const productsForStockModal = useMemo(() => {
-    if (selectedProducts.length > 0) {
-      return products.filter(p => selectedProducts.includes(p.id));
+  const allFilteredSelected = filteredProducts.length > 0 && filteredProducts.every((p: any) => selectedProducts.includes(p.id));
+
+  const handleSelectAll = (checked: boolean) => {
+    setSelectedProducts(checked ? filteredProducts.map((p: any) => p.id) : []);
+  };
+
+  const handleSelectOne = (id: string) => {
+    setSelectedProducts((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleInventoryEdit = (id: string, value: string) => {
+    setEditingInventory((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleInventorySave = async (product: any) => {
+    const raw = editingInventory[product.id];
+    if (raw === undefined) return;
+    const newVal = parseInt(raw, 10);
+    if (isNaN(newVal) || newVal < 0) return;
+
+    setSavingInventory((prev) => ({ ...prev, [product.id]: true }));
+    // Optimistic update
+    updateProduct(product.id, { inventory: newVal, status: newVal > 0 ? "Active" : "Out of Stock" });
+    setEditingInventory((prev) => { const n = { ...prev }; delete n[product.id]; return n; });
+
+    const { error } = await supabase
+      .from("products")
+      .update({ inventory: newVal, status: newVal > 0 ? "Active" : "Out of Stock" })
+      .eq("id", product.id);
+
+    if (error) {
+      showError(`Failed to save inventory: ${error.message}`);
+      updateProduct(product.id, { inventory: product.inventory, status: product.status });
+    } else {
+      showSuccess("Inventory updated");
     }
-    // If no products selected, we don't want to adjust all filtered products on this page, 
-    // only the ones explicitly selected or the single product being edited.
-    // Since this modal is only triggered by the BulkActionsToolbar, it should only run when selectedProducts > 0.
-    return products.filter(p => selectedProducts.includes(p.id));
-  }, [products, selectedProducts]);
+    setSavingInventory((prev) => { const n = { ...prev }; delete n[product.id]; return n; });
+  };
+
+  const handleQuickRestock = async (productId: string, amount: number) => {
+    const product = physicalProducts.find((p: any) => p.id === productId);
+    if (!product) return;
+    const newInv = (product.inventory ?? 0) + amount;
+    updateProduct(productId, { inventory: newInv, status: newInv > 0 ? "Active" : "Out of Stock" });
+    const { error } = await supabase
+      .from("products")
+      .update({ inventory: newInv, status: newInv > 0 ? "Active" : "Out of Stock" })
+      .eq("id", productId);
+    if (error) {
+      showError(`Failed to restock: ${error.message}`);
+      updateProduct(productId, { inventory: product.inventory, status: product.status });
+    } else {
+      showSuccess(`+${amount} added to ${product.name}`);
+    }
+  };
+
+  const handleBulkRestock = async (amount: number, mode: "add" | "set") => {
+    const selected = physicalProducts.filter((p: any) => selectedProducts.includes(p.id));
+    // Optimistic
+    selected.forEach((p: any) => {
+      const newInv = mode === "add" ? (p.inventory ?? 0) + amount : amount;
+      updateProduct(p.id, { inventory: newInv, status: newInv > 0 ? "Active" : "Out of Stock" });
+    });
+
+    try {
+      await Promise.all(
+        selected.map(async (p: any) => {
+          const newInv = mode === "add" ? (p.inventory ?? 0) + amount : amount;
+          const { error } = await supabase
+            .from("products")
+            .update({ inventory: newInv, status: newInv > 0 ? "Active" : "Out of Stock" })
+            .eq("id", p.id);
+          if (error) throw error;
+        })
+      );
+      showSuccess(`Restocked ${selected.length} product${selected.length !== 1 ? "s" : ""}`);
+    } catch (e: any) {
+      showError(`Failed to restock: ${e.message}`);
+      refetch?.();
+    }
+    setSelectedProducts([]);
+    setIsRestockModalOpen(false);
+  };
+
+  const handleBulkMark = async (status: "Active" | "Out of Stock") => {
+    const selected = physicalProducts.filter((p: any) => selectedProducts.includes(p.id));
+    const newInv = status === "Out of Stock" ? 0 : undefined;
+    // Optimistic
+    selected.forEach((p: any) => {
+      updateProduct(p.id, { status, ...(newInv !== undefined ? { inventory: newInv } : {}) });
+    });
+
+    try {
+      await Promise.all(
+        selected.map(async (p: any) => {
+          const patch: any = { status };
+          if (newInv !== undefined) patch.inventory = newInv;
+          const { error } = await supabase.from("products").update(patch).eq("id", p.id);
+          if (error) throw error;
+        })
+      );
+      showSuccess(`${selected.length} product${selected.length !== 1 ? "s" : ""} marked as ${status}`);
+    } catch (e: any) {
+      showError(`Failed to update status: ${e.message}`);
+      refetch?.();
+    }
+    setSelectedProducts([]);
+    setBulkMarkConfirm(null);
+  };
+
+  const productsForModal = useMemo(
+    () => physicalProducts.filter((p: any) => selectedProducts.includes(p.id)),
+    [physicalProducts, selectedProducts]
+  );
 
   return (
     <>
-      <ProductEditor isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct as any} onUpdate={handleProductUpdate} />
-      {isSaleModalOpen && <SaleModal isOpen={isSaleModalOpen} onClose={() => setIsSaleModalOpen(false)} onApply={handleApplySale} productCount={selectedProducts.length} />}
-      {isStockModalOpen && (
+      {/* Bulk Restock Modal */}
+      <RestockModal
+        isOpen={isRestockModalOpen}
+        onClose={() => setIsRestockModalOpen(false)}
+        onSave={handleBulkRestock}
+        productCount={selectedProducts.length}
+      />
+
+      {/* Stock Adjustment Modal (advanced) */}
+      {isStockAdjustModalOpen && (
         <StockAdjustmentModal
-          isOpen={isStockModalOpen}
-          onClose={() => setIsStockModalOpen(false)}
-          onSave={handleStockAdjustmentSave}
-          products={productsForStockModal}
+          isOpen={isStockAdjustModalOpen}
+          onClose={() => setIsStockAdjustModalOpen(false)}
+          onSave={() => { setIsStockAdjustModalOpen(false); setSelectedProducts([]); refetch?.(); }}
+          products={productsForModal}
         />
       )}
-      <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {selectedProducts.length} products?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+
+      {/* Bulk mark confirm */}
+      <AlertDialog open={!!bulkMarkConfirm} onOpenChange={() => setBulkMarkConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Mark {selectedProducts.length} product{selectedProducts.length !== 1 ? "s" : ""} as{" "}
+              {bulkMarkConfirm === "active" ? "Active" : "Out of Stock"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {bulkMarkConfirm === "out-of-stock"
+                ? "This will set inventory to 0 and mark the products as Out of Stock."
+                : "This will mark the products as Active without changing their current inventory."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleBulkMark(bulkMarkConfirm === "active" ? "Active" : "Out of Stock")}
+              className={cn(bulkMarkConfirm === "out-of-stock" && "bg-destructive text-destructive-foreground hover:bg-destructive/90")}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="space-y-4">
-        <div className="sticky top-0 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 flex-1">
-            <div className="relative w-full max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search products..." className="pl-10 shadow-md" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            </div>
-            <Select value={sortOption} onValueChange={setSortOption}>
-              <SelectTrigger className="w-[180px] shadow-md"><SelectValue placeholder="Sort by" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="oldest">Oldest</SelectItem>
-                <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                <SelectItem value="name-asc">Name: A-Z</SelectItem>
-                <SelectItem value="name-desc">Name: Z-A</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Stats Bar */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {[
+            { label: "Total Products", value: stats.total, color: "text-foreground" },
+            { label: "In Stock", value: stats.inStock, color: "text-green-600" },
+            { label: "Low Stock", value: stats.lowStock, color: "text-amber-600" },
+            { label: "Out of Stock", value: stats.outOfStock, color: "text-red-600" },
+            { label: "Total Units", value: stats.totalUnits.toLocaleString(), color: "text-foreground" },
+          ].map((stat) => (
+            <Card key={stat.label} className="py-3 px-4 shadow-sm">
+              <div className={cn("text-2xl font-bold", stat.color)}>{stat.value}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{stat.label}</div>
+            </Card>
+          ))}
         </div>
 
-        <Card>
+        {/* Filters & Search */}
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search products..."
+              className="pl-10 shadow-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {(["all", "in-stock", "low-stock", "out-of-stock"] as StockFilter[]).map((f) => {
+              const labels: Record<StockFilter, string> = {
+                all: "All",
+                "in-stock": "In Stock",
+                "low-stock": "Low Stock",
+                "out-of-stock": "Out of Stock",
+              };
+              return (
+                <Button
+                  key={f}
+                  variant={stockFilter === f ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStockFilter(f)}
+                >
+                  {labels[f]}
+                </Button>
+              );
+            })}
+          </div>
+
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[160px] shadow-sm">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {allCategories.map((cat: string) => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Product Table */}
+        <Card className="shadow-sm">
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="p-6 space-y-2">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
+              <div className="p-6 space-y-3">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-14 w-full" />
+                ))}
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
+                <Package className="h-10 w-10 opacity-30" />
+                <p className="text-sm">No products match your filters.</p>
               </div>
             ) : (
-              <div className="p-4">
-                <Tabs defaultValue={productsWithVariants.length > 0 ? "with-variants" : "no-variants"} className="w-full">
-                  <TabsList className="mb-4">
-                    <TabsTrigger value="no-variants">Products</TabsTrigger>
-                    <TabsTrigger value="with-variants">Variants</TabsTrigger>
-                  </TabsList>
+              <div className="overflow-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/40">
+                      <th className="py-3 pl-4 pr-2 w-10">
+                        <Checkbox
+                          checked={allFilteredSelected}
+                          onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                          aria-label="Select all"
+                        />
+                      </th>
+                      <th className="py-3 px-3 text-left font-medium text-muted-foreground">Product</th>
+                      <th className="py-3 px-3 text-left font-medium text-muted-foreground hidden md:table-cell">Category</th>
+                      <th className="py-3 px-3 text-left font-medium text-muted-foreground">Inventory</th>
+                      <th className="py-3 px-3 text-left font-medium text-muted-foreground hidden sm:table-cell">Status</th>
+                      <th className="py-3 px-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Variants</th>
+                      <th className="py-3 px-3 text-right font-medium text-muted-foreground">Restock</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {filteredProducts.map((product: any) => {
+                      const isSelected = selectedProducts.includes(product.id);
+                      const editVal = editingInventory[product.id];
+                      const isSaving = !!savingInventory[product.id];
 
-                  <TabsContent value="no-variants">
-                    {productsWithoutVariants.length > 0 ? (
-                      <ProductTableView
-                        products={productsWithoutVariants as any}
-                        selectedProducts={selectedProducts}
-                        onSelectAll={(checked) => setSelectedProducts(checked ? productsWithoutVariants.map(p => p.id) : [])}
-                        onSelectOne={(id) => setSelectedProducts(prev => prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id])}
-                        onEdit={(p) => setSelectedProduct(p as any)}
-                        onDelete={(id) => { setSelectedProducts([id]); setBulkDeleteConfirm(true); }}
-                        showStatusColumn={false}
-                        selectableRowsMode="row"
-                      />
-                    ) : (
-                      <div className="text-sm text-muted-foreground p-4">No out-of-stock standalone products.</div>
-                    )}
-                  </TabsContent>
-
-                  <TabsContent value="with-variants">
-                    <Accordion type="multiple" className="w-full">
-                      {productsWithVariants.map(prod => {
-                        const variants = variantsByProduct[prod.id] || [];
-                        if (variants.length === 0) return null;
-                        const outOfStockVariants = variants.filter(v => (v.inventory || 0) <= 0);
-                        if (outOfStockVariants.length === 0) return null;
-                        return (
-                          <AccordionItem key={prod.id} value={prod.id} className="border rounded-md bg-muted/10 my-2">
-                            <AccordionTrigger className="px-4 py-3 text-left">
-                              <div className="flex-shrink-0 mr-4">
-                                  <img src={prod.media_url} alt={prod.name} className="w-20 h-20 rounded-sm object-cover bg-muted" />
+                      return (
+                        <tr
+                          key={product.id}
+                          className={cn(
+                            "transition-colors hover:bg-muted/30",
+                            isSelected && "bg-primary/5"
+                          )}
+                        >
+                          <td className="py-3 pl-4 pr-2">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => handleSelectOne(product.id)}
+                              aria-label={`Select ${product.name}`}
+                            />
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-3">
+                              {product.media_url ? (
+                                <img
+                                  src={product.thumbnail_url || product.media_url}
+                                  alt={product.name}
+                                  className="h-10 w-10 rounded-md object-cover bg-muted flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="h-10 w-10 rounded-md bg-muted flex-shrink-0 flex items-center justify-center">
+                                  <Package className="h-4 w-4 text-muted-foreground" />
                                 </div>
-                              <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full gap-2">
-                                <div>
-                                  <div className="text-sm text-muted-foreground">Product</div>
-                                  <div className="text-lg font-semibold">{prod.name}</div>
-                                </div>
-                                <div className="text-sm text-muted-foreground">{outOfStockVariants.length} out-of-stock variant(s)</div>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="px-4 pb-4">
-                              <div className="overflow-auto">
-                                <table className="w-full text-sm">
-                                  <thead>
-                                    <tr className="text-left text-muted-foreground">
-                                      {(optionNamesByProduct[prod.id]||[]).map((name)=> (
-                                        <th key={name} className="py-2 pr-4 capitalize">{name}</th>
-                                      ))}
-                                      <th className="py-2 pr-4">SKU</th>
-                                      <th className="py-2 pr-4">Inventory</th>
-                                      <th className="py-2 pr-4">Active</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {variants.map(v => {
-                                      const selected = !!variantSelected[prod.id]?.[v.id];
-                                      const optionNames = optionNamesByProduct[prod.id] || [];
-                                      return (
-                                        <tr
-                                          key={v.id}
-                                          className={cn(
-                                            "border-t cursor-pointer",
-                                          )}
-                                          onClick={() => setVariantSelected(prev=>({ ...prev, [prod.id]: { ...(prev[prod.id]||{}), [v.id]: !prev[prod.id]?.[v.id] } }))}
-                                        >
-                                          {optionNames.map((name, idx)=> (
-                                            <td
-                                              key={`${v.id}-${name}`}
-                                              className={cn(
-                                                "pr-4 align-middle capitalize",
-                                                "px-3 py-2.5",
-                                                selected && "bg-primary/10",
-                                                idx === 0 && "rounded-l-md"
-                                              )}
-                                            >
-                                              {(v.option_values||{})[name] || defaultOptionValueByProduct[prod.id]?.[name] || '—'}
-                                            </td>
-                                          ))}
-                                          <td className={cn("pr-4 align-middle px-3 py-2.5", selected && "bg-primary/10")}>{v.sku || '—'}</td>
-                                          <td className={cn("pr-4 w-[140px] px-3 py-2.5", selected && "bg-primary/10") }>
-                                            <Input
-                                              type="number"
-                                              min={0}
-                                              value={variantEdits[prod.id]?.[v.id]?.inventory ?? v.inventory ?? 0}
-                                              onChange={(e) => updateVariantEdit(prod.id, v.id, { inventory: Math.max(0, parseInt(e.target.value || '0', 10)) })}
-                                            />
-                                          </td>
-                                          <td className={cn("pr-4 w-[140px] px-3 py-2.5", selected && "bg-primary/10", "rounded-r-md") }>
-                                            <Select
-                                              value={(variantEdits[prod.id]?.[v.id]?.is_active ?? v.is_active) ? 'yes' : 'no'}
-                                              onValueChange={(val) => updateVariantEdit(prod.id, v.id, { is_active: val === 'yes' })}
-                                            >
-                                              <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="yes">Yes</SelectItem>
-                                                <SelectItem value="no">No</SelectItem>
-                                              </SelectContent>
-                                            </Select>
-                                          </td>
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
-                              </div>
-                              <div className="flex flex-col md:flex-row md:items-center gap-2 justify-between mt-3">
-                                <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">Select rows to edit in bulk.</div>
-                                <div className="flex justify-end">
-                                  <Button onClick={() => saveVariantsForProduct(prod.id)}>Save variants</Button>
-                                </div>
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        );
-                      })}
-                    </Accordion>
-                  </TabsContent>
-                </Tabs>
+                              )}
+                              <span className="font-medium line-clamp-1">{product.name}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-muted-foreground hidden md:table-cell">
+                            {product.category || <span className="italic opacity-50">—</span>}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-1.5">
+                              <Input
+                                type="number"
+                                min={0}
+                                className="h-8 w-20 text-right"
+                                value={editVal !== undefined ? editVal : String(product.inventory ?? 0)}
+                                onChange={(e) => handleInventoryEdit(product.id, e.target.value)}
+                                onBlur={() => {
+                                  if (editVal !== undefined) handleInventorySave(product);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleInventorySave(product);
+                                  if (e.key === "Escape") {
+                                    setEditingInventory((prev) => { const n = { ...prev }; delete n[product.id]; return n; });
+                                  }
+                                }}
+                                disabled={isSaving}
+                              />
+                              {isSaving && <RefreshCw className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 hidden sm:table-cell">
+                            <StatusBadge inventory={product.inventory ?? 0} />
+                          </td>
+                          <td className="py-3 px-3 hidden lg:table-cell">
+                            {product.details?.options_v2?.length > 0 ? (
+                              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                <Layers className="h-3.5 w-3.5" />
+                                {product.details.options_v2.length} variant{product.details.options_v2.length !== 1 ? "s" : ""}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center justify-end gap-1">
+                              {[10, 50].map((amt) => (
+                                <Button
+                                  key={amt}
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => handleQuickRestock(product.id, amt)}
+                                >
+                                  +{amt}
+                                </Button>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Bulk Actions Toolbar */}
       <AnimatePresence>
-        {(selectedProducts.length > 0 || countSelectedVariants > 0) && (
-          <OutOfStockActionsToolbar
-            selectedCount={selectedProducts.length + countSelectedVariants}
-            onClear={() => { setSelectedProducts([]); setVariantSelected({}); }}
-            onAddStock={handleAddStockSelected}
-            onDelete={() => setBulkDeleteConfirm(true)}
-          />
+        {selectedProducts.length > 0 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-background/80 backdrop-blur-[20px] border rounded-lg shadow-2xl p-2 flex items-center gap-2 flex-wrap"
+          >
+            <span className="text-sm font-medium px-2 whitespace-nowrap">
+              {selectedProducts.length} selected
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-blue-600 border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+              onClick={() => setIsRestockModalOpen(true)}
+            >
+              <Plus className="mr-1.5 h-4 w-4" /> Restock
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsStockAdjustModalOpen(true)}
+            >
+              <Package className="mr-1.5 h-4 w-4" /> Set Stock
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-green-600 border-green-300 hover:bg-green-50 hover:text-green-700"
+              onClick={() => setBulkMarkConfirm("active")}
+            >
+              <CheckCircle2 className="mr-1.5 h-4 w-4" /> Mark Active
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700"
+              onClick={() => setBulkMarkConfirm("out-of-stock")}
+            >
+              <XCircle className="mr-1.5 h-4 w-4" /> Mark OOS
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              onClick={() => setSelectedProducts([])}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </motion.div>
         )}
       </AnimatePresence>
     </>
