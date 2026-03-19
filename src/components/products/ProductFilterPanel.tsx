@@ -81,7 +81,7 @@ export const ProductFilterPanel = ({
 
       {/* Filter sections */}
       <ScrollArea className="flex-1">
-        <div className="p-3 space-y-4">
+        <div className="p-4 space-y-5">
 
           {/* Status */}
           <Section icon={CircleDot} title="Status" active={isSectionActive("status")} onClear={() => handleClearSection("status")}>
