@@ -792,9 +792,6 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
           const postCaption = postsToProcess.find(p => p.id === createdProduct.instagram_post_id)?.caption;
           try {
             await supabaseAdmin.functions.invoke('find-product-specs', {
-              headers: {
-                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
-              },
               body: {
                 product_id: createdProduct.id,
                 product_name: createdProduct.name,
