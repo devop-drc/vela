@@ -30,7 +30,7 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   ---
   
   **Primary Objectives:**
-  1. **Product Identification:** Determine if the post is selling a product. If not, return \`{"isProductPost": false}\`.
+  1. **Product Identification:** Determine if the post is about a product. **IMPORTANT: Be very liberal in identifying products. If there is ANY indication of a product, item, or service being offered, sold, or showcased, treat it as a product post.** Only return \`{"isProductPost": false}\` if the post is clearly personal content, memes, quotes, or completely unrelated to selling (e.g., a selfie, motivational text, holiday greeting). When in doubt, assume it IS a product post.
      - If the post is primarily about a sale, discount, promotion, event, or offer (e.g., lists multiple products with prices, or general promo without a specific product), set \`"isSaleOrPromotion": true\` and provide a summary \`promotion\` object.
   2. **Product Name:** Extract the clearest and most concise product name directly from the caption (max 10 words).
   3. **Category & Type:** Determine the most specific category and type based on the product name and caption content.
