@@ -276,17 +276,15 @@ const Index = () => {
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
           <Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" />
         </div>
-        {/* Main grid skeleton */}
+        {/* Main grid skeleton — row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Skeleton className="h-56" /><Skeleton className="h-56" />
-            </div>
-            <Skeleton className="h-96 w-full" />
-          </div>
-          <div className="lg:col-span-1">
-            <Skeleton className="h-[700px] w-full" />
-          </div>
+          <Skeleton className="lg:col-span-2 h-96 w-full" />
+          <Skeleton className="lg:col-span-1 h-40 w-full" />
+        </div>
+        {/* Main grid skeleton — row 2 */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <Skeleton className="lg:col-span-1 h-64 w-full" />
+          <Skeleton className="lg:col-span-2 h-64 w-full" />
         </div>
       </div>
     );
@@ -351,45 +349,46 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Main content grid */}
+      {/* Main content grid — row 1: chart (2/3) + profile stats (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Profile + Top Products */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Star className="h-4 w-4 text-muted-foreground" />
-                <h2 className="text-base font-semibold">Shop Profile</h2>
-              </div>
-              <ProfileStats />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Zap className="h-4 w-4 text-muted-foreground" />
-                <h2 className="text-base font-semibold">Top Sellers</h2>
-              </div>
-              <TopProducts />
-            </div>
+        {/* Chart — wide column */}
+        <div className="lg:col-span-2">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart2 className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-base font-semibold">Business Overview</h2>
           </div>
-
-          {/* Overview Chart */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <BarChart2 className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-base font-semibold">Business Overview</h2>
-            </div>
-            <OverviewChart
-              data={data.chartData}
-              dateRange={dateRange}
-              setDateRange={setDateRange}
-              granularity={granularity}
-              setGranularity={setGranularity}
-            />
-          </div>
+          <OverviewChart
+            data={data.chartData}
+            dateRange={dateRange}
+            setDateRange={setDateRange}
+            granularity={granularity}
+            setGranularity={setGranularity}
+          />
         </div>
 
-        {/* Activity Feed */}
-        <div className="lg:col-span-1 lg:sticky lg:top-0 space-y-2">
+        {/* Profile stats — narrow column */}
+        <div className="lg:col-span-1">
+          <div className="flex items-center gap-2 mb-3">
+            <Star className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-base font-semibold">Shop Profile</h2>
+          </div>
+          <ProfileStats />
+        </div>
+      </div>
+
+      {/* Row 2: Top Products + Activity Feed side-by-side */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Top Products — 1/3 width */}
+        <div className="lg:col-span-1">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-base font-semibold">Top Sellers</h2>
+          </div>
+          <TopProducts />
+        </div>
+
+        {/* Activity Feed — 2/3 width */}
+        <div className="lg:col-span-2">
           <div className="flex items-center gap-2 mb-3">
             <Activity className="h-4 w-4 text-muted-foreground" />
             <h2 className="text-base font-semibold">Live Activity</h2>

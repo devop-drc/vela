@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "../ui/skeleton";
-import { Crown } from "lucide-react";
 import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency, formatLargeNumber } from "@/lib/formatters";
+import { cn } from "@/lib/utils";
 
 interface TopProduct {
   product_id: string;
@@ -13,7 +13,14 @@ interface TopProduct {
   total_sold: number;
   price: number | null;
   currency: string | null;
+  category?: string | null;
 }
+
+const RANK_CONFIG = [
+  { label: '#1', bg: 'bg-amber-400/15', text: 'text-amber-500', border: 'border-amber-400/40', dot: 'bg-amber-400' },
+  { label: '#2', bg: 'bg-slate-400/10', text: 'text-slate-500', border: 'border-slate-400/30', dot: 'bg-slate-400' },
+  { label: '#3', bg: 'bg-orange-400/10', text: 'text-orange-500', border: 'border-orange-400/30', dot: 'bg-orange-400' },
+];
 
 export const TopProducts = () => {
   const [products, setProducts] = useState<TopProduct[]>([]);
@@ -30,7 +37,7 @@ export const TopProducts = () => {
       if (!business) { setIsLoading(false); return; }
 
       const { data, error } = await supabase.rpc('get_top_products', { p_business_id: business.id });
-      
+
       if (error) {
         console.error("Failed to fetch top products:", error);
       } else {
@@ -41,36 +48,93 @@ export const TopProducts = () => {
     fetchTopProducts();
   }, []);
 
-  if (!shopDetails) return <Skeleton className="h-full w-full" />; // Show skeleton if shopDetails not ready
+  if (!shopDetails) return <Skeleton className="h-full w-full" />;
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="sr-only">Top Sellers</CardTitle>
+    <Card className="shadow-sm border border-border/60">
+      <CardHeader className="pb-3">
+        <CardDescription className="text-sm">Best-selling products by units sold.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="pt-0">
         {isLoading ? (
-          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)
-        ) : products.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4">
-            {products.map((product, index) => (
-              <div key={product.product_id} className="flex items-center gap-4">
-                {index === 0 && <Crown className="h-6 w-6 text-amber-400" />}
-                {index === 1 && <div className="h-6 w-6 text-slate-400 font-bold text-center">2</div>}
-                {index === 2 && <div className="h-6 w-6 text-orange-400 font-bold text-center">3</div>}
-                <img src={product.media_url} alt={product.name} className="h-12 w-12 rounded-md object-cover bg-muted" />
-                <div className="flex-1">
-                  <p className="font-medium truncate">{product.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {/* Convert product.price from its stored currency (product.currency) to shopDetails.currency */}
-                    {formatCurrency(convertCurrency(product.price, product.currency, shopDetails.currency), shopDetails.currency)} &middot; {formatLargeNumber(product.total_sold)} sold
-                  </p>
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-12 w-12 rounded-lg flex-shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
                 </div>
+                <Skeleton className="h-8 w-16 rounded-md" />
               </div>
             ))}
           </div>
+        ) : products.length > 0 ? (
+          <ol className="space-y-2">
+            {products.map((product, index) => {
+              const rank = RANK_CONFIG[index] ?? {
+                label: `#${index + 1}`,
+                bg: 'bg-muted/50',
+                text: 'text-muted-foreground',
+                border: 'border-border/40',
+                dot: 'bg-muted-foreground',
+              };
+              const revenue = formatCurrency(
+                convertCurrency(product.price, product.currency, shopDetails.currency),
+                shopDetails.currency
+              );
+
+              return (
+                <li
+                  key={product.product_id}
+                  className={cn(
+                    'flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors',
+                    rank.bg,
+                    rank.border
+                  )}
+                >
+                  {/* Rank badge */}
+                  <span className={cn('w-7 text-center text-xs font-bold tabular-nums flex-shrink-0', rank.text)}>
+                    {rank.label}
+                  </span>
+
+                  {/* Thumbnail */}
+                  <div className="h-11 w-11 flex-shrink-0 rounded-lg overflow-hidden bg-muted border border-border/40">
+                    {product.media_url ? (
+                      <img
+                        src={product.media_url}
+                        alt={product.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs">
+                        —
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Name + category */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm leading-tight truncate">{product.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {product.category ?? 'Uncategorized'}
+                    </p>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="text-right flex-shrink-0 space-y-0.5">
+                    <p className="text-sm font-semibold tabular-nums">{revenue}</p>
+                    <p className="text-xs text-muted-foreground tabular-nums">
+                      {formatLargeNumber(product.total_sold)} sold
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-4">No sales data yet.</p>
+          <p className="text-sm text-muted-foreground text-center py-6">No sales data yet.</p>
         )}
       </CardContent>
     </Card>
