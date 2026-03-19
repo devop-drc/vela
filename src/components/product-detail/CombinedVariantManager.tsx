@@ -1,9 +1,6 @@
 import React, { useCallback, useImperativeHandle, useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, Grid3X3, Package, Banknote, Tag, Search, Settings2, GripVertical, Info, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Grid3X3, Search, Settings2, GripVertical, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { currencies } from "@/lib/currencies";
@@ -350,389 +347,439 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
   // Loading skeleton
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex gap-2">
-          <Skeleton className="h-10 w-32" />
-          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-8 w-28" />
+          <Skeleton className="h-8 w-28" />
         </div>
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-          </CardContent>
-        </Card>
+        <div className="rounded-lg border divide-y">
+          <Skeleton className="h-11 w-full rounded-none" />
+          <Skeleton className="h-11 w-full rounded-none" />
+          <Skeleton className="h-11 w-full rounded-none" />
+        </div>
       </div>
     );
   }
 
-  const totalValues = options.reduce((sum, o) => sum + o.values.length, 0);
-
   return (
-    <div className="space-y-4">
-      {/* Info banner */}
-      <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
-        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
-        <p className="text-sm text-blue-800 dark:text-blue-300">
-          <span className="font-medium">Options</span> are attributes customers choose (like Color or Size). Each combination of option values creates a <span className="font-medium">variant</span> with its own price and inventory.
-        </p>
-      </div>
-
+    <div className="space-y-3">
       <Tabs defaultValue="options" className="w-full">
-        <TabsList className="grid grid-cols-2 w-full md:w-auto">
-          <TabsTrigger value="options" className="text-sm gap-1.5">
-            <Settings2 className="h-4 w-4" />
+        <TabsList className="grid grid-cols-2 w-full md:w-auto h-8">
+          <TabsTrigger value="options" className="text-sm gap-1.5 h-7 px-3">
+            <Settings2 className="h-3.5 w-3.5" />
             Options
             {options.length > 0 && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{options.length}</Badge>
+              <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">{options.length}</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="variants" className="text-sm gap-1.5">
-            <Grid3X3 className="h-4 w-4" />
+          <TabsTrigger value="variants" className="text-sm gap-1.5 h-7 px-3">
+            <Grid3X3 className="h-3.5 w-3.5" />
             Variants
             {rows.length > 0 && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{rows.length}</Badge>
+              <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">{rows.length}</Badge>
             )}
           </TabsTrigger>
         </TabsList>
 
         {/* ===================== OPTIONS TAB ===================== */}
-        <TabsContent value="options" className="mt-4">
-          <div className="space-y-4">
+        <TabsContent value="options" className="mt-3">
+          <div className="space-y-3">
             {options.length === 0 && (
-              <Card className="border-dashed">
-                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                  <Settings2 className="h-10 w-10 text-muted-foreground/40 mb-3" />
-                  <h3 className="text-base font-medium mb-1">No options yet</h3>
-                  <p className="text-sm text-muted-foreground max-w-sm mb-4">
-                    Options let customers choose between different versions of your product. Add your first option to get started.
-                  </p>
-                  <Button type="button" onClick={addOption} variant="outline">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add your first option
-                  </Button>
-                </CardContent>
-              </Card>
+              <div className="rounded-lg border border-dashed flex flex-col items-center justify-center py-10 text-center">
+                <Settings2 className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                <p className="text-sm font-medium mb-1">No options yet</p>
+                <p className="text-xs text-muted-foreground mb-3 max-w-xs">
+                  Add options like Color or Size to create selectable variants.
+                </p>
+                <Button type="button" onClick={addOption} variant="outline" size="sm" className="h-8">
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Add option
+                </Button>
+              </div>
             )}
 
             {options.map((opt, idx) => (
-              <Card
+              <div
                 key={idx}
-                className="overflow-hidden"
+                className="rounded-lg border overflow-hidden"
                 draggable
                 onDragStart={() => onOptionDragStart(idx)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => onOptionDrop(idx)}
               >
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-3">
-                    <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab shrink-0" />
-                    <div className="flex-1 space-y-1">
-                      <Label htmlFor={`opt-name-${idx}`} className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Option name
-                      </Label>
-                      <div className="relative max-w-sm">
-                        <Tag className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id={`opt-name-${idx}`}
-                          value={opt.name}
-                          onChange={(e) => setOptions(prev => {
-                            const next = [...prev];
-                            next[idx] = { ...next[idx], name: e.target.value };
-                            return next;
-                          })}
-                          className="pl-9"
-                          placeholder="e.g., Color, Size, Material"
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Values customers can choose from (e.g., Red, Blue, Green)
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeOption(idx)}
-                      title="Delete option"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
+                {/* Option header row */}
+                <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border-b">
+                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab shrink-0" />
+                  <Input
+                    value={opt.name}
+                    onChange={(e) => setOptions(prev => {
+                      const next = [...prev];
+                      next[idx] = { ...next[idx], name: e.target.value };
+                      return next;
+                    })}
+                    className="h-7 text-sm font-medium max-w-[200px] border-0 bg-transparent px-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none"
+                    placeholder="Option name (e.g. Color)"
+                  />
+                  <span className="text-xs text-muted-foreground ml-auto mr-1">
+                    {opt.values.length} value{opt.values.length !== 1 ? 's' : ''}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeOption(idx)}
+                    className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
 
-                <CardContent className="pt-0">
-                  {opt.values.length === 0 ? (
-                    <div className="rounded-md border border-dashed p-6 text-center">
-                      <p className="text-sm text-muted-foreground mb-3">No values yet. Add values like "Small", "Medium", "Large".</p>
-                      <Button type="button" size="sm" variant="outline" onClick={() => addValue(idx)}>
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add first value
-                      </Button>
+                {/* Values list */}
+                {opt.values.length > 0 && (
+                  <>
+                    {/* Column header */}
+                    <div className="grid grid-cols-[auto_1fr_120px_64px_48px_48px_36px] items-center gap-2 px-3 py-1 border-b bg-muted/20">
+                      <span className="w-4" />
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Value</span>
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Price adj.</span>
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground text-center">Stock</span>
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground text-center">On</span>
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground text-center">Def.</span>
+                      <span className="w-7" />
                     </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {opt.values.map((v, vidx) => (
-                        <div
-                          key={vidx}
-                          className="rounded-lg border bg-card p-3 transition-colors hover:bg-muted/30"
-                          draggable
-                          onDragStart={() => onValueDragStart(idx, vidx)}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={() => onValueDrop(idx, vidx)}
-                        >
-                          <div className="flex items-start gap-3">
-                            <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab mt-2.5 shrink-0" />
-
-                            {/* Value name */}
-                            <div className="flex-1 min-w-0 space-y-1">
-                              <Label className="text-xs text-muted-foreground">Value</Label>
+                    <div className="divide-y">
+                      {opt.values.map((v, vidx) => {
+                        const derivedStock = rows.reduce((sum, r) => r.option_values[opt.name] === v.value ? sum + r.inventory : sum, 0);
+                        const isOOS = derivedStock <= 0;
+                        const isCrit = derivedStock > 0 && derivedStock < 5;
+                        const isLow = derivedStock >= 5 && derivedStock < 10;
+                        return (
+                          <div
+                            key={vidx}
+                            className="grid grid-cols-[auto_1fr_120px_64px_48px_48px_36px] items-center gap-2 px-3 py-1.5 hover:bg-muted/20 transition-colors"
+                            draggable
+                            onDragStart={() => onValueDragStart(idx, vidx)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={() => onValueDrop(idx, vidx)}
+                          >
+                            <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 cursor-grab" />
+                            <Input
+                              value={v.value}
+                              placeholder="e.g. Red"
+                              className="h-7 text-sm"
+                              onChange={(e) => setOptions(prev => {
+                                const next = [...prev];
+                                const vals = [...next[idx].values];
+                                vals[vidx] = { ...vals[vidx], value: e.target.value };
+                                next[idx] = { ...next[idx], values: vals };
+                                return next;
+                              })}
+                            />
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                                {currencySymbol}
+                              </span>
                               <Input
-                                placeholder="e.g., Red, Large, Cotton"
-                                value={v.value}
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                value={convertCurrency(v.price_difference || 0, 'ALL', displayCurrency)}
+                                className="h-7 text-sm pl-6"
                                 onChange={(e) => setOptions(prev => {
                                   const next = [...prev];
                                   const vals = [...next[idx].values];
-                                  vals[vidx] = { ...vals[vidx], value: e.target.value };
+                                  const entered = parseFloat(e.target.value || '0');
+                                  const backToALL = convertCurrency(entered, displayCurrency, 'ALL');
+                                  vals[vidx] = { ...vals[vidx], price_difference: isFinite(backToALL) ? backToALL : 0 };
                                   next[idx] = { ...next[idx], values: vals };
                                   return next;
                                 })}
                               />
                             </div>
-
-                            {/* Price adjustment */}
-                            <div className="w-36 space-y-1 shrink-0">
-                              <Label className="text-xs text-muted-foreground">Price adjustment</Label>
-                              <div className="relative">
-                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
-                                  {currencySymbol}
-                                </span>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="0.00"
-                                  value={convertCurrency(v.price_difference || 0, 'ALL', displayCurrency)}
-                                  onChange={(e) => setOptions(prev => {
-                                    const next = [...prev];
-                                    const vals = [...next[idx].values];
-                                    const entered = parseFloat(e.target.value || '0');
-                                    const backToALL = convertCurrency(entered, displayCurrency, 'ALL');
-                                    vals[vidx] = { ...vals[vidx], price_difference: isFinite(backToALL) ? backToALL : 0 };
-                                    next[idx] = { ...next[idx], values: vals };
-                                    return next;
-                                  })}
-                                  className="pl-8"
-                                />
-                              </div>
+                            <div className={cn(
+                              "h-7 flex items-center justify-center rounded text-xs font-medium tabular-nums border",
+                              isOOS ? "bg-red-50 text-red-600 border-red-200 dark:bg-red-950/30 dark:border-red-900 dark:text-red-400" :
+                              isCrit ? "bg-red-50 text-red-500 border-red-200 dark:bg-red-950/30 dark:border-red-900 dark:text-red-400" :
+                              isLow ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900 dark:text-amber-400" :
+                              "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-400"
+                            )}>
+                              {derivedStock}
                             </div>
-
-                            {/* Stock (read-only, derived from variants) */}
-                            <div className="w-20 space-y-1 shrink-0">
-                              <Label className="text-xs text-muted-foreground">Stock</Label>
-                              {(() => {
-                                const derivedStock = rows.reduce((sum, r) => r.option_values[opt.name] === v.value ? sum + r.inventory : sum, 0);
-                                const isOOS = derivedStock <= 0;
-                                const isCrit = derivedStock > 0 && derivedStock < 5;
-                                const isLow = derivedStock >= 5 && derivedStock < 10;
-                                return (
-                                  <div className={cn(
-                                    "h-9 flex items-center justify-center rounded-md text-sm font-medium tabular-nums border",
-                                    isOOS ? "bg-red-50 text-red-600 border-red-200" :
-                                    isCrit ? "bg-red-50 text-red-500 border-red-200" :
-                                    isLow ? "bg-amber-50 text-amber-600 border-amber-200" :
-                                    "bg-emerald-50 text-emerald-600 border-emerald-200"
-                                  )}>
-                                    {derivedStock}
-                                  </div>
-                                );
-                              })()}
+                            <div className="flex items-center justify-center">
+                              <Switch
+                                checked={v.is_active}
+                                onCheckedChange={(c) => setOptions(prev => {
+                                  const next = [...prev];
+                                  const vals = [...next[idx].values];
+                                  vals[vidx] = { ...vals[vidx], is_active: !!c };
+                                  next[idx] = { ...next[idx], values: vals };
+                                  return next;
+                                })}
+                                className="scale-75"
+                              />
                             </div>
-
-                            {/* Controls */}
-                            <div className="flex items-end gap-3 pb-0.5 shrink-0">
-                              <div className="flex flex-col items-center gap-1">
-                                <Label className="text-xs text-muted-foreground">Active</Label>
-                                <Switch
-                                  checked={v.is_active}
-                                  onCheckedChange={(c) => setOptions(prev => {
-                                    const next = [...prev];
-                                    const vals = [...next[idx].values];
-                                    vals[vidx] = { ...vals[vidx], is_active: !!c };
-                                    next[idx] = { ...next[idx], values: vals };
-                                    return next;
-                                  })}
-                                />
-                              </div>
-                              <div className="flex flex-col items-center gap-1">
-                                <Label className="text-xs text-muted-foreground">Default</Label>
-                                <Checkbox
-                                  checked={v.is_default}
-                                  onCheckedChange={(c) => setOptions(prev => {
-                                    const next = [...prev];
-                                    const vals = next[idx].values.map((vv, i) => ({ ...vv, is_default: i === vidx }));
-                                    next[idx] = { ...next[idx], values: vals };
-                                    return next;
-                                  })}
-                                />
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => removeValue(idx, vidx)}
-                                title="Delete value"
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
+                            <div className="flex items-center justify-center">
+                              <Checkbox
+                                checked={v.is_default}
+                                onCheckedChange={(c) => setOptions(prev => {
+                                  const next = [...prev];
+                                  const vals = next[idx].values.map((vv, i) => ({ ...vv, is_default: i === vidx }));
+                                  next[idx] = { ...next[idx], values: vals };
+                                  return next;
+                                })}
+                              />
                             </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeValue(idx, vidx)}
+                              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
-                        </div>
-                      ))}
-
-                      <Button type="button" size="sm" variant="outline" onClick={() => addValue(idx)} className="mt-2">
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add value
-                      </Button>
+                        );
+                      })}
                     </div>
+                  </>
+                )}
+
+                {/* Add value footer */}
+                <div className="px-3 py-2 border-t bg-muted/10">
+                  {opt.values.length === 0 && (
+                    <p className="text-xs text-muted-foreground mb-2">No values yet — add options like "Small", "Medium", "Large".</p>
                   )}
-                </CardContent>
-              </Card>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => addValue(idx)} className="h-7 text-xs px-2">
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Add value
+                  </Button>
+                </div>
+              </div>
             ))}
 
-            {/* Add option card */}
+            {/* Add option button */}
             {options.length > 0 && (
               <button
                 type="button"
                 onClick={addOption}
-                className="w-full rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 p-6 text-center transition-colors group"
+                className="w-full rounded-lg border border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 py-3 text-center transition-colors group flex items-center justify-center gap-2"
               >
-                <Plus className="h-6 w-6 text-muted-foreground/50 group-hover:text-muted-foreground mx-auto mb-2 transition-colors" />
-                <span className="block text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                  Add Option
-                </span>
-                <span className="block text-xs text-muted-foreground/70 mt-1">
-                  Add a new customer-selectable option like Color, Size, or Material
-                </span>
+                <Plus className="h-4 w-4 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
+                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">Add Option</span>
               </button>
             )}
           </div>
         </TabsContent>
 
         {/* ===================== VARIANTS TAB ===================== */}
-        <TabsContent value="variants" className="mt-4">
-          <Card>
-            <CardContent className="p-4 space-y-3">
-              {rows.length === 0 ? (
-                /* Empty state */
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <Grid3X3 className="h-10 w-10 text-muted-foreground/40 mb-3" />
-                  <h3 className="text-base font-medium mb-1">No variants yet</h3>
-                  <p className="text-sm text-muted-foreground max-w-sm">
-                    Add at least one option with values to generate variants. Each combination of option values becomes a variant.
-                  </p>
+        <TabsContent value="variants" className="mt-3">
+          {rows.length === 0 ? (
+            <div className="rounded-lg border border-dashed flex flex-col items-center justify-center py-10 text-center">
+              <Grid3X3 className="h-8 w-8 text-muted-foreground/40 mb-2" />
+              <p className="text-sm font-medium mb-1">No variants yet</p>
+              <p className="text-xs text-muted-foreground max-w-xs">
+                Add at least one option with active values to generate variants.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {/* Compact toolbar */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="relative flex-1 min-w-[160px] max-w-xs">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search variants..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-7 h-8 text-sm"
+                  />
                 </div>
-              ) : (
-                <>
-                  {/* Compact toolbar */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="relative flex-1 min-w-[180px] max-w-xs">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="Search variants..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-9 text-sm" />
-                    </div>
-                    <Select value={groupBy} onValueChange={setGroupBy as any}>
-                      <SelectTrigger className="w-32 h-9 text-sm">
-                        <SelectValue placeholder="Group by" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No grouping</SelectItem>
-                        {activeOptionNames.map(n => (<SelectItem key={n} value={n}>Group: {n}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
-                      <SelectTrigger className="w-32 h-9 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="inventory">Sort: Inventory</SelectItem>
-                        <SelectItem value="price">Sort: Price</SelectItem>
-                        <SelectItem value="sku">Sort: SKU</SelectItem>
-                        {activeOptionNames.map(n => (<SelectItem key={`opt:${n}`} value={`opt:${n}`}>Sort: {n}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={sortDir} onValueChange={(v) => setSortDir(v as 'asc' | 'desc')}>
-                      <SelectTrigger className="w-20 h-9 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="asc">Asc</SelectItem>
-                        <SelectItem value="desc">Desc</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button type="button" variant="outline" size="sm" onClick={regenerateVariants} title="Regenerate variants from current options" className="h-9">
-                      <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                      Regenerate
-                    </Button>
+                <Select value={groupBy} onValueChange={setGroupBy as any}>
+                  <SelectTrigger className="w-28 h-8 text-sm">
+                    <SelectValue placeholder="Group by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No grouping</SelectItem>
+                    {activeOptionNames.map(n => (<SelectItem key={n} value={n}>By {n}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+                  <SelectTrigger className="w-28 h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="inventory">Inventory</SelectItem>
+                    <SelectItem value="price">Price</SelectItem>
+                    <SelectItem value="sku">SKU</SelectItem>
+                    {activeOptionNames.map(n => (<SelectItem key={`opt:${n}`} value={`opt:${n}`}>{n}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Select value={sortDir} onValueChange={(v) => setSortDir(v as 'asc' | 'desc')}>
+                  <SelectTrigger className="w-16 h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asc">Asc</SelectItem>
+                    <SelectItem value="desc">Desc</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" size="sm" onClick={regenerateVariants} className="h-8 text-sm">
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                  Regenerate
+                </Button>
 
-                    {Object.values(selected).some(Boolean) && (
-                      <div className="ml-auto flex items-center gap-1.5">
-                        <Button variant="outline" size="sm" className="h-9" onClick={() => bulkSet({ is_active: true })}>Activate</Button>
-                        <Button variant="outline" size="sm" className="h-9" onClick={() => bulkSet({ is_active: false })}>Deactivate</Button>
-                        <Button variant="outline" size="sm" className="h-9" onClick={() => bulkSet({ inventory: 0 })}>Set Inv 0</Button>
+                {Object.values(selected).some(Boolean) && (
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => bulkSet({ is_active: true })}>Activate</Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => bulkSet({ is_active: false })}>Deactivate</Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => bulkSet({ inventory: 0 })}>Zero inv.</Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Variants list */}
+              <div className="rounded-lg border overflow-hidden">
+                {/* Header */}
+                <div className="grid items-center gap-2 px-3 py-1.5 bg-muted/40 border-b"
+                  style={{ gridTemplateColumns: `28px 1fr ${activeOptionNames.map(()=>'auto').join(' ')} 80px 100px 120px 44px 44px` }}
+                >
+                  <Checkbox
+                    checked={filtered.length > 0 && filtered.every(r => selected[r.combination_key])}
+                    onCheckedChange={(c) => toggleSelectAll(!!c)}
+                    className="mx-auto"
+                  />
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Variant</span>
+                  {activeOptionNames.map(n => (
+                    <span key={n} className="text-xs uppercase tracking-wide text-muted-foreground whitespace-nowrap">{n}</span>
+                  ))}
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground text-right">Inv.</span>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Price</span>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">SKU</span>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground text-center">On</span>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground text-center">Def.</span>
+                </div>
+
+                {/* Rows */}
+                <div className="divide-y">
+                  {(groupBy !== 'none'
+                    ? Array.from(new Map<string, VariantRow[]>(sorted.map(r => [r.option_values[groupBy] || '—', []])).keys())
+                    : [null]
+                  ).flatMap(groupVal => {
+                    const groupRows = groupBy === 'none' ? sorted : sorted.filter(r => (r.option_values[groupBy] || '—') === groupVal);
+
+                    const headerRow = groupBy !== 'none' ? (
+                      <div key={`g-${groupVal}`} className="px-3 py-1.5 bg-muted/30 flex items-center gap-2">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{groupBy}:</span>
+                        <span className="text-sm font-medium capitalize">{groupVal}</span>
+                        <Badge variant="secondary" className="h-4 px-1 text-xs ml-1">{groupRows.length}</Badge>
                       </div>
-                    )}
-                  </div>
+                    ) : null;
 
-                  <div className="overflow-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-10"><Checkbox checked={filtered.length > 0 && filtered.every(r => selected[r.combination_key])} onCheckedChange={(c) => toggleSelectAll(!!c)} /></TableHead>
-                          {activeOptionNames.map(n => (<TableHead key={n} className="whitespace-nowrap">{n}</TableHead>))}
-                          <TableHead className="whitespace-nowrap"><Package className="inline h-4 w-4 mr-1" />Inventory</TableHead>
-                          <TableHead className="whitespace-nowrap"><Banknote className="inline h-4 w-4 mr-1" />Price</TableHead>
-                          <TableHead className="whitespace-nowrap"><Tag className="inline h-4 w-4 mr-1" />SKU</TableHead>
-                          <TableHead className="whitespace-nowrap">Active</TableHead>
-                          <TableHead className="whitespace-nowrap">Default</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(groupBy !== 'none' ? Array.from(new Map<string, VariantRow[]>(sorted.map(r => [r.option_values[groupBy] || '\u2014', []])).keys()) : [null]).flatMap(groupVal => {
-                          const groupRows = groupBy === 'none' ? sorted : sorted.filter(r => (r.option_values[groupBy] || '\u2014') === groupVal);
-                          const headerRow = groupBy === 'none' ? null : (
-                            <TableRow key={`g-${groupVal}`} className="bg-muted/40">
-                              <TableCell colSpan={activeOptionNames.length + 6} className="font-semibold">{groupBy}: <span className="capitalize">{groupVal}</span> <Badge variant="secondary" className="ml-2">{groupRows.length}</Badge></TableCell>
-                            </TableRow>
-                          );
-                          const bodyRows = groupRows.map((r) => {
-                            const priceDisp = rowDisplayPrice(r);
-                            return (
-                              <TableRow key={r.combination_key}>
-                                <TableCell className="w-10"><Checkbox checked={!!selected[r.combination_key]} onCheckedChange={(c) => setSelected(prev => ({ ...prev, [r.combination_key]: !!c }))} /></TableCell>
-                                {activeOptionNames.map(n => (<TableCell key={n} className="capitalize">{r.option_values[n]}</TableCell>))}
-                                <TableCell className="w-[110px]"><Input type="number" min={0} value={r.inventory} onChange={(e) => { const val = parseInt(e.target.value || '0', 10); setVariants(prev => { const next = [...prev]; const i = next.findIndex(v => v.combination_key === r.combination_key); if (i >= 0) next[i] = { ...next[i], inventory: val }; else next.push({ ...r, inventory: val }); return next; }); }} /></TableCell>
-                                <TableCell className="w-[160px] font-medium">{formatCurrency(priceDisp, displayCurrency)}</TableCell>
-                                <TableCell className="w-[180px]"><Input value={r.sku || ''} onChange={(e) => { const val = e.target.value; setVariants(prev => { const next = [...prev]; const i = next.findIndex(v => v.combination_key === r.combination_key); if (i >= 0) next[i] = { ...next[i], sku: val }; else next.push({ ...r, sku: val }); return next; }); }} placeholder="SKU" /></TableCell>
-                                <TableCell className="w-[90px]"><Switch checked={r.is_active} onCheckedChange={(c) => setVariants(prev => { const next = [...prev]; const i = next.findIndex(v => v.combination_key === r.combination_key); if (i >= 0) next[i] = { ...next[i], is_active: !!c }; else next.push({ ...r, is_active: !!c }); return next; })} /></TableCell>
-                                <TableCell className="w-[120px]"><Checkbox checked={r.is_default} onCheckedChange={(c) => setVariants(prev => { // unique default
-                                  const next = rows.map(x => ({ ...x, is_default: x.combination_key === r.combination_key })); return next;
-                                })} /></TableCell>
-                              </TableRow>
-                            );
-                          });
-                          return [headerRow, ...bodyRows].filter(Boolean) as React.ReactNode[];
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Price shown = Base + option price adjustments, converted to {displayCurrency}.
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                    const bodyRows = groupRows.map((r, ri) => {
+                      const priceDisp = rowDisplayPrice(r);
+                      return (
+                        <div
+                          key={r.combination_key}
+                          className={cn(
+                            "grid items-center gap-2 px-3 py-1.5 hover:bg-muted/20 transition-colors",
+                            ri % 2 === 1 && "bg-muted/10"
+                          )}
+                          style={{ gridTemplateColumns: `28px 1fr ${activeOptionNames.map(()=>'auto').join(' ')} 80px 100px 120px 44px 44px` }}
+                        >
+                          <Checkbox
+                            checked={!!selected[r.combination_key]}
+                            onCheckedChange={(c) => setSelected(prev => ({ ...prev, [r.combination_key]: !!c }))}
+                            className="mx-auto"
+                          />
+                          {/* Option value badges */}
+                          <div className="flex flex-wrap gap-1">
+                            {activeOptionNames.map(n => r.option_values[n] ? (
+                              <Badge key={n} variant="secondary" className="text-xs h-5 px-1.5 capitalize font-normal">
+                                {r.option_values[n]}
+                              </Badge>
+                            ) : null)}
+                          </div>
+                          {/* Per-option value cells (hidden visually but kept for spacing) */}
+                          {activeOptionNames.map(n => (
+                            <span key={n} className="text-sm capitalize text-muted-foreground hidden">
+                              {r.option_values[n]}
+                            </span>
+                          ))}
+                          {/* Inventory */}
+                          <Input
+                            type="number"
+                            min={0}
+                            value={r.inventory}
+                            className="h-7 text-sm text-right w-20"
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value || '0', 10);
+                              setVariants(prev => {
+                                const next = [...prev];
+                                const i = next.findIndex(v => v.combination_key === r.combination_key);
+                                if (i >= 0) next[i] = { ...next[i], inventory: val };
+                                else next.push({ ...r, inventory: val });
+                                return next;
+                              });
+                            }}
+                          />
+                          {/* Price (read-only display) */}
+                          <span className="text-sm font-medium tabular-nums whitespace-nowrap">
+                            {formatCurrency(priceDisp, displayCurrency)}
+                          </span>
+                          {/* SKU */}
+                          <Input
+                            value={r.sku || ''}
+                            placeholder="SKU"
+                            className="h-7 text-sm"
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setVariants(prev => {
+                                const next = [...prev];
+                                const i = next.findIndex(v => v.combination_key === r.combination_key);
+                                if (i >= 0) next[i] = { ...next[i], sku: val };
+                                else next.push({ ...r, sku: val });
+                                return next;
+                              });
+                            }}
+                          />
+                          {/* Active switch */}
+                          <div className="flex items-center justify-center">
+                            <Switch
+                              checked={r.is_active}
+                              onCheckedChange={(c) => setVariants(prev => {
+                                const next = [...prev];
+                                const i = next.findIndex(v => v.combination_key === r.combination_key);
+                                if (i >= 0) next[i] = { ...next[i], is_active: !!c };
+                                else next.push({ ...r, is_active: !!c });
+                                return next;
+                              })}
+                              className="scale-75"
+                            />
+                          </div>
+                          {/* Default checkbox */}
+                          <div className="flex items-center justify-center">
+                            <Checkbox
+                              checked={r.is_default}
+                              onCheckedChange={(c) => setVariants(() => {
+                                return rows.map(x => ({ ...x, is_default: x.combination_key === r.combination_key }));
+                              })}
+                            />
+                          </div>
+                        </div>
+                      );
+                    });
+
+                    return [headerRow, ...bodyRows].filter(Boolean) as React.ReactNode[];
+                  })}
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Price = base + option adjustments, in {displayCurrency}.
+              </p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
