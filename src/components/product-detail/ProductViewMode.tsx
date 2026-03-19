@@ -137,7 +137,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                             const isActive = val.is_active;
                             const stock = val.inventory || 0;
                             const isOOS = stock <= 0;
-                            const isLow = stock > 0 && stock <= 5;
+                            const isCritical = stock > 0 && stock < 5;
+                            const isLow = stock >= 5 && stock < 10;
                             return (
                               <div
                                 key={val.id}
@@ -147,9 +148,11 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                                     ? "bg-muted/50 text-muted-foreground border-border/50 opacity-50"
                                     : isOOS
                                       ? "bg-red-50 text-red-700 border-red-200"
-                                      : isLow
-                                        ? "bg-amber-50 text-amber-700 border-amber-200"
-                                        : "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                      : isCritical
+                                        ? "bg-red-50 text-red-600 border-red-200"
+                                        : isLow
+                                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                                          : "bg-emerald-50 text-emerald-700 border-emerald-200",
                                   val.is_default && "ring-1 ring-primary ring-offset-1"
                                 )}
                               >
@@ -233,7 +236,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                     if (isFinite(minStock)) effectiveStock = minStock;
                   }
                   const isOOS = effectiveStock <= 0;
-                  const isLow = effectiveStock > 0 && effectiveStock <= 5;
+                  const isCritical = effectiveStock > 0 && effectiveStock < 5;
+                  const isLow = effectiveStock >= 5 && effectiveStock < 10;
                   return (
                     <div key={v.id || i} className={cn(
                       "grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2.5 items-center",
@@ -256,13 +260,14 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                         onClick={() => setStockModalOpen(true)}
                         className={cn(
                           "w-28 text-right text-xs font-medium flex items-center justify-end gap-1 rounded px-2 py-1 transition-colors cursor-pointer",
-                          isOOS ? "text-destructive bg-destructive/10 hover:bg-destructive/20" :
+                          isOOS ? "text-red-700 bg-red-50 hover:bg-red-100" :
+                          isCritical ? "text-red-600 bg-red-50 hover:bg-red-100" :
                           isLow ? "text-amber-600 bg-amber-50 hover:bg-amber-100" :
                           "text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
                         )}
                       >
                         <Package className="h-3 w-3" />
-                        {isOOS ? 'Out of stock' : isLow ? `${effectiveStock} low` : `${effectiveStock} in stock`}
+                        {isOOS ? 'Out of stock' : isCritical ? `${effectiveStock} critical` : isLow ? `${effectiveStock} low` : `${effectiveStock} in stock`}
                       </button>
                     </div>
                   );
