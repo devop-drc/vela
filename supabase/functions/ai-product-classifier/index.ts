@@ -74,8 +74,9 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   - For other currencies, use standard codes: USD, EUR, GBP, etc.
   - If no currency is specified, default to "ALL".
 
-  **User-Defined Keywords:**
-  ${keywords.length > 0 ? keywords.map(k => `- **${k.keyword}:** ${k.description}`).join('\n') : 'No custom keywords provided.'}
+  **User-Defined Keywords (IMPORTANT — use these to extract data):**
+  ${keywords.length > 0 ? `The user has defined these keywords/symbols that appear in their captions. When you find any of these in the caption, use the description to understand what follows and extract it as a specification or option accordingly.
+${keywords.map(k => `- When you see "${k.keyword}" in the caption: ${k.description}`).join('\n')}` : 'No custom keywords provided.'}
 
   ${similarProductsContext}
 
