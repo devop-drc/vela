@@ -40,7 +40,20 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   5. **Price Extraction:** Extract the numerical base price and the currency code (e.g., USD, EUR, ALL). **If a price and currency are present in the caption, use them.** Default currency to "ALL" if none is specified.
   6. **Inventory/Stock:** Infer \`inventory\` (base stock) as an integer. If stock is mentioned (e.g., "only 5 left"), use that number. Defaults to 10 if not mentioned but clearly a product.
   7. **Attributes Extraction (Crucial):**
-     - **Specifications (Fixed Details):** A key-value object of fixed, unchangeable attributes (e.g., Material, Dimensions). Use snake_case for keys. Use Google Search to find standard specs for the product.
+
+     CRITICAL DISTINCTION between specifications and options:
+
+     SPECIFICATIONS are fixed product attributes that describe what the product IS. The customer CANNOT change these.
+       Examples: material, processor, screen_size, battery_mah, weight, dimensions
+       Return as: "specifications": [{"key": "material", "value": "Cotton", "unit": null}, {"key": "weight", "value": "200", "unit": "grams"}]
+
+     OPTIONS are attributes the customer CHOOSES when purchasing. These create variant combinations.
+       Examples: color, size, storage capacity, RAM amount
+       Return as: "options": {"Size": [{"value": "M", "price_difference": 0, "inventory": 10}], "Color": [...]}
+
+     Do NOT put customer-selectable attributes in specifications. Do NOT put fixed attributes in options.
+
+     - **Specifications (Fixed Details):** An array of spec objects with key, value, and optional unit. Use snake_case for keys. Use Google Search to find standard specs for the product.
      - **Options (Metadata-Rich Variants):** A map of customer-selectable options (e.g., Color, Size). Each option should be an object containing values and their specific impact on price and stock. Search for common variants of this product.
        \`\`\`json
        "options": {
@@ -60,7 +73,7 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
     "price": number | null,
     "currency": string | null,
     "inventory": number | null,
-    "specifications": Record<string, string | number>,
+    "specifications": Array<{ key: string, value: string, unit: string | null }>,
     "options": Record<string, Array<{ value: string, price_difference: number, inventory: number }>>,
     "variants": Array<{ option_values: Record<string, string>, price_difference: number, inventory: number, is_active: boolean }>
   }
@@ -98,7 +111,12 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
         { "value": "Starlight Silver", "price_difference": 0, "inventory": 10 }
       ]
     },
-    "specifications": { "water_resistance": "5ATM", "battery_life": "14 days" }
+    "specifications": [
+      { "key": "water_resistance", "value": "5ATM", "unit": null },
+      { "key": "battery_life", "value": "14", "unit": "days" },
+      { "key": "display_size", "value": "1.4", "unit": "inches" },
+      { "key": "weight", "value": "52", "unit": "grams" }
+    ]
   }
 
   
@@ -112,7 +130,7 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
         "price": 250,
         "currency": "ALL",
         "inventory": 150,
-        "specifications": { "ref_code": "x3185794" },
+        "specifications": [{ "key": "ref_code", "value": "x3185794", "unit": null }],
         "options": { "color": ["Black", "White"], "size": ["S", "M", "L"] },
         "variants": [
           { "option_values": { "color": "Black", "size": "M" }, "inventory": 10, "is_active": true },
@@ -128,7 +146,7 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
         "price": 10,
         "currency": "ALL",
         "inventory": 250,
-        "specifications": { "ref_code": "x3185494" },
+        "specifications": [{ "key": "ref_code", "value": "x3185494", "unit": null }],
         "options": {},
         "variants": [],
         "required": false,
