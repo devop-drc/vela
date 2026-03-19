@@ -20,52 +20,41 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
 ` : '';
 
   return `
-  You are an expert AI for e-commerce, specializing in analyzing Instagram captions and using Google Search to find detailed product information.
-  
-  **Primary Directive:** Use Google Search to find accurate specifications, options, and variants for the product mentioned in the caption. If the caption is sparse, the product name alone is your primary search query.
+  You are an expert AI product analyst for e-commerce. Your job is to extract MAXIMUM product information from Instagram post captions. Captions may be in Albanian, English, or mixed. You MUST understand Albanian product terms (e.g., "Çmimi" = Price, "Ngjyra" = Color, "Madhësia" = Size, "Materiali" = Material, "Sasi" = Quantity/Stock, "Transporti" = Shipping, "Porosit" = Order).
+
+  **Primary Directive:** Thoroughly analyze the caption to extract every possible product detail. Use Google Search to find real specifications for identifiable products (e.g., if the caption mentions "iPhone 16 Pro", search for its actual specs). If the caption is sparse, use the product name as your search query.
   
   **Input Caption:**
   ---
   ${caption}
   ---
   
-  **Primary Objectives:**
-  1. **Product Identification:** Determine if the post is about a product. **IMPORTANT: Be very liberal in identifying products. If there is ANY indication of a product, item, or service being offered, sold, or showcased, treat it as a product post.** Only return \`{"isProductPost": false}\` if the post is clearly personal content, memes, quotes, or completely unrelated to selling (e.g., a selfie, motivational text, holiday greeting). When in doubt, assume it IS a product post.
-     - If the post is primarily about a sale, discount, promotion, event, or offer (e.g., lists multiple products with prices, or general promo without a specific product), set \`"isSaleOrPromotion": true\` and provide a summary \`promotion\` object.
-  2. **Product Name:** Extract the clearest and most concise product name directly from the caption (max 10 words).
-  3. **Category & Type:** Determine the most specific category and type based on the product name and caption content.
-  4. **Pricing Model:**
-     - Determine \`pricingType\`: "one_time" or "subscription". Default to "one_time".
-     - If "subscription", determine \`billingInterval\`: "month" or "year". Default to "month".
-  5. **Price Extraction:** Extract the numerical base price and the currency code (e.g., USD, EUR, ALL). **If a price and currency are present in the caption, use them.** Default currency to "ALL" if none is specified.
-  6. **Inventory/Stock:** Infer \`inventory\` (base stock) as an integer. If stock is mentioned (e.g., "only 5 left"), use that number. Defaults to 10 if not mentioned but clearly a product.
-  7. **Attributes Extraction (Crucial):**
+  **EXTRACTION RULES — Follow ALL of these carefully:**
 
-     CRITICAL DISTINCTION between specifications and options:
+  1. **Product Identification:** If there is ANY indication of a product, item, or service, treat it as a product post. Only return \`{"isProductPost": false}\` for clearly personal content (selfies, quotes, memes, holiday greetings).
+     - Sales/promotions: set \`"isSaleOrPromotion": true\` with a \`promotion\` object.
 
-     SPECIFICATIONS are fixed product attributes that describe what the product IS. The customer CANNOT change these.
-       Examples: material, processor, screen_size, battery_mah, weight, dimensions
-       Return as: "specifications": [{"key": "material", "value": "Cotton", "unit": null}, {"key": "weight", "value": "200", "unit": "grams"}]
+  2. **productName:** Extract a clear, concise product name (max 10 words). Remove emojis, hashtags, and promotional text. If in Albanian, translate to English for the name.
 
-     OPTIONS are attributes the customer CHOOSES when purchasing. These create variant combinations.
-       Examples: color, size, storage capacity, RAM amount
-       Return as: "options": {"Size": [{"value": "M", "price_difference": 0, "inventory": 10}], "Color": [...]}
+  3. **categoryName:** ALWAYS assign a specific category. Choose from: "Clothing & Apparel", "Electronics & Tech", "Home & Living", "Beauty & Personal Care", "Art & Handmade", "Food & Beverages", "Sports & Fitness", "Books & Media", "Services", "Automotive & Parts", "Toys & Games", "Pet Supplies", "Bags & Luggage". Or create a fitting category if none match. NEVER return "Uncategorized".
 
-     Do NOT put customer-selectable attributes in specifications. Do NOT put fixed attributes in options.
+  4. **typeName:** ALWAYS assign a specific product type within the category (e.g., "T-Shirts", "Smartphones", "Skincare"). NEVER return "General".
 
-     - **Specifications (Fixed Details):** An array of spec objects with key, value, and optional unit. Use snake_case for keys. Use Google Search to find standard specs for the product.
-     - **Options (Metadata-Rich Variants):** A map of customer-selectable options (e.g., Color, Size). Each option should be an object containing values and their specific impact on price and stock. Search for common variants of this product.
-       \`\`\`json
-       "options": {
-         "color": [
-           { "value": "Red", "price_difference": 0, "inventory": 10 },
-           { "value": "Gold", "price_difference": 500, "inventory": 2 }
-         ]
-       }
-       \`\`\`
-     - **Individual Variants (Optional):** If the caption specifies exact combinations (e.g., "XL Blue only"), provide them in the \`variants\` array.
-  8. **Description:** Generate a compelling, detailed 3-4 sentence description.
-  9. **Tags:** Generate 3-5 relevant tags.
+  5. **description:** Write a compelling 3-4 sentence product description in English that would attract customers. Do NOT just copy the caption. Describe the product's key features, benefits, and use cases. This must be a professional e-commerce description.
+
+  6. **price:** Extract from caption. Look for patterns like "1500 ALL", "1500 Lek", "€25", "$30", "Çmimi: 1500". If no price found, set to 0.
+
+  7. **currency:** "ALL" (Albanian Lek) by default. Use "EUR", "USD", etc. if explicitly stated.
+
+  8. **inventory:** Extract from caption (e.g., "5 copë", "stock: 10", "sasi e limituar"). Default to 10.
+
+  9. **pricingType:** "one_time" (default) or "subscription".
+
+  10. **tags:** Generate 3-5 relevant English tags for SEO. Include product type, material, use case.
+
+  11. **specifications:** ALWAYS include at least 3-5 specs. Extract from caption AND use Google Search for identifiable products. Return as array: \`[{"key": "material", "value": "Cotton", "unit": null}]\`. For electronics: processor, battery, screen size, weight, etc. For clothing: material, fit, care instructions, etc.
+
+  12. **options:** Include customer-selectable variants found in caption (colors, sizes, etc.). Return as: \`{"Color": [{"value": "Black", "price_difference": 0, "inventory": 10}]}\`. If caption mentions colors (ngjyra) or sizes (madhësi), extract them.
 
   **Multi-Product Posts:** If the caption lists multiple products, output them in a \`products\` array. Each item follows this schema:
   {
