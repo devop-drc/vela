@@ -132,7 +132,7 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
   const activeOptionNames = useMemo(()=> options.filter(o=>o.values.length>0).map(o=>o.name), [options]);
   const combinations = useMemo(()=>{
     const active = options.map(o => o.values.filter(v=>v.is_active).map(v=>v.value)).filter(arr=>arr.length>0);
-    if (active.length < 2 || active.length > 3) return [] as Array<Record<string,string>>;
+    if (active.length < 1 || active.length > 5) return [] as Array<Record<string,string>>;
     return cartesian(active).map(row => {
       const obj: Record<string,string> = {};
       row.forEach((val, idx) => { const name = options.filter(o=>o.values.filter(v=>v.is_active).length>0)[idx].name; obj[name]=val; });

@@ -109,7 +109,15 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                     <Badge variant={product.status === 'Active' ? 'default' : 'secondary'}>{product.status}</Badge>
                   </h1>
                 </div>
-                <p className="text-base text-muted-foreground flex-1">{product.caption || 'No description provided.'}</p>
+                {/* Description */}
+                {product.caption ? (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold">Description</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{product.caption}</p>
+                  </div>
+                ) : (
+                  <p className="text-base text-muted-foreground flex-1">No description provided.</p>
+                )}
                 {product.tags?.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {product.tags.map((t: string, i: number) => <Badge key={`${t}-${i}`} variant="secondary">{t}</Badge>)}
@@ -151,6 +159,9 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 </div>
               </div>
             )}
+
+            {/* Separator between specs and options */}
+            {specs && specs.length > 0 && <hr className="border-border" />}
 
             {/* Options V2 Display (Now using new tables) */}
             {isLoadingOptions ? (

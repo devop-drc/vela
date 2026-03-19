@@ -383,8 +383,8 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                   {specs && specs.length > 0 ? (
                     <div className="grid gap-2">
                       {/* Header row */}
-                      <div className="grid grid-cols-[1fr_1.5fr_80px_32px] gap-2 text-xs text-muted-foreground px-1">
-                        <span>Spec</span><span>Value</span><span>Unit</span><span />
+                      <div className="grid grid-cols-[1fr_1.5fr_80px_32px] gap-2 text-xs font-medium text-muted-foreground px-1 pb-1 border-b">
+                        <span>Key</span><span>Value</span><span>Unit</span><span>Actions</span>
                       </div>
                       {specs.map((spec: any, idx: number) => (
                         <div key={spec.id || spec.key} className="grid grid-cols-[1fr_1.5fr_80px_32px] items-center gap-2">
@@ -399,7 +399,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                           />
                           <Input
                             value={spec.value}
-                            placeholder="Value"
+                            placeholder="e.g. 500"
                             onChange={(e) => {
                               const updated = specs.map((s: any, i: number) => i === idx ? { ...s, value: e.target.value } : s);
                               setSpecs(updated);
@@ -408,7 +408,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                           />
                           <Input
                             value={spec.unit || ''}
-                            placeholder="Unit"
+                            placeholder="e.g. g"
                             onChange={(e) => {
                               const updated = specs.map((s: any, i: number) => i === idx ? { ...s, unit: e.target.value } : s);
                               setSpecs(updated);
@@ -434,7 +434,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="mt-1"
+                    className="mt-2 w-full border-dashed"
                     onClick={() => setSpecs([...(specs || []), { key: '', value: '', unit: '' }])}
                   >
                     <PlusCircle className="mr-2 h-4 w-4" />Add Spec

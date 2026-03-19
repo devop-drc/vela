@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Checkbox } from "./ui/checkbox";
-import { AlertTriangle, Palette, Ruler, Tag, Frame, ScanText, Cog, Package, Layers } from "lucide-react"; // Import Package & Layers icons
+import { AlertTriangle, Palette, Ruler, Tag, Frame, ScanText, Package, Layers } from "lucide-react"; // Import Package & Layers icons
 
 import { ProductStatusDropdown } from "./ProductStatusDropdown";
 import { Badge } from "./ui/badge";
@@ -78,16 +78,6 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
 
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
   
-  const EXCLUDED_DETAIL_KEYS = ['type', 'options', 'multi_product'];
-  const detailsToDisplay = Object.entries(details || {})
-    .filter(([key, value]) =>
-      !EXCLUDED_DETAIL_KEYS.includes(key) &&
-      value !== null &&
-      value !== undefined &&
-      value !== '' &&
-      (!Array.isArray(value) || value.length > 0)
-    )
-    .slice(0, 3);
 
   const getStockBadge = (inventory: number | null) => {
     if (product.pricing_type === 'subscription') {
@@ -166,14 +156,12 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
               </div>
             )}
 
-            {gridSize === 'lg' && detailsToDisplay.length > 0 && (
-              <div className="space-y-1.5 pt-1">
-                {detailsToDisplay.map(([key, value]) => (
-                  <DetailRow key={key} icon={Cog}>
-                    <span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span>
-                    <span className="truncate">{Array.isArray(value) ? value.join(', ') : String(value)}</span>
-                  </DetailRow>
-                ))}
+            {/* Spec/option indicators */}
+            {gridSize !== 'sm' && (
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                {Object.keys(details || {}).filter(k => !['type', 'options', 'multi_product', 'Brand'].includes(k)).length > 0 && (
+                  <span>{Object.keys(details || {}).filter(k => !['type', 'options', 'multi_product', 'Brand'].includes(k)).length} specs</span>
+                )}
               </div>
             )}
           </div>
