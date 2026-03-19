@@ -339,45 +339,13 @@ serve(async (req) => {
         throw new Error("AI returned invalid JSON format.");
     }
 
-    // Check if retry with images is needed
+    // Flag if this analysis might benefit from image retry (used by caller for async retry)
     const needsImageRetry = !usedImages && (
       (analysis.isProductPost === false && post_media?.media_url) ||
       (analysis.isProductPost === true && (!analysis.productName || analysis.price === null || analysis.price === undefined))
     );
-
-    if (needsImageRetry && post_media) {
-      const retryMediaObj = {
-        media_url: post_media.media_url,
-        thumbnail_url: post_media.thumbnail_url,
-        media_type: post_media.media_type,
-        id: post_media.post_id,
-      };
-      const retryImageParts = await getPostMedia(retryMediaObj, access_token);
-      if (retryImageParts.length > 0) {
-        // Rebuild prompt with image analysis instruction
-        const retryPromptText = promptText + '\n\nIMPORTANT: The caption for this post is insufficient or missing. Product images have been provided.\nAnalyze the images carefully to identify:\n- The product(s) shown (name, type, brand if visible)\n- Visual attributes (color, material, condition)\n- Any text visible in the image (price tags, labels, brand names)\n- Product category based on visual appearance\nCombine image analysis with any caption text available to produce the most accurate product details.';
-
-        const retryParts = [{ text: retryPromptText }, ...retryImageParts];
-        const retryResponse = await fetch(getGeminiUrl('flash'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: retryParts }],
-            tools: [{ google_search: {} }],
-            generationConfig: { responseMimeType: "application/json" }
-          })
-        });
-        const retryData = await retryResponse.json();
-        const retryText = retryData.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (retryText) {
-          try {
-            const retryAnalysis = JSON.parse(retryText);
-            if (retryAnalysis.isProductPost || retryAnalysis.productName) {
-              analysis = retryAnalysis; // Use the better result
-            }
-          } catch { /* keep original analysis */ }
-        }
-      }
+    if (needsImageRetry) {
+      analysis._needsImageRetry = true;
     }
 
     // Heuristic parser for multi-product captions of the form:

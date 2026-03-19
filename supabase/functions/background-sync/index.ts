@@ -390,25 +390,44 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     // --- Step 1: Live Analysis ---
     await updateJobProgress(supabaseAdmin, jobId, { progress: 0, total, message: `Analyzing ${postsNeedingAnalysis.length} new posts...` });
 
-    const analysisPromises = postsNeedingAnalysis.map(post =>
-      supabaseAdmin.functions.invoke('ai-product-classifier', {
-        body: {
-          caption: post.caption || '',
-          user_id: user.id,
-          include_images: post.captionInsufficient,
-          post_media: {
-            media_url: post.media_url,
-            thumbnail_url: post.thumbnail_url,
-            media_type: post.media_type,
-            post_id: post.id
-          },
-          access_token: accessToken
-        }
-      })
-        .then(({ data, error }) => ({ post, analysis: data as AnalysisResult, error } as LiveAnalysisResult))
-    );
-    
-    const liveAnalysisResults: LiveAnalysisResult[] = await Promise.all(analysisPromises);
+    // Process AI analysis in batches of 10 for stability (avoids overwhelming edge function concurrency)
+    const BATCH_SIZE = 10;
+    const liveAnalysisResults: LiveAnalysisResult[] = [];
+
+    for (let batchStart = 0; batchStart < postsNeedingAnalysis.length; batchStart += BATCH_SIZE) {
+      const batch = postsNeedingAnalysis.slice(batchStart, batchStart + BATCH_SIZE);
+      const batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(postsNeedingAnalysis.length / BATCH_SIZE);
+
+      await updateJobProgress(supabaseAdmin, jobId, {
+        progress: batchStart,
+        total,
+        message: `AI analyzing batch ${batchNum}/${totalBatches} (${batch.length} posts)...`,
+        thumbnail_url: batch[0]?.thumbnail_url || batch[0]?.media_url,
+      });
+
+      const batchPromises = batch.map(post =>
+        supabaseAdmin.functions.invoke('ai-product-classifier', {
+          body: {
+            caption: post.caption || '',
+            user_id: user.id,
+            include_images: post.captionInsufficient,
+            post_media: {
+              media_url: post.media_url,
+              thumbnail_url: post.thumbnail_url,
+              media_type: post.media_type,
+              post_id: post.id
+            },
+            access_token: accessToken
+          }
+        })
+          .then(({ data, error }) => ({ post, analysis: data as AnalysisResult, error } as LiveAnalysisResult))
+          .catch(error => ({ post, analysis: null as any, error } as LiveAnalysisResult))
+      );
+
+      const batchResults = await Promise.all(batchPromises);
+      liveAnalysisResults.push(...batchResults);
+    }
     const newCacheEntries: any[] = [];
 
     const inferBrand = (name?: string, tags?: string[]): string | null => {
