@@ -577,10 +577,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
           continue;
         }
 
-        // Build details
-        const details: { [key: string]: any } = { type: toTitleCase(typeName) };
-        if (specifications) for (const [k,v] of Object.entries(specifications)) details[k] = v;
-        if (options) for (const [k,v] of Object.entries(options)) details[k] = v;
+        // Details JSONB only stores type + brand (specs go to product_specifications, options go to product_options)
 
         for (const item of itemsToCreate) {
           const itemName = item ? item.productName || item.name || aiProductName : aiProductName;
@@ -599,16 +596,10 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
           const itemCategoryName = categoryName || 'Generic Product';
           const itemTypeName = typeName || 'Generic';
 
+          // Details only stores type + brand (specs → product_specifications table, options → product_options table)
           const itemDetails: { [key: string]: any } = { type: toTitleCase(itemTypeName || '') };
-          if (itemSpecifications) for (const [key, value] of Object.entries(itemSpecifications)) itemDetails[key] = value as any;
-          if (itemOptions) for (const [key, value] of Object.entries(itemOptions)) itemDetails[key] = value as any;
-
-          // Brand inference
-          const hasBrand = Object.keys(itemDetails).some(k => k.toLowerCase() === 'brand');
-          if (!hasBrand) {
-            const inferred = inferBrand(itemName, aiTags);
-            if (inferred) itemDetails['Brand'] = inferred;
-          }
+          const inferred = inferBrand(itemName, aiTags);
+          if (inferred) itemDetails['Brand'] = inferred;
 
           const finalPricingType = pricingType || 'one_time';
           const finalBillingInterval = finalPricingType === 'subscription' ? (billingInterval || 'month') : null;

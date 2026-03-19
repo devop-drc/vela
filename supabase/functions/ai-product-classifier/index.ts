@@ -415,7 +415,13 @@ serve(async (req) => {
       if (!analysis.productName) analysis.productName = caption?.split('\n')[0]?.slice(0, 60) || 'Unknown Product';
       if (!analysis.categoryName) analysis.categoryName = 'Uncategorized';
       if (!analysis.typeName) analysis.typeName = 'General';
-      if (!analysis.description) analysis.description = caption || '';
+      // Description must be AI-generated, NOT the raw caption
+      if (!analysis.description || analysis.description === caption) {
+        const name = analysis.productName || 'This product';
+        const cat = analysis.categoryName || '';
+        const type = analysis.typeName || '';
+        analysis.description = `${name} is a high-quality ${type.toLowerCase()} in the ${cat.toLowerCase()} category. ${caption ? 'Originally described as: ' + caption.slice(0, 150) : ''}`.trim();
+      }
       if (!analysis.currency) analysis.currency = 'ALL';
       if (!analysis.tags || !Array.isArray(analysis.tags)) analysis.tags = [];
       if (analysis.price === undefined || analysis.price === null) analysis.price = 0;

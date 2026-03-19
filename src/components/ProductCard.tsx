@@ -154,7 +154,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
               {getStockBadge(product.inventory)}
             </h3>
 
-            {(gridSize === 'md' || gridSize === 'lg') && caption && (
+            {caption && (
               <p className="text-xs text-muted-foreground line-clamp-2">{caption}</p>
             )}
             
