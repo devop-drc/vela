@@ -438,14 +438,14 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
                 {opt.values.length > 0 && (
                   <>
                     {/* Column header */}
-                    <div className="grid grid-cols-[auto_1fr_120px_64px_48px_48px_36px] items-center gap-2 px-3 py-1 border-b bg-muted/20">
-                      <span className="w-4" />
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Value</span>
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Price adj.</span>
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground text-center">Stock</span>
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground text-center">On</span>
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground text-center">Def.</span>
-                      <span className="w-7" />
+                    <div className="grid grid-cols-[20px_1fr_100px_56px_56px_56px_32px] items-center gap-1.5 px-3 py-1.5 border-b bg-muted/20">
+                      <span />
+                      <span className="text-xs text-muted-foreground font-medium">Value</span>
+                      <span className="text-xs text-muted-foreground font-medium">Price +/-</span>
+                      <span className="text-xs text-muted-foreground font-medium text-center">Stock</span>
+                      <span className="text-xs text-muted-foreground font-medium text-center">Active</span>
+                      <span className="text-xs text-muted-foreground font-medium text-center">Default</span>
+                      <span />
                     </div>
                     <div className="divide-y">
                       {opt.values.map((v, vidx) => {
@@ -456,7 +456,7 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
                         return (
                           <div
                             key={vidx}
-                            className="grid grid-cols-[auto_1fr_120px_64px_48px_48px_36px] items-center gap-2 px-3 py-1.5 hover:bg-muted/20 transition-colors"
+                            className="grid grid-cols-[20px_1fr_100px_56px_56px_56px_32px] items-center gap-1.5 px-3 py-1.5 hover:bg-muted/20 transition-colors"
                             draggable
                             onDragStart={() => onValueDragStart(idx, vidx)}
                             onDragOver={(e) => e.preventDefault()}
@@ -466,7 +466,7 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
                             <Input
                               value={v.value}
                               placeholder="e.g. Red"
-                              className="h-7 text-sm"
+                              className="h-8 text-sm"
                               onChange={(e) => setOptions(prev => {
                                 const next = [...prev];
                                 const vals = [...next[idx].values];
@@ -482,9 +482,9 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
                               <Input
                                 type="number"
                                 step="0.01"
-                                placeholder="0.00"
+                                placeholder="0"
                                 value={convertCurrency(v.price_difference || 0, 'ALL', displayCurrency)}
-                                className="h-7 text-sm pl-6"
+                                className="h-8 text-sm pl-6"
                                 onChange={(e) => setOptions(prev => {
                                   const next = [...prev];
                                   const vals = [...next[idx].values];
@@ -497,11 +497,8 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
                               />
                             </div>
                             <div className={cn(
-                              "h-7 flex items-center justify-center rounded text-xs font-medium tabular-nums border",
-                              isOOS ? "bg-red-50 text-red-600 border-red-200 dark:bg-red-950/30 dark:border-red-900 dark:text-red-400" :
-                              isCrit ? "bg-red-50 text-red-500 border-red-200 dark:bg-red-950/30 dark:border-red-900 dark:text-red-400" :
-                              isLow ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900 dark:text-amber-400" :
-                              "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-400"
+                              "h-8 flex items-center justify-center rounded-md text-xs font-medium tabular-nums",
+                              isOOS ? "text-red-600" : isCrit ? "text-red-500" : isLow ? "text-amber-600" : "text-emerald-600"
                             )}>
                               {derivedStock}
                             </div>
@@ -515,7 +512,7 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
                                   next[idx] = { ...next[idx], values: vals };
                                   return next;
                                 })}
-                                className="scale-75"
+                                className="scale-90"
                               />
                             </div>
                             <div className="flex items-center justify-center">
@@ -534,7 +531,7 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
                               variant="ghost"
                               size="icon"
                               onClick={() => removeValue(idx, vidx)}
-                              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
