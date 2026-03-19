@@ -272,12 +272,14 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
   };
 
   try {
+    await updateJobProgress(supabaseAdmin, jobId, { progress: 0, total: 0, message: "Starting sync...", status: 'in_progress', summary });
+
     const { data: business, error: businessError } = await supabaseAdmin.from('businesses').select('id').eq('user_id', user.id).single();
     if (businessError || !business) throw new Error("Could not find business profile.");
 
     await fetchExchangeRates(supabaseAdmin);
 
-    await updateJobProgress(supabaseAdmin, jobId, { progress: 0, total: 0, message: "Fetching Instagram posts...", status: 'in_progress', summary });
+    await updateJobProgress(supabaseAdmin, jobId, { message: "Fetching Instagram posts...", summary });
 
     const { data: postsData, error: postsError } = await supabaseAdmin.functions.invoke('instagram-posts', { headers: { Authorization: `Bearer ${user.token}` }, body: { skip_upload: true } });
     if (postsError) throw postsError;
@@ -764,8 +766,13 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     await updateJobProgress(supabaseAdmin, jobId, { status: 'completed', progress: total, total, message: finalMessage, summary });
 
   } catch (error: any) {
-    console.error('Background Sync Error:', error.message);
-    await updateJobProgress(supabaseAdmin, jobId, { status: 'failed', message: error.message, summary });
+    const errorMsg = error?.message || String(error);
+    console.error('Background Sync Error:', errorMsg, error?.stack || '');
+    try {
+      await updateJobProgress(supabaseAdmin, jobId, { status: 'failed', message: `Sync failed: ${errorMsg}`, summary });
+    } catch (e) {
+      console.error('Failed to update job with error status:', e);
+    }
   }
 };
 serve(async (req) => {
