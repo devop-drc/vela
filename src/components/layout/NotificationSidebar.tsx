@@ -700,11 +700,11 @@ export default function NotificationSidebar() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <button className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+        <button className="fixed top-1/2 -translate-y-1/2 right-0 z-50 flex flex-col items-center gap-1 rounded-l-lg bg-card border border-r-0 border-border px-2 py-3 shadow-md hover:bg-accent transition-colors focus:outline-none focus:ring-2 focus:ring-ring">
           <Bell className="h-4 w-4" />
-          <span className="text-sm font-medium">Notifications</span>
+          <span className="text-[10px] font-medium writing-mode-vertical" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>Notifications</span>
           {unreadCount > 0 && (
-            <span className="flex items-center justify-center h-5 min-w-[20px] rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold px-1.5">
+            <span className="flex items-center justify-center h-4 min-w-[16px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-1">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}

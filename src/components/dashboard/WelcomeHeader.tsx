@@ -6,10 +6,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface WelcomeHeaderProps {
   pendingOrders: number;
   activeProducts: number;
+  totalOrders?: number;
   isLoading?: boolean;
 }
 
-export const WelcomeHeader = ({ pendingOrders, activeProducts, isLoading }: WelcomeHeaderProps) => {
+export const WelcomeHeader = ({ pendingOrders, activeProducts, totalOrders = 0, isLoading }: WelcomeHeaderProps) => {
   const [firstName, setFirstName] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
@@ -17,13 +18,7 @@ export const WelcomeHeader = ({ pendingOrders, activeProducts, isLoading }: Welc
     const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setProfileLoading(false); return; }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("first_name")
-        .eq("id", user.id)
-        .single();
-
+      const { data: profile } = await supabase.from("profiles").select("first_name").eq("id", user.id).single();
       setFirstName(profile?.first_name || user.user_metadata?.first_name || null);
       setProfileLoading(false);
     };
@@ -35,33 +30,25 @@ export const WelcomeHeader = ({ pendingOrders, activeProducts, isLoading }: Welc
   if (profileLoading || isLoading) {
     return (
       <div className="space-y-2">
-        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-10 w-72" />
         <Skeleton className="h-4 w-96" />
       </div>
     );
   }
 
+  const activeOrderCount = pendingOrders + totalOrders;
+
   return (
     <div>
-      <h1 className="text-2xl font-bold tracking-tight">
-        Welcome back{firstName ? `, ${firstName}` : ""}
+      <h1 className="text-3xl font-bold tracking-tight">
+        Welcome back{firstName ? `, ${firstName}` : ""} 👋
       </h1>
-      <p className="text-sm text-muted-foreground mt-1">
+      <p className="text-muted-foreground mt-1">
         {todayLabel}
         {" · "}
-        <span>
-          {pendingOrders === 0
-            ? "No pending orders"
-            : pendingOrders === 1
-            ? "1 pending order"
-            : `${pendingOrders} pending orders`}
-        </span>
+        <span className="font-medium text-foreground">{activeOrderCount} active order{activeOrderCount !== 1 ? 's' : ''}</span>
         {" and "}
-        <span>
-          {activeProducts === 1
-            ? "1 active product"
-            : `${activeProducts} active products`}
-        </span>
+        <span className="font-medium text-foreground">{activeProducts} product{activeProducts !== 1 ? 's' : ''}</span>
       </p>
     </div>
   );

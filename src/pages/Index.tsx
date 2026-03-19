@@ -304,20 +304,12 @@ const Index = () => {
       <WelcomeHeader
         pendingOrders={data.pendingOrders}
         activeProducts={data.activeProducts}
+        totalOrders={data.salesCount}
       />
 
-      {/* Quick Actions */}
+      {/* Stat Cards — no section header, just the cards */}
       <section>
-        <QuickActions />
-      </section>
-
-      {/* Stat Cards */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <BarChart2 className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-base font-semibold">Key Metrics</h2>
-        </div>
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Total Revenue"
             value={formatCurrency(data.totalRevenue, shopDetails?.currency)}
@@ -349,14 +341,31 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Main content grid — row 1: chart (2/3) + profile stats (1/3) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Chart — wide column */}
+      {/* Quick Actions — compact */}
+      <section>
+        <QuickActions />
+      </section>
+
+      {/* Row 1: Shop Profile (1/3) + Live Activity (2/3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        <div className="lg:col-span-1">
+          <h2 className="text-sm font-semibold text-muted-foreground mb-2">Shop Profile</h2>
+          <ProfileStats />
+        </div>
         <div className="lg:col-span-2">
-          <div className="flex items-center gap-2 mb-3">
-            <BarChart2 className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-base font-semibold">Business Overview</h2>
-          </div>
+          <h2 className="text-sm font-semibold text-muted-foreground mb-2">Live Activity</h2>
+          <ActivityFeed />
+        </div>
+      </div>
+
+      {/* Row 2: Top Sellers (1/3) + Business Overview (2/3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        <div className="lg:col-span-1">
+          <h2 className="text-sm font-semibold text-muted-foreground mb-2">Top Sellers</h2>
+          <TopProducts />
+        </div>
+        <div className="lg:col-span-2">
+          <h2 className="text-sm font-semibold text-muted-foreground mb-2">Business Overview</h2>
           <OverviewChart
             data={data.chartData}
             dateRange={dateRange}
@@ -364,36 +373,6 @@ const Index = () => {
             granularity={granularity}
             setGranularity={setGranularity}
           />
-        </div>
-
-        {/* Profile stats — narrow column */}
-        <div className="lg:col-span-1">
-          <div className="flex items-center gap-2 mb-3">
-            <Star className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-base font-semibold">Shop Profile</h2>
-          </div>
-          <ProfileStats />
-        </div>
-      </div>
-
-      {/* Row 2: Top Products + Activity Feed side-by-side */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Top Products — 1/3 width */}
-        <div className="lg:col-span-1">
-          <div className="flex items-center gap-2 mb-3">
-            <Zap className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-base font-semibold">Top Sellers</h2>
-          </div>
-          <TopProducts />
-        </div>
-
-        {/* Activity Feed — 2/3 width */}
-        <div className="lg:col-span-2">
-          <div className="flex items-center gap-2 mb-3">
-            <Activity className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-base font-semibold">Live Activity</h2>
-          </div>
-          <ActivityFeed />
         </div>
       </div>
     </div>
