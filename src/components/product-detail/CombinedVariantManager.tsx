@@ -9,9 +9,11 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, Grid3X3, Package, Banknote, Tag, Search, ChevronDown, Settings2, Check, GripVertical } from "lucide-react";
+import { Plus, Trash2, Grid3X3, Package, Banknote, Tag, Search, Settings2, GripVertical, Info, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
+import { currencies } from "@/lib/currencies";
 
 export type OptionValue = { id?: string; value: string; price_difference: number; is_active: boolean; is_default: boolean; inventory?: number };
 export type ProductOption = { id?: string; name: string; values: OptionValue[]; display_order?: number };
@@ -57,6 +59,10 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
   const initialOptionIdsRef = React.useRef<Set<string>>(new Set());
   const initialValueIdsRef = React.useRef<Set<string>>(new Set());
 
+  const currencySymbol = useMemo(() => {
+    return currencies.find(c => c.code === displayCurrency)?.symbol || displayCurrency;
+  }, [displayCurrency]);
+
   // Load initial options and variants
   React.useEffect(() => {
     const run = async () => {
@@ -97,7 +103,7 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
 
   // Simple options editor: name + list of values with price diff and delete
   const addOption = () => setOptions(prev => [...prev, { name: `Option ${prev.length+1}`, values: [] }]);
-  const addValue = (idx: number) => setOptions(prev => { const next=[...prev]; next[idx] = { ...next[idx], values: [...next[idx].values, { value: '', price_difference: 0, is_active: true, is_default: next[idx].values.length===0 }]}; return next; });
+  const addValue = (idx: number) => setOptions(prev => { const next=[...prev]; next[idx] = { ...next[idx], values: [...next[idx].values, { value: '', price_difference: 0, is_active: true, is_default: next[idx].values.length===0, inventory: 0 }]}; return next; });
   const removeOption = (idx: number) => setOptions(prev => prev.filter((_,i)=>i!==idx));
   const removeValue = (iOpt: number, iVal: number) => setOptions(prev => { const next=[...prev]; next[iOpt] = { ...next[iOpt], values: next[iOpt].values.filter((_,j)=>j!==iVal) }; return next; });
   // Drag & drop reordering
@@ -149,6 +155,17 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
       return { product_id: productId, combination_key: key, option_values: combo, price_difference: 0, inventory: 0, is_active: true, is_default: false, sku: autoSku('SKU', combo) } as VariantRow;
     });
   }, [combinations, variants, productId]);
+
+  // Regenerate variants from current options (force rebuild)
+  const regenerateVariants = () => {
+    const newVariants = combinations.map(combo => {
+      const key = normalizeKey(combo);
+      const ex = variants.find(v => v.combination_key === key);
+      if (ex) return ex;
+      return { product_id: productId, combination_key: key, option_values: combo, price_difference: 0, inventory: 0, is_active: true, is_default: false, sku: autoSku('SKU', combo) } as VariantRow;
+    });
+    setVariants(newVariants);
+  };
 
   // Table controls
   const [search, setSearch] = useState("");
@@ -329,176 +346,386 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
     }
   };
 
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex gap-2">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const totalValues = options.reduce((sum, o) => sum + o.values.length, 0);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Info banner */}
+      <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-3">
+        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+        <p className="text-sm text-blue-800 dark:text-blue-300">
+          <span className="font-medium">Options</span> are attributes customers choose (like Color or Size). Each combination of option values creates a <span className="font-medium">variant</span> with its own price and inventory.
+        </p>
+      </div>
+
       <Tabs defaultValue="options" className="w-full">
         <TabsList className="grid grid-cols-2 w-full md:w-auto">
-          <TabsTrigger value="options" className="text-sm">Options</TabsTrigger>
-          <TabsTrigger value="variants" className="text-sm">Variants</TabsTrigger>
+          <TabsTrigger value="options" className="text-sm gap-1.5">
+            <Settings2 className="h-4 w-4" />
+            Options
+            {options.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{options.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="variants" className="text-sm gap-1.5">
+            <Grid3X3 className="h-4 w-4" />
+            Variants
+            {rows.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{rows.length}</Badge>
+            )}
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="options">
-          <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Settings2 className="h-5 w-5" /> Options</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-          {options.map((opt, idx)=>(
-            <div key={idx}
-                 className="border rounded-md p-3 space-y-3 bg-muted/20"
-                 draggable
-                 onDragStart={()=>onOptionDragStart(idx)}
-                 onDragOver={(e)=>e.preventDefault()}
-                 onDrop={()=>onOptionDrop(idx)}
-            >
-              <div className="flex items-center gap-2">
-                <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                <Label className="w-20">Name</Label>
-                <div className="relative max-w-xs flex-1">
-                  <Tag className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input value={opt.name} onChange={(e)=> setOptions(prev=>{ const next=[...prev]; next[idx] = { ...next[idx], name: e.target.value }; return next; })} className="pl-8" placeholder="e.g., Color" />
-                </div>
-                <Button type="button" variant="ghost" size="icon" onClick={()=>removeOption(idx)} title="Delete option"><Trash2 className="h-4 w-4" /></Button>
-              </div>
-              <div className="space-y-2">
-                {opt.values.map((v, vidx)=>(
-                  <div key={vidx}
-                       className="flex items-center gap-2"
-                       draggable
-                       onDragStart={()=>onValueDragStart(idx, vidx)}
-                       onDragOver={(e)=>e.preventDefault()}
-                       onDrop={()=>onValueDrop(idx, vidx)}
-                  >
-                    <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                    <div className="relative max-w-[220px] w-full">
-                      <Tag className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="Value" value={v.value} onChange={(e)=> setOptions(prev=>{ const next=[...prev]; const vals=[...next[idx].values]; vals[vidx] = { ...vals[vidx], value: e.target.value }; next[idx] = { ...next[idx], values: vals }; return next; })} className="pl-8" />
-                    </div>
-                    <div className="relative w-44">
-                      <Banknote className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder={`Price Δ (${displayCurrency})`}
-                        value={convertCurrency(v.price_difference||0, 'ALL', displayCurrency)}
-                        onChange={(e)=> setOptions(prev=>{
-                          const next=[...prev];
-                          const vals=[...next[idx].values];
-                          const entered = parseFloat(e.target.value||'0');
-                          const backToALL = convertCurrency(entered, displayCurrency, 'ALL');
-                          vals[vidx] = { ...vals[vidx], price_difference: isFinite(backToALL) ? backToALL : 0 };
-                          next[idx] = { ...next[idx], values: vals };
-                          return next;
-                        })}
-                        className="pl-8"
-                      />
-                    </div>
-                    <Switch checked={v.is_active} onCheckedChange={(c)=> setOptions(prev=>{ const next=[...prev]; const vals=[...next[idx].values]; vals[vidx] = { ...vals[vidx], is_active: !!c }; next[idx] = { ...next[idx], values: vals }; return next; })} />
-                    <Label>Active</Label>
-                    <Checkbox checked={v.is_default} onCheckedChange={(c)=> setOptions(prev=>{ const next=[...prev]; const vals=next[idx].values.map((vv, i)=> ({ ...vv, is_default: i===vidx })); next[idx] = { ...next[idx], values: vals }; return next; })} />
-                    <Label>Default</Label>
-                    <Button type="button" variant="ghost" size="icon" onClick={()=>removeValue(idx, vidx)} title="Delete value"><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                ))}
-                <Button type="button" size="sm" variant="outline" onClick={()=>addValue(idx)}><Plus className="h-4 w-4 mr-1" />Add value</Button>
-              </div>
-            </div>
-          ))}
-          <Button type="button" onClick={addOption}><Plus className="h-4 w-4 mr-1" />Add option</Button>
-          <div className="text-xs text-muted-foreground">Enter price differences in ALL. Variants tab will reflect totals in {displayCurrency}.</div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/* ===================== OPTIONS TAB ===================== */}
+        <TabsContent value="options" className="mt-4">
+          <div className="space-y-4">
+            {options.length === 0 && (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                  <Settings2 className="h-10 w-10 text-muted-foreground/40 mb-3" />
+                  <h3 className="text-base font-medium mb-1">No options yet</h3>
+                  <p className="text-sm text-muted-foreground max-w-sm mb-4">
+                    Options let customers choose between different versions of your product. Add your first option to get started.
+                  </p>
+                  <Button type="button" onClick={addOption} variant="outline">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add your first option
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
-        <TabsContent value="variants">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Grid3X3 className="h-5 w-5" /> Variants</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search variants..." value={search} onChange={(e)=>setSearch(e.target.value)} className="pl-8 w-64" />
-            </div>
-            <div className="flex items-center gap-2">
-              <Label>Group by</Label>
-              <Select value={groupBy} onValueChange={setGroupBy as any}>
-                <SelectTrigger className="w-40"><SelectValue placeholder="None" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {activeOptionNames.map(n=> (<SelectItem key={n} value={n}>{n}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Label>Sort</Label>
-              <Select value={sortKey} onValueChange={(v)=> setSortKey(v as SortKey)}>
-                <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="inventory">Inventory</SelectItem>
-                  <SelectItem value="price">Price</SelectItem>
-                  <SelectItem value="sku">SKU</SelectItem>
-                  {activeOptionNames.map(n=> (<SelectItem key={`opt:${n}`} value={`opt:${n}`}>By {n}</SelectItem>))}
-                </SelectContent>
-              </Select>
-              <Select value={sortDir} onValueChange={(v)=> setSortDir(v as 'asc'|'desc')}>
-                <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="asc">Asc</SelectItem>
-                  <SelectItem value="desc">Desc</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {Object.values(selected).some(Boolean) && (
-              <div className="ml-auto flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={()=>bulkSet({ is_active: true })}>Activate</Button>
-                <Button variant="outline" size="sm" onClick={()=>bulkSet({ is_active: false })}>Deactivate</Button>
-                <Button variant="outline" size="sm" onClick={()=>bulkSet({ inventory: 0 })}>Set Inv 0</Button>
-              </div>
+            {options.map((opt, idx) => (
+              <Card
+                key={idx}
+                className="overflow-hidden"
+                draggable
+                onDragStart={() => onOptionDragStart(idx)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => onOptionDrop(idx)}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab shrink-0" />
+                    <div className="flex-1 space-y-1">
+                      <Label htmlFor={`opt-name-${idx}`} className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Option name
+                      </Label>
+                      <div className="relative max-w-sm">
+                        <Tag className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id={`opt-name-${idx}`}
+                          value={opt.name}
+                          onChange={(e) => setOptions(prev => {
+                            const next = [...prev];
+                            next[idx] = { ...next[idx], name: e.target.value };
+                            return next;
+                          })}
+                          className="pl-9"
+                          placeholder="e.g., Color, Size, Material"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Values customers can choose from (e.g., Red, Blue, Green)
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeOption(idx)}
+                      title="Delete option"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="pt-0">
+                  {opt.values.length === 0 ? (
+                    <div className="rounded-md border border-dashed p-6 text-center">
+                      <p className="text-sm text-muted-foreground mb-3">No values yet. Add values like "Small", "Medium", "Large".</p>
+                      <Button type="button" size="sm" variant="outline" onClick={() => addValue(idx)}>
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add first value
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {opt.values.map((v, vidx) => (
+                        <div
+                          key={vidx}
+                          className="rounded-lg border bg-card p-3 transition-colors hover:bg-muted/30"
+                          draggable
+                          onDragStart={() => onValueDragStart(idx, vidx)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={() => onValueDrop(idx, vidx)}
+                        >
+                          <div className="flex items-start gap-3">
+                            <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab mt-2.5 shrink-0" />
+
+                            {/* Value name */}
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <Label className="text-xs text-muted-foreground">Value</Label>
+                              <Input
+                                placeholder="e.g., Red, Large, Cotton"
+                                value={v.value}
+                                onChange={(e) => setOptions(prev => {
+                                  const next = [...prev];
+                                  const vals = [...next[idx].values];
+                                  vals[vidx] = { ...vals[vidx], value: e.target.value };
+                                  next[idx] = { ...next[idx], values: vals };
+                                  return next;
+                                })}
+                              />
+                            </div>
+
+                            {/* Price adjustment */}
+                            <div className="w-36 space-y-1 shrink-0">
+                              <Label className="text-xs text-muted-foreground">Price adjustment</Label>
+                              <div className="relative">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+                                  {currencySymbol}
+                                </span>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="0.00"
+                                  value={convertCurrency(v.price_difference || 0, 'ALL', displayCurrency)}
+                                  onChange={(e) => setOptions(prev => {
+                                    const next = [...prev];
+                                    const vals = [...next[idx].values];
+                                    const entered = parseFloat(e.target.value || '0');
+                                    const backToALL = convertCurrency(entered, displayCurrency, 'ALL');
+                                    vals[vidx] = { ...vals[vidx], price_difference: isFinite(backToALL) ? backToALL : 0 };
+                                    next[idx] = { ...next[idx], values: vals };
+                                    return next;
+                                  })}
+                                  className="pl-8"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Inventory */}
+                            <div className="w-24 space-y-1 shrink-0">
+                              <Label className="text-xs text-muted-foreground">Inventory</Label>
+                              <Input
+                                type="number"
+                                min={0}
+                                placeholder="0"
+                                value={v.inventory ?? 0}
+                                onChange={(e) => setOptions(prev => {
+                                  const next = [...prev];
+                                  const vals = [...next[idx].values];
+                                  vals[vidx] = { ...vals[vidx], inventory: parseInt(e.target.value || '0', 10) };
+                                  next[idx] = { ...next[idx], values: vals };
+                                  return next;
+                                })}
+                              />
+                            </div>
+
+                            {/* Controls */}
+                            <div className="flex items-end gap-3 pb-0.5 shrink-0">
+                              <div className="flex flex-col items-center gap-1">
+                                <Label className="text-xs text-muted-foreground">Active</Label>
+                                <Switch
+                                  checked={v.is_active}
+                                  onCheckedChange={(c) => setOptions(prev => {
+                                    const next = [...prev];
+                                    const vals = [...next[idx].values];
+                                    vals[vidx] = { ...vals[vidx], is_active: !!c };
+                                    next[idx] = { ...next[idx], values: vals };
+                                    return next;
+                                  })}
+                                />
+                              </div>
+                              <div className="flex flex-col items-center gap-1">
+                                <Label className="text-xs text-muted-foreground">Default</Label>
+                                <Checkbox
+                                  checked={v.is_default}
+                                  onCheckedChange={(c) => setOptions(prev => {
+                                    const next = [...prev];
+                                    const vals = next[idx].values.map((vv, i) => ({ ...vv, is_default: i === vidx }));
+                                    next[idx] = { ...next[idx], values: vals };
+                                    return next;
+                                  })}
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeValue(idx, vidx)}
+                                title="Delete value"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      <Button type="button" size="sm" variant="outline" onClick={() => addValue(idx)} className="mt-2">
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add value
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+
+            {/* Add option card */}
+            {options.length > 0 && (
+              <button
+                type="button"
+                onClick={addOption}
+                className="w-full rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 p-6 text-center transition-colors group"
+              >
+                <Plus className="h-6 w-6 text-muted-foreground/50 group-hover:text-muted-foreground mx-auto mb-2 transition-colors" />
+                <span className="block text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                  Add Option
+                </span>
+                <span className="block text-xs text-muted-foreground/70 mt-1">
+                  Add a new customer-selectable option like Color, Size, or Material
+                </span>
+              </button>
             )}
           </div>
+        </TabsContent>
 
-          <div className="overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10"><Checkbox checked={filtered.length>0 && filtered.every(r=>selected[r.combination_key])} onCheckedChange={(c)=>toggleSelectAll(!!c)} /></TableHead>
-                  {activeOptionNames.map(n=> (<TableHead key={n} className="whitespace-nowrap">{n}</TableHead>))}
-                  <TableHead className="whitespace-nowrap"><Package className="inline h-4 w-4 mr-1" />Inventory</TableHead>
-                  <TableHead className="whitespace-nowrap"><Banknote className="inline h-4 w-4 mr-1" />Price</TableHead>
-                  <TableHead className="whitespace-nowrap"><Tag className="inline h-4 w-4 mr-1" />SKU</TableHead>
-                  <TableHead className="whitespace-nowrap">Active</TableHead>
-                  <TableHead className="whitespace-nowrap">Default</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(groupBy !== 'none' ? Array.from(new Map<string, VariantRow[]>(sorted.map(r=> [r.option_values[groupBy]||'—', []])).keys()) : [null]).flatMap(groupVal => {
-                  const groupRows = groupBy === 'none' ? sorted : sorted.filter(r => (r.option_values[groupBy]||'—') === groupVal);
-                  const headerRow = groupBy === 'none' ? null : (
-                    <TableRow key={`g-${groupVal}`} className="bg-muted/40">
-                      <TableCell colSpan={activeOptionNames.length + 6} className="font-semibold">{groupBy}: <span className="capitalize">{groupVal}</span> <Badge variant="secondary" className="ml-2">{groupRows.length}</Badge></TableCell>
-                    </TableRow>
-                  );
-                  const bodyRows = groupRows.map((r)=>{
-                  const priceDisp = rowDisplayPrice(r);
-                  return (
-                    <TableRow key={r.combination_key}>
-                      <TableCell className="w-10"><Checkbox checked={!!selected[r.combination_key]} onCheckedChange={(c)=> setSelected(prev=>({ ...prev, [r.combination_key]: !!c }))} /></TableCell>
-                      {activeOptionNames.map(n=> (<TableCell key={n} className="capitalize">{r.option_values[n]}</TableCell>))}
-                      <TableCell className="w-[110px]"><Input type="number" min={0} value={r.inventory} onChange={(e)=>{ const val=parseInt(e.target.value||'0',10); setVariants(prev=>{ const next=[...prev]; const i=next.findIndex(v=>v.combination_key===r.combination_key); if(i>=0) next[i]={...next[i], inventory: val}; else next.push({...r, inventory: val}); return next; }); }} /></TableCell>
-                      <TableCell className="w-[160px] font-medium">{formatCurrency(priceDisp, displayCurrency)}</TableCell>
-                      <TableCell className="w-[180px]"><Input value={r.sku||''} onChange={(e)=>{ const val=e.target.value; setVariants(prev=>{ const next=[...prev]; const i=next.findIndex(v=>v.combination_key===r.combination_key); if(i>=0) next[i]={...next[i], sku: val}; else next.push({...r, sku: val}); return next; }); }} placeholder="SKU" /></TableCell>
-                      <TableCell className="w-[90px]"><Switch checked={r.is_active} onCheckedChange={(c)=> setVariants(prev=>{ const next=[...prev]; const i=next.findIndex(v=>v.combination_key===r.combination_key); if(i>=0) next[i]={...next[i], is_active: !!c}; else next.push({...r, is_active: !!c}); return next; })} /></TableCell>
-                      <TableCell className="w-[120px]"><Checkbox checked={r.is_default} onCheckedChange={(c)=> setVariants(prev=>{ // unique default
-                        const next = rows.map(x=> ({ ...x, is_default: x.combination_key===r.combination_key })); return next; })} /></TableCell>
-                    </TableRow>
-                  );
-                  });
-                  return [headerRow, ...bodyRows].filter(Boolean) as React.ReactNode[];
-                })}
-              </TableBody>
-            </Table>
-          </div>
-          <div className="text-xs text-muted-foreground">Price shown = Base + option diffs (+ variant-specific diff if any), converted to {displayCurrency}.</div>
+        {/* ===================== VARIANTS TAB ===================== */}
+        <TabsContent value="variants" className="mt-4">
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              {rows.length === 0 ? (
+                /* Empty state */
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Grid3X3 className="h-10 w-10 text-muted-foreground/40 mb-3" />
+                  <h3 className="text-base font-medium mb-1">No variants yet</h3>
+                  <p className="text-sm text-muted-foreground max-w-sm">
+                    Add at least one option with values to generate variants. Each combination of option values becomes a variant.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Compact toolbar */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="relative flex-1 min-w-[180px] max-w-xs">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input placeholder="Search variants..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-9 text-sm" />
+                    </div>
+                    <Select value={groupBy} onValueChange={setGroupBy as any}>
+                      <SelectTrigger className="w-32 h-9 text-sm">
+                        <SelectValue placeholder="Group by" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No grouping</SelectItem>
+                        {activeOptionNames.map(n => (<SelectItem key={n} value={n}>Group: {n}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+                      <SelectTrigger className="w-32 h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="inventory">Sort: Inventory</SelectItem>
+                        <SelectItem value="price">Sort: Price</SelectItem>
+                        <SelectItem value="sku">Sort: SKU</SelectItem>
+                        {activeOptionNames.map(n => (<SelectItem key={`opt:${n}`} value={`opt:${n}`}>Sort: {n}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={sortDir} onValueChange={(v) => setSortDir(v as 'asc' | 'desc')}>
+                      <SelectTrigger className="w-20 h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="asc">Asc</SelectItem>
+                        <SelectItem value="desc">Desc</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" size="sm" onClick={regenerateVariants} title="Regenerate variants from current options" className="h-9">
+                      <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                      Regenerate
+                    </Button>
+
+                    {Object.values(selected).some(Boolean) && (
+                      <div className="ml-auto flex items-center gap-1.5">
+                        <Button variant="outline" size="sm" className="h-9" onClick={() => bulkSet({ is_active: true })}>Activate</Button>
+                        <Button variant="outline" size="sm" className="h-9" onClick={() => bulkSet({ is_active: false })}>Deactivate</Button>
+                        <Button variant="outline" size="sm" className="h-9" onClick={() => bulkSet({ inventory: 0 })}>Set Inv 0</Button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10"><Checkbox checked={filtered.length > 0 && filtered.every(r => selected[r.combination_key])} onCheckedChange={(c) => toggleSelectAll(!!c)} /></TableHead>
+                          {activeOptionNames.map(n => (<TableHead key={n} className="whitespace-nowrap">{n}</TableHead>))}
+                          <TableHead className="whitespace-nowrap"><Package className="inline h-4 w-4 mr-1" />Inventory</TableHead>
+                          <TableHead className="whitespace-nowrap"><Banknote className="inline h-4 w-4 mr-1" />Price</TableHead>
+                          <TableHead className="whitespace-nowrap"><Tag className="inline h-4 w-4 mr-1" />SKU</TableHead>
+                          <TableHead className="whitespace-nowrap">Active</TableHead>
+                          <TableHead className="whitespace-nowrap">Default</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(groupBy !== 'none' ? Array.from(new Map<string, VariantRow[]>(sorted.map(r => [r.option_values[groupBy] || '\u2014', []])).keys()) : [null]).flatMap(groupVal => {
+                          const groupRows = groupBy === 'none' ? sorted : sorted.filter(r => (r.option_values[groupBy] || '\u2014') === groupVal);
+                          const headerRow = groupBy === 'none' ? null : (
+                            <TableRow key={`g-${groupVal}`} className="bg-muted/40">
+                              <TableCell colSpan={activeOptionNames.length + 6} className="font-semibold">{groupBy}: <span className="capitalize">{groupVal}</span> <Badge variant="secondary" className="ml-2">{groupRows.length}</Badge></TableCell>
+                            </TableRow>
+                          );
+                          const bodyRows = groupRows.map((r) => {
+                            const priceDisp = rowDisplayPrice(r);
+                            return (
+                              <TableRow key={r.combination_key}>
+                                <TableCell className="w-10"><Checkbox checked={!!selected[r.combination_key]} onCheckedChange={(c) => setSelected(prev => ({ ...prev, [r.combination_key]: !!c }))} /></TableCell>
+                                {activeOptionNames.map(n => (<TableCell key={n} className="capitalize">{r.option_values[n]}</TableCell>))}
+                                <TableCell className="w-[110px]"><Input type="number" min={0} value={r.inventory} onChange={(e) => { const val = parseInt(e.target.value || '0', 10); setVariants(prev => { const next = [...prev]; const i = next.findIndex(v => v.combination_key === r.combination_key); if (i >= 0) next[i] = { ...next[i], inventory: val }; else next.push({ ...r, inventory: val }); return next; }); }} /></TableCell>
+                                <TableCell className="w-[160px] font-medium">{formatCurrency(priceDisp, displayCurrency)}</TableCell>
+                                <TableCell className="w-[180px]"><Input value={r.sku || ''} onChange={(e) => { const val = e.target.value; setVariants(prev => { const next = [...prev]; const i = next.findIndex(v => v.combination_key === r.combination_key); if (i >= 0) next[i] = { ...next[i], sku: val }; else next.push({ ...r, sku: val }); return next; }); }} placeholder="SKU" /></TableCell>
+                                <TableCell className="w-[90px]"><Switch checked={r.is_active} onCheckedChange={(c) => setVariants(prev => { const next = [...prev]; const i = next.findIndex(v => v.combination_key === r.combination_key); if (i >= 0) next[i] = { ...next[i], is_active: !!c }; else next.push({ ...r, is_active: !!c }); return next; })} /></TableCell>
+                                <TableCell className="w-[120px]"><Checkbox checked={r.is_default} onCheckedChange={(c) => setVariants(prev => { // unique default
+                                  const next = rows.map(x => ({ ...x, is_default: x.combination_key === r.combination_key })); return next;
+                                })} /></TableCell>
+                              </TableRow>
+                            );
+                          });
+                          return [headerRow, ...bodyRows].filter(Boolean) as React.ReactNode[];
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Price shown = Base + option price adjustments, converted to {displayCurrency}.
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
