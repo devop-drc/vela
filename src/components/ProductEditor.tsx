@@ -67,7 +67,22 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mediaItems, setMediaItems] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [specs, setSpecs] = useState<any[]>([]);
   const { shopDetails, convertCurrency } = useShop();
+
+  // Fetch specs when product loads
+  useEffect(() => {
+    if (product?.id) {
+      supabase
+        .from('product_specifications')
+        .select('*')
+        .eq('product_id', product.id)
+        .order('display_order')
+        .then(({ data }) => {
+          if (data) setSpecs(data);
+        });
+    }
+  }, [product?.id]);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -220,6 +235,8 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
                   isEditing={isEditing}
                   setMediaItems={setMediaItems}
                   setIsSubmitting={setIsSubmitting}
+                  specs={specs}
+                  setSpecs={setSpecs}
                 />
               </FormProvider>
             ) : (

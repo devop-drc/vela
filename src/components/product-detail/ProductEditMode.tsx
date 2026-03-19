@@ -139,7 +139,7 @@ const AttributeInput = ({ control, fieldName, inputType }: any) => {
   }
 };
 
-export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, onClose, onUpdate, isSubmitting, setIsSubmitting }: any) => {
+export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, onClose, onUpdate, isSubmitting, setIsSubmitting, specs, setSpecs }: any) => {
     const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
     const { shopDetails, convertCurrency } = useShop();
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
@@ -269,9 +269,51 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             return next;
         });
     };
-    const handleReanalyze = async () => {
+    const handleFindSpecs = async () => {
         setIsReanalyzing(true);
         const toastId = toast.loading("Finding specs with AI...");
+        try {
+            if (!product?.id) throw new Error("Please save the product before analyzing so variants can be created.");
+            const { data: { user } = {} } = await supabase.auth.getUser();
+            if (!user) throw new Error("User not authenticated.");
+
+            const { data, error } = await supabase.functions.invoke('find-product-specs', {
+              body: {
+                product_id: product.id,
+                product_name: product.name || getValues('name'),
+                category: product.category || getValues('category'),
+                type: product.details?.type || getValues('details.type'),
+                user_id: user.id,
+                caption: product.caption || getValues('caption'),
+                force_search: false
+              }
+            });
+
+            if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+
+            if (data?.specifications?.length > 0) {
+              // Refresh specs from DB
+              const { data: refreshed } = await supabase
+                .from('product_specifications')
+                .select('*')
+                .eq('product_id', product.id)
+                .order('display_order');
+              if (refreshed) setSpecs(refreshed);
+              toast.success(`Found ${data.specifications.length} specs (source: ${data.source})`, { id: toastId });
+            } else {
+              toast.success('No additional specifications found', { id: toastId });
+            }
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to find specs', { id: toastId });
+        } finally {
+            setIsReanalyzing(false);
+        }
+    };
+
+    const handleReanalyze = async () => {
+        setIsReanalyzing(true);
+        const toastId = toast.loading("Analyzing product with AI...");
         try {
             let caption = getValues('caption');
             const name = getValues('name');
@@ -291,7 +333,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             if (!caption && !detailsSnippet) throw new Error("Please provide a description or some details for the AI to analyze.");
             const { data: { user } = {} } = await supabase.auth.getUser();
             if (!user) throw new Error("User not authenticated.");
-            
+
             const mergedCaption = `${name ? name + '. ' : ''}${caption ?? ''}${detailsSnippet}`.trim();
             const { data: analysis, error } = await supabase.functions.invoke('ai-product-classifier', { body: { caption: mergedCaption, user_id: user.id } });
             if (error) throw error;
@@ -310,20 +352,20 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
               if (typeof onUpdate === 'function') onUpdate();
               return;
             }
-            
+
             // Update core fields
             if (analysis.categoryName) setValue('category', analysis.categoryName, { shouldDirty: true });
             if (analysis.typeName) setValue('details.type', analysis.typeName, { shouldDirty: true });
-            
+
             // Update specifications
             const newDetails: { [key: string]: any } = { type: analysis.typeName };
-            
+
             if (analysis.specifications) {
                 for (const [key, value] of Object.entries(analysis.specifications)) {
                     newDetails[key] = value;
                 }
             }
-            
+
             // Update the form's details object (excluding options_v2)
             const currentDetails = getValues('details');
             setValue('details', { ...currentDetails, ...newDetails }, { shouldDirty: true });
@@ -427,13 +469,27 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 product_type: data.product_type,
               }).eq('id', product.id);
 
-            if (updateError) { 
+            if (updateError) {
                 error = updateError;
-                showError(`Failed to update product: ${error.message}`); 
-                console.error("ProductEditor: Error updating product:", error); 
-            } 
-            else { 
-                showSuccess("Product updated successfully!"); 
+                showError(`Failed to update product: ${error.message}`);
+                console.error("ProductEditor: Error updating product:", error);
+            }
+            else {
+                // Save edited specs to product_specifications table
+                if (specs && specs.length > 0) {
+                  for (let i = 0; i < specs.length; i++) {
+                    const spec = specs[i];
+                    await supabase.from('product_specifications').upsert({
+                      product_id: product.id,
+                      user_id: product.user_id,
+                      key: spec.key,
+                      value: spec.value,
+                      unit: spec.unit || null,
+                      display_order: i
+                    }, { onConflict: 'product_id,key' });
+                  }
+                }
+                showSuccess("Product updated successfully!");
                 if (onUpdate) onUpdate(); // Call onUpdate
             }
         } catch (e: any) {
@@ -572,20 +628,54 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 </div>
               </div>
               
-              {/* Specifications (Fixed Details) */}
+              {/* Specifications (from product_specifications table) */}
+              <Card>
+                <CardHeader>
+                  <CardTitleComponent className="text-base flex items-center justify-between">
+                    <span className="flex items-center gap-2"><Settings className="h-5 w-5" /> Specifications</span>
+                    <Button type="button" variant="outline" size="sm" onClick={handleFindSpecs} disabled={isReanalyzing}>
+                      {isReanalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-amber-400" />}Find specs with AI
+                    </Button>
+                  </CardTitleComponent>
+                </CardHeader>
+                <CardContent>
+                  {specs && specs.length > 0 ? (
+                    <div className="grid gap-2">
+                      {specs.map((spec: any) => (
+                        <div key={spec.id || spec.key} className="flex items-center gap-2 text-sm">
+                          <span className="text-muted-foreground capitalize min-w-[120px]">{spec.key.replace(/_/g, ' ')}</span>
+                          <Input
+                            value={spec.value}
+                            onChange={(e) => {
+                              const updated = specs.map((s: any) => s.key === spec.key ? { ...s, value: e.target.value } : s);
+                              setSpecs(updated);
+                            }}
+                            className="h-8 text-sm"
+                          />
+                          {spec.unit && <span className="text-xs text-muted-foreground">{spec.unit}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No specifications yet. Click "Find specs with AI" to populate.</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Legacy Specifications (from details JSONB) */}
               {specificationsToRender.length > 0 && (
                 <Card>
                   <CardHeader>
-                    <CardTitleComponent className="text-base flex items-center gap-2">
-                      <Settings className="h-5 w-5" /> Specifications
-                    <Button type="button" variant="outline" onClick={handleReanalyze} disabled={isReanalyzing}>
-                      {isReanalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-amber-400" />}Find specs with AI
-                    </Button>
+                    <CardTitleComponent className="text-base flex items-center justify-between">
+                      <span className="flex items-center gap-2"><Settings className="h-5 w-5" /> Details</span>
+                      <Button type="button" variant="outline" size="sm" onClick={handleReanalyze} disabled={isReanalyzing}>
+                        {isReanalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-amber-400" />}Analyze with AI
+                      </Button>
                     </CardTitleComponent>
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {specificationsToRender.map((attr: any) => {
-                      if (!attr || !attr.name) return null; // Added null check guard
+                      if (!attr || !attr.name) return null;
                       const Icon = getAttributeIcon(attr.name);
                       return (
                         <div key={attr.name} className="space-y-2">
