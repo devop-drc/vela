@@ -383,13 +383,17 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                   </Button>
                 </div>
                 {specs && specs.length > 0 ? (
-                  <div className="rounded-lg border overflow-hidden">
+                  <div className="space-y-2">
+                    {/* Column labels */}
+                    <div className="grid grid-cols-[1fr_1.5fr_70px_28px] gap-2 px-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                      <span>Attribute</span><span>Value</span><span>Unit</span><span></span>
+                    </div>
                     {specs.map((spec: any, idx: number) => (
-                      <div key={spec.id || idx} className={cn("grid grid-cols-[1fr_1.5fr_70px_28px] items-center gap-1.5 px-2 py-1.5", idx % 2 === 0 ? "bg-muted/30" : "bg-card")}>
-                        <Input value={spec.key} placeholder="e.g. material" onChange={(e) => setSpecs(specs.map((s: any, i: number) => i === idx ? { ...s, key: e.target.value } : s))} className="h-7 text-xs border-0 bg-transparent capitalize focus-visible:ring-1 px-2" />
-                        <Input value={spec.value} placeholder="e.g. Cotton" onChange={(e) => setSpecs(specs.map((s: any, i: number) => i === idx ? { ...s, value: e.target.value } : s))} className="h-7 text-xs border-0 bg-transparent focus-visible:ring-1 px-2" />
-                        <Input value={spec.unit || ''} placeholder="unit" onChange={(e) => setSpecs(specs.map((s: any, i: number) => i === idx ? { ...s, unit: e.target.value } : s))} className="h-7 text-[10px] border-0 bg-transparent text-muted-foreground focus-visible:ring-1 px-2" />
-                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground/50 hover:text-destructive" onClick={() => setSpecs(specs.filter((_: any, i: number) => i !== idx))}><Trash2 className="h-3 w-3" /></Button>
+                      <div key={spec.id || idx} className="grid grid-cols-[1fr_1.5fr_70px_28px] items-center gap-2">
+                        <Input value={spec.key} placeholder="e.g. material" onChange={(e) => setSpecs(specs.map((s: any, i: number) => i === idx ? { ...s, key: e.target.value } : s))} className="h-8 text-sm capitalize" />
+                        <Input value={spec.value} placeholder="e.g. Cotton" onChange={(e) => setSpecs(specs.map((s: any, i: number) => i === idx ? { ...s, value: e.target.value } : s))} className="h-8 text-sm" />
+                        <Input value={spec.unit || ''} placeholder="g, mm..." onChange={(e) => setSpecs(specs.map((s: any, i: number) => i === idx ? { ...s, unit: e.target.value } : s))} className="h-8 text-xs text-muted-foreground" />
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setSpecs(specs.filter((_: any, i: number) => i !== idx))}><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     ))}
                   </div>
@@ -399,8 +403,8 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     <p className="text-xs text-muted-foreground/60 mt-1">Click "Find with AI" or add manually below</p>
                   </div>
                 )}
-                <Button type="button" variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => setSpecs([...(specs || []), { key: '', value: '', unit: '' }])}>
-                  <PlusCircle className="mr-1.5 h-3 w-3" />Add specification
+                <Button type="button" variant="outline" size="sm" className="h-8 text-xs w-full border-dashed" onClick={() => setSpecs([...(specs || []), { key: '', value: '', unit: '' }])}>
+                  <PlusCircle className="mr-1.5 h-3.5 w-3.5" />Add specification
                 </Button>
               </div>
 
