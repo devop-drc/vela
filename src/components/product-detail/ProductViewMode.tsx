@@ -4,8 +4,9 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Package, Settings, Loader2, Wrench, Layers, Tag, ChevronRight } from "lucide-react";
-import { DialogFooter } from "../ui/dialog";
+import { Edit, Trash2, Package, Settings, Loader2, Wrench, Layers, Tag, ChevronRight, Save } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
+import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { MediaItem } from "../MediaItem";
@@ -21,6 +22,9 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
   const [options, setOptions] = useState<any[]>([]);
   const [variants, setVariants] = useState<any[]>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(true);
+  const [stockModalOpen, setStockModalOpen] = useState(false);
+  const [stockEdits, setStockEdits] = useState<Record<string, number>>({});
+  const [isSavingStock, setIsSavingStock] = useState(false);
 
   const currencyCode = shopDetails?.currency || 'USD';
 
@@ -189,17 +193,26 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
           {/* Variants */}
           {hasVariants && (
             <div>
-              <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
-                <Layers className="h-4 w-4" />
-                Variants
-                <Badge variant="secondary" className="text-[10px] ml-1">{variants.length}</Badge>
-              </h3>
-              <div className="space-y-2">
-                {variants.slice(0, 16).map((v: any) => {
-                  // Use option_values JSONB, or parse from combination_key as fallback
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Layers className="h-4 w-4" />
+                  Variants
+                  <Badge variant="secondary" className="text-[10px]">{variants.length}</Badge>
+                </h3>
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setStockModalOpen(true)}>
+                  <Package className="mr-1.5 h-3 w-3" />Manage Stock
+                </Button>
+              </div>
+              <div className="rounded-lg border overflow-hidden">
+                {/* Header */}
+                <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2 bg-muted/50 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                  <span>Variant</span>
+                  <span className="w-24 text-right">Price</span>
+                  <span className="w-28 text-right">Stock</span>
+                </div>
+                {variants.slice(0, 20).map((v: any, i: number) => {
                   let optVals = v.option_values || {};
                   if (Object.keys(optVals).length === 0 && v.combination_key) {
-                    // Parse "Color=Red|Size=M" format
                     v.combination_key.split('|').forEach((part: string) => {
                       const [key, val] = part.split('=');
                       if (key && val) optVals[key] = val;
@@ -208,43 +221,44 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   const totalPriceALL = (product.price || 0) + (v.price_difference || 0);
                   const displayTotal = convertCurrency(totalPriceALL, 'ALL', currencyCode);
                   const isOOS = v.inventory <= 0;
+                  const isLow = v.inventory > 0 && v.inventory <= 5;
                   return (
-                    <div key={v.id} className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg border",
-                      isOOS ? "bg-muted/30 opacity-60" : "bg-card"
+                    <div key={v.id || i} className={cn(
+                      "grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2.5 items-center",
+                      i % 2 === 0 ? "bg-card" : "bg-muted/20",
+                      isOOS && "opacity-50"
                     )}>
-                      {/* Option badges with type labels */}
-                      <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
+                      <div className="flex flex-wrap gap-1.5 items-center min-w-0">
                         {Object.entries(optVals).map(([optName, optVal]) => (
-                          <Badge key={optName} variant="outline" className="text-xs font-normal gap-1">
-                            <span className="text-muted-foreground">{optName}:</span>
-                            <span className="font-medium">{String(optVal)}</span>
-                          </Badge>
+                          <span key={optName} className="inline-flex items-center text-xs">
+                            <span className="text-muted-foreground/70 mr-1">{optName}:</span>
+                            <span className="font-medium bg-muted/60 px-1.5 py-0.5 rounded">{String(optVal)}</span>
+                          </span>
                         ))}
+                        {v.sku && <span className="text-[10px] text-muted-foreground/40 ml-1">{v.sku}</span>}
                       </div>
-                      {/* Price */}
-                      <span className={cn("text-sm font-semibold whitespace-nowrap", isOOS && "line-through")}>
+                      <span className={cn("w-24 text-right text-sm font-medium tabular-nums", isOOS && "line-through")}>
                         {formatCurrency(displayTotal, currencyCode)}
                       </span>
-                      {/* Stock */}
-                      <span className={cn(
-                        "text-xs whitespace-nowrap flex items-center gap-1",
-                        isOOS ? "text-destructive" : v.inventory <= 5 ? "text-amber-600" : "text-muted-foreground"
-                      )}>
+                      <button
+                        onClick={() => setStockModalOpen(true)}
+                        className={cn(
+                          "w-28 text-right text-xs font-medium flex items-center justify-end gap-1 rounded px-2 py-1 transition-colors cursor-pointer",
+                          isOOS ? "text-destructive bg-destructive/10 hover:bg-destructive/20" :
+                          isLow ? "text-amber-600 bg-amber-50 hover:bg-amber-100" :
+                          "text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
+                        )}
+                      >
                         <Package className="h-3 w-3" />
-                        {isOOS ? 'Out of stock' : `${v.inventory} in stock`}
-                      </span>
-                      {/* SKU */}
-                      {v.sku && <span className="text-[10px] text-muted-foreground/50 whitespace-nowrap hidden sm:block">{v.sku}</span>}
+                        {isOOS ? 'Out of stock' : isLow ? `${v.inventory} low` : `${v.inventory} in stock`}
+                      </button>
                     </div>
                   );
                 })}
-                {variants.length > 16 && (
-                  <p className="text-xs text-muted-foreground text-center py-2">
-                    +{variants.length - 16} more variants
-                  </p>
-                )}
               </div>
+              {variants.length > 20 && (
+                <p className="text-xs text-muted-foreground text-center py-2">+{variants.length - 20} more variants</p>
+              )}
             </div>
           )}
 
@@ -260,6 +274,91 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
         <Button variant="outline" onClick={onEdit} disabled={isSubmitting}><Edit className="mr-2 h-4 w-4" />Edit</Button>
         <Button variant="destructive" onClick={onDelete} disabled={isSubmitting}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>
       </DialogFooter>
+
+      {/* Stock Management Modal */}
+      <Dialog open={stockModalOpen} onOpenChange={setStockModalOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Manage Variant Stock
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1 -mx-6 px-6">
+            <div className="space-y-1">
+              {variants.map((v: any, i: number) => {
+                let optVals = v.option_values || {};
+                if (Object.keys(optVals).length === 0 && v.combination_key) {
+                  v.combination_key.split('|').forEach((part: string) => {
+                    const [key, val] = part.split('=');
+                    if (key && val) optVals[key] = val;
+                  });
+                }
+                const currentStock = stockEdits[v.id] ?? v.inventory;
+                const isOOS = currentStock <= 0;
+                return (
+                  <div key={v.id || i} className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg",
+                    i % 2 === 0 ? "bg-muted/30" : ""
+                  )}>
+                    <div className="flex flex-wrap gap-1 flex-1 min-w-0">
+                      {Object.entries(optVals).map(([k, val]) => (
+                        <span key={k} className="text-xs">
+                          <span className="text-muted-foreground/60">{k}: </span>
+                          <span className="font-medium">{String(val)}</span>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button" variant="outline" size="icon" className="h-7 w-7"
+                        onClick={() => setStockEdits(prev => ({ ...prev, [v.id]: Math.max(0, (prev[v.id] ?? v.inventory) - 1) }))}
+                      >-</Button>
+                      <Input
+                        type="number" min={0}
+                        value={currentStock}
+                        onChange={(e) => setStockEdits(prev => ({ ...prev, [v.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        className="h-7 w-16 text-center text-sm tabular-nums"
+                      />
+                      <Button
+                        type="button" variant="outline" size="icon" className="h-7 w-7"
+                        onClick={() => setStockEdits(prev => ({ ...prev, [v.id]: (prev[v.id] ?? v.inventory) + 1 }))}
+                      >+</Button>
+                    </div>
+                    <span className={cn("text-[10px] w-14 text-right", isOOS ? "text-destructive" : "text-muted-foreground")}>
+                      {isOOS ? 'OOS' : `${currentStock} pcs`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+          <DialogFooter className="pt-3 border-t">
+            <Button variant="outline" onClick={() => { setStockEdits({}); setStockModalOpen(false); }}>Cancel</Button>
+            <Button
+              disabled={isSavingStock || Object.keys(stockEdits).length === 0}
+              onClick={async () => {
+                setIsSavingStock(true);
+                try {
+                  const updates = Object.entries(stockEdits).map(([id, inventory]) =>
+                    supabase.from('product_variants').update({ inventory }).eq('id', id)
+                  );
+                  await Promise.all(updates);
+                  setVariants(prev => prev.map(v => stockEdits[v.id] !== undefined ? { ...v, inventory: stockEdits[v.id] } : v));
+                  setStockEdits({});
+                  setStockModalOpen(false);
+                } catch (e: any) {
+                  showError('Failed to update stock: ' + (e.message || e));
+                }
+                setIsSavingStock(false);
+              }}
+            >
+              {isSavingStock ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Save Stock
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };
