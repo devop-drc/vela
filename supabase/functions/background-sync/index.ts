@@ -130,7 +130,7 @@ const upsertProductOption = async (supabase: SupabaseClient, productId: string, 
   return inserted!.id;
 };
 
-const upsertOptionValue = async (supabase: SupabaseClient, optionId: string, value: string) => {
+const upsertOptionValue = async (supabase: SupabaseClient, optionId: string, value: string, priceDifference: number = 0, inventory: number = 10) => {
   const val = String(value).trim();
   const { data: existing, error: selErr } = await supabase
     .from('option_values')
@@ -142,7 +142,7 @@ const upsertOptionValue = async (supabase: SupabaseClient, optionId: string, val
   if (existing) return existing.id;
   const { data: inserted, error: insErr } = await supabase
     .from('option_values')
-    .insert({ option_id: optionId, value: val, is_active: true })
+    .insert({ option_id: optionId, value: val, is_active: true, price_difference: priceDifference, inventory })
     .select('id')
     .single();
   if (insErr) throw insErr;
@@ -184,8 +184,19 @@ const upsertVariantsFromOptions = async (supabase: SupabaseClient, productId: st
     const ids: string[] = [];
     const labels: string[] = [];
     for (const raw of values) {
-      const val = String(raw).trim();
-      const id = await upsertOptionValue(supabase, optionIds[i], val);
+      let val: string;
+      let priceDiff = 0;
+      let optInventory = 10;
+
+      if (typeof raw === 'object' && raw !== null) {
+        val = String(raw.value || raw).trim();
+        priceDiff = raw.price_difference || 0;
+        optInventory = raw.inventory || 10;
+      } else {
+        val = String(raw).trim();
+      }
+
+      const id = await upsertOptionValue(supabase, optionIds[i], val, priceDiff, optInventory);
       ids.push(id);
       labels.push(val);
     }
@@ -338,7 +349,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         const extractedName = extractProductName(post.caption || null);
 
         let usedGlobalIntelligence = false;
-        if (heuristicResult && extractedName) {
+        if (heuristicResult && extractedName && heuristicResult.productName && typeof heuristicResult.price === 'number' && heuristicResult.currency) {
           const normalized = normalizeProductName(extractedName);
           const { data: globalMatch } = await supabaseAdmin
             .from('global_product_intelligence')
@@ -781,7 +792,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     // --- Step 4: Batch Upsert Products ---
     await updateJobProgress(supabaseAdmin, jobId, { message: `Saving ${productsToUpsert.length} products...` });
     if (productsToUpsert.length > 0) {
-      const { error: upsertError } = await supabaseAdmin.from('products').upsert(productsToUpsert);
+      const { error: upsertError } = await supabaseAdmin.from('products').upsert(productsToUpsert, { onConflict: 'instagram_post_id,user_id' });
       if (upsertError) {
         console.error("CRITICAL: Failed to upsert products batch:", upsertError);
         throw upsertError;

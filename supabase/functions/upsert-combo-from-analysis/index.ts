@@ -57,6 +57,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, skipped: true, reason: 'Not a multi-product analysis' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Fetch business_id for this user
+    const { data: bizData } = await supabase.from('businesses').select('id').eq('user_id', user_id).single();
+    const business_id = bizData?.id;
+
     // 1) Upsert combo_products by instagram_post_id
     const title = analysis.combo?.title || analysis.productName || 'Combo Product';
     const description = analysis.combo?.description || analysis.description || null;
@@ -72,7 +76,7 @@ serve(async (req) => {
     if (existingCombo?.id) {
       const { data: updated, error: upErr } = await supabase
         .from('combo_products')
-        .update({ title, description, user_id })
+        .update({ title, description, user_id, ...(business_id ? { business_id } : {}) })
         .eq('id', existingCombo.id)
         .select('id')
         .single();
@@ -81,7 +85,7 @@ serve(async (req) => {
     } else {
       const { data: inserted, error: insErr } = await supabase
         .from('combo_products')
-        .insert({ title, description, instagram_post_id, user_id })
+        .insert({ title, description, instagram_post_id, user_id, ...(business_id ? { business_id } : {}) })
         .select('id')
         .single();
       if (insErr) throw insErr;
@@ -116,6 +120,7 @@ serve(async (req) => {
             details: { ...(it.specifications || {}) },
             media_url: it.media_url || null,
             thumbnail_url: it.media_url || null,
+            ...(business_id ? { business_id } : {}),
           })
           .eq('id', existingProduct.id)
           .select('id')
@@ -137,6 +142,7 @@ serve(async (req) => {
             media_url: it.media_url || null,
             thumbnail_url: it.media_url || null,
             pricing_type: 'one_time',
+            ...(business_id ? { business_id } : {}),
           })
           .select('id')
           .single();
@@ -231,9 +237,9 @@ serve(async (req) => {
         const values = Array.isArray(options[optName]) ? options[optName] : [];
         for (let vi = 0; vi < values.length; vi++) {
           const item = values[vi];
-          const val = typeof item === 'object' ? item.value : String(item);
-          const priceDiffRaw = typeof item === 'object' ? item.price_difference : 0;
-          const inventory = typeof item === 'object' ? item.inventory : 10;
+          const val = (item && typeof item === 'object') ? item.value : String(item || '');
+          const priceDiffRaw = (item && typeof item === 'object') ? item.price_difference : 0;
+          const inventory = (item && typeof item === 'object') ? item.inventory : 10;
           
           const priceDiffConverted = convertToALL(priceDiffRaw, it.currency || 'ALL');
 

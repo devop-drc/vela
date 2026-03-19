@@ -11,19 +11,16 @@ export function extractProductName(caption: string | null): string | null {
 export function normalizeProductName(name: string): string {
   return name.toLowerCase().trim()
     .replace(/\s+/g, ' ')
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\b(the|a|an)\b/g, '')
+    .replace(/[^\w\s\-.']/g, '')
     .trim();
 }
 
 export function isCaptionInsufficient(caption: string | null): boolean {
   if (!caption || caption.trim().length === 0) return true;
-  if (caption.trim().length < 20) return true;
+  if (caption.trim().length < 15) return true;
   const words = caption.trim().split(/\s+/);
   if (words.every((w: string) => w.startsWith('#'))) return true;
   if (!/[a-zA-Z0-9]/.test(caption)) return true;
-  const pricePattern = /\b(ALL|EUR|USD|GBP|Lek|Leke)\b|\d+[\.,]?\d*\s?(ALL|EUR|USD|GBP|€|\$)/i;
-  if (!pricePattern.test(caption)) return true;
   return false;
 }
 
