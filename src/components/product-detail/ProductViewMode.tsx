@@ -28,6 +28,10 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
   const [isSavingStock, setIsSavingStock] = useState(false);
   const [stockSearch, setStockSearch] = useState('');
   const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'low' | 'oos'>('all');
+  // Variant list search/filter/sort in view mode
+  const [varSearch, setVarSearch] = useState('');
+  const [varFilter, setVarFilter] = useState<'all' | 'in_stock' | 'low' | 'oos'>('all');
+  const [varSort, setVarSort] = useState<'default' | 'stock_asc' | 'stock_desc' | 'price_asc' | 'price_desc'>('default');
 
   const currencyCode = shopDetails?.currency || 'USD';
 
@@ -204,9 +208,47 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
           )}
 
           {/* Variants */}
-          {hasVariants && (
+          {hasVariants && (() => {
+            // Preprocess variants with parsed optVals and effectiveStock
+            const processedVariants = variants.map((v: any) => {
+              let optVals = { ...(v.option_values || {}) };
+              if (Object.keys(optVals).length === 0 && v.combination_key) {
+                v.combination_key.split('|').forEach((part: string) => { const [key, val] = part.split('='); if (key && val) optVals[key] = val; });
+              }
+              let effectiveStock = v.inventory || 0;
+              if (effectiveStock === 0 && Object.keys(optVals).length > 0) {
+                let minStock = Infinity;
+                Object.entries(optVals).forEach(([optName, optVal]) => {
+                  const opt = options.find((o: any) => o.name === optName);
+                  const ov = opt?.option_values?.find((x: any) => x.value === optVal);
+                  if (ov) minStock = Math.min(minStock, ov.inventory || 0);
+                });
+                if (isFinite(minStock)) effectiveStock = minStock;
+              }
+              const totalPriceALL = (product.price || 0) + (v.price_difference || 0);
+              const displayTotal = convertCurrency(totalPriceALL, 'ALL', currencyCode);
+              return { ...v, optVals, effectiveStock, displayTotal };
+            });
+
+            // Filter
+            let filtered = processedVariants;
+            if (varSearch) {
+              const s = varSearch.toLowerCase();
+              filtered = filtered.filter(v => Object.values(v.optVals).join(' ').toLowerCase().includes(s) || (v.sku || '').toLowerCase().includes(s));
+            }
+            if (varFilter === 'oos') filtered = filtered.filter(v => v.effectiveStock <= 0);
+            else if (varFilter === 'low') filtered = filtered.filter(v => v.effectiveStock > 0 && v.effectiveStock < 10);
+            else if (varFilter === 'in_stock') filtered = filtered.filter(v => v.effectiveStock > 0);
+
+            // Sort
+            if (varSort === 'stock_asc') filtered.sort((a, b) => a.effectiveStock - b.effectiveStock);
+            else if (varSort === 'stock_desc') filtered.sort((a, b) => b.effectiveStock - a.effectiveStock);
+            else if (varSort === 'price_asc') filtered.sort((a, b) => a.displayTotal - b.displayTotal);
+            else if (varSort === 'price_desc') filtered.sort((a, b) => b.displayTotal - a.displayTotal);
+
+            return (
             <div>
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   <Layers className="h-4 w-4" />
                   Variants
@@ -216,47 +258,55 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   <Package className="mr-1.5 h-3 w-3" />Manage Stock
                 </Button>
               </div>
+
+              {/* Search + Filter + Sort toolbar */}
+              <div className="flex gap-1.5 mb-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                  <Input placeholder="Search..." value={varSearch} onChange={(e) => setVarSearch(e.target.value)} className="h-7 pl-7 text-xs" />
+                </div>
+                <Select value={varFilter} onValueChange={(v) => setVarFilter(v as any)}>
+                  <SelectTrigger className="h-7 w-24 text-[10px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="in_stock">In Stock</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="oos">OOS</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={varSort} onValueChange={(v) => setVarSort(v as any)}>
+                  <SelectTrigger className="h-7 w-28 text-[10px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Default</SelectItem>
+                    <SelectItem value="stock_asc">Stock &uarr;</SelectItem>
+                    <SelectItem value="stock_desc">Stock &darr;</SelectItem>
+                    <SelectItem value="price_asc">Price &uarr;</SelectItem>
+                    <SelectItem value="price_desc">Price &darr;</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="rounded-lg border overflow-hidden">
-                {/* Header */}
-                <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2 bg-muted/50 text-[11px] font-medium text-muted-foreground uppercase tracking-wider sticky top-0 z-10">
+                <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-1.5 bg-muted/50 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
                   <span>Variant</span>
                   <span className="w-24 text-right">Price</span>
                   <span className="w-28 text-right">Stock</span>
                 </div>
                 <div className="max-h-[400px] overflow-y-auto">
-                {variants.map((v: any, i: number) => {
-                  let optVals = v.option_values || {};
-                  if (Object.keys(optVals).length === 0 && v.combination_key) {
-                    v.combination_key.split('|').forEach((part: string) => {
-                      const [key, val] = part.split('=');
-                      if (key && val) optVals[key] = val;
-                    });
-                  }
-                  const totalPriceALL = (product.price || 0) + (v.price_difference || 0);
-                  const displayTotal = convertCurrency(totalPriceALL, 'ALL', currencyCode);
-                  // Compute effective stock: use variant's own inventory, or derive from option values
-                  let effectiveStock = v.inventory || 0;
-                  if (effectiveStock === 0 && Object.keys(optVals).length > 0) {
-                    // Derive from min of matching option value inventories
-                    let minStock = Infinity;
-                    Object.entries(optVals).forEach(([optName, optVal]) => {
-                      const opt = options.find((o: any) => o.name === optName);
-                      const val = opt?.option_values?.find((ov: any) => ov.value === optVal);
-                      if (val) minStock = Math.min(minStock, val.inventory || 0);
-                    });
-                    if (isFinite(minStock)) effectiveStock = minStock;
-                  }
-                  const isOOS = effectiveStock <= 0;
-                  const isCritical = effectiveStock > 0 && effectiveStock < 5;
-                  const isLow = effectiveStock >= 5 && effectiveStock < 10;
+                {filtered.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-muted-foreground">No variants match your search</div>
+                ) : filtered.map((v: any, i: number) => {
+                  const isOOS = v.effectiveStock <= 0;
+                  const isCritical = v.effectiveStock > 0 && v.effectiveStock < 5;
+                  const isLow = v.effectiveStock >= 5 && v.effectiveStock < 10;
                   return (
                     <div key={v.id || i} className={cn(
-                      "grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2.5 items-center",
+                      "grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2 items-center",
                       i % 2 === 0 ? "bg-card" : "bg-muted/20",
                       isOOS && "opacity-50"
                     )}>
                       <div className="flex flex-wrap gap-1.5 items-center min-w-0">
-                        {Object.entries(optVals).map(([optName, optVal]) => (
+                        {Object.entries(v.optVals).map(([optName, optVal]: [string, any]) => (
                           <span key={optName} className="inline-flex items-center text-xs">
                             <span className="text-muted-foreground/70 mr-1">{optName}:</span>
                             <span className="font-medium bg-muted/60 px-1.5 py-0.5 rounded">{String(optVal)}</span>
@@ -265,20 +315,17 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                         {v.sku && <span className="text-[10px] text-muted-foreground/40 ml-1">{v.sku}</span>}
                       </div>
                       <span className={cn("w-24 text-right text-sm font-medium tabular-nums", isOOS && "line-through")}>
-                        {formatCurrency(displayTotal, currencyCode)}
+                        {formatCurrency(v.displayTotal, currencyCode)}
                       </span>
-                      <button
-                        onClick={() => setStockModalOpen(true)}
-                        className={cn(
-                          "w-28 text-right text-xs font-medium flex items-center justify-end gap-1 rounded px-2 py-1 transition-colors cursor-pointer",
-                          isOOS ? "text-red-700 bg-red-50 hover:bg-red-100" :
-                          isCritical ? "text-red-600 bg-red-50 hover:bg-red-100" :
-                          isLow ? "text-amber-600 bg-amber-50 hover:bg-amber-100" :
-                          "text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
-                        )}
-                      >
+                      <button onClick={() => setStockModalOpen(true)} className={cn(
+                        "w-28 text-right text-xs font-medium flex items-center justify-end gap-1 rounded px-2 py-1 transition-colors cursor-pointer",
+                        isOOS ? "text-red-700 bg-red-50 hover:bg-red-100" :
+                        isCritical ? "text-red-600 bg-red-50 hover:bg-red-100" :
+                        isLow ? "text-amber-600 bg-amber-50 hover:bg-amber-100" :
+                        "text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
+                      )}>
                         <Package className="h-3 w-3" />
-                        {isOOS ? 'Out of stock' : isCritical ? `${effectiveStock} critical` : isLow ? `${effectiveStock} low` : `${effectiveStock} in stock`}
+                        {isOOS ? 'OOS' : isCritical ? `${v.effectiveStock} critical` : isLow ? `${v.effectiveStock} low` : `${v.effectiveStock}`}
                       </button>
                     </div>
                   );
@@ -286,7 +333,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* Loading state */}
           {isLoadingOptions && (

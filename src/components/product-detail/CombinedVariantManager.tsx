@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Trash2, Grid3X3, Package, Banknote, Tag, Search, Settings2, GripVertical, Info, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
+import { cn } from "@/lib/utils";
 import { currencies } from "@/lib/currencies";
 
 export type OptionValue = { id?: string; value: string; price_difference: number; is_active: boolean; is_default: boolean; inventory?: number };
