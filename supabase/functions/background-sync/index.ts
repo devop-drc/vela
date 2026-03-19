@@ -585,7 +585,24 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         }
       }
 
-      const { categoryName: rawCategoryName, typeName: rawTypeName, specifications: rawSpecifications, options, pricingType, billingInterval, inventory: aiInventory, ...productInfo } = analysis;
+      // Extract all fields directly from analysis (don't rely on rest operator which can lose fields)
+      const categoryName = analysis.categoryName || (analysis as any).category_name || 'Uncategorized';
+      const typeName = analysis.typeName || (analysis as any).type_name || 'General';
+      const aiDescription = analysis.description || (analysis as any).desc || null;
+      const aiTags = analysis.tags || [];
+      const aiProductName = analysis.productName || (analysis as any).product_name || null;
+      const aiPrice = analysis.price;
+      const aiCurrency = analysis.currency;
+      const pricingType = analysis.pricingType || (analysis as any).pricing_type || 'one_time';
+      const billingInterval = analysis.billingInterval || (analysis as any).billing_interval || null;
+      const aiInventory = analysis.inventory;
+      const rawSpecifications = analysis.specifications;
+      const options = analysis.options;
+
+      // Debug log for first few posts
+      if (progress < 3) {
+        console.log(`[SYNC DEBUG] Post ${post.id}: categoryName=${categoryName}, typeName=${typeName}, description=${aiDescription?.substring(0, 50)}, tags=${JSON.stringify(aiTags)}, specs=${JSON.stringify(rawSpecifications)?.substring(0, 100)}, options=${JSON.stringify(options)?.substring(0, 100)}`);
+      }
 
       // Normalize specifications: handle both array [{key,value,unit}] and object {key:value} formats
       let specifications: Record<string, any> | undefined;
@@ -595,12 +612,8 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
           if (spec && spec.key) specifications[spec.key] = spec.value || '';
         }
       } else if (rawSpecifications && typeof rawSpecifications === 'object') {
-        specifications = rawSpecifications;
+        specifications = rawSpecifications as Record<string, any>;
       }
-
-      // Default category/type if AI didn't return them
-      const categoryName = rawCategoryName || 'Uncategorized';
-      const typeName = rawTypeName || 'General';
 
       // If AI returned products array (multi-product), expand them; otherwise, try parser; else fall back to single product
       const multiProducts: Array<any> = (analysis as any).products && Array.isArray((analysis as any).products)
@@ -671,9 +684,9 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       }
 
       for (const item of itemsToCreate) {
-        const itemName = item ? item.productName || item.name || productInfo.productName : productInfo.productName;
-        const itemPrice = item && typeof item.price === 'number' ? item.price : productInfo.price;
-        const itemCurrency = (item && item.currency) ? item.currency : productInfo.currency;
+        const itemName = item ? item.productName || item.name || aiProductName : aiProductName;
+        const itemPrice = item && typeof item.price === 'number' ? item.price : aiPrice;
+        const itemCurrency = (item && item.currency) ? item.currency : aiCurrency;
         const itemInventory = item && typeof item.inventory === 'number' ? item.inventory : aiInventory;
         // Normalize item specs (handle array or object format)
         let itemSpecifications = item && item.specifications ? item.specifications : specifications;
@@ -704,7 +717,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         // Brand inference
         const hasBrand = Object.keys(details).some(k => k.toLowerCase() === 'brand');
         if (!hasBrand) {
-          const inferred = inferBrand(itemName, productInfo.tags);
+          const inferred = inferBrand(itemName, aiTags);
           if (inferred) details['Brand'] = inferred;
         }
 
@@ -720,11 +733,11 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         }
 
         const productPayload: ProductPayload = {
-          name: itemName,
-          caption: (productInfo as any).description || post.caption || '',
+          name: itemName || post.caption?.split('\n')[0]?.slice(0, 60) || 'Product',
+          caption: aiDescription || post.caption || '',
           price: priceInALL,
           currency: 'ALL',
-          tags: (productInfo as any).tags || [],
+          tags: aiTags || [],
           category: toTitleCase(itemCategoryName || ''),
           details: details,
           business_id: (business as any).id,
