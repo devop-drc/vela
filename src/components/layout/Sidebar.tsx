@@ -94,17 +94,15 @@ const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => {
                       to={to}
                       end={end}
                       className={({ isActive }) => cn(
-                        "relative flex items-center justify-center h-9 my-0.5 rounded-md transition-all duration-150",
-                        textNormal, hoverBg, "hover:text-foreground",
-                        isActive && cn(textActive, activeBg)
+                        "flex items-center justify-center h-9 w-9 mx-auto my-0.5 rounded-md transition-all duration-150",
+                        isActive
+                          ? isPrimary
+                            ? "bg-primary-foreground/20 text-primary-foreground ring-2 ring-primary-foreground/30"
+                            : "bg-primary text-primary-foreground ring-2 ring-primary/30"
+                          : cn(textNormal, hoverBg)
                       )}
                     >
-                      {({ isActive }) => (
-                        <>
-                          {isActive && <span className={cn("absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-4 rounded-r-full", activeBar)} />}
-                          <Icon className="h-4 w-4" />
-                        </>
-                      )}
+                      <Icon className="h-4 w-4" />
                     </NavLink>
                   </TooltipTrigger>
                   <TooltipContent side="right" sideOffset={10} className="text-xs">
