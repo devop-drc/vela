@@ -647,177 +647,120 @@ const Orders = () => {
         }}
       />
 
-      <div className="space-y-6">
-        {/* ── Stats Cards ── */}
-        {isLoading || !shopDetails || !stats ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-28" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            <StatCard
-              title="Total Orders"
-              value={stats.total.toLocaleString()}
-              icon={ShoppingBag}
-            />
-            <StatCard
-              title="Pending"
-              value={stats.pending.toLocaleString()}
-              icon={Clock}
-            />
-            <StatCard
-              title="In Progress"
-              value={stats.inProgress.toLocaleString()}
-              icon={Loader2}
-            />
-            <StatCard
-              title="Fulfilled"
-              value={stats.fulfilled.toLocaleString()}
-              icon={CheckCircle2}
-            />
-            <StatCard
-              title="Total Revenue"
-              value={formatCurrency(stats.totalRevenue, shopDetails.currency)}
-              icon={Banknote}
-            />
-            <StatCard
-              title="Avg. Order Value"
-              value={formatCurrency(stats.aov, shopDetails.currency)}
-              icon={FileBarChart}
-            />
+      <div className="space-y-4">
+        {/* ── Stats — compact inline chips ── */}
+        {!isLoading && stats && shopDetails && (
+          <div className="flex flex-wrap gap-3">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-card">
+              <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xl font-bold tabular-nums">{stats.total}</span>
+              <span className="text-sm text-muted-foreground">orders</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-card">
+              <Banknote className="h-4 w-4 text-emerald-500" />
+              <span className="text-xl font-bold tabular-nums">{formatCurrency(stats.totalRevenue, shopDetails.currency)}</span>
+              <span className="text-sm text-muted-foreground">revenue</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium">
+              <Clock className="h-3.5 w-3.5" />{stats.pending} pending
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium">
+              <Loader2 className="h-3.5 w-3.5" />{stats.inProgress} in progress
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
+              <CheckCircle2 className="h-3.5 w-3.5" />{stats.fulfilled} fulfilled
+            </div>
           </div>
         )}
 
-        {/* ── Filters + Table ── */}
+        {/* ── Toolbar ── */}
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as TabValue); setSelectedIds(new Set()); }}>
-          <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm pb-3 space-y-3">
-            {/* Search + date row */}
-            <div className="flex flex-col sm:flex-row items-center gap-2">
-              <div className="relative w-full sm:w-72">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search customer name or email…"
-                  className="pl-10 shadow-md"
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setSelectedIds(new Set());
-                  }}
-                />
+          <div className="space-y-2">
+            {/* Row 1: Search + Date + Clear */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input placeholder="Search orders…" className="h-8 pl-8 text-sm" value={searchTerm}
+                  onChange={(e) => { setSearchTerm(e.target.value); setSelectedIds(new Set()); }} />
               </div>
               <DateRangePicker date={dateRange} onDateChange={(d) => { setDateRange(d); setSelectedIds(new Set()); }} />
+
+              {/* Sort */}
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest</SelectItem>
+                  <SelectItem value="oldest">Oldest</SelectItem>
+                  <SelectItem value="amount_high">Amount ↓</SelectItem>
+                  <SelectItem value="amount_low">Amount ↑</SelectItem>
+                  <SelectItem value="name">Name A-Z</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Payment filters */}
+              <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
+                <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All pay</SelectItem>
+                  <SelectItem value="card">Card</SelectItem>
+                  <SelectItem value="cash_on_delivery">Cash</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={paymentStatusFilter} onValueChange={(v) => setPaymentStatusFilter(v as any)}>
+                <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All status</SelectItem>
+                  <SelectItem value="pending">Pay pending</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
+                  <SelectItem value="completed">Paid</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+
               {hasFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1 text-muted-foreground hover:text-foreground"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setDateRange(undefined);
-                    setActiveTab("All");
-                    setSelectedIds(new Set());
-                    setSortBy("newest");
-                    setPaymentFilter("all");
-                    setPaymentStatusFilter("all");
-                  }}
-                >
-                  <X className="h-3 w-3" />
-                  Clear
+                <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => {
+                  setSearchTerm(""); setDateRange(undefined); setActiveTab("All");
+                  setSelectedIds(new Set()); setSortBy("newest"); setPaymentFilter("all"); setPaymentStatusFilter("all");
+                }}>
+                  <X className="h-3 w-3" />Clear
                 </Button>
               )}
             </div>
 
-            {/* Status tabs + sort/filters row */}
-            <div className="flex flex-wrap items-center gap-2">
-              <TabsList className="shadow-md flex-wrap h-auto gap-1">
-                {STATUS_TABS.map((tab) => (
-                  <TabsTrigger key={tab.value} value={tab.value} className="text-xs gap-1.5">
-                    {tab.label}
-                    {tabCounts[tab.value] !== undefined && tabCounts[tab.value] > 0 && (
-                      <span className="ml-0.5 rounded-full bg-muted px-1.5 py-0 text-[10px] font-medium text-muted-foreground">
-                        {tabCounts[tab.value]}
-                      </span>
-                    )}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-
-              <div className="flex items-center gap-1.5 ml-auto">
-                {/* Sort */}
-                <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-                  <SelectTrigger className="h-8 w-32 text-xs"><SelectValue placeholder="Sort" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="newest">Newest first</SelectItem>
-                    <SelectItem value="oldest">Oldest first</SelectItem>
-                    <SelectItem value="amount_high">Amount high→low</SelectItem>
-                    <SelectItem value="amount_low">Amount low→high</SelectItem>
-                    <SelectItem value="name">Customer A→Z</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {/* Payment method */}
-                <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
-                  <SelectTrigger className="h-8 w-28 text-xs"><SelectValue placeholder="Payment" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All methods</SelectItem>
-                    <SelectItem value="card">Card</SelectItem>
-                    <SelectItem value="cash_on_delivery">Cash</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {/* Payment status */}
-                <Select value={paymentStatusFilter} onValueChange={(v) => setPaymentStatusFilter(v as any)}>
-                  <SelectTrigger className="h-8 w-28 text-xs"><SelectValue placeholder="Pay status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="failed">Failed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            {/* Row 2: Status tabs */}
+            <TabsList className="h-auto gap-1 flex-wrap">
+              {STATUS_TABS.map((tab) => (
+                <TabsTrigger key={tab.value} value={tab.value} className="text-xs gap-1">
+                  {tab.label}
+                  {tabCounts[tab.value] > 0 && (
+                    <Badge variant="secondary" className="h-4 px-1 text-xs ml-0.5">{tabCounts[tab.value]}</Badge>
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
           </div>
 
-          {/* Bulk action bar */}
-          <BulkActionBar
-            selectedIds={selectedIds}
-            onClearSelection={() => setSelectedIds(new Set())}
-            onBulkStatusChange={handleBulkStatusChange}
-            onExport={handleExportSelected}
-            isUpdating={isBulkUpdating}
-          />
+          {/* Bulk actions */}
+          <BulkActionBar selectedIds={selectedIds} onClearSelection={() => setSelectedIds(new Set())}
+            onBulkStatusChange={handleBulkStatusChange} onExport={handleExportSelected} isUpdating={isBulkUpdating} />
 
-          {/* Table */}
-          <Card className="mt-2">
-            <CardContent className="p-0">
-              {isLoading || !shopDetails ? (
-                <div className="space-y-3 p-6">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} className="h-10 w-full" />
-                  ))}
-                </div>
-              ) : (
-                <OrderTable
-                  orders={filteredOrders}
-                  onSelectOrder={setSelectedOrder}
-                  selectedIds={selectedIds}
-                  onToggleSelect={handleToggleSelect}
-                  onToggleAll={handleToggleAll}
-                  onOptimisticUpdate={handleOptimisticUpdate}
-                  hasFilters={hasFilters}
-                />
-              )}
-            </CardContent>
-          </Card>
+          {/* Order list */}
+          <div className="mt-3 rounded-lg border bg-card overflow-hidden">
+            {isLoading || !shopDetails ? (
+              <div className="space-y-2 p-4">
+                {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+              </div>
+            ) : (
+              <OrderTable orders={filteredOrders} onSelectOrder={setSelectedOrder} selectedIds={selectedIds}
+                onToggleSelect={handleToggleSelect} onToggleAll={handleToggleAll}
+                onOptimisticUpdate={handleOptimisticUpdate} hasFilters={hasFilters} />
+            )}
+          </div>
 
-          {/* Result count */}
-          {!isLoading && filteredOrders.length > 0 && (
-            <p className="text-xs text-muted-foreground text-right pt-1">
-              Showing {filteredOrders.length} of {orders.length} order{orders.length !== 1 ? "s" : ""}
+          {!isLoading && (
+            <p className="text-xs text-muted-foreground text-right mt-1">
+              {filteredOrders.length} of {orders.length} order{orders.length !== 1 ? "s" : ""}
             </p>
           )}
         </Tabs>
