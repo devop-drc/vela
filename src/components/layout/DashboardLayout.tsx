@@ -109,9 +109,9 @@ const DashboardLayout = () => {
       >
         <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
         <Sidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
-        <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
+        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto transition-all duration-300">
           <Header title={title} />
-          <main className="flex-1 overflow-y-auto p-6">{content}</main>
+          <main className="flex-1 p-6">{content}</main>
         </div>
         <SyncStatusWidget />
         <NotificationSidebar />

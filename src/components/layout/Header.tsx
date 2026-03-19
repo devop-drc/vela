@@ -343,12 +343,11 @@ const Header = ({ title }: HeaderProps) => {
   return (
     <header
       className={cn(
-        'fixed top-0 right-0 z-50 flex items-center justify-between h-[60px] px-6 transition-all duration-300 shadow-md',
+        'z-50 flex items-center justify-between h-[60px] px-6 transition-all duration-300',
         isFloating
-          ? 'top-4 right-4 border rounded-lg'
-          : 'border-b left-0',
+          ? 'fixed top-4 right-4 border rounded-lg shadow-md'
+          : 'sticky top-0 border-b shadow-sm',
         blurEnabled ? 'bg-card/80 backdrop-blur-[20px]' : 'bg-card',
-        !isFloating && 'md:left-[calc(var(--sidebar-width)+1px)]',
       )}
       style={isFloating ? { left: `calc(var(--sidebar-width, 16rem) + 1rem)` } : undefined}
     >
