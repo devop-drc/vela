@@ -1,324 +1,151 @@
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Search, Link as LinkIcon, LogOut, User as UserIcon, Settings, Sparkles,
-  Package, LayoutDashboard, ShoppingCart,
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { useAppearance } from "@/contexts/AppearanceContext";
-import { cn } from "@/lib/utils";
-import { Button } from "../ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
-import { useShop } from "@/contexts/ShopContext";
-import { showSuccess, showError } from "@/utils/toast";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAppearance } from "@/contexts/AppearanceContext";
+import { useShop } from "@/contexts/ShopContext";
+import { showSuccess, showError } from "@/utils/toast";
+import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Search, Link as LinkIcon, LogOut, User as UserIcon, Settings,
+  Sparkles, Package, LayoutDashboard, ShoppingCart,
+} from "lucide-react";
 
-interface HeaderProps {
-  title: string;
-}
+// ── Types ────────────────────────────────────────────────────────────────────
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+type SearchResult = { kind: "page" | "product" | "order"; id: string; label: string; subtitle: string; path: string };
+interface GroupedResults { pages: SearchResult[]; products: SearchResult[]; orders: SearchResult[] }
 
-type PageResult = { kind: 'page'; id: string; label: string; subtitle: string; path: string };
-type ProductResult = { kind: 'product'; id: string; label: string; subtitle: string; path: string };
-type OrderResult = { kind: 'order'; id: string; label: string; subtitle: string; path: string };
-
-type SearchResult = PageResult | ProductResult | OrderResult;
-
-interface GroupedResults {
-  pages: PageResult[];
-  products: ProductResult[];
-  orders: OrderResult[];
-}
-
-// ─── Static page list ─────────────────────────────────────────────────────────
-
-const STATIC_PAGES: Array<{ label: string; subtitle: string; path: string }> = [
-  { label: 'Dashboard', subtitle: 'Overview & stats', path: '/' },
-  { label: 'Products', subtitle: 'Manage your products', path: '/products' },
-  { label: 'Out of Stock', subtitle: 'Products needing restock', path: '/out-of-stock' },
-  { label: 'Orders', subtitle: 'Customer orders', path: '/orders' },
-  { label: 'Customers', subtitle: 'Customer list', path: '/customers' },
-  { label: 'Categories', subtitle: 'Product categories', path: '/categories' },
-  { label: 'Keywords', subtitle: 'Keyword management', path: '/keywords' },
-  { label: 'Promotions', subtitle: 'Discount & promo codes', path: '/promotions' },
-  { label: 'Store Settings', subtitle: 'General store settings', path: '/settings' },
-  { label: 'Appearance', subtitle: 'Theme & layout options', path: '/settings/appearance' },
-  { label: 'Payments', subtitle: 'Payment method settings', path: '/settings/payments' },
+const PAGES = [
+  { label: "Dashboard", subtitle: "Overview & stats", path: "/" },
+  { label: "Products", subtitle: "Manage products", path: "/products" },
+  { label: "Stock", subtitle: "Manage inventory", path: "/out-of-stock" },
+  { label: "Orders", subtitle: "Customer orders", path: "/orders" },
+  { label: "Categories", subtitle: "Product categories", path: "/categories" },
+  { label: "Keywords", subtitle: "AI keyword hints", path: "/keywords" },
+  { label: "Promotions", subtitle: "Discounts & promos", path: "/promotions" },
+  { label: "Settings", subtitle: "Store settings", path: "/settings" },
 ];
 
-// ─── Component ────────────────────────────────────────────────────────────────
+const GROUP_ICONS: Record<string, React.ReactNode> = {
+  Pages: <LayoutDashboard className="h-4 w-4 text-muted-foreground shrink-0" />,
+  Products: <Package className="h-4 w-4 text-muted-foreground shrink-0" />,
+  Orders: <ShoppingCart className="h-4 w-4 text-muted-foreground shrink-0" />,
+};
 
-const Header = ({ title }: HeaderProps) => {
+// ── Component ────────────────────────────────────────────────────────────────
+
+export default function Header({ title }: { title: string }) {
   const navigate = useNavigate();
   const { settings } = useAppearance();
   const { shopDetails } = useShop();
-  const isFloating = settings.layoutStyle === 'floating';
-  const blurEnabled = settings.blurEnabled;
 
+  const floating = settings.layoutStyle === "floating";
+  const blur = settings.blurEnabled;
+
+  // ── User ─────────────────────────────────────────────────────────────────
   const [user, setUser] = useState<any>(null);
+  useEffect(() => { supabase.auth.getUser().then(({ data }) => setUser(data.user)); }, []);
+
+  // ── AI token stats ───────────────────────────────────────────────────────
   const [aiOpen, setAiOpen] = useState(false);
-  const [tokenStats, setTokenStats] = useState<{
-    prompt: number;
-    candidates: number;
-    jobs: { created_at: string; prompt: number; candidates: number }[];
-  }>({ prompt: 0, candidates: 0, jobs: [] });
-
-  // ── Search state ────────────────────────────────────────────────────────────
-  const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [grouped, setGrouped] = useState<GroupedResults | null>(null);
-  const [activeIndex, setActiveIndex] = useState(-1);
-
-  const searchContainerRef = useRef<HTMLDivElement | null>(null);
-  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
-  const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-
-  // ── Auth ────────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
-  }, []);
+  const [tokens, setTokens] = useState({ prompt: 0, candidates: 0, jobs: [] as any[] });
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from('sync_jobs')
-      .select('created_at, summary')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
+    supabase.from("sync_jobs").select("created_at, summary").eq("user_id", user.id).order("created_at", { ascending: false })
       .then(({ data }) => {
         const jobs = (data || []).map((r: any) => ({
           created_at: r.created_at,
           prompt: Number(r.summary?.total_ai_tokens_used?.prompt || 0),
           candidates: Number(r.summary?.total_ai_tokens_used?.candidates || 0),
         }));
-        setTokenStats({
-          prompt: jobs.reduce((a, b) => a + b.prompt, 0),
-          candidates: jobs.reduce((a, b) => a + b.candidates, 0),
-          jobs,
-        });
+        setTokens({ prompt: jobs.reduce((a: number, b: any) => a + b.prompt, 0), candidates: jobs.reduce((a: number, b: any) => a + b.candidates, 0), jobs });
       });
   }, [user]);
 
-  // ── Flatten results for keyboard nav ────────────────────────────────────────
-  const flat = useMemo<SearchResult[]>(() => {
-    if (!grouped) return [];
-    return [
-      ...grouped.pages,
-      ...grouped.products,
-      ...grouped.orders,
-    ];
-  }, [grouped]);
+  const aiCost = (tokens.prompt / 1e6) * 0.15 + (tokens.candidates / 1e6) * 0.60; // Flash pricing
 
-  // ── Debounced search (300 ms) ────────────────────────────────────────────────
+  // ── Search ───────────────────────────────────────────────────────────────
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [grouped, setGrouped] = useState<GroupedResults | null>(null);
+  const [active, setActive] = useState(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const refs = useRef(new Map<number, HTMLDivElement>());
+
+  const flat = useMemo<SearchResult[]>(() => grouped ? [...grouped.pages, ...grouped.products, ...grouped.orders] : [], [grouped]);
+  const hasResults = flat.length > 0;
+
   useEffect(() => {
-    if (!query.trim()) {
-      setGrouped(null);
-      setOpen(false);
-      setActiveIndex(-1);
-      return;
-    }
-
+    if (!query.trim()) { setGrouped(null); setOpen(false); setActive(-1); return; }
     let cancelled = false;
     setLoading(true);
-
     const timer = setTimeout(async () => {
+      const q = query.toLowerCase();
+      const pages: SearchResult[] = PAGES.filter(p => p.label.toLowerCase().includes(q)).slice(0, 5).map(p => ({ kind: "page", id: p.path, ...p }));
+      let products: SearchResult[] = [];
+      let orders: SearchResult[] = [];
       try {
-        const lower = query.toLowerCase();
-
-        // Pages — static, client-side filter
-        const pages: PageResult[] = STATIC_PAGES
-          .filter(p => p.label.toLowerCase().includes(lower))
-          .slice(0, 5)
-          .map(p => ({ kind: 'page', id: p.path, label: p.label, subtitle: p.subtitle, path: p.path }));
-
-        // Products — Supabase ilike on name, category, tags
-        let products: ProductResult[] = [];
-        try {
-          // Try the RPC first (trigram search)
-          const { data: rpcData, error: rpcErr } = await supabase.rpc('admin_search_products', {
-            q: query,
-            limit_count: 5,
-          });
-          if (!rpcErr && Array.isArray(rpcData)) {
-            products = rpcData.map((p: any) => ({
-              kind: 'product',
-              id: p.id,
-              label: p.name,
-              subtitle: p.category || 'Product',
-              path: `/products?openProduct=${p.id}`,
-            }));
-          } else {
-            throw new Error('rpc not available');
-          }
-        } catch {
-          // Fallback: ilike on name, category, tags
-          const { data: prodData } = await supabase
-            .from('products')
-            .select('id, name, category, tags')
-            .or(`name.ilike.%${query}%,category.ilike.%${query}%,tags.cs.{${query}}`)
-            .limit(5);
-          products = (prodData || []).map((p: any) => ({
-            kind: 'product',
-            id: p.id,
-            label: p.name,
-            subtitle: p.category || 'Product',
-            path: `/products?openProduct=${p.id}`,
-          }));
-        }
-
-        // Orders — ilike on customer_name, customer_email
-        let orders: OrderResult[] = [];
-        const { data: orderData } = await supabase
-          .from('orders')
-          .select('id, customer_name, customer_email, status')
-          .or(`customer_name.ilike.%${query}%,customer_email.ilike.%${query}%`)
-          .limit(5);
-        orders = (orderData || []).map((o: any) => ({
-          kind: 'order',
-          id: o.id,
-          label: o.customer_name || o.customer_email,
-          subtitle: o.status || 'Order',
-          path: `/orders?orderId=${o.id}`,
-        }));
-
-        if (!cancelled) {
-          setGrouped({ pages, products, orders });
-          setOpen(true);
-          setActiveIndex(-1);
-          itemRefs.current.clear();
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+        const { data } = await supabase.from("products").select("id, name, category").or(`name.ilike.%${query}%,category.ilike.%${query}%`).limit(5);
+        products = (data || []).map((p: any) => ({ kind: "product", id: p.id, label: p.name, subtitle: p.category || "Product", path: `/products?openProduct=${p.id}` }));
+      } catch {}
+      try {
+        const { data } = await supabase.from("orders").select("id, customer_name, customer_email, status").or(`customer_name.ilike.%${query}%,customer_email.ilike.%${query}%`).limit(5);
+        orders = (data || []).map((o: any) => ({ kind: "order", id: o.id, label: o.customer_name || o.customer_email || "Order", subtitle: o.status || "Order", path: `/orders?orderId=${o.id}` }));
+      } catch {}
+      if (!cancelled) { setGrouped({ pages, products, orders }); setOpen(true); setActive(-1); refs.current.clear(); }
+      if (!cancelled) setLoading(false);
     }, 300);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [query]);
 
-  // ── Dropdown position (portal) ───────────────────────────────────────────────
   useEffect(() => {
-    const updateRect = () => {
-      const el = searchContainerRef.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      setDropdownRect({ top: r.bottom + 8, left: r.left, width: r.width });
-    };
-    if (open) {
-      updateRect();
-      window.addEventListener('scroll', updateRect, true);
-      window.addEventListener('resize', updateRect);
-      return () => {
-        window.removeEventListener('scroll', updateRect, true);
-        window.removeEventListener('resize', updateRect);
-      };
-    }
-  }, [open, grouped, loading]);
+    if (!open || !containerRef.current) return;
+    const update = () => { const r = containerRef.current!.getBoundingClientRect(); setRect({ top: r.bottom + 6, left: r.left, width: Math.max(r.width, 360) }); };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => { window.removeEventListener("scroll", update, true); window.removeEventListener("resize", update); };
+  }, [open, grouped]);
 
-  // ── Navigation ───────────────────────────────────────────────────────────────
-  const navigateToResult = useCallback((item: SearchResult) => {
-    navigate(item.path);
-    setOpen(false);
-    setQuery('');
-  }, [navigate]);
+  const go = useCallback((item: SearchResult) => { navigate(item.path); setOpen(false); setQuery(""); }, [navigate]);
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const onKey = (e: React.KeyboardEvent) => {
     if (!open) return;
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      const next = Math.min(flat.length - 1, activeIndex + 1);
-      setActiveIndex(next);
-      itemRefs.current.get(next)?.scrollIntoView({ block: 'nearest' });
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      const prev = Math.max(0, activeIndex - 1);
-      setActiveIndex(prev);
-      itemRefs.current.get(prev)?.scrollIntoView({ block: 'nearest' });
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      const item = activeIndex >= 0 ? flat[activeIndex] : flat[0];
-      if (item) navigateToResult(item);
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      setOpen(false);
-    }
+    if (e.key === "ArrowDown") { e.preventDefault(); const n = Math.min(flat.length - 1, active + 1); setActive(n); refs.current.get(n)?.scrollIntoView({ block: "nearest" }); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); const n = Math.max(0, active - 1); setActive(n); refs.current.get(n)?.scrollIntoView({ block: "nearest" }); }
+    else if (e.key === "Enter") { e.preventDefault(); const item = active >= 0 ? flat[active] : flat[0]; if (item) go(item); }
+    else if (e.key === "Escape") setOpen(false);
   };
 
-  // ── Auth actions ─────────────────────────────────────────────────────────────
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/login');
-  };
-
-  const handleCopyStorefrontUrl = async () => {
-    if (shopDetails?.slug) {
-      const url = `${window.location.origin}/instagramShop/${shopDetails.slug}`;
-      try {
-        await navigator.clipboard.writeText(url);
-        showSuccess('Storefront URL copied to clipboard!');
-      } catch {
-        showError('Failed to copy URL. Please try again manually.');
-      }
-    } else {
-      showError('Your shop URL is not available yet. Please set your shop name in settings.');
-    }
-  };
-
-  // ── Flat index counter for refs (rebuilt each render) ────────────────────────
-  let flatIdx = 0;
-
-  const renderGroup = (
-    label: string,
-    items: SearchResult[],
-    icon: React.ReactNode,
-  ) => {
-    if (items.length === 0) return null;
+  // ── Render helpers ─────────────────────────────────────────────────────────
+  let idx = 0;
+  const renderGroup = (label: string, items: SearchResult[]) => {
+    if (!items.length) return null;
     return (
       <div key={label}>
-        <div className="px-2 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {label}
-        </div>
-        {items.map((item) => {
-          const idx = flatIdx++;
+        <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
+        {items.map(item => {
+          const i = idx++;
           return (
-            <div
-              key={item.id}
-              ref={(el) => {
-                if (el) itemRefs.current.set(idx, el);
-              }}
-              className={cn(
-                'flex items-center gap-2.5 px-2 py-2 rounded-md cursor-pointer transition-colors',
-                idx === activeIndex
-                  ? 'bg-accent text-accent-foreground'
-                  : 'hover:bg-muted',
-              )}
-              onMouseEnter={() => setActiveIndex(idx)}
-              onMouseDown={(e) => {
-                e.preventDefault(); // prevent input blur
-                navigateToResult(item);
-              }}
-            >
-              {icon}
+            <div key={item.id} ref={el => { if (el) refs.current.set(i, el); }}
+              className={cn("flex items-center gap-2.5 mx-1 px-2 py-1.5 rounded-md cursor-pointer transition-colors", i === active ? "bg-accent text-accent-foreground" : "hover:bg-muted")}
+              onMouseEnter={() => setActive(i)} onMouseDown={e => { e.preventDefault(); go(item); }}>
+              {GROUP_ICONS[label]}
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium truncate">{item.label}</div>
-                {item.subtitle && (
-                  <div className="text-xs text-muted-foreground truncate">{item.subtitle}</div>
-                )}
+                <p className="text-sm font-medium truncate">{item.label}</p>
+                <p className="text-xs text-muted-foreground truncate">{item.subtitle}</p>
               </div>
             </div>
           );
@@ -327,187 +154,121 @@ const Header = ({ title }: HeaderProps) => {
     );
   };
 
-  const hasResults = grouped && (
-    grouped.pages.length > 0 || grouped.products.length > 0 || grouped.orders.length > 0
-  );
+  // ── Actions ──────────────────────────────────────────────────────────────
+  const copyUrl = async () => {
+    if (!shopDetails?.slug) { showError("Set your shop name in settings first."); return; }
+    try { await navigator.clipboard.writeText(`${location.origin}/instagramShop/${shopDetails.slug}`); showSuccess("URL copied!"); }
+    catch { showError("Copy failed."); }
+  };
 
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ── JSX ──────────────────────────────────────────────────────────────────
 
   return (
     <header
       className={cn(
-        'z-50 flex items-center justify-between h-14 min-h-[56px] px-6 transition-all duration-300',
-        isFloating
-          ? 'fixed top-3 right-3 border rounded-lg shadow-lg'
-          : 'sticky top-0 border-b shadow-sm shrink-0',
-        blurEnabled ? 'bg-card/80 backdrop-blur-[20px]' : 'bg-card',
+        "z-50 flex items-center gap-4 h-14 min-h-14 px-5 transition-all duration-300",
+        floating ? "fixed top-3 right-3 border rounded-lg shadow-lg" : "sticky top-0 border-b shadow-sm shrink-0",
+        blur ? "bg-card/80 backdrop-blur-xl" : "bg-card",
       )}
-      style={isFloating ? { left: `calc(var(--sidebar-width, 16rem) + 2rem)` } : undefined}
+      style={floating ? { left: "calc(var(--sidebar-width, 16rem) + 2rem)" } : undefined}
     >
-      {/* Left: title + search */}
-      <div className="flex items-center gap-4 min-w-0">
-        <h1 className="text-xl font-bold hidden md:block shrink-0">{title}</h1>
+      {/* Title */}
+      <h1 className="text-lg font-bold hidden md:block shrink-0">{title}</h1>
 
-        {/* Search bar */}
-        <div ref={searchContainerRef} className="relative w-72">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            type="search"
-            placeholder="Search products, orders, pages…"
-            className="pl-8 w-full"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={onKeyDown}
-            onFocus={() => { if (grouped) setOpen(true); }}
-            onBlur={() => setTimeout(() => setOpen(false), 150)}
-          />
-        </div>
+      {/* Search */}
+      <div ref={containerRef} className="relative w-64 lg:w-80">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+        <Input
+          type="search" placeholder="Search…" className="h-8 pl-8 text-sm"
+          value={query} onChange={e => setQuery(e.target.value)}
+          onKeyDown={onKey} onFocus={() => { if (grouped) setOpen(true); }}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+        />
       </div>
 
-      {/* Search dropdown — portal so z-index is never clipped */}
-      {open && dropdownRect && createPortal(
-        <div
-          style={{
-            position: 'fixed',
-            top: dropdownRect.top,
-            left: dropdownRect.left,
-            width: Math.max(dropdownRect.width, 320),
-            zIndex: 9999,
-          }}
-          className="max-h-[420px] overflow-y-auto rounded-lg border bg-card shadow-xl"
-        >
-          {loading && (
-            <div className="p-3 text-sm text-muted-foreground">Searching…</div>
-          )}
-
+      {/* Search dropdown */}
+      {open && rect && createPortal(
+        <div style={{ position: "fixed", top: rect.top, left: rect.left, width: rect.width, zIndex: 9999 }}
+          className="max-h-96 overflow-y-auto rounded-lg border bg-card shadow-xl py-1">
+          {loading && <p className="p-3 text-sm text-muted-foreground">Searching…</p>}
           {!loading && grouped && (
-            <div className="p-2 space-y-3">
-              {renderGroup('Pages', grouped.pages, <LayoutDashboard className="h-4 w-4 shrink-0 text-muted-foreground" />)}
-              {renderGroup('Products', grouped.products, <Package className="h-4 w-4 shrink-0 text-muted-foreground" />)}
-              {renderGroup('Orders', grouped.orders, <ShoppingCart className="h-4 w-4 shrink-0 text-muted-foreground" />)}
-
-              {!hasResults && (
-                <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                  No results for &ldquo;{query}&rdquo;
-                </div>
-              )}
+            <div className="space-y-1">
+              {renderGroup("Pages", grouped.pages)}
+              {renderGroup("Products", grouped.products)}
+              {renderGroup("Orders", grouped.orders)}
+              {!hasResults && <p className="px-3 py-4 text-center text-sm text-muted-foreground">No results for "{query}"</p>}
             </div>
           )}
         </div>,
-        document.body,
+        document.body
       )}
 
-      {/* Right: AI stats, storefront link, avatar */}
-      <div className="flex items-center gap-4 shrink-0">
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Right actions */}
+      <div className="flex items-center gap-2 shrink-0">
         {/* AI usage */}
         <Dialog open={aiOpen} onOpenChange={setAiOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Sparkles className="mr-2 h-4 w-4" />
-              {((tokenStats.prompt + tokenStats.candidates) / 1000).toFixed(1)}k &bull; {(() => {
-                const cost =
-                  (tokenStats.prompt / 1_000_000) * 1.25 +
-                  (tokenStats.candidates / 1_000_000) * 10.0;
-                return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(cost);
-              })()}
+            <Button variant="ghost" size="sm" className="h-8 text-xs gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span className="hidden lg:inline">{((tokens.prompt + tokens.candidates) / 1000).toFixed(1)}k</span>
+              <span className="font-semibold">{new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(aiCost)}</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[520px]">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>AI Usage</DialogTitle>
-              <DialogDescription>
-                Total tokens and estimated cost using Gemini 2.5 Pro pricing (USD): $1.25 per 1M input tokens, $10.00 per 1M output tokens.
-              </DialogDescription>
+              <DialogDescription>Gemini Flash pricing: $0.15/1M input, $0.60/1M output</DialogDescription>
             </DialogHeader>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">Prompt tokens</span>
-                <span>{tokenStats.prompt.toLocaleString()}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">Output tokens</span>
-                <span>{tokenStats.candidates.toLocaleString()}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">Estimated cost</span>
-                <span>{(() => {
-                  const cost =
-                    (tokenStats.prompt / 1_000_000) * 1.25 +
-                    (tokenStats.candidates / 1_000_000) * 10.0;
-                  return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(cost);
-                })()}</span>
-              </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span>Input tokens</span><span className="font-medium">{tokens.prompt.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>Output tokens</span><span className="font-medium">{tokens.candidates.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>Cost</span><span className="font-semibold">{new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(aiCost)}</span></div>
               <div className="h-px bg-border my-2" />
-              <div className="max-h-64 overflow-auto space-y-1 text-sm">
-                {tokenStats.jobs.map((j, idx) => {
-                  const total = (j.prompt / 1_000_000) * 1.25 + (j.candidates / 1_000_000) * 10.0;
-                  return (
-                    <div key={idx} className="flex items-center justify-between">
-                      <span>{new Date(j.created_at).toLocaleString()}</span>
-                      <span>
-                        {(j.prompt + j.candidates).toLocaleString()} tokens &bull;{' '}
-                        {new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(total)}
-                      </span>
-                    </div>
-                  );
-                })}
-                {tokenStats.jobs.length === 0 && (
-                  <div className="text-muted-foreground">No sync jobs yet.</div>
-                )}
+              <div className="max-h-48 overflow-auto space-y-1">
+                {tokens.jobs.map((j: any, i: number) => (
+                  <div key={i} className="flex justify-between text-xs text-muted-foreground">
+                    <span>{new Date(j.created_at).toLocaleDateString()}</span>
+                    <span>{((j.prompt + j.candidates) / 1000).toFixed(1)}k tokens</span>
+                  </div>
+                ))}
+                {tokens.jobs.length === 0 && <p className="text-muted-foreground">No syncs yet</p>}
               </div>
             </div>
           </DialogContent>
         </Dialog>
 
-        {/* Storefront link */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleCopyStorefrontUrl}
-          disabled={!shopDetails?.slug}
-        >
-          <LinkIcon className="mr-2 h-4 w-4" />
-          Get Storefront URL
+        {/* Storefront URL */}
+        <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={copyUrl} disabled={!shopDetails?.slug}>
+          <LinkIcon className="h-3.5 w-3.5 mr-1.5" />
+          <span className="hidden lg:inline">Shop URL</span>
         </Button>
 
-        {/* Avatar / user menu */}
+        {/* User menu */}
         {user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={shopDetails?.logo_url || undefined} alt={shopDetails?.shop_name || 'User'} />
-                  <AvatarFallback>
-                    {shopDetails?.shop_name?.[0] || <UserIcon className="h-4 w-4" />}
-                  </AvatarFallback>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                <Avatar className="h-7 w-7">
+                  <AvatarImage src={shopDetails?.logo_url || undefined} />
+                  <AvatarFallback className="text-xs">{shopDetails?.shop_name?.[0] || <UserIcon className="h-3.5 w-3.5" />}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {user.user_metadata?.full_name || user.email}
-                  </p>
-                  <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-                </div>
+                <p className="text-sm font-medium truncate">{user.user_metadata?.full_name || user.email}</p>
+                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/settings')}>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Log out
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/settings")}><Settings className="mr-2 h-3.5 w-3.5" />Settings</DropdownMenuItem>
+              <DropdownMenuItem onClick={async () => { await supabase.auth.signOut(); navigate("/login"); }}><LogOut className="mr-2 h-3.5 w-3.5" />Log out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
       </div>
     </header>
   );
-};
-
-export default Header;
+}
