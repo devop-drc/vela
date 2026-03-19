@@ -170,7 +170,7 @@ export default function Header({ title }: { title: string }) {
         floating ? "fixed top-3 right-3 border rounded-lg shadow-lg" : "sticky top-0 border-b shadow-sm shrink-0",
         blur ? "bg-card/80 backdrop-blur-xl" : "bg-card",
       )}
-      style={floating ? { left: "calc(var(--sidebar-width, 16rem) + 2rem)" } : undefined}
+      style={floating ? { left: "calc(var(--sidebar-width, 16rem) + 0.75rem + 0.75rem)" } : undefined}
     >
       {/* Title */}
       <h1 className="text-lg font-bold hidden md:block shrink-0">{title}</h1>
