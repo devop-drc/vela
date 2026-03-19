@@ -526,7 +526,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         const aiTags = analysis.tags || [];
         const aiProductName = analysis.productName || (analysis as any).product_name || null;
         const aiPrice = analysis.price;
-        const aiCurrency = analysis.currency;
+        const aiCurrency = analysis.currency || 'ALL';
         const pricingType = analysis.pricingType || (analysis as any).pricing_type || 'one_time';
         const billingInterval = analysis.billingInterval || (analysis as any).billing_interval || null;
         const aiInventory = analysis.inventory;
@@ -560,6 +560,8 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             });
             if (comboErr) {
               console.error('upsert-combo-from-analysis failed:', comboErr.message);
+              summary.skipped++;
+              summary.skipped_items.push({ name: `Multi-product: "${post.caption?.substring(0, 30) || ''}..."`, reason: `Combo creation failed: ${comboErr.message}`, thumbnail_url: post.thumbnail_url || post.media_url });
             } else if ((comboRes as any)?.error) {
               console.error('upsert-combo-from-analysis error:', (comboRes as any).error);
             } else {

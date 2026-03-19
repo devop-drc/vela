@@ -410,6 +410,21 @@ serve(async (req) => {
     if (hasProducts) analysis.isProductPost = true;
     const isMultiProductPost = hasProducts && analysis.products.length > 1;
 
+    // Validate and default required fields
+    if (analysis.isProductPost) {
+      if (!analysis.productName) analysis.productName = caption?.split('\n')[0]?.slice(0, 60) || 'Unknown Product';
+      if (!analysis.categoryName) analysis.categoryName = 'Uncategorized';
+      if (!analysis.typeName) analysis.typeName = 'General';
+      if (!analysis.description) analysis.description = caption || '';
+      if (!analysis.currency) analysis.currency = 'ALL';
+      if (!analysis.tags || !Array.isArray(analysis.tags)) analysis.tags = [];
+      if (analysis.price === undefined || analysis.price === null) analysis.price = 0;
+      if (analysis.inventory === undefined || analysis.inventory === null) analysis.inventory = 10;
+      if (!analysis.pricingType) analysis.pricingType = 'one_time';
+      if (!analysis.specifications) analysis.specifications = [];
+      if (!analysis.options) analysis.options = {};
+    }
+
     // Map the new fields to the expected output structure
     const result = {
       ...analysis,

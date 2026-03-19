@@ -142,6 +142,7 @@ serve(async (req) => {
             media_url: it.media_url || null,
             thumbnail_url: it.media_url || null,
             pricing_type: 'one_time',
+            status: (it.inventory ?? 0) === 0 ? 'Out of Stock' : 'Draft',
             ...(business_id ? { business_id } : {}),
           })
           .select('id')

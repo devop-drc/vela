@@ -232,6 +232,9 @@ Return JSON: {"specifications": [{"key": "...", "value": "...", "unit": "..."}],
 
 // Write specifications to product_specifications table
 async function writeSpecifications(supabase: any, productId: string, userId: string, specs: any[]) {
+  // Clear old specs first to prevent accumulation
+  await supabase.from('product_specifications').delete().eq('product_id', productId);
+
   for (let i = 0; i < specs.length; i++) {
     const s = specs[i];
     await supabase.from('product_specifications').upsert({
