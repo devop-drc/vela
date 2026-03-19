@@ -287,13 +287,11 @@ const ProductAccordionRow = ({
     }
   };
 
-  const totalStock = getTotalStock(localVariants);
-  const worstStatus =
-    localVariants.length > 0 ? getLowestStockStatus(localVariants) : getStockStatus(product.inventory ?? 0);
-
-  const hasVariants = variantCache[product.id]
-    ? variantCache[product.id].length > 0
-    : (product.details?.options_v2?.length ?? 0) > 0;
+  // Use variant stock if variants exist, otherwise fall back to product base inventory
+  const hasLoadedVariants = variantCache[product.id] !== undefined;
+  const hasVariants = hasLoadedVariants ? variantCache[product.id].length > 0 : (product.details?.options_v2?.length ?? 0) > 0;
+  const totalStock = localVariants.length > 0 ? getTotalStock(localVariants) : (product.inventory ?? 0);
+  const worstStatus = localVariants.length > 0 ? getLowestStockStatus(localVariants) : getStockStatus(product.inventory ?? 0);
 
   return (
     <div className="border-b last:border-b-0">
@@ -346,7 +344,7 @@ const ProductAccordionRow = ({
 
         {/* Total stock */}
         <div className="text-sm font-semibold flex-shrink-0 w-16 text-right tabular-nums">
-          {variantCache[product.id] ? totalStock.toLocaleString() : (product.inventory ?? 0).toLocaleString()}
+          {totalStock.toLocaleString()}
         </div>
 
         {/* Status indicator */}

@@ -37,7 +37,7 @@ const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => {
       icon: Package,
       items: [
         { to: "/products", icon: Package, label: "All Products" },
-        { to: "/out-of-stock", icon: Archive, label: "Out of Stock" },
+        { to: "/out-of-stock", icon: Archive, label: "Stock" },
         { to: "/promotions", icon: Megaphone, label: "Promotions" },
         { to: "/keywords", icon: MessageSquareQuote, label: "AI Keywords" },
         { to: "/categories", icon: Layers, label: "Categories" },

@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useShop } from "@/contexts/ShopContext";
 import { useEffect, useState } from "react";
 import { SyncStatusWidget } from "./SyncStatusWidget";
+import NotificationSidebar from "./NotificationSidebar";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { cn } from "@/lib/utils";
 
@@ -113,6 +114,7 @@ const DashboardLayout = () => {
           <main className="flex-1 overflow-y-auto p-6">{content}</main>
         </div>
         <SyncStatusWidget />
+        <NotificationSidebar />
       </div>
     );
   }
@@ -135,6 +137,7 @@ const DashboardLayout = () => {
       </main>
       <BottomNav />
       <SyncStatusWidget />
+      <NotificationSidebar />
     </div>
   );
 };
