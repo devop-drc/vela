@@ -1,6 +1,6 @@
-import { useRef, useState, useEffect, useCallback, useMemo, forwardRef } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller } from "react-hook-form";
 import { DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { TagInput } from "../TagInput";
-import { Loader2, XCircle, PlusCircle, CheckCircle, Archive, Sparkles, Settings, Cloud, Package, Banknote, Eye } from "lucide-react";
+import { Loader2, XCircle, PlusCircle, CheckCircle, Sparkles, Settings, Cloud, Package, Eye, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,15 +19,11 @@ import { CreatableCombobox } from "../CreatableCombobox";
 import { currencies } from "@/lib/currencies";
 import { MediaItem } from "../MediaItem";
 import { toast } from "sonner";
-import { getAttributeIcon } from "@/lib/attributeIcons";
 import { useShop } from "@/contexts/ShopContext";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../ui/carousel";
 import { showError, showSuccess } from "@/utils/toast";
-import { OptionsManager } from "./OptionsManager";
 import CombinedVariantManager from "./CombinedVariantManager";
-import { generateOptionsAndVariantsFromDetails, upsertEnrichedOptionsAndVariants, EnrichedOptionMap } from "@/lib/variantGeneration";
-import { generateComboFromAI } from "@/lib/comboGeneration";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -35,130 +31,23 @@ const statusConfig = {
   'Out of Stock': { icon: Package, color: "text-slate-600", label: "Out of Stock" }, // Changed icon to Package
 };
 
-const normalizeOptions = (raw: any): Record<string, any[]> => {
-  if (!raw) return {};
-  // Case 1: Already an object map
-  if (typeof raw === 'object' && !Array.isArray(raw)) {
-    return Object.fromEntries(
-      Object.entries(raw).map(([k, v]) => {
-          // Flatten simple string arrays to enriched format if needed
-          if (Array.isArray(v)) {
-              return [k, v.map(x => typeof x === 'string' ? { value: x, price_difference: 0, inventory: 10 } : x)];
-          }
-          return [k, []];
-      })
-    );
-  }
-  // Case 2: Array of { name, values } (legacy support)
-  if (Array.isArray(raw)) {
-    const out: Record<string, any[]> = {};
-    for (const item of raw) {
-      const key = (item?.name ?? '').toString();
-      const vals = Array.isArray(item?.values) ? item.values : [];
-      if (key && vals.length) {
-          out[key] = vals.map((x: any) => typeof x === 'string' ? { value: x, price_difference: 0, inventory: 10 } : x);
-      }
-    }
-    return out;
-  }
-  return {};
-};
 
-// Helper to convert snake_case to Title Case for display
-const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
-
-// Variant helpers for editor-side upsert
-const upsertProductOption = async (productId: string, name: string, position: number) => {
-  const normalized = toTitleCase(name);
-  const { data: existing } = await supabase
-    .from('product_options')
-    .select('id')
-    .eq('product_id', productId)
-    .eq('name', normalized)
-    .maybeSingle();
-  if (existing) return existing.id as string;
-  const { data: inserted, error: insErr } = await supabase
-    .from('product_options')
-    .insert({ product_id: productId, name: normalized, position, display_order: position })
-    .select('id')
-    .single();
-  if (insErr) throw insErr;
-  return (inserted as any).id as string;
-};
-
-const upsertOptionValue = async (optionId: string, value: string) => {
-  const val = String(value).trim();
-  const { data: existing } = await supabase
-    .from('option_values')
-    .select('id')
-    .eq('option_id', optionId)
-    .eq('value', val)
-    .maybeSingle();
-  if (existing) return existing.id as string;
-  const { data: inserted, error: insErr } = await supabase
-    .from('option_values')
-    .insert({ option_id: optionId, value: val, is_active: true })
-    .select('id')
-    .single();
-  if (insErr) throw insErr;
-  return (inserted as any).id as string;
-};
-
-const combinations = <T,>(arrays: T[][]): T[][] => {
-  if (arrays.length === 0) return [];
-  return arrays.reduce<T[][]>((acc, curr) => {
-    if (acc.length === 0) return curr.map(v => [v]);
-    const next: T[][] = [];
-    for (const prev of acc) {
-      for (const v of curr) next.push([...prev, v]);
-    }
-    return next;
-  }, []);
-};
-
-const buildVariantKey = (orderedOptionNames: string[], valueLabels: string[]) => {
-  const parts = orderedOptionNames.map((name, idx) => `${name}=${valueLabels[idx]}`);
-  return parts.join('|');
-};
-
-const upsertVariantsFromOptions = async (productId: string, aiOptions: EnrichedOptionMap, explicitVariants?: any[]) => {
-    return upsertEnrichedOptionsAndVariants(supabase, productId, aiOptions, explicitVariants);
-};
-
-const AttributeInput = ({ control, fieldName, inputType }: any) => {
-  const name = `details.${fieldName}`;
-  switch (inputType) {
-    case 'number':
-      return <Controller name={name} control={control} render={({ field }) => <Input type="number" {...field} value={field.value || ''} />} />;
-    case 'tags':
-      return <Controller name={name} control={control} render={({ field }) => <TagInput {...field} value={Array.isArray(field.value) ? field.value : (field.value ? [field.value] : [])} />} />;
-    case 'color':
-        return <Controller name={name} control={control} render={({ field }) => <Input type="color" {...field} value={field.value || '#000000'} className="h-10 w-16" />} />;
-    default:
-      return <Controller name={name} control={control} render={({ field }) => <Input {...field} value={field.value || ''} />} />;
-  }
-};
 
 export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, onClose, onUpdate, isSubmitting, setIsSubmitting, specs, setSpecs }: any) => {
     const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
     const { shopDetails, convertCurrency } = useShop();
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
     const [typeOptions, setTypeOptions] = useState<string[]>([]);
-    const [typeAttributes, setTypeAttributes] = useState<any[]>([]);
     const [isReanalyzing, setIsReanalyzing] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
     
-    // Refs for child managers
-    const optionsManagerRef = useRef<{ handleSaveOptions: () => Promise<boolean> }>(null);
-    const variantMatrixRef = useRef<{ handleSaveVariants: () => Promise<boolean> }>(null);
+    // Ref for combined options + variants manager
     const combinedManagerRef = useRef<{ handleSaveCombined: () => Promise<boolean> }>(null);
 
     const pricingType = watch("pricing_type");
     const categoryValue = watch("category");
-    const typeValue = watch("details.type");
     const statusValue = watch("status");
     const captionValue = watch("caption");
-    const productType = watch("product_type");
     const currencyCode = watch("currency");
     const baseInventory = watch("inventory");
     // Removed optionsV2 watch as it's now managed externally
@@ -204,27 +93,21 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     }, []);
 
     useEffect(() => {
-        const fetchTypesAndAttributes = async () => {
+        const fetchTypes = async () => {
             if (!categoryValue) {
                 setTypeOptions([]);
-                setTypeAttributes([]);
                 return;
             }
             const { data: categoryData } = await supabase.from('categories').select('id').eq('name', categoryValue).single();
             if (categoryData) {
-                const { data: dbTypes } = await supabase.from('types').select('name, attributes').eq('category_id', categoryData.id);
+                const { data: dbTypes } = await supabase.from('types').select('name').eq('category_id', categoryData.id);
                 setTypeOptions(dbTypes?.map(t => t.name) || []);
-                
-                const selectedType = dbTypes?.find(t => t.name === typeValue);
-                // Use all attributes defined for the type
-                setTypeAttributes(selectedType?.attributes || []);
             } else {
                 setTypeOptions([]);
-                setTypeAttributes([]);
             }
         };
-        fetchTypesAndAttributes();
-    }, [categoryValue, typeValue]);
+        fetchTypes();
+    }, [categoryValue]);
 
     // --- Auto-Update Status/Inventory (Simplified for base product only) ---
     useEffect(() => {
@@ -311,123 +194,6 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         }
     };
 
-    const handleReanalyze = async () => {
-        setIsReanalyzing(true);
-        const toastId = toast.loading("Analyzing product with AI...");
-        try {
-            let caption = getValues('caption');
-            const name = getValues('name');
-            if (!product?.id) throw new Error("Please save the product before analyzing so variants can be created.");
-            // Try to use the original Instagram caption if available
-            if (product?.instagram_post_id) {
-              const { data: cached } = await supabase
-                .from('ai_analysis_cache')
-                .select('caption')
-                .eq('instagram_post_id', product.instagram_post_id)
-                .maybeSingle();
-              if (cached?.caption) caption = cached.caption;
-            }
-            // Enrich with existing details if present
-            const details = getValues('details');
-            const detailsSnippet = details && Object.keys(details || {}).length > 0 ? `. Existing details: ${JSON.stringify(details)}` : '';
-            if (!caption && !detailsSnippet) throw new Error("Please provide a description or some details for the AI to analyze.");
-            const { data: { user } = {} } = await supabase.auth.getUser();
-            if (!user) throw new Error("User not authenticated.");
-
-            const mergedCaption = `${name ? name + '. ' : ''}${caption ?? ''}${detailsSnippet}`.trim();
-            const { data: analysis, error } = await supabase.functions.invoke('ai-product-classifier', { body: { caption: mergedCaption, user_id: user.id } });
-            if (error) throw error;
-            if (analysis.error) throw new Error(analysis.error);
-            if (!analysis.isProductPost) throw new Error("No accurate info found for this product. Please verify the product name/caption and try again.");
-
-            // If multiple items detected, call Edge Function to upsert combo with nested items/options/variants.
-            const multi = Array.isArray(analysis.products) ? analysis.products : (Array.isArray(analysis.items) ? analysis.items : []);
-            if (multi.length > 1) {
-              const payload = { instagram_post_id: product.instagram_post_id ?? null, user_id: user.id, analysis: { ...analysis, products: multi, combo: { title: name, description: caption, ...(analysis.combo || {}) } } };
-              const { data: comboRes, error: comboErr } = await supabase.functions.invoke('upsert-combo-from-analysis', { body: payload });
-              if (comboErr) throw comboErr;
-              if (comboRes?.error) throw new Error(comboRes.error);
-              toast.success(`Created combo with ${multi.length} items.`, { id: toastId });
-              setRefreshKey(k => k + 1);
-              if (typeof onUpdate === 'function') onUpdate();
-              return;
-            }
-
-            // Update core fields
-            if (analysis.categoryName) setValue('category', analysis.categoryName, { shouldDirty: true });
-            if (analysis.typeName) setValue('details.type', analysis.typeName, { shouldDirty: true });
-
-            // Update specifications
-            const newDetails: { [key: string]: any } = { type: analysis.typeName };
-
-            if (analysis.specifications) {
-                for (const [key, value] of Object.entries(analysis.specifications)) {
-                    newDetails[key] = value;
-                }
-            }
-
-            // Update the form's details object (excluding options_v2)
-            const currentDetails = getValues('details');
-            setValue('details', { ...currentDetails, ...newDetails }, { shouldDirty: true });
-
-            // Update description (caption) if provided by AI
-            if (analysis.description) {
-                setValue('caption', analysis.description, { shouldDirty: true });
-            }
-
-            // Create options/variants (support both shapes). If no explicit options, derive from array-valued specifications or existing details
-            let createdSummary = '';
-            let candidate: Record<string, any[]> = {};
-            if (analysis.options) {
-              candidate = normalizeOptions(analysis.options);
-            }
-              if (!candidate || Object.keys(candidate).length === 0) {
-                const derived: Record<string, any[]> = {};
-                if (analysis.specifications && typeof analysis.specifications === 'object') {
-                  for (const [k, v] of Object.entries(analysis.specifications)) {
-                    if (Array.isArray(v) && v.length > 0) {
-                      const stringVals = v.map(x => String(x).trim()).filter(Boolean);
-                      if (stringVals.length > 0) {
-                          derived[k] = stringVals.map(val => ({ value: val, price_difference: 0, inventory: 10 }));
-                      }
-                    }
-                  }
-                }
-                // Fallback to existing details arrays
-                if ((!derived || Object.keys(derived).length === 0) && details && typeof details === 'object') {
-                  for (const [k, v] of Object.entries(details)) {
-                    if (k === 'type') continue;
-                    if (Array.isArray(v) && v.length > 1) {
-                      const vs = v.map(x => String(x).trim()).filter(Boolean);
-                      if (vs.length > 1) {
-                        derived[k] = Array.from(new Set(vs)).map(val => ({ value: val, price_difference: 0, inventory: 10 }));
-                      }
-                    }
-                  }
-                }
-                candidate = derived;
-              }
-            const keys = Object.keys(candidate || {});
-            if (keys.length > 0) {
-              const optionCount = keys.length;
-              const variantCount = keys.reduce((prod, k) => prod * (Array.isArray(candidate[k]) ? candidate[k].length : 0), 1) || 0;
-              await upsertVariantsFromOptions(product.id, candidate as EnrichedOptionMap, analysis.variants);
-              createdSummary = ` • ${optionCount} option(s), ${variantCount} variant(s)`;
-              // Force-refresh the variant manager without closing
-              setRefreshKey(k => k + 1);
-              if (typeof onUpdate === 'function') onUpdate();
-            } else {
-              toast.info("No accurate options/specs found for this product. Please verify the name/info and try again.", { id: toastId });
-              return;
-            }
-
-            toast.success(`Specs updated${createdSummary}.`, { id: toastId });
-        } catch (err: any) {
-            toast.error(err.message, { id: toastId });
-        } finally {
-            setIsReanalyzing(false);
-        }
-    };
 
     const handleSave = async (data: any) => {
         setIsSubmitting(true);
@@ -512,31 +278,6 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         return currencies.find(c => c.code === currencyCode)?.symbol || currencyCode;
     }, [currencyCode]);
 
-    // Filter attributes to only include those defined by the current type
-    const attributesToRender = useMemo(() => {
-        const attributeNames = new Set(typeAttributes.map(attr => attr?.name).filter(Boolean));
-        
-        // Include all attributes defined in the type, plus any existing custom ones in details
-        const existingDetailsKeys = Object.keys(getValues('details') || {}).filter(key => key !== 'type' && key !== 'options_v2');
-        const allKeys = new Set([...attributeNames, ...existingDetailsKeys]);
-
-        return Array.from(allKeys).map(key => {
-            const typeAttr = typeAttributes.find(attr => attr.name === key);
-            return {
-                name: key,
-                inputType: typeAttr?.inputType || 'text',
-                isOption: typeAttr?.isOption || false,
-            };
-        }).sort((a, b) => {
-            // Sort options (isOption: true) first, then specifications
-            if (a.isOption && !b.isOption) return -1;
-            if (!a.isOption && b.isOption) return 1;
-            return a.name.localeCompare(b.name);
-        });
-    }, [typeAttributes, getValues]);
-
-    // Filter out attributes that are now handled by options_v2 (Color, Size, etc.)
-    const specificationsToRender = attributesToRender.filter(attr => !attr.isOption && attr.name); // Added final check for attr.name
 
     return (
       <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
@@ -638,55 +379,68 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     </Button>
                   </CardTitleComponent>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-3">
                   {specs && specs.length > 0 ? (
                     <div className="grid gap-2">
-                      {specs.map((spec: any) => (
-                        <div key={spec.id || spec.key} className="flex items-center gap-2 text-sm">
-                          <span className="text-muted-foreground capitalize min-w-[120px]">{spec.key.replace(/_/g, ' ')}</span>
+                      {/* Header row */}
+                      <div className="grid grid-cols-[1fr_1.5fr_80px_32px] gap-2 text-xs text-muted-foreground px-1">
+                        <span>Spec</span><span>Value</span><span>Unit</span><span />
+                      </div>
+                      {specs.map((spec: any, idx: number) => (
+                        <div key={spec.id || spec.key} className="grid grid-cols-[1fr_1.5fr_80px_32px] items-center gap-2">
+                          <Input
+                            value={spec.key}
+                            placeholder="e.g. weight"
+                            onChange={(e) => {
+                              const updated = specs.map((s: any, i: number) => i === idx ? { ...s, key: e.target.value } : s);
+                              setSpecs(updated);
+                            }}
+                            className="h-8 text-sm capitalize"
+                          />
                           <Input
                             value={spec.value}
+                            placeholder="Value"
                             onChange={(e) => {
-                              const updated = specs.map((s: any) => s.key === spec.key ? { ...s, value: e.target.value } : s);
+                              const updated = specs.map((s: any, i: number) => i === idx ? { ...s, value: e.target.value } : s);
                               setSpecs(updated);
                             }}
                             className="h-8 text-sm"
                           />
-                          {spec.unit && <span className="text-xs text-muted-foreground">{spec.unit}</span>}
+                          <Input
+                            value={spec.unit || ''}
+                            placeholder="Unit"
+                            onChange={(e) => {
+                              const updated = specs.map((s: any, i: number) => i === idx ? { ...s, unit: e.target.value } : s);
+                              setSpecs(updated);
+                            }}
+                            className="h-8 text-sm"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => setSpecs(specs.filter((_: any, i: number) => i !== idx))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No specifications yet. Click "Find specs with AI" to populate.</p>
+                    <p className="text-sm text-muted-foreground">No specifications yet. Click "Find specs with AI" or add one manually.</p>
                   )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-1"
+                    onClick={() => setSpecs([...(specs || []), { key: '', value: '', unit: '' }])}
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" />Add Spec
+                  </Button>
                 </CardContent>
               </Card>
-
-              {/* Legacy Specifications (from details JSONB) */}
-              {specificationsToRender.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitleComponent className="text-base flex items-center justify-between">
-                      <span className="flex items-center gap-2"><Settings className="h-5 w-5" /> Details</span>
-                      <Button type="button" variant="outline" size="sm" onClick={handleReanalyze} disabled={isReanalyzing}>
-                        {isReanalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-amber-400" />}Analyze with AI
-                      </Button>
-                    </CardTitleComponent>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {specificationsToRender.map((attr: any) => {
-                      if (!attr || !attr.name) return null;
-                      const Icon = getAttributeIcon(attr.name);
-                      return (
-                        <div key={attr.name} className="space-y-2">
-                          <Label className="capitalize flex items-center gap-1.5"><Icon className="h-4 w-4" />{toTitleCase(attr.name)}</Label>
-                          <AttributeInput control={control} fieldName={attr.name} inputType={attr.inputType} />
-                        </div>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
-              )}
 
               {/* Combined Options + Variants Manager */}
               {product?.id && (
