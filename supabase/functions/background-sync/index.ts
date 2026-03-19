@@ -359,7 +359,10 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
               inventory: heuristicResult.inventory,
               categoryName: intel.category_name || undefined,
               typeName: intel.type_name || undefined,
-              specifications: intel.specs || undefined,
+              description: intel.description || post.caption || undefined,
+              tags: intel.tags || [],
+              specifications: intel.specifications || undefined,
+              options: intel.options || undefined,
               pricingType: 'one_time',
               billingInterval: null,
             };
@@ -555,7 +558,22 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         }
       }
 
-      const { categoryName, typeName, specifications, options, pricingType, billingInterval, inventory: aiInventory, ...productInfo } = analysis;
+      const { categoryName: rawCategoryName, typeName: rawTypeName, specifications: rawSpecifications, options, pricingType, billingInterval, inventory: aiInventory, ...productInfo } = analysis;
+
+      // Normalize specifications: handle both array [{key,value,unit}] and object {key:value} formats
+      let specifications: Record<string, any> | undefined;
+      if (Array.isArray(rawSpecifications)) {
+        specifications = {};
+        for (const spec of rawSpecifications) {
+          if (spec && spec.key) specifications[spec.key] = spec.value || '';
+        }
+      } else if (rawSpecifications && typeof rawSpecifications === 'object') {
+        specifications = rawSpecifications;
+      }
+
+      // Default category/type if AI didn't return them
+      const categoryName = rawCategoryName || 'Uncategorized';
+      const typeName = rawTypeName || 'General';
 
       // If AI returned products array (multi-product), expand them; otherwise, try parser; else fall back to single product
       const multiProducts: Array<any> = (analysis as any).products && Array.isArray((analysis as any).products)
@@ -586,8 +604,8 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         continue;
       }
       
-      // 1. Collect Category and Type data for batch upsert later
-      if (categoryName && typeName) {
+      // 1. Collect Category and Type data for batch upsert later (always runs — creates new categories/types if needed)
+      {
         const normalizedCategoryName = toTitleCase(categoryName);
         const normalizedTypeName = toTitleCase(typeName);
         
@@ -630,7 +648,15 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         const itemPrice = item && typeof item.price === 'number' ? item.price : productInfo.price;
         const itemCurrency = (item && item.currency) ? item.currency : productInfo.currency;
         const itemInventory = item && typeof item.inventory === 'number' ? item.inventory : aiInventory;
-        const itemSpecifications = item && item.specifications ? item.specifications : specifications;
+        // Normalize item specs (handle array or object format)
+        let itemSpecifications = item && item.specifications ? item.specifications : specifications;
+        if (Array.isArray(itemSpecifications)) {
+          const normalized: Record<string, any> = {};
+          for (const spec of itemSpecifications) {
+            if (spec && spec.key) normalized[spec.key] = spec.value || '';
+          }
+          itemSpecifications = normalized;
+        }
         const itemOptions = item && item.options ? item.options : options;
         const itemCategoryName = categoryName || 'Generic Product';
         const itemTypeName = typeName || 'Generic';
@@ -668,10 +694,10 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
         const productPayload: ProductPayload = {
           name: itemName,
-          caption: (productInfo as any).description,
+          caption: (productInfo as any).description || post.caption || '',
           price: priceInALL,
           currency: 'ALL',
-          tags: (productInfo as any).tags,
+          tags: (productInfo as any).tags || [],
           category: toTitleCase(itemCategoryName || ''),
           details: details,
           business_id: (business as any).id,
