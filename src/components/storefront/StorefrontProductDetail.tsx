@@ -46,6 +46,8 @@ const StorefrontProductDetail = () => {
   const [options, setOptions] = useState<ProductOption[]>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [selectedValues, setSelectedValues] = useState<Record<string, string>>({});
+  // Specifications from product_specifications table
+  const [dbSpecs, setDbSpecs] = useState<{ key: string; value: string; unit: string | null }[]>([]);
 
   const [api, setApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -138,6 +140,21 @@ const StorefrontProductDetail = () => {
     };
     loadOptions();
   }, [productId, products, convertCurrency]);
+
+  // Fetch product specifications from product_specifications table
+  useEffect(() => {
+    if (!productId) return;
+    const p = products.find(pp => pp.id === productId);
+    if (!p) return;
+    supabase
+      .from('product_specifications')
+      .select('key, value, unit')
+      .eq('product_id', p.id)
+      .order('display_order')
+      .then(({ data }) => {
+        if (data) setDbSpecs(data);
+      });
+  }, [productId, products]);
 
   if (isLoading) {
     return <div className="container py-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -461,8 +478,25 @@ const StorefrontProductDetail = () => {
             </CardContent>
           </Card>
 
-          {/* Specifications */}
-          {specifications.length > 0 && (
+          {/* Specifications (from product_specifications table) */}
+          {dbSpecs.length > 0 && (
+            <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-md")}>
+              <CardHeader><CardTitle className="text-lg md:text-xl">Specifications</CardTitle></CardHeader>
+              <CardContent className="p-4">
+                <div className="rounded-lg border">
+                  {dbSpecs.map((spec, i) => (
+                    <div key={spec.key} className={`flex justify-between px-4 py-2.5 text-sm ${i !== dbSpecs.length - 1 ? 'border-b' : ''}`}>
+                      <span className="text-muted-foreground capitalize">{spec.key.replace(/_/g, ' ')}</span>
+                      <span className="font-medium">{spec.value}{spec.unit ? ` ${spec.unit}` : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Legacy Specifications (from details JSONB) */}
+          {specifications.length > 0 && dbSpecs.length === 0 && (
             <Card className={cn(blurEnabled ? "bg-card/70 backdrop-blur-[20px]" : "bg-card", "shadow-md")}>
               <CardHeader><CardTitle className="text-lg md:text-xl">Specifications</CardTitle></CardHeader>
               <CardContent className="p-4 space-y-4">
