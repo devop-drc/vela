@@ -121,46 +121,157 @@ The `ai_analysis_cache` uses `instagram_post_id` as PK, so only one cache entry 
 
 Google Search grounding costs **$35 per 1,000 requests**. A naive two-pass approach (classify + spec search) would cost ~$0.07/product. For 100 products synced, that's $7 in grounding alone, plus token costs for images and text.
 
-### 3.2 Solution: Spec Resolution Waterfall
+### 3.2 Solution: Product Intelligence Waterfall
 
-Instead of always hitting Google Search, use a 4-level waterfall that resolves specs from cheapest to most expensive. Stop at the first level that produces sufficient results.
+A 4-level waterfall that resolves **everything** (classification + specs + options) from cheapest to most expensive. The key insight: once ANY user pays for AI classification and spec search for a product, that intelligence is cached globally and every future user gets it for free.
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│ Product classified (name, category, type from Pass 1)    │
-└──────────────────────┬──────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│ Instagram post arrives (caption + media)             │
+└──────────────────────┬──────────────────────────────┘
                        ▼
-            ┌──────────────────┐
-  Level 1   │  User Product    │  FREE — Query user's own products
-            │  Reuse           │  for same product name + category
-            └────────┬─────────┘
-                     │ no match
-                     ▼
-            ┌──────────────────┐
-  Level 2   │  Global Spec     │  FREE — Query shared cache of
-            │  Cache           │  previously-searched product specs
-            └────────┬─────────┘
-                     │ no match
-                     ▼
-            ┌──────────────────┐
-  Level 3   │  Category        │  FREE — Fill from category_templates
-            │  Template        │  default specs + common values
-            │  Defaults        │
-            └────────┬─────────┘
-                     │ insufficient (novel/unknown product)
-                     ▼
-            ┌──────────────────┐
-  Level 4   │  Gemini +        │  PAID — Single Gemini call with
-            │  Dynamic         │  dynamic retrieval (only charges
-            │  Retrieval       │  if Gemini actually searches)
-            └──────────────────┘
+            ┌──────────────────────┐
+  Step 0    │  Heuristic Extract   │  FREE — Extract product name
+            │  Product Name        │  from caption via regex
+            └──────────┬───────────┘
+                       ▼
+            ┌──────────────────────┐
+  Level 1   │  Global Product      │  FREE — Full classification +
+            │  Intelligence        │  specs + options from shared
+            │  Cache               │  cross-user cache
+            └──────────┬───────────┘
+                       │ no match
+                       ▼
+            ┌──────────────────────┐
+  Level 2   │  User Product        │  FREE — Match against user's
+            │  Reuse               │  own existing products
+            └──────────┬───────────┘
+                       │ no match
+                       ▼
+            ┌──────────────────────┐
+  Level 3   │  Category Template   │  FREE — Fill from seed data
+            │  Defaults            │  (partial, for known types)
+            └──────────┬───────────┘
+                       │ insufficient
+                       ▼
+            ┌──────────────────────┐
+  Level 4   │  Gemini Flash +      │  PAID — Single AI call,
+            │  Dynamic Retrieval   │  results cached globally
+            │                      │  (one-time cost, free forever)
+            └──────────────────────┘
+                       │
+                       ▼
+            ┌──────────────────────┐
+            │  Populate Global     │  Results saved to shared cache
+            │  Intelligence Cache  │  → all future users get it FREE
+            └──────────────────────┘
 ```
 
-### 3.3 Level 1: User Product Reuse (Free)
+### 3.3 Step 0: Heuristic Product Name Extraction (Free)
 
-When a new product matches an existing product in the user's catalog, copy its specs and options.
+Before hitting any database or AI, extract a candidate product name from the caption. This is needed to look up the global cache.
 
-**Matching logic (in `background-sync` after classification):**
+```typescript
+function extractProductName(caption: string): string | null {
+  if (!caption) return null;
+  const lines = caption.split('\n').filter(l => l.trim());
+  // First non-hashtag, non-emoji line is likely the product name
+  for (const line of lines) {
+    const cleaned = line.replace(/#\S+/g, '').replace(/[^\w\s\-&.'/]/g, '').trim();
+    if (cleaned.length >= 3) return cleaned;
+  }
+  return null;
+}
+
+function normalizeProductName(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\b(the|a|an)\b/g, '')
+    .trim();
+}
+```
+
+### 3.4 Level 1: Global Product Intelligence Cache (Free)
+
+The core optimization. A shared, cross-user cache of **complete product intelligence** — classification, specs, AND options. Once any user's sync processes an "iPhone 16 Pro", every future user gets the full classification + specs + options for free with zero AI calls.
+
+**New table: `global_product_intelligence`** (replaces `global_spec_cache`)
+
+```sql
+CREATE TABLE public.global_product_intelligence (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    normalized_name text NOT NULL,
+    category_name text NOT NULL,
+    type_name text NOT NULL,
+    description text,                       -- generic product description
+    tags jsonb DEFAULT '[]',                -- ["smartphone", "apple", "iphone"]
+    specifications jsonb NOT NULL,          -- [{key, value, unit}, ...]
+    options jsonb DEFAULT '[]',             -- [{name, common_values}, ...]
+    source text DEFAULT 'ai_classified',    -- 'ai_classified' | 'manual' | 'seeded'
+    confidence numeric DEFAULT 0.8,         -- quality score (0-1)
+    reuse_count integer DEFAULT 0,          -- how many times reused across users
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    UNIQUE(normalized_name, category_name, type_name)
+);
+
+CREATE INDEX idx_gpi_name_lookup
+    ON public.global_product_intelligence(normalized_name);
+CREATE INDEX idx_gpi_category_lookup
+    ON public.global_product_intelligence(category_name, type_name);
+CREATE INDEX idx_gpi_reuse_count
+    ON public.global_product_intelligence(reuse_count DESC);
+
+-- Readable by all authenticated users, writable only via service role
+ALTER TABLE public.global_product_intelligence ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated users can read global product intelligence"
+    ON public.global_product_intelligence
+    FOR SELECT
+    USING (auth.role() = 'authenticated');
+```
+
+**Lookup (using normalized name from Step 0):**
+```sql
+SELECT category_name, type_name, description, tags, specifications, options, confidence
+FROM global_product_intelligence
+WHERE normalized_name = :normalizedName
+ORDER BY confidence DESC, reuse_count DESC
+LIMIT 1
+```
+
+**If no exact match, try fuzzy:**
+```sql
+SELECT category_name, type_name, description, tags, specifications, options, confidence
+FROM global_product_intelligence
+WHERE normalized_name % :normalizedName   -- trigram similarity (pg_trgm)
+  AND similarity(normalized_name, :normalizedName) > 0.6
+ORDER BY similarity(normalized_name, :normalizedName) DESC
+LIMIT 1
+```
+
+Requires: `CREATE EXTENSION IF NOT EXISTS pg_trgm;` and `CREATE INDEX idx_gpi_name_trgm ON global_product_intelligence USING gin(normalized_name gin_trgm_ops);`
+
+**If match found (confidence ≥ 0.7):**
+- Use cached `category_name`, `type_name` as the product's classification — **skip AI classification entirely**
+- Copy `specifications` to `product_specifications` table for this product
+- Copy `options` to `product_options` + `option_values` tables
+- Use cached `description` if the post caption is insufficient
+- Use cached `tags`
+- Increment `reuse_count`
+- Mark source as `'global_intelligence'`
+- **DONE — zero AI cost, zero grounding cost**
+
+**Only the user-specific data comes from the caption:** price, inventory, specific option values selected (e.g., which colors this seller has), media URLs.
+
+### 3.5 Level 2: User Product Reuse (Free)
+
+When no global match exists but the user has a similar product in their own catalog, copy its intelligence.
+
+**Matching logic:**
 
 ```sql
 SELECT p.id, p.name, p.category,
@@ -168,7 +279,6 @@ SELECT p.id, p.name, p.category,
 FROM products p
 LEFT JOIN product_specifications ps ON ps.product_id = p.id
 WHERE p.user_id = :userId
-  AND p.category = :categoryName
   AND (
     p.name ILIKE '%' || :productName || '%'
     OR :productName ILIKE '%' || p.name || '%'
@@ -184,95 +294,31 @@ Also query `product_options` + `option_values` for the matched product.
 **If match found with specs:**
 - Copy all `product_specifications` rows to the new product
 - Copy option structure (option names and common values)
-- Mark spec source as `'user_reuse'`
-- Done — skip Levels 2-4
-
-### 3.4 Level 2: Global Spec Cache (Free)
-
-A shared cache of product specs that have been previously searched via Google, available across all users. This means if ANY user has already searched for "iPhone 16 Pro" specs, no other user needs to pay for that search again.
-
-**New table: `global_spec_cache`**
-
-```sql
-CREATE TABLE public.global_spec_cache (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    normalized_name text NOT NULL,         -- lowercase, trimmed, brand-normalized
-    category_name text NOT NULL,
-    type_name text NOT NULL,
-    specifications jsonb NOT NULL,          -- [{key, value, unit}, ...]
-    options jsonb,                          -- [{name, common_values}, ...]
-    source text DEFAULT 'google_search',    -- 'google_search' | 'manual'
-    search_count integer DEFAULT 1,         -- how many times this was reused
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now(),
-    UNIQUE(normalized_name, category_name, type_name)
-);
-
-CREATE INDEX idx_global_spec_cache_lookup
-    ON public.global_spec_cache(normalized_name, category_name);
-
--- Readable by all authenticated users, writable only via service role
-ALTER TABLE public.global_spec_cache ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Authenticated users can read global spec cache"
-    ON public.global_spec_cache
-    FOR SELECT
-    USING (auth.role() = 'authenticated');
-```
-
-**Name normalization function:**
-```typescript
-function normalizeProductName(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, ' ')           // collapse whitespace
-    .replace(/[^\w\s-]/g, '')       // remove special chars
-    .replace(/\b(the|a|an)\b/g, '') // remove articles
-    .trim();
-}
-```
-
-**Lookup:**
-```sql
-SELECT specifications, options
-FROM global_spec_cache
-WHERE normalized_name = :normalizedName
-  AND category_name = :categoryName
-ORDER BY updated_at DESC
-LIMIT 1
-```
-
-**If match found:**
-- Copy specs to `product_specifications` for the new product
-- Increment `search_count` on the cache row
-- Mark spec source as `'global_cache'`
+- Copy category and type from matched product
+- **Also populate `global_product_intelligence`** so future users benefit too
+- Mark source as `'user_reuse'`
 - Done — skip Levels 3-4
 
-**Cache population:** Whenever Level 4 (Google Search) returns results, insert/update the global cache.
+### 3.6 Level 3: Category Template Defaults (Free)
 
-### 3.5 Level 3: Category Template Defaults (Free)
-
-If no existing product or cache match, use the `category_templates` seed data to pre-fill specs with common values.
+If no match anywhere, use `category_templates` seed data for partial fill. This level requires AI classification first (to know the category/type), so a Gemini Flash call happens here.
 
 **Flow:**
-1. Look up `category_templates` for the classified `(categoryName, typeName)` — custom templates first, then system
-2. For each `default_specifications` entry that has `common_values`:
-   - Use the first common value as a placeholder (e.g., material → "Cotton" for T-shirts)
-3. For specifications without common values (e.g., weight, dimensions):
-   - Leave empty — these need real data from Level 4 or manual input
-
-**Result:** A partial spec fill. Good for generic attributes (material, gender, season) but insufficient for product-specific specs (exact processor, battery capacity).
+1. Run Gemini Flash classification (caption-only, no grounding) to get `categoryName` and `typeName`
+2. Look up `category_templates` for the classified type
+3. For each `default_specifications` entry with `common_values`:
+   - Use the first common value as a placeholder
+4. For specifications without common values:
+   - Leave empty — need Level 4 or manual input
 
 **Sufficiency check:** If the template provides values for ≥80% of its own spec keys, consider it "sufficient" and skip Level 4. Otherwise, proceed to Level 4 to fill the gaps.
 
-**Mark spec source as `'template_default'`** — these specs should be visually distinguished in the UI (e.g., lighter text, "estimated" badge) so the user knows they're defaults, not verified.
+**Mark spec source as `'template_default'`** — visually distinguished in UI (lighter text, "estimated" badge).
 
-### 3.6 Level 4: Single Gemini Call with Dynamic Retrieval (Paid, Last Resort)
+### 3.7 Level 4: Single Gemini Call with Dynamic Retrieval (Paid, Last Resort)
 
-Only reached for novel products with insufficient template coverage. Uses **dynamic retrieval** instead of always-on grounding to minimize cost.
+Only reached for truly novel products. Uses **dynamic retrieval** to minimize grounding charges.
 
-**Dynamic retrieval:** Instead of `tools: [{ google_search: {} }]`, use:
 ```json
 {
   "tools": [{ "google_search": {} }],
@@ -287,9 +333,7 @@ Only reached for novel products with insufficient template coverage. Uses **dyna
 }
 ```
 
-This tells Gemini to only use Google Search when it determines the query actually needs real-time data. Grounding charges only apply when Gemini actually searches and returns grounding URLs. For well-known products where Gemini's training data already has specs, it may skip the search entirely.
-
-**Single call prompt (combines classification context + spec search):**
+**Single call prompt:**
 ```
 Find the exact specifications for this product.
 
@@ -306,15 +350,37 @@ Expected specifications for this product type:
 
 Fill in accurate values for each specification. Use Google Search ONLY if the product
 is not well-known or if the caption lacks specific details.
-Return JSON array: [{"key": "...", "value": "...", "unit": "..."}]
+Return JSON: {
+  "specifications": [{"key": "...", "value": "...", "unit": "..."}],
+  "options": [{"name": "...", "common_values": ["..."]}],
+  "description": "...",
+  "tags": ["..."]
+}
 ```
 
-**After response:**
+**After response — critically, populate global intelligence:**
 1. Upsert results into `product_specifications` for this product
-2. **Populate `global_spec_cache`** with the results so future lookups for this product name are free
+2. **Insert into `global_product_intelligence`** with the full classification + specs + options
 3. Mark spec source as `'google_search'`
+4. **This is a one-time cost. Every future user who sells this same product gets it for free.**
 
-### 3.7 Write Results to `product_specifications` Table
+### 3.8 Global Intelligence Population Strategy
+
+The `global_product_intelligence` table grows organically as users sync products. But we can accelerate it:
+
+**Seeding popular products:**
+- Pre-populate the cache with specs for top 500-1000 common products (iPhones, Samsung phones, Nike shoes, common electronics, etc.) using a one-time batch job
+- Mark these as `source: 'seeded'`, `confidence: 0.9`
+- Cost: ~$5-10 one-time for 1000 products via batch API with Flash
+
+**Quality maintenance:**
+- When multiple users classify the same product, compare results. If they agree, increase `confidence`
+- If a user manually corrects specs, update the global cache (with `confidence` boost)
+- Stale entries (>1 year old for electronics, >2 years for clothing) get `confidence` reduced and may trigger re-search
+
+**Privacy:** The global cache stores product TYPES, not user-specific data. No user prices, inventory, media, or business information is shared. Only generic product intelligence (what specs does an iPhone 16 Pro have?).
+
+### 3.9 Write Results to `product_specifications` Table
 
 All four levels write to the same destination:
 
@@ -330,16 +396,17 @@ All four levels write to the same destination:
 **In `upsert-combo-from-analysis`:**
 - For each combo item product, run the waterfall and insert specs
 
-### 3.8 Grounding in `analyze-instagram-posts`
+### 3.10 Grounding in `analyze-instagram-posts`
 
 **Problem:** `analyze-instagram-posts` (import preview) currently has no Google Search grounding.
 
 **Fix:** Do NOT add grounding to `analyze-instagram-posts`. The import preview should stay fast and cheap — it's for quick preview, not final spec accuracy. Instead:
-- Import preview uses Gemini WITHOUT grounding (current behavior) for classification only
-- After the user confirms import and the product is created, `background-sync` or the manual "Find specs" button runs the waterfall to get accurate specs
+- Import preview checks `global_product_intelligence` first (free, instant)
+- If no match, uses Gemini WITHOUT grounding for basic classification only
+- After the user confirms import and the product is created, `background-sync` or the manual "Find specs" button runs the full waterfall
 - This keeps import preview fast (~1-2s per post) and free of grounding charges
 
-### 3.9 New Edge Function: `find-product-specs`
+### 3.11 New Edge Function: `find-product-specs`
 
 A dedicated function that runs the waterfall:
 
@@ -348,26 +415,31 @@ A dedicated function that runs the waterfall:
 {
   product_id: string,
   product_name: string,
-  category: string,
-  type: string,
+  category?: string,       // optional — waterfall may resolve this
+  type?: string,           // optional — waterfall may resolve this
   user_id: string,
   caption?: string,
-  media_urls?: string[],     // for Level 4 image context
-  force_search?: boolean     // skip Levels 1-3, go straight to Level 4
+  media_urls?: string[],   // for Level 4 image context
+  force_search?: boolean   // skip Levels 1-3, go straight to Level 4
 }
 
 // Output
 {
+  category_name: string,
+  type_name: string,
+  description?: string,
+  tags?: string[],
   specifications: [{ key: string, value: string, unit: string | null }],
   options?: [{ name: string, common_values: string[] }],
-  source: 'user_reuse' | 'global_cache' | 'template_default' | 'google_search',
-  cost: { grounding_used: boolean, tokens_used?: number }
+  source: 'global_intelligence' | 'user_reuse' | 'template_default' | 'google_search',
+  cost: { grounding_used: boolean, tokens_used?: number, model_used: 'flash' | 'pro' | 'none' }
 }
 ```
 
 - `force_search: true` is used by the manual "Find specs with AI" button when the user explicitly wants fresh Google Search results regardless of cache
+- When `source` is `'global_intelligence'`, `cost.model_used` is `'none'` — no AI call was made
 
-### 3.10 Tiered Model Selection
+### 3.12 Tiered Model Selection
 
 Use the cheapest model that can handle each task. Only escalate to Pro for genuine edge cases.
 
@@ -388,7 +460,7 @@ function getGeminiUrl(model: 'flash' | 'pro' = 'flash'): string {
 }
 ```
 
-### 3.11 Batch API for Background Sync (50% Off)
+### 3.13 Batch API for Background Sync (50% Off)
 
 Background sync is not real-time — users already wait while watching the progress widget. Use Gemini's Batch API for 50% off all token costs.
 
@@ -419,7 +491,7 @@ POST /v1beta/models/gemini-2.5-flash:batchGenerateContent
 
 **Fallback:** If batch takes >5 minutes, fall back to individual calls so the user isn't waiting too long. Show estimated time in the sync widget.
 
-### 3.12 Context Caching for System Prompt (90% Off Repeated Tokens)
+### 3.14 Context Caching for System Prompt (90% Off Repeated Tokens)
 
 The classifier system prompt (~2,000 tokens) is identical for every product. Context caching charges only 10% for cached tokens.
 
@@ -452,7 +524,7 @@ const response = await fetch(getGeminiUrl('flash'), {
 
 **Note:** Context caching has a minimum token requirement (typically 32K tokens). If the system prompt + keywords + templates don't meet this threshold, concatenate the templates for all 65 types into the cached context to pad it. This is free to cache and makes template lookups instant.
 
-### 3.13 Heuristic Pre-Filter (Skip AI Entirely)
+### 3.15 Heuristic Pre-Filter (Skip AI Entirely)
 
 Many Instagram product captions follow predictable patterns. A regex-based parser can extract product info without any AI call.
 
@@ -494,7 +566,7 @@ function heuristicParse(caption: string): HeuristicResult | null {
 
 **Expected hit rate:** ~30% of posts (well-structured Albanian/English product captions with clear pricing).
 
-### 3.14 Free Tier Maximization
+### 3.16 Free Tier Maximization
 
 Google provides generous free quotas that small shops may never exceed:
 
@@ -511,49 +583,52 @@ Google provides generous free quotas that small shops may never exceed:
 - Queue remaining products for next day if limits hit
 - Show user: "Free daily limit reached. Remaining products will be processed tomorrow."
 
-### 3.15 Cost Projections (All Optimizations Combined)
+### 3.17 Cost Projections (All Optimizations Combined)
 
-**Scenario: User syncs 100 Instagram posts**
+**Scenario A: New platform (first users, empty global cache)**
 
-**Classification costs (getting product name, category, price):**
-
-| Optimization | Products | Model | Cost |
+| Step | Products | AI Calls | Cost |
 |---|---|---|---|
-| Heuristic pre-filter (skip AI) | 30 | None | $0 |
-| Flash classification (within free tier) | 65 | Flash (free) | $0 |
-| Pro escalation (5% edge cases) | 5 | Pro (free tier) | $0 |
-| **Classification total** | **100** | | **$0** (within free tier) |
+| Heuristic pre-filter (skip AI) | 30 | 0 | $0 |
+| Global intelligence (empty, no hits) | 0 | 0 | $0 |
+| User product reuse | 10 | 0 | $0 |
+| Template defaults (sufficient) | 15 | 1 Flash each (classification) | Free tier |
+| Level 4 search (novel products) | 45 | 1 Flash + grounding each | Free tier (1,500/day) |
+| **Total for first 100 products** | **100** | | **~$0.00** (within free tier) |
 
-**Spec-finding costs (waterfall):**
+All 100 products now populate `global_product_intelligence`. **Every future user benefits.**
 
-| Level | Products | Cost |
-|---|---|---|
-| L1: User Reuse | 20 | $0 |
-| L2: Global Cache | 40 | $0 |
-| L3: Template Defaults | 20 | $0 |
-| L4: Dynamic Retrieval (Flash + grounding) | 20 | ~$0.70 (within free 1,500/day) |
-| **Spec total** | **100** | **$0** (within free tier) |
+**Scenario B: Mature platform (global cache has ~5,000 products)**
 
-**Grand total for 100 products: ~$0.00** (within free tier limits)
+| Step | Products | AI Calls | Cost |
+|---|---|---|---|
+| Heuristic pre-filter | 30 | 0 | $0 |
+| **Global intelligence (cache hit!)** | **55** | **0** | **$0** |
+| User product reuse | 5 | 0 | $0 |
+| Template defaults | 5 | 1 Flash each | Free tier |
+| Level 4 search (truly novel only) | 5 | 1 Flash + grounding each | Free tier |
+| **Total for 100 products** | **100** | **~10 AI calls** | **~$0.00** |
 
-**For heavy users exceeding free tier (500+ products/day):**
+**90% of products resolved with zero AI cost.** Only ~5 truly novel products per 100 need any AI at all.
+
+**Scenario C: Heavy user, 500 products/day, exceeding free tier**
 
 | Component | Cost per Product | 500 Products |
 |---|---|---|
-| Flash classification (batch, cached) | ~$0.0005 | ~$0.25 |
-| Spec waterfall Level 4 (~15%) | ~$0.005 | ~$0.38 |
-| Pro escalation (~5%) | ~$0.001 | ~$0.05 |
-| **Total** | **~$0.001/product** | **~$0.68** |
+| Global intelligence hits (~60%) | $0 | $0 |
+| Flash classification (batch, cached) for remainder | ~$0.0005 | ~$0.10 |
+| Level 4 grounding (~5% of total) | ~$0.0018 | ~$0.44 |
+| Pro escalation (~2% of total) | ~$0.0004 | ~$0.04 |
+| **Total** | **~$0.001/product** | **~$0.58** |
 
-**Cost comparison:**
+**Cost comparison over time:**
 
-| Approach | 100 Products | 500 Products |
-|---|---|---|
-| Original (Pro + always-grounding + two-pass) | $7.00 | $35.00 |
-| First waterfall optimization | $2.35 | $11.75 |
-| **Final (all optimizations)** | **~$0.00** | **~$0.68** |
+| Approach | First 100 Products | After 5,000 cached | 500/day heavy user |
+|---|---|---|---|
+| Original design (Pro + always-grounding) | $7.00 | $7.00 | $35.00 |
+| **Final design (all optimizations)** | **~$0.00** | **~$0.00** | **~$0.58** |
 
-**~50-100x cost reduction from original design.**
+**Key insight:** The cost approaches zero as the global cache grows. After the first few thousand products are classified across all users, the platform effectively runs for free. AI costs become a rounding error.
 
 ---
 
@@ -958,7 +1033,7 @@ When a user navigates from the Instagram Shop layout back to the dashboard, the 
 - `supabase/functions/analyze-instagram-posts/index.ts` — No grounding change (stays fast for preview)
 - `supabase/functions/background-sync/index.ts` — Heuristic pre-filter, caption quality check, retry logic, image fetching, batch API support, calls `find-product-specs` waterfall, context caching per session, write specs to `product_specifications` table
 - `supabase/functions/upsert-combo-from-analysis/index.ts` — Write specs to `product_specifications` table
-- `supabase/recreate_db.sql` — New tables (`product_specifications`, `category_templates`, `global_spec_cache`), seed data, indexes, RLS policies, triggers
+- `supabase/recreate_db.sql` — New tables (`product_specifications`, `category_templates`, `global_product_intelligence`), seed data, indexes (including `pg_trgm` for fuzzy matching), RLS policies, triggers
 - `src/App.tsx` — New `/categories` route
 - `src/components/layout/Sidebar.tsx` — Add categories link
 - `src/components/layout/BottomNav.tsx` — Add categories link (if applicable)
