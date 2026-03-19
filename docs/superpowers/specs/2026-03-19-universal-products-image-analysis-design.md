@@ -367,21 +367,193 @@ A dedicated function that runs the waterfall:
 
 - `force_search: true` is used by the manual "Find specs with AI" button when the user explicitly wants fresh Google Search results regardless of cache
 
-### 3.10 Cost Projections
+### 3.10 Tiered Model Selection
+
+Use the cheapest model that can handle each task. Only escalate to Pro for genuine edge cases.
+
+| Task | Model | Cost (per 1M tokens) | Why |
+|------|-------|---------------------|-----|
+| Standard classification (clear caption) | **Flash** | $0.30 in / $2.50 out | Structured extraction, doesn't need complex reasoning |
+| Image analysis (insufficient caption) | **Flash** | $0.30 in / $2.50 out | Vision works well on Flash |
+| Level 4 spec search (grounding) | **Flash** | $0.30 in / $2.50 out | Google Search does the heavy lifting |
+| Ambiguous/complex retry | **Pro** | $1.25 in / $10 out | Better reasoning for edge cases |
+
+**Escalation trigger:** If Flash returns `isProductPost: false` on a post that has media, OR returns a product with no name and no price, retry once with Pro. Expected escalation rate: ~5% of products.
+
+**Implementation:** Change `GEMINI_PRO_API_URL` to a model selector:
+```typescript
+function getGeminiUrl(model: 'flash' | 'pro' = 'flash'): string {
+  const modelId = model === 'flash' ? 'gemini-2.5-flash' : 'gemini-2.5-pro';
+  return `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${GEMINI_API_KEY}`;
+}
+```
+
+### 3.11 Batch API for Background Sync (50% Off)
+
+Background sync is not real-time — users already wait while watching the progress widget. Use Gemini's Batch API for 50% off all token costs.
+
+**How it works:**
+- Instead of individual `generateContent` calls per post, batch all classification requests into a single batch job
+- Gemini processes them asynchronously (up to 24h, usually much faster)
+- Poll for completion, then process all results at once
+
+**Implementation in `background-sync`:**
+1. Collect all posts needing analysis
+2. Submit as a batch request to Gemini Flash
+3. Update `sync_jobs.status = 'analyzing'` with progress polling
+4. When batch completes, process all results and create products
+5. Run spec waterfall for each product
+
+**Batch API format:**
+```typescript
+// Submit batch
+POST /v1beta/models/gemini-2.5-flash:batchGenerateContent
+{
+  "requests": [
+    { "contents": [{ "parts": [{ "text": "prompt_for_post_1" }] }] },
+    { "contents": [{ "parts": [{ "text": "prompt_for_post_2" }] }] },
+    // ... up to 100 requests per batch
+  ]
+}
+```
+
+**Fallback:** If batch takes >5 minutes, fall back to individual calls so the user isn't waiting too long. Show estimated time in the sync widget.
+
+### 3.12 Context Caching for System Prompt (90% Off Repeated Tokens)
+
+The classifier system prompt (~2,000 tokens) is identical for every product. Context caching charges only 10% for cached tokens.
+
+**Implementation:**
+1. On first call in a sync session, create a cached content object with the system prompt + user keywords + category templates
+2. Use `cachedContent` reference in subsequent calls
+3. Cache TTL: 1 hour (covers a full sync session)
+
+```typescript
+// Create cache (once per sync session)
+const cache = await fetch(`${GEMINI_BASE}/cachedContents`, {
+  method: 'POST',
+  body: JSON.stringify({
+    model: 'models/gemini-2.5-flash',
+    contents: [{ parts: [{ text: systemPrompt + keywordsContext + templateContext }] }],
+    ttl: '3600s'
+  })
+});
+
+// Use cache in each call (90% cheaper for cached portion)
+const response = await fetch(getGeminiUrl('flash'), {
+  body: JSON.stringify({
+    cachedContent: cache.name,
+    contents: [{ parts: [{ text: productCaption }] }]  // only the variable part
+  })
+});
+```
+
+**Savings:** For 100 products, the ~2K token prompt is sent once instead of 100 times. At Flash pricing: saves ~$0.054 per 100 products (small individually but adds up).
+
+**Note:** Context caching has a minimum token requirement (typically 32K tokens). If the system prompt + keywords + templates don't meet this threshold, concatenate the templates for all 65 types into the cached context to pad it. This is free to cache and makes template lookups instant.
+
+### 3.13 Heuristic Pre-Filter (Skip AI Entirely)
+
+Many Instagram product captions follow predictable patterns. A regex-based parser can extract product info without any AI call.
+
+**Heuristic parser triggers (skip Gemini if ALL conditions met):**
+1. Caption contains a clear price signal: `(\d+[\.,]?\d*)\s*(ALL|EUR|USD|GBP|Lek)`
+2. First line of caption looks like a product name (>3 chars, not all hashtags)
+3. Product name matches a known category template type
+
+**Parser extracts:**
+```typescript
+function heuristicParse(caption: string): HeuristicResult | null {
+  const priceMatch = caption.match(/(\d+[\.,]?\d*)\s*(ALL|EUR|USD|GBP|Lek|€|\$)/i);
+  const refMatch = caption.match(/ref\.?\s*code\s*:\s*([A-Za-z0-9\-]+)/i);
+  const stockMatch = caption.match(/stock\s*:\s*(\d+)/i);
+  const lines = caption.split('\n').filter(l => l.trim());
+  const name = lines[0]?.replace(/#\S+/g, '').trim();
+
+  if (!priceMatch || !name || name.length < 3) return null;
+
+  return {
+    productName: name,
+    price: parseFloat(priceMatch[1].replace(',', '.')),
+    currency: normalizeCurrency(priceMatch[2]),
+    reference_code: refMatch?.[1] || null,
+    inventory: stockMatch ? parseInt(stockMatch[1]) : 10,
+    confidence: 'heuristic'
+  };
+}
+```
+
+**When heuristic succeeds:**
+- Create product with parsed data (name, price, currency, inventory)
+- Still run the spec waterfall to get specifications
+- Still let AI classify category/type in the background (low priority, can be batched)
+- Mark product as `needs_ai_review: true` so the user knows it was heuristic-parsed
+
+**When heuristic fails:**
+- Proceed to Gemini Flash classification as normal
+
+**Expected hit rate:** ~30% of posts (well-structured Albanian/English product captions with clear pricing).
+
+### 3.14 Free Tier Maximization
+
+Google provides generous free quotas that small shops may never exceed:
+
+| Resource | Free Quota | Typical Usage (100 products) |
+|----------|-----------|------------------------------|
+| Gemini 2.5 Flash requests | 250/day | ~70 (after heuristic filter) |
+| Gemini 2.5 Pro requests | 100/day | ~5 (escalation only) |
+| Google Search grounding | 1,500/day on paid tier | ~20 (Level 4 only) |
+
+**For shops syncing <250 products/day, classification is completely free.**
+
+**Implementation:** Track daily API usage in a simple counter (in-memory or `sync_jobs` metadata). When approaching free tier limits:
+- Switch to batch mode (which has separate, higher limits)
+- Queue remaining products for next day if limits hit
+- Show user: "Free daily limit reached. Remaining products will be processed tomorrow."
+
+### 3.15 Cost Projections (All Optimizations Combined)
 
 **Scenario: User syncs 100 Instagram posts**
 
-| Level | Expected Hit Rate | Cost per Product | Products | Total Cost |
-|-------|------------------|-----------------|----------|------------|
-| L1: User Reuse | ~20% (20 products) | $0 | 20 | $0 |
-| L2: Global Cache | ~40% (40 products) | $0 | 40 | $0 |
-| L3: Template Defaults | ~20% (20 products sufficient) | $0 | 20 | $0 |
-| L4: Dynamic Retrieval | ~20% (20 novel products) | ~$0.035 | 20 | ~$0.70 |
-| **Total** | | | **100** | **~$0.70** |
+**Classification costs (getting product name, category, price):**
 
-Compare to naive two-pass approach: **$7.00** — a **10x cost reduction**.
+| Optimization | Products | Model | Cost |
+|---|---|---|---|
+| Heuristic pre-filter (skip AI) | 30 | None | $0 |
+| Flash classification (within free tier) | 65 | Flash (free) | $0 |
+| Pro escalation (5% edge cases) | 5 | Pro (free tier) | $0 |
+| **Classification total** | **100** | | **$0** (within free tier) |
 
-As the global cache grows, Level 4 hits decrease further. Popular products (iPhones, Nike shoes, Samsung TVs) get cached quickly and never need paid search again
+**Spec-finding costs (waterfall):**
+
+| Level | Products | Cost |
+|---|---|---|
+| L1: User Reuse | 20 | $0 |
+| L2: Global Cache | 40 | $0 |
+| L3: Template Defaults | 20 | $0 |
+| L4: Dynamic Retrieval (Flash + grounding) | 20 | ~$0.70 (within free 1,500/day) |
+| **Spec total** | **100** | **$0** (within free tier) |
+
+**Grand total for 100 products: ~$0.00** (within free tier limits)
+
+**For heavy users exceeding free tier (500+ products/day):**
+
+| Component | Cost per Product | 500 Products |
+|---|---|---|
+| Flash classification (batch, cached) | ~$0.0005 | ~$0.25 |
+| Spec waterfall Level 4 (~15%) | ~$0.005 | ~$0.38 |
+| Pro escalation (~5%) | ~$0.001 | ~$0.05 |
+| **Total** | **~$0.001/product** | **~$0.68** |
+
+**Cost comparison:**
+
+| Approach | 100 Products | 500 Products |
+|---|---|---|
+| Original (Pro + always-grounding + two-pass) | $7.00 | $35.00 |
+| First waterfall optimization | $2.35 | $11.75 |
+| **Final (all optimizations)** | **~$0.00** | **~$0.68** |
+
+**~50-100x cost reduction from original design.**
 
 ---
 
@@ -782,9 +954,9 @@ When a user navigates from the Instagram Shop layout back to the dashboard, the 
 - `src/components/categories/OptionEditor.tsx` — Manage option list
 
 ### Modified Files
-- `supabase/functions/ai-product-classifier/index.ts` — Image analysis, template-guided prompts, new spec output format, Pass 1 classification
+- `supabase/functions/ai-product-classifier/index.ts` — Switch to Flash by default, tiered model selection, image analysis, template-guided prompts, heuristic pre-filter, context caching, batch support, new spec output format
 - `supabase/functions/analyze-instagram-posts/index.ts` — No grounding change (stays fast for preview)
-- `supabase/functions/background-sync/index.ts` — Caption heuristic, retry logic, image fetching, calls `find-product-specs` waterfall after classification, write specs to `product_specifications` table
+- `supabase/functions/background-sync/index.ts` — Heuristic pre-filter, caption quality check, retry logic, image fetching, batch API support, calls `find-product-specs` waterfall, context caching per session, write specs to `product_specifications` table
 - `supabase/functions/upsert-combo-from-analysis/index.ts` — Write specs to `product_specifications` table
 - `supabase/recreate_db.sql` — New tables (`product_specifications`, `category_templates`, `global_spec_cache`), seed data, indexes, RLS policies, triggers
 - `src/App.tsx` — New `/categories` route
