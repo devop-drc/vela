@@ -144,6 +144,24 @@ serve(async (req) => {
         productId = insertedProd.id as string;
       }
 
+      // Write specs to product_specifications table
+      if (it.specifications && productId) {
+        const specsArray = Array.isArray(it.specifications) ? it.specifications :
+          Object.entries(it.specifications).map(([key, value]) => ({ key, value: String(value), unit: null }));
+
+        for (let si = 0; si < specsArray.length; si++) {
+          const spec = specsArray[si];
+          await supabase.from('product_specifications').upsert({
+            product_id: productId,
+            user_id: user_id,
+            key: typeof spec === 'object' ? spec.key : String(spec),
+            value: typeof spec === 'object' ? String(spec.value || '') : '',
+            unit: typeof spec === 'object' ? (spec.unit || null) : null,
+            display_order: si
+          }, { onConflict: 'product_id,key' });
+        }
+      }
+
       // Upsert combo_items for this product
       const { data: existingItem } = await supabase
         .from('combo_items')
