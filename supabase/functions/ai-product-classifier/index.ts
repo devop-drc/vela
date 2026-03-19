@@ -93,14 +93,32 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   **Output Format:**
   Respond ONLY with a single, valid JSON object. Do not include any explanation or markdown.
 
-  **Example JSON (Single Product with options):**
+  **REQUIRED FIELDS for product posts — you MUST include ALL of these:**
+  - "isProductPost": true
+  - "productName": string (max 10 words, clear and concise)
+  - "categoryName": string (e.g., "Clothing & Apparel", "Electronics & Tech", "Beauty & Personal Care", "Home & Living", "Food & Beverages", "Sports & Fitness", "Bags & Luggage", etc.)
+  - "typeName": string (e.g., "T-Shirts", "Smartphones", "Skincare", "Furniture", etc.)
+  - "description": string (compelling 3-4 sentence product description, NOT the raw caption)
+  - "price": number (extracted from caption, or estimated from product type, or 0 if unknown)
+  - "currency": string (e.g., "ALL", "EUR", "USD")
+  - "inventory": number (default 10 if not mentioned)
+  - "pricingType": "one_time" or "subscription"
+  - "tags": string[] (3-5 relevant tags)
+  - "specifications": array of {key, value, unit} — ALWAYS include at least basic specs like material, dimensions, weight etc. Use Google Search to find real specs if the product is identifiable.
+  - "options": object — include common customer-selectable options (color, size, etc.) if applicable
+
+  **Example JSON (Single Product — ALL fields required):**
   {
     "isProductPost": true,
     "productName": "Titanium Smartwatch Pro",
-    "categoryName": "Electronics",
-    "typeName": "Smartwatch",
+    "categoryName": "Electronics & Tech",
+    "typeName": "Smartwatches",
+    "description": "The Titanium Smartwatch Pro combines elegant design with cutting-edge fitness tracking. Features a vibrant 1.4-inch AMOLED display and up to 14 days of battery life. Water-resistant to 5ATM, perfect for swimming and outdoor activities.",
     "price": 199,
     "currency": "USD",
+    "inventory": 10,
+    "pricingType": "one_time",
+    "tags": ["smartwatch", "fitness tracker", "wearable", "titanium"],
     "options": {
       "strap_material": [
         { "value": "Silicone", "price_difference": 0, "inventory": 20 },
@@ -115,7 +133,9 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
       { "key": "water_resistance", "value": "5ATM", "unit": null },
       { "key": "battery_life", "value": "14", "unit": "days" },
       { "key": "display_size", "value": "1.4", "unit": "inches" },
-      { "key": "weight", "value": "52", "unit": "grams" }
+      { "key": "weight", "value": "52", "unit": "grams" },
+      { "key": "connectivity", "value": "Bluetooth 5.2", "unit": null },
+      { "key": "os", "value": "Wear OS", "unit": null }
     ]
   }
 
