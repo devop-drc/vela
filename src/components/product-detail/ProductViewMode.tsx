@@ -4,7 +4,8 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Package, Settings, Loader2, Wrench, Layers, Tag, ChevronRight, Save } from "lucide-react";
+import { Edit, Trash2, Package, Settings, Loader2, Wrench, Layers, Tag, ChevronRight, Save, Search, Filter } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/formatters";
@@ -25,6 +26,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
   const [stockModalOpen, setStockModalOpen] = useState(false);
   const [stockEdits, setStockEdits] = useState<Record<string, number>>({});
   const [isSavingStock, setIsSavingStock] = useState(false);
+  const [stockSearch, setStockSearch] = useState('');
+  const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'low' | 'oos'>('all');
 
   const currencyCode = shopDetails?.currency || 'USD';
 
@@ -121,7 +124,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 </div>
               )}
 
-              {/* Options */}
+              {/* Options — stock derived from variants */}
               {!isLoadingOptions && hasOptions && (
                 <div className="space-y-2.5 pt-2 border-t">
                   {options.map((option: any) => {
@@ -135,7 +138,15 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                             const priceDiff = convertCurrency(val.price_difference, product.currency, currencyCode);
                             const priceDiffFormatted = formatCurrency(priceDiff, currencyCode, 'en-US', true);
                             const isActive = val.is_active;
-                            const stock = val.inventory || 0;
+                            // Derive stock from variants: sum inventory of all variants containing this option value
+                            const derivedStock = variants.reduce((sum: number, v: any) => {
+                              const vOpts = v.option_values || {};
+                              if (Object.keys(vOpts).length === 0 && v.combination_key) {
+                                v.combination_key.split('|').forEach((p: string) => { const [k, vl] = p.split('='); if (k && vl) vOpts[k] = vl; });
+                              }
+                              return vOpts[option.name] === val.value ? sum + (v.inventory || 0) : sum;
+                            }, 0);
+                            const stock = derivedStock;
                             const isOOS = stock <= 0;
                             const isCritical = stock > 0 && stock < 5;
                             const isLow = stock >= 5 && stock < 10;
@@ -158,7 +169,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                               >
                                 <span className="font-medium">{val.value}</span>
                                 {priceDiff !== 0 && <span className="opacity-60">({priceDiffFormatted})</span>}
-                                <span className="opacity-60 tabular-nums">{isOOS ? '0' : stock}</span>
+                                <span className="opacity-60 tabular-nums">{stock}</span>
                               </div>
                             );
                           })}
@@ -291,17 +302,49 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
       </DialogFooter>
 
       {/* Stock Management Modal */}
-      <Dialog open={stockModalOpen} onOpenChange={setStockModalOpen}>
-        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+      <Dialog open={stockModalOpen} onOpenChange={(open) => { if (!open) { setStockSearch(''); setStockFilter('all'); } setStockModalOpen(open); }}>
+        <DialogContent className="max-w-xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
               Manage Variant Stock
+              <Badge variant="secondary" className="text-[10px] ml-auto">{variants.length} variants</Badge>
             </DialogTitle>
           </DialogHeader>
+
+          {/* Search + Filter */}
+          <div className="flex gap-2 shrink-0">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input placeholder="Search variants..." value={stockSearch} onChange={(e) => setStockSearch(e.target.value)} className="h-8 pl-8 text-xs" />
+            </div>
+            <Select value={stockFilter} onValueChange={(v) => setStockFilter(v as any)}>
+              <SelectTrigger className="h-8 w-32 text-xs">
+                <Filter className="h-3 w-3 mr-1" /><SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="in_stock">In Stock</SelectItem>
+                <SelectItem value="low">Low (&lt;10)</SelectItem>
+                <SelectItem value="oos">Out of Stock</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <ScrollArea className="flex-1 -mx-6 px-6">
             <div className="space-y-1">
-              {variants.map((v: any, i: number) => {
+              {variants.filter((v: any) => {
+                // Search filter
+                const optVals = v.option_values || {};
+                const searchStr = Object.values(optVals).join(' ').toLowerCase() + ' ' + (v.sku || '').toLowerCase();
+                if (stockSearch && !searchStr.includes(stockSearch.toLowerCase())) return false;
+                // Stock filter
+                const s = stockEdits[v.id] ?? (v.inventory || 0);
+                if (stockFilter === 'oos' && s > 0) return false;
+                if (stockFilter === 'low' && (s >= 10 || s <= 0)) return false;
+                if (stockFilter === 'in_stock' && s <= 0) return false;
+                return true;
+              }).map((v: any, i: number) => {
                 let optVals = v.option_values || {};
                 if (Object.keys(optVals).length === 0 && v.combination_key) {
                   v.combination_key.split('|').forEach((part: string) => {
@@ -309,25 +352,16 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                     if (key && val) optVals[key] = val;
                   });
                 }
-                // Derive stock from option values if variant has 0
-                let baseStock = v.inventory || 0;
-                if (baseStock === 0 && Object.keys(optVals).length > 0) {
-                  let minS = Infinity;
-                  Object.entries(optVals).forEach(([oN, oV]) => {
-                    const opt = options.find((o: any) => o.name === oN);
-                    const val = opt?.option_values?.find((ov: any) => ov.value === oV);
-                    if (val) minS = Math.min(minS, val.inventory || 0);
-                  });
-                  if (isFinite(minS)) baseStock = minS;
-                }
-                const currentStock = stockEdits[v.id] ?? baseStock;
+                const currentStock = stockEdits[v.id] ?? (v.inventory || 0);
                 const isOOS = currentStock <= 0;
+                const isCritical = currentStock > 0 && currentStock < 5;
+                const isLow = currentStock >= 5 && currentStock < 10;
                 return (
                   <div key={v.id || i} className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg",
+                    "flex items-center gap-3 px-3 py-2 rounded-lg",
                     i % 2 === 0 ? "bg-muted/30" : ""
                   )}>
-                    <div className="flex flex-wrap gap-1 flex-1 min-w-0">
+                    <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
                       {Object.entries(optVals).map(([k, val]) => (
                         <span key={k} className="text-xs">
                           <span className="text-muted-foreground/60">{k}: </span>
@@ -335,33 +369,36 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                         </span>
                       ))}
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        type="button" variant="outline" size="icon" className="h-7 w-7"
-                        onClick={() => setStockEdits(prev => ({ ...prev, [v.id]: Math.max(0, (prev[v.id] ?? v.inventory) - 1) }))}
+                    <div className="flex items-center gap-1">
+                      <Button type="button" variant="outline" size="icon" className="h-6 w-6 text-xs"
+                        onClick={() => setStockEdits(prev => ({ ...prev, [v.id]: Math.max(0, currentStock - 1) }))}
                       >-</Button>
-                      <Input
-                        type="number" min={0}
-                        value={currentStock}
+                      <Input type="number" min={0} value={currentStock}
                         onChange={(e) => setStockEdits(prev => ({ ...prev, [v.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
-                        className="h-7 w-16 text-center text-sm tabular-nums"
+                        className="h-6 w-14 text-center text-xs tabular-nums"
                       />
-                      <Button
-                        type="button" variant="outline" size="icon" className="h-7 w-7"
-                        onClick={() => setStockEdits(prev => ({ ...prev, [v.id]: (prev[v.id] ?? v.inventory) + 1 }))}
+                      <Button type="button" variant="outline" size="icon" className="h-6 w-6 text-xs"
+                        onClick={() => setStockEdits(prev => ({ ...prev, [v.id]: currentStock + 1 }))}
                       >+</Button>
                     </div>
-                    <span className={cn("text-[10px] w-14 text-right", isOOS ? "text-destructive" : "text-muted-foreground")}>
-                      {isOOS ? 'OOS' : `${currentStock} pcs`}
+                    <span className={cn(
+                      "text-[10px] w-12 text-right font-medium",
+                      isOOS ? "text-red-600" : isCritical ? "text-red-500" : isLow ? "text-amber-600" : "text-emerald-600"
+                    )}>
+                      {isOOS ? 'OOS' : currentStock}
                     </span>
                   </div>
                 );
               })}
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-3 border-t">
-            <Button variant="outline" onClick={() => { setStockEdits({}); setStockModalOpen(false); }}>Cancel</Button>
-            <Button
+
+          <DialogFooter className="pt-3 border-t flex items-center">
+            <span className="text-xs text-muted-foreground mr-auto">
+              {Object.keys(stockEdits).length > 0 ? `${Object.keys(stockEdits).length} changed` : 'No changes'}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => { setStockEdits({}); setStockModalOpen(false); }}>Cancel</Button>
+            <Button size="sm"
               disabled={isSavingStock || Object.keys(stockEdits).length === 0}
               onClick={async () => {
                 setIsSavingStock(true);
@@ -379,8 +416,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 setIsSavingStock(false);
               }}
             >
-              {isSavingStock ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Save Stock
+              {isSavingStock ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>

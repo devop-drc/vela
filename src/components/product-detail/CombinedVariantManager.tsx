@@ -526,22 +526,26 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
                               </div>
                             </div>
 
-                            {/* Inventory */}
-                            <div className="w-24 space-y-1 shrink-0">
-                              <Label className="text-xs text-muted-foreground">Inventory</Label>
-                              <Input
-                                type="number"
-                                min={0}
-                                placeholder="0"
-                                value={v.inventory ?? 0}
-                                onChange={(e) => setOptions(prev => {
-                                  const next = [...prev];
-                                  const vals = [...next[idx].values];
-                                  vals[vidx] = { ...vals[vidx], inventory: parseInt(e.target.value || '0', 10) };
-                                  next[idx] = { ...next[idx], values: vals };
-                                  return next;
-                                })}
-                              />
+                            {/* Stock (read-only, derived from variants) */}
+                            <div className="w-20 space-y-1 shrink-0">
+                              <Label className="text-xs text-muted-foreground">Stock</Label>
+                              {(() => {
+                                const derivedStock = rows.reduce((sum, r) => r.option_values[opt.name] === v.value ? sum + r.inventory : sum, 0);
+                                const isOOS = derivedStock <= 0;
+                                const isCrit = derivedStock > 0 && derivedStock < 5;
+                                const isLow = derivedStock >= 5 && derivedStock < 10;
+                                return (
+                                  <div className={cn(
+                                    "h-9 flex items-center justify-center rounded-md text-sm font-medium tabular-nums border",
+                                    isOOS ? "bg-red-50 text-red-600 border-red-200" :
+                                    isCrit ? "bg-red-50 text-red-500 border-red-200" :
+                                    isLow ? "bg-amber-50 text-amber-600 border-amber-200" :
+                                    "bg-emerald-50 text-emerald-600 border-emerald-200"
+                                  )}>
+                                    {derivedStock}
+                                  </div>
+                                );
+                              })()}
                             </div>
 
                             {/* Controls */}
