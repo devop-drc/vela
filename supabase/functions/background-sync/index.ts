@@ -702,6 +702,51 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
           if (specifications) for (const [name] of Object.entries(specifications)) attrList.push({ name, inputType: 'text', isOption: false });
           if (options) for (const [name, vals] of Object.entries(options)) attrList.push({ name, inputType: name.toLowerCase().includes('color') ? 'color' : 'tags', isOption: true, possibleValues: vals });
           await upsertTypeAndMergeAttributes(supabaseAdmin, catId, normType, attrList, user.id);
+
+          // Auto-create/update category template so the system learns from new products
+          const templateSpecs = specifications ? (Array.isArray(rawSpecifications)
+            ? rawSpecifications.map((s: any) => ({ key: s.key, label: toTitleCase(s.key), unit: s.unit || null, common_values: s.value ? [s.value] : null }))
+            : Object.entries(specifications).map(([k, v]) => ({ key: k, label: toTitleCase(k), unit: null, common_values: v ? [String(v)] : null }))
+          ) : [];
+          const templateOpts = options ? Object.entries(options).map(([name, vals]) => ({
+            name, common_values: Array.isArray(vals) ? vals.map((v: any) => typeof v === 'object' ? v.value : String(v)).filter(Boolean) : []
+          })) : [];
+
+          if (templateSpecs.length > 0 || templateOpts.length > 0) {
+            // Merge with existing template if one exists
+            const { data: existingTpl } = await supabaseAdmin.from('category_templates')
+              .select('id, default_specifications, default_options')
+              .eq('category_name', normCat).eq('type_name', normType).is('user_id', null).maybeSingle();
+
+            if (existingTpl) {
+              // Merge new specs/options into existing template (add new keys, merge common_values)
+              const mergedSpecs = [...(existingTpl.default_specifications || [])];
+              for (const ns of templateSpecs) {
+                const existing = mergedSpecs.find((s: any) => s.key === ns.key);
+                if (existing) {
+                  if (ns.common_values?.[0] && !existing.common_values?.includes(ns.common_values[0])) {
+                    existing.common_values = [...(existing.common_values || []), ...ns.common_values].slice(0, 20);
+                  }
+                } else { mergedSpecs.push(ns); }
+              }
+              const mergedOpts = [...(existingTpl.default_options || [])];
+              for (const no of templateOpts) {
+                const existing = mergedOpts.find((o: any) => o.name === no.name);
+                if (existing) {
+                  const merged = new Set([...(existing.common_values || []), ...no.common_values]);
+                  existing.common_values = Array.from(merged).slice(0, 30);
+                } else { mergedOpts.push(no); }
+              }
+              await supabaseAdmin.from('category_templates').update({ default_specifications: mergedSpecs, default_options: mergedOpts }).eq('id', existingTpl.id);
+            } else {
+              // Create new system template from this product's data
+              await supabaseAdmin.from('category_templates').insert({
+                category_name: normCat, type_name: normType,
+                default_specifications: templateSpecs, default_options: templateOpts,
+                is_system: true, user_id: null
+              }).then(({ error }) => { if (error) console.log('Template auto-create skipped (may exist):', error.message); });
+            }
+          }
         } catch (e: any) { console.error('Category/type upsert failed:', e.message); }
       }
 
