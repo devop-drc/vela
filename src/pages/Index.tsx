@@ -299,22 +299,22 @@ const Index = () => {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Header */}
-      <WelcomeHeader
-        pendingOrders={data.pendingOrders}
-        activeProducts={data.activeProducts}
-        totalOrders={data.salesCount}
-      />
-
-      {/* Quick Actions — full-width row right below welcome header */}
-      <section>
-        <QuickActions />
-      </section>
+    <div className="space-y-6">
+      {/* Welcome Header + Quick Actions on same row */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <WelcomeHeader
+          pendingOrders={data.pendingOrders}
+          activeProducts={data.activeProducts}
+          totalOrders={data.salesCount}
+        />
+        <div className="shrink-0">
+          <QuickActions />
+        </div>
+      </div>
 
       {/* Stat Cards */}
       <section>
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Total Revenue"
             value={formatCurrency(data.totalRevenue, shopDetails?.currency)}
@@ -342,10 +342,10 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Main grid: Left column (Profile + Top Sellers) | Right column (Overview + Activity) */}
+      {/* Main grid: Left (Profile + Top Sellers + Overview) | Right (Activity) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
         {/* Left column */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className="lg:col-span-2 space-y-4">
           <div>
             <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Star className="h-3.5 w-3.5" />Shop Profile</h2>
             <ProfileStats />
@@ -354,10 +354,6 @@ const Index = () => {
             <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Zap className="h-3.5 w-3.5" />Top Sellers</h2>
             <TopProducts />
           </div>
-        </div>
-
-        {/* Right column */}
-        <div className="lg:col-span-2 space-y-4">
           <div>
             <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><BarChart2 className="h-3.5 w-3.5" />Business Overview</h2>
             <OverviewChart
@@ -368,10 +364,12 @@ const Index = () => {
               setGranularity={setGranularity}
             />
           </div>
-          <div>
-            <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" />Live Activity</h2>
-            <ActivityFeed />
-          </div>
+        </div>
+
+        {/* Right column — full Activity Feed */}
+        <div className="lg:col-span-1">
+          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" />Live Activity</h2>
+          <ActivityFeed />
         </div>
       </div>
     </div>
