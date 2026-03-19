@@ -32,7 +32,7 @@ const DashboardLayout = () => {
       const next = !prev;
       try {
         localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
-      } catch {}
+      } catch { }
       return next;
     });
   };
@@ -86,20 +86,18 @@ const DashboardLayout = () => {
     </AnimatePresence>
   );
 
+  // Must match Sidebar.tsx: w-14 (56px), w-52 (208px), w-60 (240px), w-72 (288px)
   const sidebarWidthValue = collapsed
-    ? '60px'
+    ? '3.5rem'     // 56px = w-14
     : settings.sidebarWidth === 'compact'
-      ? '14rem'
+      ? '13rem'    // 208px = w-52
       : settings.sidebarWidth === 'spacious'
-        ? '18rem'
-        : '16rem';
+        ? '18rem'  // 288px = w-72
+        : '15rem'; // 240px = w-60
 
-  // Floating layout: sidebar is fixed, main content uses left padding
-  const mainPaddingClasses = {
-    compact: 'md:pl-[calc(14rem+2rem)]', // 224px + 32px padding
-    default: 'md:pl-[calc(16rem+2rem)]', // 256px + 32px padding
-    spacious: 'md:pl-[calc(18rem+2rem)]', // 288px + 32px padding
-  };
+  // Floating layout: main content left padding = sidebar left-offset + sidebar-width + gap
+  // sidebar at left-3 (0.75rem), gap = 0.75rem
+  // So: pl = 0.75rem + sidebar-width + 0.75rem = sidebar-width + 1.5rem
 
   if (settings.layoutStyle === 'docked') {
     return (
@@ -128,10 +126,8 @@ const DashboardLayout = () => {
       <Sidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
       <Header title={title} />
       <main
-        className={cn(
-          "absolute inset-0 overflow-y-auto px-4 md:px-6 md:pb-4 transition-all duration-300 pt-24",
-          collapsed ? "md:pl-[calc(60px+2rem)]" : mainPaddingClasses[settings.sidebarWidth || 'default']
-        )}
+        className="absolute inset-0 overflow-y-auto px-4 md:px-6 md:pb-4 transition-all duration-300 pt-20"
+        style={{ paddingLeft: `calc(var(--sidebar-width) + 1.8rem)` }}
       >
         {content}
       </main>
