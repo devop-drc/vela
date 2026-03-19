@@ -163,23 +163,33 @@ const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => {
                             end={item.to === "/"}
                             className={({ isActive }) =>
                               cn(
-                                "relative flex items-center justify-center h-9 w-9 mx-auto rounded-lg text-sm font-medium transition-all duration-150",
+                                "relative flex items-center justify-center h-10 w-10 mx-auto rounded-lg transition-all duration-150",
                                 isPrimary
                                   ? cn(
-                                      "text-primary-foreground/60 hover:bg-primary-foreground/15 hover:text-primary-foreground",
-                                      isActive && "bg-primary-foreground/20 text-primary-foreground shadow-sm"
+                                      "text-primary-foreground/50 hover:text-primary-foreground hover:bg-primary-foreground/10",
+                                      isActive && "text-primary-foreground bg-primary-foreground/20"
                                     )
                                   : cn(
-                                      "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                                      isActive && "bg-primary text-primary-foreground shadow-sm"
+                                      "text-muted-foreground hover:text-foreground hover:bg-accent",
+                                      isActive && "text-primary bg-primary/10"
                                     )
                               )
                             }
                           >
-                            <item.icon className="h-4.5 w-4.5 shrink-0" />
+                            {({ isActive }) => (
+                              <>
+                                {isActive && (
+                                  <span className={cn(
+                                    "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full",
+                                    isPrimary ? "bg-primary-foreground" : "bg-primary"
+                                  )} />
+                                )}
+                                <item.icon className="h-[18px] w-[18px] shrink-0" />
+                              </>
+                            )}
                           </NavLink>
                         </TooltipTrigger>
-                        <TooltipContent side="right">
+                        <TooltipContent side="right" sideOffset={8}>
                           {item.label}
                         </TooltipContent>
                       </Tooltip>
