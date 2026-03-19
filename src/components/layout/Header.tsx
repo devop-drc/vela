@@ -29,32 +29,32 @@ interface HeaderProps {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type PageResult   = { kind: 'page';    id: string; label: string; subtitle: string; path: string };
+type PageResult = { kind: 'page'; id: string; label: string; subtitle: string; path: string };
 type ProductResult = { kind: 'product'; id: string; label: string; subtitle: string; path: string };
-type OrderResult  = { kind: 'order';   id: string; label: string; subtitle: string; path: string };
+type OrderResult = { kind: 'order'; id: string; label: string; subtitle: string; path: string };
 
 type SearchResult = PageResult | ProductResult | OrderResult;
 
 interface GroupedResults {
-  pages:    PageResult[];
+  pages: PageResult[];
   products: ProductResult[];
-  orders:   OrderResult[];
+  orders: OrderResult[];
 }
 
 // ─── Static page list ─────────────────────────────────────────────────────────
 
 const STATIC_PAGES: Array<{ label: string; subtitle: string; path: string }> = [
-  { label: 'Dashboard',      subtitle: 'Overview & stats',          path: '/'                      },
-  { label: 'Products',       subtitle: 'Manage your products',      path: '/products'              },
-  { label: 'Out of Stock',   subtitle: 'Products needing restock',  path: '/out-of-stock'          },
-  { label: 'Orders',         subtitle: 'Customer orders',           path: '/orders'                },
-  { label: 'Customers',      subtitle: 'Customer list',             path: '/customers'             },
-  { label: 'Categories',     subtitle: 'Product categories',        path: '/categories'            },
-  { label: 'Keywords',       subtitle: 'Keyword management',        path: '/keywords'              },
-  { label: 'Promotions',     subtitle: 'Discount & promo codes',    path: '/promotions'            },
-  { label: 'Store Settings', subtitle: 'General store settings',    path: '/settings'              },
-  { label: 'Appearance',     subtitle: 'Theme & layout options',    path: '/settings/appearance'   },
-  { label: 'Payments',       subtitle: 'Payment method settings',   path: '/settings/payments'     },
+  { label: 'Dashboard', subtitle: 'Overview & stats', path: '/' },
+  { label: 'Products', subtitle: 'Manage your products', path: '/products' },
+  { label: 'Out of Stock', subtitle: 'Products needing restock', path: '/out-of-stock' },
+  { label: 'Orders', subtitle: 'Customer orders', path: '/orders' },
+  { label: 'Customers', subtitle: 'Customer list', path: '/customers' },
+  { label: 'Categories', subtitle: 'Product categories', path: '/categories' },
+  { label: 'Keywords', subtitle: 'Keyword management', path: '/keywords' },
+  { label: 'Promotions', subtitle: 'Discount & promo codes', path: '/promotions' },
+  { label: 'Store Settings', subtitle: 'General store settings', path: '/settings' },
+  { label: 'Appearance', subtitle: 'Theme & layout options', path: '/settings/appearance' },
+  { label: 'Payments', subtitle: 'Payment method settings', path: '/settings/payments' },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -279,13 +279,6 @@ const Header = ({ title }: HeaderProps) => {
     }
   };
 
-  // ── Layout helpers ───────────────────────────────────────────────────────────
-  const headerLeftMarginClasses: Record<string, string> = {
-    compact:  'md:left-[calc(14rem+2rem)]',
-    default:  'md:left-[calc(16rem+2rem)]',
-    spacious: 'md:left-[calc(18rem+2rem)]',
-  };
-
   // ── Flat index counter for refs (rebuilt each render) ────────────────────────
   let flatIdx = 0;
 
@@ -343,10 +336,10 @@ const Header = ({ title }: HeaderProps) => {
   return (
     <header
       className={cn(
-        'z-50 flex items-center justify-between h-[60px] px-6 transition-all duration-300',
+        'z-50 flex items-center justify-between h-14 min-h-[56px] px-6 transition-all duration-300',
         isFloating
           ? 'fixed top-3 right-3 border rounded-lg shadow-lg'
-          : 'sticky top-0 border-b shadow-sm',
+          : 'sticky top-0 border-b shadow-sm shrink-0',
         blurEnabled ? 'bg-card/80 backdrop-blur-[20px]' : 'bg-card',
       )}
       style={isFloating ? { left: `calc(var(--sidebar-width, 16rem) + 2rem)` } : undefined}
@@ -389,9 +382,9 @@ const Header = ({ title }: HeaderProps) => {
 
           {!loading && grouped && (
             <div className="p-2 space-y-3">
-              {renderGroup('Pages',    grouped.pages,    <LayoutDashboard className="h-4 w-4 shrink-0 text-muted-foreground" />)}
-              {renderGroup('Products', grouped.products, <Package         className="h-4 w-4 shrink-0 text-muted-foreground" />)}
-              {renderGroup('Orders',   grouped.orders,   <ShoppingCart    className="h-4 w-4 shrink-0 text-muted-foreground" />)}
+              {renderGroup('Pages', grouped.pages, <LayoutDashboard className="h-4 w-4 shrink-0 text-muted-foreground" />)}
+              {renderGroup('Products', grouped.products, <Package className="h-4 w-4 shrink-0 text-muted-foreground" />)}
+              {renderGroup('Orders', grouped.orders, <ShoppingCart className="h-4 w-4 shrink-0 text-muted-foreground" />)}
 
               {!hasResults && (
                 <div className="px-2 py-4 text-center text-sm text-muted-foreground">
@@ -413,7 +406,7 @@ const Header = ({ title }: HeaderProps) => {
               <Sparkles className="mr-2 h-4 w-4" />
               {((tokenStats.prompt + tokenStats.candidates) / 1000).toFixed(1)}k &bull; {(() => {
                 const cost =
-                  (tokenStats.prompt     / 1_000_000) * 1.25 +
+                  (tokenStats.prompt / 1_000_000) * 1.25 +
                   (tokenStats.candidates / 1_000_000) * 10.0;
                 return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(cost);
               })()}
@@ -439,7 +432,7 @@ const Header = ({ title }: HeaderProps) => {
                 <span className="font-medium">Estimated cost</span>
                 <span>{(() => {
                   const cost =
-                    (tokenStats.prompt     / 1_000_000) * 1.25 +
+                    (tokenStats.prompt / 1_000_000) * 1.25 +
                     (tokenStats.candidates / 1_000_000) * 10.0;
                   return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(cost);
                 })()}</span>
