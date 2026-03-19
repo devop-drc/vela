@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-const GEMINI_PRO_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_PRO_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,13 +16,15 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
 ` : '';
 
   return `
-  You are an expert AI for e-commerce, specializing in analyzing Instagram captions to create structured product listings. Your task is to extract product information with high accuracy.
-
+  You are an expert AI for e-commerce, specializing in analyzing Instagram captions and using Google Search to find detailed product information.
+  
+  **Primary Directive:** Use Google Search to find accurate specifications, options, and variants for the product mentioned in the caption. If the caption is sparse, the product name alone is your primary search query.
+  
   **Input Caption:**
   ---
   ${caption}
   ---
-
+  
   **Primary Objectives:**
   1. **Product Identification:** Determine if the post is selling a product. If not, return \`{"isProductPost": false}\`.
      - If the post is primarily about a sale, discount, promotion, event, or offer (e.g., lists multiple products with prices, or general promo without a specific product), set \`"isSaleOrPromotion": true\` and provide a summary \`promotion\` object.
@@ -34,8 +36,8 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
   5. **Price Extraction:** Extract the numerical base price and the currency code (e.g., USD, EUR, ALL). **If a price and currency are present in the caption, use them.** Default currency to "ALL" if none is specified.
   6. **Inventory/Stock:** Infer \`inventory\` (base stock) as an integer. If stock is mentioned (e.g., "only 5 left"), use that number. Defaults to 10 if not mentioned but clearly a product.
   7. **Attributes Extraction (Crucial):**
-     - **Specifications (Fixed Details):** A key-value object of fixed, unchangeable attributes (e.g., Material, Dimensions). Use snake_case for keys.
-     - **Options (Metadata-Rich Variants):** A map of customer-selectable options (e.g., Color, Size). Each option should be an object containing values and their specific impact on price and stock:
+     - **Specifications (Fixed Details):** A key-value object of fixed, unchangeable attributes (e.g., Material, Dimensions). Use snake_case for keys. Use Google Search to find standard specs for the product.
+     - **Options (Metadata-Rich Variants):** A map of customer-selectable options (e.g., Color, Size). Each option should be an object containing values and their specific impact on price and stock. Search for common variants of this product.
        \`\`\`json
        "options": {
          "color": [
