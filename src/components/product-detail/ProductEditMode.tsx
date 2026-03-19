@@ -377,7 +377,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                   <h3 className="text-sm font-semibold flex items-center gap-2">
                     <Settings className="h-4 w-4" />
                     Specifications
-                    {specs && specs.length > 0 && <Badge variant="secondary" className="text-[10px] h-5">{specs.length}</Badge>}
+                    {specs && specs.length > 0 && <Badge variant="secondary" className="text-xs h-5">{specs.length}</Badge>}
                   </h3>
                   <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleFindSpecs} disabled={isReanalyzing}>
                     {isReanalyzing ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1.5 h-3 w-3 text-amber-400" />}Find with AI
@@ -386,7 +386,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 {specs && specs.length > 0 ? (
                   <div className="space-y-2">
                     {/* Column labels */}
-                    <div className="grid grid-cols-[1fr_1.5fr_70px_28px] gap-2 px-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                    <div className="grid grid-cols-[1fr_1.5fr_70px_28px] gap-2 px-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       <span>Attribute</span><span>Value</span><span>Unit</span><span></span>
                     </div>
                     {specs.map((spec: any, idx: number) => (

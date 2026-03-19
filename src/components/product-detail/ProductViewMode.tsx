@@ -252,7 +252,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   <Layers className="h-4 w-4" />
                   Variants
-                  <Badge variant="secondary" className="text-[10px]">{variants.length}</Badge>
+                  <Badge variant="secondary" className="text-xs">{variants.length}</Badge>
                 </h3>
                 <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setStockModalOpen(true)}>
                   <Package className="mr-1.5 h-3 w-3" />Manage Stock
@@ -266,7 +266,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   <Input placeholder="Search..." value={varSearch} onChange={(e) => setVarSearch(e.target.value)} className="h-7 pl-7 text-xs" />
                 </div>
                 <Select value={varFilter} onValueChange={(v) => setVarFilter(v as any)}>
-                  <SelectTrigger className="h-7 w-24 text-[10px]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
                     <SelectItem value="in_stock">In Stock</SelectItem>
@@ -275,7 +275,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   </SelectContent>
                 </Select>
                 <Select value={varSort} onValueChange={(v) => setVarSort(v as any)}>
-                  <SelectTrigger className="h-7 w-28 text-[10px]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-7 w-28 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="default">Default</SelectItem>
                     <SelectItem value="stock_asc">Stock &uarr;</SelectItem>
@@ -287,7 +287,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </div>
 
               <div className="rounded-lg border overflow-hidden">
-                <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-1.5 bg-muted/50 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-1.5 bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   <span>Variant</span>
                   <span className="w-24 text-right">Price</span>
                   <span className="w-28 text-right">Stock</span>
@@ -312,7 +312,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                             <span className="font-medium bg-muted/60 px-1.5 py-0.5 rounded">{String(optVal)}</span>
                           </span>
                         ))}
-                        {v.sku && <span className="text-[10px] text-muted-foreground/40 ml-1">{v.sku}</span>}
+                        {v.sku && <span className="text-xs text-muted-foreground/40 ml-1">{v.sku}</span>}
                       </div>
                       <span className={cn("w-24 text-right text-sm font-medium tabular-nums", isOOS && "line-through")}>
                         {formatCurrency(v.displayTotal, currencyCode)}
@@ -356,7 +356,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
               Manage Variant Stock
-              <Badge variant="secondary" className="text-[10px] ml-auto">{variants.length} variants</Badge>
+              <Badge variant="secondary" className="text-xs ml-auto">{variants.length} variants</Badge>
             </DialogTitle>
           </DialogHeader>
 
@@ -430,7 +430,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                       >+</Button>
                     </div>
                     <span className={cn(
-                      "text-[10px] w-12 text-right font-medium",
+                      "text-xs w-12 text-right font-medium",
                       isOOS ? "text-red-600" : isCritical ? "text-red-500" : isLow ? "text-amber-600" : "text-emerald-600"
                     )}>
                       {isOOS ? 'OOS' : currentStock}
