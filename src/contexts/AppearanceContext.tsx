@@ -175,6 +175,7 @@ interface AppearanceContextType {
   setAdvanced: (isAdvanced: boolean) => void;
   saveCustomTheme: (themeName: string) => void;
   deleteCustomTheme: (themeId: string) => void;
+  restoreSettings: () => void;
 }
 
 const AppearanceContext = createContext<AppearanceContextType | undefined>(undefined);
@@ -436,7 +437,7 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AppearanceContext.Provider value={{ settings, setTheme, updateSetting, resetSettings, isLoading, isAdvanced: settings.isAdvanced, setAdvanced, randomizeTheme, saveCustomTheme, deleteCustomTheme }}>
+    <AppearanceContext.Provider value={{ settings, setTheme, updateSetting, resetSettings, isLoading, isAdvanced: settings.isAdvanced, setAdvanced, randomizeTheme, saveCustomTheme, deleteCustomTheme, restoreSettings: () => applySettingsToDOM(settings) }}>
       {children}
     </AppearanceContext.Provider>
   );

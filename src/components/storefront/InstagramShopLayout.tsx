@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { Outlet, useSearchParams, useLocation } from 'react-router-dom'; // Import useSearchParams
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import { InstagramShopHeader } from './InstagramShopHeader'; // Custom header
-import { defaultSettings } from '@/contexts/AppearanceContext';
+import { defaultSettings, useAppearance } from '@/contexts/AppearanceContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { CartProvider } from '@/contexts/CartContext';
@@ -76,7 +76,7 @@ const applyInstagramShopSettingsToDOM = (isDark: boolean) => {
   // Inject/update a style tag with !important variables to prevent overrides
   const existing = document.getElementById('instagram-shop-theme-style') as HTMLStyleElement | null;
   const vars = getComputedStyle(root);
-  const css = `:root{--background:${vars.getPropertyValue('--background').trim()} !important;--foreground:${vars.getPropertyValue('--foreground').trim()} !important;--primary:${vars.getPropertyValue('--primary').trim()} !important;--primary-foreground:${vars.getPropertyValue('--primary-foreground').trim()} !important;--muted:${vars.getPropertyValue('--muted').trim()} !important;--muted-foreground:${vars.getPropertyValue('--muted-foreground').trim()} !important;--border:${vars.getPropertyValue('--border').trim()} !important;--card:${vars.getPropertyValue('--card').trim()} !important;--input:${vars.getPropertyValue('--input').trim()} !important;--radius:${vars.getPropertyValue('--radius').trim()} !important;--font-sans:${vars.getPropertyValue('--font-sans').trim() || 'Montserrat, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif'} !important;--font-heading:${vars.getPropertyValue('--font-heading').trim() || 'Montserrat, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif'} !important;} body{font-family:var(--font-sans) !important;} h1,h2,h3,h4,h5,h6{font-family:var(--font-heading) !important;}`;
+  const css = `:root{--background:${vars.getPropertyValue('--background').trim()};--foreground:${vars.getPropertyValue('--foreground').trim()};--primary:${vars.getPropertyValue('--primary').trim()};--primary-foreground:${vars.getPropertyValue('--primary-foreground').trim()};--muted:${vars.getPropertyValue('--muted').trim()};--muted-foreground:${vars.getPropertyValue('--muted-foreground').trim()};--border:${vars.getPropertyValue('--border').trim()};--card:${vars.getPropertyValue('--card').trim()};--input:${vars.getPropertyValue('--input').trim()};--radius:${vars.getPropertyValue('--radius').trim()};--font-sans:${vars.getPropertyValue('--font-sans').trim() || 'Montserrat, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif'};--font-heading:${vars.getPropertyValue('--font-heading').trim() || 'Montserrat, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif'};} body{font-family:var(--font-sans);} h1,h2,h3,h4,h5,h6{font-family:var(--font-heading);}`;
   if (existing) {
     existing.textContent = css;
   } else {
@@ -88,6 +88,7 @@ const applyInstagramShopSettingsToDOM = (isDark: boolean) => {
 };
 
 const InstagramShopLayoutContent = () => {
+  const { restoreSettings } = useAppearance();
   const [isDark, setIsDark] = useState<boolean>(() => {
     const saved = localStorage.getItem('instagram_shop_theme');
     if (saved === 'light') return false;
@@ -224,9 +225,10 @@ const InstagramShopLayoutContent = () => {
       window.removeEventListener('instagram-shop-toggle-theme', toggleListener as EventListener);
       const styleEl = document.getElementById('instagram-shop-theme-style');
       if (styleEl && styleEl.parentElement) styleEl.parentElement.removeChild(styleEl);
-      // Re-apply default settings or main app settings if needed elsewhere
+      // Re-apply dashboard appearance settings so radius and other values are restored
+      restoreSettings();
     };
-  }, [appearanceSettings, isDark]);
+  }, [appearanceSettings, isDark, restoreSettings]);
 
   // Global events to open drawers from anywhere (e.g., floating pill / sidebar)
   useEffect(() => {
