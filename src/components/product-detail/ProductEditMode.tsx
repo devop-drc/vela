@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { TagInput } from "../TagInput";
 import { Loader2, XCircle, PlusCircle, CheckCircle, Sparkles, Settings, Cloud, Package, Eye, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";

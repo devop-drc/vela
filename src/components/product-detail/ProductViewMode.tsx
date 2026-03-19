@@ -117,36 +117,42 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 </div>
               )}
 
-              {/* Quick Options Preview (inline, like a real product page) */}
+              {/* Options with typed badges */}
               {!isLoadingOptions && hasOptions && (
                 <div className="space-y-3 pt-2 border-t">
                   {options.map((option: any) => {
-                    const values = (option.option_values || []).filter((v: any) => v.is_active);
+                    const values = (option.option_values || []);
                     if (values.length === 0) return null;
                     return (
-                      <div key={option.id}>
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wider">{option.name}</Label>
-                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      <div key={option.id} className="space-y-2">
+                        <Label className="font-semibold capitalize text-sm">{option.name}</Label>
+                        <div className="flex flex-wrap gap-2">
                           {values.map((val: any) => {
                             const priceDiff = convertCurrency(val.price_difference, product.currency, currencyCode);
+                            const priceDiffFormatted = formatCurrency(priceDiff, currencyCode, 'en-US', true);
+                            const isActive = val.is_active;
+                            const isOOS = val.inventory <= 0;
                             return (
                               <div
                                 key={val.id}
                                 className={cn(
-                                  "px-3 py-1.5 rounded-md text-sm border transition-colors",
-                                  val.is_default
-                                    ? "bg-primary/10 border-primary text-primary font-medium"
-                                    : val.inventory <= 0
-                                      ? "bg-muted/50 border-border text-muted-foreground line-through"
-                                      : "bg-card border-border hover:border-primary/50"
+                                  "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
+                                  isActive
+                                    ? (isOOS
+                                        ? "bg-slate-100 text-slate-800 border-slate-300"
+                                        : "bg-emerald-100 text-emerald-800 border-emerald-300")
+                                    : "bg-gray-100 text-gray-500 border-gray-300",
+                                  val.is_default && "ring-2 ring-primary ring-offset-1 ring-offset-background"
                                 )}
                               >
-                                <span>{val.value}</span>
-                                {priceDiff !== 0 && (
-                                  <span className="text-[10px] ml-1 opacity-70">
-                                    {priceDiff > 0 ? '+' : ''}{formatCurrency(priceDiff, currencyCode)}
-                                  </span>
-                                )}
+                                <span className="flex items-center gap-1">
+                                  {val.value}
+                                  {val.is_default && <span className="text-xs font-normal text-primary">(Default)</span>}
+                                </span>
+                                {priceDiff !== 0 && <span className="text-xs font-normal opacity-70">({priceDiffFormatted})</span>}
+                                <span className="text-xs font-normal opacity-70 flex items-center gap-0.5">
+                                  <Package className="h-3 w-3" />{val.inventory}
+                                </span>
                               </div>
                             );
                           })}
@@ -180,7 +186,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
             </div>
           )}
 
-          {/* Variants Summary */}
+          {/* Variants */}
           {hasVariants && (
             <div>
               <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
@@ -188,30 +194,47 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 Variants
                 <Badge variant="secondary" className="text-[10px] ml-1">{variants.length}</Badge>
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {variants.slice(0, 12).map((v: any) => {
+              <div className="space-y-2">
+                {variants.slice(0, 16).map((v: any) => {
                   const optVals = v.option_values || {};
                   const totalPriceALL = (product.price || 0) + (v.price_difference || 0);
                   const displayTotal = convertCurrency(totalPriceALL, 'ALL', currencyCode);
+                  const isOOS = v.inventory <= 0;
                   return (
-                    <div key={v.id} className="p-2.5 rounded-lg border bg-card text-xs space-y-1">
-                      <div className="font-medium truncate">
-                        {Object.values(optVals).join(' / ')}
+                    <div key={v.id} className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg border",
+                      isOOS ? "bg-muted/30 opacity-60" : "bg-card"
+                    )}>
+                      {/* Option badges with type labels */}
+                      <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
+                        {Object.entries(optVals).map(([optName, optVal]) => (
+                          <Badge key={optName} variant="outline" className="text-xs font-normal gap-1">
+                            <span className="text-muted-foreground">{optName}:</span>
+                            <span className="font-medium">{String(optVal)}</span>
+                          </Badge>
+                        ))}
                       </div>
-                      <div className="flex items-center justify-between text-muted-foreground">
-                        <span>{formatCurrency(displayTotal, currencyCode)}</span>
-                        <span className="flex items-center gap-0.5">
-                          <Package className="h-2.5 w-2.5" />{v.inventory}
-                        </span>
-                      </div>
-                      {v.sku && <div className="text-[10px] text-muted-foreground/60 truncate">{v.sku}</div>}
+                      {/* Price */}
+                      <span className={cn("text-sm font-semibold whitespace-nowrap", isOOS && "line-through")}>
+                        {formatCurrency(displayTotal, currencyCode)}
+                      </span>
+                      {/* Stock */}
+                      <span className={cn(
+                        "text-xs whitespace-nowrap flex items-center gap-1",
+                        isOOS ? "text-destructive" : v.inventory <= 5 ? "text-amber-600" : "text-muted-foreground"
+                      )}>
+                        <Package className="h-3 w-3" />
+                        {isOOS ? 'Out of stock' : `${v.inventory} in stock`}
+                      </span>
+                      {/* SKU */}
+                      {v.sku && <span className="text-[10px] text-muted-foreground/50 whitespace-nowrap hidden sm:block">{v.sku}</span>}
                     </div>
                   );
                 })}
-                {variants.length > 12 && (
-                  <div className="p-2.5 rounded-lg border border-dashed bg-muted/30 flex items-center justify-center text-xs text-muted-foreground">
-                    +{variants.length - 12} more
-                  </div>
+                {variants.length > 16 && (
+                  <p className="text-xs text-muted-foreground text-center py-2">
+                    +{variants.length - 16} more variants
+                  </p>
                 )}
               </div>
             </div>
