@@ -494,6 +494,50 @@ const OutOfStock = () => {
     setTitle("Stock Management");
   }, [setTitle]);
 
+  // Pre-fetch variant stock summaries for ALL products on load
+  useEffect(() => {
+    if (!allProducts || allProducts.length === 0) return;
+    const productIds = allProducts.filter((p: any) => p.pricing_type === "one_time").map((p: any) => p.id);
+    if (productIds.length === 0) return;
+
+    (async () => {
+      const { data, error } = await supabase
+        .from("product_variants")
+        .select("id, product_id, combination_key, option_values, inventory, price_difference, is_active, is_default, sku")
+        .in("product_id", productIds);
+
+      if (error || !data) return;
+
+      // Group by product_id
+      const grouped: Record<string, VariantRow[]> = {};
+      data.forEach((v: any) => {
+        let optVals = v.option_values || {};
+        if (Object.keys(optVals).length === 0 && v.combination_key) {
+          v.combination_key.split("|").forEach((part: string) => {
+            const [key, val] = part.split("=");
+            if (key && val) optVals[key] = val;
+          });
+        }
+        const row: VariantRow = { ...v, option_values: optVals };
+        if (!grouped[v.product_id]) grouped[v.product_id] = [];
+        grouped[v.product_id].push(row);
+      });
+
+      // Distribute base inventory to variants that all have 0
+      for (const pid of Object.keys(grouped)) {
+        const variants = grouped[pid];
+        const product = allProducts.find((p: any) => p.id === pid);
+        if (variants.every(v => v.inventory === 0) && product?.inventory > 0) {
+          const perVariant = Math.floor(product.inventory / variants.length);
+          const remainder = product.inventory % variants.length;
+          variants.forEach((v, i) => { v.inventory = perVariant + (i < remainder ? 1 : 0); });
+        }
+      }
+
+      setVariantCache(prev => ({ ...prev, ...grouped }));
+    })();
+  }, [allProducts]);
+
   const physicalProducts = useMemo(
     () => allProducts.filter((p: any) => p.pricing_type === "one_time"),
     [allProducts]
