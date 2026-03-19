@@ -30,7 +30,7 @@ export default function Settings() {
   }, [searchParams, setSearchParams]);
 
   return (
-    <div className="max-w-5xl">
+    <div>
       <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v }, { replace: true })}>
         {/* Tab bar */}
         <TabsList className="w-full grid grid-cols-3 h-12 mb-6">
