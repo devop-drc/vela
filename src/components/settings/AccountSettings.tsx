@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User as SupabaseUser } from '@supabase/supabase-js'; // Renamed to avoid conflict with Lucide User icon
+import { Badge } from "@/components/ui/badge";
+import { User as SupabaseUser } from '@supabase/supabase-js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Facebook, ExternalLink, Languages, Bell, Trash2, User, Mail, Phone } from 'lucide-react'; // Added Phone icon
+import { Facebook, ExternalLink, Languages, Bell, Trash2, User, Mail, Phone, CheckCircle2, XCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { IntegrationSettings } from './IntegrationSettings';
-import { useSearchParams } from 'react-router-dom'; // Import useSearchParams
+import { useSearchParams } from 'react-router-dom';
 
 const PreferenceRow = ({ id, title, description, defaultChecked = false }: { id: string, title: string, description: string, defaultChecked?: boolean }) => (
   <div className="flex items-center justify-between p-3 border rounded-lg">
@@ -25,10 +26,11 @@ const PreferenceRow = ({ id, title, description, defaultChecked = false }: { id:
 
 export const AccountSettings = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [profile, setProfile] = useState<any | null>(null); // State for user profile
+  const [profile, setProfile] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [facebookId, setFacebookId] = useState<string | null>(null);
-  const [searchParams] = useSearchParams(); // Get search params
+  const [integration, setIntegration] = useState<any | null>(null);
+  const [searchParams] = useSearchParams();
 
   const fetchUserAndProfile = async () => {
     setIsLoading(true);
@@ -36,10 +38,9 @@ export const AccountSettings = () => {
     setUser(user);
 
     if (user) {
-      // Fetch profile data
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('first_name, last_name, avatar_url, phone_number') // Added phone_number
+        .select('first_name, last_name, avatar_url, phone_number')
         .eq('id', user.id)
         .single();
 
@@ -49,84 +50,136 @@ export const AccountSettings = () => {
         setProfile(profileData);
       }
 
-      // Check for Facebook identity
       const facebookIdentity = user.identities?.find(i => i.provider === 'facebook');
       if (facebookIdentity) {
         setFacebookId(facebookIdentity.id);
       }
+
+      const { data: integrationData } = await supabase
+        .from('integrations')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('provider', 'facebook')
+        .maybeSingle();
+
+      setIntegration(integrationData);
     }
     setIsLoading(false);
   };
 
   useEffect(() => {
     fetchUserAndProfile();
-  }, [searchParams.get('integration_success')]); // Re-fetch when integration_success param changes
+  }, [searchParams.get('integration_success')]);
 
   if (isLoading) {
     return (
-      <div className="space-y-8">
-        <Skeleton className="h-96 w-full" />
-        <Skeleton className="h-64 w-full" />
+      <div className="space-y-6">
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
       </div>
     );
   }
 
+  const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'No name set';
+  const avatarSrc = profile?.avatar_url || user?.user_metadata?.avatar_url;
+  const initials = (profile?.first_name?.[0] || user?.user_metadata?.first_name?.[0] || '?').toUpperCase();
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-      <div className="lg:col-span-2 space-y-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile</CardTitle>
-            <CardDescription>This is your personal information.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {facebookId && (
-              <Alert>
-                <Facebook className="h-4 w-4" />
-                <AlertTitle>Synced from Facebook</AlertTitle>
-                <AlertDescription className="flex items-center justify-between">
-                  Some profile details might be synced from your connected Facebook account.
-                  {facebookId && (
-                    <Button asChild variant="outline" size="sm">
-                      <a href={`https://facebook.com/${facebookId}`} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        View on Facebook
-                      </a>
-                    </Button>
-                  )}
-                </AlertDescription>
-              </Alert>
-            )}
-            <div className="flex items-center gap-4 pt-2">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={profile?.avatar_url || user?.user_metadata.avatar_url || undefined} alt="User avatar" />
-                <AvatarFallback>{profile?.first_name?.[0]?.toUpperCase() || user?.user_metadata.first_name?.[0]?.toUpperCase() || <User className="h-10 w-10" />}</AvatarFallback>
-              </Avatar>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
-                <div className="space-y-1">
-                  <Label className="flex items-center gap-2"><User className="h-4 w-4" /> First Name</Label>
-                  <p className="text-lg font-medium">{profile?.first_name || 'Not set'}</p>
-                </div>
-                <div className="space-y-1">
-                  <Label className="flex items-center gap-2"><User className="h-4 w-4" /> Last Name</Label>
-                  <p className="text-lg font-medium">{profile?.last_name || 'Not set'}</p>
-                </div>
+    <div className="space-y-6">
+      {/* Profile hero card */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+            <Avatar className="h-20 w-20 ring-2 ring-border flex-shrink-0">
+              <AvatarImage src={avatarSrc || undefined} alt="User avatar" />
+              <AvatarFallback className="text-2xl font-semibold">
+                {avatarSrc ? <User className="h-10 w-10" /> : initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 text-center sm:text-left space-y-1">
+              <h3 className="text-xl font-semibold">{displayName}</h3>
+              <p className="text-muted-foreground flex items-center justify-center sm:justify-start gap-1.5">
+                <Mail className="h-4 w-4" />
+                {user?.email}
+              </p>
+              {profile?.phone_number && (
+                <p className="text-muted-foreground flex items-center justify-center sm:justify-start gap-1.5">
+                  <Phone className="h-4 w-4" />
+                  {profile.phone_number}
+                </p>
+              )}
+              {/* Integration status pill */}
+              <div className="pt-2">
+                {integration ? (
+                  <Badge variant="secondary" className="gap-1.5 text-emerald-600 border-emerald-200 bg-emerald-50 dark:bg-emerald-950 dark:border-emerald-800">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Connected to Instagram
+                    {integration.metadata?.username && (
+                      <span className="text-muted-foreground font-normal">· @{integration.metadata.username}</span>
+                    )}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="gap-1.5 text-muted-foreground">
+                    <XCircle className="h-3.5 w-3.5" />
+                    Instagram not connected
+                  </Badge>
+                )}
               </div>
             </div>
-            <div className="space-y-1">
-              <Label className="flex items-center gap-2"><Mail className="h-4 w-4" /> Email Address</Label>
-              <p className="text-lg font-medium">{user?.email}</p>
+          </div>
+
+          {facebookId && (
+            <Alert className="mt-5">
+              <Facebook className="h-4 w-4" />
+              <AlertTitle>Synced from Facebook</AlertTitle>
+              <AlertDescription className="flex items-center justify-between flex-wrap gap-2">
+                <span>Some profile details may be synced from your connected Facebook account.</span>
+                <Button asChild variant="outline" size="sm">
+                  <a href={`https://facebook.com/${facebookId}`} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    View on Facebook
+                  </a>
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Profile fields — read-only info */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile Details</CardTitle>
+          <CardDescription>Your personal information on this account.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1 p-3 rounded-lg bg-muted/50">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> First Name</Label>
+              <p className="font-medium">{profile?.first_name || <span className="text-muted-foreground italic">Not set</span>}</p>
             </div>
-            <div className="space-y-1">
-              <Label className="flex items-center gap-2"><Phone className="h-4 w-4" /> Phone Number</Label>
-              <p className="text-lg font-medium">{profile?.phone_number || 'Not set'}</p>
+            <div className="space-y-1 p-3 rounded-lg bg-muted/50">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> Last Name</Label>
+              <p className="font-medium">{profile?.last_name || <span className="text-muted-foreground italic">Not set</span>}</p>
             </div>
-          </CardContent>
-        </Card>
-        <IntegrationSettings />
-      </div>
-      <div className="space-y-8">
+            <div className="space-y-1 p-3 rounded-lg bg-muted/50">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> Email</Label>
+              <p className="font-medium">{user?.email}</p>
+            </div>
+            <div className="space-y-1 p-3 rounded-lg bg-muted/50">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> Phone</Label>
+              <p className="font-medium">{profile?.phone_number || <span className="text-muted-foreground italic">Not set</span>}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Integrations */}
+      <IntegrationSettings />
+
+      {/* Preferences + Danger in a 2-col layout on larger screens */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Preferences</CardTitle>
@@ -152,9 +205,13 @@ export const AccountSettings = () => {
             </div>
           </CardContent>
         </Card>
+
         <Card className="border-destructive">
           <CardHeader>
-            <CardTitle className="text-destructive flex items-center gap-2"><Trash2 className="h-5 w-5" /> Danger Zone</CardTitle>
+            <CardTitle className="text-destructive flex items-center gap-2">
+              <Trash2 className="h-5 w-5" /> Danger Zone
+            </CardTitle>
+            <CardDescription>Irreversible account actions.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="destructive" className="w-full">Delete Account</Button>
