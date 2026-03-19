@@ -639,22 +639,19 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
               <div className="rounded-lg border overflow-hidden">
                 {/* Header */}
                 <div className="grid items-center gap-2 px-3 py-1.5 bg-muted/40 border-b"
-                  style={{ gridTemplateColumns: `28px 1fr ${activeOptionNames.map(()=>'auto').join(' ')} 80px 100px 120px 44px 44px` }}
+                  style={{ gridTemplateColumns: '28px 1fr 80px 100px 120px 44px 44px' }}
                 >
                   <Checkbox
                     checked={filtered.length > 0 && filtered.every(r => selected[r.combination_key])}
                     onCheckedChange={(c) => toggleSelectAll(!!c)}
                     className="mx-auto"
                   />
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Variant</span>
-                  {activeOptionNames.map(n => (
-                    <span key={n} className="text-xs uppercase tracking-wide text-muted-foreground whitespace-nowrap">{n}</span>
-                  ))}
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground text-right">Inv.</span>
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Price</span>
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground">SKU</span>
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground text-center">On</span>
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground text-center">Def.</span>
+                  <span className="text-xs text-muted-foreground font-medium">Variant</span>
+                  <span className="text-xs text-muted-foreground font-medium text-right">Stock</span>
+                  <span className="text-xs text-muted-foreground font-medium">Price</span>
+                  <span className="text-xs text-muted-foreground font-medium">SKU</span>
+                  <span className="text-xs text-muted-foreground font-medium text-center">Active</span>
+                  <span className="text-xs text-muted-foreground font-medium text-center">Default</span>
                 </div>
 
                 {/* Rows */}
@@ -682,7 +679,7 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
                             "grid items-center gap-2 px-3 py-1.5 hover:bg-muted/20 transition-colors",
                             ri % 2 === 1 && "bg-muted/10"
                           )}
-                          style={{ gridTemplateColumns: `28px 1fr ${activeOptionNames.map(()=>'auto').join(' ')} 80px 100px 120px 44px 44px` }}
+                          style={{ gridTemplateColumns: '28px 1fr 80px 100px 120px 44px 44px' }}
                         >
                           <Checkbox
                             checked={!!selected[r.combination_key]}
@@ -691,18 +688,12 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
                           />
                           {/* Option value badges */}
                           <div className="flex flex-wrap gap-1">
-                            {activeOptionNames.map(n => r.option_values[n] ? (
-                              <Badge key={n} variant="secondary" className="text-xs h-5 px-1.5 capitalize font-normal">
-                                {r.option_values[n]}
+                            {Object.entries(r.option_values).map(([n, v]) => (
+                              <Badge key={n} variant="secondary" className="text-xs px-1.5 capitalize font-normal">
+                                <span className="text-muted-foreground mr-1">{n}:</span>{String(v)}
                               </Badge>
-                            ) : null)}
+                            ))}
                           </div>
-                          {/* Per-option value cells (hidden visually but kept for spacing) */}
-                          {activeOptionNames.map(n => (
-                            <span key={n} className="text-sm capitalize text-muted-foreground hidden">
-                              {r.option_values[n]}
-                            </span>
-                          ))}
                           {/* Inventory */}
                           <Input
                             type="number"
