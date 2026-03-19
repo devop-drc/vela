@@ -131,6 +131,7 @@ const Products = () => {
     allDetailsAttributes,
     maxPrice,
     isLoading: isProductDataLoading,
+    refetch,
   } = useProductData();
 
   // Use Product Filters Hook
@@ -452,13 +453,13 @@ const Products = () => {
   const handleStatusChange = async (productId: string, newStatus: ProductStatus) => {
     const { error } = await supabase.from('products').update({ status: newStatus }).eq('id', productId);
     if (error) showError(`Failed to update status: ${error.message}`);
-    else showSuccess(`Product is now ${newStatus.toLowerCase()}.`);
+    else { showSuccess(`Product is now ${newStatus.toLowerCase()}.`); refetch(); }
   };
 
   const handleBulkStatusChange = async (status: ProductStatus) => {
     const { error } = await supabase.from('products').update({ status }).in('id', selectedProducts);
     if (error) showError(`Failed to update products: ${error.message}`);
-    else { showSuccess(`Successfully updated ${selectedProducts.length} products.`); setSelectedProducts([]); }
+    else { showSuccess(`Successfully updated ${selectedProducts.length} products.`); setSelectedProducts([]); refetch(); }
   };
   const handleBulkDelete = async () => {
     const { data: productsToDelete, error: fetchError } = await supabase
@@ -491,10 +492,9 @@ const Products = () => {
     if (deleteError) {
       showError(`Failed to delete products: ${deleteError.message}`);
     } else {
-      // The realtime listener will update `allProducts` in `useProductData`
-      // which will then trigger `filteredAndSortedProducts` to update.
       showSuccess(`Successfully deleted ${selectedProducts.length} products.`);
       setSelectedProducts([]);
+      refetch();
     }
     setBulkDeleteConfirm(false);
   };

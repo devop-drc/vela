@@ -163,5 +163,6 @@ export const useProductData = (): UseProductDataResult => {
     allDetailsAttributes,
     maxPrice,
     isLoading,
+    refetch: fetchProductsAndMetadata,
   };
 };
