@@ -1,91 +1,137 @@
-import { NavLink } from "react-router-dom";
-import { Home, ShoppingBag, Settings, Package, Archive, MessageSquareQuote, Megaphone, Users, Store, LayoutDashboard, Layers, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeft } from "lucide-react";
+import { NavLink, useLocation } from "react-router-dom";
+import {
+  Home, Package, Archive, Layers, MessageSquareQuote, Megaphone,
+  ShoppingBag, Settings, PanelLeftClose, PanelLeft,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { useShop } from "@/contexts/ShopContext";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-interface SidebarProps {
+// ── Nav config ──────────────────────────────────────────────────────────────
+
+type NavItem = { to: string; icon: typeof Home; label: string; end?: boolean };
+type NavDivider = { divider: true; label: string };
+type NavEntry = NavItem | NavDivider;
+
+const nav: NavEntry[] = [
+  { to: "/", icon: Home, label: "Dashboard", end: true },
+  { divider: true, label: "Products" },
+  { to: "/products", icon: Package, label: "Products" },
+  { to: "/out-of-stock", icon: Archive, label: "Stock" },
+  { to: "/categories", icon: Layers, label: "Categories" },
+  { to: "/keywords", icon: MessageSquareQuote, label: "Keywords" },
+  { to: "/promotions", icon: Megaphone, label: "Promotions" },
+  { divider: true, label: "Sales" },
+  { to: "/orders", icon: ShoppingBag, label: "Orders" },
+  { divider: true, label: "App" },
+  { to: "/settings", icon: Settings, label: "Settings" },
+];
+
+// ── Component ───────────────────────────────────────────────────────────────
+
+interface Props {
   collapsed: boolean;
   onToggleCollapsed: () => void;
 }
 
-const navItems = [
-  { to: "/", icon: Home, label: "Dashboard", end: true },
-  { type: "divider" as const, label: "Products" },
-  { to: "/products", icon: Package, label: "Products" },
-  { to: "/out-of-stock", icon: Archive, label: "Stock" },
-  { to: "/categories", icon: Layers, label: "Categories" },
-  { to: "/keywords", icon: MessageSquareQuote, label: "AI Keywords" },
-  { to: "/promotions", icon: Megaphone, label: "Promotions" },
-  { type: "divider" as const, label: "Sales" },
-  { to: "/orders", icon: ShoppingBag, label: "Orders" },
-  { type: "divider" as const, label: "Settings" },
-  { to: "/settings", icon: Settings, label: "Settings" },
-];
-
-const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => {
+export default function Sidebar({ collapsed, onToggleCollapsed }: Props) {
   const { settings } = useAppearance();
   const { shopDetails } = useShop();
-  const isFloating = settings.layoutStyle === 'floating';
-  const isPrimary = settings.sidebarStyle === 'primary';
-  const blurEnabled = settings.blurEnabled;
+  const location = useLocation();
+
+  const floating = settings.layoutStyle === "floating";
+  const primary = settings.sidebarStyle === "primary";
+  const blur = settings.blurEnabled;
+  const width = settings.sidebarWidth || "default";
 
   const shopName = shopDetails?.shop_name || "InstaShop";
-  const shopInitials = shopName.slice(0, 2).toUpperCase();
+  const initials = shopName.slice(0, 2).toUpperCase();
 
-  const textMuted = isPrimary ? "text-primary-foreground/50" : "text-muted-foreground";
-  const textNormal = isPrimary ? "text-primary-foreground/70" : "text-muted-foreground";
-  const textActive = isPrimary ? "text-primary-foreground" : "text-foreground";
-  const hoverBg = isPrimary ? "hover:bg-primary-foreground/10" : "hover:bg-accent";
-  const activeBg = isPrimary ? "bg-primary-foreground/15" : "bg-accent";
-  const activeBar = isPrimary ? "bg-primary-foreground" : "bg-primary";
-  const borderColor = isPrimary ? "border-primary-foreground/15" : "border-border/50";
+  // ── Palette ─────────────────────────────────────────────────────────────
+
+  const palette = primary
+    ? {
+        bg: blur ? "bg-primary/90 backdrop-blur-xl" : "bg-primary",
+        text: "text-primary-foreground",
+        muted: "text-primary-foreground/45",
+        normal: "text-primary-foreground/70",
+        active: "text-primary-foreground",
+        hover: "hover:bg-primary-foreground/10 hover:text-primary-foreground",
+        activeBg: "bg-primary-foreground/15",
+        activeRing: "ring-primary-foreground/25",
+        border: "border-primary-foreground/10",
+        divider: "bg-primary-foreground/10",
+        logoBg: "bg-primary-foreground/15",
+        toggleBg: "hover:bg-primary-foreground/10",
+      }
+    : {
+        bg: blur ? "bg-card/90 backdrop-blur-xl" : "bg-card",
+        text: "",
+        muted: "text-muted-foreground/60",
+        normal: "text-muted-foreground",
+        active: "text-primary",
+        hover: "hover:bg-accent hover:text-accent-foreground",
+        activeBg: "bg-primary/8",
+        activeRing: "ring-primary/20",
+        border: "border-border",
+        divider: "bg-border",
+        logoBg: "bg-primary/10",
+        toggleBg: "hover:bg-accent",
+      };
+
+  // ── Width classes ─────────────────────────────────────────────────────────
+
+  const widthClass = collapsed
+    ? "w-14"
+    : width === "compact" ? "w-52" : width === "spacious" ? "w-72" : "w-60";
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  const isActive = (to: string, end?: boolean) => {
+    if (end) return location.pathname === to;
+    return location.pathname.startsWith(to);
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <TooltipProvider delayDuration={150}>
+    <TooltipProvider delayDuration={100}>
       <aside
         className={cn(
-          "z-40 hidden md:flex flex-col transition-all duration-300 ease-in-out overflow-hidden shrink-0",
-          collapsed ? "w-[56px]" : (settings.sidebarWidth === 'compact' ? 'w-52' : settings.sidebarWidth === 'spacious' ? 'w-72' : 'w-60'),
-          isFloating ? "fixed top-3 left-3 bottom-3 rounded-lg border shadow-lg" : "h-full border-r",
-          isPrimary
-            ? cn(blurEnabled ? "bg-primary/90 backdrop-blur-xl" : "bg-primary", "text-primary-foreground")
-            : cn(blurEnabled ? "bg-card/90 backdrop-blur-xl" : "bg-card", "border-border")
+          "z-40 hidden md:flex flex-col shrink-0 transition-all duration-300 overflow-hidden",
+          widthClass,
+          floating ? "fixed top-3 left-3 bottom-3 rounded-lg border shadow-lg" : "h-full border-r",
+          palette.bg, palette.text, palette.border
         )}
       >
-        {/* Logo */}
-        <div className={cn("shrink-0 flex items-center border-b px-3", borderColor, collapsed ? "justify-center h-14" : "h-14 gap-2.5")}>
-          <div className={cn(
-            "flex items-center justify-center shrink-0 rounded-md font-bold text-xs select-none",
-            collapsed ? "h-8 w-8" : "h-8 w-8",
-            isPrimary ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary text-primary-foreground"
-          )}>
-            {shopInitials}
+        {/* ── Logo ────────────────────────────────────────────────────── */}
+        <div className={cn("shrink-0 flex items-center h-14 border-b", palette.border, collapsed ? "justify-center px-2" : "px-4 gap-3")}>
+          <div className={cn("h-8 w-8 shrink-0 rounded-md flex items-center justify-center text-xs font-bold select-none", palette.logoBg, primary ? "text-primary-foreground" : "text-primary")}>
+            {initials}
           </div>
-          {!collapsed && (
-            <div className="min-w-0">
-              <h1 className="text-sm font-bold truncate">{shopName}</h1>
-            </div>
-          )}
+          {!collapsed && <span className="text-sm font-semibold truncate">{shopName}</span>}
         </div>
 
-        {/* Navigation */}
-        <nav className={cn("flex-1 overflow-y-auto overflow-x-hidden py-2", collapsed ? "px-1" : "px-2")}>
-          {navItems.map((item, i) => {
-            if ('type' in item && item.type === 'divider') {
+        {/* ── Nav ─────────────────────────────────────────────────────── */}
+        <nav className={cn("flex-1 overflow-y-auto overflow-x-hidden py-2", collapsed ? "px-1.5" : "px-2.5")}>
+          {nav.map((entry, i) => {
+            // Divider
+            if ("divider" in entry) {
               if (collapsed) {
-                return <div key={i} className={cn("my-2 mx-2 border-t", borderColor)} />;
+                return <div key={`d-${i}`} className={cn("h-px my-2.5 mx-1.5 rounded-full", palette.divider)} />;
               }
               return (
-                <div key={i} className={cn("mt-4 mb-1.5 px-3", i === 0 && "mt-1")}>
-                  <span className={cn("text-[10px] font-semibold uppercase tracking-widest", textMuted)}>{item.label}</span>
-                </div>
+                <p key={`d-${i}`} className={cn("text-[10px] font-semibold uppercase tracking-widest mt-5 mb-1 px-2.5", palette.muted, i === 1 && "mt-2")}>
+                  {entry.label}
+                </p>
               );
             }
 
-            const { to, icon: Icon, label, end } = item as { to: string; icon: any; label: string; end?: boolean };
+            const { to, icon: Icon, label, end } = entry;
+            const active = isActive(to, end);
 
+            // ── Collapsed link ──────────────────────────────────────
             if (collapsed) {
               return (
                 <Tooltip key={to}>
@@ -93,81 +139,63 @@ const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => {
                     <NavLink
                       to={to}
                       end={end}
-                      className={({ isActive }) => cn(
+                      className={cn(
                         "flex items-center justify-center h-9 w-9 mx-auto my-0.5 rounded-md transition-all duration-150",
-                        isActive
-                          ? isPrimary
-                            ? "bg-primary-foreground/20 text-primary-foreground ring-2 ring-primary-foreground/30"
-                            : "bg-primary text-primary-foreground ring-2 ring-primary/30"
-                          : cn(textNormal, hoverBg)
+                        active
+                          ? cn(palette.active, palette.activeBg, "ring-2", palette.activeRing, "shadow-sm")
+                          : cn(palette.normal, palette.hover)
                       )}
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className="h-[17px] w-[17px]" />
                     </NavLink>
                   </TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={10} className="text-xs">
+                  <TooltipContent side="right" sideOffset={12} className="text-xs font-medium">
                     {label}
                   </TooltipContent>
                 </Tooltip>
               );
             }
 
+            // ── Expanded link ───────────────────────────────────────
             return (
               <NavLink
                 key={to}
                 to={to}
                 end={end}
-                className={({ isActive }) => cn(
-                  "relative flex items-center gap-2.5 px-3 py-2 my-0.5 rounded-md text-sm transition-all duration-150",
-                  textNormal, hoverBg,
-                  isActive && cn(textActive, activeBg, "font-medium")
+                className={cn(
+                  "flex items-center gap-2.5 px-2.5 py-[7px] my-px rounded-md text-sm transition-all duration-150",
+                  active
+                    ? cn(palette.active, palette.activeBg, "font-medium shadow-sm")
+                    : cn(palette.normal, palette.hover)
                 )}
               >
-                {({ isActive }) => (
-                  <>
-                    {isActive && <span className={cn("absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-5 rounded-r-full", activeBar)} />}
-                    <Icon className={cn("h-4 w-4 shrink-0", isActive && "scale-105")} />
-                    <span className="truncate">{label}</span>
-                  </>
-                )}
+                <Icon className={cn("h-4 w-4 shrink-0", active && "scale-[1.05]")} />
+                <span className="truncate">{label}</span>
               </NavLink>
             );
           })}
         </nav>
 
-        {/* Collapse toggle */}
-        <div className={cn("shrink-0 border-t px-2 py-2", borderColor)}>
+        {/* ── Toggle ──────────────────────────────────────────────────── */}
+        <div className={cn("shrink-0 border-t px-2 py-2", palette.border)}>
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 onClick={onToggleCollapsed}
                 className={cn(
                   "w-full flex items-center justify-center gap-2 rounded-md py-2 text-xs font-medium transition-all duration-150",
-                  isPrimary
-                    ? "text-primary-foreground/60 hover:text-primary-foreground hover:bg-primary-foreground/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  palette.normal, palette.toggleBg
                 )}
               >
-                {collapsed ? (
-                  <PanelLeft className="h-4 w-4" />
-                ) : (
-                  <>
-                    <PanelLeftClose className="h-4 w-4" />
-                    <span>Collapse</span>
-                  </>
-                )}
+                {collapsed ? <PanelLeft className="h-4 w-4" /> : <><PanelLeftClose className="h-4 w-4" /><span>Collapse</span></>}
               </button>
             </TooltipTrigger>
             {collapsed && (
-              <TooltipContent side="right" sideOffset={10} className="text-xs">
-                Expand sidebar
-              </TooltipContent>
+              <TooltipContent side="right" sideOffset={12} className="text-xs">Expand</TooltipContent>
             )}
           </Tooltip>
         </div>
       </aside>
     </TooltipProvider>
   );
-};
-
-export default Sidebar;
+}
