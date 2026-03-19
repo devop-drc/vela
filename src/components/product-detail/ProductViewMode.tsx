@@ -123,14 +123,14 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
 
               {/* Options with typed badges */}
               {!isLoadingOptions && hasOptions && (
-                <div className="space-y-3 pt-2 border-t">
+                <div className="space-y-2.5 pt-2 border-t">
                   {options.map((option: any) => {
                     const values = (option.option_values || []);
                     if (values.length === 0) return null;
                     return (
-                      <div key={option.id} className="space-y-2">
-                        <Label className="font-semibold capitalize text-sm">{option.name}</Label>
-                        <div className="flex flex-wrap gap-2">
+                      <div key={option.id} className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider">{option.name}</Label>
+                        <div className="flex flex-wrap gap-1.5">
                           {values.map((val: any) => {
                             const priceDiff = convertCurrency(val.price_difference, product.currency, currencyCode);
                             const priceDiffFormatted = formatCurrency(priceDiff, currencyCode, 'en-US', true);
@@ -140,23 +140,17 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                               <div
                                 key={val.id}
                                 className={cn(
-                                  "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
+                                  "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs border transition-colors",
                                   isActive
                                     ? (isOOS
-                                        ? "bg-slate-100 text-slate-800 border-slate-300"
-                                        : "bg-emerald-100 text-emerald-800 border-emerald-300")
-                                    : "bg-gray-100 text-gray-500 border-gray-300",
-                                  val.is_default && "ring-2 ring-primary ring-offset-1 ring-offset-background"
+                                        ? "bg-slate-50 text-slate-600 border-slate-200"
+                                        : "bg-card text-foreground border-border")
+                                    : "bg-muted/50 text-muted-foreground border-border/50 line-through",
+                                  val.is_default && "ring-1 ring-primary/50 border-primary/30 bg-primary/5"
                                 )}
                               >
-                                <span className="flex items-center gap-1">
-                                  {val.value}
-                                  {val.is_default && <span className="text-xs font-normal text-primary">(Default)</span>}
-                                </span>
-                                {priceDiff !== 0 && <span className="text-xs font-normal opacity-70">({priceDiffFormatted})</span>}
-                                <span className="text-xs font-normal opacity-70 flex items-center gap-0.5">
-                                  <Package className="h-3 w-3" />{val.inventory}
-                                </span>
+                                <span className="font-medium">{val.value}</span>
+                                {priceDiff !== 0 && <span className="text-muted-foreground">({priceDiffFormatted})</span>}
                               </div>
                             );
                           })}

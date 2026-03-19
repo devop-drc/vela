@@ -203,14 +203,35 @@ const upsertVariantsFromOptions = async (supabase: SupabaseClient, productId: st
     .eq('product_id', productId);
   const existingKeys = new Set((existingVariants || []).map(v => v.combination_key));
 
+  // Build a lookup for option value inventory: { "Color": { "Red": 10, "Blue": 5 } }
+  const valueInventoryMap: Record<string, Record<string, number>> = {};
+  for (let i = 0; i < optionEntries.length; i++) {
+    const [optName, values] = optionEntries[i];
+    const name = orderedNames[i];
+    valueInventoryMap[name] = {};
+    for (const raw of values) {
+      if (typeof raw === 'object' && raw !== null) {
+        valueInventoryMap[name][String(raw.value || raw).trim()] = raw.inventory || 10;
+      } else {
+        valueInventoryMap[name][String(raw).trim()] = 10;
+      }
+    }
+  }
+
   const toInsert: any[] = [];
   for (let i = 0; i < combosIds.length; i++) {
     const variantKey = buildVariantKey(orderedNames, combosLabels[i]);
     if (existingKeys.has(variantKey)) continue;
-    // Build option_values JSONB: { "Color": "Red", "Size": "M" }
     const optionValuesObj: Record<string, string> = {};
-    orderedNames.forEach((name, idx) => { optionValuesObj[name] = combosLabels[i][idx]; });
-    toInsert.push({ product_id: productId, combination_key: variantKey, option_values: optionValuesObj, is_active: true });
+    // Calculate variant inventory as minimum of its option values' inventories
+    let variantInventory = Infinity;
+    orderedNames.forEach((name, idx) => {
+      optionValuesObj[name] = combosLabels[i][idx];
+      const valInv = valueInventoryMap[name]?.[combosLabels[i][idx]] ?? 10;
+      if (valInv < variantInventory) variantInventory = valInv;
+    });
+    if (!isFinite(variantInventory)) variantInventory = 10;
+    toInsert.push({ product_id: productId, combination_key: variantKey, option_values: optionValuesObj, inventory: variantInventory, is_active: true });
   }
   if (toInsert.length > 0) {
     const { error } = await supabase.from('product_variants').insert(toInsert);
