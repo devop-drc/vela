@@ -79,27 +79,27 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
   
 
-  const getStockBadge = (inventory: number | null) => {
+  const getStockDot = (inventory: number | null) => {
     if (product.pricing_type === 'subscription') {
-      return <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-300">Subscription</Badge>;
+      return <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-medium"><span className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />Sub</span>;
     }
     if (inventory === null) {
-      return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">N/A</Badge>;
+      return <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground font-medium"><span className="h-2 w-2 rounded-full bg-gray-400 flex-shrink-0" />N/A</span>;
     }
     if (inventory > 10) {
-      return <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-300">In Stock</Badge>;
+      return <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-medium"><span className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />{inventory}</span>;
     }
     if (inventory > 0 && inventory <= 10) {
-      return <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">Low Stock</Badge>;
+      return <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-medium"><span className="h-2 w-2 rounded-full bg-amber-500 flex-shrink-0" />{inventory} left</span>;
     }
-    return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">Out of Stock</Badge>;
+    return <span className="inline-flex items-center gap-1 text-[10px] text-red-500 font-medium"><span className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />Out</span>;
   };
 
   return (
     <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative h-full overflow-visible">
-      <Card 
+      <Card
         className={cn(
-          "group w-full overflow-hidden rounded-lg transition-all duration-300 flex flex-col cursor-pointer h-full shadow-sm",
+          "group w-full overflow-hidden rounded-lg transition-all duration-300 flex flex-col cursor-pointer h-full shadow-sm hover:shadow-md",
           isSelectionModeActive && "ring-2 ring-gray-400 shadow-md",
           isSelected && "ring-primary ring-offset-2 shadow-2xl"
         )}
@@ -129,20 +129,20 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
           </>}
         </Carousel>
 
-        <div className="bg-card p-3 flex-1 flex flex-col justify-between space-y-3" onClick={handleCardClick}>
-          <div className="space-y-2">
-            <div className="text-xs text-muted-foreground font-medium flex flex-wrap gap-x-2">
-              <span><span className="font-semibold text-foreground/60">Category:</span> {product.category || 'Uncategorized'}</span>
+        <div className="bg-card p-3 flex-1 flex flex-col justify-between space-y-2.5" onClick={handleCardClick}>
+          <div className="space-y-1.5">
+            {/* Category · Type on one line */}
+            <p className="text-[10px] text-muted-foreground truncate">
+              {product.category || 'Uncategorized'}
               {product.details?.type && (
-                <span><span className="font-semibold text-foreground/60">Type:</span> {product.details.type}</span>
+                <span> · {product.details.type}</span>
               )}
-            </div>
+            </p>
 
-            <h3 className="font-semibold tracking-tight leading-snug flex items-center gap-2">
-              {product.details?.multi_product && <Layers className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />}
-              {product.name}
-              {getStockBadge(product.inventory)}
-            </h3>
+            <div className="flex items-start gap-1.5">
+              {product.details?.multi_product && <Layers className="h-4 w-4 flex-shrink-0 mt-0.5 text-muted-foreground" />}
+              <h3 className="font-semibold tracking-tight leading-snug">{product.name}</h3>
+            </div>
 
             {caption && (
               <p className="text-xs text-muted-foreground line-clamp-2">{caption}</p>
@@ -166,17 +166,17 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
             )}
           </div>
 
-          <div className="flex items-end justify-between pt-2">
+          <div className="flex items-end justify-between pt-1 gap-2">
             {product.details?.multi_product ? (
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-[hsl(var(--muted-foreground))]">
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground">
                 <Layers className="h-4 w-4" />
                 Multi-Product
               </div>
             ) : (
-              <>
-                {product.price != null && shopDetails ? ( // Ensure shopDetails is available
-                  <div className="flex flex-col">
-                    <p className="font-semibold text-lg">
+              <div className="flex flex-col min-w-0">
+                {product.price != null && shopDetails ? (
+                  <>
+                    <p className="font-bold text-xl leading-tight">
                       {displayPrice != null ? (
                         <>
                           {new Intl.NumberFormat('en-US', {
@@ -184,29 +184,32 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
                             currency: shopDetails.currency
                           }).format(displayPrice)}
                           {product.pricing_type === 'subscription' && (
-                            <span className="text-sm font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                            <span className="text-xs font-normal text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                           )}
                         </>
                       ) : 'N/A'}
                     </p>
-                    {product.currency && product.currency !== shopDetails.currency && (
-                      <span className="text-xs text-muted-foreground">
-                        {originalPriceFormatted}
-                      </span>
-                    )}
-                  </div>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {product.currency && product.currency !== shopDetails.currency && (
+                        <span className="text-[10px] text-muted-foreground">{originalPriceFormatted}</span>
+                      )}
+                      {getStockDot(product.inventory)}
+                    </div>
+                  </>
                 ) : (
                   <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-600">
                     <AlertTriangle className="h-4 w-4" />
                     Set Price
                   </div>
                 )}
-              </>
+              </div>
             )}
-            <ProductStatusDropdown 
-              currentStatus={product.status} 
-              onStatusChange={(newStatus) => onStatusChange(product.id, newStatus)} 
-            />
+            <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+              <ProductStatusDropdown
+                currentStatus={product.status}
+                onStatusChange={(newStatus) => onStatusChange(product.id, newStatus)}
+              />
+            </div>
           </div>
         </div>
       </Card>

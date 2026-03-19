@@ -11,6 +11,7 @@ interface TopProduct {
   name: string;
   media_url: string;
   total_sold: number;
+  total_revenue: number;
   price: number | null;
   currency: string | null;
   category?: string | null;
@@ -40,9 +41,38 @@ export const TopProducts = () => {
 
       if (error) {
         console.error("Failed to fetch top products:", error);
-      } else {
-        setProducts(data);
+        setIsLoading(false);
+        return;
       }
+
+      // Filter: only products with more than 1 unit sold, already ordered by total_sold DESC from RPC
+      const qualified = (data as TopProduct[]).filter(p => p.total_sold > 1);
+
+      if (qualified.length === 0) {
+        setProducts([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch actual revenue (sum of quantity × price_at_purchase) from order_items
+      const productIds = qualified.map(p => p.product_id);
+      const { data: salesSummary } = await supabase.rpc('get_products_sales_summary', {
+        p_product_ids: productIds,
+      });
+
+      const revenueMap: Record<string, number> = {};
+      if (salesSummary) {
+        for (const row of salesSummary as { product_id: string; total_earned: number; total_sold: number }[]) {
+          revenueMap[row.product_id] = row.total_earned;
+        }
+      }
+
+      const enriched: TopProduct[] = qualified.map(p => ({
+        ...p,
+        total_revenue: revenueMap[p.product_id] ?? (p.price ?? 0) * p.total_sold,
+      }));
+
+      setProducts(enriched);
       setIsLoading(false);
     };
     fetchTopProducts();
@@ -70,7 +100,9 @@ export const TopProducts = () => {
               </div>
             ))}
           </div>
-        ) : products.length > 0 ? (
+        ) : products.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">No sales data yet.</p>
+        ) : (
           <ol className="space-y-2">
             {products.map((product, index) => {
               const rank = RANK_CONFIG[index] ?? {
@@ -80,8 +112,9 @@ export const TopProducts = () => {
                 border: 'border-border/40',
                 dot: 'bg-muted-foreground',
               };
-              const revenue = formatCurrency(
-                convertCurrency(product.price, product.currency, shopDetails.currency),
+
+              const revenueDisplay = formatCurrency(
+                convertCurrency(product.total_revenue, product.currency, shopDetails.currency),
                 shopDetails.currency
               );
 
@@ -124,7 +157,7 @@ export const TopProducts = () => {
 
                   {/* Stats */}
                   <div className="text-right flex-shrink-0 space-y-0.5">
-                    <p className="text-sm font-semibold tabular-nums">{revenue}</p>
+                    <p className="text-sm font-semibold tabular-nums">{revenueDisplay}</p>
                     <p className="text-xs text-muted-foreground tabular-nums">
                       {formatLargeNumber(product.total_sold)} sold
                     </p>
@@ -133,8 +166,6 @@ export const TopProducts = () => {
               );
             })}
           </ol>
-        ) : (
-          <p className="text-sm text-muted-foreground text-center py-6">No sales data yet.</p>
         )}
       </CardContent>
     </Card>

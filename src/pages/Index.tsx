@@ -269,12 +269,12 @@ const Index = () => {
           <Skeleton className="h-4 w-96" />
         </div>
         {/* Quick actions skeleton */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" />
+        <div className="flex flex-wrap gap-2">
+          <Skeleton className="h-8 w-28" /><Skeleton className="h-8 w-24" /><Skeleton className="h-8 w-28" /><Skeleton className="h-8 w-24" />
         </div>
         {/* Stat cards skeleton */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" />
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          <Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" />
         </div>
         {/* Main grid skeleton — row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
@@ -307,43 +307,39 @@ const Index = () => {
         totalOrders={data.salesCount}
       />
 
-      {/* Stat Cards — no section header, just the cards */}
+      {/* Quick Actions — full-width row right below welcome header */}
+      <section>
+        <QuickActions />
+      </section>
+
+      {/* Stat Cards */}
       <section>
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Total Revenue"
             value={formatCurrency(data.totalRevenue, shopDetails?.currency)}
             icon={Banknote}
-            description="Fulfilled & paid orders"
             color="emerald"
           />
           <StatCard
             title="Sales"
             value={`${data.salesCount}`}
             icon={CreditCard}
-            description="All-time sales count"
             color="blue"
           />
           <StatCard
             title="Active Products"
             value={data.activeProducts.toString()}
             icon={Package}
-            description="Available for purchase"
             color="violet"
           />
           <StatCard
             title="Total Customers"
             value={data.customers.toString()}
             icon={Users}
-            description="Unique customers"
             color="amber"
           />
         </div>
-      </section>
-
-      {/* Quick Actions — compact */}
-      <section>
-        <QuickActions />
       </section>
 
       {/* Main grid: Left column (Profile + Top Sellers) | Right column (Overview + Activity) */}

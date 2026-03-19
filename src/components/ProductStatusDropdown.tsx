@@ -33,8 +33,8 @@ export const ProductStatusDropdown = ({ currentStatus, onStatusChange }: Product
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-        <Button variant="ghost" size="sm" className={cn("font-semibold", currentColor)}>
-          <CurrentIcon className="mr-2 h-4 w-4" />
+        <Button variant="ghost" size="sm" className={cn("h-7 px-1.5 text-xs font-semibold", currentColor)}>
+          <CurrentIcon className="mr-1 h-3.5 w-3.5" />
           {statusConfig[currentStatus]?.label || 'Draft'}
         </Button>
       </DropdownMenuTrigger>

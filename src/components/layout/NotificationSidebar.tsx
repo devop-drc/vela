@@ -417,16 +417,19 @@ export default function NotificationSidebar() {
     }
   });
 
-  const unreadCount = useMemo(() => {
+  const unreadCounts = useMemo(() => {
     const ts = lastSeen;
-    const orderCount = orders.filter(
+    const orders_ = orders.filter(
       (o) => new Date(o.created_at).getTime() > ts
     ).length;
-    const disputeCount = disputes.filter(
+    const disputes_ = disputes.filter(
       (d) => new Date(d.created_at).getTime() > ts
     ).length;
-    return orderCount + disputeCount;
-  }, [orders, disputes, lastSeen]);
+    const activity_ = activity.filter(
+      (a) => new Date(a.timestamp).getTime() > ts
+    ).length;
+    return { orders: orders_, disputes: disputes_, activity: activity_ };
+  }, [orders, disputes, activity, lastSeen]);
 
   // Mark as seen when sheet opens
   useEffect(() => {
@@ -702,12 +705,25 @@ export default function NotificationSidebar() {
       <SheetTrigger asChild>
         <button className="fixed top-1/2 -translate-y-1/2 right-0 z-50 flex flex-col items-center gap-1 rounded-l-lg bg-card border border-r-0 border-border px-2 py-3 shadow-md hover:bg-accent transition-colors focus:outline-none focus:ring-2 focus:ring-ring">
           <Bell className="h-4 w-4" />
-          <span className="text-[10px] font-medium writing-mode-vertical" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>Notifications</span>
-          {unreadCount > 0 && (
-            <span className="flex items-center justify-center h-4 min-w-[16px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-1">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
-          )}
+          <span className="text-[10px] font-medium" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>Notifications</span>
+          {/* Per-tab colored dot badges */}
+          <div className="flex flex-col items-center gap-0.5 mt-0.5">
+            {unreadCounts.orders > 0 && (
+              <span className="flex items-center justify-center h-4 min-w-[16px] rounded-full bg-blue-500 text-white text-[9px] font-bold px-1">
+                {unreadCounts.orders > 99 ? "99+" : unreadCounts.orders}
+              </span>
+            )}
+            {unreadCounts.disputes > 0 && (
+              <span className="flex items-center justify-center h-4 min-w-[16px] rounded-full bg-red-500 text-white text-[9px] font-bold px-1">
+                {unreadCounts.disputes > 99 ? "99+" : unreadCounts.disputes}
+              </span>
+            )}
+            {unreadCounts.activity > 0 && (
+              <span className="flex items-center justify-center h-4 min-w-[16px] rounded-full bg-green-500 text-white text-[9px] font-bold px-1">
+                {unreadCounts.activity > 99 ? "99+" : unreadCounts.activity}
+              </span>
+            )}
+          </div>
         </button>
       </SheetTrigger>
 
