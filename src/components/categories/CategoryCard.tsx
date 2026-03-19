@@ -6,7 +6,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronRight, PlusCircle } from "lucide-react";
+import { ChevronRight, PlusCircle, Layers, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TypeCard } from "./TypeCard";
 
@@ -28,35 +28,45 @@ export const CategoryCard = ({
   onDuplicate,
 }: CategoryCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const hasSystem = templates.some((t) => t.is_system);
+  const systemCount = templates.filter((t) => t.is_system).length;
+  const customCount = templates.filter((t) => !t.is_system).length;
+  const totalSpecs = templates.reduce((sum, t) => sum + (t.default_specifications?.length || 0), 0);
+  const totalOptions = templates.reduce((sum, t) => sum + (t.default_options?.length || 0), 0);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="rounded-lg border bg-card shadow-sm">
+      <div className="rounded-lg border bg-card overflow-hidden">
         <CollapsibleTrigger asChild>
-          <button className="flex w-full items-center justify-between p-4 text-left hover:bg-accent/50 rounded-t-lg transition-colors">
-            <div className="flex items-center gap-3">
-              <ChevronRight
-                className={cn(
-                  "h-4 w-4 text-muted-foreground transition-transform",
-                  isOpen && "rotate-90"
-                )}
-              />
-              <span className="font-semibold">{categoryName}</span>
-              <Badge variant="secondary" className="text-xs">
+          <button className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-accent/30 transition-colors">
+            <ChevronRight
+              className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform shrink-0",
+                isOpen && "rotate-90"
+              )}
+            />
+            <Layers className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="flex-1 min-w-0">
+              <span className="font-semibold text-sm">{categoryName}</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Badge variant="secondary" className="text-xs h-5">
                 {templates.length} type{templates.length !== 1 ? "s" : ""}
               </Badge>
-              {hasSystem && (
-                <Badge variant="outline" className="text-xs">
-                  System
-                </Badge>
+              {totalSpecs > 0 && (
+                <span className="text-xs text-muted-foreground">{totalSpecs} specs</span>
+              )}
+              {totalOptions > 0 && (
+                <span className="text-xs text-muted-foreground">{totalOptions} opts</span>
+              )}
+              {systemCount > 0 && (
+                <Lock className="h-3 w-3 text-muted-foreground/50" />
               )}
             </div>
           </button>
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <div className="px-4 pb-4 space-y-2">
+          <div className="px-4 pb-3 space-y-2 border-t pt-3">
             {templates.map((template) => (
               <TypeCard
                 key={template.id}
@@ -66,15 +76,13 @@ export const CategoryCard = ({
                 onDuplicate={() => onDuplicate(template)}
               />
             ))}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full mt-2 text-muted-foreground"
+            <button
+              className="w-full rounded-lg border border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 py-2.5 text-center transition-colors flex items-center justify-center gap-2"
               onClick={() => onAddType(categoryName)}
             >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Type
-            </Button>
+              <PlusCircle className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Add Type to {categoryName}</span>
+            </button>
           </div>
         </CollapsibleContent>
       </div>
