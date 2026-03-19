@@ -45,8 +45,8 @@ export const TopProducts = () => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Top Sellers</CardTitle>
+      <CardHeader className="pb-2">
+        <CardTitle className="sr-only">Top Sellers</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (

@@ -78,7 +78,7 @@ export const OverviewChart = ({ data, dateRange, setDateRange, granularity, setG
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <CardTitle>Business Overview</CardTitle>
+            <CardTitle className="sr-only">Business Overview</CardTitle>
             <CardDescription>Revenue, new clients, and orders over time.</CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-2">

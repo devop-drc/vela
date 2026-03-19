@@ -258,8 +258,8 @@ export const ActivityFeed = () => {
       {selectedProduct && <ProductEditor isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} onUpdate={() => {}} />}
       {selectedOrder && <OrderDetailModal isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} order={selectedOrder} onUpdate={() => {}} />}
       <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Live Activity</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="sr-only">Live Activity</CardTitle>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[74.5vh]">

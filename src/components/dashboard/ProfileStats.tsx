@@ -43,8 +43,8 @@ export const ProfileStats = () => {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Profile Stats</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="sr-only">Profile Stats</CardTitle>
         <Button variant="ghost" size="icon" onClick={fetchShopDetails}>
           <RefreshCw className="h-4 w-4" />
         </Button>
