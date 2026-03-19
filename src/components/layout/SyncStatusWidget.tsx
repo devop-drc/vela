@@ -5,8 +5,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, Loader2, X, Info, ChevronDown, ChevronUp, Bug, Zap, Clock, Package, SkipForward, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, X, Info, ChevronDown, ChevronUp, Bug, Zap, Clock, Package, SkipForward, AlertTriangle, List } from 'lucide-react';
 import { SyncSummaryModal } from './SyncSummaryModal';
+import { SyncLiveFeedModal } from './SyncLiveFeedModal';
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 
@@ -23,6 +24,7 @@ export const SyncStatusWidget = () => {
   const { activeJob, dismissJob } = useSync();
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [isLiveFeedOpen, setIsLiveFeedOpen] = useState(false);
   const [isAborting, setIsAborting] = useState(false);
   const [showDevLog, setShowDevLog] = useState(false);
   const [devLogs, setDevLogs] = useState<string[]>([]);
@@ -113,11 +115,17 @@ export const SyncStatusWidget = () => {
     };
   }, [analysis]);
 
-  if (!isVisible) return <SyncSummaryModal job={activeJob} isOpen={isSummaryOpen} onClose={() => setIsSummaryOpen(false)} />;
+  if (!isVisible) return (
+    <>
+      <SyncSummaryModal job={activeJob} isOpen={isSummaryOpen} onClose={() => setIsSummaryOpen(false)} />
+      <SyncLiveFeedModal job={activeJob} isOpen={isLiveFeedOpen} onClose={() => setIsLiveFeedOpen(false)} />
+    </>
+  );
 
   return (
     <>
       <SyncSummaryModal job={activeJob} isOpen={isSummaryOpen} onClose={() => setIsSummaryOpen(false)} />
+      <SyncLiveFeedModal job={activeJob} isOpen={isLiveFeedOpen} onClose={() => setIsLiveFeedOpen(false)} />
       <AnimatePresence>
         <motion.div
           layout
@@ -256,11 +264,9 @@ export const SyncStatusWidget = () => {
               {/* Action buttons */}
               <div className="flex gap-1.5">
                 {isFinished ? (
-                  <>
-                    <Button size="sm" className="flex-1 h-7 text-xs" onClick={() => setIsSummaryOpen(true)}>
-                      <Info className="mr-1.5 h-3 w-3" />View Summary
-                    </Button>
-                  </>
+                  <Button size="sm" className="flex-1 h-7 text-xs" onClick={() => setIsSummaryOpen(true)}>
+                    <Info className="mr-1.5 h-3 w-3" />Summary
+                  </Button>
                 ) : (
                   <Button
                     size="sm"
@@ -273,6 +279,15 @@ export const SyncStatusWidget = () => {
                     Abort
                   </Button>
                 )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs px-2 shrink-0"
+                  onClick={() => setIsLiveFeedOpen(true)}
+                  title="View live product feed"
+                >
+                  <List className="h-3 w-3" />
+                </Button>
                 <Button
                   size="icon"
                   variant={showDevLog ? 'secondary' : 'ghost'}
