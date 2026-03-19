@@ -205,12 +205,13 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </div>
               <div className="rounded-lg border overflow-hidden">
                 {/* Header */}
-                <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2 bg-muted/50 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2 bg-muted/50 text-[11px] font-medium text-muted-foreground uppercase tracking-wider sticky top-0 z-10">
                   <span>Variant</span>
                   <span className="w-24 text-right">Price</span>
                   <span className="w-28 text-right">Stock</span>
                 </div>
-                {variants.slice(0, 20).map((v: any, i: number) => {
+                <div className="max-h-[400px] overflow-y-auto">
+                {variants.map((v: any, i: number) => {
                   let optVals = v.option_values || {};
                   if (Object.keys(optVals).length === 0 && v.combination_key) {
                     v.combination_key.split('|').forEach((part: string) => {
@@ -255,10 +256,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                     </div>
                   );
                 })}
+                </div>
               </div>
-              {variants.length > 20 && (
-                <p className="text-xs text-muted-foreground text-center py-2">+{variants.length - 20} more variants</p>
-              )}
             </div>
           )}
 
