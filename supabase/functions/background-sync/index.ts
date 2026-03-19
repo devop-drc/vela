@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { crypto } from "https://deno.land/std@0.190.0/crypto/mod.ts";
-import { isCaptionInsufficient, extractProductName, normalizeProductName } from "../_shared/heuristics.ts";
+import { isCaptionInsufficient, extractProductName, normalizeProductName, heuristicParse } from "../_shared/heuristics.ts";
 
 // Types
 interface InstagramPost {
@@ -333,7 +333,45 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         analysisFromCache.set(post.id, cached.analysis_result as AnalysisResult);
         summary.cache_hits++;
       } else {
-        postsNeedingAnalysis.push({ ...post, captionHash, captionInsufficient });
+        // Try heuristic parse first — skip AI if global intelligence cache has a confident match
+        const heuristicResult = heuristicParse(post.caption || '');
+        const extractedName = extractProductName(post.caption || null);
+
+        let usedGlobalIntelligence = false;
+        if (heuristicResult && extractedName) {
+          const normalized = normalizeProductName(extractedName);
+          const { data: globalMatch } = await supabaseAdmin
+            .from('global_product_intelligence')
+            .select('*')
+            .eq('normalized_name', normalized)
+            .gte('confidence', 0.7)
+            .order('confidence', { ascending: false })
+            .limit(1);
+
+          if (globalMatch && globalMatch.length > 0) {
+            // Build a synthetic AnalysisResult from heuristic price + global intelligence metadata
+            const intel = globalMatch[0];
+            const syntheticAnalysis: AnalysisResult = {
+              isProductPost: true,
+              productName: heuristicResult.productName,
+              price: heuristicResult.price,
+              currency: heuristicResult.currency,
+              inventory: heuristicResult.inventory,
+              categoryName: intel.category_name || undefined,
+              typeName: intel.type_name || undefined,
+              specifications: intel.specs || undefined,
+              pricingType: 'one_time',
+              billingInterval: null,
+            };
+            analysisFromCache.set(post.id, syntheticAnalysis);
+            summary.cache_hits = (summary.cache_hits || 0) + 1;
+            usedGlobalIntelligence = true;
+          }
+        }
+
+        if (!usedGlobalIntelligence) {
+          postsNeedingAnalysis.push({ ...post, captionHash, captionInsufficient });
+        }
       }
     }
 
@@ -738,6 +776,33 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             } catch (e) {
               console.error(`Failed to upsert variants for product ${p.id}:`, (e as any).message || e);
             }
+          }
+        }
+      }
+
+      // Run spec waterfall for all upserted products
+      const allUpsertedPostIds = productsToUpsert.map(p => p.instagram_post_id).filter(Boolean) as string[];
+      if (allUpsertedPostIds.length > 0) {
+        const { data: upsertedProducts } = await supabaseAdmin
+          .from('products')
+          .select('id, name, category, instagram_post_id')
+          .in('instagram_post_id', allUpsertedPostIds);
+        for (const createdProduct of upsertedProducts || []) {
+          const postAnalysis = analysisFromCache.get(createdProduct.instagram_post_id);
+          const postCaption = postsToProcess.find(p => p.id === createdProduct.instagram_post_id)?.caption;
+          try {
+            await supabaseAdmin.functions.invoke('find-product-specs', {
+              body: {
+                product_id: createdProduct.id,
+                product_name: createdProduct.name,
+                category: createdProduct.category || postAnalysis?.categoryName,
+                type: postAnalysis?.typeName,
+                user_id: user.id,
+                caption: postCaption || ''
+              }
+            });
+          } catch (e) {
+            console.error('find-product-specs failed for', createdProduct.name, e);
           }
         }
       }
