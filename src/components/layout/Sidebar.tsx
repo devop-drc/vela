@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Home, ShoppingBag, Settings, Package, Archive, MessageSquareQuote, Link as LinkIcon, MessageSquareWarning, Megaphone, Sparkles, Users, Store, LayoutDashboard } from "lucide-react";
+import { Home, ShoppingBag, Settings, Package, Archive, MessageSquareQuote, Link as LinkIcon, MessageSquareWarning, Megaphone, Sparkles, Users, Store, LayoutDashboard, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { motion } from "framer-motion";
@@ -30,6 +30,7 @@ const Sidebar = () => {
         { to: "/out-of-stock", icon: Archive, label: "Out of Stock" },
         { to: "/promotions", icon: Megaphone, label: "Promotions" },
         { to: "/keywords", icon: MessageSquareQuote, label: "AI Keywords" },
+        { to: "/categories", icon: Layers, label: "Categories" },
       ]
     },
     {

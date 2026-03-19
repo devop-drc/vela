@@ -19,6 +19,7 @@ import { ShopProvider } from "./contexts/ShopContext";
 import { SyncProvider } from "./contexts/syncContext";
 import Demo from "./pages/Demo";
 import Keywords from "./pages/Keywords";
+import Categories from "./pages/Categories";
 import StorefrontLayout from "./components/storefront/StorefrontLayout";
 import StorefrontIndex from "./pages/StorefrontIndex";
 import StorefrontProductDetail from "./pages/StorefrontProductDetail";
@@ -136,6 +137,7 @@ const AppContent = () => {
           <Route path="/orders" element={<Orders />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/keywords" element={<Keywords />} />
+          <Route path="/categories" element={<Categories />} />
           <Route path="/out-of-stock" element={<OutOfStock />} />
           <Route path="/promotions" element={<Promotions />} />
           <Route path="/filters" element={<FilterVisibility />} />
