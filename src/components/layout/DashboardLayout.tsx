@@ -129,8 +129,8 @@ const DashboardLayout = () => {
       <Header title={title} />
       <main
         className={cn(
-          "absolute inset-0 overflow-y-auto px-4 md:pr-6 md:pb-4 transition-all duration-300 pt-24",
-          collapsed ? "md:pl-[calc(60px+1rem)]" : mainPaddingClasses[settings.sidebarWidth || 'default']
+          "absolute inset-0 overflow-y-auto px-4 md:px-6 md:pb-4 transition-all duration-300 pt-24",
+          collapsed ? "md:pl-[calc(60px+2rem)]" : mainPaddingClasses[settings.sidebarWidth || 'default']
         )}
       >
         {content}

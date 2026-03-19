@@ -343,20 +343,14 @@ const Header = ({ title }: HeaderProps) => {
   return (
     <header
       className={cn(
-        'fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-[60px] px-6 transition-all shadow-md',
+        'fixed top-0 right-0 z-50 flex items-center justify-between h-[60px] px-6 transition-all duration-300 shadow-md',
         isFloating
-          ? 'top-4 right-4 left-4 border rounded-lg'
-          : 'border-b',
-        isFloating && (headerLeftMarginClasses[settings.sidebarWidth || 'default']),
+          ? 'top-4 right-4 border rounded-lg'
+          : 'border-b left-0',
         blurEnabled ? 'bg-card/80 backdrop-blur-[20px]' : 'bg-card',
-        !isFloating && 'md:ml-[var(--sidebar-width)] md:pr-8',
+        !isFloating && 'md:left-[var(--sidebar-width)]',
       )}
-      style={{
-        '--sidebar-width':
-          settings.sidebarWidth === 'compact'  ? '14rem' :
-          settings.sidebarWidth === 'spacious' ? '18rem' :
-          '16rem',
-      } as React.CSSProperties}
+      style={isFloating ? { left: `calc(var(--sidebar-width, 16rem) + 1rem)` } : undefined}
     >
       {/* Left: title + search */}
       <div className="flex items-center gap-4 min-w-0">
