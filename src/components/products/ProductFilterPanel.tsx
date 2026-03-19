@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Filter, XCircle } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { X, SlidersHorizontal, CircleDot, Layers, DollarSign, Tag, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
@@ -26,29 +26,23 @@ interface ProductFilterPanelProps {
   onClose: () => void;
 }
 
+const statusColors: Record<string, string> = {
+  Active: "bg-emerald-500",
+  Draft: "bg-amber-500",
+  "Out of Stock": "bg-red-500",
+};
+
 export const ProductFilterPanel = ({
-  allCategories,
-  allTags,
-  maxPrice,
-  filters,
-  statusFilter,
-  localPriceRange,
-  handleToggleFilter,
-  handleToggleStatusFilter,
-  handleClearSection,
-  handleResetAllFilters,
-  handlePriceRangeChange,
-  hasActiveFilters,
-  onClose,
+  allCategories, allTags, maxPrice, filters, statusFilter, localPriceRange,
+  handleToggleFilter, handleToggleStatusFilter, handleClearSection,
+  handleResetAllFilters, handlePriceRangeChange, hasActiveFilters, onClose,
 }: ProductFilterPanelProps) => {
   const { shopDetails } = useShop();
+  const currency = shopDetails?.currency || 'USD';
 
   const activeFilterCount = useMemo(() => {
-    let count = 0;
-    count += statusFilter.length;
-    count += filters.categories.length;
-    count += (filters.tags as string[]).length;
-    if (filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice) count += 1;
+    let count = statusFilter.length + filters.categories.length + (filters.tags as string[]).length;
+    if (filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice) count++;
     return count;
   }, [statusFilter, filters, maxPrice]);
 
@@ -61,154 +55,90 @@ export const ProductFilterPanel = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-card border-r border-border">
+    <div className="flex flex-col h-full bg-card rounded-lg border shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b bg-muted/30 shrink-0">
         <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-primary" />
+          <SlidersHorizontal className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold">Filters</span>
           {activeFilterCount > 0 && (
-            <span className="flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
+            <span className="h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">
               {activeFilterCount}
             </span>
           )}
         </div>
         <div className="flex items-center gap-1">
           {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleResetAllFilters}
-              className="h-7 text-xs text-muted-foreground hover:text-foreground"
-            >
+            <Button variant="ghost" size="sm" onClick={handleResetAllFilters} className="h-6 text-xs px-2">
               Clear all
             </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7">
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6">
             <X className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
 
-      {/* Scrollable filter sections */}
+      {/* Filter sections */}
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-5">
+        <div className="p-3 space-y-4">
 
-          {/* Status Section */}
-          <FilterSection
-            title="Status"
-            isActive={isSectionActive("status")}
-            onClear={() => handleClearSection("status")}
-          >
-            <div className="space-y-2">
+          {/* Status */}
+          <Section icon={CircleDot} title="Status" active={isSectionActive("status")} onClear={() => handleClearSection("status")}>
+            <div className="space-y-1.5">
               {["Active", "Draft", "Out of Stock"].map((status) => (
-                <label
-                  key={status}
-                  className="flex items-center gap-2.5 cursor-pointer group"
-                >
-                  <Checkbox
-                    checked={statusFilter.includes(status)}
-                    onCheckedChange={() => handleToggleStatusFilter(status)}
-                  />
-                  <span className="text-sm text-foreground group-hover:text-foreground/80">
-                    {status}
-                  </span>
+                <label key={status} className="flex items-center gap-2 cursor-pointer py-1 px-1 rounded hover:bg-muted/50 transition-colors">
+                  <Checkbox checked={statusFilter.includes(status)} onCheckedChange={() => handleToggleStatusFilter(status)} className="h-4 w-4" />
+                  <span className={cn("h-2 w-2 rounded-full shrink-0", statusColors[status])} />
+                  <span className="text-sm">{status}</span>
                 </label>
               ))}
             </div>
-          </FilterSection>
+          </Section>
 
-          {/* Categories Section */}
+          {/* Categories */}
           {allCategories.length > 0 && (
-            <FilterSection
-              title="Categories"
-              isActive={isSectionActive("categories")}
-              onClear={() => handleClearSection("categories")}
-            >
-              <div className="space-y-2">
-                {allCategories.map((category) => (
-                  <label
-                    key={category}
-                    className="flex items-center gap-2.5 cursor-pointer group"
-                  >
-                    <Checkbox
-                      checked={filters.categories.includes(category)}
-                      onCheckedChange={() => handleToggleFilter("categories", category)}
-                    />
-                    <span className="text-sm text-foreground group-hover:text-foreground/80 truncate">
-                      {category}
-                    </span>
+            <Section icon={Layers} title="Categories" active={isSectionActive("categories")} onClear={() => handleClearSection("categories")}>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                {allCategories.map((cat) => (
+                  <label key={cat} className="flex items-center gap-2 cursor-pointer py-1 px-1 rounded hover:bg-muted/50 transition-colors">
+                    <Checkbox checked={filters.categories.includes(cat)} onCheckedChange={() => handleToggleFilter("categories", cat)} className="h-4 w-4" />
+                    <span className="text-sm truncate">{cat}</span>
                   </label>
                 ))}
               </div>
-            </FilterSection>
+            </Section>
           )}
 
-          {/* Price Range Section */}
-          <FilterSection
-            title="Price Range"
-            isActive={isSectionActive("priceRange")}
-            onClear={() => handleClearSection("priceRange")}
-          >
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <Label className="text-xs text-muted-foreground mb-1 block">Min</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={localPriceRange[1]}
-                  value={localPriceRange[0]}
-                  onChange={(e) => {
-                    const val = Math.max(0, Number(e.target.value));
-                    handlePriceRangeChange([val, localPriceRange[1]]);
-                  }}
-                  className="h-8 text-sm"
-                  placeholder="0"
-                />
-              </div>
-              <span className="text-muted-foreground mt-4">–</span>
-              <div className="flex-1">
-                <Label className="text-xs text-muted-foreground mb-1 block">Max</Label>
-                <Input
-                  type="number"
-                  min={localPriceRange[0]}
-                  max={maxPrice > 0 ? maxPrice : 99999}
-                  value={localPriceRange[1]}
-                  onChange={(e) => {
-                    const val = Math.max(0, Number(e.target.value));
-                    handlePriceRangeChange([localPriceRange[0], val]);
-                  }}
-                  className="h-8 text-sm"
-                  placeholder={String(maxPrice)}
-                />
+          {/* Price Range */}
+          <Section icon={DollarSign} title="Price Range" active={isSectionActive("priceRange")} onClear={() => handleClearSection("priceRange")}>
+            <div className="space-y-3">
+              <Slider
+                min={0}
+                max={maxPrice > 0 ? maxPrice : 1000}
+                step={1}
+                value={[localPriceRange[0], localPriceRange[1]]}
+                onValueChange={(val) => handlePriceRangeChange([val[0], val[1]])}
+              />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{formatCurrency(localPriceRange[0], currency)}</span>
+                <span>{formatCurrency(localPriceRange[1], currency)}</span>
               </div>
             </div>
-          </FilterSection>
+          </Section>
 
-          {/* Tags Section */}
+          {/* Tags */}
           {allTags.length > 0 && (
-            <FilterSection
-              title="Tags"
-              isActive={isSectionActive("tags")}
-              onClear={() => handleClearSection("tags")}
-            >
-              <div className="space-y-2 max-h-48 overflow-y-auto">
+            <Section icon={Tag} title="Tags" active={isSectionActive("tags")} onClear={() => handleClearSection("tags")}>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {allTags.map((tag) => (
-                  <label
-                    key={tag}
-                    className="flex items-center gap-2.5 cursor-pointer group"
-                  >
-                    <Checkbox
-                      checked={(filters.tags as string[]).includes(tag)}
-                      onCheckedChange={() => handleToggleFilter("tags", tag)}
-                    />
-                    <span className="text-sm text-foreground group-hover:text-foreground/80 truncate">
-                      {tag}
-                    </span>
+                  <label key={tag} className="flex items-center gap-2 cursor-pointer py-1 px-1 rounded hover:bg-muted/50 transition-colors">
+                    <Checkbox checked={(filters.tags as string[]).includes(tag)} onCheckedChange={() => handleToggleFilter("tags", tag)} className="h-4 w-4" />
+                    <span className="text-sm truncate">{tag}</span>
                   </label>
                 ))}
               </div>
-            </FilterSection>
+            </Section>
           )}
 
         </div>
@@ -217,37 +147,27 @@ export const ProductFilterPanel = ({
   );
 };
 
-/* ── Reusable section wrapper ── */
-function FilterSection({
-  title,
-  isActive,
-  onClear,
-  children,
-}: {
+function Section({ icon: Icon, title, active, onClear, children }: {
+  icon: React.ComponentType<{ className?: string }>;
   title: string;
-  isActive: boolean;
+  active: boolean;
   onClear: () => void;
   children: React.ReactNode;
 }) {
   return (
     <div>
-      <div className="flex items-center justify-between mb-2.5">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </span>
-        {isActive && (
-          <button
-            onClick={onClear}
-            className="p-0.5 rounded-full hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={`Clear ${title} filters`}
-          >
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</span>
+        </div>
+        {active && (
+          <button onClick={onClear} className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
             <XCircle className="h-3.5 w-3.5" />
           </button>
         )}
       </div>
-      <div className="border-t border-border pt-2.5">
-        {children}
-      </div>
+      {children}
     </div>
   );
 }

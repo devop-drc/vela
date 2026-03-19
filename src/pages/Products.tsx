@@ -639,39 +639,25 @@ const Products = () => {
       />
 
       {/* ── Main layout: filter panel + content ── */}
-      <div
-        className={cn(
-          "grid transition-all duration-300",
-          !isMobile && showFilters
-            ? "grid-cols-[260px_1fr]"
-            : "grid-cols-[1fr]"
-        )}
-      >
+      <div className="flex gap-4">
         {/* Inline filter panel (desktop only) */}
-        {!isMobile && (
-          <div
-            className={cn(
-              "overflow-hidden transition-all duration-300 h-[calc(100vh-80px)] sticky top-0",
-              showFilters ? "w-[260px] opacity-100" : "w-0 opacity-0"
-            )}
-          >
-            {showFilters && (
-              <ProductFilterPanel
-                allCategories={allCategories}
-                allTags={allTags}
-                maxPrice={maxPrice}
-                filters={filters}
-                statusFilter={statusFilter}
-                localPriceRange={localPriceRange}
-                handleToggleFilter={handleToggleFilter}
-                handleToggleStatusFilter={handleToggleStatusFilter}
-                handleClearSection={handleClearSection}
-                handleResetAllFilters={handleResetAllFilters}
-                handlePriceRangeChange={handlePriceRangeChange}
-                hasActiveFilters={hasActiveFilters}
-                onClose={() => setShowFilters(false)}
-              />
-            )}
+        {!isMobile && showFilters && (
+          <div className="w-[260px] shrink-0 h-[calc(100vh-80px)] sticky top-0">
+            <ProductFilterPanel
+              allCategories={allCategories}
+              allTags={allTags}
+              maxPrice={maxPrice}
+              filters={filters}
+              statusFilter={statusFilter}
+              localPriceRange={localPriceRange}
+              handleToggleFilter={handleToggleFilter}
+              handleToggleStatusFilter={handleToggleStatusFilter}
+              handleClearSection={handleClearSection}
+              handleResetAllFilters={handleResetAllFilters}
+              handlePriceRangeChange={handlePriceRangeChange}
+              hasActiveFilters={hasActiveFilters}
+              onClose={() => setShowFilters(false)}
+            />
           </div>
         )}
 
@@ -993,7 +979,7 @@ const Products = () => {
         )}
 
         </div>{/* end main content column */}
-      </div>{/* end grid layout */}
+      </div>{/* end flex layout */}
 
       <AnimatePresence>
         {selectedProducts.length > 0 && (

@@ -348,7 +348,7 @@ const Header = ({ title }: HeaderProps) => {
           ? 'top-4 right-4 border rounded-lg'
           : 'border-b left-0',
         blurEnabled ? 'bg-card/80 backdrop-blur-[20px]' : 'bg-card',
-        !isFloating && 'md:left-[var(--sidebar-width)]',
+        !isFloating && 'md:left-[calc(var(--sidebar-width)+1px)]',
       )}
       style={isFloating ? { left: `calc(var(--sidebar-width, 16rem) + 1rem)` } : undefined}
     >
