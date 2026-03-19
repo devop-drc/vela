@@ -346,33 +346,36 @@ const Index = () => {
         <QuickActions />
       </section>
 
-      {/* Row 1: Shop Profile (1/3) + Live Activity (2/3) */}
+      {/* Main grid: Left column (Profile + Top Sellers) | Right column (Overview + Activity) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-        <div className="lg:col-span-1">
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2">Shop Profile</h2>
-          <ProfileStats />
+        {/* Left column */}
+        <div className="lg:col-span-1 space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Star className="h-3.5 w-3.5" />Shop Profile</h2>
+            <ProfileStats />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Zap className="h-3.5 w-3.5" />Top Sellers</h2>
+            <TopProducts />
+          </div>
         </div>
-        <div className="lg:col-span-2">
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2">Live Activity</h2>
-          <ActivityFeed />
-        </div>
-      </div>
 
-      {/* Row 2: Top Sellers (1/3) + Business Overview (2/3) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-        <div className="lg:col-span-1">
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2">Top Sellers</h2>
-          <TopProducts />
-        </div>
-        <div className="lg:col-span-2">
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2">Business Overview</h2>
-          <OverviewChart
-            data={data.chartData}
-            dateRange={dateRange}
-            setDateRange={setDateRange}
-            granularity={granularity}
-            setGranularity={setGranularity}
-          />
+        {/* Right column */}
+        <div className="lg:col-span-2 space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><BarChart2 className="h-3.5 w-3.5" />Business Overview</h2>
+            <OverviewChart
+              data={data.chartData}
+              dateRange={dateRange}
+              setDateRange={setDateRange}
+              granularity={granularity}
+              setGranularity={setGranularity}
+            />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" />Live Activity</h2>
+            <ActivityFeed />
+          </div>
         </div>
       </div>
     </div>

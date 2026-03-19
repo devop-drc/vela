@@ -142,9 +142,21 @@ export const QuickActions = () => {
           </a>
         )}
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="flex flex-wrap gap-2">
         {actions.map((action) => (
-          <QuickActionCard key={action.title} {...action} />
+          <button
+            key={action.title}
+            onClick={action.onClick}
+            disabled={action.disabled}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
+              "hover:bg-accent hover:text-accent-foreground",
+              action.disabled && "opacity-50 cursor-not-allowed"
+            )}
+          >
+            {action.icon}
+            {action.title}
+          </button>
         ))}
       </div>
     </div>
