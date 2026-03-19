@@ -421,12 +421,9 @@ const Products = () => {
       // Show widget immediately with optimistic state
       startNewSync('pending');
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) throw new Error('Not authenticated');
-
+        // Let Supabase client handle auth automatically (don't override headers)
         const { data, error } = await supabase.functions.invoke('background-sync', {
-          body: { syncType },
-          headers: { Authorization: `Bearer ${session.access_token}` }
+          body: { syncType }
         });
 
         if (error) {
@@ -443,8 +440,11 @@ const Products = () => {
         }
 
         if (syncType === 'full') {
-          supabase.from('businesses').update({ last_full_sync_at: new Date().toISOString() }).eq('user_id', session.user.id)
-            .then(() => setHasDoneFullSync(true));
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            supabase.from('businesses').update({ last_full_sync_at: new Date().toISOString() }).eq('user_id', user.id)
+              .then(() => setHasDoneFullSync(true));
+          }
         }
       } catch (err: any) {
         console.error('handleSync error:', err);

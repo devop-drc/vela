@@ -15,16 +15,10 @@ export const QuickActions = () => {
 
   const handleQuickSync = () => {
     runWithIntegrationCheck(async () => {
+      startNewSync('pending');
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) throw new Error('Not authenticated');
-
-        // Show widget immediately
-        startNewSync('pending');
-
         const { data, error } = await supabase.functions.invoke('background-sync', {
-          body: { syncType: 'quick' },
-          headers: { Authorization: `Bearer ${session.access_token}` }
+          body: { syncType: 'quick' }
         });
 
         if (error) throw error;

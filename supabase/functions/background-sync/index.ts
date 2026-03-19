@@ -786,19 +786,21 @@ serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing Authorization header' }), { 
-        status: 401, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      console.error('No Authorization header received. Headers:', JSON.stringify(Object.fromEntries(req.headers.entries())));
+      return new Response(JSON.stringify({ error: 'Missing Authorization header. Please log out and log back in.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    
+
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid or expired token' }), { 
-        status: 401, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      console.error('Auth failed:', authError?.message, 'Token prefix:', token.substring(0, 20) + '...');
+      return new Response(JSON.stringify({ error: `Authentication failed: ${authError?.message || 'Invalid token'}. Please log out and log back in.` }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
