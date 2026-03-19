@@ -30,12 +30,6 @@ interface AnalysisResult {
   tokenUsage?: { promptTokenCount?: number; candidatesTokenCount?: number };
 }
 
-interface LiveAnalysisResult {
-  post: InstagramPost & { captionHash: string };
-  analysis: AnalysisResult;
-  error: any;
-}
-
 interface ProductPayload {
   id?: string;
   name?: string;
@@ -329,107 +323,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       .maybeSingle();
     const accessToken: string | null = integration?.access_token || null;
 
-    const postsNeedingAnalysis: (InstagramPost & { captionHash: string; captionInsufficient: boolean })[] = [];
-    const analysisFromCache = new Map<string, AnalysisResult>();
-
-    for (const post of postsToProcess) {
-      // Allow captionless posts to proceed with image analysis flag
-      const captionInsufficient = isCaptionInsufficient(post.caption ?? null);
-      const captionHash = await sha256(post.caption || post.id);
-      const cached = cacheMap.get(post.id);
-
-      if (cached && cached.caption_hash === captionHash) {
-        analysisFromCache.set(post.id, cached.analysis_result as AnalysisResult);
-        summary.cache_hits++;
-      } else {
-        // Try heuristic parse first — skip AI if global intelligence cache has a confident match
-        const heuristicResult = heuristicParse(post.caption || '');
-        const extractedName = extractProductName(post.caption || null);
-
-        let usedGlobalIntelligence = false;
-        if (heuristicResult && extractedName && heuristicResult.productName && typeof heuristicResult.price === 'number' && heuristicResult.currency) {
-          const normalized = normalizeProductName(extractedName);
-          const { data: globalMatch } = await supabaseAdmin
-            .from('global_product_intelligence')
-            .select('*')
-            .eq('normalized_name', normalized)
-            .gte('confidence', 0.7)
-            .order('confidence', { ascending: false })
-            .limit(1);
-
-          if (globalMatch && globalMatch.length > 0) {
-            // Build a synthetic AnalysisResult from heuristic price + global intelligence metadata
-            const intel = globalMatch[0];
-            const syntheticAnalysis: AnalysisResult = {
-              isProductPost: true,
-              productName: heuristicResult.productName,
-              price: heuristicResult.price,
-              currency: heuristicResult.currency,
-              inventory: heuristicResult.inventory,
-              categoryName: intel.category_name || undefined,
-              typeName: intel.type_name || undefined,
-              description: intel.description || post.caption || undefined,
-              tags: intel.tags || [],
-              specifications: intel.specifications || undefined,
-              options: intel.options || undefined,
-              pricingType: 'one_time',
-              billingInterval: null,
-            };
-            analysisFromCache.set(post.id, syntheticAnalysis);
-            summary.cache_hits = (summary.cache_hits || 0) + 1;
-            usedGlobalIntelligence = true;
-          }
-        }
-
-        if (!usedGlobalIntelligence) {
-          postsNeedingAnalysis.push({ ...post, captionHash, captionInsufficient });
-        }
-      }
-    }
-
-    // --- Step 1: Live Analysis ---
-    await updateJobProgress(supabaseAdmin, jobId, { progress: 0, total, message: `Analyzing ${postsNeedingAnalysis.length} new posts...` });
-
-    // Process AI analysis in batches of 10 for stability (avoids overwhelming edge function concurrency)
-    const BATCH_SIZE = 10;
-    const liveAnalysisResults: LiveAnalysisResult[] = [];
-
-    for (let batchStart = 0; batchStart < postsNeedingAnalysis.length; batchStart += BATCH_SIZE) {
-      const batch = postsNeedingAnalysis.slice(batchStart, batchStart + BATCH_SIZE);
-      const batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
-      const totalBatches = Math.ceil(postsNeedingAnalysis.length / BATCH_SIZE);
-
-      await updateJobProgress(supabaseAdmin, jobId, {
-        progress: batchStart,
-        total,
-        message: `AI analyzing batch ${batchNum}/${totalBatches} (${batch.length} posts)...`,
-        thumbnail_url: batch[0]?.thumbnail_url || batch[0]?.media_url,
-      });
-
-      const batchPromises = batch.map(post =>
-        supabaseAdmin.functions.invoke('ai-product-classifier', {
-          body: {
-            caption: post.caption || '',
-            user_id: user.id,
-            include_images: post.captionInsufficient,
-            post_media: {
-              media_url: post.media_url,
-              thumbnail_url: post.thumbnail_url,
-              media_type: post.media_type,
-              post_id: post.id
-            },
-            access_token: accessToken
-          }
-        })
-          .then(({ data, error }) => ({ post, analysis: data as AnalysisResult, error } as LiveAnalysisResult))
-          .catch(error => ({ post, analysis: null as any, error } as LiveAnalysisResult))
-      );
-
-      const batchResults = await Promise.all(batchPromises);
-      liveAnalysisResults.push(...batchResults);
-    }
-    const newCacheEntries: any[] = [];
-
+    // --- Helper functions (defined before batch loop) ---
     const inferBrand = (name?: string, tags?: string[]): string | null => {
       const cands: string[] = [];
       if (Array.isArray(tags)) {
@@ -497,377 +391,335 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       return a;
     };
 
-    for (const { post, analysis, error } of liveAnalysisResults) {
-      const captionSnippet = `"${post.caption?.substring(0, 30) || ''}..."`;
-      let effectiveAnalysis = normalizeAnalysis(analysis, post.caption) as AnalysisResult | undefined;
-      if (error || !effectiveAnalysis) {
-        // Heuristic fallback: if caption contains price or currency signals, mark as product
-        const hasPriceSignal = /\b(ALL|EUR|USD|GBP|Lek|Lekë)\b|\d+[\.,]?\d*\s?(ALL|EUR|USD|GBP)/i.test(post.caption || '');
-        if (hasPriceSignal) {
-          effectiveAnalysis = { isProductPost: true, productName: post.caption?.split('\n')[0]?.slice(0, 40) || 'Product' } as AnalysisResult;
+    // --- Process posts in batches (analyze → create products → update live feed) ---
+    const BATCH_SIZE = 5;
+    const allProductsCreated: string[] = []; // track for spec waterfall at end
+    const promotionsToInsert: Array<{ title: string; summary: string; discount_type?: 'percent'|'amount'|null; discount_value?: number|null; currency?: string|null; valid_until?: string|null; post_id: string }>
+      = [];
+
+    for (let batchStart = 0; batchStart < postsToProcess.length; batchStart += BATCH_SIZE) {
+      const batch = postsToProcess.slice(batchStart, batchStart + BATCH_SIZE);
+      const batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(postsToProcess.length / BATCH_SIZE);
+
+      // --- a) AI Analyze this batch ---
+      // Filter batch into cached vs needs-analysis
+      const batchCached: Array<{post: InstagramPost, analysis: AnalysisResult}> = [];
+      const batchNeedsAnalysis: Array<InstagramPost & {captionHash: string, captionInsufficient: boolean}> = [];
+
+      for (const post of batch) {
+        const captionInsufficient = isCaptionInsufficient(post.caption ?? null);
+        const captionHash = await sha256(post.caption || post.id);
+        const cached = cacheMap.get(post.id);
+
+        if (cached && cached.caption_hash === captionHash) {
+          batchCached.push({post, analysis: cached.analysis_result});
+          summary.cache_hits++;
         } else {
-          summary.skipped++;
-          summary.skipped_items.push({ name: captionSnippet, reason: error?.message || "Analysis function failed.", thumbnail_url: post.thumbnail_url || post.media_url });
-          continue;
+          // Check global intelligence
+          const heuristicResult = heuristicParse(post.caption || '');
+          const extractedName = extractProductName(post.caption || null);
+          let usedGlobal = false;
+          if (heuristicResult && extractedName && heuristicResult.productName && typeof heuristicResult.price === 'number' && heuristicResult.currency) {
+            const normalized = normalizeProductName(extractedName);
+            const { data: globalMatch } = await supabaseAdmin.from('global_product_intelligence').select('*')
+              .eq('normalized_name', normalized).gte('confidence', 0.7).order('confidence', { ascending: false }).limit(1);
+            if (globalMatch?.length > 0) {
+              const intel = globalMatch[0];
+              batchCached.push({post, analysis: { isProductPost: true, productName: heuristicResult.productName, price: heuristicResult.price, currency: heuristicResult.currency, inventory: heuristicResult.inventory, categoryName: intel.category_name, typeName: intel.type_name, description: intel.description || post.caption, tags: intel.tags || [], specifications: intel.specifications, options: intel.options, pricingType: 'one_time', billingInterval: null } as AnalysisResult});
+              summary.cache_hits++;
+              usedGlobal = true;
+            }
+          }
+          if (!usedGlobal) {
+            batchNeedsAnalysis.push({ ...post, captionHash, captionInsufficient });
+          }
         }
       }
 
-      if (analysis?.tokenUsage) {
-        summary.total_ai_tokens_used.prompt += analysis.tokenUsage.promptTokenCount || 0;
-        summary.total_ai_tokens_used.candidates += analysis.tokenUsage.candidatesTokenCount || 0;
+      // Run AI on posts that need it (parallel within batch)
+      await updateJobProgress(supabaseAdmin, jobId, {
+        progress: batchStart, total: postsToProcess.length,
+        message: `Batch ${batchNum}/${totalBatches}: analyzing ${batchNeedsAnalysis.length} posts...`,
+        thumbnail_url: batch[0]?.thumbnail_url || batch[0]?.media_url,
+        summary
+      });
+
+      const aiResults = await Promise.all(
+        batchNeedsAnalysis.map(post =>
+          supabaseAdmin.functions.invoke('ai-product-classifier', {
+            body: { caption: post.caption || '', user_id: user.id, include_images: post.captionInsufficient, post_media: { media_url: post.media_url, thumbnail_url: post.thumbnail_url, media_type: post.media_type, post_id: post.id }, access_token: accessToken }
+          })
+            .then(({data, error}) => ({post, analysis: data as AnalysisResult, error}))
+            .catch(error => ({post, analysis: null as any, error}))
+        )
+      );
+
+      // Process AI results + cached results for this batch
+      const batchAnalyzed: Array<{post: InstagramPost, analysis: AnalysisResult}> = [...batchCached];
+      const newCacheEntries: any[] = [];
+
+      for (const {post, analysis, error} of aiResults) {
+        let effective = normalizeAnalysis(analysis, post.caption);
+        if (error || !effective) {
+          const hasPriceSignal = /\b(ALL|EUR|USD|GBP|Lek|Lekë)\b|\d+[\.,]?\d*\s?(ALL|EUR|USD|GBP)/i.test(post.caption || '');
+          if (hasPriceSignal) {
+            effective = { isProductPost: true, productName: post.caption?.split('\n')[0]?.slice(0, 40) || 'Product' };
+          } else {
+            summary.skipped++;
+            summary.skipped_items.push({ name: `"${post.caption?.substring(0, 30) || ''}..."`, reason: error?.message || "Analysis failed.", thumbnail_url: post.thumbnail_url || post.media_url });
+            continue;
+          }
+        }
+        if (analysis?.tokenUsage) {
+          summary.total_ai_tokens_used.prompt += analysis.tokenUsage.promptTokenCount || 0;
+          summary.total_ai_tokens_used.candidates += analysis.tokenUsage.candidatesTokenCount || 0;
+        }
+        batchAnalyzed.push({post, analysis: effective});
+        newCacheEntries.push({ instagram_post_id: post.id, user_id: user.id, caption_hash: (post as any).captionHash, analysis_result: effective });
       }
-      
-      analysisFromCache.set(post.id, effectiveAnalysis);
-      newCacheEntries.push({
-        instagram_post_id: post.id,
-        user_id: user.id,
-        caption_hash: post.captionHash,
-        analysis_result: effectiveAnalysis
+
+      // Save cache entries
+      if (newCacheEntries.length > 0) {
+        await supabaseAdmin.from('ai_analysis_cache').upsert(newCacheEntries);
+      }
+
+      // --- b) Build product payloads from this batch ---
+      const batchProducts: ProductPayload[] = [];
+      const batchOptionsMap = new Map<string, Record<string, string[]>>();
+
+      for (const {post, analysis: rawAnalysis} of batchAnalyzed) {
+        const analysis = normalizeAnalysis(rawAnalysis, post.caption);
+        if (!analysis) continue;
+
+        // If AI marks as non-product: try promotion branch, else try parsing products; else skip
+        if (!analysis.isProductPost) {
+          const anyAnalysis: any = analysis as any;
+          if (anyAnalysis.isSaleOrPromotion && anyAnalysis.promotion) {
+            const promo = anyAnalysis.promotion as { title: string; summary?: string; discount_type?: 'percent'|'amount'|null; discount_value?: number|null; currency?: string|null; valid_until?: string|null };
+            promotionsToInsert.push({
+              title: promo.title || 'Promotion',
+              summary: promo.summary || (post.caption?.slice(0, 180) || ''),
+              discount_type: promo.discount_type ?? null,
+              discount_value: promo.discount_value ?? null,
+              currency: promo.currency ?? null,
+              valid_until: promo.valid_until ?? null,
+              post_id: post.id,
+            });
+            continue;
+          }
+          const parsed = parseMultiProducts(post.caption);
+          if (parsed.length > 0) {
+            (analysis as any).isProductPost = true;
+            (analysis as any).products = parsed;
+          } else {
+            summary.skipped++;
+            summary.skipped_items.push({ name: `"${post.caption?.substring(0, 30) || ''}..."`, reason: "Not a product post.", thumbnail_url: post.thumbnail_url || post.media_url });
+            continue;
+          }
+        }
+
+        // Extract fields directly
+        const categoryName = analysis.categoryName || (analysis as any).category_name || 'Uncategorized';
+        const typeName = analysis.typeName || (analysis as any).type_name || 'General';
+        const aiDescription = analysis.description || (analysis as any).desc || null;
+        const aiTags = analysis.tags || [];
+        const aiProductName = analysis.productName || (analysis as any).product_name || null;
+        const aiPrice = analysis.price;
+        const aiCurrency = analysis.currency;
+        const pricingType = analysis.pricingType || (analysis as any).pricing_type || 'one_time';
+        const billingInterval = analysis.billingInterval || (analysis as any).billing_interval || null;
+        const aiInventory = analysis.inventory;
+        const rawSpecifications = analysis.specifications;
+        const options = analysis.options;
+
+        // Normalize specifications
+        let specifications: Record<string, any> | undefined;
+        if (Array.isArray(rawSpecifications)) {
+          specifications = {};
+          for (const spec of rawSpecifications) {
+            if (spec && spec.key) specifications[spec.key] = spec.value || '';
+          }
+        } else if (rawSpecifications && typeof rawSpecifications === 'object') {
+          specifications = rawSpecifications as Record<string, any>;
+        }
+
+        // If AI returned products array (multi-product), expand them; otherwise, try parser; else fall back to single product
+        const multiProducts: Array<any> = (analysis as any).products && Array.isArray((analysis as any).products)
+          ? (analysis as any).products
+          : [];
+        const parsedProducts = multiProducts.length === 0 ? parseMultiProducts(post.caption) : [];
+        const itemsToCreate = multiProducts.length > 0 ? multiProducts : parsedProducts.length > 0 ? parsedProducts : [null];
+
+        // If multiple items were detected (AI or parser), call the dedicated Edge Function to upsert the combo fully
+        if ((analysis as any).isMultiProductPost === true || itemsToCreate.filter(Boolean).length > 1) {
+          try {
+            const enrichedAnalysis: any = { ...analysis, products: itemsToCreate };
+            const { error: comboErr, data: comboRes } = await supabaseAdmin.functions.invoke('upsert-combo-from-analysis', {
+              body: { instagram_post_id: post.id, user_id: user.id, analysis: enrichedAnalysis },
+            });
+            if (comboErr) {
+              console.error('upsert-combo-from-analysis failed:', comboErr.message);
+            } else if ((comboRes as any)?.error) {
+              console.error('upsert-combo-from-analysis error:', (comboRes as any).error);
+            } else {
+              summary.combo_created++;
+            }
+          } catch (e) {
+            console.error('Error invoking upsert-combo-from-analysis:', (e as any).message || e);
+          }
+          continue;
+        }
+
+        // Build details
+        const details: { [key: string]: any } = { type: toTitleCase(typeName) };
+        if (specifications) for (const [k,v] of Object.entries(specifications)) details[k] = v;
+        if (options) for (const [k,v] of Object.entries(options)) details[k] = v;
+
+        for (const item of itemsToCreate) {
+          const itemName = item ? item.productName || item.name || aiProductName : aiProductName;
+          const itemPrice = item && typeof item.price === 'number' ? item.price : aiPrice;
+          const itemCurrency = (item && item.currency) ? item.currency : aiCurrency;
+          const itemInventory = item && typeof item.inventory === 'number' ? item.inventory : aiInventory;
+          let itemSpecifications = item && item.specifications ? item.specifications : specifications;
+          if (Array.isArray(itemSpecifications)) {
+            const normalized: Record<string, any> = {};
+            for (const spec of itemSpecifications) {
+              if (spec && spec.key) normalized[spec.key] = spec.value || '';
+            }
+            itemSpecifications = normalized;
+          }
+          const itemOptions = item && item.options ? item.options : options;
+          const itemCategoryName = categoryName || 'Generic Product';
+          const itemTypeName = typeName || 'Generic';
+
+          const itemDetails: { [key: string]: any } = { type: toTitleCase(itemTypeName || '') };
+          if (itemSpecifications) for (const [key, value] of Object.entries(itemSpecifications)) itemDetails[key] = value as any;
+          if (itemOptions) for (const [key, value] of Object.entries(itemOptions)) itemDetails[key] = value as any;
+
+          // Brand inference
+          const hasBrand = Object.keys(itemDetails).some(k => k.toLowerCase() === 'brand');
+          if (!hasBrand) {
+            const inferred = inferBrand(itemName, aiTags);
+            if (inferred) itemDetails['Brand'] = inferred;
+          }
+
+          const finalPricingType = pricingType || 'one_time';
+          const finalBillingInterval = finalPricingType === 'subscription' ? (billingInterval || 'month') : null;
+          const inventory = finalPricingType === 'subscription' ? 0 : (itemInventory ?? 10);
+
+          let priceInALL = itemPrice ?? 0;
+          if (itemPrice && itemCurrency && itemCurrency !== 'ALL') {
+            priceInALL = convertCurrency(itemPrice, itemCurrency, 'ALL');
+          }
+
+          const productPayload: ProductPayload = {
+            name: itemName || post.caption?.split('\n')[0]?.slice(0, 60) || 'Product',
+            caption: aiDescription || post.caption || '',
+            price: priceInALL,
+            currency: 'ALL',
+            tags: aiTags || [],
+            category: toTitleCase(itemCategoryName || ''),
+            details: itemDetails,
+            business_id: business.id,
+            user_id: user.id,
+            status: inventory === 0 ? 'Out of Stock' : 'Draft',
+            instagram_post_id: post.id,
+            media_url: post.media_url,
+            thumbnail_url: post.thumbnail_url || post.media_url,
+            media_type: post.media_type,
+            inventory: inventory,
+            pricing_type: finalPricingType,
+            billing_interval: finalBillingInterval,
+          };
+
+          const existingId = existingProductMap.get(post.id);
+          if (existingId && itemsToCreate.length === 1) {
+            productPayload.id = existingId;
+            summary.updated++;
+            summary.updated_items.push(productPayload);
+          } else {
+            productPayload.product_type = 'physical';
+            summary.created++;
+            summary.created_items.push(productPayload);
+          }
+          batchProducts.push(productPayload);
+        }
+
+        // Track options for variant creation
+        const derivedFromSpecs: Record<string, string[]> = {};
+        if (!options || Object.keys(options || {}).length === 0) {
+          if (specifications && typeof specifications === 'object') {
+            for (const [k, v] of Object.entries(specifications)) {
+              if (Array.isArray(v) && v.length > 0) {
+                const stringVals = v.map(x => String(x).trim()).filter(Boolean);
+                if (stringVals.length > 0) derivedFromSpecs[k] = stringVals;
+              }
+            }
+          }
+        }
+        const finalOptions = (options && Object.keys(options).length > 0)
+          ? (options as Record<string, string[]>)
+          : derivedFromSpecs;
+        if (finalOptions && Object.keys(finalOptions).length > 0) {
+          batchOptionsMap.set(post.id, finalOptions);
+        }
+
+        // Upsert category/type immediately for this batch
+        const normCat = toTitleCase(categoryName);
+        const normType = toTitleCase(typeName);
+        try {
+          const catId = await upsertCategory(supabaseAdmin, normCat, user.id);
+          const attrList: any[] = [];
+          if (specifications) for (const [name] of Object.entries(specifications)) attrList.push({ name, inputType: 'text', isOption: false });
+          if (options) for (const [name, vals] of Object.entries(options)) attrList.push({ name, inputType: name.toLowerCase().includes('color') ? 'color' : 'tags', isOption: true, possibleValues: vals });
+          await upsertTypeAndMergeAttributes(supabaseAdmin, catId, normType, attrList, user.id);
+        } catch (e: any) { console.error('Category/type upsert failed:', e.message); }
+      }
+
+      // --- c) Upsert this batch's products ---
+      if (batchProducts.length > 0) {
+        const { error: upsertErr } = await supabaseAdmin.from('products').upsert(batchProducts, { onConflict: 'instagram_post_id,user_id' });
+        if (upsertErr) console.error('Batch product upsert failed:', upsertErr);
+
+        // Track for spec waterfall
+        for (const p of batchProducts) if (p.instagram_post_id) allProductsCreated.push(p.instagram_post_id);
+
+        // --- d) Create variants for this batch ---
+        const postIds = Array.from(batchOptionsMap.keys());
+        if (postIds.length > 0) {
+          const { data: prods } = await supabaseAdmin.from('products').select('id, instagram_post_id').in('instagram_post_id', postIds);
+          const variantPromises = (prods || []).filter(p => batchOptionsMap.has(p.instagram_post_id)).map(p =>
+            upsertVariantsFromOptions(supabaseAdmin, p.id, batchOptionsMap.get(p.instagram_post_id)!)
+              .catch(e => console.error('Variant upsert failed:', e))
+          );
+          await Promise.allSettled(variantPromises);
+        }
+      }
+
+      // --- e) Update live feed with this batch's results ---
+      await updateJobProgress(supabaseAdmin, jobId, {
+        progress: batchStart + batch.length, total: postsToProcess.length,
+        message: `Batch ${batchNum}/${totalBatches} done — ${summary.created} created, ${summary.updated} updated, ${summary.skipped} skipped`,
+        summary
       });
     }
 
-    if (newCacheEntries.length > 0) {
-      await supabaseAdmin.from('ai_analysis_cache').upsert(newCacheEntries);
-    }
-
-    // --- Step 2: Process and Upsert Products ---
-    const productsToUpsert: ProductPayload[] = [];
-    const postOptionsMap = new Map<string, Record<string, string[]>>();
-    const categoriesToUpsert = new Map<string, { id: string, name: string }>();
-    const typesToUpsert = new Map<string, { categoryId: string, name: string, attributes: any[] }>();
-    const promotionsToInsert: Array<{ title: string; summary: string; discount_type?: 'percent'|'amount'|null; discount_value?: number|null; currency?: string|null; valid_until?: string|null; post_id: string }>
-      = [];
-    let progress = 0;
-    
-    for (const post of postsToProcess) {
-      const analysis = normalizeAnalysis(analysisFromCache.get(post.id), post.caption);
-      if (!analysis) { // Post was skipped during analysis, so we skip it here too.
-        continue;
-      }
-
-      progress++;
-      // Update progress for EVERY post to give real-time feel, but throttle DB calls slightly if total is huge
-      if (total <= 10 || progress % Math.max(1, Math.floor(total / 10)) === 0 || progress === total) {
-        await updateJobProgress(supabaseAdmin, jobId, { 
-          progress, 
-          total, 
-          message: `Processing post ${progress} of ${total}: ${analysis?.productName || 'Analyzing...'}`,
-          thumbnail_url: post.thumbnail_url || post.media_url,
-          analysis_result: analysis
-        });
-      }
-
-      // If AI marks as non-product: try promotion branch, else try parsing products; else skip
-      if (!analysis.isProductPost) {
-        const anyAnalysis: any = analysis as any;
-        if (anyAnalysis.isSaleOrPromotion && anyAnalysis.promotion) {
-          const promo = anyAnalysis.promotion as { title: string; summary?: string; discount_type?: 'percent'|'amount'|null; discount_value?: number|null; currency?: string|null; valid_until?: string|null };
-          promotionsToInsert.push({
-            title: promo.title || 'Promotion',
-            summary: promo.summary || (post.caption?.slice(0, 180) || ''),
-            discount_type: promo.discount_type ?? null,
-            discount_value: promo.discount_value ?? null,
-            currency: promo.currency ?? null,
-            valid_until: promo.valid_until ?? null,
-            post_id: post.id,
-          });
-          continue;
-        }
-        const parsed = parseMultiProducts(post.caption);
-        if (parsed.length > 0) {
-          // Emulate minimal analysis so downstream logic creates products from parsed items
-          (analysis as any).isProductPost = true;
-          (analysis as any).products = parsed;
-        } else {
-          summary.skipped++;
-          summary.skipped_items.push({ name: `"${post.caption?.substring(0, 30) || ''}..."`, reason: "AI determined this is not a product post.", thumbnail_url: post.thumbnail_url || post.media_url });
-          continue;
-        }
-      }
-
-      // Extract all fields directly from analysis (don't rely on rest operator which can lose fields)
-      const categoryName = analysis.categoryName || (analysis as any).category_name || 'Uncategorized';
-      const typeName = analysis.typeName || (analysis as any).type_name || 'General';
-      const aiDescription = analysis.description || (analysis as any).desc || null;
-      const aiTags = analysis.tags || [];
-      const aiProductName = analysis.productName || (analysis as any).product_name || null;
-      const aiPrice = analysis.price;
-      const aiCurrency = analysis.currency;
-      const pricingType = analysis.pricingType || (analysis as any).pricing_type || 'one_time';
-      const billingInterval = analysis.billingInterval || (analysis as any).billing_interval || null;
-      const aiInventory = analysis.inventory;
-      const rawSpecifications = analysis.specifications;
-      const options = analysis.options;
-
-      // Debug log for first few posts
-      if (progress < 3) {
-        console.log(`[SYNC DEBUG] Post ${post.id}: categoryName=${categoryName}, typeName=${typeName}, description=${aiDescription?.substring(0, 50)}, tags=${JSON.stringify(aiTags)}, specs=${JSON.stringify(rawSpecifications)?.substring(0, 100)}, options=${JSON.stringify(options)?.substring(0, 100)}`);
-      }
-
-      // Normalize specifications: handle both array [{key,value,unit}] and object {key:value} formats
-      let specifications: Record<string, any> | undefined;
-      if (Array.isArray(rawSpecifications)) {
-        specifications = {};
-        for (const spec of rawSpecifications) {
-          if (spec && spec.key) specifications[spec.key] = spec.value || '';
-        }
-      } else if (rawSpecifications && typeof rawSpecifications === 'object') {
-        specifications = rawSpecifications as Record<string, any>;
-      }
-
-      // If AI returned products array (multi-product), expand them; otherwise, try parser; else fall back to single product
-      const multiProducts: Array<any> = (analysis as any).products && Array.isArray((analysis as any).products)
-        ? (analysis as any).products
-        : [];
-      const parsedProducts = multiProducts.length === 0 ? parseMultiProducts(post.caption) : [];
-      const itemsToCreate = multiProducts.length > 0 ? multiProducts : parsedProducts.length > 0 ? parsedProducts : [null];
-      const isMultiPost = itemsToCreate.filter(Boolean).length > 1;
-
-      // If multiple items were detected (AI or parser), call the dedicated Edge Function to upsert the combo fully
-      if ((analysis as any).isMultiProductPost === true || itemsToCreate.filter(Boolean).length > 1) {
-        try {
-          const enrichedAnalysis: any = { ...analysis, products: itemsToCreate };
-          const { error: comboErr, data: comboRes } = await supabaseAdmin.functions.invoke('upsert-combo-from-analysis', {
-            body: { instagram_post_id: post.id, user_id: user.id, analysis: enrichedAnalysis },
-          });
-          if (comboErr) {
-            console.error('upsert-combo-from-analysis failed:', comboErr.message);
-          } else if ((comboRes as any)?.error) {
-            console.error('upsert-combo-from-analysis error:', (comboRes as any).error);
-          } else {
-            summary.combo_created++;
-          }
-        } catch (e) {
-          console.error('Error invoking upsert-combo-from-analysis:', (e as any).message || e);
-        }
-        // Avoid creating duplicate item products or combos here; the edge function handles it
-        continue;
-      }
-      
-      // 1. Collect Category and Type data for batch upsert later (always runs — creates new categories/types if needed)
-      {
-        const normalizedCategoryName = toTitleCase(categoryName);
-        const normalizedTypeName = toTitleCase(typeName);
-        
-        if (!categoriesToUpsert.has(normalizedCategoryName)) {
-            // We don't know the ID yet, we'll fetch/create it later
-            categoriesToUpsert.set(normalizedCategoryName, { id: '', name: normalizedCategoryName });
-        }
-
-        // Convert specifications and options into the 'attributes' array format for type upsert
-        const attributesForTypeUpsert = [];
-        
-        // Add specifications (fixed details)
-        if (specifications) {
-            for (const [name] of Object.entries(specifications)) {
-                attributesForTypeUpsert.push({ name, inputType: 'text', isOption: false });
-            }
-        }
-        
-        // Add options (variants)
-        if (options) {
-            for (const [name, values] of Object.entries(options)) {
-                let inputType = 'text';
-                if (name.toLowerCase().includes('color')) inputType = 'color';
-                else if (Array.isArray(values) && values.length > 0) inputType = 'tags';
-                
-                attributesForTypeUpsert.push({ name, inputType, isOption: true, possibleValues: values });
-            }
-        }
-        
-        // Store type data, linking it by name to the category
-        typesToUpsert.set(`${normalizedCategoryName}:${normalizedTypeName}`, { 
-            categoryId: '', // Will be filled later
-            name: normalizedTypeName, 
-            attributes: attributesForTypeUpsert 
-        });
-      }
-
-      for (const item of itemsToCreate) {
-        const itemName = item ? item.productName || item.name || aiProductName : aiProductName;
-        const itemPrice = item && typeof item.price === 'number' ? item.price : aiPrice;
-        const itemCurrency = (item && item.currency) ? item.currency : aiCurrency;
-        const itemInventory = item && typeof item.inventory === 'number' ? item.inventory : aiInventory;
-        // Normalize item specs (handle array or object format)
-        let itemSpecifications = item && item.specifications ? item.specifications : specifications;
-        if (Array.isArray(itemSpecifications)) {
-          const normalized: Record<string, any> = {};
-          for (const spec of itemSpecifications) {
-            if (spec && spec.key) normalized[spec.key] = spec.value || '';
-          }
-          itemSpecifications = normalized;
-        }
-        const itemOptions = item && item.options ? item.options : options;
-        const itemCategoryName = categoryName || 'Generic Product';
-        const itemTypeName = typeName || 'Generic';
-
-        // 2. Construct the new 'details' object for the product table
-        const details: { [key: string]: any } = { type: toTitleCase(itemTypeName || '') };
-        if (itemSpecifications) {
-          for (const [key, value] of Object.entries(itemSpecifications)) {
-            details[key] = value as any;
-          }
-        }
-        if (itemOptions) {
-          for (const [key, value] of Object.entries(itemOptions)) {
-            details[key] = value as any;
-          }
-        }
-
-        // Brand inference
-        const hasBrand = Object.keys(details).some(k => k.toLowerCase() === 'brand');
-        if (!hasBrand) {
-          const inferred = inferBrand(itemName, aiTags);
-          if (inferred) details['Brand'] = inferred;
-        }
-
-        // Determine pricing and inventory
-        const finalPricingType = pricingType || 'one_time';
-        const finalBillingInterval = finalPricingType === 'subscription' ? (billingInterval || 'month') : null;
-        const inventory = finalPricingType === 'subscription' ? 0 : (itemInventory ?? 10);
-
-        // Convert to ALL
-        let priceInALL = itemPrice ?? 0;
-        if (itemPrice && itemCurrency && itemCurrency !== 'ALL') {
-          priceInALL = convertCurrency(itemPrice, itemCurrency, 'ALL');
-        }
-
-        const productPayload: ProductPayload = {
-          name: itemName || post.caption?.split('\n')[0]?.slice(0, 60) || 'Product',
-          caption: aiDescription || post.caption || '',
-          price: priceInALL,
-          currency: 'ALL',
-          tags: aiTags || [],
-          category: toTitleCase(itemCategoryName || ''),
-          details: details,
-          business_id: (business as any).id,
-          user_id: user.id,
-          status: inventory === 0 ? 'Out of Stock' : 'Draft',
-          instagram_post_id: post.id,
-          media_url: post.media_url,
-          thumbnail_url: post.thumbnail_url || post.media_url,
-          media_type: post.media_type,
-          inventory: inventory,
-          pricing_type: finalPricingType,
-          billing_interval: finalBillingInterval,
-        };
-
-        // If a single existing product was mapped to this post, update just the first
-        const existingId = existingProductMap.get(post.id);
-        if (existingId && itemsToCreate.length === 1) {
-          productPayload.id = existingId;
-          summary.updated++;
-          summary.updated_items.push(productPayload);
-        } else {
-          productPayload.product_type = 'physical';
-          summary.created++;
-          summary.created_items.push(productPayload);
-        }
-        productsToUpsert.push(productPayload);
-      }
-
-      // Prefer explicit options; otherwise, derive from array-valued specifications
-      const derivedFromSpecs: Record<string, string[]> = {};
-      if (!options || Object.keys(options || {}).length === 0) {
-        if (specifications && typeof specifications === 'object') {
-          for (const [k, v] of Object.entries(specifications)) {
-            if (Array.isArray(v) && v.length > 0) {
-              const stringVals = v.map(x => String(x).trim()).filter(Boolean);
-              if (stringVals.length > 0) derivedFromSpecs[k] = stringVals;
-            }
-          }
-        }
-      }
-      const finalOptions = (options && Object.keys(options).length > 0)
-        ? (options as Record<string, string[]>)
-        : derivedFromSpecs;
-      if (finalOptions && Object.keys(finalOptions).length > 0) {
-        // Store options by instagram_post_id for variant creation after upsert
-        postOptionsMap.set(post.id, finalOptions);
-      }
-    }
-    
-    // --- Step 3: Batch Upsert Categories and Types ---
-    await updateJobProgress(supabaseAdmin, jobId, { message: `Updating categories and types...` });
-    
-    // Upsert Categories
-    for (const [name] of categoriesToUpsert.entries()) {
-        try {
-            const id = await upsertCategory(supabaseAdmin, name, user.id);
-            categoriesToUpsert.get(name)!.id = id;
-        } catch (e) {
-            console.error(`Failed to upsert category ${name}:`, e.message);
-        }
-    }
-
-    // Upsert Types
-    for (const [key, typeData] of typesToUpsert.entries()) {
-        const [categoryName, typeName] = key.split(':');
-        const categoryId = categoriesToUpsert.get(categoryName)?.id;
-        if (categoryId) {
-            try {
-                await upsertTypeAndMergeAttributes(supabaseAdmin, categoryId, typeName, typeData.attributes, user.id);
-            } catch (e: any) {
-                console.error(`Failed to upsert type ${typeName} in category ${categoryName}:`, e.message);
-            }
-        }
-    }
-
-    // --- Step 4: Batch Upsert Products ---
-    await updateJobProgress(supabaseAdmin, jobId, { message: `Saving ${productsToUpsert.length} products...` });
-    if (productsToUpsert.length > 0) {
-      const { error: upsertError } = await supabaseAdmin.from('products').upsert(productsToUpsert, { onConflict: 'instagram_post_id,user_id' });
-      if (upsertError) {
-        console.error("CRITICAL: Failed to upsert products batch:", upsertError);
-        throw upsertError;
-      }
-      // Build variants for products with options
-      const postIds = Array.from(postOptionsMap.keys());
-      if (postIds.length > 0) {
-        const { data: productsForVariants, error: fetchErr } = await supabaseAdmin
-          .from('products')
-          .select('id, instagram_post_id')
-          .in('instagram_post_id', postIds);
-        if (fetchErr) throw fetchErr;
-        const variantPromises = (productsForVariants || [])
-          .filter(p => postOptionsMap.has(p.instagram_post_id))
-          .map(p => {
-            const aiOpts = postOptionsMap.get(p.instagram_post_id)!;
-            return upsertVariantsFromOptions(supabaseAdmin, p.id, aiOpts)
-              .catch(e => console.error(`Failed to upsert variants for product ${p.id}:`, (e as any).message || e));
-          });
-        await Promise.allSettled(variantPromises);
-      }
-
-      // Run spec waterfall for all upserted products
-      const allUpsertedPostIds = productsToUpsert.map(p => p.instagram_post_id).filter(Boolean) as string[];
-      if (allUpsertedPostIds.length > 0) {
-        const { data: upsertedProducts } = await supabaseAdmin
-          .from('products')
-          .select('id, name, category, instagram_post_id')
-          .in('instagram_post_id', allUpsertedPostIds);
-        // Run spec waterfall in parallel for all products (non-blocking)
-        if (upsertedProducts && upsertedProducts.length > 0) {
-          const specPromises = upsertedProducts.map(createdProduct => {
-            const postAnalysis = analysisFromCache.get(createdProduct.instagram_post_id);
-            const postCaption = postsToProcess.find(p => p.id === createdProduct.instagram_post_id)?.caption;
-            return supabaseAdmin.functions.invoke('find-product-specs', {
-              body: {
-                product_id: createdProduct.id,
-                product_name: createdProduct.name,
-                category: createdProduct.category || postAnalysis?.categoryName,
-                type: postAnalysis?.typeName,
-                user_id: user.id,
-                caption: postCaption || ''
-              }
-            }).catch(e => console.error('find-product-specs failed for', createdProduct.name, e));
-          });
-          await Promise.allSettled(specPromises);
-        }
+    // --- After all batches: run spec waterfall in parallel (non-blocking) ---
+    if (allProductsCreated.length > 0) {
+      await updateJobProgress(supabaseAdmin, jobId, { message: `Finding specifications for ${allProductsCreated.length} products...`, summary });
+      const { data: allProds } = await supabaseAdmin.from('products').select('id, name, category, instagram_post_id').in('instagram_post_id', allProductsCreated);
+      if (allProds?.length) {
+        const specPromises = allProds.map(p =>
+          supabaseAdmin.functions.invoke('find-product-specs', {
+            body: { product_id: p.id, product_name: p.name, category: p.category, user_id: user.id, caption: postsToProcess.find(pp => pp.id === p.instagram_post_id)?.caption || '' }
+          }).catch(e => console.error('Spec waterfall failed for', p.name, e))
+        );
+        await Promise.allSettled(specPromises);
       }
     }
 
-    // --- Step 5: Insert Promotions and Announcements (best-effort) ---
+    // --- Insert Promotions and Announcements (best-effort) ---
     if (promotionsToInsert.length > 0) {
       try {
         const { data: businessData } = await supabaseAdmin.from('businesses').select('id').eq('user_id', user.id).single();
