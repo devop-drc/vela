@@ -582,6 +582,12 @@ const Products = () => {
     return { 'All Products': filteredAndSortedProducts };
   }, [filteredAndSortedProducts, grouping]);
 
+  // ── Stats derived from allProducts (not filtered, so numbers are always real totals) ──
+  const statsTotal = allProducts.length;
+  const statsActive = allProducts.filter(p => p.status === 'Active').length;
+  const statsDraft = allProducts.filter(p => p.status === 'Draft').length;
+  const statsOos = allProducts.filter(p => p.status === 'Out of Stock').length;
+
   return (
     <>
       {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={() => {}} />}
@@ -600,7 +606,7 @@ const Products = () => {
       />
       {isSaleModalOpen && <SaleModal isOpen={isSaleModalOpen} onClose={() => setIsSaleModalOpen(false)} onApply={handleApplySale} productCount={selectedProducts.length} />}
       <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {selectedProducts.length} products?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-      
+
       {/* Product Filter Drawer (used on desktop and mobile) */}
       <ProductFilterDrawer
         isOpen={isFilterDrawerOpen}
@@ -629,9 +635,36 @@ const Products = () => {
         allDetailsAttributes={allDetailsAttributes}
         allProducts={allProducts}
       />
-      
-      <div className="sticky top-[0px] z-50 flex mb-3 items-center justify-between">
-          <div className="flex items-center gap-1">
+
+      {/* ── Stats summary bar ── */}
+      {!isProductDataLoading && (
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/70 border border-border text-sm font-medium text-foreground shadow-sm">
+            <Package className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="font-semibold">{statsTotal}</span>
+            <span className="text-muted-foreground">Total</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-sm font-medium text-emerald-700 dark:text-emerald-400 shadow-sm">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+            <span className="font-semibold">{statsActive}</span>
+            <span className="opacity-80">Active</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-sm font-medium text-amber-700 dark:text-amber-400 shadow-sm">
+            <span className="h-2 w-2 rounded-full bg-amber-500 inline-block" />
+            <span className="font-semibold">{statsDraft}</span>
+            <span className="opacity-80">Draft</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/25 text-sm font-medium text-red-700 dark:text-red-400 shadow-sm">
+            <span className="h-2 w-2 rounded-full bg-red-500 inline-block" />
+            <span className="font-semibold">{statsOos}</span>
+            <span className="opacity-80">Out of Stock</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Toolbar ── */}
+      <div className="sticky top-[0px] z-50 flex mb-3 items-center justify-between gap-2">
+          <div className="flex items-center gap-1 flex-wrap">
             {/* Filter Management Button */}
             <Button className="bg-primary text-primary-foreground border-none justify-start flex-1 md:flex-none hover:bg-primary/90 shadow-lg" onClick={() => setIsVisibilitySheetOpen(true)}>
               <List className="mr-2 h-4 w-4" />
@@ -644,7 +677,7 @@ const Products = () => {
               Filter
               {hasActiveFilters && <span className="ml-1 text-xs text-primary">(Active)</span>}
             </Button>
-            
+
             {/* Sort Select */}
             <Select value={sortOption} onValueChange={setSortOption}>
               <SelectTrigger className="w-full sm:w-[180px] shadow-lg">
@@ -659,7 +692,7 @@ const Products = () => {
                 <SelectItem value="name-desc">Name: Z-A</SelectItem>
               </SelectContent>
             </Select>
-            
+
             {/* View/Grouping/Selection Controls (Desktop Only) */}
             <AnimatePresence>
               {!isMobile && (
@@ -676,9 +709,39 @@ const Products = () => {
                       </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <Button variant="outline" size="icon" onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')} className="shadow-lg">
-                    {viewMode === 'grid' ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
-                  </Button>
+
+                  {/* Segmented view toggle */}
+                  <div className="flex items-center rounded-md border border-border bg-muted/60 p-0.5 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('grid')}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded text-sm font-medium transition-all duration-150",
+                        viewMode === 'grid'
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                      aria-label="Grid view"
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                      <span className="hidden lg:inline">Grid</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('table')}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded text-sm font-medium transition-all duration-150",
+                        viewMode === 'table'
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                      aria-label="Table view"
+                    >
+                      <List className="h-4 w-4" />
+                      <span className="hidden lg:inline">Table</span>
+                    </button>
+                  </div>
+
                   {viewMode === 'grid' && (
                     <Button variant="outline" onClick={cycleGridSize} className="w-28 justify-start shadow-lg">
                       <LayoutGrid className="mr-2 h-4 w-4" />{sizeLabels[gridSize]}
@@ -693,20 +756,201 @@ const Products = () => {
               )}
             </AnimatePresence>
           </div>
-          
-          {/* Sync Actions */}
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <Button variant="outline" onClick={() => runWithIntegrationCheck(() => setIsImporterOpen(true))} className="flex-1 md:flex-none shadow-lg">
-              <Import className="mr-2 h-4 w-4" />Import
+
+          {/* Sync Actions — more prominent */}
+          <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
+            {/* Import from Instagram — visually distinct */}
+            <Button
+              onClick={() => runWithIntegrationCheck(() => setIsImporterOpen(true))}
+              className="flex-1 md:flex-none shadow-lg bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white border-0"
+            >
+              <Import className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Import from Instagram</span>
+              <span className="sm:hidden">Import</span>
             </Button>
-            {hasDoneFullSync === null ? <Skeleton className="h-10 w-32" /> : !hasDoneFullSync ? <Button onClick={() => handleSync('full')} disabled={isSyncing} className="flex-1 shadow-lg"><RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />Full Sync</Button> : <div className="flex items-center"><Button onClick={() => handleSync('quick')} disabled={isSyncing} className="rounded-r-none flex-1 shadow-lg"><RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />Quick Sync</Button><DropdownMenu><DropdownMenuTrigger asChild><Button disabled={isSyncing} className="rounded-l-none px-2 border-l border-primary-foreground/20 shadow-lg"><ChevronDown className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleSync('full')} disabled={isSyncing}>Run Full Sync</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>}
+
+            {/* Sync buttons */}
+            {hasDoneFullSync === null ? (
+              <Skeleton className="h-10 w-32" />
+            ) : !hasDoneFullSync ? (
+              <Button
+                onClick={() => handleSync('full')}
+                disabled={isSyncing}
+                variant="outline"
+                className="flex-1 shadow-lg border-primary/40 text-primary hover:bg-primary/10 hover:border-primary"
+              >
+                <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+                Full Sync
+              </Button>
+            ) : (
+              <div className="flex items-center">
+                <Button
+                  onClick={() => handleSync('quick')}
+                  disabled={isSyncing}
+                  variant="outline"
+                  className="rounded-r-none flex-1 shadow-lg border-primary/40 text-primary hover:bg-primary/10 hover:border-primary"
+                >
+                  <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+                  Quick Sync
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      disabled={isSyncing}
+                      variant="outline"
+                      className="rounded-l-none px-2 border-l-0 border-primary/40 text-primary hover:bg-primary/10 hover:border-primary shadow-lg"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleSync('full')} disabled={isSyncing}>Run Full Sync</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Product List/Grid */}
-        {isProductDataLoading ? (currentView === 'grid' ? <div className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>{Array.from({ length: 12 }).map((_, i) => <div key={i} className="space-y-2"><Skeleton className="aspect-square w-full rounded-lg" /><Skeleton className="h-4 w-2/3" /><Skeleton className="h-4 w-1/2" /></div>)}</div> : <div className="p-6 space-y-2"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>) : Object.keys(groupedProducts).length > 0 ? (currentView === 'grid' ? <div className="space-y-8">{Object.entries(groupedProducts).map(([groupName, products]) => (<div key={groupName}><div className="flex items-center gap-4 mb-4"><h2 className={cn("text-xl font-bold capitalize inline-block", settings.backgroundImageUrl && "bg-card/60 backdrop-blur-[20px] px-3 py-1 rounded-md")}>{groupName} ({products.length})</h2>{grouping === 'category' && products.length > 0 && (<Button variant="outline" size="sm" onClick={() => handleSelectAllInGroup(products)}><CheckSquare className="mr-2 h-4 w-4" />{products.every(p => selectedProducts.includes(p.id)) ? 'Deselect All' : 'Select All'}</Button>)}</div><motion.div variants={containerVariants} initial="hidden" animate="visible" className={cn("grid grid-cols-2 md:grid-cols-3 gap-4 items-stretch", gridSizeClasses[gridSize])}>{products.map((product) => <motion.div key={product.id} variants={itemVariants} className="h-full"><ProductCard product={product} gridSize={gridSize} isSelected={selectedProducts.includes(product.id)} isSelectionModeActive={isSelectionModeActive || selectedProducts.length > 0} onSelect={handleSelectProduct} onEdit={setSelectedProduct} onStatusChange={handleStatusChange} /></motion.div>)}</motion.div></div>))}</div> : <Card><CardContent className="p-0"><ProductTableView products={filteredAndSortedProducts} selectedProducts={selectedProducts} onSelectAll={(checked) => setSelectedProducts(checked ? filteredAndSortedProducts.map(p => p.id) : [])} onSelectOne={handleSelectProduct} onEdit={setSelectedProduct} onDelete={handleBulkDelete} /></CardContent></Card>) : <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg"><h3 className="lg:text-lg font-semibold">No Products Found</h3><p className="text-sm mt-1">Try adjusting your search or filters, or import from Instagram.</p></div>}
+        {/* ── View indicator ── */}
+        {!isProductDataLoading && filteredAndSortedProducts.length > 0 && (
+          <p className="text-xs text-muted-foreground mb-3">
+            Showing <span className="font-semibold text-foreground">{filteredAndSortedProducts.length}</span> of{' '}
+            <span className="font-semibold text-foreground">{statsTotal}</span> product{statsTotal !== 1 ? 's' : ''}
+            {hasActiveFilters && <span className="ml-1 text-primary">(filtered)</span>}
+          </p>
+        )}
+
+        {/* ── Product List/Grid ── */}
+        {isProductDataLoading ? (
+          currentView === 'grid' ? (
+            <div className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="aspect-square w-full rounded-lg" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-6 space-y-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          )
+        ) : filteredAndSortedProducts.length > 0 ? (
+          currentView === 'grid' ? (
+            <div className="space-y-8">
+              {Object.entries(groupedProducts).map(([groupName, products]) => (
+                <div key={groupName}>
+                  <div className="flex items-center gap-4 mb-4">
+                    <h2 className={cn("text-xl font-bold capitalize inline-block", settings.backgroundImageUrl && "bg-card/60 backdrop-blur-[20px] px-3 py-1 rounded-md")}>
+                      {groupName} ({products.length})
+                    </h2>
+                    {grouping === 'category' && products.length > 0 && (
+                      <Button variant="outline" size="sm" onClick={() => handleSelectAllInGroup(products)}>
+                        <CheckSquare className="mr-2 h-4 w-4" />
+                        {products.every(p => selectedProducts.includes(p.id)) ? 'Deselect All' : 'Select All'}
+                      </Button>
+                    )}
+                  </div>
+                  <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className={cn("grid grid-cols-2 md:grid-cols-3 gap-4 items-stretch", gridSizeClasses[gridSize])}
+                  >
+                    {products.map((product) => (
+                      <motion.div key={product.id} variants={itemVariants} className="h-full">
+                        <ProductCard
+                          product={product}
+                          gridSize={gridSize}
+                          isSelected={selectedProducts.includes(product.id)}
+                          isSelectionModeActive={isSelectionModeActive || selectedProducts.length > 0}
+                          onSelect={handleSelectProduct}
+                          onEdit={setSelectedProduct}
+                          onStatusChange={handleStatusChange}
+                        />
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <ProductTableView
+                  products={filteredAndSortedProducts}
+                  selectedProducts={selectedProducts}
+                  onSelectAll={(checked) => setSelectedProducts(checked ? filteredAndSortedProducts.map(p => p.id) : [])}
+                  onSelectOne={handleSelectProduct}
+                  onEdit={setSelectedProduct}
+                  onDelete={handleBulkDelete}
+                />
+              </CardContent>
+            </Card>
+          )
+        ) : (
+          /* ── Improved empty state ── */
+          <div className="flex flex-col items-center justify-center py-24 px-6 text-center border-2 border-dashed rounded-xl border-border/60 bg-muted/20">
+            <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-muted mb-4">
+              <Package className="h-8 w-8 text-muted-foreground" />
+            </div>
+            {hasActiveFilters ? (
+              <>
+                <h3 className="text-lg font-semibold mb-1">No products match your filters</h3>
+                <p className="text-sm text-muted-foreground max-w-sm mb-4">
+                  Try broadening your search or removing some active filters to see more results.
+                </p>
+                <Button variant="outline" onClick={handleResetAllFilters}>
+                  Clear all filters
+                </Button>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-semibold mb-1">No products yet</h3>
+                <p className="text-sm text-muted-foreground max-w-sm mb-6">
+                  Import products from your Instagram posts or run a full sync to get started.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <Button
+                    onClick={() => runWithIntegrationCheck(() => setIsImporterOpen(true))}
+                    className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white border-0 shadow-md"
+                  >
+                    <Import className="mr-2 h-4 w-4" />
+                    Import from Instagram
+                  </Button>
+                  {hasDoneFullSync === false && (
+                    <Button
+                      variant="outline"
+                      onClick={() => handleSync('full')}
+                      disabled={isSyncing}
+                      className="border-primary/40 text-primary hover:bg-primary/10"
+                    >
+                      <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+                      Run Full Sync
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
       <AnimatePresence>
-        {selectedProducts.length > 0 && <BulkActionsToolbar selectedCount={selectedProducts.length} onClear={() => { setSelectedProducts([]); setIsSelectionModeActive(false); }} onSetStatus={handleBulkStatusChange} onDelete={() => setBulkDeleteConfirm(true)} onAddSale={() => setIsSaleModalOpen(true)} />}</AnimatePresence>
+        {selectedProducts.length > 0 && (
+          <BulkActionsToolbar
+            selectedCount={selectedProducts.length}
+            onClear={() => { setSelectedProducts([]); setIsSelectionModeActive(false); }}
+            onSetStatus={handleBulkStatusChange}
+            onDelete={() => setBulkDeleteConfirm(true)}
+            onAddSale={() => setIsSaleModalOpen(true)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 };
