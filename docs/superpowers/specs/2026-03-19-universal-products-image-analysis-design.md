@@ -115,9 +115,168 @@ The `ai_analysis_cache` uses `instagram_post_id` as PK, so only one cache entry 
 
 ---
 
-## 3. Universal Product Structure
+## 3. Enhanced "Find Specs with AI" System
 
-### 3.1 New Table: `product_specifications`
+The current spec-finding uses `ai-product-classifier` with Google Search grounding, but only when manually triggered or during background sync. The `analyze-instagram-posts` function (used for import preview) has NO grounding. This section improves spec-finding across the board.
+
+### 3.1 Enable Google Search Grounding Everywhere
+
+**Problem:** `analyze-instagram-posts` does not include `tools: [{ google_search: {} }]` in its Gemini call, so import preview analysis lacks real-world specs.
+
+**Fix:** Add `tools: [{ google_search: {} }]` to the Gemini call in `analyze-instagram-posts/index.ts`. All AI analysis paths should use grounding:
+
+| Function | Currently Has Grounding | After |
+|----------|------------------------|-------|
+| `ai-product-classifier` | Yes | Yes |
+| `analyze-instagram-posts` | **No** | **Yes** |
+| `background-sync` (calls classifier) | Yes (inherited) | Yes |
+
+### 3.2 Category Template-Guided Spec Search
+
+Once the product's category/type is identified (either from caption analysis or image analysis), include the matching `category_templates` expected spec keys in the prompt so Gemini knows exactly what to look for.
+
+**Flow:**
+1. First, the AI identifies `categoryName` and `typeName` from the caption/image
+2. Look up matching `category_templates` row (custom first, then system)
+3. Include the template's `default_specifications` keys in a follow-up instruction:
+
+```
+For this product type "{typeName}" in category "{categoryName}", find these specific specifications:
+- processor: The CPU/chipset model
+- gpu: The graphics processor
+- battery_mah: Battery capacity in milliampere-hours
+- screen_size: Display diagonal in inches
+- resolution: Screen resolution (e.g., 2796x1290)
+- weight: Device weight
+- os: Operating system version
+...
+Also find any additional specifications not listed above that are relevant to this product.
+```
+
+**Implementation:** The template lookup happens inside the edge function before the Gemini call. Fetch templates using the service role client. If no template matches, use the generic prompt (current behavior).
+
+### 3.3 Better Search Context with Images
+
+When "Find specs with AI" is triggered (manual button or during sync), send richer context to Gemini:
+
+1. **Product name as explicit search hint** — Prepend to the prompt: `"Product to search for: {productName}"`
+2. **Product images** — Include up to 3 images (reusing the image analysis infrastructure from Section 2) so Gemini can identify the exact product model, variant, and color from the image
+3. **Existing partial specs** — Include any specs already known so Gemini can fill gaps rather than re-derive everything
+
+**Updated prompt structure for "Find specs" calls:**
+```
+Search for the exact specifications of this product.
+
+Product name: {productName}
+Category: {categoryName}
+Type: {typeName}
+Known specifications: {existingSpecs as key-value pairs}
+Caption/description: {caption}
+
+[Images attached if available]
+
+Expected specifications for this product type: {templateSpecKeys}
+
+Use Google Search to find the most accurate and complete specifications.
+Return ONLY the specifications as a JSON array: [{"key": "...", "value": "...", "unit": "..."}]
+Do not re-classify the product. Focus entirely on finding accurate specifications.
+```
+
+### 3.4 Write Results to `product_specifications` Table
+
+After the spec-finding call returns, write results directly to the new `product_specifications` table instead of the `details` JSONB blob.
+
+**In `ProductEditMode.tsx` (`handleReanalyze`):**
+- Current: writes specs to `details` JSONB via `setValue('details', ...)`
+- New: upsert each spec to `product_specifications` table via Supabase client
+- Then refresh the specs display from the table
+
+**In `background-sync`:**
+- After product creation, insert specs into `product_specifications` from the analysis result
+- Use `INSERT ... ON CONFLICT (product_id, key) DO UPDATE SET value = EXCLUDED.value, unit = EXCLUDED.unit`
+
+**In `upsert-combo-from-analysis`:**
+- For each combo item product, insert its specs into `product_specifications`
+
+### 3.5 Two-Pass Analysis for Accurate Specs
+
+For the manual "Find specs with AI" button and during background sync, use a two-pass approach:
+
+**Pass 1 — Classification (existing behavior):**
+- Analyze caption (+ images if needed per Section 2)
+- Extract: product name, category, type, price, options, basic specs
+- This is the current `ai-product-classifier` call
+
+**Pass 2 — Dedicated Spec Search (new):**
+- Triggered automatically after Pass 1 completes
+- Uses the identified product name + category/type
+- Loads the matching `category_templates` to know what specs to search for
+- Sends a focused prompt (see Section 3.3) asking ONLY for specifications
+- Includes product images for exact model identification
+- Google Search grounding finds real-world specs (dimensions, battery, processor, etc.)
+- Results merged with Pass 1 specs (Pass 2 wins on conflicts)
+
+**When to run Pass 2:**
+- **Background sync:** Always run both passes (the second pass is cheap and greatly improves spec quality)
+- **Manual "Find specs" button:** Always run (this is what the user explicitly asked for)
+- **Import preview (`analyze-instagram-posts`):** Only Pass 1 (speed matters for preview; user can run Pass 2 later)
+
+**New edge function: `find-product-specs`**
+
+A dedicated function for Pass 2 that:
+1. Accepts: `{ product_id, product_name, category, type, caption?, media_urls?, existing_specs? }`
+2. Fetches matching `category_templates`
+3. Builds a spec-focused prompt with template keys
+4. Calls Gemini with Google Search grounding + optional images
+5. Returns: `{ specifications: [{ key, value, unit }] }`
+6. Upserts results into `product_specifications` table
+
+This function can also be called independently from the product editor UI to re-fetch specs at any time.
+
+### 3.6 Spec Reuse for Known Products
+
+When a new product is added that matches an existing product (e.g., another "iPhone 16 Pro" listing), reuse the already-extracted specifications and options instead of re-searching from scratch.
+
+**Matching logic (in `ai-product-classifier` and `background-sync`):**
+
+1. After Pass 1 classifies the product (name, category, type), before running Pass 2:
+2. Query `products` joined with `product_specifications` to find existing products with a similar name and same category/type:
+   ```sql
+   SELECT p.id, p.name, p.category,
+          array_agg(json_build_object('key', ps.key, 'value', ps.value, 'unit', ps.unit)) as specs
+   FROM products p
+   LEFT JOIN product_specifications ps ON ps.product_id = p.id
+   WHERE p.user_id = :userId
+     AND p.category = :categoryName
+     AND (
+       p.name ILIKE '%' || :productName || '%'
+       OR :productName ILIKE '%' || p.name || '%'
+     )
+     AND p.id != :currentProductId  -- exclude self
+   GROUP BY p.id
+   LIMIT 3
+   ```
+3. Also query `product_options` + `option_values` for the matched products to get existing options.
+
+**If a match is found:**
+- Copy specifications from the matched product into the new product's `product_specifications` rows
+- Copy option structure (option names and common values) from matched product
+- Skip Pass 2 (no need to Google Search for specs we already have)
+- Still allow the AI to adjust price, inventory, and specific option values (e.g., different color selection) from the caption
+
+**If no match is found:**
+- Proceed with Pass 2 as normal (Google Search for specs)
+
+**Benefits:**
+- Avoids redundant Gemini API calls for well-known products
+- Ensures consistency across multiple listings of the same product
+- Faster sync when re-importing similar products
+
+---
+
+## 4. Universal Product Structure
+
+### 4.1 New Table: `product_specifications`
 
 ```sql
 CREATE TABLE public.product_specifications (
@@ -169,7 +328,7 @@ CREATE POLICY "Public read product specifications for active products"
     ));
 ```
 
-### 3.2 New Table: `category_templates`
+### 4.2 New Table: `category_templates`
 
 System-level templates defining expected specs and options per category/type. These are global (not per-user) and serve as defaults. Users can also create custom categories/types.
 
@@ -231,7 +390,7 @@ CREATE POLICY "Users can manage their own custom templates"
 ]
 ```
 
-### 3.3 Seed Data (13 Categories, ~65 Types)
+### 4.3 Seed Data (13 Categories, ~65 Types)
 
 #### Clothing & Apparel
 
@@ -370,7 +529,7 @@ CREATE POLICY "Users can manage their own custom templates"
 | Luggage & Suitcases | material, capacity_liters, dimensions, weight, wheels, tsa_lock | Size, Color |
 | Wallets & Cardholders | material, card_slots, dimensions, rfid_blocking | Color |
 
-### 3.4 Migration: `products.details` → `product_specifications`
+### 4.4 Migration: `products.details` → `product_specifications`
 
 A one-time migration script that:
 
@@ -384,7 +543,7 @@ A one-time migration script that:
 2. Keep `details` column for backward compatibility but stop writing specs to it
 3. Update all frontend reads to use `product_specifications` instead of `details`
 
-### 3.5 AI Prompt Updates
+### 4.5 AI Prompt Updates
 
 Update the Gemini prompt in `ai-product-classifier` to:
 
@@ -395,7 +554,7 @@ Update the Gemini prompt in `ai-product-classifier` to:
 3. Return specs as: `"specifications": [{"key": "material", "value": "Cotton", "unit": null}, ...]`
 4. Return options as before: `"options": {"Size": [...], "Color": [...]}`
 
-### 3.6 Product Creation Flow Changes
+### 4.6 Product Creation Flow Changes
 
 When a product is created (from AI or manually):
 
@@ -409,13 +568,13 @@ When a product is created (from AI or manually):
 
 ---
 
-## 4. Category & Type Management Page
+## 5. Category & Type Management Page
 
-### 4.1 Route
+### 5.1 Route
 
 `/categories` — New protected route in `App.tsx`, added to sidebar navigation.
 
-### 4.2 Page Structure
+### 5.2 Page Structure
 
 ```
 Categories & Types Management Page
@@ -447,7 +606,7 @@ Categories & Types Management Page
     └── Delete Confirmation Modal
 ```
 
-### 4.3 Behavior
+### 5.3 Behavior
 
 **System templates:**
 - Read-only by default (marked with a badge)
@@ -464,7 +623,7 @@ Categories & Types Management Page
 - When AI classifies a product, it checks custom templates first (user-specific), then falls back to system templates
 - When user manually creates a product and selects a category/type, the template pre-populates spec and option fields
 
-### 4.4 Components
+### 5.4 Components
 
 | Component | Purpose |
 |-----------|---------|
@@ -478,9 +637,9 @@ Categories & Types Management Page
 
 ---
 
-## 5. Radius Fix
+## 6. Radius Fix
 
-### 5.1 Root Cause
+### 6.1 Root Cause
 
 The `InstagramShopLayout` component (`src/components/storefront/InstagramShopLayout.tsx`) contains `applyInstagramShopSettingsToDOM()` which:
 
@@ -490,7 +649,7 @@ The `InstagramShopLayout` component (`src/components/storefront/InstagramShopLay
 
 When a user navigates from the Instagram Shop layout back to the dashboard, the hardcoded values and `!important` overrides can persist, making the radius slider appear non-functional.
 
-### 5.2 Fix
+### 6.2 Fix
 
 1. **`AppearanceContext.tsx`**: Export a `restoreSettings()` method via context (or export `applySettingsToDOM` directly). Currently `applySettingsToDOM` is a module-level function not exposed to other components.
 2. **`InstagramShopLayout.tsx`**: On unmount (cleanup function in `useEffect`), call the exported `restoreSettings()` to re-apply the user's saved design settings.
@@ -499,28 +658,32 @@ When a user navigates from the Instagram Shop layout back to the dashboard, the 
 
 ---
 
-## 6. Files Changed
+## 7. Files Changed
 
 ### New Files
-- `src/pages/Categories.tsx`
-- `src/components/categories/CategoryCard.tsx`
-- `src/components/categories/TypeCard.tsx`
-- `src/components/categories/CategoryEditorModal.tsx`
-- `src/components/categories/TypeEditorModal.tsx`
-- `src/components/categories/SpecificationEditor.tsx`
-- `src/components/categories/OptionEditor.tsx`
+- `supabase/functions/find-product-specs/index.ts` — Dedicated Pass 2 spec-finding edge function
+- `src/pages/Categories.tsx` — Category & Type management page
+- `src/components/categories/CategoryCard.tsx` — Collapsible category with types
+- `src/components/categories/TypeCard.tsx` — Type display with specs and options
+- `src/components/categories/CategoryEditorModal.tsx` — Add/edit category
+- `src/components/categories/TypeEditorModal.tsx` — Add/edit type with spec/option editors
+- `src/components/categories/SpecificationEditor.tsx` — Manage spec list
+- `src/components/categories/OptionEditor.tsx` — Manage option list
 
 ### Modified Files
-- `supabase/functions/ai-product-classifier/index.ts` — Image analysis, updated prompt, new spec output format
-- `supabase/functions/background-sync/index.ts` — Caption heuristic, retry logic, image fetching, spec table writes
-- `supabase/functions/upsert-combo-from-analysis/index.ts` — Write specs to new table
-- `supabase/recreate_db.sql` — New tables, seed data
+- `supabase/functions/ai-product-classifier/index.ts` — Image analysis, template-guided prompts, new spec output format, Pass 1 classification
+- `supabase/functions/analyze-instagram-posts/index.ts` — Add Google Search grounding (`tools: [{ google_search: {} }]`)
+- `supabase/functions/background-sync/index.ts` — Caption heuristic, retry logic, image fetching, two-pass analysis (calls `find-product-specs` after classification), write specs to `product_specifications` table
+- `supabase/functions/upsert-combo-from-analysis/index.ts` — Write specs to `product_specifications` table
+- `supabase/recreate_db.sql` — New tables (`product_specifications`, `category_templates`), seed data, indexes, RLS policies, triggers
 - `src/App.tsx` — New `/categories` route
 - `src/components/layout/Sidebar.tsx` — Add categories link
 - `src/components/layout/BottomNav.tsx` — Add categories link (if applicable)
-- `src/components/storefront/InstagramShopLayout.tsx` — Radius fix
+- `src/components/storefront/InstagramShopLayout.tsx` — Radius fix (remove `!important`, cleanup restores settings)
 - `src/components/settings/AppearancePanel.tsx` — Verify radius slider works
-- `src/contexts/AppearanceContext.tsx` — Ensure settings restoration after layout switches
+- `src/contexts/AppearanceContext.tsx` — Export `restoreSettings()`, ensure settings restoration after layout switches
+- `src/components/product-detail/ProductEditMode.tsx` — "Find specs with AI" button now calls `find-product-specs`, reads/writes `product_specifications` table instead of `details` JSONB
 - `src/components/product-detail/ProductEditor.tsx` — Read specs from `product_specifications`, show template defaults
 - `src/components/product-forms/*` — Use new spec/option structure
-- `src/components/storefront/StorefrontProductDetail.tsx` — Display specs from new table
+- `src/components/storefront/StorefrontProductDetail.tsx` — Display specs from `product_specifications` table
+- `src/components/InstagramPostModal.tsx` — Benefits from grounding in `analyze-instagram-posts`
