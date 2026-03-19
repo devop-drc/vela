@@ -257,7 +257,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                   }
                 }
                 showSuccess("Product updated successfully!");
-                if (onUpdate) onUpdate(); // Call onUpdate
+                if (onUpdate) onUpdate(); // Refresh parent product list
             }
         } catch (e: any) {
             error = e;
@@ -266,7 +266,8 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         } finally {
             setIsSubmitting(false);
             if (!error) {
-                onClose();
+                // Switch back to view mode instead of closing the modal
+                onCancel();
             }
         }
     };

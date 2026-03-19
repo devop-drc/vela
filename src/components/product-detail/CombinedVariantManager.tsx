@@ -258,12 +258,12 @@ const CombinedVariantManager = React.forwardRef(({ productId, basePriceALL, disp
     const idMap: Record<string,string> = {};
     upsertedOptions?.forEach((r: { id: string; name: string })=>{ idMap[r.name]=r.id });
 
-    // Upsert values
-    const valueRows: Array<{ id?: string; option_id: string; value: string; price_difference: number; is_active: boolean; is_default: boolean; display_order: number }>= [];
+    // Upsert values (including inventory!)
+    const valueRows: Array<{ id?: string; option_id: string; value: string; price_difference: number; inventory: number; is_active: boolean; is_default: boolean; display_order: number }>= [];
     options.forEach((o, idx) => {
       const option_id = idMap[o.name] || o.id;
       o.values.forEach((v, vidx) => {
-        valueRows.push({ id: v.id, option_id: option_id as string, value: v.value, price_difference: v.price_difference, is_active: v.is_active, is_default: v.is_default, display_order: vidx });
+        valueRows.push({ id: v.id, option_id: option_id as string, value: v.value, price_difference: v.price_difference, inventory: v.inventory ?? 0, is_active: v.is_active, is_default: v.is_default, display_order: vidx });
       });
     });
     // Deletes: values removed

@@ -68,6 +68,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
   const [mediaItems, setMediaItems] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [specs, setSpecs] = useState<any[]>([]);
+  const [viewRefreshKey, setViewRefreshKey] = useState(0);
   const { shopDetails, convertCurrency } = useShop();
 
   // Fetch specs when product loads
@@ -228,7 +229,15 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
                   handleImageDelete={handleImageDelete}
                   isUploading={isUploading}
                   form={{...form, handleSubmit: form.handleSubmit}}
-                  onCancel={() => setIsEditing(false)}
+                  onCancel={() => {
+                    setIsEditing(false);
+                    setViewRefreshKey(k => k + 1);
+                    // Re-fetch specs after edit
+                    if (product?.id) {
+                      supabase.from('product_specifications').select('*').eq('product_id', product.id).order('display_order')
+                        .then(({ data }) => { if (data) setSpecs(data); });
+                    }
+                  }}
                   onClose={onClose}
                   onUpdate={onUpdate}
                   isSubmitting={isSubmitting}
@@ -241,6 +250,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
               </FormProvider>
             ) : (
               <ProductViewMode
+                key={viewRefreshKey}
                 product={product}
                 mediaItems={mediaItems}
                 onEdit={() => setIsEditing(true)}
