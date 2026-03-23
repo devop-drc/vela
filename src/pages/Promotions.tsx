@@ -22,6 +22,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import Marquee from "react-fast-marquee";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTranslation } from "react-i18next";
 
 interface Promotion {
   id: string;
@@ -122,16 +123,17 @@ interface PromotionCardProps {
 }
 
 const PromotionCard = ({ promo, onEdit, onDelete, onRerun, onToggle }: PromotionCardProps) => {
+  const { t } = useTranslation();
   const status = getPromotionStatus(promo);
   const details = getPromotionDetails(promo);
   const typeLabel = getTypeLabel(promo);
   const typeIcon = getTypeIcon(promo);
 
   const statusConfig: Record<string, { label: string; className: string }> = {
-    active:    { label: 'Active',    className: 'bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-800' },
+    active: { label: 'Active', className: 'bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-800' },
     scheduled: { label: 'Scheduled', className: 'bg-blue-500/10 text-blue-600 border-blue-200 dark:border-blue-800' },
-    expired:   { label: 'Expired',   className: 'bg-zinc-500/10 text-zinc-500 border-zinc-200 dark:border-zinc-700' },
-    inactive:  { label: 'Inactive',  className: 'bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-800' },
+    expired: { label: 'Expired', className: 'bg-zinc-500/10 text-zinc-500 border-zinc-200 dark:border-zinc-700' },
+    inactive: { label: 'Inactive', className: 'bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-800' },
   };
 
   const { label: statusLabel, className: statusClass } = statusConfig[status] ?? statusConfig.inactive;
@@ -204,7 +206,7 @@ const PromotionCard = ({ promo, onEdit, onDelete, onRerun, onToggle }: Promotion
         ) : (
           <div className="rounded-md bg-muted/50 px-3 py-2 text-xs flex items-center gap-2 text-muted-foreground">
             <Zap className="h-3.5 w-3.5 shrink-0" />
-            <span>Always on</span>
+            <span>{t("promotions.always_on")}</span>
           </div>
         )}
 
@@ -217,16 +219,16 @@ const PromotionCard = ({ promo, onEdit, onDelete, onRerun, onToggle }: Promotion
               aria-label={`Toggle ${promo.name} active status`}
               className="scale-90"
             />
-            <span className="text-xs text-muted-foreground">{promo.is_active ? 'Enabled' : 'Disabled'}</span>
+            <span className="text-xs text-muted-foreground">{promo.is_active ? t('promotions.enabled') : t('promotions.disabled')}</span>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onRerun(promo)} title="Duplicate & rerun">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onRerun(promo)} title={t("promotions.duplicate")}>
               <Repeat2 className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(promo)} title="Edit">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(promo)} title={t("common.edit")}>
               <Edit className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(promo.id)} title="Delete">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(promo.id)} title={t("common.delete")}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -238,26 +240,30 @@ const PromotionCard = ({ promo, onEdit, onDelete, onRerun, onToggle }: Promotion
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
 
-const EmptyPromotions = ({ onCreateClick }: { onCreateClick: () => void }) => (
-  <div className="flex flex-col items-center justify-center py-20 text-center">
-    <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-primary/10 mb-4">
-      <Tag className="h-8 w-8 text-primary" />
+const EmptyPromotions = ({ onCreateClick }: { onCreateClick: () => void }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-primary/10 mb-4">
+        <Tag className="h-8 w-8 text-primary" />
+      </div>
+      <h3 className="text-lg font-semibold mb-1">{t("promotions.no_promotions")}</h3>
+      <p className="text-sm text-muted-foreground max-w-xs mb-6">
+        {t("promotions.no_promotions_desc")}
+      </p>
+      <Button onClick={onCreateClick}>
+        <PlusCircle className="mr-2 h-4 w-4" />
+        {t("promotions.create_first")}
+      </Button>
     </div>
-    <h3 className="text-lg font-semibold mb-1">No promotions yet</h3>
-    <p className="text-sm text-muted-foreground max-w-xs mb-6">
-      Create your first promotion — a percentage discount, a fixed amount off, or free shipping — to drive more sales.
-    </p>
-    <Button onClick={onCreateClick}>
-      <PlusCircle className="mr-2 h-4 w-4" />
-      Create your first promotion
-    </Button>
-  </div>
-);
+  );
+};
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 const Promotions = () => {
   const { setTitle } = usePageTitle();
+  const { t } = useTranslation();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [storefrontAnnouncements, setStorefrontAnnouncements] = useState<StorefrontAnnouncement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -269,7 +275,7 @@ const Promotions = () => {
   const [itemToDelete, setItemToDelete] = useState<{ id: string; type: 'promotion' | 'announcement' } | null>(null);
   const [filter, setFilter] = useState<FilterTab>('all');
 
-  useEffect(() => { setTitle("Promotions"); }, [setTitle]);
+  useEffect(() => { setTitle(t("nav.promotions")); }, [setTitle, t]);
 
   const fetchPromotionsAndAnnouncements = async () => {
     setIsLoading(true);
@@ -388,9 +394,9 @@ const Promotions = () => {
   // ── derived stats ────────────────────────────────────────────────────────────
 
   const now = new Date();
-  const activeCount    = promotions.filter(p => p.is_active && (!p.end_date || isAfter(parseISO(p.end_date), now)) && (!p.start_date || isBefore(parseISO(p.start_date), now))).length;
+  const activeCount = promotions.filter(p => p.is_active && (!p.end_date || isAfter(parseISO(p.end_date), now)) && (!p.start_date || isBefore(parseISO(p.start_date), now))).length;
   const scheduledCount = promotions.filter(p => p.start_date && isAfter(parseISO(p.start_date), now)).length;
-  const expiredCount   = promotions.filter(p => p.end_date && isBefore(parseISO(p.end_date), now)).length;
+  const expiredCount = promotions.filter(p => p.end_date && isBefore(parseISO(p.end_date), now)).length;
 
   // ── filtered list ─────────────────────────────────────────────────────────────
 
@@ -423,15 +429,15 @@ const Promotions = () => {
       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>{t("promotions.delete_confirm")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the selected {itemToDelete?.type}.
+              {t("promotions.delete_warning")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeletion} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Yes, delete
+              {t("products.yes_delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -442,14 +448,14 @@ const Promotions = () => {
         {/* ── Page header ── */}
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Promotions</h1>
+            <h1 className="text-2xl font-bold">{t("nav.promotions")}</h1>
             <p className="text-muted-foreground text-sm mt-0.5">
-              Manage your marketing campaigns, discounts, and special offers.
+              {t("promotions.page_desc")}
             </p>
           </div>
           <Button onClick={() => setIsPromotionEditorOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Create Promotion
+            {t("promotions.create")}
           </Button>
         </div>
 
@@ -461,25 +467,25 @@ const Promotions = () => {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <StatCard
-              label="Active Promotions"
+              label={t("promotions.active_promotions")}
               value={activeCount}
               icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}
               colorClass="bg-emerald-500/10"
             />
             <StatCard
-              label="Scheduled"
+              label={t("promotions.scheduled")}
               value={scheduledCount}
               icon={<Clock className="h-5 w-5 text-blue-600" />}
               colorClass="bg-blue-500/10"
             />
             <StatCard
-              label="Expired"
+              label={t("promotions.expired")}
               value={expiredCount}
               icon={<XCircle className="h-5 w-5 text-zinc-500" />}
               colorClass="bg-zinc-500/10"
             />
             <StatCard
-              label="Total Promotions"
+              label={t("promotions.total_promotions")}
               value={promotions.length}
               icon={<LayoutGrid className="h-5 w-5 text-primary" />}
               colorClass="bg-primary/10"
@@ -490,13 +496,13 @@ const Promotions = () => {
         {/* ── Promotions section ── */}
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="text-lg font-semibold">Your Promotions</h2>
+            <h2 className="text-lg font-semibold">{t("promotions.your_promotions")}</h2>
             <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterTab)}>
               <TabsList className="h-8">
-                <TabsTrigger value="all" className="text-xs px-3">All ({promotions.length})</TabsTrigger>
-                <TabsTrigger value="active" className="text-xs px-3">Active ({activeCount})</TabsTrigger>
-                <TabsTrigger value="scheduled" className="text-xs px-3">Scheduled ({scheduledCount})</TabsTrigger>
-                <TabsTrigger value="expired" className="text-xs px-3">Expired ({expiredCount})</TabsTrigger>
+                <TabsTrigger value="all" className="text-xs px-3">{t("common.all")} ({promotions.length})</TabsTrigger>
+                <TabsTrigger value="active" className="text-xs px-3">{t("common.active")} ({activeCount})</TabsTrigger>
+                <TabsTrigger value="scheduled" className="text-xs px-3">{t("promotions.scheduled")} ({scheduledCount})</TabsTrigger>
+                <TabsTrigger value="expired" className="text-xs px-3">{t("promotions.expired")} ({expiredCount})</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -511,7 +517,7 @@ const Promotions = () => {
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
                 <Tag className="h-8 w-8 mb-3 opacity-40" />
-                <p className="text-sm">No {filter} promotions found.</p>
+                <p className="text-sm">{t("promotions.no_filtered", { filter })}</p>
               </div>
             )
           ) : (
@@ -534,21 +540,21 @@ const Promotions = () => {
         <div className="pt-4 space-y-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold">Storefront Announcements</h2>
+              <h2 className="text-lg font-semibold">{t("promotions.announcements")}</h2>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Scrolling messages displayed on your storefront homepage.
+                {t("promotions.announcements_desc")}
               </p>
             </div>
             <Button onClick={() => setIsAnnouncementEditorOpen(true)}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Add Announcement
+              {t("promotions.add_announcement")}
             </Button>
           </div>
 
           {storefrontAnnouncements.filter(e => e.is_active).length > 0 && (
             <div className="space-y-2">
               <h3 className="font-medium text-sm flex items-center gap-2 text-muted-foreground">
-                <Megaphone className="h-4 w-4" /> Live Preview
+                <Megaphone className="h-4 w-4" /> {t("promotions.live_preview")}
               </h3>
               <div className="border rounded-lg p-2 bg-muted/50">
                 <Marquee pauseOnHover className="py-2 border-y-2 border-primary/20 bg-primary/10">
@@ -565,9 +571,9 @@ const Promotions = () => {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Your Storefront Announcements</CardTitle>
+              <CardTitle className="text-base">{t("promotions.your_announcements")}</CardTitle>
               <CardDescription>
-                These messages appear in a scrolling banner on your storefront.
+                {t("promotions.your_announcements_desc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -581,11 +587,11 @@ const Promotions = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[50px]">Order</TableHead>
-                      <TableHead className="w-[50px]">Icon</TableHead>
-                      <TableHead>Message</TableHead>
-                      <TableHead className="w-[80px] text-center">Active</TableHead>
-                      <TableHead className="text-right w-[120px]">Actions</TableHead>
+                      <TableHead className="w-[50px]">{t("promotions.order_col")}</TableHead>
+                      <TableHead className="w-[50px]">{t("promotions.icon")}</TableHead>
+                      <TableHead>{t("promotions.message")}</TableHead>
+                      <TableHead className="w-[80px] text-center">{t("common.active")}</TableHead>
+                      <TableHead className="text-right w-[120px]">{t("promotions.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -617,7 +623,7 @@ const Promotions = () => {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                          No storefront announcements added yet.
+                          {t("promotions.no_announcements")}
                         </TableCell>
                       </TableRow>
                     )}

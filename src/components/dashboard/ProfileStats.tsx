@@ -7,6 +7,7 @@ import { Skeleton } from "../ui/skeleton";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface StatPillProps {
   icon: React.ReactNode;
@@ -24,6 +25,7 @@ const StatPill = ({ icon, label, value, colorClass = 'bg-muted' }: StatPillProps
 );
 
 export const ProfileStats = () => {
+  const { t } = useTranslation();
   const { shopDetails, isLoading, fetchShopDetails } = useShop();
   const [productCount, setProductCount] = useState<number | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -105,19 +107,19 @@ export const ProfileStats = () => {
         <div className="flex gap-2 mt-4 justify-between">
           <StatPill
             icon={<Users className="h-3.5 w-3.5" />}
-            label="Followers"
+            label={t("dashboard.followers")}
             value={followers}
             colorClass="bg-blue-500/8 flex-1"
           />
           <StatPill
             icon={<ImageIcon className="h-3.5 w-3.5" />}
-            label="Posts"
+            label={t("dashboard.posts")}
             value={posts}
             colorClass="bg-violet-500/8 flex-1"
           />
           <StatPill
             icon={<Package className="h-3.5 w-3.5" />}
-            label="Products"
+            label={t("nav.products")}
             value={products}
             colorClass="bg-emerald-500/8 flex-1"
           />

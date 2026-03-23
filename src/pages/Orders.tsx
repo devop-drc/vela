@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 type OrderStatus =
   | "Pending"
@@ -65,12 +66,12 @@ type Order = {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const STATUS_TABS = [
-  { value: "All", label: "All" },
-  { value: "Pending", label: "Pending" },
-  { value: "In Progress", label: "In Progress" },
-  { value: "Fulfilled", label: "Fulfilled" },
-  { value: "Problematic", label: "Problematic" },
-  { value: "Cancelled", label: "Cancelled" },
+  { value: "All", labelKey: "common.all" },
+  { value: "Pending", labelKey: "orders.pending" },
+  { value: "In Progress", labelKey: "orders.in_progress" },
+  { value: "Fulfilled", labelKey: "orders.fulfilled" },
+  { value: "Problematic", labelKey: "orders.problematic" },
+  { value: "Cancelled", labelKey: "orders.cancelled" },
 ] as const;
 
 type TabValue = (typeof STATUS_TABS)[number]["value"];
@@ -154,19 +155,20 @@ function exportOrdersCSV(orders: Order[], currency: string) {
 
 // ─── Empty State ─────────────────────────────────────────────────────────────
 
-const EmptyState = ({ hasFilters }: { hasFilters: boolean }) => (
-  <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
-    <PackageCheck className="h-12 w-12 text-muted-foreground/40" />
-    <p className="text-lg font-medium text-muted-foreground">
-      {hasFilters ? "No orders match your filters" : "No orders yet"}
-    </p>
-    <p className="text-sm text-muted-foreground/70">
-      {hasFilters
-        ? "Try adjusting your search or date range."
-        : "Orders placed through your shop will appear here."}
-    </p>
-  </div>
-);
+const EmptyState = ({ hasFilters }: { hasFilters: boolean }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
+      <PackageCheck className="h-12 w-12 text-muted-foreground/40" />
+      <p className="text-lg font-medium text-muted-foreground">
+        {hasFilters ? t("orders.no_match") : t("orders.no_orders")}
+      </p>
+      <p className="text-sm text-muted-foreground/70">
+        {hasFilters ? t("orders.no_match_desc") : t("orders.no_orders_desc")}
+      </p>
+    </div>
+  );
+};
 
 // ─── Inline Status Dropdown ───────────────────────────────────────────────────
 
@@ -260,6 +262,7 @@ const OrderTable = ({
   onOptimisticUpdate,
   hasFilters,
 }: OrderTableProps) => {
+  const { t } = useTranslation();
   const { shopDetails, convertCurrency } = useShop();
 
   if (!shopDetails) return null;
@@ -278,12 +281,12 @@ const OrderTable = ({
               aria-label="Select all"
             />
           </TableHead>
-          <TableHead>Order</TableHead>
-          <TableHead>Customer</TableHead>
-          <TableHead>Items</TableHead>
-          <TableHead>Created</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className="text-right">Total</TableHead>
+          <TableHead>{t("orders.order")}</TableHead>
+          <TableHead>{t("orders.customer")}</TableHead>
+          <TableHead>{t("orders.items")}</TableHead>
+          <TableHead>{t("orders.created")}</TableHead>
+          <TableHead>{t("orders.status")}</TableHead>
+          <TableHead className="text-right">{t("orders.total")}</TableHead>
           <TableHead className="w-[90px]" />
         </TableRow>
       </TableHeader>
@@ -345,7 +348,7 @@ const OrderTable = ({
                   className="h-7 text-xs"
                   onClick={() => onSelectOrder(order)}
                 >
-                  Details
+                  {t("orders.details")}
                 </Button>
               </TableCell>
             </TableRow>
@@ -379,18 +382,19 @@ const BulkActionBar = ({
   onExport,
   isUpdating,
 }: BulkActionBarProps) => {
+  const { t } = useTranslation();
   const count = selectedIds.size;
   if (count === 0) return null;
 
   return (
     <div className="flex items-center gap-3 px-4 py-2 bg-primary/5 border border-primary/20 rounded-lg text-sm">
       <span className="font-medium">
-        {count} order{count !== 1 ? "s" : ""} selected
+        {t("orders.selected", { count })}
       </span>
       <div className="flex items-center gap-2 ml-auto">
         <Select onValueChange={(v) => onBulkStatusChange(v as OrderStatus)} disabled={isUpdating}>
           <SelectTrigger className="h-7 text-xs w-[160px]">
-            <SelectValue placeholder="Change status…" />
+            <SelectValue placeholder={t("orders.change_status")} />
           </SelectTrigger>
           <SelectContent>
             {ALL_STATUSES.map((s) => (
@@ -407,7 +411,7 @@ const BulkActionBar = ({
           onClick={onExport}
         >
           <Download className="h-3 w-3" />
-          Export
+          {t("common.export")}
         </Button>
         <Button
           variant="ghost"
@@ -426,6 +430,7 @@ const BulkActionBar = ({
 
 const Orders = () => {
   const { setTitle } = usePageTitle();
+  const { t } = useTranslation();
   const { shopDetails, convertCurrency } = useShop();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -441,8 +446,8 @@ const Orders = () => {
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<"all" | "pending" | "processing" | "completed" | "failed">("all");
 
   useEffect(() => {
-    setTitle("Orders");
-  }, [setTitle]);
+    setTitle(t("nav.orders"));
+  }, [setTitle, t]);
 
   const fetchOrders = useCallback(async () => {
     setIsLoading(true);
@@ -654,21 +659,21 @@ const Orders = () => {
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-card">
               <ShoppingBag className="h-4 w-4 text-muted-foreground" />
               <span className="text-xl font-bold tabular-nums">{stats.total}</span>
-              <span className="text-sm text-muted-foreground">orders</span>
+              <span className="text-sm text-muted-foreground">{t("orders.orders")}</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-card">
               <Banknote className="h-4 w-4 text-emerald-500" />
               <span className="text-xl font-bold tabular-nums">{formatCurrency(stats.totalRevenue, shopDetails.currency)}</span>
-              <span className="text-sm text-muted-foreground">revenue</span>
+              <span className="text-sm text-muted-foreground">{t("orders.revenue")}</span>
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium">
-              <Clock className="h-3.5 w-3.5" />{stats.pending} pending
+              <Clock className="h-3.5 w-3.5" />{stats.pending} {t("orders.pending")}
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium">
-              <Loader2 className="h-3.5 w-3.5" />{stats.inProgress} in progress
+              <Loader2 className="h-3.5 w-3.5" />{stats.inProgress} {t("orders.in_progress")}
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
-              <CheckCircle2 className="h-3.5 w-3.5" />{stats.fulfilled} fulfilled
+              <CheckCircle2 className="h-3.5 w-3.5" />{stats.fulfilled} {t("orders.fulfilled")}
             </div>
           </div>
         )}
@@ -680,7 +685,7 @@ const Orders = () => {
             <div className="flex items-center gap-2 flex-wrap">
               <div className="relative flex-1 min-w-[200px] max-w-sm">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input placeholder="Search orders…" className="h-8 pl-8 text-sm" value={searchTerm}
+                <Input placeholder={t("orders.search_orders")} className="h-8 pl-8 text-sm" value={searchTerm}
                   onChange={(e) => { setSearchTerm(e.target.value); setSelectedIds(new Set()); }} />
               </div>
               <DateRangePicker date={dateRange} onDateChange={(d) => { setDateRange(d); setSelectedIds(new Set()); }} />
@@ -689,11 +694,11 @@ const Orders = () => {
               <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
                 <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="newest">Newest</SelectItem>
-                  <SelectItem value="oldest">Oldest</SelectItem>
-                  <SelectItem value="amount_high">Amount ↓</SelectItem>
-                  <SelectItem value="amount_low">Amount ↑</SelectItem>
-                  <SelectItem value="name">Name A-Z</SelectItem>
+                  <SelectItem value="newest">{t("products.newest")}</SelectItem>
+                  <SelectItem value="oldest">{t("products.oldest")}</SelectItem>
+                  <SelectItem value="amount_high">{t("orders.amount_desc")}</SelectItem>
+                  <SelectItem value="amount_low">{t("orders.amount_asc")}</SelectItem>
+                  <SelectItem value="name">{t("products.name_az")}</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -701,20 +706,20 @@ const Orders = () => {
               <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
                 <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All pay</SelectItem>
-                  <SelectItem value="card">Card</SelectItem>
-                  <SelectItem value="cash_on_delivery">Cash</SelectItem>
+                  <SelectItem value="all">{t("orders.all_pay")}</SelectItem>
+                  <SelectItem value="card">{t("orders.card")}</SelectItem>
+                  <SelectItem value="cash_on_delivery">{t("orders.cash")}</SelectItem>
                 </SelectContent>
               </Select>
 
               <Select value={paymentStatusFilter} onValueChange={(v) => setPaymentStatusFilter(v as any)}>
                 <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All status</SelectItem>
-                  <SelectItem value="pending">Pay pending</SelectItem>
-                  <SelectItem value="processing">Processing</SelectItem>
-                  <SelectItem value="completed">Paid</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
+                  <SelectItem value="all">{t("orders.all_status")}</SelectItem>
+                  <SelectItem value="pending">{t("orders.pay_pending")}</SelectItem>
+                  <SelectItem value="processing">{t("orders.processing")}</SelectItem>
+                  <SelectItem value="completed">{t("orders.paid")}</SelectItem>
+                  <SelectItem value="failed">{t("orders.pay_failed")}</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -723,7 +728,7 @@ const Orders = () => {
                   setSearchTerm(""); setDateRange(undefined); setActiveTab("All");
                   setSelectedIds(new Set()); setSortBy("newest"); setPaymentFilter("all"); setPaymentStatusFilter("all");
                 }}>
-                  <X className="h-3 w-3" />Clear
+                  <X className="h-3 w-3" />{t("common.clear")}
                 </Button>
               )}
             </div>
@@ -732,7 +737,7 @@ const Orders = () => {
             <TabsList className="h-auto gap-1 flex-wrap">
               {STATUS_TABS.map((tab) => (
                 <TabsTrigger key={tab.value} value={tab.value} className="text-xs gap-1">
-                  {tab.label}
+                  {t(tab.labelKey)}
                   {tabCounts[tab.value] > 0 && (
                     <Badge variant="secondary" className="h-4 px-1 text-xs ml-0.5">{tabCounts[tab.value]}</Badge>
                   )}
@@ -760,7 +765,7 @@ const Orders = () => {
 
           {!isLoading && (
             <p className="text-xs text-muted-foreground text-right mt-1">
-              {filteredOrders.length} of {orders.length} order{orders.length !== 1 ? "s" : ""}
+              {filteredOrders.length} {t("common.of")} {orders.length} {t("orders.orders")}
             </p>
           )}
         </Tabs>

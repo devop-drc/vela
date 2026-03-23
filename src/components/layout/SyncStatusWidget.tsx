@@ -10,6 +10,7 @@ import { SyncSummaryModal } from './SyncSummaryModal';
 import { SyncLiveFeedModal } from './SyncLiveFeedModal';
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
+import { useTranslation } from 'react-i18next';
 
 const formatTime = (ms: number) => {
   if (ms < 0 || !isFinite(ms) || isNaN(ms)) return '--:--';
@@ -21,6 +22,7 @@ const formatTime = (ms: number) => {
 };
 
 export const SyncStatusWidget = () => {
+  const { t } = useTranslation();
   const { activeJob, dismissJob } = useSync();
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
@@ -151,7 +153,7 @@ export const SyncStatusWidget = () => {
                     <XCircle className="h-4 w-4 text-destructive" />
                   )}
                   <span className="text-sm font-semibold">
-                    {isRunning ? 'Syncing Products' : isSuccess ? 'Sync Complete' : 'Sync Failed'}
+                    {isRunning ? t('sync.syncing') : isSuccess ? t('sync.complete') : t('sync.failed')}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -169,7 +171,7 @@ export const SyncStatusWidget = () => {
                 <Progress value={percentage} className="h-1.5" />
                 <div className="flex justify-between items-center">
                   <span className="text-[11px] text-muted-foreground truncate max-w-[180px]">
-                    {activeJob?.message || 'Initializing...'}
+                    {activeJob?.message || t('sync.initializing')}
                   </span>
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground tabular-nums shrink-0">
                     {activeJob.total > 0 && (
@@ -189,22 +191,22 @@ export const SyncStatusWidget = () => {
                 <div className="flex gap-1.5">
                   {(liveStats?.created ?? 0) > 0 && (
                     <Badge variant="secondary" className="text-[10px] h-5 px-1.5 gap-1 bg-emerald-500/10 text-emerald-600 border-0">
-                      <Package className="h-2.5 w-2.5" />{liveStats!.created} new
+                      <Package className="h-2.5 w-2.5" />{liveStats!.created} {t('sync.new')}
                     </Badge>
                   )}
                   {(liveStats?.updated ?? 0) > 0 && (
                     <Badge variant="secondary" className="text-[10px] h-5 px-1.5 gap-1 bg-blue-500/10 text-blue-600 border-0">
-                      <Zap className="h-2.5 w-2.5" />{liveStats!.updated} updated
+                      <Zap className="h-2.5 w-2.5" />{liveStats!.updated} {t('sync.updated')}
                     </Badge>
                   )}
                   {(liveStats?.skipped ?? 0) > 0 && (
                     <Badge variant="secondary" className="text-[10px] h-5 px-1.5 gap-1 bg-muted text-muted-foreground border-0">
-                      <SkipForward className="h-2.5 w-2.5" />{liveStats!.skipped} skipped
+                      <SkipForward className="h-2.5 w-2.5" />{liveStats!.skipped} {t('sync.skipped')}
                     </Badge>
                   )}
                   {(liveStats?.cached ?? 0) > 0 && (
                     <Badge variant="secondary" className="text-[10px] h-5 px-1.5 gap-1 bg-amber-500/10 text-amber-600 border-0">
-                      <Zap className="h-2.5 w-2.5" />{liveStats!.cached} cached
+                      <Zap className="h-2.5 w-2.5" />{liveStats!.cached} {t('sync.cached')}
                     </Badge>
                   )}
                 </div>
@@ -223,7 +225,7 @@ export const SyncStatusWidget = () => {
                     className="h-10 w-10 rounded object-cover bg-muted shrink-0"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium truncate">{analysisPreview.name || 'Analyzing...'}</p>
+                    <p className="text-xs font-medium truncate">{analysisPreview.name || t('sync.analyzing')}</p>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       {analysisPreview.category && (
                         <span className="text-[10px] text-muted-foreground">{analysisPreview.category}</span>
@@ -240,13 +242,13 @@ export const SyncStatusWidget = () => {
               {isFinished && summary && (
                 <div className="flex gap-1.5 flex-wrap">
                   <Badge variant="outline" className="text-[10px] h-5 gap-1">
-                    <Package className="h-2.5 w-2.5 text-emerald-500" />{summary.created} created
+                    <Package className="h-2.5 w-2.5 text-emerald-500" />{summary.created} {t('sync.created')}
                   </Badge>
                   <Badge variant="outline" className="text-[10px] h-5 gap-1">
-                    <Zap className="h-2.5 w-2.5 text-blue-500" />{summary.updated} updated
+                    <Zap className="h-2.5 w-2.5 text-blue-500" />{summary.updated} {t('sync.updated')}
                   </Badge>
                   <Badge variant="outline" className="text-[10px] h-5 gap-1">
-                    <SkipForward className="h-2.5 w-2.5" />{summary.skipped} skipped
+                    <SkipForward className="h-2.5 w-2.5" />{summary.skipped} {t('sync.skipped')}
                   </Badge>
                 </div>
               )}
@@ -265,7 +267,7 @@ export const SyncStatusWidget = () => {
               <div className="flex gap-1.5">
                 {isFinished ? (
                   <Button size="sm" className="flex-1 h-7 text-xs" onClick={() => setIsSummaryOpen(true)}>
-                    <Info className="mr-1.5 h-3 w-3" />Summary
+                    <Info className="mr-1.5 h-3 w-3" />{t('sync.summary')}
                   </Button>
                 ) : (
                   <Button
@@ -276,7 +278,7 @@ export const SyncStatusWidget = () => {
                     disabled={isAborting}
                   >
                     {isAborting ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <XCircle className="mr-1.5 h-3 w-3" />}
-                    Abort
+                    {t('sync.abort')}
                   </Button>
                 )}
                 <Button
@@ -314,7 +316,7 @@ export const SyncStatusWidget = () => {
                         <span className="text-zinc-600">{devLogs.length} entries</span>
                       </div>
                       {devLogs.length === 0 ? (
-                        <p className="text-zinc-600">Waiting for sync events...</p>
+                        <p className="text-zinc-600">{t('sync.waiting')}</p>
                       ) : (
                         devLogs.map((log, i) => (
                           <div key={i} className={`py-0.5 ${i === 0 ? 'text-zinc-200' : 'text-zinc-500'}`}>

@@ -2,17 +2,19 @@ import { NavLink } from "react-router-dom";
 import { Home, Package, ShoppingBag, Archive, Settings } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 const navItems = [
-  { to: "/", icon: Home, label: "Home" },
-  { to: "/products", icon: Package, label: "Products" },
-  { to: "/out-of-stock", icon: Archive, label: "Out of Stock" },
-  { to: "/orders", icon: ShoppingBag, label: "Orders" },
-  { to: "/settings", icon: Settings, label: "Settings" },
+  { to: "/", icon: Home, labelKey: "nav.dashboard" },
+  { to: "/products", icon: Package, labelKey: "nav.products" },
+  { to: "/out-of-stock", icon: Archive, labelKey: "nav.stock" },
+  { to: "/orders", icon: ShoppingBag, labelKey: "nav.orders" },
+  { to: "/settings", icon: Settings, labelKey: "nav.settings" },
 ];
 
 const BottomNav = () => {
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
 
   if (!isMobile) {
     return null;
@@ -34,7 +36,7 @@ const BottomNav = () => {
               }
             >
               <item.icon className="h-6 w-6" />
-              <span className="text-xs mt-1">{item.label}</span>
+              <span className="text-xs mt-1">{t(item.labelKey)}</span>
             </NavLink>
           ))}
         </div>

@@ -126,7 +126,7 @@ const DashboardLayout = () => {
       <Sidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
       <Header title={title} />
       <main
-        className="absolute inset-0 overflow-y-auto px-4 md:px-6 md:pb-4 transition-all duration-300 pt-20"
+        className="absolute inset-0 overflow-y-auto md:px-6 md:pb-4 transition-all duration-300 pt-24"
         style={{ paddingLeft: `calc(var(--sidebar-width) + 1.8rem)` }}
       >
         {content}

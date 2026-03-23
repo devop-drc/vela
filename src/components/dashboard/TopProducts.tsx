@@ -5,6 +5,7 @@ import { Skeleton } from "../ui/skeleton";
 import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency, formatLargeNumber } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface TopProduct {
   product_id: string;
@@ -24,6 +25,7 @@ const RANK_CONFIG = [
 ];
 
 export const TopProducts = () => {
+  const { t } = useTranslation();
   const [products, setProducts] = useState<TopProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { shopDetails, convertCurrency } = useShop();
@@ -83,7 +85,7 @@ export const TopProducts = () => {
   return (
     <Card className="shadow-sm border border-border/60">
       <CardHeader className="pb-3">
-        <CardDescription className="text-sm">Best-selling products by units sold.</CardDescription>
+        <CardDescription className="text-sm">{t("dashboard.best_selling")}</CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
         {isLoading ? (
@@ -101,7 +103,7 @@ export const TopProducts = () => {
             ))}
           </div>
         ) : products.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">No sales data yet.</p>
+          <p className="text-sm text-muted-foreground text-center py-6">{t("dashboard.no_sales_data")}</p>
         ) : (
           <ol className="space-y-2">
             {products.map((product, index) => {
@@ -151,7 +153,7 @@ export const TopProducts = () => {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm leading-tight truncate">{product.name}</p>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                      {product.category ?? 'Uncategorized'}
+                      {product.category ?? t("dashboard.uncategorized")}
                     </p>
                   </div>
 
@@ -159,7 +161,7 @@ export const TopProducts = () => {
                   <div className="text-right flex-shrink-0 space-y-0.5">
                     <p className="text-sm font-semibold tabular-nums">{revenueDisplay}</p>
                     <p className="text-xs text-muted-foreground tabular-nums">
-                      {formatLargeNumber(product.total_sold)} sold
+                      {formatLargeNumber(product.total_sold)} {t("dashboard.sold")}
                     </p>
                   </div>
                 </li>

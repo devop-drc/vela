@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Trash2, Check, X } from "lucide-react";
 import { Keyword } from "@/pages/Keywords";
+import { useTranslation } from "react-i18next";
 
 interface KeywordsTableProps {
   keywords: Keyword[];
@@ -18,6 +19,7 @@ interface EditState {
 }
 
 export const KeywordsTable = ({ keywords, onInlineUpdate, onDelete }: KeywordsTableProps) => {
+  const { t } = useTranslation();
   const [editState, setEditState] = useState<EditState | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -57,9 +59,9 @@ export const KeywordsTable = ({ keywords, onInlineUpdate, onDelete }: KeywordsTa
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[180px]">Keyword</TableHead>
-          <TableHead>Description (How the AI uses it)</TableHead>
-          <TableHead className="text-right w-[80px]">Actions</TableHead>
+          <TableHead className="w-[180px]">{t("keywords.keyword_col")}</TableHead>
+          <TableHead>{t("keywords.description_col")}</TableHead>
+          <TableHead className="text-right w-[80px]">{t("promotions.actions")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -91,7 +93,7 @@ export const KeywordsTable = ({ keywords, onInlineUpdate, onDelete }: KeywordsTa
                   ) : (
                     <span
                       className="font-mono text-sm bg-muted px-1.5 py-0.5 rounded cursor-pointer hover:bg-muted/80 transition-colors"
-                      title="Click to edit"
+                      title={t("keywords.click_to_edit")}
                       onClick={() => startEdit(kw, "keyword")}
                     >
                       {kw.keyword}
@@ -120,7 +122,7 @@ export const KeywordsTable = ({ keywords, onInlineUpdate, onDelete }: KeywordsTa
                   ) : (
                     <span
                       className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
-                      title="Click to edit"
+                      title={t("keywords.click_to_edit")}
                       onClick={() => startEdit(kw, "description")}
                     >
                       {kw.description}
@@ -145,7 +147,7 @@ export const KeywordsTable = ({ keywords, onInlineUpdate, onDelete }: KeywordsTa
         ) : (
           <TableRow>
             <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
-              No keywords added yet. Add one above or pick from the suggestions.
+              {t("keywords.no_keywords_table")}
             </TableCell>
           </TableRow>
         )}

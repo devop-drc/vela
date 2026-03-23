@@ -8,19 +8,21 @@ import { usePageTitle } from "@/contexts/PageTitleContext";
 import { User, Store, Palette } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 const tabs = [
-  { id: "account", label: "Account", icon: User, color: "text-blue-600" },
-  { id: "shop", label: "Shop", icon: Store, color: "text-emerald-600" },
-  { id: "appearance", label: "Appearance", icon: Palette, color: "text-violet-600" },
+  { id: "account", labelKey: "settings.account", icon: User, color: "text-blue-600" },
+  { id: "shop", labelKey: "settings.shop", icon: Store, color: "text-emerald-600" },
+  { id: "appearance", labelKey: "settings.appearance", icon: Palette, color: "text-violet-600" },
 ] as const;
 
 export default function Settings() {
   const { setTitle } = usePageTitle();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "account";
+  const { t } = useTranslation();
 
-  useEffect(() => { setTitle("Settings"); }, [setTitle]);
+  useEffect(() => { setTitle(t("nav.settings")); }, [setTitle, t]);
 
   useEffect(() => {
     const err = searchParams.get("integration_error");
@@ -44,7 +46,7 @@ export default function Settings() {
                 className="flex items-center gap-2 data-[state=active]:shadow-sm h-10"
               >
                 <Icon className={cn("h-4 w-4", isActive ? tab.color : "text-muted-foreground")} />
-                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="hidden sm:inline">{t(tab.labelKey)}</span>
               </TabsTrigger>
             );
           })}

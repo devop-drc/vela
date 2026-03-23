@@ -13,6 +13,7 @@ import { Facebook, ExternalLink, Languages, Bell, Trash2, User, Mail, Phone, Che
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { IntegrationSettings } from './IntegrationSettings';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from "react-i18next";
 
 const PreferenceRow = ({ id, title, description, defaultChecked = false }: { id: string, title: string, description: string, defaultChecked?: boolean }) => (
   <div className="flex items-center justify-between p-3 border rounded-lg">
@@ -31,6 +32,7 @@ export const AccountSettings = () => {
   const [facebookId, setFacebookId] = useState<string | null>(null);
   const [integration, setIntegration] = useState<any | null>(null);
   const [searchParams] = useSearchParams();
+  const { t, i18n } = useTranslation();
 
   const fetchUserAndProfile = async () => {
     setIsLoading(true);
@@ -81,7 +83,7 @@ export const AccountSettings = () => {
     );
   }
 
-  const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'No name set';
+  const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || t("settings.no_name");
   const avatarSrc = profile?.avatar_url || user?.user_metadata?.avatar_url;
   const initials = (profile?.first_name?.[0] || user?.user_metadata?.first_name?.[0] || '?').toUpperCase();
 
@@ -114,7 +116,7 @@ export const AccountSettings = () => {
                 {integration ? (
                   <Badge variant="secondary" className="gap-1.5 text-emerald-600 border-emerald-200 bg-emerald-50 dark:bg-emerald-950 dark:border-emerald-800">
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    Connected to Instagram
+                    {t("settings.connected_ig")}
                     {integration.metadata?.username && (
                       <span className="text-muted-foreground font-normal">· @{integration.metadata.username}</span>
                     )}
@@ -122,7 +124,7 @@ export const AccountSettings = () => {
                 ) : (
                   <Badge variant="outline" className="gap-1.5 text-muted-foreground">
                     <XCircle className="h-3.5 w-3.5" />
-                    Instagram not connected
+                    {t("settings.not_connected_ig")}
                   </Badge>
                 )}
               </div>
@@ -132,13 +134,13 @@ export const AccountSettings = () => {
           {facebookId && (
             <Alert className="mt-5">
               <Facebook className="h-4 w-4" />
-              <AlertTitle>Synced from Facebook</AlertTitle>
+              <AlertTitle>{t("settings.synced_fb")}</AlertTitle>
               <AlertDescription className="flex items-center justify-between flex-wrap gap-2">
-                <span>Some profile details may be synced from your connected Facebook account.</span>
+                <span>{t("settings.synced_fb_desc")}</span>
                 <Button asChild variant="outline" size="sm">
                   <a href={`https://facebook.com/${facebookId}`} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="mr-2 h-4 w-4" />
-                    View on Facebook
+                    {t("settings.view_fb")}
                   </a>
                 </Button>
               </AlertDescription>
@@ -150,26 +152,26 @@ export const AccountSettings = () => {
       {/* Profile fields — read-only info */}
       <Card>
         <CardHeader>
-          <CardTitle>Profile Details</CardTitle>
-          <CardDescription>Your personal information on this account.</CardDescription>
+          <CardTitle>{t("settings.profile_details")}</CardTitle>
+          <CardDescription>{t("settings.profile_desc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1 p-3 rounded-lg bg-muted/50">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> First Name</Label>
-              <p className="font-medium">{profile?.first_name || <span className="text-muted-foreground italic">Not set</span>}</p>
+              <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> {t("settings.first_name")}</Label>
+              <p className="font-medium">{profile?.first_name || <span className="text-muted-foreground italic">{t("settings.not_set")}</span>}</p>
             </div>
             <div className="space-y-1 p-3 rounded-lg bg-muted/50">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> Last Name</Label>
-              <p className="font-medium">{profile?.last_name || <span className="text-muted-foreground italic">Not set</span>}</p>
+              <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> {t("settings.last_name")}</Label>
+              <p className="font-medium">{profile?.last_name || <span className="text-muted-foreground italic">{t("settings.not_set")}</span>}</p>
             </div>
             <div className="space-y-1 p-3 rounded-lg bg-muted/50">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> Email</Label>
+              <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> {t("settings.email")}</Label>
               <p className="font-medium">{user?.email}</p>
             </div>
             <div className="space-y-1 p-3 rounded-lg bg-muted/50">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> Phone</Label>
-              <p className="font-medium">{profile?.phone_number || <span className="text-muted-foreground italic">Not set</span>}</p>
+              <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> {t("settings.phone")}</Label>
+              <p className="font-medium">{profile?.phone_number || <span className="text-muted-foreground italic">{t("settings.not_set")}</span>}</p>
             </div>
           </div>
         </CardContent>
@@ -182,14 +184,14 @@ export const AccountSettings = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Preferences</CardTitle>
-            <CardDescription>Customize your dashboard experience.</CardDescription>
+            <CardTitle>{t("settings.preferences")}</CardTitle>
+            <CardDescription>{t("settings.preferences_desc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label className="flex items-center gap-2"><Languages className="h-4 w-4" /> Language</Label>
-              <Select defaultValue="en">
-                <SelectTrigger><SelectValue placeholder="Select language" /></SelectTrigger>
+              <Label className="flex items-center gap-2"><Languages className="h-4 w-4" /> {t("settings.language")}</Label>
+              <Select value={i18n.language} onValueChange={(v) => i18n.changeLanguage(v)}>
+                <SelectTrigger><SelectValue placeholder={t("settings.select_language")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="en">English</SelectItem>
                   <SelectItem value="sq">Albanian (Shqip)</SelectItem>
@@ -197,10 +199,10 @@ export const AccountSettings = () => {
               </Select>
             </div>
             <div className="space-y-4">
-              <h3 className="font-medium text-sm flex items-center gap-2"><Bell className="h-4 w-4" /> Email Notifications</h3>
+              <h3 className="font-medium text-sm flex items-center gap-2"><Bell className="h-4 w-4" /> {t("settings.email_notif")}</h3>
               <div className="space-y-3">
-                <PreferenceRow id="new-sale" title="New Sale" description="Get an email every time you make a sale." />
-                <PreferenceRow id="weekly-summary" title="Weekly Summary" description="Receive a summary of your weekly performance." defaultChecked />
+                <PreferenceRow id="new-sale" title={t("settings.new_sale_notif")} description={t("settings.new_sale_notif_desc")} />
+                <PreferenceRow id="weekly-summary" title={t("settings.weekly_summary")} description={t("settings.weekly_summary_desc")} defaultChecked />
               </div>
             </div>
           </CardContent>
@@ -209,13 +211,13 @@ export const AccountSettings = () => {
         <Card className="border-destructive">
           <CardHeader>
             <CardTitle className="text-destructive flex items-center gap-2">
-              <Trash2 className="h-5 w-5" /> Danger Zone
+              <Trash2 className="h-5 w-5" /> {t("settings.danger_zone")}
             </CardTitle>
-            <CardDescription>Irreversible account actions.</CardDescription>
+            <CardDescription>{t("settings.danger_desc")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="destructive" className="w-full">Delete Account</Button>
-            <p className="text-xs text-muted-foreground mt-2">This action is permanent and cannot be undone.</p>
+            <Button variant="destructive" className="w-full">{t("settings.delete_account")}</Button>
+            <p className="text-xs text-muted-foreground mt-2">{t("settings.delete_warning")}</p>
           </CardContent>
         </Card>
       </div>

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { FilterState } from "@/hooks/useProductFilters";
+import { useTranslation } from "react-i18next";
 
 interface ProductFilterPanelProps {
   allCategories: string[];
@@ -35,6 +36,7 @@ export const ProductFilterPanel = ({
   handleToggleFilter, handleToggleStatusFilter, handleClearSection,
   handleResetAllFilters, handlePriceRangeChange, hasActiveFilters, onClose,
 }: ProductFilterPanelProps) => {
+  const { t } = useTranslation();
   const { shopDetails } = useShop();
   const currency = shopDetails?.currency || 'USD';
 
@@ -58,7 +60,7 @@ export const ProductFilterPanel = ({
       <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30 shrink-0">
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold">Filters</span>
+          <span className="text-sm font-semibold">{t("common.filters")}</span>
           {activeFilterCount > 0 && (
             <span className="h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">
               {activeFilterCount}
@@ -67,7 +69,7 @@ export const ProductFilterPanel = ({
         </div>
         <div className="flex items-center gap-1">
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={handleResetAllFilters} className="h-6 text-xs px-2">Clear all</Button>
+            <Button variant="ghost" size="sm" onClick={handleResetAllFilters} className="h-6 text-xs px-2">{t("common.clear_all")}</Button>
           )}
           <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6"><X className="h-3.5 w-3.5" /></Button>
         </div>
@@ -77,7 +79,7 @@ export const ProductFilterPanel = ({
         <div className="p-4 space-y-5">
 
           {/* Status — toggle pills */}
-          <Section icon={CircleDot} title="Status" active={isSectionActive("status")} onClear={() => handleClearSection("status")}>
+          <Section icon={CircleDot} title={t("products.status")} active={isSectionActive("status")} onClear={() => handleClearSection("status")}>
             <div className="flex flex-wrap gap-1.5">
               {statusConfig.map(({ value, color, activeClass }) => {
                 const isOn = statusFilter.includes(value);
@@ -100,7 +102,7 @@ export const ProductFilterPanel = ({
 
           {/* Categories — toggle pills */}
           {allCategories.length > 0 && (
-            <Section icon={Layers} title="Categories" active={isSectionActive("categories")} onClear={() => handleClearSection("categories")}>
+            <Section icon={Layers} title={t("products.categories")} active={isSectionActive("categories")} onClear={() => handleClearSection("categories")}>
               <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
                 {allCategories.map((cat) => {
                   const isOn = filters.categories.includes(cat);
@@ -124,7 +126,7 @@ export const ProductFilterPanel = ({
           )}
 
           {/* Price Range — dual slider */}
-          <Section icon={DollarSign} title="Price" active={isSectionActive("priceRange")} onClear={() => handleClearSection("priceRange")}>
+          <Section icon={DollarSign} title={t("products.price_range")} active={isSectionActive("priceRange")} onClear={() => handleClearSection("priceRange")}>
             <div className="space-y-3 px-1">
               <Slider
                 min={0}
@@ -143,7 +145,7 @@ export const ProductFilterPanel = ({
 
           {/* Tags — toggle pills */}
           {allTags.length > 0 && (
-            <Section icon={Tag} title="Tags" active={isSectionActive("tags")} onClear={() => handleClearSection("tags")}>
+            <Section icon={Tag} title={t("products.tags")} active={isSectionActive("tags")} onClear={() => handleClearSection("tags")}>
               <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
                 {allTags.map((tag) => {
                   const isOn = (filters.tags as string[]).includes(tag);

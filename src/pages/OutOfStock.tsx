@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -64,21 +65,22 @@ const getTotalStock = (variants: VariantRow[]): number =>
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
 const StatusBadge = ({ status }: { status: "in-stock" | "low-stock" | "out-of-stock" }) => {
+  const { t } = useTranslation();
   if (status === "out-of-stock")
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600">
-        <XCircle className="h-3.5 w-3.5" /> Out of Stock
+        <XCircle className="h-3.5 w-3.5" /> {t("common.out_of_stock")}
       </span>
     );
   if (status === "low-stock")
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
-        <AlertTriangle className="h-3.5 w-3.5" /> Low Stock
+        <AlertTriangle className="h-3.5 w-3.5" /> {t("common.low_stock")}
       </span>
     );
   return (
     <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
-      <CheckCircle2 className="h-3.5 w-3.5" /> In Stock
+      <CheckCircle2 className="h-3.5 w-3.5" /> {t("common.in_stock")}
     </span>
   );
 };
@@ -156,7 +158,7 @@ const VariantSubRow = ({ variant, isSelected, onSelect, onStockChange }: Variant
             {variant.sku}
           </span>
         ) : (
-          <span className="text-xs text-muted-foreground italic">Default variant</span>
+          <span className="text-xs text-muted-foreground italic">{t("stock.default_variant")}</span>
         )}
         {variant.sku && optionEntries.length > 0 && (
           <span className="text-xs text-muted-foreground/60 flex items-center gap-0.5 ml-1">
@@ -210,6 +212,7 @@ const ProductAccordionRow = ({
   variantCache,
   stockFilterForProduct,
 }: ProductAccordionRowProps) => {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [localVariants, setLocalVariants] = useState<VariantRow[]>([]);
@@ -359,7 +362,7 @@ const ProductAccordionRow = ({
         {hasVariants && (
           <span className="hidden sm:inline-flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
             <Layers className="h-3.5 w-3.5" />
-            {variantCache[product.id]?.length ?? "…"} variants
+            {variantCache[product.id]?.length ?? "…"} {t("stock.variants")}
           </span>
         )}
 
@@ -393,7 +396,7 @@ const ProductAccordionRow = ({
                   className="h-7 text-xs px-2.5"
                   onClick={(e) => { e.stopPropagation(); setQuickMode("set"); }}
                 >
-                  Set all
+                  {t("stock.set_all")}
                 </Button>
                 <Button
                   size="sm"
@@ -401,7 +404,7 @@ const ProductAccordionRow = ({
                   className="h-7 text-xs px-2.5"
                   onClick={(e) => { e.stopPropagation(); setQuickMode("add"); }}
                 >
-                  Add to all
+                  {t("stock.add_to_all")}
                 </Button>
               </div>
               <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -429,7 +432,7 @@ const ProductAccordionRow = ({
                     applyToAll(quickMode, quickMode === "set" ? setAllValue : addAllValue);
                   }}
                 >
-                  Apply
+                  {t("common.apply")}
                 </Button>
               </div>
             </div>
@@ -444,7 +447,7 @@ const ProductAccordionRow = ({
             ) : localVariants.length === 0 ? (
               <div className="flex items-center gap-3 px-4 py-3 bg-muted/20">
                 <div className="pl-8 flex-1 min-w-0">
-                  <span className="text-sm text-muted-foreground">Base product stock (no variants)</span>
+                  <span className="text-sm text-muted-foreground">{t("stock.base_stock")}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-medium tabular-nums w-12 text-right">{product.inventory ?? 0}</span>
@@ -473,6 +476,7 @@ const ProductAccordionRow = ({
 
 const OutOfStock = () => {
   const { setTitle } = usePageTitle();
+  const { t } = useTranslation();
   const { allProducts, allCategories, isLoading } = useProductData() as any;
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -491,8 +495,8 @@ const OutOfStock = () => {
   const [bulkSaving, setBulkSaving] = useState(false);
 
   useEffect(() => {
-    setTitle("Stock Management");
-  }, [setTitle]);
+    setTitle(t("stock.title"));
+  }, [setTitle, t]);
 
   // Pre-fetch variant stock summaries for ALL products on load
   useEffect(() => {
@@ -663,10 +667,10 @@ const OutOfStock = () => {
   };
 
   const stockFilterLabels: Record<StockFilter, string> = {
-    all: "All",
-    "in-stock": "In Stock",
-    "low-stock": "Low Stock",
-    "out-of-stock": "Out of Stock",
+    all: t("common.all"),
+    "in-stock": t("common.in_stock"),
+    "low-stock": t("common.low_stock"),
+    "out-of-stock": t("common.out_of_stock"),
   };
 
   return (
@@ -675,11 +679,11 @@ const OutOfStock = () => {
         {/* Stats Bar */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
-            { label: "Total Products", value: stats.total, color: "text-foreground" },
-            { label: "In Stock", value: stats.inStock, color: "text-green-600" },
-            { label: "Low Stock", value: stats.lowStock, color: "text-amber-600" },
-            { label: "Out of Stock", value: stats.outOfStock, color: "text-red-600" },
-            { label: "Total Units", value: stats.totalUnits.toLocaleString(), color: "text-foreground" },
+            { label: t("stock.total_products"), value: stats.total, color: "text-foreground" },
+            { label: t("common.in_stock"), value: stats.inStock, color: "text-green-600" },
+            { label: t("common.low_stock"), value: stats.lowStock, color: "text-amber-600" },
+            { label: t("common.out_of_stock"), value: stats.outOfStock, color: "text-red-600" },
+            { label: t("stock.total_units"), value: stats.totalUnits.toLocaleString(), color: "text-foreground" },
           ].map((stat) => (
             <Card key={stat.label} className="py-3 px-4 shadow-sm">
               <div className={cn("text-2xl font-bold", stat.color)}>{stat.value}</div>
@@ -693,7 +697,7 @@ const OutOfStock = () => {
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search products..."
+              placeholder={t("stock.search_products")}
               className="pl-10 shadow-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -715,10 +719,10 @@ const OutOfStock = () => {
 
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="w-[160px] shadow-sm">
-              <SelectValue placeholder="Category" />
+              <SelectValue placeholder={t("stock.category")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="all">{t("stock.all_categories")}</SelectItem>
               {allCategories.map((cat: string) => (
                 <SelectItem key={cat} value={cat}>{cat}</SelectItem>
               ))}
@@ -731,9 +735,9 @@ const OutOfStock = () => {
           {/* Table header */}
           <div className="flex items-center gap-3 px-4 py-2.5 border-b bg-muted/40 text-xs font-medium text-muted-foreground">
             <div className="w-4 flex-shrink-0" /> {/* chevron space */}
-            <div className="flex-1">Product</div>
-            <div className="hidden sm:block flex-shrink-0 w-20 text-right">Total Stock</div>
-            <div className="hidden sm:block flex-shrink-0 w-28">Status</div>
+            <div className="flex-1">{t("stock.product")}</div>
+            <div className="hidden sm:block flex-shrink-0 w-20 text-right">{t("stock.total_stock")}</div>
+            <div className="hidden sm:block flex-shrink-0 w-28">{t("products.status")}</div>
           </div>
 
           <CardContent className="p-0">
@@ -746,7 +750,7 @@ const OutOfStock = () => {
             ) : filteredProducts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
                 <Package className="h-10 w-10 opacity-30" />
-                <p className="text-sm">No products match your filters.</p>
+                <p className="text-sm">{t("products.no_match")}</p>
               </div>
             ) : (
               filteredProducts.map((product: any) => (
@@ -776,7 +780,7 @@ const OutOfStock = () => {
             className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-background/80 backdrop-blur-[20px] border rounded-lg shadow-2xl p-2 flex items-center gap-2 flex-wrap"
           >
             <span className="text-sm font-medium px-2 whitespace-nowrap">
-              {selectedVariantIds.size} variant{selectedVariantIds.size !== 1 ? "s" : ""} selected
+              {selectedVariantIds.size} {t("stock.variants")} {t("stock.selected_lc")}
             </span>
 
             {/* Mode buttons */}
@@ -789,7 +793,7 @@ const OutOfStock = () => {
                   className="h-8 text-xs"
                   onClick={() => setBulkMode(m)}
                 >
-                  {m === "set" ? "Set to" : m === "add" ? "Add" : "Zero out"}
+                  {m === "set" ? t("stock.set_to") : m === "add" ? t("common.add") : t("stock.zero_out")}
                 </Button>
               ))}
             </div>
@@ -819,7 +823,7 @@ const OutOfStock = () => {
               ) : (
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
               )}
-              Apply
+              {t("common.apply")}
             </Button>
 
             <Button

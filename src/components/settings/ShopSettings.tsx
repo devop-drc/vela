@@ -14,6 +14,7 @@ import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { showSuccess, showError } from '@/utils/toast';
 import { currencies } from '@/lib/currencies';
+import { useTranslation } from "react-i18next";
 
 const InfoRow = ({ icon: Icon, label, value, link }: { icon: React.ElementType, label: string, value: React.ReactNode, link?: string }) => (
   <div className="flex items-start gap-3">
@@ -33,6 +34,7 @@ const InfoRow = ({ icon: Icon, label, value, link }: { icon: React.ElementType, 
 
 export const ShopSettings = () => {
   const { shopDetails, updateShopDetails, isLoading: isContextLoading, exchangeRates } = useShop();
+  const { t } = useTranslation();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [syncedData, setSyncedData] = useState<any>(null);
 
@@ -120,14 +122,14 @@ export const ShopSettings = () => {
               <Store className="h-5 w-5 text-primary" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-medium text-muted-foreground">Your storefront URL</p>
+              <p className="text-xs font-medium text-muted-foreground">{t("settings.storefront_url")}</p>
               <p className="font-medium text-sm truncate">{shopUrl}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <Button variant="outline" size="sm" onClick={handleCopyShopUrl}>
               <Copy className="mr-2 h-4 w-4" />
-              Copy
+              {t("settings.copy")}
             </Button>
             <Button variant="outline" size="icon" asChild>
               <a href={shopUrl} target="_blank" rel="noopener noreferrer" title="Open storefront">
@@ -144,31 +146,31 @@ export const ShopSettings = () => {
           <form onSubmit={handleSubmit(onSubmit)}>
             <Card>
               <CardHeader>
-                <CardTitle>Shop Details</CardTitle>
-                <CardDescription>This information is displayed on your storefront and in communications.</CardDescription>
+                <CardTitle>{t("settings.shop_details")}</CardTitle>
+                <CardDescription>{t("settings.shop_details_desc")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="shop_name" className="flex items-center gap-2"><Store className="h-4 w-4" /> Shop Name</Label>
+                    <Label htmlFor="shop_name" className="flex items-center gap-2"><Store className="h-4 w-4" /> {t("settings.shop_name")}</Label>
                     <Input id="shop_name" {...register('shop_name')} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="headline" className="flex items-center gap-2"><Type className="h-4 w-4" /> Headline</Label>
+                    <Label htmlFor="headline" className="flex items-center gap-2"><Type className="h-4 w-4" /> {t("settings.headline")}</Label>
                     <Input id="headline" {...register('headline')} placeholder="e.g., Handcrafted Leather Goods" />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="about" className="flex items-center gap-2"><Info className="h-4 w-4" /> About Section</Label>
+                  <Label htmlFor="about" className="flex items-center gap-2"><Info className="h-4 w-4" /> {t("settings.about_section")}</Label>
                   <Textarea id="about" {...register('about')} rows={4} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="contact_email" className="flex items-center gap-2"><Mail className="h-4 w-4" /> Public Contact Email</Label>
+                    <Label htmlFor="contact_email" className="flex items-center gap-2"><Mail className="h-4 w-4" /> {t("settings.contact_email")}</Label>
                     <Input id="contact_email" type="email" {...register('contact_email')} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="currency" className="flex items-center gap-2"><DollarSign className="h-4 w-4" /> Default Currency</Label>
+                    <Label htmlFor="currency" className="flex items-center gap-2"><DollarSign className="h-4 w-4" /> {t("settings.default_currency")}</Label>
                     <div className="flex gap-2">
                       {selectedCurrencyMeta && (
                         <div className="flex items-center justify-center w-10 h-10 rounded-md border bg-muted text-sm font-semibold flex-shrink-0">
@@ -180,7 +182,7 @@ export const ShopSettings = () => {
                         control={control}
                         render={({ field }) => (
                           <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger className="flex-1"><SelectValue placeholder="Select currency..." /></SelectTrigger>
+                            <SelectTrigger className="flex-1"><SelectValue placeholder={t("settings.select_currency")} /></SelectTrigger>
                             <SelectContent>
                               {currencies.map(c => (
                                 <SelectItem key={c.code} value={c.code}>
@@ -206,7 +208,7 @@ export const ShopSettings = () => {
               <CardFooter className="border-t pt-6 justify-end">
                 <Button type="submit" disabled={isSubmitting || !isDirty}>
                   {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  Save Changes
+                  {t("settings.save_changes")}
                 </Button>
               </CardFooter>
             </Card>
@@ -221,7 +223,7 @@ export const ShopSettings = () => {
                 <CardTitle className="flex items-center gap-2">
                   <Instagram className="h-4 w-4" /> Instagram
                 </CardTitle>
-                <CardDescription>Synced data — read only.</CardDescription>
+                <CardDescription>{t("settings.synced_readonly")}</CardDescription>
               </div>
               <Button variant="outline" size="icon" onClick={fetchSyncedDetails} disabled={isRefreshing} className="flex-shrink-0">
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -239,20 +241,20 @@ export const ShopSettings = () => {
                 </div>
               </div>
               <div className="space-y-3">
-                <InfoRow icon={Users} label="Followers" value={syncedData?.followers_count?.toLocaleString()} />
-                <InfoRow icon={ImageIcon} label="Posts" value={syncedData?.media_count?.toLocaleString()} />
+                <InfoRow icon={Users} label={t("dashboard.followers")} value={syncedData?.followers_count?.toLocaleString()} />
+                <InfoRow icon={ImageIcon} label={t("dashboard.posts")} value={syncedData?.media_count?.toLocaleString()} />
                 <InfoRow
                   icon={Instagram}
-                  label="Instagram Profile"
+                  label={t("settings.ig_profile")}
                   value={`@${syncedData?.username}`}
                   link={syncedData?.instagram_url}
                 />
               </div>
               <Alert>
                 <Instagram className="h-4 w-4" />
-                <AlertTitle>Read-Only</AlertTitle>
+                <AlertTitle>{t("settings.read_only")}</AlertTitle>
                 <AlertDescription>
-                  To update this info, make changes in your Instagram app, then click refresh.
+                  {t("settings.read_only_desc")}
                 </AlertDescription>
               </Alert>
             </CardContent>

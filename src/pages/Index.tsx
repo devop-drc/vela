@@ -14,6 +14,7 @@ import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { WelcomeHeader } from "@/components/dashboard/WelcomeHeader";
 import { useIntegration } from "@/contexts/IntegrationContext";
+import { useTranslation } from "react-i18next";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { DateRange } from "react-day-picker";
 import { subMonths, startOfMonth, endOfMonth, addDays, startOfDay, endOfDay } from "date-fns";
@@ -222,10 +223,11 @@ const Index = () => {
   const [granularity, setGranularity] = useState<'day' | 'month'>('month');
   const { data, isLoading: isDashboardDataLoading, fetchData } = useDashboardData(shopDetails, convertCurrency, dateRange, granularity);
   const { runWithIntegrationCheck } = useIntegration();
+  const { t } = useTranslation();
 
   useEffect(() => {
-    setTitle("Dashboard");
-  }, [setTitle]);
+    setTitle(t("nav.dashboard"));
+  }, [setTitle, t]);
 
   useEffect(() => {
     if (activeJob?.status === 'completed') {
@@ -293,7 +295,7 @@ const Index = () => {
   if (!data) {
     return (
       <div className="text-center py-10">
-        No data to display. Start by adding some products and orders!
+        {t("dashboard.no_data")}
       </div>
     );
   }
@@ -316,25 +318,25 @@ const Index = () => {
       <section>
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
           <StatCard
-            title="Total Revenue"
+            title={t("dashboard.total_revenue")}
             value={formatCurrency(data.totalRevenue, shopDetails?.currency)}
             icon={Banknote}
             color="emerald"
           />
           <StatCard
-            title="Sales"
+            title={t("dashboard.sales")}
             value={`${data.salesCount}`}
             icon={CreditCard}
             color="blue"
           />
           <StatCard
-            title="Active Products"
+            title={t("dashboard.active_products")}
             value={data.activeProducts.toString()}
             icon={Package}
             color="violet"
           />
           <StatCard
-            title="Total Customers"
+            title={t("dashboard.total_customers")}
             value={data.customers.toString()}
             icon={Users}
             color="amber"
@@ -345,11 +347,11 @@ const Index = () => {
       {/* Row 1: Shop Profile (left) + Top Sellers (right) — side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Star className="h-3.5 w-3.5" />Shop Profile</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Star className="h-3.5 w-3.5" />{t("dashboard.shop_profile")}</h2>
           <ProfileStats />
         </div>
         <div>
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Zap className="h-3.5 w-3.5" />Top Sellers</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Zap className="h-3.5 w-3.5" />{t("dashboard.top_sellers")}</h2>
           <TopProducts />
         </div>
       </div>
@@ -357,7 +359,7 @@ const Index = () => {
       {/* Row 2: Business Overview (left 2/3) + Live Activity (right 1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
         <div className="lg:col-span-2">
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><BarChart2 className="h-3.5 w-3.5" />Business Overview</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><BarChart2 className="h-3.5 w-3.5" />{t("dashboard.business_overview")}</h2>
           <OverviewChart
             data={data.chartData}
             dateRange={dateRange}
@@ -367,7 +369,7 @@ const Index = () => {
           />
         </div>
         <div className="lg:col-span-1">
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" />Live Activity</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" />{t("dashboard.live_activity")}</h2>
           <ActivityFeed />
         </div>
       </div>

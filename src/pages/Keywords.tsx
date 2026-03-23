@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { showError, showSuccess } from "@/utils/toast";
 import { KeywordEditorModal } from "@/components/KeywordEditorModal";
 import { KeywordsTable } from "@/components/KeywordsTable";
+import { useTranslation } from "react-i18next";
 
 export interface Keyword {
   id: string;
@@ -18,17 +19,18 @@ export interface Keyword {
 }
 
 const SUGGESTED_KEYWORDS = [
-  { keyword: "Çmimi", description: "Price in Albanian Lek" },
-  { keyword: "Ngjyra", description: "Color/colour of the product" },
-  { keyword: "Madhësia", description: "Size of the product" },
-  { keyword: "Materiali", description: "Material/fabric of the product" },
-  { keyword: "Sasia", description: "Available quantity/stock" },
-  { keyword: "Transporti", description: "Shipping/delivery information" },
-  { keyword: "Ref", description: "Reference or model number" },
+  { keyword: "Çmimi", descKey: "keywords.sug_price" },
+  { keyword: "Ngjyra", descKey: "keywords.sug_color" },
+  { keyword: "Madhësia", descKey: "keywords.sug_size" },
+  { keyword: "Materiali", descKey: "keywords.sug_material" },
+  { keyword: "Sasia", descKey: "keywords.sug_quantity" },
+  { keyword: "Transporti", descKey: "keywords.sug_shipping" },
+  { keyword: "Ref", descKey: "keywords.sug_ref" },
 ];
 
 const Keywords = () => {
   const { setTitle } = usePageTitle();
+  const { t } = useTranslation();
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -36,8 +38,8 @@ const Keywords = () => {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    setTitle("AI Keywords");
-  }, [setTitle]);
+    setTitle(t("keywords.title"));
+  }, [setTitle, t]);
 
   const fetchKeywords = async () => {
     setIsLoading(true);
@@ -87,7 +89,7 @@ const Keywords = () => {
     }
   };
 
-  const handleAddSuggestion = async (suggestion: { keyword: string; description: string }) => {
+  const handleAddSuggestion = async (suggestion: { keyword: string; descKey: string }) => {
     const alreadyExists = keywords.some(
       (k) => k.keyword.toLowerCase() === suggestion.keyword.toLowerCase()
     );
@@ -99,7 +101,7 @@ const Keywords = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { showError("You must be logged in."); return; }
 
-    const { error } = await supabase.from("keywords").insert({ ...suggestion, user_id: user.id });
+    const { error } = await supabase.from("keywords").insert({ keyword: suggestion.keyword, description: t(suggestion.descKey), user_id: user.id });
     if (error) {
       showError(`Failed to add keyword: ${error.message}`);
     } else {
@@ -131,21 +133,14 @@ const Keywords = () => {
         {/* Page header */}
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold">AI Keywords</h1>
+            <h1 className="text-2xl font-bold">{t("keywords.title")}</h1>
             <p className="text-muted-foreground max-w-2xl">
-              Keywords teach the AI to recognise patterns in Instagram captions and extract structured
-              product data automatically. For example:{" "}
-              <code className="bg-muted px-1 rounded text-xs font-mono">Mat:</code>{" "}
-              → "Material specification follows",{" "}
-              <code className="bg-muted px-1 rounded text-xs font-mono">Çm:</code>{" "}
-              → "Price in Albanian Lek follows",{" "}
-              <code className="bg-muted px-1 rounded text-xs font-mono">Nr:</code>{" "}
-              → "Reference/model number follows".
+              {t("keywords.description")}
             </p>
           </div>
           <Button onClick={() => setIsEditorOpen(true)} className="shrink-0">
             <PlusCircle className="mr-2 h-4 w-4" />
-            Add Keyword
+            {t("keywords.add_keyword")}
           </Button>
         </div>
 
@@ -155,10 +150,8 @@ const Keywords = () => {
             <Tag className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
               {keywords.length === 0
-                ? "No keywords defined yet"
-                : keywords.length === 1
-                ? "1 keyword defined"
-                : `${keywords.length} keywords defined`}
+                ? t("keywords.no_keywords")
+                : t("keywords.keywords_count", { count: keywords.length })}
             </span>
           </div>
         )}
@@ -169,10 +162,10 @@ const Keywords = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                <CardTitle className="text-base">Suggested Keywords</CardTitle>
+                <CardTitle className="text-base">{t("keywords.suggested")}</CardTitle>
               </div>
               <CardDescription>
-                Common Albanian/English abbreviations used in product captions. Click to add.
+                {t("keywords.suggested_desc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -182,11 +175,11 @@ const Keywords = () => {
                     key={s.keyword}
                     onClick={() => handleAddSuggestion(s)}
                     className="group flex items-center gap-1.5 rounded-full border bg-background px-3 py-1.5 text-sm hover:border-primary hover:bg-primary/5 transition-colors"
-                    title={s.description}
+                    title={t(s.descKey)}
                   >
                     <span className="font-mono font-medium">{s.keyword}</span>
                     <span className="text-muted-foreground text-xs group-hover:text-primary transition-colors">
-                      — {s.description}
+                      — {t(s.descKey)}
                     </span>
                     <PlusCircle className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors ml-0.5" />
                   </button>
@@ -201,17 +194,16 @@ const Keywords = () => {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <CardTitle>Your Keywords</CardTitle>
+                <CardTitle>{t("keywords.your_keywords")}</CardTitle>
                 <CardDescription>
-                  Click any keyword or description to edit it inline. The AI extracts the text
-                  following the keyword based on your description.
+                  {t("keywords.your_keywords_desc")}
                 </CardDescription>
               </div>
               {!isLoading && keywords.length > 0 && (
                 <div className="relative shrink-0 w-56">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <Input
-                    placeholder="Search keywords…"
+                    placeholder={t("keywords.search_keywords")}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pl-8 h-9 text-sm"
@@ -236,7 +228,7 @@ const Keywords = () => {
                 />
                 {search && filteredKeywords.length === 0 && (
                   <p className="text-center text-sm text-muted-foreground py-4">
-                    No keywords match <Badge variant="secondary">{search}</Badge>
+                    {t("keywords.no_match")} <Badge variant="secondary">{search}</Badge>
                   </p>
                 )}
               </>

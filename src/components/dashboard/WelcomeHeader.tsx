@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
 
 interface WelcomeHeaderProps {
   pendingOrders: number;
@@ -11,6 +12,7 @@ interface WelcomeHeaderProps {
 }
 
 export const WelcomeHeader = ({ pendingOrders, activeProducts, totalOrders = 0, isLoading }: WelcomeHeaderProps) => {
+  const { t } = useTranslation();
   const [firstName, setFirstName] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
@@ -41,14 +43,14 @@ export const WelcomeHeader = ({ pendingOrders, activeProducts, totalOrders = 0, 
   return (
     <div>
       <h1 className="text-3xl font-bold tracking-tight">
-        Welcome back{firstName ? `, ${firstName}` : ""} 👋
+        {t("dashboard.welcome")}{firstName ? `, ${firstName}` : ""} 👋
       </h1>
       <p className="text-muted-foreground mt-1">
         {todayLabel}
         {" · "}
-        <span className="font-medium text-foreground">{activeOrderCount} active order{activeOrderCount !== 1 ? 's' : ''}</span>
-        {" and "}
-        <span className="font-medium text-foreground">{activeProducts} product{activeProducts !== 1 ? 's' : ''}</span>
+        <span className="font-medium text-foreground">{activeOrderCount !== 1 ? t("dashboard.active_orders_plural", { count: activeOrderCount }) : t("dashboard.active_orders", { count: activeOrderCount })}</span>
+        {" " + t("dashboard.and") + " "}
+        <span className="font-medium text-foreground">{activeProducts !== 1 ? t("dashboard.products_count_plural", { count: activeProducts }) : t("dashboard.products_count", { count: activeProducts })}</span>
       </p>
     </div>
   );

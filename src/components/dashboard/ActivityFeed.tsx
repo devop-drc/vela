@@ -13,6 +13,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Badge } from "../ui/badge";
+import { useTranslation } from "react-i18next";
 
 type Activity = {
   id: string;
@@ -111,6 +112,7 @@ const relativeTime = (date: string) => {
 
 // ── main component ────────────────────────────────────────────────────────────
 export const ActivityFeed = () => {
+  const { t } = useTranslation();
   const [activities, setActivities]   = useState<Activity[]>([]);
   const [isLoading, setIsLoading]     = useState(true);
   const { shopDetails, convertCurrency } = useShop();
@@ -154,18 +156,18 @@ export const ActivityFeed = () => {
       const orderActivities: Activity[] = (ordersRes.data || []).map(order => {
         const amount = convertCurrency(order.total_amount, order.currency, shopDetails?.currency);
         if (order.status === 'Fulfilled' && order.payment_status === 'paid') {
-          return { id: order.id, type: 'sale', title: 'New Sale', description: `to ${order.customer_name}`, value: formatCurrency(amount, shopDetails?.currency), date: order.created_at, orderId: order.id };
+          return { id: order.id, type: 'sale', title: t('dashboard.new_sale'), description: `to ${order.customer_name}`, value: formatCurrency(amount, shopDetails?.currency), date: order.created_at, orderId: order.id };
         }
-        return { id: order.id, type: 'new_order', title: 'New Order', description: `from ${order.customer_name}`, value: formatCurrency(amount, shopDetails?.currency), date: order.created_at, orderId: order.id };
+        return { id: order.id, type: 'new_order', title: t('dashboard.new_order'), description: `from ${order.customer_name}`, value: formatCurrency(amount, shopDetails?.currency), date: order.created_at, orderId: order.id };
       });
 
       const productActivities: Activity[] = (productsRes.data || []).map(product => ({
-        id: product.id, type: 'product', title: 'New Product', description: product.name,
+        id: product.id, type: 'product', title: t('dashboard.new_product'), description: product.name,
         value: product.status, image: product.media_url, date: product.created_at,
       }));
 
       const disputeActivities: Activity[] = (disputesRes.data || []).map(dispute => ({
-        id: dispute.id, type: 'dispute', title: 'New Dispute', description: `Reason: ${dispute.reason}`,
+        id: dispute.id, type: 'dispute', title: t('dashboard.new_dispute'), description: `${t('dashboard.reason')}: ${dispute.reason}`,
         value: 'Open', date: dispute.created_at, disputeId: dispute.id, orderId: dispute.order_id,
       }));
 
@@ -179,13 +181,13 @@ export const ActivityFeed = () => {
       productsChannel = supabase.channel('dashboard-products-feed')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` }, (payload) => {
           const p = payload.new;
-          const a: Activity = { id: p.id, type: 'product', title: 'New Product', description: p.name, value: p.status, image: p.media_url, date: p.created_at };
+          const a: Activity = { id: p.id, type: 'product', title: t('dashboard.new_product'), description: p.name, value: p.status, image: p.media_url, date: p.created_at };
           if (isMounted) setActivities(prev => [a, ...prev].sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime()).slice(0, 20));
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` }, (payload) => {
           const oldP = payload.old as any; const newP = payload.new as any;
           if (oldP.status !== newP.status) {
-            const a: Activity = { id: `${newP.id}-${payload.commit_timestamp}`, type: 'product', title: 'Status Updated', description: newP.name, value: newP.status, image: newP.media_url, date: payload.commit_timestamp };
+            const a: Activity = { id: `${newP.id}-${payload.commit_timestamp}`, type: 'product', title: t('dashboard.status_updated'), description: newP.name, value: newP.status, image: newP.media_url, date: payload.commit_timestamp };
             if (isMounted) setActivities(prev => [a, ...prev].sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime()).slice(0, 20));
           }
         })
@@ -195,18 +197,18 @@ export const ActivityFeed = () => {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` }, (payload) => {
           const o = payload.new as any;
           const amount = convertCurrency(o.total_amount, o.currency, shopDetails?.currency);
-          const a: Activity = { id: o.id, type: 'new_order', title: 'New Order', description: `from ${o.customer_name}`, value: formatCurrency(amount, shopDetails?.currency), date: o.created_at, orderId: o.id };
+          const a: Activity = { id: o.id, type: 'new_order', title: t('dashboard.new_order'), description: `from ${o.customer_name}`, value: formatCurrency(amount, shopDetails?.currency), date: o.created_at, orderId: o.id };
           if (isMounted) setActivities(prev => [a, ...prev].sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime()).slice(0, 20));
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` }, (payload) => {
           const oldO = payload.old as any; const newO = payload.new as any;
           const amount = convertCurrency(newO.total_amount, newO.currency, shopDetails?.currency);
           if (oldO.status !== newO.status) {
-            const a: Activity = { id: `${newO.id}-${payload.commit_timestamp}-status-update`, type: 'order_status_update', title: 'Order Status Updated', description: `Order #${newO.id.substring(0, 8)} → ${newO.status}`, value: newO.status, date: payload.commit_timestamp, orderId: newO.id };
+            const a: Activity = { id: `${newO.id}-${payload.commit_timestamp}-status-update`, type: 'order_status_update', title: t('dashboard.order_status_updated'), description: `#${newO.id.substring(0, 8)} → ${newO.status}`, value: newO.status, date: payload.commit_timestamp, orderId: newO.id };
             if (isMounted) setActivities(prev => [a, ...prev].sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime()).slice(0, 20));
           }
           if (newO.status === 'Fulfilled' && newO.payment_status === 'paid' && (oldO.status !== 'Fulfilled' || oldO.payment_status !== 'paid')) {
-            const a: Activity = { id: `${newO.id}-${payload.commit_timestamp}-sale`, type: 'sale', title: 'Sale Fulfilled', description: `Order #${newO.id.substring(0, 8)} by ${newO.customer_name}`, value: formatCurrency(amount, shopDetails?.currency), date: payload.commit_timestamp, orderId: newO.id };
+            const a: Activity = { id: `${newO.id}-${payload.commit_timestamp}-sale`, type: 'sale', title: t('dashboard.sale_fulfilled'), description: `#${newO.id.substring(0, 8)} — ${newO.customer_name}`, value: formatCurrency(amount, shopDetails?.currency), date: payload.commit_timestamp, orderId: newO.id };
             if (isMounted) setActivities(prev => [a, ...prev].sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime()).slice(0, 20));
           }
         })
@@ -215,7 +217,7 @@ export const ActivityFeed = () => {
       disputesChannel = supabase.channel('dashboard-disputes-feed')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_disputes', filter: `orders.business_id=eq.${business.id}` }, (payload) => {
           const d = payload.new as any;
-          const a: Activity = { id: d.id, type: 'dispute', title: 'New Dispute', description: `Reason: ${d.reason}`, value: 'Open', date: d.created_at, disputeId: d.id, orderId: d.order_id };
+          const a: Activity = { id: d.id, type: 'dispute', title: t('dashboard.new_dispute'), description: `${t('dashboard.reason')}: ${d.reason}`, value: 'Open', date: d.created_at, disputeId: d.id, orderId: d.order_id };
           if (isMounted) setActivities(prev => [a, ...prev].sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime()).slice(0, 20));
         })
         .subscribe();
@@ -255,7 +257,7 @@ export const ActivityFeed = () => {
 
       <Card className="shadow-sm border border-border/60 h-full">
         <CardHeader className="pb-3">
-          <CardDescription className="text-sm">Click any event for details.</CardDescription>
+          <CardDescription className="text-sm">{t("dashboard.click_event")}</CardDescription>
         </CardHeader>
         <CardContent className="pt-0 px-4">
           <ScrollArea className="h-[74vh] pr-2">
@@ -328,7 +330,7 @@ export const ActivityFeed = () => {
                 </div>
               </AnimatePresence>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-10">No recent activity.</p>
+              <p className="text-sm text-muted-foreground text-center py-10">{t("notifications.no_activity")}</p>
             )}
           </ScrollArea>
         </CardContent>

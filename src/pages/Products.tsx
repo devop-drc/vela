@@ -34,6 +34,7 @@ import { ProductFilterPanel } from "@/components/products/ProductFilterPanel"; /
 import { FilterVisibilitySheet } from "@/components/dashboard/FilterVisibilitySheet";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useTranslation } from "react-i18next";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { Info, Tag as TagIcon, DollarSign, Layers, Monitor, Cpu, Gamepad, HardDrive, Baby, Package, Globe, Sparkles } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
@@ -87,6 +88,7 @@ const itemVariants = {
 
 const Products = () => {
   const { setTitle } = usePageTitle();
+  const { t } = useTranslation();
   const { runWithIntegrationCheck } = useIntegration();
   const { isSyncing, startNewSync } = useSync();
   const { settings } = useAppearance();
@@ -337,7 +339,7 @@ const Products = () => {
   
 
 
-  useEffect(() => { setTitle("Products"); }, [setTitle]);
+  useEffect(() => { setTitle(t("nav.products")); }, [setTitle, t]);
 
   useEffect(() => {
     if (searchParams.get("instagram_connected") === "true") {
@@ -607,7 +609,7 @@ const Products = () => {
         onUpdate={() => {}}
       />
       {isSaleModalOpen && <SaleModal isOpen={isSaleModalOpen} onClose={() => setIsSaleModalOpen(false)} onApply={handleApplySale} productCount={selectedProducts.length} />}
-      <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {selectedProducts.length} products?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{t("products.delete_confirm", { count: selectedProducts.length })}</AlertDialogTitle><AlertDialogDescription>{t("products.delete_warning")}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("products.yes_delete")}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
 
       {/* Product Filter Drawer (used on desktop and mobile) */}
       <ProductFilterDrawer
@@ -669,22 +671,22 @@ const Products = () => {
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/70 border border-border text-sm font-medium text-foreground shadow-sm">
             <Package className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="font-semibold">{statsTotal}</span>
-            <span className="text-muted-foreground">Total</span>
+            <span className="text-muted-foreground">{t("products.total")}</span>
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-sm font-medium text-emerald-700 dark:text-emerald-400 shadow-sm">
             <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
             <span className="font-semibold">{statsActive}</span>
-            <span className="opacity-80">Active</span>
+            <span className="opacity-80">{t("common.active")}</span>
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-sm font-medium text-amber-700 dark:text-amber-400 shadow-sm">
             <span className="h-2 w-2 rounded-full bg-amber-500 inline-block" />
             <span className="font-semibold">{statsDraft}</span>
-            <span className="opacity-80">Draft</span>
+            <span className="opacity-80">{t("common.draft")}</span>
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/25 text-sm font-medium text-red-700 dark:text-red-400 shadow-sm">
             <span className="h-2 w-2 rounded-full bg-red-500 inline-block" />
             <span className="font-semibold">{statsOos}</span>
-            <span className="opacity-80">Out of Stock</span>
+            <span className="opacity-80">{t("common.out_of_stock")}</span>
           </div>
         </div>
       )}
@@ -695,7 +697,7 @@ const Products = () => {
             {/* Filter Management Button */}
             <Button className="bg-primary text-primary-foreground border-none justify-start flex-1 md:flex-none hover:bg-primary/90 shadow-lg" onClick={() => setIsVisibilitySheetOpen(true)}>
               <List className="mr-2 h-4 w-4" />
-              Filter Management
+              {t("products.filter_management")}
             </Button>
 
             {/* Filter Button — toggles inline panel on desktop, opens drawer on mobile */}
@@ -711,22 +713,22 @@ const Products = () => {
               }}
             >
               <FilterIcon className="mr-2 h-4 w-4" />
-              Filters
-              {hasActiveFilters && <span className="ml-1 text-xs text-primary">(Active)</span>}
+              {t("common.filters")}
+              {hasActiveFilters && <span className="ml-1 text-xs text-primary">({t("common.active")})</span>}
             </Button>
 
             {/* Sort Select */}
             <Select value={sortOption} onValueChange={setSortOption}>
               <SelectTrigger className="w-full sm:w-[180px] shadow-lg">
-                <SelectValue placeholder="Sort by" />
+                <SelectValue placeholder={t("common.sort")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="oldest">Oldest</SelectItem>
-                <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                <SelectItem value="name-asc">Name: A-Z</SelectItem>
-                <SelectItem value="name-desc">Name: Z-A</SelectItem>
+                <SelectItem value="newest">{t("products.newest")}</SelectItem>
+                <SelectItem value="oldest">{t("products.oldest")}</SelectItem>
+                <SelectItem value="price-asc">{t("products.price_low_high")}</SelectItem>
+                <SelectItem value="price-desc">{t("products.price_high_low")}</SelectItem>
+                <SelectItem value="name-asc">{t("products.name_az")}</SelectItem>
+                <SelectItem value="name-desc">{t("products.name_za")}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -736,13 +738,13 @@ const Products = () => {
                 <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 'auto', opacity: 1 }} exit={{ width: 0, opacity: 0 }} className="flex items-center gap-2 overflow-visible">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="shadow-lg"><Group className="mr-2 h-4 w-4" />Group</Button>
+                      <Button variant="outline" className="shadow-lg"><Group className="mr-2 h-4 w-4" />{t("products.group")}</Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       <DropdownMenuRadioGroup value={grouping} onValueChange={(v) => setGrouping(v as GroupingType)}>
-                        <DropdownMenuRadioItem value="none">None</DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="category">By Category</DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="type">By Type</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="none">{t("common.none")}</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="category">{t("products.by_category")}</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="type">{t("products.by_type")}</DropdownMenuRadioItem>
                       </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -761,7 +763,7 @@ const Products = () => {
                       aria-label="Grid view"
                     >
                       <LayoutGrid className="h-4 w-4" />
-                      <span className="hidden lg:inline">Grid</span>
+                      <span className="hidden lg:inline">{t("products.grid")}</span>
                     </button>
                     <button
                       type="button"
@@ -775,7 +777,7 @@ const Products = () => {
                       aria-label="Table view"
                     >
                       <List className="h-4 w-4" />
-                      <span className="hidden lg:inline">Table</span>
+                      <span className="hidden lg:inline">{t("products.table")}</span>
                     </button>
                   </div>
 
@@ -786,7 +788,7 @@ const Products = () => {
                   )}
                   {viewMode === 'grid' && (
                     <Button variant={isSelectionModeActive ? "secondary" : "outline"} onClick={toggleSelectionMode} className="shadow-lg">
-                      <CheckSquare className="mr-2 h-4 w-4" />{isSelectionModeActive ? 'Cancel' : 'Select'}
+                      <CheckSquare className="mr-2 h-4 w-4" />{isSelectionModeActive ? t('common.cancel') : t('products.select')}
                     </Button>
                   )}
                 </motion.div>
@@ -803,8 +805,8 @@ const Products = () => {
               className="flex-1 md:flex-none border-foreground/20 text-foreground hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors"
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-              <span className="hidden sm:inline">Import</span>
-              <span className="sm:hidden">Import</span>
+              <span className="hidden sm:inline">{t("products.import")}</span>
+              <span className="sm:hidden">{t("products.import")}</span>
             </Button>
 
             {/* Sync buttons */}
@@ -818,7 +820,7 @@ const Products = () => {
                 className="flex-1 shadow-sm bg-red-600 text-white hover:bg-red-700 border-0"
               >
                 <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
-                Full Sync
+                {t("products.full_sync")}
               </Button>
             ) : (
               <div className="flex items-center">
@@ -829,7 +831,7 @@ const Products = () => {
                   className="rounded-r-none flex-1 shadow-lg border-primary/40 text-primary hover:bg-primary/10 hover:border-primary"
                 >
                   <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
-                  Quick Sync
+                  {t("dashboard.quick_sync")}
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -842,7 +844,7 @@ const Products = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleSync('full')} disabled={isSyncing}>Run Full Sync</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSync('full')} disabled={isSyncing}>{t("products.run_full_sync")}</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -853,9 +855,9 @@ const Products = () => {
         {/* ── View indicator ── */}
         {!isProductDataLoading && filteredAndSortedProducts.length > 0 && (
           <p className="text-xs text-muted-foreground mb-3">
-            Showing <span className="font-semibold text-foreground">{filteredAndSortedProducts.length}</span> of{' '}
-            <span className="font-semibold text-foreground">{statsTotal}</span> product{statsTotal !== 1 ? 's' : ''}
-            {hasActiveFilters && <span className="ml-1 text-primary">(filtered)</span>}
+            {t("common.showing")} <span className="font-semibold text-foreground">{filteredAndSortedProducts.length}</span> {t("common.of")}{' '}
+            <span className="font-semibold text-foreground">{statsTotal}</span> {statsTotal !== 1 ? t("nav.products").toLowerCase() : t("nav.products").toLowerCase()}
+            {hasActiveFilters && <span className="ml-1 text-primary">({t("products.filtered")})</span>}
           </p>
         )}
 
@@ -890,7 +892,7 @@ const Products = () => {
                     {grouping === 'category' && products.length > 0 && (
                       <Button variant="outline" size="sm" onClick={() => handleSelectAllInGroup(products)}>
                         <CheckSquare className="mr-2 h-4 w-4" />
-                        {products.every(p => selectedProducts.includes(p.id)) ? 'Deselect All' : 'Select All'}
+                        {products.every(p => selectedProducts.includes(p.id)) ? t('products.deselect_all') : t('products.select_all')}
                       </Button>
                     )}
                   </div>
@@ -939,19 +941,19 @@ const Products = () => {
             </div>
             {hasActiveFilters ? (
               <>
-                <h3 className="text-lg font-semibold mb-1">No products match your filters</h3>
+                <h3 className="text-lg font-semibold mb-1">{t("products.no_match")}</h3>
                 <p className="text-sm text-muted-foreground max-w-sm mb-4">
-                  Try broadening your search or removing some active filters to see more results.
+                  {t("products.no_match_desc")}
                 </p>
                 <Button variant="outline" onClick={handleResetAllFilters}>
-                  Clear all filters
+                  {t("common.clear_all")} {t("common.filters").toLowerCase()}
                 </Button>
               </>
             ) : (
               <>
-                <h3 className="text-lg font-semibold mb-1">No products yet</h3>
+                <h3 className="text-lg font-semibold mb-1">{t("products.no_products")}</h3>
                 <p className="text-sm text-muted-foreground max-w-sm mb-6">
-                  Import products from your Instagram posts or run a full sync to get started.
+                  {t("products.no_products_desc")}
                 </p>
                 <div className="flex flex-col sm:flex-row items-center gap-3">
                   <Button
@@ -959,7 +961,7 @@ const Products = () => {
                     variant="outline" className="border-foreground/20 text-foreground hover:bg-red-50 hover:text-red-600 hover:border-red-300"
                   >
                     <Import className="mr-2 h-4 w-4" />
-                    Import from Instagram
+                    {t("products.import_instagram")}
                   </Button>
                   {hasDoneFullSync === false && (
                     <Button
@@ -969,7 +971,7 @@ const Products = () => {
                       className="border-primary/40 text-primary hover:bg-primary/10"
                     >
                       <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
-                      Run Full Sync
+                      {t("products.run_full_sync")}
                     </Button>
                   )}
                 </div>

@@ -8,6 +8,7 @@ import { DateRangePicker } from "../ui/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { Button } from "../ui/button";
 import { subDays, subMonths } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 interface OverviewChartProps {
   data: { name: string; revenue: number; clients: number; orders: number }[];
@@ -25,6 +26,7 @@ const PERIOD_PRESETS = [
 
 export const OverviewChart = ({ data, dateRange, setDateRange, granularity, setGranularity }: OverviewChartProps) => {
   const { shopDetails } = useShop();
+  const { t } = useTranslation();
   const [visibleData, setVisibleData] = useState(['revenue', 'clients', 'orders']);
   const [activePeriod, setActivePeriod] = useState<number | null>(null);
 
@@ -78,7 +80,7 @@ export const OverviewChart = ({ data, dateRange, setDateRange, granularity, setG
       <CardHeader className="pb-4">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <CardDescription className="text-sm">Revenue, clients, and orders over time.</CardDescription>
+            <CardDescription className="text-sm">{t("dashboard.chart_description")}</CardDescription>
             {/* Period selector — segmented buttons */}
             <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
               {PERIOD_PRESETS.map(({ label, days }) => (
@@ -112,20 +114,20 @@ export const OverviewChart = ({ data, dateRange, setDateRange, granularity, setG
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                All
+                {t("common.all")}
               </button>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <DateRangePicker date={dateRange} onDateChange={(r) => { setActivePeriod(null); setDateRange(r); }} />
             <ToggleGroup type="single" variant="outline" size="sm" value={granularity} onValueChange={(value: 'day' | 'month') => value && setGranularity(value)}>
-              <ToggleGroupItem value="month" aria-label="By Month">Month</ToggleGroupItem>
-              <ToggleGroupItem value="day" aria-label="By Day">Day</ToggleGroupItem>
+              <ToggleGroupItem value="month" aria-label="By Month">{t("dashboard.month")}</ToggleGroupItem>
+              <ToggleGroupItem value="day" aria-label="By Day">{t("dashboard.day")}</ToggleGroupItem>
             </ToggleGroup>
             <ToggleGroup type="multiple" variant="outline" size="sm" value={visibleData} onValueChange={handleToggle}>
-              <ToggleGroupItem value="revenue" aria-label="Toggle revenue">Revenue</ToggleGroupItem>
-              <ToggleGroupItem value="clients" aria-label="Toggle clients">Clients</ToggleGroupItem>
-              <ToggleGroupItem value="orders" aria-label="Toggle orders">Orders</ToggleGroupItem>
+              <ToggleGroupItem value="revenue" aria-label="Toggle revenue">{t("dashboard.revenue")}</ToggleGroupItem>
+              <ToggleGroupItem value="clients" aria-label="Toggle clients">{t("dashboard.clients")}</ToggleGroupItem>
+              <ToggleGroupItem value="orders" aria-label="Toggle orders">{t("nav.orders")}</ToggleGroupItem>
             </ToggleGroup>
           </div>
         </div>
@@ -179,7 +181,7 @@ export const OverviewChart = ({ data, dateRange, setDateRange, granularity, setG
               <Bar
                 yAxisId="left"
                 dataKey="revenue"
-                name="Revenue"
+                name={t("dashboard.revenue")}
                 fill="url(#colorRevenue)"
                 stroke="hsl(var(--primary))"
                 strokeWidth={0}
@@ -192,7 +194,7 @@ export const OverviewChart = ({ data, dateRange, setDateRange, granularity, setG
                 yAxisId="right"
                 type="monotone"
                 dataKey="clients"
-                name="New Clients"
+                name={t("dashboard.new_clients")}
                 fill="url(#colorClients)"
                 stroke="hsl(var(--muted-foreground))"
                 strokeWidth={1.5}
@@ -206,7 +208,7 @@ export const OverviewChart = ({ data, dateRange, setDateRange, granularity, setG
                 yAxisId="right"
                 type="monotone"
                 dataKey="orders"
-                name="Orders"
+                name={t("nav.orders")}
                 fill="url(#colorOrders)"
                 stroke="hsl(var(--muted-foreground))"
                 strokeWidth={1.5}

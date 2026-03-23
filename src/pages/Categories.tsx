@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ interface CategoryTemplate {
 
 const Categories = () => {
   const { setTitle } = usePageTitle();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"all" | "custom" | "system">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [templates, setTemplates] = useState<CategoryTemplate[]>([]);
@@ -41,7 +43,7 @@ const Categories = () => {
   const [typeModalCategory, setTypeModalCategory] = useState<string>("");
   const [deleteConfirm, setDeleteConfirm] = useState<any | null>(null);
 
-  useEffect(() => { setTitle("Categories & Types"); }, [setTitle]);
+  useEffect(() => { setTitle(t("categories.title")); }, [setTitle, t]);
 
   const fetchTemplates = async () => {
     setLoading(true);
@@ -132,10 +134,10 @@ const Categories = () => {
       <div className="text-center py-16 border-2 border-dashed rounded-lg">
         <Layers className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
         <h3 className="text-sm font-semibold text-muted-foreground">
-          {searchQuery ? "No results found" : activeTab === "custom" ? "No custom templates" : "No categories"}
+          {searchQuery ? t("categories.no_results") : activeTab === "custom" ? t("categories.no_custom") : t("categories.no_categories")}
         </h3>
         <p className="text-xs text-muted-foreground/60 mt-1 max-w-sm mx-auto">
-          {searchQuery ? "Try a different search term." : activeTab === "custom" ? "Duplicate a system template or create a new one." : "Add a category to get started."}
+          {searchQuery ? t("categories.try_different") : activeTab === "custom" ? t("categories.duplicate_hint") : t("categories.add_hint")}
         </p>
       </div>
     );
@@ -163,12 +165,12 @@ const Categories = () => {
       <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete "{deleteConfirm?.type_name}"?</AlertDialogTitle>
-            <AlertDialogDescription>This will permanently remove this type template.</AlertDialogDescription>
+            <AlertDialogTitle>{t("categories.delete_type", { name: deleteConfirm?.type_name })}</AlertDialogTitle>
+            <AlertDialogDescription>{t("categories.delete_type_desc")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteType} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteType} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("common.delete")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -179,26 +181,26 @@ const Categories = () => {
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 border text-sm">
             <Layers className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="font-medium">{stats.categories}</span>
-            <span className="text-muted-foreground">categories</span>
+            <span className="text-muted-foreground">{t("categories.categories_label")}</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 border text-sm">
             <span className="font-medium">{stats.types}</span>
-            <span className="text-muted-foreground">types</span>
+            <span className="text-muted-foreground">{t("categories.types_label")}</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 border text-sm">
             <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="font-medium">{stats.totalSpecs}</span>
-            <span className="text-muted-foreground">specs</span>
+            <span className="text-muted-foreground">{t("categories.specs")}</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 border text-sm">
             <Palette className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="font-medium">{stats.totalOptions}</span>
-            <span className="text-muted-foreground">options</span>
+            <span className="text-muted-foreground">{t("categories.options_label")}</span>
           </div>
           <div className="ml-auto">
             <Button onClick={handleAddCategory} size="sm">
               <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
-              Add Category
+              {t("categories.add_category")}
             </Button>
           </div>
         </div>
@@ -208,18 +210,18 @@ const Categories = () => {
           <div className="flex items-center gap-3">
             <TabsList>
               <TabsTrigger value="all" className="text-sm">
-                All <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-xs">{templates.length}</Badge>
+                {t("common.all")} <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-xs">{templates.length}</Badge>
               </TabsTrigger>
               <TabsTrigger value="system" className="text-sm">
-                <Lock className="h-3 w-3 mr-1" />System <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-xs">{stats.systemCount}</Badge>
+                <Lock className="h-3 w-3 mr-1" />{t("categories.system")} <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-xs">{stats.systemCount}</Badge>
               </TabsTrigger>
               <TabsTrigger value="custom" className="text-sm">
-                Custom <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-xs">{stats.customCount}</Badge>
+                {t("categories.custom")} <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-xs">{stats.customCount}</Badge>
               </TabsTrigger>
             </TabsList>
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search categories, types, specs..." className="pl-9" />
+              <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t("categories.search_placeholder")} className="pl-9" />
             </div>
           </div>
 

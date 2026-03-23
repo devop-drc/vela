@@ -16,9 +16,11 @@ import { AnimatePresence } from "framer-motion";
 import { Sparkles, Save } from "lucide-react";
 import { Switch } from "../ui/switch";
 import { Slider } from "../ui/slider";
+import { useTranslation } from "react-i18next";
 
 const CustomThemeManager = () => {
   const { settings, saveCustomTheme } = useAppearance();
+  const { t } = useTranslation();
   const [themeName, setThemeName] = useState("");
   const isCustom = settings.themeName === 'Custom' || settings.themeName === 'AI Generated';
 
@@ -33,16 +35,16 @@ const CustomThemeManager = () => {
 
   return (
     <div className="p-4 border rounded-lg bg-accent/50 space-y-3 mt-8">
-      <p className="text-sm font-medium">You're using custom settings. Save them as a new theme!</p>
+      <p className="text-sm font-medium">{t("appearance.custom_hint")}</p>
       <div className="flex items-center gap-2">
         <Input 
-          placeholder="Enter theme name..." 
+          placeholder={t("appearance.theme_name_placeholder")}
           value={themeName}
           onChange={(e) => setThemeName(e.target.value)}
         />
         <Button onClick={handleSave} disabled={!themeName.trim()}>
           <Save className="mr-2 h-4 w-4" />
-          Save Theme
+          {t("appearance.save_theme")}
         </Button>
       </div>
     </div>
@@ -51,6 +53,7 @@ const CustomThemeManager = () => {
 
 export const AppearancePanel = () => {
   const { settings, updateSetting, resetSettings, isLoading, isAdvanced, setAdvanced, randomizeTheme } = useAppearance();
+  const { t } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const radiusValue = parseFloat(settings['--radius'] || '0') * 16;
 
@@ -63,15 +66,15 @@ export const AppearancePanel = () => {
       <Card>
         <CardHeader className="flex flex-row items-start justify-between">
           <div>
-            <CardTitle>Branding & Palettes</CardTitle>
+            <CardTitle>{t("appearance.branding")}</CardTitle>
             <CardDescription>
-              Get inspired with a random theme or choose from presets.
+              {t("appearance.branding_desc")}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <Button onClick={randomizeTheme} variant="outline">
               <Sparkles className="mr-2 h-4 w-4 text-amber-400" />
-              Inspire Me
+              {t("appearance.inspire_me")}
             </Button>
           </div>
         </CardHeader>
@@ -84,12 +87,12 @@ export const AppearancePanel = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card>
           <CardHeader>
-            <CardTitle>Layout & Feel</CardTitle>
-            <CardDescription>Control the structure and shape of the UI.</CardDescription>
+            <CardTitle>{t("appearance.layout")}</CardTitle>
+            <CardDescription>{t("appearance.layout_desc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-3">
-              <Label>Sidebar & Header Style</Label>
+              <Label>{t("appearance.sidebar_style")}</Label>
               <RadioGroup 
                   value={settings.sidebarStyle} 
                   onValueChange={(value) => updateSetting('sidebarStyle', value as 'primary' | 'card')}
@@ -98,45 +101,45 @@ export const AppearancePanel = () => {
                   <Label className="flex items-center gap-3 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-primary flex-1">
                       <RadioGroupItem value="primary" id="sidebar-primary" />
                       <div>
-                          <p className="font-medium">Vibrant</p>
-                          <p className="text-sm text-muted-foreground">Uses your primary brand color.</p>
+                          <p className="font-medium">{t("appearance.vibrant")}</p>
+                          <p className="text-sm text-muted-foreground">{t("appearance.vibrant_desc")}</p>
                       </div>
                   </Label>
                   <Label className="flex items-center gap-3 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-primary flex-1">
                       <RadioGroupItem value="card" id="sidebar-card" />
                        <div>
-                          <p className="font-medium">Subtle</p>
-                          <p className="text-sm text-muted-foreground">Blends with the content area.</p>
+                          <p className="font-medium">{t("appearance.subtle")}</p>
+                          <p className="text-sm text-muted-foreground">{t("appearance.subtle_desc")}</p>
                       </div>
                   </Label>
               </RadioGroup>
             </div>
             <div className="space-y-3">
-              <Label>Layout Style</Label>
+              <Label>{t("appearance.layout_style")}</Label>
               <RadioGroup 
                 value={settings.layoutStyle} 
                 onValueChange={(value) => updateSetting('layoutStyle', value as 'floating' | 'docked')}
                 className="flex gap-4"
               >
-                <div className="flex items-center space-x-2"><RadioGroupItem value="floating" id="floating" /><Label htmlFor="floating">Floating</Label></div>
-                <div className="flex items-center space-x-2"><RadioGroupItem value="docked" id="docked" /><Label htmlFor="docked">Docked</Label></div>
+                <div className="flex items-center space-x-2"><RadioGroupItem value="floating" id="floating" /><Label htmlFor="floating">{t("appearance.floating")}</Label></div>
+                <div className="flex items-center space-x-2"><RadioGroupItem value="docked" id="docked" /><Label htmlFor="docked">{t("appearance.docked")}</Label></div>
               </RadioGroup>
             </div>
             <div className="space-y-3">
-              <Label>Sidebar Width</Label>
+              <Label>{t("appearance.sidebar_width")}</Label>
               <RadioGroup 
                 value={settings.sidebarWidth} 
                 onValueChange={(value) => updateSetting('sidebarWidth', value as 'compact' | 'default' | 'spacious')}
                 className="flex gap-4"
               >
-                <div className="flex items-center space-x-2"><RadioGroupItem value="compact" id="compact" /><Label htmlFor="compact">Compact</Label></div>
-                <div className="flex items-center space-x-2"><RadioGroupItem value="default" id="default" /><Label htmlFor="default">Default</Label></div>
-                <div className="flex items-center space-x-2"><RadioGroupItem value="spacious" id="spacious" /><Label htmlFor="spacious">Spacious</Label></div>
+                <div className="flex items-center space-x-2"><RadioGroupItem value="compact" id="compact" /><Label htmlFor="compact">{t("appearance.compact")}</Label></div>
+                <div className="flex items-center space-x-2"><RadioGroupItem value="default" id="default" /><Label htmlFor="default">{t("appearance.default")}</Label></div>
+                <div className="flex items-center space-x-2"><RadioGroupItem value="spacious" id="spacious" /><Label htmlFor="spacious">{t("appearance.spacious")}</Label></div>
               </RadioGroup>
             </div>
             <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label>Corner Radius</Label>
+                  <Label>{t("appearance.corner_radius")}</Label>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">{radiusValue.toFixed(0)}px</span>
                     <div
@@ -153,16 +156,16 @@ export const AppearancePanel = () => {
                     onValueChange={(value) => updateSetting('--radius', `${value[0] / 16}rem`)}
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Sharp</span>
-                  <span>Round</span>
+                  <span>{t("appearance.sharp")}</span>
+                  <span>{t("appearance.round")}</span>
                 </div>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Typography</CardTitle>
-            <CardDescription>Choose a font pairing that matches your brand's voice.</CardDescription>
+            <CardTitle>{t("appearance.typography")}</CardTitle>
+            <CardDescription>{t("appearance.typography_desc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <FontSelector />
@@ -172,15 +175,15 @@ export const AppearancePanel = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Background & Effects</CardTitle>
-          <CardDescription>Customize the application background and visual effects.</CardDescription>
+          <CardTitle>{t("appearance.bg_effects")}</CardTitle>
+          <CardDescription>{t("appearance.bg_effects_desc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <BackgroundImageSelector />
           <div className="flex items-center justify-between rounded-lg border p-4 mt-6">
             <div className="space-y-0.5">
-              <Label className="text-base">Enable Glassmorphism</Label>
-              <p className="text-sm text-muted-foreground">Apply a frosted glass effect to UI elements.</p>
+              <Label className="text-base">{t("appearance.glassmorphism")}</Label>
+              <p className="text-sm text-muted-foreground">{t("appearance.glassmorphism_desc")}</p>
             </div>
             <Switch checked={settings.blurEnabled} onCheckedChange={(checked) => updateSetting('blurEnabled', checked)} />
           </div>
@@ -189,8 +192,8 @@ export const AppearancePanel = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Hero Section Background</CardTitle>
-          <CardDescription>Customize the background of your storefront's hero section.</CardDescription>
+          <CardTitle>{t("appearance.hero_bg")}</CardTitle>
+          <CardDescription>{t("appearance.hero_bg_desc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <HeroBackgroundSettings />
@@ -200,22 +203,22 @@ export const AppearancePanel = () => {
       <div className="flex items-center gap-4 pt-4 border-t">
           <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <Button variant="outline" onClick={() => isAdvanced ? setAdvanced(false) : setIsModalOpen(true)}>
-                  {isAdvanced ? "Disable Advanced Mode" : "Advanced Customization"}
+                  {isAdvanced ? t("appearance.disable_advanced") : t("appearance.advanced")}
               </Button>
               <AlertDialogContent>
                   <AlertDialogHeader>
-                      <AlertDialogTitle>Enable Advanced Customization?</AlertDialogTitle>
+                      <AlertDialogTitle>{t("appearance.enable_advanced")}</AlertDialogTitle>
                       <AlertDialogDescription>
-                          This will allow you to override the preset theme with your own custom values. You can always reset to the default themes later if you change your mind.
+                          {t("appearance.enable_advanced_desc")}
                       </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => setAdvanced(true)}>Continue</AlertDialogAction>
+                      <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => setAdvanced(true)}>{t("appearance.continue")}</AlertDialogAction>
                   </AlertDialogFooter>
               </AlertDialogContent>
           </AlertDialog>
-          <Button variant="ghost" onClick={resetSettings}>Reset to Defaults</Button>
+          <Button variant="ghost" onClick={resetSettings}>{t("appearance.reset_defaults")}</Button>
       </div>
       <AnimatePresence>
           {isAdvanced && <AdvancedPanel />}

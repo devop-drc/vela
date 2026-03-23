@@ -27,6 +27,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -145,6 +146,7 @@ function OrderCard({
   businessId: string;
   onStatusChange: (id: string, status: string) => void;
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [items, setItems] = useState<OrderItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
@@ -203,7 +205,7 @@ function OrderCard({
       {expanded && (
         <div className="mt-3 space-y-3 border-t pt-3">
           {loadingItems ? (
-            <p className="text-xs text-muted-foreground">Loading items...</p>
+            <p className="text-xs text-muted-foreground">{t("common.loading")}</p>
           ) : (
             <>
               {items.length > 0 && (
@@ -227,7 +229,7 @@ function OrderCard({
                     </div>
                   ))}
                   <p className="text-xs text-muted-foreground mt-1">
-                    {totalQuantity} item{totalQuantity !== 1 ? "s" : ""} reserved
+                    {totalQuantity} {t("common.items")} {t("notifications.reserved")}
                   </p>
                 </div>
               )}
@@ -256,7 +258,7 @@ function OrderCard({
                     onClick={() => onStatusChange(order.id, "Cancelled")}
                   >
                     <XCircle className="h-3 w-3 mr-1" />
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                 )}
               </div>
@@ -277,6 +279,7 @@ function DisputeCard({
   onReply: (id: string, message: string) => void;
   onToggleStatus: (id: string, status: string) => void;
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [replyText, setReplyText] = useState("");
 
@@ -359,7 +362,7 @@ function DisputeCard({
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Type a reply..."
+              placeholder={t("notifications.type_reply")}
               className="flex-1 h-8 px-3 text-xs border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-ring"
             />
             <Button
@@ -384,7 +387,7 @@ function DisputeCard({
               )
             }
           >
-            Mark as {dispute.status === "Open" ? "Resolved" : "Open"}
+            {t("notifications.mark_as")} {dispute.status === "Open" ? t("notifications.resolved") : t("notifications.open")}
           </Button>
         </div>
       )}
@@ -395,6 +398,7 @@ function DisputeCard({
 // ── Main Component ───────────────────────────────────────────────────
 
 export default function NotificationSidebar() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [businessId, setBusinessId] = useState<string | null>(null);
 
@@ -705,7 +709,7 @@ export default function NotificationSidebar() {
       <SheetTrigger asChild>
         <button className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2.5 shadow-lg hover:bg-primary/90 transition-all focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
           <Bell className="h-4 w-4" />
-          <span className="text-sm font-medium hidden sm:inline">Notifications</span>
+          <span className="text-sm font-medium hidden sm:inline">{t("notifications.title")}</span>
           {/* Colored dot badges */}
           <div className="flex items-center gap-1">
             {unreadCounts.orders > 0 && (
@@ -729,22 +733,22 @@ export default function NotificationSidebar() {
 
       <SheetContent side="bottom" className="h-[80vh] rounded-t-xl p-0 flex flex-col">
         <div className="px-4 pt-4 pb-2">
-          <h2 className="text-lg font-semibold">Notifications</h2>
+          <h2 className="text-lg font-semibold">{t("notifications.title")}</h2>
         </div>
 
         <Tabs defaultValue="orders" className="flex-1 flex flex-col min-h-0">
           <TabsList className="mx-4 mb-2 grid grid-cols-3">
             <TabsTrigger value="orders" className="text-xs">
               <Package className="h-3.5 w-3.5 mr-1" />
-              Orders
+              {t("notifications.orders")}
             </TabsTrigger>
             <TabsTrigger value="disputes" className="text-xs">
               <AlertTriangle className="h-3.5 w-3.5 mr-1" />
-              Disputes
+              {t("notifications.disputes")}
             </TabsTrigger>
             <TabsTrigger value="activity" className="text-xs">
               <Activity className="h-3.5 w-3.5 mr-1" />
-              Activity
+              {t("notifications.activity")}
             </TabsTrigger>
           </TabsList>
 
@@ -753,7 +757,7 @@ export default function NotificationSidebar() {
             <ScrollArea className="h-full px-4 pb-4">
               {orders.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  No recent orders
+                  {t("notifications.no_orders")}
                 </p>
               ) : (
                 <div className="space-y-2 pb-2">
@@ -776,7 +780,7 @@ export default function NotificationSidebar() {
             <ScrollArea className="h-full px-4 pb-4">
               {disputes.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  No disputes
+                  {t("notifications.no_disputes")}
                 </p>
               ) : (
                 <div className="space-y-2 pb-2">
@@ -798,7 +802,7 @@ export default function NotificationSidebar() {
             <ScrollArea className="h-full px-4 pb-4">
               {activity.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  No recent activity
+                  {t("notifications.no_activity")}
                 </p>
               ) : (
                 <div className="space-y-2 pb-2">
