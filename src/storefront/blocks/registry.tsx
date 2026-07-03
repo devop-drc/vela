@@ -190,6 +190,7 @@ export const BLOCK_REGISTRY: Record<string, BlockDef> = {
     variantProp: 'variant',
     variants: [
       { value: 'carousel', label: 'Carousel' },
+      { value: 'thumbs', label: 'Thumbnail rail' },
       { value: 'grid', label: 'Media grid' },
     ],
   },

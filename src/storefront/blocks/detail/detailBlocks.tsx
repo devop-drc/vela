@@ -44,10 +44,47 @@ export const useProductDetail = () => {
 };
 
 /* ── Gallery ───────────────────────────────────────────────────────────── */
-// variant: carousel (default) | grid — grid lays all media out at once.
-export const GalleryBlock = ({ props }: { props: { variant?: 'carousel' | 'grid' } }) => {
+// variant: carousel (default) | grid (all media at once) | thumbs (main image
+// with a clickable thumbnail rail — the classic premium e-commerce gallery).
+export const GalleryBlock = ({ props }: { props: { variant?: 'carousel' | 'grid' | 'thumbs' } }) => {
   const { product, media, isOutOfStock } = useProductDetail();
+  const [active, setActive] = useState(0);
+  useEffect(() => { setActive(0); }, [product.id]);
   if (media.length === 0) return null;
+
+  if (props.variant === 'thumbs' && media.length > 1) {
+    const current = media[Math.min(active, media.length - 1)];
+    return (
+      <div className="space-y-3">
+        <div className="relative aspect-square w-full overflow-hidden border bg-muted sf-card" style={{ borderRadius: 'var(--radius)' } as any}>
+          <MediaItem
+            key={current}
+            src={current}
+            alt={`${product.name} ${active + 1}`}
+            type={product.media_type}
+            className={cn('h-full w-full object-cover', isOutOfStock && 'grayscale')}
+          />
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Product images">
+          {media.map((url, i) => (
+            <button
+              key={i}
+              role="tab"
+              aria-selected={i === active}
+              aria-label={`Image ${i + 1}`}
+              onClick={() => setActive(i)}
+              className={cn(
+                'h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 bg-muted transition-all',
+                i === active ? 'border-primary' : 'border-transparent opacity-70 hover:opacity-100'
+              )}
+            >
+              <MediaItem src={url} alt="" type={product.media_type} className="h-full w-full object-cover" />
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (props.variant === 'grid' && media.length > 1) {
     return (
