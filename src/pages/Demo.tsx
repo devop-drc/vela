@@ -22,7 +22,7 @@ const DemoSidebar = () => (
   <aside className="hidden md:flex md:flex-col md:w-64 bg-card border-r">
     <div className="p-4 border-b flex items-center">
       <ShoppingBag className="h-6 w-6 mr-2" />
-      <h1 className="text-xl font-bold">InstaShopify</h1>
+      <h1 className="text-xl font-bold">InstantShop</h1>
     </div>
     <nav className="flex-1 p-4 space-y-2">
       {[
@@ -32,7 +32,7 @@ const DemoSidebar = () => (
         { to: "/demo", icon: ShoppingBag, label: "Orders" },
         { to: "/demo", icon: Settings, label: "Settings" },
       ].map((item) => (
-        <div key={item.to} className="relative">
+        <div key={item.label} className="relative">
           <a href="#" className="flex items-center px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
             <item.icon className="mr-3 h-5 w-5" />
             {item.label}
@@ -101,7 +101,7 @@ const Demo = () => {
             <div className="lg:col-span-2 space-y-6">
               <Card className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground">
                 <CardHeader>
-                  <CardTitle>Welcome to the InstaShopify Demo!</CardTitle>
+                  <CardTitle>Welcome to the InstantShop Demo!</CardTitle>
                   <CardDescription className="text-primary-foreground/80">This is a preview of the dashboard. Connect your account to see your own data.</CardDescription>
                 </CardHeader>
               </Card>

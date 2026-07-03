@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, ShoppingCart, Minus, Plus, ArrowLeft, Star, Truck, Sparkles } from "lucide-react";
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { getAttributeIcon } from "@/lib/attributeIcons";
+import { supabase } from "@/integrations/supabase/client";
 
 interface InstagramProductQuickViewModalProps {
   isOpen: boolean;
@@ -309,7 +310,7 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
                 {product.name}
                 {isOutOfStock && (
                   <Badge variant="secondary" className="text-sm bg-amber-500 text-white flex-shrink-0">
-                    Coming Soon
+                    Sold Out
                   </Badge>
                 )}
                 {activePromotions.length > 0 && !isOutOfStock && (

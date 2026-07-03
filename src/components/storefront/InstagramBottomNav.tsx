@@ -67,6 +67,7 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
         <div className="flex justify-around items-center h-full">
           <button
             onClick={onOpenMyOrders}
+            aria-label="My Orders"
             className="flex flex-row gap-1 items-center justify-center w-full h-full transition-colors text-xs relative hover:bg-[hsl(var(--muted))]"
           >
             <ShoppingBag className="h-5 w-5" />
@@ -90,6 +91,7 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
           {/* Cart Button */}
           <button
             onClick={onOpenCart}
+            aria-label="Cart"
             className="flex flex-row-reverse gap-1 items-center justify-center w-full h-full transition-colors text-xs relative hover:bg-[hsl(var(--muted))]"
           >
             <motion.span

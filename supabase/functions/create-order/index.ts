@@ -12,31 +12,56 @@ const getSupabaseAdmin = () => createClient(
   { auth: { persistSession: false } }
 );
 
-// Currency conversion helper (assumes rates are ALL-based)
-const convertCurrencyServer = async (amount: number, fromCurrency: string, toCurrency: string = 'ALL'): Promise<number> => {
-  if (fromCurrency === toCurrency) return amount;
+// Build the same variant combination_key the frontend uses
+// (CombinedVariantManager.normalizeKey): sorted "Name:Value" joined by "|".
+const buildCombinationKey = (selectedOptions: Record<string, unknown>): string =>
+  Object.keys(selectedOptions)
+    .sort()
+    .map((k) => {
+      const v = selectedOptions[k];
+      return `${k}:${Array.isArray(v) ? v.join(',') : v}`;
+    })
+    .join('|');
 
-  const supabaseAdmin = getSupabaseAdmin();
-  const { data, error } = await supabaseAdmin.functions.invoke('exchange-rates');
-  if (error || data.error) {
-    console.error("Server-side currency conversion: Failed to fetch exchange rates.", error || data.error);
-    return amount; // Return original amount on error
+// After a variant's stock changes, keep the product's base inventory, status and
+// each option value's derived stock in sync (denormalized caches; best-effort,
+// the source of truth is product_variants.inventory).
+const resyncProductStock = async (supabaseAdmin: any, productId: string): Promise<void> => {
+  const { data: variants } = await supabaseAdmin
+    .from('product_variants')
+    .select('inventory, option_values')
+    .eq('product_id', productId);
+
+  if (!variants || variants.length === 0) return;
+
+  const total = variants.reduce((sum: number, v: any) => sum + (v.inventory || 0), 0);
+
+  const { data: prod } = await supabaseAdmin
+    .from('products')
+    .select('status, pricing_type')
+    .eq('id', productId)
+    .single();
+
+  const productUpdate: { inventory: number; status?: string } = { inventory: total };
+  if (prod?.pricing_type !== 'subscription' && prod?.status !== 'Draft') {
+    productUpdate.status = total > 0 ? 'Active' : 'Out of Stock';
   }
-  const exchangeRates = data.rates;
+  await supabaseAdmin.from('products').update(productUpdate).eq('id', productId);
 
-  const fromRate = exchangeRates[fromCurrency];
-  const toRate = exchangeRates[toCurrency];
+  const { data: opts } = await supabaseAdmin
+    .from('product_options')
+    .select('name, option_values(id, value)')
+    .eq('product_id', productId);
 
-  if (!fromRate || !toRate) {
-    console.warn(`Server-side currency conversion: Missing exchange rate for conversion from ${fromCurrency} to ${toCurrency}.`);
-    return amount; // Return original amount if rates are missing
+  for (const opt of opts || []) {
+    for (const val of opt.option_values || []) {
+      const derived = variants.reduce(
+        (sum: number, v: any) => (v.option_values?.[opt.name] === val.value ? sum + (v.inventory || 0) : sum),
+        0,
+      );
+      await supabaseAdmin.from('option_values').update({ inventory: derived }).eq('id', val.id);
+    }
   }
-
-  // Rates are ALL-based: rate[X] means 1 ALL = X of currency X
-  // To convert from A to B: amount_in_B = amount_in_A * (rate[B] / rate[A])
-  const convertedAmount = amount * (toRate / fromRate);
-  
-  return Math.round(convertedAmount * 100) / 100;
 };
 
 serve(async (req) => {
@@ -45,11 +70,15 @@ serve(async (req) => {
   }
 
   try {
-    const { shopSlug, customerInfo, cartItems, totalAmount, currency, paymentMethod, shippingAddress, shippingCity, shippingZip, shippingCountry, shippingNotesSeller, shippingNotesCourier } = await req.json();
+    // NOTE: client-supplied prices/totals are intentionally ignored. All pricing
+    // is re-derived server-side from the database to prevent tampering.
+    const {
+      shopSlug, customerInfo, cartItems, paymentMethod,
+      shippingAddress, shippingCity, shippingZip, shippingCountry,
+      shippingNotesSeller, shippingNotesCourier,
+    } = await req.json();
 
-
-    if (!shopSlug || !customerInfo || !cartItems || cartItems.length === 0 || !totalAmount || !currency || !paymentMethod) {
-      console.error("create-order: Missing required order details in payload.");
+    if (!shopSlug || !customerInfo || !customerInfo.email || !Array.isArray(cartItems) || cartItems.length === 0 || !paymentMethod) {
       return new Response(JSON.stringify({ error: "Missing required order details." }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -58,107 +87,145 @@ serve(async (req) => {
 
     const supabaseAdmin = getSupabaseAdmin();
 
-    // 1. Find the business ID using the shopSlug
+    // 1. Resolve the shop -> business + owner + display currency.
     const { data: shopData, error: shopError } = await supabaseAdmin
       .from('shop_details')
-      .select('business_id')
+      .select('business_id, currency, businesses(user_id)')
       .eq('slug', shopSlug)
       .single();
 
     if (shopError || !shopData) {
-      console.error("create-order: Shop not found or inaccessible for slug:", shopSlug, "Error:", shopError);
+      console.error("create-order: Shop not found for slug:", shopSlug, shopError);
       throw new Error("Shop not found or inaccessible.");
     }
     const businessId = shopData.business_id;
+    const ownerUserId = (shopData as any).businesses?.user_id;
+    const shopCurrency = shopData.currency || 'ALL';
 
-    // Convert totalAmount from client's display currency to ALL for storage
-    const totalAmountInALL = await convertCurrencyServer(totalAmount, currency, 'ALL');
-
-    // 2. Insert the new order
-    const orderToInsert = {
-      business_id: businessId,
-      customer_name: `${customerInfo.firstName} ${customerInfo.lastName}`,
-      customer_email: customerInfo.email,
-      status: 'Pending', // Default order status for new orders
-      total_amount: totalAmountInALL, // Store total in ALL
-      currency: 'ALL', // Always store order currency as ALL
-      payment_method: paymentMethod, // New: Store selected payment method
-      payment_status: paymentMethod === 'cash_on_delivery' ? 'pending' : 'processing', // New: Set initial payment status
-      shipping_address: shippingAddress, // New: Store shipping details
-      shipping_city: shippingCity,
-      shipping_zip: shippingZip,
-      shipping_country: shippingCountry,
-      shipping_notes_seller: shippingNotesSeller, // New: Notes for seller
-      shipping_notes_courier: shippingNotesCourier, // New: Notes for courier
+    // 2. Exchange rates (ALL-based) — fetched once, used for shipping + flat discounts.
+    let rates: Record<string, number> = {};
+    try {
+      const { data: ratesData } = await supabaseAdmin.functions.invoke('exchange-rates');
+      if (ratesData?.rates) rates = ratesData.rates;
+    } catch (e) {
+      console.warn("create-order: failed to fetch exchange rates, treating non-ALL amounts as ALL.", (e as Error)?.message);
+    }
+    // Convert between currencies using ALL-based rates (rate[X] = X per 1 ALL).
+    const convert = (amount: number, from: string, to: string): number => {
+      if (from === to) return amount;
+      const fromRate = rates[from];
+      const toRate = rates[to];
+      if (!fromRate || !toRate) return amount;
+      return Math.round(amount * (toRate / fromRate) * 100) / 100;
     };
 
-    const { data: newOrder, error: orderInsertError } = await supabaseAdmin
-      .from('orders')
-      .insert(orderToInsert)
-      .select('*') // Select all columns to return the full order object
-      .single();
-
-    if (orderInsertError || !newOrder) {
-      console.error("create-order: Failed to create order. Error:", orderInsertError);
-      throw new Error(`Failed to create order: ${orderInsertError?.message || 'Unknown error'}`);
+    // 3. Active discount promotions for this shop owner.
+    let promotions: any[] = [];
+    if (ownerUserId) {
+      const { data: promoData } = await supabaseAdmin
+        .from('promotions')
+        .select('*')
+        .eq('user_id', ownerUserId)
+        .eq('is_active', true);
+      promotions = promoData || [];
     }
+    const now = Date.now();
+    const discountedALL = (baseALL: number, productId: string): number => {
+      const promo = promotions.find((p) =>
+        p.type === 'discount' && p.value &&
+        (!p.start_date || new Date(p.start_date).getTime() <= now) &&
+        (!p.end_date || new Date(p.end_date).getTime() >= now) &&
+        (!p.target_products || p.target_products.length === 0 || p.target_products.includes(productId)));
+      if (!promo) return baseALL;
+      const v = promo.value;
+      if (v.discountType === 'percentage') return Math.max(0, baseALL * (1 - (v.discountValue || 0) / 100));
+      if (v.discountType === 'flat') return Math.max(0, baseALL - convert(v.discountValue || 0, shopCurrency, 'ALL'));
+      return baseALL;
+    };
 
-    const orderId = newOrder.id;
-
-    // 3. Insert order items and update product inventory/status
-    const orderItemsToInsert = [];
+    // 4. Re-derive each line's authoritative ALL price from the DB.
+    const rpcItems: any[] = [];
+    let subtotalALL = 0;
     for (const item of cartItems) {
-      // Convert item.price from client's display currency to ALL for storage
-      const itemPriceInALL = await convertCurrencyServer(item.price, currency, 'ALL');
-
-      orderItemsToInsert.push({
-        order_id: orderId,
-        product_id: item.productId,
-        quantity: item.quantity,
-        price_at_purchase: itemPriceInALL, // Store item price in ALL
-      });
-
-      // Fetch product to check pricing_type and current inventory
-      const { data: product, error: productFetchError } = await supabaseAdmin
+      const { data: product, error: productErr } = await supabaseAdmin
         .from('products')
-        .select('pricing_type, inventory')
+        .select('id, price, currency, pricing_type')
         .eq('id', item.productId)
         .single();
-
-      if (productFetchError || !product) {
-        console.error(`create-order: Failed to fetch product ${item.productId} for inventory update. Error:`, productFetchError);
-        // Continue with order, but log the inventory issue
-        continue;
+      if (productErr || !product) {
+        throw new Error("One of the products in your cart is no longer available.");
       }
 
-      if (product.pricing_type === 'one_time') {
-        const newInventory = product.inventory - item.quantity;
-        const updatePayload: { inventory: number; status?: string } = { inventory: newInventory };
+      const quantity = Math.max(1, parseInt(String(item.quantity), 10) || 1);
+      let unitALL = convert(Number(product.price) || 0, product.currency || 'ALL', 'ALL');
 
-        if (newInventory <= 0) {
-          updatePayload.status = 'Out of Stock';
-        }
+      const sel = item.selectedOptions && typeof item.selectedOptions === 'object' ? item.selectedOptions : null;
+      let combinationKey: string | null = null;
 
-        const { error: inventoryUpdateError } = await supabaseAdmin
-          .from('products')
-          .update(updatePayload)
-          .eq('id', item.productId);
-        
-        if (inventoryUpdateError) {
-          console.error(`create-order: Failed to update inventory for product ${item.productId}. Error:`, inventoryUpdateError);
-          // Log error but don't block the order creation
+      if (sel && Object.keys(sel).length > 0) {
+        combinationKey = buildCombinationKey(sel);
+        // Add the price difference of each selected option value (stored in ALL).
+        const { data: opts } = await supabaseAdmin
+          .from('product_options')
+          .select('name, option_values(value, price_difference)')
+          .eq('product_id', product.id);
+        for (const opt of opts || []) {
+          const chosen = sel[opt.name];
+          const match = (opt.option_values || []).find((v: any) => v.value === chosen);
+          if (match) unitALL += Number(match.price_difference) || 0;
         }
       }
+
+      unitALL = Math.round(discountedALL(unitALL, product.id) * 100) / 100;
+      subtotalALL += unitALL * quantity;
+
+      rpcItems.push({
+        product_id: product.id,
+        quantity,
+        selected_options: sel,
+        combination_key: combinationKey,
+        unit_price_all: unitALL,
+      });
     }
 
-    const { error: orderItemsInsertError } = await supabaseAdmin
-      .from('order_items')
-      .insert(orderItemsToInsert);
+    // 5. Shipping (mirror storefront: free over $50, else $5, both in USD -> ALL).
+    const freeThresholdALL = convert(50, 'USD', 'ALL');
+    const shippingALL = subtotalALL >= freeThresholdALL ? 0 : convert(5, 'USD', 'ALL');
+    const totalALL = Math.round((subtotalALL + shippingALL) * 100) / 100;
 
-    if (orderItemsInsertError) {
-      console.error(`create-order: Failed to insert order items for order ${orderId}. Error:`, orderItemsInsertError);
-      await supabaseAdmin.from('orders').update({ status: 'Problematic', message: 'Failed to add items' }).eq('id', orderId);
-      throw new Error(`Order created, but failed to add items: ${orderItemsInsertError.message}`);
+    // 6. Place the order atomically (stock validated + decremented in one transaction).
+    const { data: newOrder, error: rpcError } = await supabaseAdmin.rpc('place_order', {
+      p_business_id: businessId,
+      p_customer_name: `${customerInfo.firstName ?? ''} ${customerInfo.lastName ?? ''}`.trim(),
+      p_customer_email: (customerInfo.email || '').trim(),
+      p_payment_method: paymentMethod,
+      p_payment_status: paymentMethod === 'cash_on_delivery' ? 'pending' : 'processing',
+      p_shipping_address: shippingAddress ?? null,
+      p_shipping_city: shippingCity ?? null,
+      p_shipping_zip: shippingZip ?? null,
+      p_shipping_country: shippingCountry ?? null,
+      p_shipping_notes_seller: shippingNotesSeller ?? null,
+      p_shipping_notes_courier: shippingNotesCourier ?? null,
+      p_total_amount: totalALL,
+      p_items: rpcItems,
+    });
+
+    if (rpcError) {
+      console.error("create-order: place_order RPC failed:", rpcError);
+      const rpcErrStr = JSON.stringify(rpcError);
+      if (rpcErrStr.includes('insufficient_stock')) {
+        return new Response(JSON.stringify({ error: "Sorry, one or more items just went out of stock. Please review your cart." }), {
+          status: 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      throw new Error(`Failed to place order: ${rpcError.message}`);
+    }
+
+    // 7. Resync denormalized caches for products whose variant stock changed.
+    const affectedProducts = new Set<string>(rpcItems.filter((i) => i.combination_key).map((i) => i.product_id));
+    for (const productId of affectedProducts) {
+      await resyncProductStock(supabaseAdmin, productId);
     }
 
     return new Response(JSON.stringify({ message: "Order placed successfully!", order: newOrder }), {

@@ -15,14 +15,16 @@ import { MediaItem } from "@/components/MediaItem";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
+import { QuantityInput } from "./QuantityInput";
 import { motion, AnimatePresence } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { InstagramCheckoutForm, CheckoutFormData, CustomerAddress, LOCAL_STORAGE_ADDRESSES_KEY } from "./InstagramCheckoutForm"; // Import LOCAL_STORAGE_ADDRESSES_KEY
+import { saveStoredCustomer, addStoredOrderId } from "@/lib/instagramCustomer";
 import { supabase } from "@/integrations/supabase/client";
-import { showError, showSuccess } from "@/utils/toast";
+import { showError, showSuccess, toFriendlyError } from "@/utils/toast";
 import { InstagramProductQuickViewModal } from "./InstagramProductQuickViewModal"; // Import new modal
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"; // Import Accordion components
 import { Badge } from "@/components/ui/badge";
@@ -193,6 +195,15 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
       if (invokeError) throw invokeError;
       if (responseData.error) throw new Error(responseData.error);
 
+      // Persist the customer + this order locally so "My Orders" works without an account.
+      saveStoredCustomer({
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone || undefined,
+      });
+      if (responseData?.order?.id) addStoredOrderId(responseData.order.id);
+
       if (toastId) toast.success("Order placed successfully! Redirecting to your orders.", { id: toastId });
       else showSuccess("Order placed successfully! Redirecting to your orders.");
       
@@ -209,8 +220,9 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
       navigate(`/instagramShop/${shopDetails.slug}?orderId=${responseData.order.id}`);
     } catch (err: any) {
       console.error("Checkout failed:", err);
-      if (toastId) toast.error(`Failed to place order: ${err.message || "An unexpected error occurred."}`, { id: toastId });
-      else showError(`Failed to place order: ${err.message || "An unexpected error occurred."}`);
+      const friendly = toFriendlyError(err, "We couldn't place your order. Please try again.");
+      if (toastId) toast.error(friendly, { id: toastId });
+      else showError(friendly);
     } finally {
       setIsSubmittingOrder(false);
     }
@@ -371,12 +383,10 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                             >
                                               <Minus className="h-4 w-4" />
                                             </button>
-                                            <Input
-                                              type="number"
+                                            <QuantityInput
                                               value={item.quantity}
-                                              onChange={(e) => updateQuantity(item.uid, parseInt(e.target.value) || 1)}
+                                              onChange={(v) => updateQuantity(item.uid, v)}
                                               className="w-12 text-center justify-center border-y-0 border-x border-[hsl(var(--border))] focus-visible:ring-0 text-sm h-full rounded-none bg-[hsl(var(--card))] p-0"
-                                              min={1}
                                             />
                                             <button
                                               type="button"
@@ -538,6 +548,15 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                   {shipping === 0 ? "FREE" : formatCurrency(shipping, shopDetails?.currency)}
                 </span>
               </div>
+              {shipping > 0 && (() => {
+                const threshold = convertCurrency(FREE_SHIPPING_THRESHOLD, 'USD');
+                const away = threshold - subtotal;
+                return away > 0 ? (
+                  <p className="text-xs text-center text-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10 rounded-md py-1.5">
+                    Add {formatCurrency(away, shopDetails?.currency)} more for <strong>free shipping</strong> 🎉
+                  </p>
+                ) : null;
+              })()}
               {totalSaved > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
                   <span>You Saved:</span>

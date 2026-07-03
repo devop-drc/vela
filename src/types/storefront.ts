@@ -1,9 +1,7 @@
-import * as LucideIcons from 'lucide-react';
-
 export interface StorefrontAnnouncement {
   id: string;
   message: string;
-  icon_name: keyof typeof LucideIcons; // Use keyof typeof LucideIcons for icon_name
+  icon_name: string; // Lucide icon name (resolved via lib/iconLibrary)
   is_active: boolean;
   display_order: number;
   start_date: string | null; // New: Start date for the announcement

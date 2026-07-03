@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Galada&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -161,6 +162,47 @@
 }
 
 @layer utilities {
+  /* ── Brand: animated signature gradient (landing, auth, billing…).
+       Fluid "mesh" motion: four radial blobs drift on independent paths
+       over a pink base; odd keyframe stops + alternate direction make the
+       movement feel organic rather than looping. ── */
+  .brand-gradient {
+    background-color: #ec4899;
+    background-image:
+      radial-gradient(42% 56% at 20% 25%, #c026d3 0%, rgba(192, 38, 211, 0) 100%),
+      radial-gradient(48% 62% at 80% 18%, #f59e0b 0%, rgba(245, 158, 11, 0) 100%),
+      radial-gradient(52% 66% at 72% 82%, #d946ef 0%, rgba(217, 70, 239, 0) 100%),
+      radial-gradient(44% 54% at 22% 78%, #fb7185 0%, rgba(251, 113, 133, 0) 100%);
+    background-size: 230% 230%, 210% 210%, 250% 250%, 220% 220%;
+    background-position: 0% 0%, 100% 0%, 100% 100%, 0% 100%;
+    animation: brand-blob 13s ease-in-out infinite alternate;
+  }
+  @keyframes brand-blob {
+    0%   { background-position: 0% 0%,     100% 0%,   100% 100%, 0% 100%; }
+    23%  { background-position: 55% 35%,   45% 15%,   65% 55%,   25% 70%; }
+    47%  { background-position: 100% 75%,  5% 65%,    15% 5%,    85% 25%; }
+    71%  { background-position: 35% 100%,  70% 95%,   0% 45%,    100% 5%; }
+    100% { background-position: 5% 25%,    90% 10%,   85% 95%,   15% 85%; }
+  }
+  /* Legacy pan (used by .grad-border's thin rim, where blobs can't read) */
+  @keyframes brand-pan {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* ── Brand typefaces (loaded above; used by landing + auth) ── */
+  .font-display-brand {
+    font-family: 'Clash Display', 'Space Grotesk', sans-serif;
+    letter-spacing: -0.02em;
+  }
+  .font-sans-brand {
+    font-family: 'Satoshi', 'Inter', system-ui, sans-serif;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .brand-gradient { animation: none; }
+  }
+
   .dialog-overlay {
     @apply fixed inset-0 z-50 bg-black/80 backdrop-blur-[20px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0;
   }
@@ -226,5 +268,104 @@
     100% {
       transform: translate(0, 0) scale(1);
     }
+  }
+}
+
+/* ─── Storefront Studio (scoped under .sf-root) ──────────────────────────── */
+@layer components {
+  .sf-root {
+    font-family: var(--font-sans);
+    line-height: var(--sf-leading, 1.6);
+  }
+  .sf-root h1, .sf-root h2, .sf-root h3, .sf-root h4,
+  .sf-root .sf-heading {
+    font-family: var(--font-heading);
+    font-weight: var(--sf-weight-heading, 700);
+    letter-spacing: var(--sf-tracking, 0);
+    text-transform: var(--sf-heading-transform, none);
+  }
+  .sf-root .sf-container {
+    width: 100%;
+    max-width: var(--sf-container-max, 1280px);
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+  }
+
+  /* Glassmorphism: opt-in surfaces use .sf-glass; effect only when enabled. */
+  .sf-glass {
+    background: hsl(var(--card));
+    border: var(--sf-border-width, 1px) solid hsl(var(--border));
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+  }
+  .glass-enabled .sf-glass {
+    background: hsl(var(--card) / var(--sf-glass-alpha, 0.7));
+    backdrop-filter: blur(var(--sf-glass-blur, 12px));
+    -webkit-backdrop-filter: blur(var(--sf-glass-blur, 12px));
+  }
+
+  .sf-card { box-shadow: var(--shadow-card); }
+
+  /* Hover effects — gated by data-hover so it's a single switch. */
+  .sf-hoverable { transition: transform .25s ease, box-shadow .25s ease; }
+  [data-hover="lift"] .sf-hoverable:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
+  [data-hover="zoom"] .sf-hoverable:hover { transform: scale(1.03); box-shadow: var(--shadow-hover); }
+  [data-hover="glow"] .sf-hoverable:hover { box-shadow: 0 0 0 1px hsl(var(--primary) / .4), 0 0 24px hsl(var(--primary) / .25); }
+  [data-hover="tilt"] .sf-hoverable:hover { transform: perspective(600px) rotateX(2deg) rotateY(-2deg) translateY(-2px); box-shadow: var(--shadow-hover); }
+  [data-motion="none"] .sf-hoverable { transition: none; }
+  [data-motion="none"] .sf-hoverable:hover { transform: none; }
+}
+
+@layer utilities {
+  /* Film-grain / noise overlay. */
+  .grain-enabled.sf-root::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 60; pointer-events: none;
+    opacity: .05; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Scroll-reveal — sections start hidden, .is-visible reveals them. */
+  .reveal-enabled .sf-reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal-enabled .sf-reveal.is-visible { opacity: 1; transform: none; }
+  [data-motion="subtle"] .sf-reveal { transform: translateY(12px); }
+  [data-motion="expressive"] .sf-reveal { transform: translateY(40px) scale(.98); }
+  /* When GSAP owns the reveal it writes inline styles frame-by-frame — the CSS
+     reveal transition would double-ease every frame, so it's disabled. */
+  .sf-gsap .sf-reveal { transition: none; }
+}
+
+/* ─── Landing page (scoped under .landing) ──────────────────────────────── */
+@layer utilities {
+  /* Slow-drifting aurora blobs behind the hero / CTA. */
+  @keyframes ls-aurora {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    33%      { transform: translate3d(6%, -8%, 0) scale(1.15); }
+    66%      { transform: translate3d(-6%, 6%, 0) scale(0.9); }
+  }
+  .ls-aurora { will-change: transform; animation: ls-aurora 20s ease-in-out infinite; }
+
+  /* Shimmer sweep across gradient text. */
+  @keyframes ls-shimmer { to { background-position: 200% center; } }
+  .ls-shimmer { background-size: 200% auto; animation: ls-shimmer 6s linear infinite; }
+
+  /* Idle float for hero cards (GSAP handles entrance + parallax on top). */
+  @keyframes ls-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+  .ls-float  { animation: ls-float 6s ease-in-out infinite; }
+  .ls-float2 { animation: ls-float 7.5s ease-in-out infinite; }
+  .ls-float3 { animation: ls-float 9s ease-in-out infinite; }
+
+  /* Faint blueprint grid, faded toward edges. */
+  .ls-grid {
+    background-image:
+      linear-gradient(hsl(var(--foreground) / .05) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground) / .05) 1px, transparent 1px);
+    background-size: 46px 46px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 78%);
+            mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 78%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ls-aurora, .ls-shimmer, .ls-float, .ls-float2, .ls-float3 { animation: none !important; }
   }
 }

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { showError, showSuccess } from "@/utils/toast";
-import { AppearancePanel } from "@/components/settings/AppearancePanel";
+import { StorefrontStudio } from "@/components/settings/studio/StorefrontStudio";
 import { AccountSettings } from "@/components/settings/AccountSettings";
 import { ShopSettings } from "@/components/settings/ShopSettings";
 import { usePageTitle } from "@/contexts/PageTitleContext";
@@ -32,7 +32,7 @@ export default function Settings() {
   }, [searchParams, setSearchParams]);
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-[1800px]">
       <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v }, { replace: true })}>
         {/* Tab bar */}
         <TabsList className="w-full grid grid-cols-3 h-12 mb-6">
@@ -62,7 +62,7 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="appearance" className="mt-0">
-          <AppearancePanel />
+          <StorefrontStudio />
         </TabsContent>
       </Tabs>
     </div>

@@ -135,7 +135,7 @@ export const InstagramProductCard = ({
             </div>
             {isOutOfStock && (
               <Badge variant="secondary" className="absolute top-2 left-2 text-xs bg-amber-500 text-white">
-                Coming Soon
+                Sold Out
               </Badge>
             )}
             {activePromotions.length > 0 && !isOutOfStock && (

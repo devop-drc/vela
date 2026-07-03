@@ -9,19 +9,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Facebook, ExternalLink, Languages, Bell, Trash2, User, Mail, Phone, CheckCircle2, XCircle } from 'lucide-react';
+import { Facebook, ExternalLink, Languages, Bell, Trash2, User, Mail, Phone, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { IntegrationSettings } from './IntegrationSettings';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from "react-i18next";
+import { showError, showSuccess, toFriendlyError } from "@/utils/toast";
 
-const PreferenceRow = ({ id, title, description, defaultChecked = false }: { id: string, title: string, description: string, defaultChecked?: boolean }) => (
+const PreferenceRow = ({ id, title, description, defaultChecked = false, comingSoon = false, comingSoonLabel }: { id: string, title: string, description: string, defaultChecked?: boolean, comingSoon?: boolean, comingSoonLabel?: string }) => (
   <div className="flex items-center justify-between p-3 border rounded-lg">
     <div>
-      <Label htmlFor={id} className="font-medium">{title}</Label>
+      <Label htmlFor={id} className="font-medium flex items-center gap-2">
+        {title}
+        {comingSoon && <Badge variant="secondary" className="text-[10px] font-normal">{comingSoonLabel}</Badge>}
+      </Label>
       <p className="text-sm text-muted-foreground">{description}</p>
     </div>
-    <Switch id={id} defaultChecked={defaultChecked} />
+    <Switch id={id} defaultChecked={defaultChecked} disabled={comingSoon} />
   </div>
 );
 
@@ -33,6 +38,24 @@ export const AccountSettings = () => {
   const [integration, setIntegration] = useState<any | null>(null);
   const [searchParams] = useSearchParams();
   const { t, i18n } = useTranslation();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-account');
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      await supabase.auth.signOut();
+      showSuccess(t("settings.account_deleted"));
+      window.location.href = '/login';
+    } catch (err) {
+      showError(toFriendlyError(err, t("settings.delete_account_failed")));
+      setIsDeletingAccount(false);
+      setDeleteConfirmOpen(false);
+    }
+  };
 
   const fetchUserAndProfile = async () => {
     setIsLoading(true);
@@ -94,7 +117,7 @@ export const AccountSettings = () => {
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
             <Avatar className="h-20 w-20 ring-2 ring-border flex-shrink-0">
-              <AvatarImage src={avatarSrc || undefined} alt="User avatar" />
+              <AvatarImage src={avatarSrc || undefined} alt={t("settings.user_avatar")} />
               <AvatarFallback className="text-2xl font-semibold">
                 {avatarSrc ? <User className="h-10 w-10" /> : initials}
               </AvatarFallback>
@@ -201,8 +224,8 @@ export const AccountSettings = () => {
             <div className="space-y-4">
               <h3 className="font-medium text-sm flex items-center gap-2"><Bell className="h-4 w-4" /> {t("settings.email_notif")}</h3>
               <div className="space-y-3">
-                <PreferenceRow id="new-sale" title={t("settings.new_sale_notif")} description={t("settings.new_sale_notif_desc")} />
-                <PreferenceRow id="weekly-summary" title={t("settings.weekly_summary")} description={t("settings.weekly_summary_desc")} defaultChecked />
+                <PreferenceRow id="new-sale" title={t("settings.new_sale_notif")} description={t("settings.new_sale_notif_desc")} comingSoon comingSoonLabel={t("settings.coming_soon")} />
+                <PreferenceRow id="weekly-summary" title={t("settings.weekly_summary")} description={t("settings.weekly_summary_desc")} defaultChecked comingSoon comingSoonLabel={t("settings.coming_soon")} />
               </div>
             </div>
           </CardContent>
@@ -216,8 +239,25 @@ export const AccountSettings = () => {
             <CardDescription>{t("settings.danger_desc")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="destructive" className="w-full">{t("settings.delete_account")}</Button>
+            <Button variant="destructive" className="w-full" onClick={() => setDeleteConfirmOpen(true)}>{t("settings.delete_account")}</Button>
             <p className="text-xs text-muted-foreground mt-2">{t("settings.delete_warning")}</p>
+            <AlertDialog open={deleteConfirmOpen} onOpenChange={(o) => { if (!isDeletingAccount) setDeleteConfirmOpen(o); }}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("settings.delete_account_title")}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t("settings.delete_account_desc")}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeletingAccount}>{t("common.cancel")}</AlertDialogCancel>
+                  <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteAccount(); }} disabled={isDeletingAccount} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    {isDeletingAccount && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {t("settings.delete_account_confirm")}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </CardContent>
         </Card>
       </div>

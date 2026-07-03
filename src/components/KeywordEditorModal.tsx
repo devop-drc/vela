@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -13,8 +14,8 @@ import { Loader2 } from "lucide-react";
 import { Keyword } from "@/pages/Keywords";
 
 const keywordSchema = z.object({
-  keyword: z.string().min(1, "Keyword is required"),
-  description: z.string().min(1, "Description is required"),
+  keyword: z.string().min(1, "keywords.keyword_required"),
+  description: z.string().min(1, "keywords.desc_required"),
 });
 
 type KeywordFormData = z.infer<typeof keywordSchema>;
@@ -27,6 +28,7 @@ interface KeywordEditorModalProps {
 }
 
 export const KeywordEditorModal = ({ isOpen, onClose, onSave, keyword }: KeywordEditorModalProps) => {
+  const { t } = useTranslation();
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<KeywordFormData>({
     resolver: zodResolver(keywordSchema),
   });
@@ -42,7 +44,7 @@ export const KeywordEditorModal = ({ isOpen, onClose, onSave, keyword }: Keyword
   const onSubmit = async (data: KeywordFormData) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      showError("You must be logged in.");
+      showError(t("keywords.must_login"));
       return;
     }
 
@@ -56,9 +58,9 @@ export const KeywordEditorModal = ({ isOpen, onClose, onSave, keyword }: Keyword
     }
 
     if (error) {
-      showError(`Failed to save keyword: ${error.message}`);
+      showError(t("keywords.save_failed", { message: error.message }));
     } else {
-      showSuccess(`Keyword ${keyword ? 'updated' : 'added'} successfully!`);
+      showSuccess(keyword ? t("keywords.saved_updated") : t("keywords.saved_added"));
       onSave();
     }
   };
@@ -67,27 +69,27 @@ export const KeywordEditorModal = ({ isOpen, onClose, onSave, keyword }: Keyword
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{keyword ? "Edit Keyword" : "Add New Keyword"}</DialogTitle>
+          <DialogTitle>{keyword ? t("keywords.edit_keyword") : t("keywords.add_new_keyword")}</DialogTitle>
           <DialogDescription>
-            Define a keyword and tell the AI how to interpret the information that follows it in a caption.
+            {t("keywords.modal_desc")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="keyword">Keyword</Label>
-            <Input id="keyword" {...register("keyword")} placeholder="e.g., Material, Sizes, Color" />
-            {errors.keyword && <p className="text-sm text-destructive mt-1">{errors.keyword.message}</p>}
+            <Label htmlFor="keyword">{t("keywords.keyword_label")}</Label>
+            <Input id="keyword" {...register("keyword")} placeholder={t("keywords.keyword_placeholder")} />
+            {errors.keyword && <p className="text-sm text-destructive mt-1">{t(errors.keyword.message)}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">Description for AI</Label>
-            <Textarea id="description" {...register("description")} placeholder="e.g., The fabric or substance the product is made of." />
-            {errors.description && <p className="text-sm text-destructive mt-1">{errors.description.message}</p>}
+            <Label htmlFor="description">{t("keywords.desc_label")}</Label>
+            <Textarea id="description" {...register("description")} placeholder={t("keywords.desc_placeholder")} />
+            {errors.description && <p className="text-sm text-destructive mt-1">{t(errors.description.message)}</p>}
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Keyword
+              {t("keywords.save_keyword")}
             </Button>
           </DialogFooter>
         </form>

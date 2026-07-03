@@ -183,6 +183,7 @@ CREATE TABLE IF NOT EXISTS public.order_items (
     product_id uuid,
     quantity integer NOT NULL,
     price_at_purchase numeric(10,2) NOT NULL,
+    selected_options jsonb,
     CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE CASCADE,
     CONSTRAINT order_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE SET NULL
 );

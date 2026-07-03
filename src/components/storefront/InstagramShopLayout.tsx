@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { Suspense, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { Outlet, useSearchParams, useLocation } from 'react-router-dom'; // Import useSearchParams
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import { InstagramShopHeader } from './InstagramShopHeader'; // Custom header
@@ -14,12 +14,13 @@ import { InstagramCartDrawer } from './InstagramCartDrawer'; // Import Instagram
 import { cn } from '@/lib/utils';
 import { loadGoogleFont } from '@/lib/fontUtils';
 import { InstagramMyOrdersDrawer } from './InstagramMyOrdersDrawer'; // Import InstagramMyOrdersDrawer
-import { supabase } from '@/integrations/supabase/client'; // Import supabase for order count
 import { Drawer } from '@/components/ui/drawer'; // Import Drawer.Root
 import { InstagramBottomNav } from './InstagramBottomNav'; // Import new bottom nav
 import { InstagramDesktopSidebar } from './InstagramDesktopSidebar';
 import { InstagramFilterDrawer } from './InstagramFilterDrawer'; // Import InstagramFilterDrawer
 import { FloatingCartPill } from './FloatingCartPill';
+import { getStoredOrderIds } from '@/lib/instagramCustomer';
+import { useStorefrontTypeRedirect } from '@/hooks/useStorefrontTypeRedirect';
 
 // Function to apply fixed Instagram-like settings to the DOM
 const applyInstagramShopSettingsToDOM = (isDark: boolean) => {
@@ -114,6 +115,7 @@ const InstagramShopLayoutContent = () => {
     });
   }, []);
   const { shopDetails, products: allProducts, isLoading, error, convertCurrency, appearanceSettings } = useStorefront();
+  useStorefrontTypeRedirect('instagram');
   const isMobile = useIsMobile();
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
   const [isMyOrdersDrawerOpen, setIsMyOrdersDrawerOpen] = useState(false); // New state for My Orders drawer
@@ -174,29 +176,16 @@ const InstagramShopLayoutContent = () => {
     };
   }, []);
 
+  // Keep the latest isDark / restoreSettings reachable from mount-only listeners
+  // without making them effect dependencies (which would cause focus-time thrash).
+  const isDarkRef = useRef(isDark);
+  useEffect(() => { isDarkRef.current = isDark; }, [isDark]);
+  const restoreSettingsRef = useRef(restoreSettings);
+  useEffect(() => { restoreSettingsRef.current = restoreSettings; }, [restoreSettings]);
+
+  // Apply the Instagram shop theme whenever the dark/light choice or shop fonts change.
   useEffect(() => {
-    let applying = false;
-    const safeApply = () => {
-      if (applying) return;
-      applying = true;
-      applyInstagramShopSettingsToDOM(isDark);
-      requestAnimationFrame(() => { applying = false; });
-    };
-
-    safeApply();
-    // Notify listeners (e.g., bottom nav) that theme has been updated
-    try { window.dispatchEvent(new CustomEvent('instagram-shop-theme-updated')); } catch {}
-    const reapply = () => safeApply();
-    const storageHandler = (e: StorageEvent) => {
-      if (e.key === 'instagram_shop_theme') reapply();
-    };
-
-    window.addEventListener('focus', reapply);
-    document.addEventListener('visibilitychange', reapply);
-    window.addEventListener('storage', storageHandler);
-    const toggleListener = () => toggleTheme();
-    window.addEventListener('instagram-shop-toggle-theme', toggleListener as EventListener);
-
+    applyInstagramShopSettingsToDOM(isDark);
     // Apply admin-selected fonts if available (fallback to Montserrat)
     try {
       const root = document.documentElement;
@@ -208,27 +197,43 @@ const InstagramShopLayoutContent = () => {
       if (body) root.style.setProperty('--font-sans', `"${body}", ${fallback}`);
       if (heading) root.style.setProperty('--font-heading', `"${heading}", ${fallback}`);
     } catch {}
-    // Clean up styles when component unmounts or path changes away from instagramShop
+    try { window.dispatchEvent(new CustomEvent('instagram-shop-theme-updated')); } catch {}
+  }, [appearanceSettings, isDark]);
+
+  // Mount-only: re-apply on focus/visibility/storage changes, and tear the theme
+  // down ONLY when actually leaving the Instagram shop (true unmount).
+  useEffect(() => {
+    const reapply = () => applyInstagramShopSettingsToDOM(isDarkRef.current);
+    const storageHandler = (e: StorageEvent) => { if (e.key === 'instagram_shop_theme') reapply(); };
+    const toggleListener = () => toggleTheme();
+
+    window.addEventListener('focus', reapply);
+    document.addEventListener('visibilitychange', reapply);
+    window.addEventListener('storage', storageHandler);
+    window.addEventListener('instagram-shop-toggle-theme', toggleListener as EventListener);
+
     return () => {
-      const root = document.documentElement;
-      for (const key of Object.keys(defaultSettings)) {
-        if (key.startsWith('--')) {
-          root.style.removeProperty(key);
-        }
-      }
-      root.style.removeProperty('--font-sans');
-      root.style.removeProperty('--font-heading');
-      root.classList.remove('blur-enabled');
       window.removeEventListener('focus', reapply);
       document.removeEventListener('visibilitychange', reapply);
       window.removeEventListener('storage', storageHandler);
       window.removeEventListener('instagram-shop-toggle-theme', toggleListener as EventListener);
+
+      const root = document.documentElement;
+      // Release theme ownership FIRST so the dashboard appearance can re-apply.
+      root.classList.remove('instagram-shop-theme');
+      root.removeAttribute('data-instagram-shop-theme');
+      for (const key of Object.keys(defaultSettings)) {
+        if (key.startsWith('--')) root.style.removeProperty(key);
+      }
+      root.style.removeProperty('--font-sans');
+      root.style.removeProperty('--font-heading');
+      root.classList.remove('blur-enabled');
       const styleEl = document.getElementById('instagram-shop-theme-style');
       if (styleEl && styleEl.parentElement) styleEl.parentElement.removeChild(styleEl);
-      // Re-apply dashboard appearance settings so radius and other values are restored
-      restoreSettings();
+      // Re-apply dashboard appearance settings so radius and other values are restored.
+      restoreSettingsRef.current();
     };
-  }, [appearanceSettings, isDark, restoreSettings]);
+  }, [toggleTheme]);
 
   // Global events to open drawers from anywhere (e.g., floating pill / sidebar)
   useEffect(() => {
@@ -304,28 +309,11 @@ const InstagramShopLayoutContent = () => {
     }
   }, [searchParams, shopDetails, setSearchParams]); // Add shopDetails to dependencies
 
-  // Fetch order count for the fixed button
+  // Order count badge: derived from the order IDs saved on this device.
+  // (Anon clients can't query the orders table directly due to RLS.)
   useEffect(() => {
-    const fetchOrderCount = async () => {
-      if (!shopDetails?.business_id) return;
-      const customerEmail = localStorage.getItem('instagram_shop_customer_email');
-      if (!customerEmail) return;
-
-      const { count, error } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .eq('business_id', shopDetails.business_id)
-        .eq('customer_email', customerEmail)
-        .in('status', ['Pending', 'Order Seen', 'Order Packaged', 'Given to Courier', 'Problematic']); // Only count active orders
-
-      if (error) {
-        console.error("Error fetching my orders count:", error);
-      } else {
-        setMyOrdersCount(count || 0);
-      }
-    };
-    fetchOrderCount();
-  }, [shopDetails?.business_id, isMyOrdersDrawerOpen]); // Re-fetch when drawer opens/closes
+    setMyOrdersCount(getStoredOrderIds().length);
+  }, [isMyOrdersDrawerOpen, location.pathname]); // Re-read when drawer opens/closes or after navigating back from checkout
 
   // Determine if current route is the products feed page
   const isProductsFeedPage = location.pathname.includes('/products');
@@ -437,16 +425,18 @@ const InstagramShopLayoutContent = () => {
           />
         </div>
         <main className="flex-1 flex mx-auto">
-        <Outlet context={{
-          isFilterDrawerOpen,
-          setIsFilterDrawerOpen,
-          filters,
-          handleFilterChange,
-          handleResetFilters,
-          maxPrice,
-          allProducts,
-          convertCurrency,
-        }} />
+        <Suspense fallback={<div className="p-6 w-full"><Skeleton className="h-96 w-full" /></div>}>
+          <Outlet context={{
+            isFilterDrawerOpen,
+            setIsFilterDrawerOpen,
+            filters,
+            handleFilterChange,
+            handleResetFilters,
+            maxPrice,
+            allProducts,
+            convertCurrency,
+          }} />
+        </Suspense>
         </main>
       </div>
       <Sonner />

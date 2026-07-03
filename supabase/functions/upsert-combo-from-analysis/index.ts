@@ -76,7 +76,7 @@ serve(async (req) => {
     if (existingCombo?.id) {
       const { data: updated, error: upErr } = await supabase
         .from('combo_products')
-        .update({ title, description, user_id, ...(business_id ? { business_id } : {}) })
+        .update({ title, description, user_id }) // combo_products has no business_id column
         .eq('id', existingCombo.id)
         .select('id')
         .single();
@@ -85,7 +85,7 @@ serve(async (req) => {
     } else {
       const { data: inserted, error: insErr } = await supabase
         .from('combo_products')
-        .insert({ title, description, instagram_post_id, user_id, ...(business_id ? { business_id } : {}) })
+        .insert({ title, description, instagram_post_id, user_id }) // combo_products has no business_id column
         .select('id')
         .single();
       if (insErr) throw insErr;
@@ -107,6 +107,12 @@ serve(async (req) => {
         .eq('name', it.productName)
         .maybeSingle();
 
+      // Inventory defaults to 10 like single-product analysis (0 would mark
+      // every AI-split product "Out of Stock"); category comes from the post's
+      // shared analysis so split products don't land uncategorized.
+      const itemInventory = it.inventory ?? 10;
+      const itemCategory = (analysis.categoryName || analysis.category_name || null) as string | null;
+
       let productId: string;
       if (existingProduct?.id) {
         const { data: updatedProd, error: upProdErr } = await supabase
@@ -116,7 +122,8 @@ serve(async (req) => {
             caption: description,
             price: base_price_all,
             currency: 'ALL',
-            inventory: it.inventory ?? 0,
+            inventory: itemInventory,
+            category: itemCategory,
             details: { ...(it.specifications || {}) },
             media_url: it.media_url || null,
             thumbnail_url: it.media_url || null,
@@ -137,12 +144,13 @@ serve(async (req) => {
             caption: description,
             price: base_price_all,
             currency: 'ALL',
-            inventory: it.inventory ?? 0,
+            inventory: itemInventory,
+            category: itemCategory,
             details: { ...(it.specifications || {}) },
             media_url: it.media_url || null,
             thumbnail_url: it.media_url || null,
             pricing_type: 'one_time',
-            status: (it.inventory ?? 0) === 0 ? 'Out of Stock' : 'Draft',
+            status: itemInventory === 0 ? 'Out of Stock' : 'Draft',
             ...(business_id ? { business_id } : {}),
           })
           .select('id')

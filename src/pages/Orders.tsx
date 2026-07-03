@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -61,6 +65,7 @@ type Order = {
   shipping_country?: string;
   shipping_notes_seller?: string;
   shipping_notes_courier?: string;
+  item_count?: number;
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -184,9 +189,9 @@ const InlineStatusDropdown = ({
   onOptimisticUpdate,
 }: InlineStatusDropdownProps) => {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [pendingCancel, setPendingCancel] = useState(false);
 
-  const handleChange = async (newStatus: OrderStatus) => {
-    if (newStatus === currentStatus) return;
+  const applyStatus = async (newStatus: OrderStatus) => {
     // Optimistic update
     onOptimisticUpdate(orderId, newStatus);
     setIsUpdating(true);
@@ -204,7 +209,34 @@ const InlineStatusDropdown = ({
     setIsUpdating(false);
   };
 
+  const handleChange = async (newStatus: OrderStatus) => {
+    if (newStatus === currentStatus) return;
+    // Cancelling restores inventory and can't be undone — confirm first.
+    if (newStatus === "Cancelled") {
+      setPendingCancel(true);
+      return;
+    }
+    applyStatus(newStatus);
+  };
+
   return (
+    <>
+    <AlertDialog open={pendingCancel} onOpenChange={setPendingCancel}>
+      <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
+          <AlertDialogDescription>
+            The reserved stock will be returned to your inventory. This can't be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep order</AlertDialogCancel>
+          <AlertDialogAction onClick={() => { setPendingCancel(false); applyStatus("Cancelled"); }}>
+            Cancel order
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <Select
       value={currentStatus}
       onValueChange={(v) => handleChange(v as OrderStatus)}
@@ -238,6 +270,7 @@ const InlineStatusDropdown = ({
         ))}
       </SelectContent>
     </Select>
+    </>
   );
 };
 
@@ -315,7 +348,9 @@ const OrderTable = ({
                 <div className="font-medium leading-tight">{order.customer_name}</div>
                 <div className="text-xs text-muted-foreground">{order.customer_email}</div>
               </TableCell>
-              <TableCell className="text-muted-foreground text-sm">—</TableCell>
+              <TableCell className="text-muted-foreground text-sm">
+                {order.item_count != null ? order.item_count : "—"}
+              </TableCell>
               <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                 <span title={new Date(order.created_at).toLocaleString()}>
                   {relativeTime(order.created_at)}
@@ -434,6 +469,7 @@ const Orders = () => {
   const { shopDetails, convertCurrency } = useShop();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [businessId, setBusinessId] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [activeTab, setActiveTab] = useState<TabValue>("All");
   const [searchTerm, setSearchTerm] = useState("");
@@ -443,14 +479,16 @@ const Orders = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "amount_high" | "amount_low" | "name">("newest");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "card" | "cash_on_delivery">("all");
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState<"all" | "pending" | "processing" | "completed" | "failed">("all");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<"all" | "pending" | "processing" | "paid" | "failed">("all");
 
   useEffect(() => {
     setTitle(t("nav.orders"));
   }, [setTitle, t]);
 
-  const fetchOrders = useCallback(async () => {
-    setIsLoading(true);
+  // `silent` skips the loading skeleton — used for realtime refreshes so the
+  // list updates in place without flashing.
+  const fetchOrders = useCallback(async (silent = false) => {
+    if (!silent) setIsLoading(true);
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -470,24 +508,44 @@ const Orders = () => {
       setIsLoading(false);
       return;
     }
+    setBusinessId(business.id);
 
     const { data, error } = await supabase
       .from("orders")
-      .select("*, updated_at")
+      .select("*, updated_at, order_items(count)")
       .eq("business_id", business.id)
       .order("created_at", { ascending: false });
 
     if (error) {
-      showError("Failed to fetch orders.");
+      if (!silent) showError("Failed to fetch orders.");
     } else {
-      setOrders(data as Order[]);
+      const withCounts = (data ?? []).map((o: any) => ({
+        ...o,
+        item_count: Array.isArray(o.order_items) ? (o.order_items[0]?.count ?? 0) : 0,
+      }));
+      setOrders(withCounts as Order[]);
     }
-    setIsLoading(false);
+    if (!silent) setIsLoading(false);
   }, []);
 
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  // Live-update the list when orders change for this business (new orders,
+  // status changes from elsewhere) so the seller doesn't need to refresh.
+  useEffect(() => {
+    if (!businessId) return;
+    const channel = supabase
+      .channel(`orders_list:${businessId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders", filter: `business_id=eq.${businessId}` },
+        () => { fetchOrders(true); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [businessId, fetchOrders]);
 
   // Open OrderDetailModal if orderId is in URL
   useEffect(() => {
@@ -568,10 +626,15 @@ const Orders = () => {
       IN_PROGRESS_STATUSES.includes(o.status)
     ).length;
     const fulfilled = orders.filter((o) => o.status === "Fulfilled").length;
-    const totalRevenue = orders.reduce((sum, o) => {
+    // Revenue counts only realised sales (Fulfilled + paid) so it matches the
+    // dashboard's figure — cancelled/unpaid orders are excluded.
+    const revenueOrders = orders.filter(
+      (o) => o.status === "Fulfilled" && o.payment_status === "paid"
+    );
+    const totalRevenue = revenueOrders.reduce((sum, o) => {
       return sum + convertCurrency(o.total_amount, o.currency, shopDetails.currency);
     }, 0);
-    const aov = total > 0 ? totalRevenue / total : 0;
+    const aov = revenueOrders.length > 0 ? totalRevenue / revenueOrders.length : 0;
 
     return { total, pending, inProgress, fulfilled, totalRevenue, aov };
   }, [orders, shopDetails, convertCurrency]);
@@ -638,7 +701,7 @@ const Orders = () => {
     exportOrdersCSV(toExport, shopDetails?.currency ?? "USD");
   };
 
-  const hasFilters = !!(searchTerm || dateRange?.from || activeTab !== "All" || paymentFilter !== "all" || paymentStatusFilter !== "all" || sortBy !== "newest");
+  const hasFilters = !!(searchTerm || dateRange?.from || activeTab !== "All" || paymentFilter !== "all" || paymentStatusFilter !== "all");
 
   return (
     <>
@@ -718,7 +781,7 @@ const Orders = () => {
                   <SelectItem value="all">{t("orders.all_status")}</SelectItem>
                   <SelectItem value="pending">{t("orders.pay_pending")}</SelectItem>
                   <SelectItem value="processing">{t("orders.processing")}</SelectItem>
-                  <SelectItem value="completed">{t("orders.paid")}</SelectItem>
+                  <SelectItem value="paid">{t("orders.paid")}</SelectItem>
                   <SelectItem value="failed">{t("orders.pay_failed")}</SelectItem>
                 </SelectContent>
               </Select>

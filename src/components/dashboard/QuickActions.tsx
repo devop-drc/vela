@@ -1,8 +1,9 @@
-import { ReactNode } from "react";
+import { getStorefrontUrl } from "@/lib/storefront";
+import { ReactNode, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSync } from "@/hooks/useSync";
 import { useIntegration } from "@/contexts/IntegrationContext";
-import { showError } from "@/utils/toast";
+import { showError, showSuccess } from "@/utils/toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
   RefreshCw,
@@ -10,6 +11,7 @@ import {
   ShoppingBag,
   Palette,
   ExternalLink,
+  ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useShop } from "@/contexts/ShopContext";
@@ -65,6 +67,30 @@ export const QuickActions = () => {
   const { runWithIntegrationCheck } = useIntegration();
   const { shopDetails } = useShop();
   const { t } = useTranslation();
+  const [isRefreshingImages, setIsRefreshingImages] = useState(false);
+
+  const handleRefreshImages = () => {
+    runWithIntegrationCheck(async () => {
+      setIsRefreshingImages(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("refresh-product-media", { body: {} });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        const refreshed = data?.refreshed ?? 0;
+        const failed = data?.failed ?? 0;
+        if (refreshed > 0) {
+          showSuccess(`Refreshed ${refreshed} image${refreshed === 1 ? "" : "s"}${failed ? ` (${failed} failed)` : ""}.`);
+          setTimeout(() => window.location.reload(), 600);
+        } else {
+          showSuccess(data?.message || "All images are up to date.");
+        }
+      } catch (err) {
+        showError(err instanceof Error ? err.message : "Failed to refresh images.");
+      } finally {
+        setIsRefreshingImages(false);
+      }
+    });
+  };
 
   const handleQuickSync = () => {
     runWithIntegrationCheck(async () => {
@@ -86,7 +112,7 @@ export const QuickActions = () => {
   };
 
   const storefrontUrl = shopDetails?.slug
-    ? `${window.location.origin}/shop/${shopDetails.slug}`
+    ? getStorefrontUrl(shopDetails.slug, shopDetails.storefront_type)
     : null;
 
   const actions = [
@@ -119,6 +145,14 @@ export const QuickActions = () => {
       colorClass: "bg-emerald-50 text-emerald-600",
     },
     {
+      icon: <ImageIcon className={cn("h-4 w-4 text-pink-600", isRefreshingImages && "animate-pulse")} />,
+      title: isRefreshingImages ? "Refreshing…" : "Fix Images",
+      description: "Re-upload broken product images",
+      onClick: handleRefreshImages,
+      disabled: isRefreshingImages,
+      colorClass: "bg-pink-50 text-pink-600",
+    },
+    {
       icon: <Palette className="h-4 w-4 text-violet-600" />,
       title: t("dashboard.customize"),
       description: t("dashboard.customize_desc"),
@@ -129,29 +163,26 @@ export const QuickActions = () => {
   ];
 
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <h2 className="text-base font-semibold">{t("dashboard.quick_actions")}</h2>
-        {storefrontUrl && (
-          <a
-            href={storefrontUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            {t("dashboard.view_storefront")}
-          </a>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-2">
+    <div className="flex flex-col items-end gap-2">
+      {storefrontUrl && (
+        <a
+          href={storefrontUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          {t("dashboard.view_storefront")}
+        </a>
+      )}
+      <div className="flex flex-wrap gap-1.5 justify-end">
         {actions.map((action) => (
           <button
             key={action.title}
             onClick={action.onClick}
             disabled={action.disabled}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
+              "inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1.5 text-xs font-medium transition-colors shadow-sm",
               "hover:bg-accent hover:text-accent-foreground",
               action.disabled && "opacity-50 cursor-not-allowed"
             )}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { showError, showSuccess } from '@/utils/toast';
@@ -140,6 +140,8 @@ export interface DesignSettings extends ColorScheme {
   heroBackgroundMediaUrl?: string;
   heroBackgroundMediaType?: 'image' | 'video';
   showHeroBlobAnimation: boolean;
+  // Customisable /shop homepage layout template
+  homepageTemplate?: 'classic' | 'minimal' | 'showcase' | 'magazine';
 }
 
 export const defaultSettings: DesignSettings = {
@@ -162,12 +164,14 @@ export const defaultSettings: DesignSettings = {
   heroBackgroundMediaUrl: undefined,
   heroBackgroundMediaType: 'image',
   showHeroBlobAnimation: true,
+  homepageTemplate: 'classic',
 };
 
 interface AppearanceContextType {
   settings: DesignSettings;
   setTheme: (themeName: string) => void;
   updateSetting: (key: keyof DesignSettings, value: any) => void;
+  applySettings: (partial: Partial<DesignSettings>) => void;
   resetSettings: () => void;
   randomizeTheme: () => void;
   isLoading: boolean;
@@ -182,6 +186,11 @@ const AppearanceContext = createContext<AppearanceContextType | undefined>(undef
 
 const applySettingsToDOM = (settings: Partial<DesignSettings>) => {
   const root = document.documentElement;
+  // The Instagram shop manages its own fixed light/dark theme. While it owns the
+  // theme (marked via data-instagram-shop-theme), don't let the dashboard
+  // appearance settings overwrite it — otherwise refetches on tab focus/auth
+  // token refresh would clobber the shop's dark mode.
+  if (root.dataset.instagramShopTheme) return;
   for (const [key, value] of Object.entries(settings)) {
     if (key.startsWith('--')) {
       root.style.setProperty(key, value as string);
@@ -273,14 +282,21 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
     applySettingsToDOM(settings);
   }, [settings]);
 
-  const debouncedSave = useCallback(
-    debounce(async (newSettings: DesignSettings) => {
-      if (!session?.user) return;
+  // Keep the latest session reachable without recreating the debounced saver —
+  // recreating it on every session change (e.g. token refresh) would drop a
+  // pending save's timer and silently lose the edit.
+  const sessionRef = useRef(session);
+  useEffect(() => { sessionRef.current = session; }, [session]);
+
+  const debouncedSave = useMemo(
+    () => debounce(async (newSettings: DesignSettings) => {
+      const s = sessionRef.current;
+      if (!s?.user) return;
       const { error } = await supabase
-        .from('design_settings').upsert({ user_id: session.user.id, settings: newSettings }, { onConflict: 'user_id' });
+        .from('design_settings').upsert({ user_id: s.user.id, settings: newSettings }, { onConflict: 'user_id' });
       if (error) console.error("Error saving settings:", error);
     }, 1000),
-    [session]
+    []
   );
 
   const setTheme = (themeName: string) => {
@@ -309,6 +325,15 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
   
   const setAdvanced = (isAdvanced: boolean) => {
     updateSetting('isAdvanced', isAdvanced);
+  };
+
+  // Apply a batch of settings (e.g. a full design preset) in one update + save.
+  const applySettings = (partial: Partial<DesignSettings>) => {
+    setSettings(prev => {
+      const newSettings = { ...prev, ...partial };
+      debouncedSave(newSettings);
+      return newSettings;
+    });
   };
 
   const resetSettings = () => {
@@ -437,7 +462,7 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AppearanceContext.Provider value={{ settings, setTheme, updateSetting, resetSettings, isLoading, isAdvanced: settings.isAdvanced, setAdvanced, randomizeTheme, saveCustomTheme, deleteCustomTheme, restoreSettings: () => applySettingsToDOM(settings) }}>
+    <AppearanceContext.Provider value={{ settings, setTheme, updateSetting, applySettings, resetSettings, isLoading, isAdvanced: settings.isAdvanced, setAdvanced, randomizeTheme, saveCustomTheme, deleteCustomTheme, restoreSettings: () => applySettingsToDOM(settings) }}>
       {children}
     </AppearanceContext.Provider>
   );

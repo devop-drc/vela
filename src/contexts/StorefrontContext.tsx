@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
@@ -21,6 +21,7 @@ interface ShopDetails {
   followers_count?: number;
   media_count?: number;
   instagram_url?: string; // Added Instagram URL
+  storefront_type?: string; // 'instagram' | 'custom'
 }
 
 interface Product {
@@ -94,6 +95,9 @@ interface StorefrontContextType {
   currentPage: number;
   hasMoreProducts: boolean;
   fetchMoreProducts: () => Promise<void>;
+  /** Fetch one product by id (deep links) and merge it into `products`.
+      Returns the product, or null if it doesn't exist / isn't public. */
+  fetchProductById: (productId: string) => Promise<Product | null>;
   isLoadingMore: boolean;
   bestSellers: TopProduct[]; // New: Best selling products
   recommendedProducts: Product[]; // New: Recommended products
@@ -104,7 +108,9 @@ interface StorefrontContextType {
   customerOrders: OrderDetails[]; // New: Customer orders
 }
 
-const StorefrontContext = createContext<StorefrontContextType | undefined>(undefined);
+// Exported so demo surfaces (e.g. the landing page's live storefront preview)
+// can mount real storefront components over mock data without fetching.
+export const StorefrontContext = createContext<StorefrontContextType | undefined>(undefined);
 
 // Helper to generate a URL-friendly slug
 const generateSlug = (name: string): string => {
@@ -195,6 +201,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         followers_count: data.shopDetails.followers_count,
         media_count: data.shopDetails.media_count,
         instagram_url: data.shopDetails.instagram_url, // Set Instagram URL
+        storefront_type: data.shopDetails.storefront_type || 'instagram',
       } as ShopDetails;
 
       // Backfill branding if missing (incognito or older records) using public storage URLs
@@ -267,7 +274,11 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         setMarqueeElements(data.marqueeElements || []); // Set marquee elements
         setCustomerOrders(data.customerOrders || []); // Set customer orders
       } else {
-        setProducts(prevProducts => [...prevProducts, ...data.products]);
+        // De-dupe by id so a double-trigger can't append the same page twice.
+        setProducts(prevProducts => {
+          const seen = new Set(prevProducts.map(p => p.id));
+          return [...prevProducts, ...(data.products || []).filter((p: Product) => !seen.has(p.id))];
+        });
       }
       setHasMoreProducts(data.hasMore);
 
@@ -284,12 +295,48 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [shopSlug]);
 
+  const isFetchingMoreRef = useRef(false);
   const fetchMoreProducts = useCallback(async () => {
-    if (!hasMoreProducts || isLoading || isLoadingMore) return;
-    const nextPage = currentPage + 1;
-    setCurrentPage(nextPage);
-    await fetchStorefrontData(nextPage);
+    // Guard synchronously (before the await) so two rapid triggers — e.g. an
+    // intersection observer firing twice — can't both pass and skip/duplicate a page.
+    if (isFetchingMoreRef.current || !hasMoreProducts || isLoading || isLoadingMore) return;
+    isFetchingMoreRef.current = true;
+    try {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      await fetchStorefrontData(nextPage);
+    } finally {
+      isFetchingMoreRef.current = false;
+    }
   }, [currentPage, hasMoreProducts, isLoading, isLoadingMore, fetchStorefrontData]);
+
+  // Single-product deep-link fetch: resolves instantly instead of paginating
+  // the whole catalog until the product happens to appear.
+  const pendingProductFetches = useRef(new Map<string, Promise<Product | null>>());
+  const fetchProductById = useCallback(async (productId: string): Promise<Product | null> => {
+    if (!shopSlug || !productId) return null;
+    const pending = pendingProductFetches.current.get(productId);
+    if (pending) return pending;
+    const task = (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-public-product', {
+          body: { shopSlug, productId },
+        });
+        if (error || data?.error) return null;
+        const product: Product | null = data?.product ?? null;
+        if (product) {
+          setProducts((prev) => (prev.some((p) => p.id === product.id) ? prev : [...prev, product]));
+        }
+        return product;
+      } catch {
+        return null;
+      } finally {
+        pendingProductFetches.current.delete(productId);
+      }
+    })();
+    pendingProductFetches.current.set(productId, task);
+    return task;
+  }, [shopSlug]);
 
   useEffect(() => {
     fetchStorefrontData(1); // Initial fetch on mount or shopSlug change
@@ -335,6 +382,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
     currentPage,
     hasMoreProducts,
     fetchMoreProducts,
+    fetchProductById,
     isLoadingMore,
     bestSellers, // Provide best sellers
     recommendedProducts, // Provide recommended products

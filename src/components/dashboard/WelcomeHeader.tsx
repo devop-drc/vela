@@ -42,10 +42,10 @@ export const WelcomeHeader = ({ pendingOrders, activeProducts, totalOrders = 0, 
 
   return (
     <div>
-      <h1 className="text-3xl font-bold tracking-tight">
+      <h1 className="text-2xl font-bold tracking-tight leading-tight">
         {t("dashboard.welcome")}{firstName ? `, ${firstName}` : ""} 👋
       </h1>
-      <p className="text-muted-foreground mt-1">
+      <p className="text-xs text-muted-foreground mt-0.5">
         {todayLabel}
         {" · "}
         <span className="font-medium text-foreground">{activeOrderCount !== 1 ? t("dashboard.active_orders_plural", { count: activeOrderCount }) : t("dashboard.active_orders", { count: activeOrderCount })}</span>

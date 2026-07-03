@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, Facebook, Instagram, ExternalLink, CheckCircle, AlertCircle, Mail, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { showError, showSuccess } from "@/utils/toast";
+import { showError, showSuccess, toFriendlyError } from "@/utils/toast";
 import { Link, useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
+import AuthLayout from '@/components/auth/AuthLayout';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -33,7 +34,7 @@ const InstagramSetupGuide = ({ open, onOpenChange }: { open: boolean; onOpenChan
           Instagram Business Setup Required
         </DialogTitle>
         <DialogDescription>
-          To use InstaShop, you need to connect an Instagram Business or Creator account to your Facebook page.
+          To use InstantShop, you need to connect an Instagram Business or Creator account to your Facebook page.
           This is a common step that sometimes requires specific actions within Instagram and Facebook.
         </DialogDescription>
       </DialogHeader>
@@ -100,8 +101,20 @@ const InstagramSetupGuide = ({ open, onOpenChange }: { open: boolean; onOpenChan
 const Login = () => {
   const [showSetupGuide, setShowSetupGuide] = useState(false);
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const lang: "sq" | "en" = i18n.language?.startsWith("sq") ? "sq" : "en";
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
+  // Already signed in? Go straight to the dashboard — re-authenticating over a
+  // live session can wedge the auth client mid-refresh.
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted && session) navigate('/dashboard', { replace: true });
+    });
+    return () => { mounted = false; };
+  }, [navigate]);
+
+  const { register, handleSubmit, getValues, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
 
@@ -116,63 +129,79 @@ const Login = () => {
         throw error;
       }
 
-      showSuccess('Login successful! Redirecting to dashboard...');
-      navigate('/');
+      showSuccess('Welcome back! Taking you to your dashboard…');
+      navigate('/dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
-      showError(`Login failed: ${error.message}`);
+      showError(toFriendlyError(error, "Couldn't sign you in. Please try again."));
     }
   };
 
+  const handleForgotPassword = async () => {
+    const email = getValues('email');
+    if (!email) {
+      showError("Enter your email above first, then tap “Forgot password?”.");
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) showError(toFriendlyError(error, "Couldn't send the reset email."));
+    else showSuccess("Password reset link sent — check your email.");
+  };
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
+    <AuthLayout
+      lang={lang}
+      title={lang === "sq" ? "Mirë se u ktheve" : "Welcome back"}
+      subtitle={lang === "sq" ? "Hyr në llogarinë tënde të InstantShop." : "Sign in to your InstantShop account."}
+      points={lang === "sq"
+        ? ["Produktet nga postimet, me AI", "Pagesa me kartë, në Lekë", "Porositë në një panel"]
+        : ["Products from posts, with AI", "Card payments, in Lek", "Orders in one panel"]}
+    >
       <InstagramSetupGuide open={showSetupGuide} onOpenChange={setShowSetupGuide} />
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center items-center gap-2 mb-2">
-            <ShoppingBag className="h-8 w-8 text-primary" />
-            <CardTitle className="text-3xl font-bold">Login</CardTitle>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input id="email" type="email" placeholder="ti@dyqani.al" {...register('email')} className="h-11 rounded-xl pl-10" />
           </div>
-          <CardDescription>Sign in to your InstaShopify account.</CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="email" type="email" {...register('email')} className="pl-10" />
-              </div>
-              {errors.email && <p className="text-sm text-destructive mt-1">{errors.email.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="password" type="password" {...register('password')} className="pl-10" />
-              </div>
-              {errors.password && <p className="text-sm text-destructive mt-1">{errors.password.message}</p>}
-            </div>
-          </CardContent>
-          <CardFooter className="flex-col">
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Login
-            </Button>
-            <p className="text-sm text-muted-foreground mt-4">
-              Don't have an account?{" "}
-              <Link to="/register" className="text-primary hover:underline">
-                Register
-              </Link>
-            </p>
-            <Button variant="link" onClick={() => setShowSetupGuide(true)} className="w-full text-sm text-primary">
-              <Instagram className="mr-2 h-4 w-4" />
-              Instagram Setup Guide
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+          {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">{lang === "sq" ? "Fjalëkalimi" : "Password"}</Label>
+            <button type="button" onClick={handleForgotPassword} className="text-xs text-fuchsia-600 hover:underline">
+              {lang === "sq" ? "Harrove fjalëkalimin?" : "Forgot password?"}
+            </button>
+          </div>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input id="password" type="password" {...register('password')} className="h-11 rounded-xl pl-10" />
+          </div>
+          {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+        </div>
+
+        <Button type="submit" disabled={isSubmitting}
+          className="h-11 w-full rounded-xl brand-gradient text-white hover:opacity-90">
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {lang === "sq" ? "Hyr" : "Sign in"}
+        </Button>
+
+        <p className="text-center text-sm text-muted-foreground">
+          {lang === "sq" ? "S'ke llogari?" : "Don't have an account?"}{" "}
+          <Link to="/register" className="font-medium text-fuchsia-600 hover:underline">
+            {lang === "sq" ? "Regjistrohu falas" : "Register free"}
+          </Link>
+        </p>
+        <button type="button" onClick={() => setShowSetupGuide(true)}
+          className="mx-auto flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground">
+          <Instagram className="h-3.5 w-3.5" />
+          {lang === "sq" ? "Udhëzuesi i Instagram Business" : "Instagram Business setup guide"}
+        </button>
+      </form>
+    </AuthLayout>
   );
 };
 

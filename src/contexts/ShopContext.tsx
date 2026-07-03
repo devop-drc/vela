@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
+import type { StorefrontType } from '@/lib/storefront';
 
 interface ShopDetails {
   id: string; // Add business ID here
@@ -18,6 +19,7 @@ interface ShopDetails {
   media_count?: number;
   instagram_url?: string; // Added Instagram URL
   username?: string; // Added Instagram username
+  storefront_type?: StorefrontType; // 'instagram' | 'custom'
 }
 
 interface ExchangeRates {
@@ -50,15 +52,30 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
   const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(null);
 
   useEffect(() => {
+    let mounted = true;
     const fetchRates = async () => {
+      // Try cache table first — much faster than invoking the edge function.
+      const { data: cached } = await supabase
+        .from('exchange_rates_cache')
+        .select('rates, last_fetched_at')
+        .eq('id', 1)
+        .maybeSingle();
+
+      const fresh = (ts?: string | null) =>
+        ts ? Date.now() - new Date(ts).getTime() < 24 * 60 * 60 * 1000 : false;
+
+      if (cached?.rates && fresh(cached.last_fetched_at)) {
+        if (mounted) setExchangeRates(cached.rates as ExchangeRates);
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       const invokeOptions: any = {};
       if (session?.access_token) {
-        invokeOptions.headers = {
-          Authorization: `Bearer ${session.access_token}`
-        };
+        invokeOptions.headers = { Authorization: `Bearer ${session.access_token}` };
       }
       const { data, error } = await supabase.functions.invoke('exchange-rates', invokeOptions);
+      if (!mounted) return;
       if (error || (data && data.error)) {
         const errorMessage = error?.message || (data && data.error) || "An unknown error occurred.";
         console.error("ShopContext: Failed to fetch exchange rates:", errorMessage);
@@ -68,75 +85,110 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     fetchRates();
+    return () => { mounted = false; };
   }, []);
 
   const fetchShopDetails = useCallback(async () => {
     setIsLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
+    // Use the locally cached session — avoids an auth network round-trip.
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     if (!user) {
       setIsLoading(false);
       return;
     }
 
-    const { data: business, error: businessError } = await supabase
-      .from('businesses').select('id, name').eq('user_id', user.id).single(); // Fetch business name too
-    if (businessError || !business) {
-      console.error("ShopContext: Could not find your business:", businessError);
+    // Run business + shop_details + integration check in parallel.
+    const [businessRes, dbDetailsRes, integrationRes] = await Promise.all([
+      supabase.from('businesses').select('id, name').eq('user_id', user.id).single(),
+      // shop_details join through business is needed; do it as a second query
+      // after we have business.id. But to parallelize we fetch by user via a join below.
+      Promise.resolve({ data: null, error: null } as { data: any; error: any }),
+      supabase.from('integrations').select('id').eq('user_id', user.id).eq('provider', 'facebook').maybeSingle(),
+    ]);
+
+    const business = businessRes.data;
+    if (businessRes.error || !business) {
+      console.error("ShopContext: Could not find your business:", businessRes.error);
       setIsLoading(false);
       return;
     }
 
-    const { data: dbDetails, error: dbDetailsError } = await supabase.from('shop_details').select('*').eq('business_id', business.id).single();
-    if (dbDetailsError && dbDetailsError.code !== 'PGRST116') { // PGRST116 = no rows found
+    const { data: dbDetails, error: dbDetailsError } = await supabase
+      .from('shop_details')
+      .select('*')
+      .eq('business_id', business.id)
+      .single();
+    if (dbDetailsError && dbDetailsError.code !== 'PGRST116') {
       console.error("ShopContext: Error fetching shop details from DB:", dbDetailsError);
     }
 
-    // Attempt to fetch Instagram details only if an integration exists
-    let igDetails: any = null;
-    const { data: integration } = await supabase.from('integrations').select('id').eq('user_id', user.id).eq('provider', 'facebook').maybeSingle();
-    if (integration) {
-      const { data: { session } } = await supabase.auth.getSession();
-      const invokeOptions: any = { body: { user_id: user.id } };
-      if (session?.access_token) {
-        invokeOptions.headers = {
-          Authorization: `Bearer ${session.access_token}`
-        };
-      }
-      const { data: fetchedIgDetails, error: igError } = await supabase.functions.invoke('instagram-profile', invokeOptions);
-      if (igError || fetchedIgDetails.error) {
-        console.error("ShopContext: Failed to fetch Instagram details:", igError || fetchedIgDetails.error);
-      } else {
-        igDetails = fetchedIgDetails;
-      }
-    }
-
     const defaultShopName = `${user.user_metadata?.first_name || 'Your'} Shop`;
-    const defaultSlug = generateSlug(user.user_metadata?.first_name || 'your-shop');
 
-    const finalDetails: ShopDetails = {
-      id: business.id, // Set the business ID here
-      userId: user.id, // Set the user ID here
-      name: business.name, // Business name from the join
-      shop_name: dbDetails?.shop_name || igDetails?.shop_name || defaultShopName,
-      slug: dbDetails?.slug || generateSlug(dbDetails?.shop_name || igDetails?.shop_name || defaultShopName), // Use existing slug or generate
-      logo_url: dbDetails?.logo_url || igDetails?.logo_url || null, // Prioritize DB, then IG
-      favicon_url: dbDetails?.favicon_url || igDetails?.favicon_url || null, // Prioritize DB, then IG
-      currency: dbDetails?.currency || 'USD', // Default to USD if not set
+    // Set shop details immediately from local DB — don't block render on the
+    // Instagram edge function (which is slow). IG data is augmented below.
+    const initialDetails: ShopDetails = {
+      id: business.id,
+      userId: user.id,
+      name: business.name,
+      shop_name: dbDetails?.shop_name || defaultShopName,
+      slug: dbDetails?.slug || generateSlug(dbDetails?.shop_name || defaultShopName),
+      logo_url: dbDetails?.logo_url || null,
+      favicon_url: dbDetails?.favicon_url || null,
+      currency: dbDetails?.currency || 'USD',
       headline: dbDetails?.headline || '',
-      about: dbDetails?.about || igDetails?.description || '',
+      about: dbDetails?.about || '',
       contact_email: dbDetails?.contact_email || user.email || '',
-      followers_count: igDetails?.followers_count,
-      media_count: igDetails?.media_count,
-      instagram_url: dbDetails?.instagram_url || igDetails?.instagram_url || null, // Prioritize DB, then IG
-      username: igDetails?.username || null,
+      instagram_url: dbDetails?.instagram_url || null,
+      storefront_type: (dbDetails?.storefront_type as StorefrontType) || 'instagram',
     };
 
-    setShopDetails(finalDetails);
+    setShopDetails(initialDetails);
     setIsLoading(false);
+
+    // Background-augment with Instagram details (non-blocking).
+    if (integrationRes.data) {
+      const invokeOptions: any = { body: { user_id: user.id } };
+      if (session?.access_token) {
+        invokeOptions.headers = { Authorization: `Bearer ${session.access_token}` };
+      }
+      supabase.functions.invoke('instagram-profile', invokeOptions).then(({ data: igDetails, error: igError }) => {
+        if (igError || igDetails?.error) {
+          console.error("ShopContext: Failed to fetch Instagram details:", igError || igDetails?.error);
+          return;
+        }
+        if (!igDetails) return;
+        setShopDetails(prev => prev ? {
+          ...prev,
+          shop_name: dbDetails?.shop_name || igDetails.shop_name || prev.shop_name,
+          slug: dbDetails?.slug || generateSlug(dbDetails?.shop_name || igDetails.shop_name || prev.shop_name),
+          logo_url: dbDetails?.logo_url || igDetails.logo_url || prev.logo_url,
+          favicon_url: dbDetails?.favicon_url || igDetails.favicon_url || prev.favicon_url,
+          about: dbDetails?.about || igDetails.description || prev.about,
+          followers_count: igDetails.followers_count,
+          media_count: igDetails.media_count,
+          instagram_url: dbDetails?.instagram_url || igDetails.instagram_url || prev.instagram_url,
+          username: igDetails.username || prev.username,
+        } : prev);
+      });
+    }
   }, []);
 
   useEffect(() => {
     fetchShopDetails();
+
+    // Refetch on auth state changes so the dashboard hydrates after login
+    // without a full page reload, and clears stale data on logout.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') {
+        fetchShopDetails();
+      } else if (event === 'SIGNED_OUT') {
+        setShopDetails(null);
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [fetchShopDetails]);
 
   const updateShopDetails = async (details: Partial<ShopDetails>) => {
@@ -181,10 +233,13 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const convertCurrency = useCallback((amount: number | null | undefined, fromCurrency: string = 'ALL', toCurrency?: string) => {
+  const convertCurrency = useCallback((amount: number | null | undefined, fromCurrency: string | null = 'ALL', toCurrency?: string) => {
     const numericAmount = amount ?? 0;
+    // Coerce a null/empty source currency to ALL (products store prices in ALL).
+    // A default parameter only applies to `undefined`, not `null`, so do it explicitly.
+    const from = fromCurrency || 'ALL';
     // Ensure targetCurrency is always a valid string, defaulting to shopDetails.currency or 'USD'
-    const targetCurrency = toCurrency || shopDetails?.currency || 'USD'; 
+    const targetCurrency = toCurrency || shopDetails?.currency || 'USD';
 
 
     // Crucial: Ensure shopDetails and exchangeRates are available for conversion
@@ -193,15 +248,15 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
     }
 
     // If source and target currencies are the same, no conversion needed
-    if (fromCurrency === targetCurrency) {
+    if (from === targetCurrency) {
       return numericAmount;
     }
 
-    const fromRate = exchangeRates[fromCurrency];
+    const fromRate = exchangeRates[from];
     const toRate = exchangeRates[targetCurrency];
 
     if (!fromRate || !toRate) {
-      console.warn(`convertCurrency: Missing exchange rate for conversion from ${fromCurrency} to ${targetCurrency}. Returning original amount.`, { amount, fromCurrency, toCurrency, exchangeRates });
+      console.warn(`convertCurrency: Missing exchange rate for conversion from ${from} to ${targetCurrency}. Returning original amount.`, { amount, fromCurrency, toCurrency, exchangeRates });
       return numericAmount;
     }
 

@@ -17,9 +17,9 @@ interface StatPillProps {
 }
 
 const StatPill = ({ icon, label, value, colorClass = 'bg-muted' }: StatPillProps) => (
-  <div className={cn('flex flex-col items-center gap-0.5 rounded-xl px-4 py-2.5 min-w-[72px]', colorClass)}>
-    <div className="text-muted-foreground mb-0.5">{icon}</div>
-    <span className="text-base font-bold tabular-nums leading-none">{value}</span>
+  <div className={cn('flex flex-col items-center gap-0.5 rounded-lg px-2 py-1.5 min-w-[60px]', colorClass)}>
+    <div className="text-muted-foreground">{icon}</div>
+    <span className="text-sm font-bold tabular-nums leading-none">{value}</span>
     <span className="text-[10px] text-muted-foreground leading-none mt-0.5">{label}</span>
   </div>
 );
@@ -31,20 +31,19 @@ export const ProfileStats = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
+    if (!shopDetails?.userId) return;
+    const userId = shopDetails.userId;
     const fetchProductCountAndProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
       const [countRes, profileRes] = await Promise.all([
-        supabase.from('products').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-        supabase.from('profiles').select('first_name, last_name').eq('id', user.id).single(),
+        supabase.from('products').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+        supabase.from('profiles').select('first_name, last_name').eq('id', userId).single(),
       ]);
 
       setProductCount(countRes.count ?? null);
       if (!profileRes.error) setUserProfile(profileRes.data);
     };
     fetchProductCountAndProfile();
-  }, []);
+  }, [shopDetails?.userId]);
 
   if (isLoading) {
     return <Skeleton className="h-28 w-full rounded-xl" />;
@@ -61,31 +60,26 @@ export const ProfileStats = () => {
 
   return (
     <Card className="shadow-sm border border-border/60">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-4">
+      <CardContent className="p-3">
+        <div className="flex items-center gap-3">
           {/* Avatar */}
           <div className="relative flex-shrink-0">
-            <Avatar className="h-14 w-14 ring-2 ring-border">
-              <AvatarImage src={shopDetails?.logo_url} />
-              <AvatarFallback className="text-lg font-bold">
+            <Avatar className="h-11 w-11 ring-2 ring-border">
+              <AvatarImage src={shopDetails?.logo_url} referrerPolicy="no-referrer" />
+              <AvatarFallback className="text-base font-bold">
                 {shopDetails?.shop_name?.[0] ?? '?'}
               </AvatarFallback>
             </Avatar>
             {/* Instagram badge */}
-            <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 ring-2 ring-background">
-              <Instagram className="h-2.5 w-2.5 text-white" />
+            <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 ring-2 ring-background">
+              <Instagram className="h-2 w-2 text-white" />
             </span>
           </div>
 
           {/* Name + username */}
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm leading-tight truncate">{shopDetails?.shop_name ?? '—'}</p>
-            {userProfile && (
-              <p className="text-xs text-muted-foreground truncate">
-                {userProfile.first_name} {userProfile.last_name}
-              </p>
-            )}
-            {shopDetails?.instagram_url && (
+            {shopDetails?.instagram_url ? (
               <a
                 href={shopDetails.instagram_url}
                 target="_blank"
@@ -94,31 +88,35 @@ export const ProfileStats = () => {
               >
                 @{shopDetails.username}
               </a>
+            ) : userProfile && (
+              <p className="text-xs text-muted-foreground truncate">
+                {userProfile.first_name} {userProfile.last_name}
+              </p>
             )}
           </div>
 
           {/* Refresh */}
-          <Button variant="ghost" size="icon" className="flex-shrink-0 h-8 w-8" onClick={fetchShopDetails}>
+          <Button variant="ghost" size="icon" className="flex-shrink-0 h-7 w-7" onClick={fetchShopDetails}>
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
         </div>
 
         {/* Stat pills */}
-        <div className="flex gap-2 mt-4 justify-between">
+        <div className="flex gap-1.5 mt-2.5 justify-between">
           <StatPill
-            icon={<Users className="h-3.5 w-3.5" />}
+            icon={<Users className="h-3 w-3" />}
             label={t("dashboard.followers")}
             value={followers}
             colorClass="bg-blue-500/8 flex-1"
           />
           <StatPill
-            icon={<ImageIcon className="h-3.5 w-3.5" />}
+            icon={<ImageIcon className="h-3 w-3" />}
             label={t("dashboard.posts")}
             value={posts}
             colorClass="bg-violet-500/8 flex-1"
           />
           <StatPill
-            icon={<Package className="h-3.5 w-3.5" />}
+            icon={<Package className="h-3 w-3" />}
             label={t("nav.products")}
             value={products}
             colorClass="bg-emerald-500/8 flex-1"

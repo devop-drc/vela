@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye, XCircle, CreditCard, MessageSquareWarning, Hash, Reply, Handshake, MapPin, StickyNote } from "lucide-react";
+import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye, XCircle, CreditCard, MessageSquareWarning, Hash, Reply, Handshake, MapPin, StickyNote, Star } from "lucide-react";
+import { LeaveReviewDialog } from "./ProductReviews";
 import { Separator } from "../ui/separator";
 import { ScrollArea } from "../ui/scroll-area";
 import { useStorefront } from "@/contexts/StorefrontContext";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { MediaItem } from "../MediaItem";
 import { InstagramReportIssueModal } from "./InstagramReportIssueModal"; // Use InstagramReportIssueModal
@@ -21,6 +22,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 type OrderStatusType = 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic' | 'Cancelled';
 
 interface OrderItem {
+  product_id?: string;
   quantity: number;
   price_at_purchase: number;
   products: {
@@ -79,6 +81,8 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
   const [isConfirmReceiptAlertOpen, setIsConfirmReceiptAlertOpen] = useState(false);
   const [isMarkCompletedAlertOpen, setIsMarkCompletedAlertOpen] = useState(false);
   const [isCancelOrderAlertOpen, setIsCancelOrderAlertOpen] = useState(false);
+  const [reviewedProductIds, setReviewedProductIds] = useState<Set<string>>(new Set());
+  const [reviewTarget, setReviewTarget] = useState<{ productId: string; productName: string } | null>(null);
 
   useEffect(() => {
     if (order) {
@@ -92,6 +96,7 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
           const { data: itemsData, error: itemsError } = await supabase
             .from('order_items')
             .select(`
+              product_id,
               quantity,
               price_at_purchase,
               products (
@@ -108,6 +113,13 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
           }
         }
         setIsLoadingItems(false);
+
+        // Which products in this order has the customer already reviewed?
+        const { data: reviewRows } = await supabase
+          .from('product_reviews')
+          .select('product_id')
+          .eq('order_id', order.id);
+        setReviewedProductIds(new Set((reviewRows || []).map((r: any) => r.product_id)));
 
         const { data: disputeData, error: disputeError } = await supabase
           .from('order_disputes')
@@ -250,6 +262,18 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
         />
       )}
 
+      {reviewTarget && (
+        <LeaveReviewDialog
+          isOpen={!!reviewTarget}
+          onClose={() => setReviewTarget(null)}
+          orderId={order.id}
+          productId={reviewTarget.productId}
+          productName={reviewTarget.productName}
+          customerEmail={order.customer_email}
+          onSubmitted={(pid) => setReviewedProductIds(prev => new Set(prev).add(pid))}
+        />
+      )}
+
       <AlertDialog open={isConfirmReceiptAlertOpen} onOpenChange={setIsConfirmReceiptAlertOpen}>
         <AlertDialogContent className="bg-white text-black rounded-lg">
           <AlertDialogHeader>
@@ -272,17 +296,16 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
       <AlertDialog open={isMarkCompletedAlertOpen} onOpenChange={setIsMarkCompletedAlertOpen}>
         <AlertDialogContent className="bg-white text-black rounded-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-bold text-gray-800">Mark Order as Completed & Paid?</AlertDialogTitle>
+            <AlertDialogTitle className="text-xl font-bold text-gray-800">Confirm you received this order?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-gray-500">
-              By confirming, you are marking this Cash on Delivery order as **Fulfilled** and **Paid**. This action cannot be reversed.
-              Please ensure payment has been collected and all items received.
+              This confirms you've received your order and paid on delivery. Once confirmed, you'll be able to leave a review. This can't be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isUpdatingOrder} className="text-gray-800 hover:bg-gray-100">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleMarkCompletedAndPaid} disabled={isUpdatingOrder} className="bg-red-500 hover:bg-red-600 text-white">
+            <AlertDialogCancel disabled={isUpdatingOrder} className="text-gray-800 hover:bg-gray-100">Not yet</AlertDialogCancel>
+            <AlertDialogAction onClick={handleMarkCompletedAndPaid} disabled={isUpdatingOrder} className="bg-green-600 hover:bg-green-700 text-white">
               {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Mark Completed & Paid
+              Yes, I received it
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -314,7 +337,7 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
               Order #{order.id.substring(0, 8)}
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-500">
-              Details for your order placed on {new Date(order.created_at).toLocaleDateString()}.
+              Details for your order placed on {formatDate(order.created_at)}.
             </DialogDescription>
           </DialogHeader>
           <span id="instagram-order-detail-description" className="sr-only">
@@ -325,16 +348,11 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><User className="h-4 w-4 text-red-500" /> Customer</div><p className="text-gray-800">{order.customer_name}</p></div>
                 <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><Mail className="h-4 w-4 text-red-500" /> Email</div><p className="text-gray-800">{order.customer_email}</p></div>
-                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><Calendar className="h-4 w-4 text-red-500" /> Date</div><p className="text-gray-800">{new Date(order.created_at).toLocaleString()}</p></div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><Calendar className="h-4 w-4 text-red-500" /> Date</div><p className="text-gray-800">{formatDateTime(order.created_at)}</p></div>
                 <div className="space-y-2 text-sm md:text-base">
                   <div className="flex items-center gap-2 text-gray-500"><Banknote className="h-4 w-4 text-red-500" /> Total</div>
                   <p className="font-semibold text-gray-800">
-                    {formatCurrency(order.total_amount, order.currency)}
-                    {shopDetails?.currency && order.currency !== shopDetails.currency && (
-                      <span className="text-sm font-normal text-gray-500 ml-2">
-                        (~{formatCurrency(convertCurrency(order.total_amount), shopDetails.currency)})
-                      </span>
-                    )}
+                    {formatCurrency(convertCurrency(order.total_amount, order.currency), shopDetails?.currency)}
                   </p>
                 </div>
                 <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><CreditCard className="h-4 w-4 text-red-500" /> Payment Method</div><p className="capitalize text-gray-800">{order.payment_method.replace(/_/g, ' ')}</p></div>
@@ -367,6 +385,16 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
                         <div className="flex-1 w-full"> {/* Ensure text wraps */}
                           <p className="font-medium text-gray-800 text-sm md:text-base">{item.products.name}</p>
                           <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                          {/* Reviews allowed only after the order is received/paid (Fulfilled). */}
+                          {order.status === 'Fulfilled' && item.product_id && (
+                            reviewedProductIds.has(item.product_id) ? (
+                              <span className="inline-flex items-center gap-1 mt-1 text-xs text-emerald-600 font-medium"><CheckCircle className="h-3.5 w-3.5" /> Reviewed</span>
+                            ) : (
+                              <Button type="button" variant="outline" size="sm" className="h-7 mt-1.5 text-xs" onClick={() => setReviewTarget({ productId: item.product_id!, productName: item.products.name })}>
+                                <Star className="h-3.5 w-3.5 mr-1.5 text-amber-400" /> Leave a review
+                              </Button>
+                            )
+                          )}
                         </div>
                         <p className="font-medium text-gray-800 text-sm md:text-base flex-shrink-0">
                           {formatCurrency(convertCurrency(item.price_at_purchase * item.quantity, 'ALL', shopDetails?.currency), shopDetails?.currency)}
@@ -407,10 +435,10 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
             </div>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               {order.payment_method === 'cash_on_delivery' && order.status !== 'Fulfilled' && order.status !== 'Cancelled' && (
-                <Button onClick={() => setIsMarkCompletedAlertOpen(true)} disabled={isUpdatingOrder} className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto text-sm md:text-base">
+                <Button onClick={() => setIsMarkCompletedAlertOpen(true)} disabled={isUpdatingOrder} className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto text-sm md:text-base">
                   {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <CheckCircle className="mr-2 h-4 w-4" />
-                  Mark as Completed & Paid
+                  Confirm order received
                 </Button>
               )}
               {order.payment_method === 'card' && order.status === 'Given to Courier' && (

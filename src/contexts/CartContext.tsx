@@ -29,7 +29,8 @@ interface CartContextType {
   shipping: number;
   total: number;
   totalSaved: number;
-  addToCart: (item: Omit<CartItem, 'quantity' | 'uid' | 'variantKey'>, quantity?: number) => void;
+  freeShippingThreshold: number;
+  addToCart: (item: Omit<CartItem, 'quantity' | 'uid' | 'variantKey'>, quantity?: number) => Promise<void>;
   updateQuantity: (uid: string, quantity: number) => void;
   removeFromCart: (uid: string) => void;
   clearCart: () => void;
@@ -50,30 +51,27 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Load cart from localStorage on mount and migrate legacy items to uid/variantKey
   useEffect(() => {
-    const storedCart = localStorage.getItem('cartItems');
-    if (storedCart) {
-      const parsed = JSON.parse(storedCart) as Array<Partial<CartItem> & Record<string, unknown>>;
-      const migrated: CartItem[] = parsed.map((it) => {
-        const variantKey = it.selectedOptions && typeof it.selectedOptions === 'object'
-          ? JSON.stringify(Object.entries(it.selectedOptions).sort(([a],[b]) => a.localeCompare(b)))
-          : undefined;
-        const uid = it.uid || `${it.productId}::${variantKey || 'base'}`;
-        return { ...(it as CartItem), uid, variantKey } as CartItem;
-      });
-      setCartItems(migrated);
-    }
-    const storedSaved = localStorage.getItem('savedItems');
-    if (storedSaved) {
-      const parsed = JSON.parse(storedSaved) as Array<Partial<CartItem> & Record<string, unknown>>;
-      const migrated: CartItem[] = parsed.map((it) => {
-        const variantKey = it.selectedOptions && typeof it.selectedOptions === 'object'
-          ? JSON.stringify(Object.entries(it.selectedOptions).sort(([a],[b]) => a.localeCompare(b)))
-          : undefined;
-        const uid = it.uid || `${it.productId}::${variantKey || 'base'}`;
-        return { ...(it as CartItem), uid, variantKey } as CartItem;
-      });
-      setSavedItems(migrated);
-    }
+    const migrate = (it: Partial<CartItem> & Record<string, unknown>): CartItem => {
+      const variantKey = it.selectedOptions && typeof it.selectedOptions === 'object'
+        ? JSON.stringify(Object.entries(it.selectedOptions).sort(([a],[b]) => a.localeCompare(b)))
+        : undefined;
+      const uid = it.uid || `${it.productId}::${variantKey || 'base'}`;
+      return { ...(it as CartItem), uid, variantKey } as CartItem;
+    };
+    try {
+      const storedCart = localStorage.getItem('cartItems');
+      if (storedCart) {
+        const parsed = JSON.parse(storedCart);
+        if (Array.isArray(parsed)) setCartItems(parsed.map(migrate));
+      }
+    } catch (e) { console.warn('CartContext: failed to load cartItems from storage', e); }
+    try {
+      const storedSaved = localStorage.getItem('savedItems');
+      if (storedSaved) {
+        const parsed = JSON.parse(storedSaved);
+        if (Array.isArray(parsed)) setSavedItems(parsed.map(migrate));
+      }
+    } catch (e) { console.warn('CartContext: failed to load savedItems from storage', e); }
   }, []);
 
   // Save cart to localStorage whenever it changes
@@ -184,17 +182,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, []);
 
-  const moveToCart = useCallback((uid: string) => {
-    setSavedItems(prevItems => {
-      const itemToMove = prevItems.find(item => item.uid === uid);
-      if (itemToMove) {
-        addToCart(itemToMove, itemToMove.quantity);
-        setTimeout(() => showSuccess(`${itemToMove.name} moved to cart.`), 0);
-        return prevItems.filter(item => item.uid !== uid);
-      }
-      return prevItems;
-    });
-  }, [addToCart]);
+  const moveToCart = useCallback(async (uid: string) => {
+    const itemToMove = savedItems.find(item => item.uid === uid);
+    if (!itemToMove) return;
+    // Only remove from "saved" once it's successfully in the cart, so a failed
+    // add can't silently drop the item.
+    await addToCart(itemToMove, itemToMove.quantity);
+    setSavedItems(prev => prev.filter(item => item.uid !== uid));
+    showSuccess(`${itemToMove.name} moved to cart.`);
+  }, [savedItems, addToCart]);
 
   const removeSavedItem = useCallback((uid: string) => {
     setSavedItems(prevItems => prevItems.filter(item => item.uid !== uid));
@@ -211,11 +207,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, 0);
   }, [cartItems, shopDetails, convertCurrency]);
 
+  // Threshold for free shipping, in the shop's display currency. Exposed so the
+  // cart can show a "spend X more for free shipping" nudge.
+  const freeShippingThreshold = useMemo(
+    () => (shopDetails ? convertCurrency(FREE_SHIPPING_THRESHOLD, 'USD') : 0),
+    [shopDetails, convertCurrency]
+  );
+
   const shipping = useMemo(() => {
     if (!shopDetails) return 0;
-    const convertedThreshold = convertCurrency(FREE_SHIPPING_THRESHOLD, 'USD');
-    return subtotal >= convertedThreshold ? 0 : convertCurrency(5, 'USD');
-  }, [subtotal, shopDetails, convertCurrency]);
+    return subtotal >= freeShippingThreshold ? 0 : convertCurrency(5, 'USD');
+  }, [subtotal, shopDetails, convertCurrency, freeShippingThreshold]);
 
   const total = useMemo(() => subtotal + shipping, [subtotal, shipping]);
 
@@ -242,6 +244,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         shipping,
         total,
         totalSaved,
+        freeShippingThreshold,
         addToCart,
         updateQuantity,
         removeFromCart,

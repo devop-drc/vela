@@ -14,6 +14,7 @@ import {
   ArrowUpNarrowWide,
   XCircle,
   Sparkles,
+  Grid3X3,
 } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,9 +25,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatLargeNumber } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import { Marquee } from "@/components/ui/marquee";
-import * as LucideIcons from 'lucide-react';
+import { getIcon } from '@/lib/iconLibrary';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { debounce } from 'lodash';
+import debounce from 'lodash/debounce';
 import { InstagramShopHeader } from "@/components/storefront/InstagramShopHeader"; // Import the updated header
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
 
@@ -76,9 +77,8 @@ const containerVariants = {
   },
 };
 
-const getIconComponent = (iconName: keyof typeof LucideIcons) => {
-  const Icon = LucideIcons[iconName] as unknown as React.ElementType | undefined;
-  const Comp = Icon ?? Sparkles;
+const getIconComponent = (iconName: string) => {
+  const Comp = getIcon(iconName);
   return <Comp className="h-5 w-5 text-red-500" />;
 };
 
@@ -100,19 +100,10 @@ const InstagramProfilePage = () => {
     convertCurrency, // Use convertCurrency from context
   } = useOutletContext<InstagramShopLayoutContext>();
 
-  const [sortOption, setSortOption] = useState(searchParams.get('sort') || "newest");
-
-  useEffect(() => {
-    const urlSort = searchParams.get('sort');
-    if (urlSort !== null && urlSort !== sortOption) {
-      setSortOption(urlSort);
-    } else if (urlSort === null && sortOption !== 'newest') {
-      setSortOption('newest');
-    }
-  }, [searchParams, sortOption]);
+  // Derive active sort directly from the URL (single source of truth)
+  const sortOption = searchParams.get('sort') || "newest";
 
   const handleSortChange = (value: string) => {
-    setSortOption(value);
     const newSearchParams = new URLSearchParams(searchParams);
     if (value !== 'newest') {
       newSearchParams.set('sort', value);
@@ -174,7 +165,7 @@ const InstagramProfilePage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white text-black flex flex-col items-center p-4">
+      <div className="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))] flex flex-col items-center p-4">
         <div className="flex flex-col items-center mb-8">
           <Skeleton className="h-24 w-24 rounded-full mb-4" />
           <Skeleton className="h-6 w-48 mb-2" />
@@ -196,16 +187,15 @@ const InstagramProfilePage = () => {
   }
 
   if (error) {
-    return <div className="container py-8 text-red-600 text-base md:text-lg">{error}</div>;
+    return <div className="container py-8 text-red-500 text-base md:text-lg">{error}</div>;
   }
 
   if (!shopDetails) {
-    return <div className="container py-8 text-center text-gray-600 text-base md:text-lg">Shop details not found.</div>;
+    return <div className="container py-8 text-center text-[hsl(var(--muted-foreground))] text-base md:text-lg">Shop details not found.</div>;
   }
 
   const totalPosts = allProducts.length;
   const totalFollowers = shopDetails.followers_count || 0;
-  const totalFollowing = 1; // Placeholder for 'following' count as it's not in shopDetails
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))] flex flex-col">
@@ -244,20 +234,15 @@ const InstagramProfilePage = () => {
                         <span className="font-semibold">{formatLargeNumber(totalPosts)}</span>
                         <span style={{color:'hsl(var(--muted-foreground))'}}>posts</span>
                       </div>
-                      <div className="flex flex-col items-center gap-1 text-sm md:text-base">
-                        <span className="font-semibold">{formatLargeNumber(totalFollowers)}</span>
-                        <span style={{color:'hsl(var(--muted-foreground))'}}>followers</span>
-                      </div>
-                      <div className="flex flex-col items-center gap-1 text-sm md:text-base">
-                        <span className="font-semibold">{formatLargeNumber(totalFollowing)}</span>
-                        <span style={{color:'hsl(var(--muted-foreground))'}}>following</span>
-                      </div>
+                      {shopDetails.followers_count != null && (
+                        <div className="flex flex-col items-center gap-1 text-sm md:text-base">
+                          <span className="font-semibold">{formatLargeNumber(totalFollowers)}</span>
+                          <span style={{color:'hsl(var(--muted-foreground))'}}>followers</span>
+                        </div>
+                      )}
                     </div>
 
                   <div className="hidden md:block">
-                    {/* Category */}
-                  <p className="mt-2 text-sm md:text-base font-normal" style={{color:'hsl(var(--muted-foreground))'}}>Advertising/Marketing</p>
-
                   {/* Bio */}
                   {shopDetails.headline && (
                     <p className="text-sm md:text-base" style={{color:'hsl(var(--foreground))'}}>{shopDetails.headline}</p>
@@ -266,7 +251,7 @@ const InstagramProfilePage = () => {
                     <p className="text-sm md:text-base" style={{color:'hsl(var(--foreground))'}}>{shopDetails.about}</p>
                   )}
 
-                    <p className="text-sm font-medium text-[hsl(var(--muted-foreground))] md:text-base">Test{shopDetails.location}</p>
+                    {shopDetails.location && <p className="text-sm font-medium text-[hsl(var(--muted-foreground))] md:text-base">{shopDetails.location}</p>}
 
                   {/* Website link */}
                   {shopDetails.instagram_url && (
@@ -284,9 +269,6 @@ const InstagramProfilePage = () => {
                 </div>
               </div>
               <div className="flex-1 xs:mx-auto md:hidden">
-                  {/* Category */}
-                  <p className="mt-2 text-sm md:text-base font-normal" style={{color:'hsl(var(--muted-foreground))'}}>Advertising/Marketing</p>
-
                   {/* Bio */}
                   {shopDetails.headline && (
                     <p className="text-sm md:text-base" style={{color:'hsl(var(--foreground))'}}>{shopDetails.headline}</p>
@@ -295,7 +277,7 @@ const InstagramProfilePage = () => {
                     <p className="text-sm md:text-base" style={{color:'hsl(var(--foreground))'}}>{shopDetails.about}</p>
                   )}
 
-                    <p className="text-sm font-medium text-[hsl(var(--muted-foreground))] md:text-base">Test{shopDetails.location}</p>
+                    {shopDetails.location && <p className="text-sm font-medium text-[hsl(var(--muted-foreground))] md:text-base">{shopDetails.location}</p>}
 
                   {/* Website link */}
                   {shopDetails.instagram_url && (
@@ -364,7 +346,7 @@ const InstagramProfilePage = () => {
           </div>
           <div className="flex items-center justify-center w-full max-w-md mt-5">
             <span className="flex flex-col justify-center items-center">
-                <LucideIcons.Grid3X3 className="h-7 w-7" stroke-weight="1" />
+                <Grid3X3 className="h-7 w-7" stroke-weight="1" />
                 <hr className="mt-1 border-[hsl(var(--foreground))] border-solid border-[1px] w-28" />
             </span>
           </div>
@@ -373,7 +355,7 @@ const InstagramProfilePage = () => {
         {/* Product Grid */}
         <section className="mt-[1px] md:px-0">
           {filteredAndSortedProducts.length === 0 ? (
-            <div className="text-center py-16 text-gray-600 border-2 border-dashed rounded-lg mx-4">
+            <div className="text-center py-16 text-[hsl(var(--muted-foreground))] border-2 border-dashed border-[hsl(var(--border))] rounded-lg mx-4">
               <h3 className="text-xl md:text-2xl font-semibold">No Products Found</h3>
               <p className="text-sm md:text-base mt-1 md:mt-2">
                 {hasActiveFilters

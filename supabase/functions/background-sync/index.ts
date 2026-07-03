@@ -75,6 +75,68 @@ const getSupabaseAdmin = () => createClient(
 
 const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
+const fileExt = (url: string): string => {
+  const clean = url.split('?')[0];
+  const parts = clean.split('.');
+  const ext = parts.length > 1 ? parts.pop() : '';
+  return (ext && ext.length <= 5) ? ext.toLowerCase() : 'jpg';
+};
+
+// Uploads Instagram CDN media to Supabase storage so URLs don't expire.
+// Returns { media_url, thumbnail_url } with permanent storage URLs (or originals if upload fails).
+const persistPostMedia = async (
+  supabase: SupabaseClient,
+  userId: string,
+  post: { id: string; media_url: string; thumbnail_url?: string; media_type: string }
+): Promise<{ media_url: string; thumbnail_url?: string }> => {
+  const uploadOne = async (sourceUrl: string, kind: 'media' | 'thumbnail'): Promise<string | null> => {
+    if (!sourceUrl) return null;
+    try {
+      const resp = await fetch(sourceUrl);
+      if (!resp.ok) {
+        console.warn(`[persistPostMedia] fetch ${kind} failed ${resp.status} for post ${post.id}`);
+        return null;
+      }
+      const blob = await resp.blob();
+      const path = `${userId}/${post.id}/${kind}_${Date.now()}.${fileExt(sourceUrl)}`;
+      const { error: upErr } = await supabase.storage
+        .from('product-media')
+        .upload(path, blob, {
+          contentType: resp.headers.get('content-type') || 'image/jpeg',
+          upsert: true,
+        });
+      if (upErr) {
+        console.warn(`[persistPostMedia] upload ${kind} failed for post ${post.id}:`, upErr.message);
+        return null;
+      }
+      return supabase.storage.from('product-media').getPublicUrl(path).data.publicUrl;
+    } catch (err: any) {
+      console.warn(`[persistPostMedia] error ${kind} for post ${post.id}:`, err?.message);
+      return null;
+    }
+  };
+
+  let mediaUrl = post.media_url;
+  let thumbUrl = post.thumbnail_url;
+
+  if (post.media_type === 'VIDEO') {
+    const [m, t] = await Promise.all([
+      post.media_url ? uploadOne(post.media_url, 'media') : Promise.resolve(null),
+      post.thumbnail_url ? uploadOne(post.thumbnail_url, 'thumbnail') : Promise.resolve(null),
+    ]);
+    if (m) mediaUrl = m;
+    if (t) thumbUrl = t;
+  } else {
+    const m = await uploadOne(post.media_url, 'media');
+    if (m) {
+      mediaUrl = m;
+      thumbUrl = m;
+    }
+  }
+
+  return { media_url: mediaUrl, thumbnail_url: thumbUrl };
+};
+
 // Cache exchange rates - fetched once per sync, used for all conversions
 let cachedExchangeRates: Record<string, number> | null = null;
 
@@ -589,7 +651,35 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         // If multiple items were detected (AI or parser), call the dedicated Edge Function to upsert the combo fully
         if ((analysis as any).isMultiProductPost === true || itemsToCreate.filter(Boolean).length > 1) {
           try {
-            const enrichedAnalysis: any = { ...analysis, products: itemsToCreate };
+            // Give each split product its own image: carousel child i → item i
+            // (multi-product posts are usually carousels with one photo per
+            // product, in order), falling back to the post's main media.
+            // Everything is persisted to storage so URLs don't expire.
+            let childUrls: string[] = [];
+            if (post.media_type === 'CAROUSEL_ALBUM' && accessToken) {
+              try {
+                const kidsRes = await fetch(`https://graph.instagram.com/${post.id}/children?fields=id,media_url,media_type,thumbnail_url&access_token=${accessToken}`);
+                const kids = await kidsRes.json();
+                childUrls = (kids.data || [])
+                  .map((c: any) => (c.media_type === 'VIDEO' ? c.thumbnail_url : c.media_url))
+                  .filter(Boolean);
+              } catch { /* fall back to the main post media */ }
+            }
+            const mainMedia = await persistPostMedia(supabaseAdmin, user.id, {
+              id: post.id, media_url: post.media_url, thumbnail_url: post.thumbnail_url, media_type: post.media_type,
+            });
+            const itemsWithMedia = await Promise.all(itemsToCreate.filter(Boolean).map(async (it: any, i: number) => {
+              if (it.media_url) return it;
+              const childSrc = childUrls[i];
+              if (childSrc) {
+                const persisted = await persistPostMedia(supabaseAdmin, user.id, {
+                  id: `${post.id}_item${i}`, media_url: childSrc, media_type: 'IMAGE',
+                });
+                return { ...it, media_url: persisted.media_url };
+              }
+              return { ...it, media_url: mainMedia.media_url };
+            }));
+            const enrichedAnalysis: any = { ...analysis, products: itemsWithMedia };
             const { error: comboErr, data: comboRes } = await supabaseAdmin.functions.invoke('upsert-combo-from-analysis', {
               body: { instagram_post_id: post.id, user_id: user.id, analysis: enrichedAnalysis },
             });
@@ -641,6 +731,14 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             priceInALL = convertCurrency(itemPrice, itemCurrency, 'ALL');
           }
 
+          // Persist Instagram media to Supabase storage so URLs don't expire
+          const persisted = await persistPostMedia(supabaseAdmin, user.id, {
+            id: post.id,
+            media_url: post.media_url,
+            thumbnail_url: post.thumbnail_url,
+            media_type: post.media_type,
+          });
+
           const productPayload: ProductPayload = {
             name: itemName || post.caption?.split('\n')[0]?.slice(0, 60) || 'Product',
             caption: aiDescription || post.caption || '',
@@ -653,8 +751,8 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             user_id: user.id,
             status: inventory === 0 ? 'Out of Stock' : 'Draft',
             instagram_post_id: post.id,
-            media_url: post.media_url,
-            thumbnail_url: post.thumbnail_url || post.media_url,
+            media_url: persisted.media_url,
+            thumbnail_url: persisted.thumbnail_url || persisted.media_url,
             media_type: post.media_type,
             inventory: inventory,
             pricing_type: finalPricingType,
@@ -792,40 +890,28 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       }
     }
 
-    // --- Insert Promotions and Announcements (best-effort) ---
+    // --- Insert Promotions (best-effort), mapped to the real promotions schema ---
     if (promotionsToInsert.length > 0) {
       try {
-        const { data: businessData } = await supabaseAdmin.from('businesses').select('id').eq('user_id', user.id).single();
-        const businessId = businessData?.id;
-
-        if (businessId) {
-          // Insert promotions
-          const promotionsPayload = promotionsToInsert.map(p => ({
-            user_id: user.id,
-            business_id: businessId,
-            title: p.title,
-            summary: p.summary,
-            discount_type: p.discount_type,
-            discount_value: p.discount_value,
-            currency: p.currency,
-            valid_until: p.valid_until,
-            instagram_post_id: p.post_id,
-          }));
-          const { data: insertedPromos } = await supabaseAdmin.from('promotions').insert(promotionsPayload).select('id, title');
-          if (insertedPromos && insertedPromos.length > 0) {
-            const announcements = insertedPromos.map((pr: any) => ({
-              user_id: user.id,
-              business_id: businessId,
-              title: pr.title,
-              message: 'New promotion: ' + pr.title,
-              promotion_id: pr.id,
-              status: 'active',
-            }));
-            await supabaseAdmin.from('storefront_announcements').insert(announcements);
-          }
-        }
+        // Map AI-extracted promos to the actual promotions columns:
+        // (user_id, name, type, value jsonb, end_date, target_products, is_active).
+        const promotionsPayload = promotionsToInsert.map(p => ({
+          user_id: user.id,
+          name: p.title,
+          type: 'discount',
+          value: {
+            discountType: p.discount_type || 'percentage',
+            discountValue: p.discount_value,
+            currency: p.currency || null,
+            summary: p.summary || null,
+          },
+          end_date: p.valid_until || null,
+          is_active: true,
+        }));
+        const { error: promoErr } = await supabaseAdmin.from('promotions').insert(promotionsPayload);
+        if (promoErr) console.error('Failed to insert promotions:', promoErr.message || promoErr);
       } catch (e: any) {
-        console.error('Failed to insert promotions/announcements (missing tables or RLS?):', e.message || e);
+        console.error('Failed to insert promotions:', e.message || e);
       }
     }
 

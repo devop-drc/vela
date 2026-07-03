@@ -62,7 +62,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                     />
                   </TableCell>
                   <TableCell>
-                    <img src={product.media_url} alt={product.name} className="h-12 w-12 object-cover rounded-md" />
+                    <img src={product.media_url} alt={product.name} className="h-12 w-12 object-cover rounded-md bg-muted" referrerPolicy="no-referrer" loading="lazy" onError={(e) => { e.currentTarget.style.opacity = '0.3'; }} />
                   </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>

@@ -88,7 +88,9 @@ interface PromotionEditorModalProps {
 
 export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: PromotionEditorModalProps) => {
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
-  const [selectedProductNames, setSelectedProductNames] = useState<string[]>([]);
+  const [selectedProductNames, setSelectedProductNames] = useState<Array<{ id: string; name: string }>>([]);
+  // Opt-in: also show this promotion as a scrolling banner on the storefront.
+  const [createAnnouncement, setCreateAnnouncement] = useState(false);
   const { shopDetails } = useShop();
 
   const { register, handleSubmit, reset, control, watch, setValue, formState: { errors, isSubmitting } } = useForm<PromotionFormData>({
@@ -144,7 +146,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
           console.error("Error fetching product names:", error);
           setSelectedProductNames([]);
         } else {
-          setSelectedProductNames(data?.map(p => p.name) || []);
+          setSelectedProductNames(data?.map(p => ({ id: p.id, name: p.name })) || []);
         }
       } else {
         setSelectedProductNames([]);
@@ -187,7 +189,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
     } else {
       showSuccess(`Promotion ${promotion ? 'updated' : 'added'} successfully!`);
 
-      if (promotionId) {
+      if (promotionId && createAnnouncement) {
         let announcementMessage = data.name;
         if (data.type === 'discount') {
           if (data.value?.discountType === 'percentage') announcementMessage = `${data.value.discountValue}% OFF - ${data.name}`;
@@ -382,10 +384,10 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                   </Button>
                   {selectedProductNames.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-3">
-                      {selectedProductNames.map(name => (
-                        <Badge key={name} variant="secondary" className="flex items-center gap-1">
+                      {selectedProductNames.map(({ id, name }) => (
+                        <Badge key={id} variant="secondary" className="flex items-center gap-1">
                           {name}
-                          <button type="button" onClick={() => setValue('target_products', targetProducts?.filter(id => id !== name) || [])} className="ml-1">
+                          <button type="button" onClick={() => setValue('target_products', targetProducts?.filter(pid => pid !== id) || [])} className="ml-1">
                             <XCircle className="h-3 w-3" />
                           </button>
                         </Badge>
@@ -500,6 +502,18 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                       onCheckedChange={field.onChange}
                     />
                   )}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="createAnnouncement" className="text-base">Show as storefront banner</Label>
+                  <p className="text-sm text-muted-foreground">Also display this promotion as a scrolling announcement on your shop.</p>
+                </div>
+                <Switch
+                  id="createAnnouncement"
+                  checked={createAnnouncement}
+                  onCheckedChange={setCreateAnnouncement}
                 />
               </div>
             </div>

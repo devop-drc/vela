@@ -80,7 +80,6 @@ interface StockAdjustmentModalProps {
 export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products: baseProducts }: StockAdjustmentModalProps) => {
   const [formProducts, setFormProducts] = useState<FormProduct[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
-  const [batchStockValue, setBatchStockValue] = useState<string>('');
   const [userId, setUserId] = useState<string | null>(null);
 
   // 1. Fetch user and detailed product data (including options/values)
@@ -151,7 +150,11 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products: basePr
     };
 
     fetchDetails();
-  }, [baseProducts]);
+    // Depend on a stable key derived from the product ids rather than the array
+    // reference — the parent passes a freshly-mapped array each render, which
+    // would otherwise re-fetch and reset the form, discarding in-progress edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseProducts.map(p => p.id).join(',')]);
 
   // 2. Prepare default values for RHF
   const defaultValues = useMemo(() => ({
@@ -175,33 +178,38 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products: basePr
 
   useEffect(() => {
     if (!isLoadingData) {
-      reset(defaultValues);
-      setBatchStockValue('');
+      reset({ ...defaultValues, batchStockValue: '' });
     }
   }, [isLoadingData, defaultValues, reset]);
 
   const handleBatchStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setBatchStockValue(value);
     const numValue = parseInt(value);
+    if (isNaN(numValue) || numValue < 0) return;
 
-    if (!isNaN(numValue) && numValue >= 0) {
-      formProducts.forEach((product, productIndex) => {
-        // 1. Update Base Inventory (if applicable)
-        if (product.pricing_type === 'one_time' && product.options.length === 0) {
-          setValue(`products.${productIndex}.baseInventory`, numValue, { shouldDirty: true });
-        }
+    // Iterate the live react-hook-form rows (the source the inputs are bound to)
+    // rather than the formProducts state snapshot, so writes target the current
+    // field array. formProducts is only consulted for structural metadata
+    // (pricing_type / whether the product has options).
+    const formRows = getValues().products || [];
+    formRows.forEach((row, productIndex) => {
+      const meta = formProducts.find(p => p.id === row.id);
+      if (!meta) return;
 
-        // 2. Update Variant Inventory (if applicable)
-        if (product.options.length > 0) {
-          product.options.forEach((option, optionIndex) => {
-            option.values.forEach((_, valueIndex) => {
-              setValue(`products.${productIndex}.options.${optionIndex}.values.${valueIndex}.inventory`, numValue, { shouldDirty: true });
-            });
+      // 1. Update Base Inventory (simple products only)
+      if (meta.pricing_type === 'one_time' && meta.options.length === 0) {
+        setValue(`products.${productIndex}.baseInventory`, numValue, { shouldDirty: true });
+      }
+
+      // 2. Update Variant Inventory (products with options)
+      if (meta.options.length > 0 && row.options) {
+        row.options.forEach((option, optionIndex) => {
+          (option.values || []).forEach((_, valueIndex) => {
+            setValue(`products.${productIndex}.options.${optionIndex}.values.${valueIndex}.inventory`, numValue, { shouldDirty: true });
           });
-        }
-      });
-    }
+        });
+      }
+    });
   };
 
   const onSubmit = async (data: StockFormData) => {
@@ -344,16 +352,20 @@ export const StockAdjustmentModal = ({ isOpen, onClose, onSave, products: basePr
           {formProducts.length > 1 && (
             <div className="flex-shrink-0 p-4 border-b">
               <Label htmlFor="batch-stock" className="font-medium">Set all stock to:</Label>
-              <Input
-                id="batch-stock"
-                type="number"
-                {...register("batchStockValue")}
-                value={batchStockValue}
-                onChange={handleBatchStockChange}
-                className="w-full mt-1"
-                min={0}
-                placeholder="Enter value to apply to all base/variant stocks"
-              />
+              {(() => {
+                const batchField = register("batchStockValue");
+                return (
+                  <Input
+                    id="batch-stock"
+                    type="number"
+                    {...batchField}
+                    onChange={(e) => { batchField.onChange(e); handleBatchStockChange(e); }}
+                    className="w-full mt-1"
+                    min={0}
+                    placeholder="Enter value to apply to all base/variant stocks"
+                  />
+                );
+              })()}
             </div>
           )}
           <ScrollArea className="flex-1 py-4">

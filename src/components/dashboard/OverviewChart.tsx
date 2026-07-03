@@ -76,10 +76,10 @@ export const OverviewChart = ({ data, dateRange, setDateRange, granularity, setG
   };
 
   return (
-    <Card className="shadow-sm border border-border/60">
-      <CardHeader className="pb-4">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <Card className="shadow-sm border border-border/60 h-full flex flex-col">
+      <CardHeader className="pb-3 flex-shrink-0">
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <CardDescription className="text-sm">{t("dashboard.chart_description")}</CardDescription>
             {/* Period selector — segmented buttons */}
             <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
@@ -132,8 +132,8 @@ export const OverviewChart = ({ data, dateRange, setDateRange, granularity, setG
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pl-2">
-        <ResponsiveContainer width="100%" height={320}>
+      <CardContent className="pl-2 pr-4 pb-4 pt-0 flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data}>
             <defs>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">

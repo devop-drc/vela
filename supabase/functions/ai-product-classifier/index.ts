@@ -267,14 +267,9 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Get user's preferred currency (though we store in ALL, this is for context)
-    const { data: userData } = await supabaseAdmin
-      .from('profiles')
-      .select('currency')
-      .eq('id', user_id)
-      .single();
-    
-    const userCurrency = userData?.currency || target_currency;
+    // Currency is only used as context for the AI; prices are always stored in ALL.
+    // (The previous `profiles.currency` lookup hit a non-existent column.)
+    const userCurrency = target_currency;
 
     const { data: keywords, error: keywordsError } = await supabaseAdmin
       .from('keywords')
@@ -455,10 +450,32 @@ serve(async (req) => {
       }
     };
 
+    // Record token usage + estimated cost so the admin panel can show per-client
+    // AI spend. Must be AWAITED: the edge runtime tears down pending promises
+    // once the response is returned, so a fire-and-forget insert never lands.
+    // Errors are swallowed so a ledger problem can never block classification.
+    // Pricing: Gemini 2.5 Flash ($/1M tokens).
     if (geminiData.usageMetadata) {
+      try {
+        const IN_PER_M = 0.30, OUT_PER_M = 2.50;
+        const inputTokens = geminiData.usageMetadata.promptTokenCount ?? 0;
+        const outputTokens = (geminiData.usageMetadata.candidatesTokenCount ?? 0) + (geminiData.usageMetadata.thoughtsTokenCount ?? 0);
+        const costUsd = (inputTokens * IN_PER_M + outputTokens * OUT_PER_M) / 1_000_000;
+        const { error: usageErr } = await supabaseAdmin.from('ai_usage').insert({
+          user_id,
+          function_name: 'ai-product-classifier',
+          model: 'gemini-2.5-flash',
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          cost_usd: Math.round(costUsd * 1_000_000) / 1_000_000,
+        });
+        if (usageErr) console.warn('ai_usage insert failed:', usageErr.message);
+      } catch (e) {
+        console.warn('ai_usage logging error:', (e as Error).message);
+      }
     }
 
-    return new Response(JSON.stringify(result), { 
+    return new Response(JSON.stringify(result), {
       headers: { 
         ...corsHeaders, 
         'Content-Type': 'application/json' 

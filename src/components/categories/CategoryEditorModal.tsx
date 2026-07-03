@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ export const CategoryEditorModal = ({
   categoryName,
   onSave,
 }: CategoryEditorModalProps) => {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -44,22 +46,22 @@ export const CategoryEditorModal = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {categoryName ? "Rename Category" : "New Category"}
+            {categoryName ? t("categories.rename_category") : t("categories.new_category")}
           </DialogTitle>
           <DialogDescription>
             {categoryName
-              ? "Change the name of this category."
-              : "Enter a name for the new category."}
+              ? t("categories.rename_category_desc")
+              : t("categories.new_category_desc")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="category-name">Category Name</Label>
+            <Label htmlFor="category-name">{t("categories.category_name")}</Label>
             <Input
               id="category-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Electronics"
+              placeholder={t("categories.category_name_placeholder")}
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSave();
               }}
@@ -68,11 +70,11 @@ export const CategoryEditorModal = ({
         </div>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={saving || !name.trim()}>
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save
+            {t("common.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

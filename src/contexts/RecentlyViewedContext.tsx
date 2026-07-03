@@ -24,8 +24,13 @@ const MAX_RECENTLY_VIEWED = 5; // Limit to 5 recently viewed products
 export const RecentlyViewedProvider = ({ children }: { children: ReactNode }) => {
   const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedProduct[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(RECENTLY_VIEWED_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
+      try {
+        const saved = localStorage.getItem(RECENTLY_VIEWED_STORAGE_KEY);
+        const parsed = saved ? JSON.parse(saved) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
     }
     return [];
   });

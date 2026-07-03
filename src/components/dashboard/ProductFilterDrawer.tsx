@@ -12,7 +12,7 @@ import { useShop } from "@/contexts/ShopContext";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
-import { debounce } from 'lodash';
+import debounce from 'lodash/debounce';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 
 import { FilterState } from "@/hooks/useProductFilters";

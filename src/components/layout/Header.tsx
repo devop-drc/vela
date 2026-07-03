@@ -1,3 +1,4 @@
+import { getStorefrontUrl } from "@/lib/storefront";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
@@ -21,7 +22,7 @@ type SearchResult = { kind: "page" | "product" | "order"; id: string; label: str
 interface GroupedResults { pages: SearchResult[]; products: SearchResult[]; orders: SearchResult[] }
 
 const PAGES = [
-  { labelKey: "nav.dashboard", subtitleKey: "header.page_dashboard_sub", path: "/" },
+  { labelKey: "nav.dashboard", subtitleKey: "header.page_dashboard_sub", path: "/dashboard" },
   { labelKey: "nav.products", subtitleKey: "header.page_products_sub", path: "/products" },
   { labelKey: "nav.stock", subtitleKey: "header.page_stock_sub", path: "/out-of-stock" },
   { labelKey: "nav.orders", subtitleKey: "header.page_orders_sub", path: "/orders" },
@@ -50,26 +51,7 @@ export default function Header({ title }: { title: string }) {
 
   // ── User ─────────────────────────────────────────────────────────────────
   const [user, setUser] = useState<any>(null);
-  useEffect(() => { supabase.auth.getUser().then(({ data }) => setUser(data.user)); }, []);
-
-  // ── AI token stats ───────────────────────────────────────────────────────
-  const [aiOpen, setAiOpen] = useState(false);
-  const [tokens, setTokens] = useState({ prompt: 0, candidates: 0, jobs: [] as any[] });
-
-  useEffect(() => {
-    if (!user) return;
-    supabase.from("sync_jobs").select("created_at, summary").eq("user_id", user.id).order("created_at", { ascending: false })
-      .then(({ data }) => {
-        const jobs = (data || []).map((r: any) => ({
-          created_at: r.created_at,
-          prompt: Number(r.summary?.total_ai_tokens_used?.prompt || 0),
-          candidates: Number(r.summary?.total_ai_tokens_used?.candidates || 0),
-        }));
-        setTokens({ prompt: jobs.reduce((a: number, b: any) => a + b.prompt, 0), candidates: jobs.reduce((a: number, b: any) => a + b.candidates, 0), jobs });
-      });
-  }, [user]);
-
-  const aiCost = (tokens.prompt / 1e6) * 0.15 + (tokens.candidates / 1e6) * 0.60; // Flash pricing
+  useEffect(() => { supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null)); }, []);
 
   // ── Search ───────────────────────────────────────────────────────────────
   const [query, setQuery] = useState("");
@@ -155,7 +137,7 @@ export default function Header({ title }: { title: string }) {
   // ── Actions ──────────────────────────────────────────────────────────────
   const copyUrl = async () => {
     if (!shopDetails?.slug) { showError("Set your shop name in settings first."); return; }
-    try { await navigator.clipboard.writeText(`${location.origin}/instagramShop/${shopDetails.slug}`); showSuccess("URL copied!"); }
+    try { await navigator.clipboard.writeText(getStorefrontUrl(shopDetails.slug, shopDetails.storefront_type)); showSuccess("URL copied!"); }
     catch { showError("Copy failed."); }
   };
 
@@ -206,38 +188,6 @@ export default function Header({ title }: { title: string }) {
 
       {/* Right actions */}
       <div className="flex items-center gap-2 shrink-0">
-        {/* AI usage */}
-        <Dialog open={aiOpen} onOpenChange={setAiOpen}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 text-xs gap-1.5">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span className="hidden lg:inline">{((tokens.prompt + tokens.candidates) / 1000).toFixed(1)}k</span>
-              <span className="font-semibold">{new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(aiCost)}</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>{t("header.ai_usage")}</DialogTitle>
-              <DialogDescription>{t("header.ai_description")}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span>{t("header.input_tokens")}</span><span className="font-medium">{tokens.prompt.toLocaleString()}</span></div>
-              <div className="flex justify-between"><span>{t("header.output_tokens")}</span><span className="font-medium">{tokens.candidates.toLocaleString()}</span></div>
-              <div className="flex justify-between"><span>{t("header.cost")}</span><span className="font-semibold">{new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(aiCost)}</span></div>
-              <div className="h-px bg-border my-2" />
-              <div className="max-h-48 overflow-auto space-y-1">
-                {tokens.jobs.map((j: any, i: number) => (
-                  <div key={i} className="flex justify-between text-xs text-muted-foreground">
-                    <span>{new Date(j.created_at).toLocaleDateString()}</span>
-                    <span>{((j.prompt + j.candidates) / 1000).toFixed(1)}k tokens</span>
-                  </div>
-                ))}
-                {tokens.jobs.length === 0 && <p className="text-muted-foreground">{t("header.no_syncs")}</p>}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
         {/* Storefront URL */}
         <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={copyUrl} disabled={!shopDetails?.slug}>
           <LinkIcon className="h-3.5 w-3.5 mr-1.5" />

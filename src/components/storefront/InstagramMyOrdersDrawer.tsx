@@ -8,7 +8,7 @@ import { ShoppingBag, X, Loader2, Search, Package, CheckCircle, Truck, Box, Eye,
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatDate } from "@/lib/formatters";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { InstagramOrderDetailModal } from "./InstagramOrderDetailModal"; // Import the new order detail modal
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getStoredCustomer, getStoredOrderIds, saveStoredCustomer } from "@/lib/instagramCustomer";
 
 type OrderStatusType = 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic' | 'Cancelled';
 
@@ -79,7 +80,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
   const { shopDetails, convertCurrency, customerOrders: contextCustomerOrders } = useStorefront(); // Use customerOrders from context
   const isMobile = useIsMobile();
   const [customerEmailInput, setCustomerEmailInput] = useState(() => {
-    return localStorage.getItem(LOCAL_STORAGE_EMAIL_KEY) || "";
+    return getStoredCustomer()?.email || localStorage.getItem(LOCAL_STORAGE_EMAIL_KEY) || "";
   });
   const [orderIdInput, setOrderIdInput] = useState(""); // This will be managed by initialOrderId prop
   const [orders, setOrders] = useState<OrderDetails[]>([]);
@@ -92,8 +93,8 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
   useEffect(() => {
     if (initialOrderId) {
       setOrderIdInput(initialOrderId);
-      // Trigger fetchOrders if email is already present
-      if (customerEmailInput && shopDetails?.slug) {
+      // Trigger fetchOrders if we have an email or any locally-saved order IDs
+      if (shopDetails?.slug && (customerEmailInput || getStoredOrderIds().length > 0)) {
         fetchOrders();
       }
       // Do NOT auto-open the modal here. The user will click the card.
@@ -105,33 +106,39 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
 
   const fetchOrders = useCallback(async (e?: React.FormEvent) => {
     e?.preventDefault();
-    setIsLoading(true);
-    setOrders([]);
     setSearchAttempted(true);
 
-    if (!customerEmailInput) {
-      showError("Please enter your email address.");
-      setIsLoading(false);
-      return;
-    }
     if (!shopDetails?.slug) {
       showError("Shop URL is invalid. Cannot fetch orders.");
-      setIsLoading(false);
       return;
     }
 
+    // We can look up orders by email OR by the order IDs saved on this device.
+    const storedOrderIds = getStoredOrderIds();
+    if (!customerEmailInput && storedOrderIds.length === 0) {
+      showError("Please enter your email address.");
+      return;
+    }
+
+    setIsLoading(true);
+    setOrders([]);
+
     try {
-      // Fetch orders via edge function to avoid RLS issues on anon client
+      // Fetch orders via edge function to avoid RLS issues on anon client.
+      // Pass both the email and the locally-saved order IDs so freshly placed
+      // orders always show up even if the email casing differs.
       const { data, error } = await supabase.functions.invoke('get-public-shop-data', {
-        body: { shopSlug: shopDetails.slug, customerEmail: customerEmailInput }
+        body: { shopSlug: shopDetails.slug, customerEmail: customerEmailInput || undefined, orderIds: storedOrderIds }
       });
       if (error) throw error;
       let fetched = (data?.customerOrders || []) as OrderDetails[];
       if (orderIdInput) {
-        fetched = fetched.filter(o => o.id === orderIdInput);
+        // Match the short order number shown to customers (first 8 chars of the UUID).
+        const q = orderIdInput.trim().toLowerCase();
+        fetched = fetched.filter(o => o.id.toLowerCase().startsWith(q));
       }
       setOrders(fetched);
-      localStorage.setItem(LOCAL_STORAGE_EMAIL_KEY, customerEmailInput);
+      if (customerEmailInput) saveStoredCustomer({ email: customerEmailInput });
 
     } catch (err: unknown) {
       console.error("Order fetching failed:", err);
@@ -144,7 +151,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
   }, [customerEmailInput, orderIdInput, shopDetails?.slug]);
 
   useEffect(() => {
-    if (isOpen && customerEmailInput && shopDetails?.slug) {
+    if (isOpen && shopDetails?.slug && (customerEmailInput || getStoredOrderIds().length > 0)) {
       fetchOrders();
     }
   }, [isOpen, customerEmailInput, shopDetails?.slug, fetchOrders]);
@@ -182,10 +189,10 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="orderId" className="text-sm text-[hsl(var(--foreground))] opacity-80">Specific Order ID (Optional)</Label>
+              <Label htmlFor="orderId" className="text-sm text-[hsl(var(--foreground))] opacity-80">Order number (optional)</Label>
               <div className="relative">
                 <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-70" />
-                <Input id="orderId" placeholder="e.g., 12345" value={orderIdInput} onChange={(e) => setOrderIdInput(e.target.value)} className="pl-10 text-sm bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))]" />
+                <Input id="orderId" placeholder="e.g., 2b7f9933" value={orderIdInput} onChange={(e) => setOrderIdInput(e.target.value)} className="pl-10 text-sm bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))]" />
               </div>
             </div>
             <Button type="submit" className="w-full text-base bg-[hsl(var(--primary))] text-white" disabled={isLoading}>
@@ -212,7 +219,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
                         </div>
                         <div className="flex items-center justify-between text-xs opacity-80">
                           <p className="flex items-center gap-1 text-[hsl(var(--muted-foreground))]">
-                            <Calendar className="h-4 w-4 text-[hsl(var(--primary))]" /> {new Date(order.created_at).toLocaleDateString()}
+                            <Calendar className="h-4 w-4 text-[hsl(var(--primary))]" /> {formatDate(order.created_at)}
                           </p>
                           <p className={cn("font-bold text-xl", {
                             "text-green-500": order.status === "Fulfilled",

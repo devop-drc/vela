@@ -2,7 +2,8 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Checkbox } from "./ui/checkbox";
-import { AlertTriangle, Palette, Ruler, Tag, Frame, ScanText, Package, Layers } from "lucide-react"; // Import Package & Layers icons
+import { AlertTriangle, Palette, Ruler, Tag, Frame, ScanText, Package, Layers, Star } from "lucide-react"; // Import Package & Layers icons
+import { useProductRating } from "@/hooks/useProductRating";
 
 import { ProductStatusDropdown } from "./ProductStatusDropdown";
 import { Badge } from "./ui/badge";
@@ -10,6 +11,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "./ui/carousel";
 import { MediaItem } from "./MediaItem";
+import { getStockStatus } from "@/lib/stock";
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 type GridSizeType = 'sm' | 'md' | 'lg';
@@ -54,6 +56,7 @@ const DetailRow = ({ icon: Icon, children }: { icon: React.ElementType, children
 
 export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSize, onSelect, onEdit, onStatusChange }: ProductCardProps) => {
   const { shopDetails, convertCurrency } = useShop();
+  const rating = useProductRating(product.id);
 
   const handleCardClick = () => {
     if (isSelectionModeActive) {
@@ -86,10 +89,11 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
     if (inventory === null) {
       return <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground font-medium"><span className="h-2 w-2 rounded-full bg-gray-400 flex-shrink-0" />N/A</span>;
     }
-    if (inventory > 10) {
+    const status = getStockStatus(inventory);
+    if (status === "in") {
       return <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-medium"><span className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />{inventory}</span>;
     }
-    if (inventory > 0 && inventory <= 10) {
+    if (status === "low" || status === "critical") {
       return <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-medium"><span className="h-2 w-2 rounded-full bg-amber-500 flex-shrink-0" />{inventory} left</span>;
     }
     return <span className="inline-flex items-center gap-1 text-[10px] text-red-500 font-medium"><span className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />Out</span>;
@@ -143,6 +147,13 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
               {product.details?.multi_product && <Layers className="h-4 w-4 flex-shrink-0 mt-0.5 text-muted-foreground" />}
               <h3 className="font-semibold tracking-tight leading-snug">{product.name}</h3>
             </div>
+
+            {rating && rating.count > 0 && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                {rating.avg.toFixed(1)} <span className="text-muted-foreground/70">({rating.count})</span>
+              </span>
+            )}
 
             {caption && (
               <p className="text-xs text-muted-foreground line-clamp-2">{caption}</p>

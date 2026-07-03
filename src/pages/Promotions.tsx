@@ -9,7 +9,7 @@ import {
   XCircle, Tag, Package, Truck, TrendingDown, Zap,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { showError, showSuccess } from "@/utils/toast";
+import { showError, showSuccess, toFriendlyError } from "@/utils/toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ import { PromotionEditorModal } from "@/components/PromotionEditorModal";
 import { StorefrontAnnouncementEditorModal } from "@/components/StorefrontAnnouncementEditorModal";
 import { StorefrontAnnouncement } from "@/types/storefront";
 import { format, isAfter, isBefore, parseISO } from "date-fns";
-import * as LucideIcons from 'lucide-react';
+import { getIcon } from '@/lib/iconLibrary';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Marquee from "react-fast-marquee";
 import { Switch } from "@/components/ui/switch";
@@ -332,7 +332,7 @@ const Promotions = () => {
       .eq('id', promotionId);
 
     if (error) {
-      showError(`Failed to update promotion status: ${error.message}`);
+      showError(toFriendlyError(error, "Couldn't update the promotion. Please try again."));
     } else {
       showSuccess(`Promotion ${!currentStatus ? 'activated' : 'deactivated'}.`);
       setPromotions(prev => prev.map(p => p.id === promotionId ? { ...p, is_active: !currentStatus } : p));
@@ -362,7 +362,7 @@ const Promotions = () => {
       .eq('id', elementId);
 
     if (error) {
-      showError(`Failed to update announcement status: ${error.message}`);
+      showError(toFriendlyError(error, "Couldn't update the announcement. Please try again."));
     } else {
       showSuccess(`Announcement ${!currentStatus ? 'activated' : 'deactivated'}.`);
       setStorefrontAnnouncements(prev => prev.map(e => e.id === elementId ? { ...e, is_active: !currentStatus } : e));
@@ -370,8 +370,8 @@ const Promotions = () => {
   };
 
   const getAnnouncementIconComponent = (iconName: string) => {
-    const Icon = (LucideIcons as any)[iconName];
-    return Icon ? <Icon className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />;
+    const Icon = getIcon(iconName);
+    return <Icon className="h-4 w-4" />;
   };
 
   const confirmDeletion = async () => {
@@ -379,11 +379,11 @@ const Promotions = () => {
 
     if (itemToDelete.type === 'promotion') {
       const { error } = await supabase.from("promotions").delete().eq("id", itemToDelete.id);
-      if (error) showError(`Failed to delete promotion: ${error.message}`);
+      if (error) showError(toFriendlyError(error, "Couldn't delete the promotion. Please try again."));
       else { showSuccess("Promotion deleted."); fetchPromotionsAndAnnouncements(); }
     } else {
       const { error } = await supabase.from("marquee_elements").delete().eq("id", itemToDelete.id);
-      if (error) showError(`Failed to delete announcement: ${error.message}`);
+      if (error) showError(toFriendlyError(error, "Couldn't delete the announcement. Please try again."));
       else { showSuccess("Storefront announcement deleted."); fetchPromotionsAndAnnouncements(); }
     }
 

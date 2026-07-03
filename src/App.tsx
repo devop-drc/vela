@@ -1,55 +1,103 @@
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import DashboardLayout from "./components/layout/DashboardLayout";
-import Products from "./pages/Products";
-import Orders from "./pages/Orders";
-import Settings from "./pages/Settings";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Loader2, MessageSquareWarning } from "lucide-react";
+import { toast } from "sonner";
+
 import ProtectedRoute from "./components/layout/ProtectedRoute";
-import OutOfStock from "./pages/OutOfStock";
+import SubscriptionGuard from "./components/layout/SubscriptionGuard";
+import DashboardLayout from "./components/layout/DashboardLayout";
+import { SubscriptionProvider } from "./contexts/SubscriptionContext";
 import { IntegrationProvider } from "./contexts/IntegrationContext";
 import { IntegrationPrompt } from "./components/layout/IntegrationPrompt";
 import { ShopProvider } from "./contexts/ShopContext";
 import { SyncProvider } from "./contexts/syncContext";
-import Demo from "./pages/Demo";
-import Keywords from "./pages/Keywords";
-import Categories from "./pages/Categories";
-import StorefrontLayout from "./components/storefront/StorefrontLayout";
-import StorefrontIndex from "./pages/StorefrontIndex";
-import StorefrontProductDetail from "./pages/StorefrontProductDetail";
-import StorefrontAllProducts from "./pages/StorefrontAllProducts";
-import StorefrontClientOrders from "./pages/StorefrontClientOrders";
-import InstagramProfilePage from "./pages/InstagramProfilePage"; // Updated import
-import InstagramProductsFeedPage from "./pages/InstagramProductsFeedPage"; // New import
-import InstagramShopLayout from "./components/storefront/InstagramShopLayout";
-import Promotions from "./pages/Promotions";
-import FilterVisibility from "./pages/FilterVisibility";
-import { useEffect } from "react";
-import { supabase } from "./integrations/supabase/client";
-import { toast } from "sonner";
-import { MessageSquareWarning } from "lucide-react";
 import { PageTitleProvider } from "./contexts/PageTitleContext";
 import { AppearanceProvider } from "./contexts/AppearanceContext";
 import { CurrencyProvider } from "./contexts/CurrencyContext";
-import { StorefrontCartModal } from "./components/storefront/StorefrontCartModal"; // Ensure this is imported for /shop routes
+import { supabase } from "./integrations/supabase/client";
 
-const queryClient = new QueryClient();
+// Route-level code splitting — keeps the initial bundle small.
+const Landing = lazy(() => import("./pages/Landing"));
+const Index = lazy(() => import("./pages/Index"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Products = lazy(() => import("./pages/Products"));
+const Orders = lazy(() => import("./pages/Orders"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const OutOfStock = lazy(() => import("./pages/OutOfStock"));
+const Demo = lazy(() => import("./pages/Demo"));
+const DemoShop = lazy(() => import("./pages/DemoShop"));
+const Keywords = lazy(() => import("./pages/Keywords"));
+const Categories = lazy(() => import("./pages/Categories"));
+const Promotions = lazy(() => import("./pages/Promotions"));
+const FilterVisibility = lazy(() => import("./pages/FilterVisibility"));
+const Billing = lazy(() => import("./pages/Billing"));
+const Admin = lazy(() => import("./pages/Admin"));
+// Custom storefront — Storefront Studio (src/storefront)
+const StorefrontLayout = lazy(() => import("./storefront/layout/StorefrontLayout"));
+const StorefrontIndex = lazy(() => import("./storefront/pages/HomePage").then((m) => ({ default: m.HomePage })));
+const StorefrontProductDetail = lazy(() => import("./storefront/pages/ProductDetailPage").then((m) => ({ default: m.ProductDetailPage })));
+const StorefrontAllProducts = lazy(() => import("./storefront/pages/ProductsPage").then((m) => ({ default: m.ProductsPage })));
+const StorefrontClientOrders = lazy(() => import("./storefront/pages/OrdersPage").then((m) => ({ default: m.OrdersPage })));
+const StorefrontCartPage = lazy(() => import("./storefront/pages/CartPage").then((m) => ({ default: m.CartPage })));
+const InstagramProfilePage = lazy(() => import("./pages/InstagramProfilePage"));
+const InstagramProductsFeedPage = lazy(() => import("./pages/InstagramProductsFeedPage"));
+const InstagramShopLayout = lazy(() => import("./components/storefront/InstagramShopLayout"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+// App-level fallback only fires for the first load of a top-level lazy layout
+// (e.g., StorefrontLayout, InstagramShopLayout, or auth pages). Intra-layout
+// navigation is caught by Suspense boundaries inside each layout, keeping the
+// chrome (sidebar/header) mounted during route transitions.
+const RouteFallback = () => (
+  <div className="fixed inset-0 flex items-center justify-center bg-background/0">
+    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/60" />
+  </div>
+);
+
+// Warm up route chunks during browser idle time so the first navigation
+// to common destinations is instant (chunk is already cached).
+const prefetchRoutes = () => {
+  const idle = (cb: () => void) => {
+    const w = window as any;
+    if (typeof w.requestIdleCallback === 'function') w.requestIdleCallback(cb, { timeout: 4000 });
+    else setTimeout(cb, 1500);
+  };
+  idle(() => {
+    import("./pages/Products");
+    import("./pages/Orders");
+    import("./pages/Settings");
+  });
+};
 
 const AppContent = () => {
+  const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    let channel = supabase.channel('dispute-notifications');
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
 
     const setupDisputeListener = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      // getSession() reads from local storage (instant); getUser() hits the network.
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      if (!user || cancelled) return;
 
       const { data: business, error: businessError } = await supabase
         .from('businesses')
@@ -57,10 +105,7 @@ const AppContent = () => {
         .eq('user_id', user.id)
         .single();
 
-      if (businessError || !business) {
-        console.error("Could not find business for dispute listener:", businessError);
-        return;
-      }
+      if (businessError || !business || cancelled) return;
 
       channel = supabase
         .channel(`order_disputes:${business.id}`)
@@ -72,79 +117,94 @@ const AppContent = () => {
             const newDispute = payload.new as NewDispute;
             supabase.from('orders').select('business_id').eq('id', newDispute.order_id).single()
               .then(({ data: orderData, error: orderError }) => {
-                if (orderError) {
-                  console.error("Error fetching order for dispute notification:", orderError);
-                  return;
-                }
-                if (orderData?.business_id === business.id) {
-                  toast.info(
-                    <div className="flex items-center gap-2">
-                      <MessageSquareWarning className="h-5 w-5 text-amber-500" />
-                      <span>New Client Dispute for Order #{newDispute.order_id.substring(0, 8)}</span>
-                    </div>,
-                    {
-                      description: newDispute.reason,
-                      action: {
-                        label: "View complaint",
-                        onClick: () => navigate(`/orders?orderId=${newDispute.order_id}`),
-                      },
-                      duration: 10000,
-                    }
-                  );
-                }
+                if (orderError || orderData?.business_id !== business.id) return;
+                toast.info(
+                  <div className="flex items-center gap-2">
+                    <MessageSquareWarning className="h-5 w-5 text-amber-500" />
+                    <span>New Client Dispute for Order #{newDispute.order_id.substring(0, 8)}</span>
+                  </div>,
+                  {
+                    description: newDispute.reason,
+                    action: {
+                      label: "View complaint",
+                      onClick: () => navigate(`/orders?orderId=${newDispute.order_id}`),
+                    },
+                    duration: 10000,
+                  }
+                );
               });
           }
         )
         .subscribe();
     };
 
-    setupDisputeListener();
+    // Defer non-critical subscription to idle so it doesn't compete with first paint.
+    const idle = (cb: () => void) => {
+      const w = window as any;
+      if (typeof w.requestIdleCallback === 'function') w.requestIdleCallback(cb, { timeout: 2000 });
+      else setTimeout(cb, 500);
+    };
+    idle(() => { if (!cancelled) setupDisputeListener(); });
+    prefetchRoutes();
 
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
     };
   }, [navigate]);
 
   return (
-    <Routes>
-      {/* Public Storefront Routes */}
-      <Route path="/shop/:shopSlug" element={<StorefrontLayout />}>
-        <Route index element={<StorefrontIndex />} />
-        <Route path="products" element={<StorefrontAllProducts />} />
-        <Route path="product/:productId" element={<StorefrontProductDetail />} />
-        <Route path="orders" element={<StorefrontClientOrders />} />
-        <Route path="cart" element={<StorefrontCartModal isOpen={true} onClose={() => navigate(-1)} />} /> {/* Added cart route */}
-      </Route>
-      {/* New Instagram Profile Storefront Routes */}
-      <Route path="/instagramShop/:shopSlug" element={<InstagramShopLayout />}>
-        <Route index element={<InstagramProfilePage />} /> {/* Instagram Profile Page */}
-        <Route path="products" element={<InstagramProductsFeedPage />} /> {/* New Products Feed Page */}
-        <Route path="products/:productId" element={<InstagramProductsFeedPage />} /> {/* Products Feed Page with scrolling */}
-      </Route>
-
-      {/* Auth Routes */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/demo" element={<Demo />} />
-      
-      {/* Protected Dashboard Routes */}
-      <Route element={<ProtectedRoute />}>
-        <Route element={<DashboardLayout />}>
-          <Route path="/" element={<Index />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/keywords" element={<Keywords />} />
-          <Route path="/categories" element={<Categories />} />
-          <Route path="/out-of-stock" element={<OutOfStock />} />
-          <Route path="/promotions" element={<Promotions />} />
-          <Route path="/filters" element={<FilterVisibility />} />
+    <ErrorBoundary resetKey={location.pathname}>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        {/* Public Storefront Routes */}
+        <Route path="/shop/:shopSlug" element={<StorefrontLayout />}>
+          <Route index element={<StorefrontIndex />} />
+          <Route path="products" element={<StorefrontAllProducts />} />
+          <Route path="product/:productId" element={<StorefrontProductDetail />} />
+          <Route path="orders" element={<StorefrontClientOrders />} />
+          <Route path="cart" element={<StorefrontCartPage />} />
         </Route>
-      </Route>
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        {/* Instagram Profile Storefront Routes */}
+        <Route path="/instagramShop/:shopSlug" element={<InstagramShopLayout />}>
+          <Route index element={<InstagramProfilePage />} />
+          <Route path="products" element={<InstagramProductsFeedPage />} />
+          <Route path="products/:productId" element={<InstagramProductsFeedPage />} />
+        </Route>
+
+        {/* Public marketing landing */}
+        <Route path="/" element={<Landing />} />
+
+        {/* Auth Routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/demo" element={<Demo />} />
+        <Route path="/demo-shop" element={<DemoShop />} />
+
+        {/* Protected Dashboard Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<DashboardLayout />}>
+            {/* Billing + Admin stay reachable even when the paywall locks the rest */}
+            <Route path="/billing" element={<Billing />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route element={<SubscriptionGuard />}>
+              <Route path="/dashboard" element={<Index />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/keywords" element={<Keywords />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/out-of-stock" element={<OutOfStock />} />
+              <Route path="/promotions" element={<Promotions />} />
+              <Route path="/filters" element={<FilterVisibility />} />
+            </Route>
+          </Route>
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Suspense>
+    </ErrorBoundary>
   );
 };
 
@@ -158,12 +218,14 @@ const App = () => (
           <PageTitleProvider>
             <CurrencyProvider>
               <ShopProvider>
-                <IntegrationProvider>
-                  <SyncProvider>
-                    <AppContent />
-                    <IntegrationPrompt />
-                  </SyncProvider>
-                </IntegrationProvider>
+                <SubscriptionProvider>
+                  <IntegrationProvider>
+                    <SyncProvider>
+                      <AppContent />
+                      <IntegrationPrompt />
+                    </SyncProvider>
+                  </IntegrationProvider>
+                </SubscriptionProvider>
               </ShopProvider>
             </CurrencyProvider>
           </PageTitleProvider>

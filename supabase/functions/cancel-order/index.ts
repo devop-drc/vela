@@ -12,6 +12,42 @@ const getSupabaseAdmin = () => createClient(
   { auth: { persistSession: false } }
 );
 
+// Keep denormalized caches in sync after variant stock was restored.
+const resyncProductStock = async (supabaseAdmin: any, productId: string): Promise<void> => {
+  const { data: variants } = await supabaseAdmin
+    .from('product_variants')
+    .select('inventory, option_values')
+    .eq('product_id', productId);
+  if (!variants || variants.length === 0) return;
+
+  const total = variants.reduce((sum: number, v: any) => sum + (v.inventory || 0), 0);
+  const { data: prod } = await supabaseAdmin
+    .from('products')
+    .select('status, pricing_type')
+    .eq('id', productId)
+    .single();
+
+  const productUpdate: { inventory: number; status?: string } = { inventory: total };
+  if (prod?.pricing_type !== 'subscription' && prod?.status !== 'Draft') {
+    productUpdate.status = total > 0 ? 'Active' : 'Out of Stock';
+  }
+  await supabaseAdmin.from('products').update(productUpdate).eq('id', productId);
+
+  const { data: opts } = await supabaseAdmin
+    .from('product_options')
+    .select('name, option_values(id, value)')
+    .eq('product_id', productId);
+  for (const opt of opts || []) {
+    for (const val of opt.option_values || []) {
+      const derived = variants.reduce(
+        (sum: number, v: any) => (v.option_values?.[opt.name] === val.value ? sum + (v.inventory || 0) : sum),
+        0,
+      );
+      await supabaseAdmin.from('option_values').update({ inventory: derived }).eq('id', val.id);
+    }
+  }
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -29,19 +65,19 @@ serve(async (req) => {
 
     const supabaseAdmin = getSupabaseAdmin();
 
-    // 1. Verify the order belongs to the customer and the shop
+    // 1. Verify the order belongs to this customer (case-insensitive email).
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
-      .select('id, status, business_id, order_items(product_id, quantity, products(pricing_type))')
+      .select('id, status, business_id, order_items(product_id, selected_options)')
       .eq('id', orderId)
-      .eq('customer_email', customerEmail)
+      .ilike('customer_email', (customerEmail || '').trim())
       .single();
 
     if (orderError || !order) {
       throw new Error("Order not found or you do not have permission to cancel it.");
     }
 
-    // 2. Verify the order belongs to the specified shopSlug
+    // 2. Verify the order belongs to the specified shop.
     const { data: shopData, error: shopError } = await supabaseAdmin
       .from('shop_details')
       .select('business_id')
@@ -52,34 +88,27 @@ serve(async (req) => {
       throw new Error("Order does not belong to this shop.");
     }
 
-    // 3. Check if the order can be cancelled (e.g., only 'Pending' orders)
+    // 3. Only 'Pending' orders may be cancelled by the customer.
     if (order.status !== 'Pending') {
       throw new Error(`Order cannot be cancelled. Current status is '${order.status}'.`);
     }
 
-    // 4. Update order status to 'Cancelled'
-    const { error: updateError } = await supabaseAdmin
-      .from('orders')
-      .update({ status: 'Cancelled', payment_status: 'refunded' }) // Assuming payment is refunded or not processed
-      .eq('id', orderId);
-
-    if (updateError) {
-      throw new Error(`Failed to update order status: ${updateError.message}`);
+    // 4. Restore inventory + mark cancelled atomically.
+    const { error: restoreError } = await supabaseAdmin.rpc('restore_order_inventory', { p_order_id: orderId });
+    if (restoreError) {
+      throw new Error(`Failed to cancel order: ${restoreError.message}`);
     }
 
-    // 5. Restore product inventory for 'one_time' products
-    for (const item of order.order_items) {
-      if (item.products?.pricing_type === 'one_time') {
-        const { error: inventoryError } = await supabaseAdmin
-          .from('products')
-          .update({ inventory: Deno.raw('inventory + ' + item.quantity) })
-          .eq('id', item.product_id);
-        
-        if (inventoryError) {
-          console.error(`Failed to restore inventory for product ${item.product_id}:`, inventoryError);
-          // Log error but don't block the cancellation
-        }
-      }
+    // 5. Resync denormalized caches ONLY for products restored via the variant
+    // path. Base-path items already had their base inventory restored directly
+    // by the RPC; resyncing them would clobber base with the variant sum.
+    const affected = new Set<string>(
+      (order.order_items || [])
+        .filter((i: any) => i.product_id && i.selected_options && Object.keys(i.selected_options).length > 0)
+        .map((i: any) => i.product_id),
+    );
+    for (const productId of affected) {
+      await resyncProductStock(supabaseAdmin, productId);
     }
 
     return new Response(JSON.stringify({ message: "Order cancelled successfully!" }), {

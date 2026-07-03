@@ -84,18 +84,18 @@ const LAST_SEEN_KEY = "notifications-last-seen";
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, t: (key: string, opts?: any) => string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
   const diff = Math.max(0, now - then);
   const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return "just now";
+  if (seconds < 60) return t("notifications.just_now");
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return t("notifications.minutes_ago", { count: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t("notifications.hours_ago", { count: hours });
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return t("notifications.days_ago", { count: days });
 }
 
 function statusColor(status: string): string {
@@ -117,6 +117,21 @@ function statusColor(status: string): string {
     default:
       return "bg-gray-100 text-gray-800 border-gray-200";
   }
+}
+
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  "Pending": "notifications.status_pending",
+  "Order Seen": "notifications.status_order_seen",
+  "Order Packaged": "notifications.status_order_packaged",
+  "Given to Courier": "notifications.status_given_to_courier",
+  "Fulfilled": "notifications.status_fulfilled",
+  "Problematic": "notifications.status_problematic",
+  "Cancelled": "notifications.status_cancelled",
+};
+
+function statusLabel(status: string, t: (key: string) => string): string {
+  const key = STATUS_LABEL_KEYS[status];
+  return key ? t(key) : status;
 }
 
 function formatAmount(amount: number, currency: string): string {
@@ -183,16 +198,16 @@ function OrderCard({
       >
         <div className="min-w-0 flex-1">
           <p className="font-medium text-sm truncate">
-            {order.customer_name || order.customer_email || "Anonymous"}
+            {order.customer_name || order.customer_email || t("notifications.anonymous")}
           </p>
           <p className="text-xs text-muted-foreground">
             {formatAmount(order.total_amount, order.currency)} &middot;{" "}
-            {timeAgo(order.created_at)}
+            {timeAgo(order.created_at, t)}
           </p>
         </div>
         <div className="flex items-center gap-2 ml-2 shrink-0">
           <Badge className={cn("text-[10px] px-1.5 py-0", statusColor(order.status))}>
-            {order.status}
+            {statusLabel(order.status, t)}
           </Badge>
           {expanded ? (
             <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -217,7 +232,7 @@ function OrderCard({
                     >
                       <span className="truncate mr-2">
                         {(item.product as { name: string } | null)?.name ||
-                          "Unknown product"}{" "}
+                          t("notifications.unknown_product")}{" "}
                         x{item.quantity}
                       </span>
                       <span className="text-muted-foreground shrink-0">
@@ -245,7 +260,7 @@ function OrderCard({
                   <SelectContent>
                     {ORDER_STATUSES.map((s) => (
                       <SelectItem key={s} value={s} className="text-xs">
-                        {s}
+                        {statusLabel(s, t)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -312,10 +327,10 @@ function DisputeCard({
                 : "bg-green-100 text-green-800 border-green-200"
             )}
           >
-            {dispute.status}
+            {dispute.status === "Open" ? t("notifications.open") : t("notifications.resolved")}
           </Badge>
           <span className="text-[10px] text-muted-foreground">
-            {timeAgo(dispute.created_at)}
+            {timeAgo(dispute.created_at, t)}
           </span>
           {expanded ? (
             <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -451,8 +466,9 @@ export default function NotificationSidebar() {
     let cancelled = false;
     const fetchBusiness = async () => {
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
+      const user = session?.user;
       if (!user || cancelled) return;
 
       const { data: business } = await supabase
@@ -513,7 +529,7 @@ export default function NotificationSidebar() {
         items.push({
           id: `order-${o.id}`,
           type: "new_order",
-          message: `New order from ${o.customer_name || "Anonymous"} \u2014 ${formatAmount(o.total_amount, o.currency)}`,
+          message: t("notifications.new_order_from", { name: o.customer_name || t("notifications.anonymous"), amount: formatAmount(o.total_amount, o.currency) }),
           timestamp: o.created_at,
         });
       }
@@ -534,7 +550,7 @@ export default function NotificationSidebar() {
         items.push({
           id: `stock-${p.id}`,
           type: "low_stock",
-          message: `Product ${p.name} is low on stock (${p.inventory} left)`,
+          message: t("notifications.low_on_stock", { name: p.name, count: p.inventory }),
           timestamp: new Date().toISOString(),
         });
       }
@@ -547,7 +563,7 @@ export default function NotificationSidebar() {
     );
 
     setActivity(items);
-  }, [businessId]);
+  }, [businessId, t]);
 
   // Initial data load
   useEffect(() => {
@@ -707,7 +723,7 @@ export default function NotificationSidebar() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <button className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2.5 shadow-lg hover:bg-primary/90 transition-all focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+        <button className="fixed bottom-24 right-4 md:bottom-4 z-50 flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2.5 shadow-lg hover:bg-primary/90 transition-all focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
           <Bell className="h-4 w-4" />
           <span className="text-sm font-medium hidden sm:inline">{t("notifications.title")}</span>
           {/* Colored dot badges */}
@@ -825,7 +841,7 @@ export default function NotificationSidebar() {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm">{item.message}</p>
                         <p className="text-[11px] text-muted-foreground">
-                          {timeAgo(item.timestamp)}
+                          {timeAgo(item.timestamp, t)}
                         </p>
                       </div>
                     </div>

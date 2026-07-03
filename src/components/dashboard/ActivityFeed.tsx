@@ -127,28 +127,24 @@ export const ActivityFeed = () => {
     let disputesChannel: any;
 
     const fetchAndSubscribe = async () => {
+      if (!shopDetails?.id) { setIsLoading(false); return; }
       setIsLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setIsLoading(false); return; }
-
-      const { data: business } = await supabase
-        .from('businesses').select('id').eq('user_id', user.id).single();
-      if (!business) { setIsLoading(false); return; }
+      const businessId = shopDetails.id;
 
       const [ordersRes, productsRes, disputesRes] = await Promise.all([
         supabase.from('orders')
           .select('id, customer_name, total_amount, created_at, currency, status, payment_status')
-          .eq('business_id', business.id)
+          .eq('business_id', businessId)
           .order('created_at', { ascending: false })
           .limit(10),
         supabase.from('products')
           .select('id, name, media_url, created_at, status')
-          .eq('business_id', business.id)
+          .eq('business_id', businessId)
           .order('created_at', { ascending: false })
           .limit(10),
         supabase.from('order_disputes')
-          .select('id, order_id, reason, created_at')
-          .eq('orders.business_id', business.id)
+          .select('id, order_id, reason, created_at, orders!inner(business_id)')
+          .eq('orders.business_id', businessId)
           .order('created_at', { ascending: false })
           .limit(5),
       ]);
@@ -179,12 +175,12 @@ export const ActivityFeed = () => {
 
       // ── realtime subscriptions ──
       productsChannel = supabase.channel('dashboard-products-feed')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` }, (payload) => {
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'products', filter: `business_id=eq.${businessId}` }, (payload) => {
           const p = payload.new;
           const a: Activity = { id: p.id, type: 'product', title: t('dashboard.new_product'), description: p.name, value: p.status, image: p.media_url, date: p.created_at };
           if (isMounted) setActivities(prev => [a, ...prev].sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime()).slice(0, 20));
         })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products', filter: `business_id=eq.${business.id}` }, (payload) => {
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products', filter: `business_id=eq.${businessId}` }, (payload) => {
           const oldP = payload.old as any; const newP = payload.new as any;
           if (oldP.status !== newP.status) {
             const a: Activity = { id: `${newP.id}-${payload.commit_timestamp}`, type: 'product', title: t('dashboard.status_updated'), description: newP.name, value: newP.status, image: newP.media_url, date: payload.commit_timestamp };
@@ -194,13 +190,13 @@ export const ActivityFeed = () => {
         .subscribe();
 
       ordersChannel = supabase.channel('dashboard-orders-feed')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` }, (payload) => {
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `business_id=eq.${businessId}` }, (payload) => {
           const o = payload.new as any;
           const amount = convertCurrency(o.total_amount, o.currency, shopDetails?.currency);
           const a: Activity = { id: o.id, type: 'new_order', title: t('dashboard.new_order'), description: `from ${o.customer_name}`, value: formatCurrency(amount, shopDetails?.currency), date: o.created_at, orderId: o.id };
           if (isMounted) setActivities(prev => [a, ...prev].sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime()).slice(0, 20));
         })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` }, (payload) => {
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `business_id=eq.${businessId}` }, (payload) => {
           const oldO = payload.old as any; const newO = payload.new as any;
           const amount = convertCurrency(newO.total_amount, newO.currency, shopDetails?.currency);
           if (oldO.status !== newO.status) {
@@ -214,23 +210,33 @@ export const ActivityFeed = () => {
         })
         .subscribe();
 
+      // Realtime filters can't span tables, so subscribe to all dispute
+      // inserts and confirm the order belongs to this business in the handler.
       disputesChannel = supabase.channel('dashboard-disputes-feed')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_disputes', filter: `orders.business_id=eq.${business.id}` }, (payload) => {
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_disputes' }, async (payload) => {
           const d = payload.new as any;
+          const { data: orderRow } = await supabase
+            .from('orders')
+            .select('business_id')
+            .eq('id', d.order_id)
+            .single();
+          if (orderRow?.business_id !== businessId) return;
           const a: Activity = { id: d.id, type: 'dispute', title: t('dashboard.new_dispute'), description: `${t('dashboard.reason')}: ${d.reason}`, value: 'Open', date: d.created_at, disputeId: d.id, orderId: d.order_id };
           if (isMounted) setActivities(prev => [a, ...prev].sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime()).slice(0, 20));
         })
         .subscribe();
-
-      return () => {
-        isMounted = false;
-        supabase.removeChannel(productsChannel);
-        supabase.removeChannel(ordersChannel);
-        supabase.removeChannel(disputesChannel);
-      };
     };
 
     if (shopDetails) { fetchAndSubscribe(); } else { setIsLoading(false); }
+
+    // Synchronous cleanup so React actually runs it (the channels are assigned
+    // to the outer-scope vars inside the async fetchAndSubscribe).
+    return () => {
+      isMounted = false;
+      if (productsChannel) supabase.removeChannel(productsChannel);
+      if (ordersChannel) supabase.removeChannel(ordersChannel);
+      if (disputesChannel) supabase.removeChannel(disputesChannel);
+    };
   }, [shopDetails, convertCurrency]);
 
   const handleActivityClick = async (activity: Activity) => {
@@ -255,12 +261,12 @@ export const ActivityFeed = () => {
         <OrderDetailModal isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} order={selectedOrder} onUpdate={() => {}} />
       )}
 
-      <Card className="shadow-sm border border-border/60 h-full">
-        <CardHeader className="pb-3">
+      <Card className="shadow-sm border border-border/60 h-full flex flex-col">
+        <CardHeader className="pb-2 flex-shrink-0">
           <CardDescription className="text-sm">{t("dashboard.click_event")}</CardDescription>
         </CardHeader>
-        <CardContent className="pt-0 px-4">
-          <ScrollArea className="h-[74vh] pr-2">
+        <CardContent className="pt-0 px-4 pb-3 flex-1 min-h-0">
+          <ScrollArea className="h-full pr-2">
             {isLoading ? (
               <div className="space-y-4 pt-1">
                 {Array.from({ length: 6 }).map((_, i) => (

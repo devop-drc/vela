@@ -8,7 +8,7 @@ interface MediaItemProps {
 }
 
 export const MediaItem = ({ src, alt, type, className }: MediaItemProps) => {
-  const isVideo = type === 'VIDEO' || src?.endsWith('.mp4') || src?.endsWith('.mov');
+  const isVideo = type?.toUpperCase() === 'VIDEO' || src?.endsWith('.mp4') || src?.endsWith('.mov');
 
   if (isVideo) {
     return (

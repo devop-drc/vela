@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Import, ChevronDown, LayoutGrid, List, CheckSquare, Group, Filter as FilterIcon } from "lucide-react"; // Renamed Filter to FilterIcon
-import { useEffect, useState, useMemo } from "react";
+import { RefreshCw, Import, ChevronDown, LayoutGrid, List, CheckSquare, Group, Filter as FilterIcon, Settings2, Plus, Loader2 } from "lucide-react"; // Renamed Filter to FilterIcon
+import { useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchParams } from "react-router-dom";
-import { showError, showSuccess } from "@/utils/toast";
+import { showError, showSuccess, toFriendlyError } from "@/utils/toast";
 import { InstagramPostModal } from "@/components/InstagramPostModal";
 import { ProductEditor } from "@/components/ProductEditor";
 import { ProductCard } from "@/components/ProductCard";
@@ -95,6 +95,40 @@ const Products = () => {
   const [isImporterOpen, setIsImporterOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isNewProduct, setIsNewProduct] = useState(false);
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+
+  // Tracks whether a freshly-created "Untitled product" draft was ever saved.
+  // If the user opens the editor and closes it without saving, we delete the
+  // empty draft so it doesn't pollute the product list / stats.
+  const newProductSaved = useRef(false);
+
+  const handleAddProduct = async () => {
+    if (!shopDetails?.id) { showError("Your shop isn't ready yet. Please try again in a moment."); return; }
+    newProductSaved.current = false;
+    setIsCreatingProduct(true);
+    const { data, error } = await supabase.from('products').insert({
+      name: 'Untitled product',
+      status: 'Draft',
+      business_id: shopDetails.id, // trigger sets user_id from the business owner
+      price: 0,
+      currency: 'ALL',
+      inventory: 0,
+      pricing_type: 'one_time',
+      product_type: 'physical',
+      details: { type: 'generic' },
+      tags: [],
+    }).select('*').single();
+    setIsCreatingProduct(false);
+    if (error || !data) {
+      showError(toFriendlyError(error, "Couldn't create the product. Please try again."));
+      return;
+    }
+    refetch();
+    setIsNewProduct(true);
+    setSelectedProduct(data as any);
+  };
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const [hasDoneFullSync, setHasDoneFullSync] = useState<boolean | null>(null); // State to track if a full sync has ever been done
@@ -477,42 +511,42 @@ const Products = () => {
     if (error) { showError(`Failed to update products: ${error.message}`); refetch(); }
     else showSuccess(`Updated ${count} products.`);
   };
-  const handleBulkDelete = async () => {
+  // Shared deletion used by both the bulk action and the single-row trash button.
+  const deleteProductsByIds = async (ids: string[]) => {
+    if (ids.length === 0) return;
     const { data: productsToDelete, error: fetchError } = await supabase
       .from('products')
       .select('id, instagram_post_id')
-      .in('id', selectedProducts);
-
+      .in('id', ids);
     if (fetchError) {
-      showError(`Failed to fetch products for deletion: ${fetchError.message}`);
-      setBulkDeleteConfirm(false);
+      showError(toFriendlyError(fetchError, "Couldn't delete the product. Please try again."));
       return;
     }
-
-    const instagramPostIds = productsToDelete.map(p => p.instagram_post_id).filter(Boolean);
-
-    // Delete from AI analysis cache
+    const instagramPostIds = (productsToDelete || []).map(p => p.instagram_post_id).filter(Boolean);
     if (instagramPostIds.length > 0) {
-      const { error: cacheError } = await supabase
-        .from('ai_analysis_cache')
-        .delete()
-        .in('instagram_post_id', instagramPostIds);
-      if (cacheError) {
-        console.error("Failed to delete AI analysis cache entries:", cacheError);
-        showError(`Failed to clear AI cache for some products: ${cacheError.message}`);
-      }
+      const { error: cacheError } = await supabase.from('ai_analysis_cache').delete().in('instagram_post_id', instagramPostIds);
+      if (cacheError) console.error("Failed to delete AI analysis cache entries:", cacheError);
     }
-
-    // Delete from products table
-    const { error: deleteError } = await supabase.from('products').delete().in('id', selectedProducts);
+    const { error: deleteError } = await supabase.from('products').delete().in('id', ids);
     if (deleteError) {
-      showError(`Failed to delete products: ${deleteError.message}`);
+      showError(toFriendlyError(deleteError, "Couldn't delete the product. Please try again."));
     } else {
-      showSuccess(`Successfully deleted ${selectedProducts.length} products.`);
-      setSelectedProducts([]);
+      showSuccess(`Deleted ${ids.length} product${ids.length > 1 ? 's' : ''}.`);
       refetch();
     }
+  };
+
+  const handleBulkDelete = async () => {
+    await deleteProductsByIds(selectedProducts);
+    setSelectedProducts([]);
     setBulkDeleteConfirm(false);
+  };
+
+  const handleDeleteOne = async () => {
+    if (!deleteTargetId) return;
+    await deleteProductsByIds([deleteTargetId]);
+    setSelectedProducts(prev => prev.filter(id => id !== deleteTargetId));
+    setDeleteTargetId(null);
   };
   const handleApplySale = async (saleData: SaleFormData) => {
     const updates = allProducts.filter(p => selectedProducts.includes(p.id) && p.price != null).map(p => ({ id: p.id, price: Math.max(0, saleData.type === 'percentage' ? p.price! * (1 - saleData.value / 100) : p.price! - saleData.value) }));
@@ -597,8 +631,15 @@ const Products = () => {
       {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={() => {}} />}
       <ProductEditor
         isOpen={!!selectedProduct}
+        startInEdit={isNewProduct}
         onClose={() => {
+          // Clean up an abandoned brand-new draft that was never saved.
+          if (isNewProduct && !newProductSaved.current && selectedProduct?.id) {
+            const draftId = selectedProduct.id;
+            supabase.from('products').delete().eq('id', draftId).then(() => refetch());
+          }
           setSelectedProduct(null);
+          setIsNewProduct(false);
           setSearchParams(prev => {
             const sp = new URLSearchParams(prev);
             sp.delete('openProduct');
@@ -606,10 +647,24 @@ const Products = () => {
           });
         }}
         product={selectedProduct}
-        onUpdate={() => {}}
+        onUpdate={() => { newProductSaved.current = true; }}
       />
       {isSaleModalOpen && <SaleModal isOpen={isSaleModalOpen} onClose={() => setIsSaleModalOpen(false)} onApply={handleApplySale} productCount={selectedProducts.length} />}
       <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{t("products.delete_confirm", { count: selectedProducts.length })}</AlertDialogTitle><AlertDialogDescription>{t("products.delete_warning")}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("products.yes_delete")}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <AlertDialog open={!!deleteTargetId} onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this product?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {(() => { const p = filteredAndSortedProducts.find(p => p.id === deleteTargetId); return p ? `"${p.name}" will be permanently deleted. This can't be undone.` : "This product will be permanently deleted. This can't be undone."; })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteOne} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("products.yes_delete")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Product Filter Drawer (used on desktop and mobile) */}
       <ProductFilterDrawer
@@ -641,7 +696,7 @@ const Products = () => {
       />
 
       {/* ── Main layout: filter panel + content ── */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 w-full">
         {/* Inline filter panel (desktop only) */}
         {!isMobile && showFilters && (
           <div className="w-[260px] shrink-0 h-[calc(100vh-80px)] sticky top-0">
@@ -663,8 +718,8 @@ const Products = () => {
           </div>
         )}
 
-        {/* Main content column */}
-        <div className="min-w-0">
+        {/* Main content column — grows to fill all space the sidebar isn't using */}
+        <div className="flex-1 min-w-0">
       {/* ── Stats summary bar ── */}
       {!isProductDataLoading && (
         <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -694,9 +749,15 @@ const Products = () => {
       {/* ── Toolbar ── */}
       <div className="sticky top-[0px] z-50 flex mb-3 items-center justify-between gap-2">
           <div className="flex items-center gap-1 flex-wrap">
-            {/* Filter Management Button */}
-            <Button className="bg-primary text-primary-foreground border-none justify-start flex-1 md:flex-none hover:bg-primary/90 shadow-lg" onClick={() => setIsVisibilitySheetOpen(true)}>
-              <List className="mr-2 h-4 w-4" />
+            {/* Primary action: create a product manually */}
+            <Button className="justify-start flex-1 md:flex-none shadow-sm bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddProduct} disabled={isCreatingProduct}>
+              {isCreatingProduct ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              {t("products.add_product", "Add Product")}
+            </Button>
+
+            {/* Storefront filter configuration (controls the customer shop's filter UI) */}
+            <Button variant="outline" className="justify-start flex-1 md:flex-none shadow-sm" onClick={() => setIsVisibilitySheetOpen(true)} title="Configure which filters customers see in your shop">
+              <Settings2 className="mr-2 h-4 w-4" />
               {t("products.filter_management")}
             </Button>
 
@@ -750,12 +811,12 @@ const Products = () => {
                   </DropdownMenu>
 
                   {/* Segmented view toggle */}
-                  <div className="flex items-center rounded-md border border-border bg-muted/60 p-0.5 shadow-lg">
+                  <div className="flex items-center rounded-lg border border-border bg-muted/60 p-0.5 shadow-lg">
                     <button
                       type="button"
                       onClick={() => setViewMode('grid')}
                       className={cn(
-                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded text-sm font-medium transition-all duration-150",
+                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all duration-150",
                         viewMode === 'grid'
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
@@ -769,7 +830,7 @@ const Products = () => {
                       type="button"
                       onClick={() => setViewMode('table')}
                       className={cn(
-                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded text-sm font-medium transition-all duration-150",
+                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all duration-150",
                         viewMode === 'table'
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
@@ -818,6 +879,7 @@ const Products = () => {
                 disabled={isSyncing}
                 variant="outline"
                 className="flex-1 shadow-sm bg-red-600 text-white hover:bg-red-700 border-0"
+                title={t("products.full_sync_hint")}
               >
                 <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
                 {t("products.full_sync")}
@@ -829,6 +891,7 @@ const Products = () => {
                   disabled={isSyncing}
                   variant="outline"
                   className="rounded-r-none flex-1 shadow-lg border-primary/40 text-primary hover:bg-primary/10 hover:border-primary"
+                  title={t("products.quick_sync_hint")}
                 >
                   <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
                   {t("dashboard.quick_sync")}
@@ -843,8 +906,11 @@ const Products = () => {
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleSync('full')} disabled={isSyncing}>{t("products.run_full_sync")}</DropdownMenuItem>
+                  <DropdownMenuContent align="end" className="max-w-[260px]">
+                    <DropdownMenuItem onClick={() => handleSync('full')} disabled={isSyncing} className="flex-col items-start gap-0.5">
+                      <span className="font-medium">{t("products.run_full_sync")}</span>
+                      <span className="text-xs text-muted-foreground whitespace-normal">{t("products.full_sync_hint")}</span>
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -928,7 +994,7 @@ const Products = () => {
                   onSelectAll={(checked) => setSelectedProducts(checked ? filteredAndSortedProducts.map(p => p.id) : [])}
                   onSelectOne={handleSelectProduct}
                   onEdit={setSelectedProduct}
-                  onDelete={handleBulkDelete}
+                  onDelete={(id) => setDeleteTargetId(id)}
                 />
               </CardContent>
             </Card>
@@ -956,6 +1022,10 @@ const Products = () => {
                   {t("products.no_products_desc")}
                 </p>
                 <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <Button onClick={handleAddProduct} disabled={isCreatingProduct} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                    {isCreatingProduct ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                    {t("products.add_product", "Add Product")}
+                  </Button>
                   <Button
                     onClick={() => runWithIntegrationCheck(() => setIsImporterOpen(true))}
                     variant="outline" className="border-foreground/20 text-foreground hover:bg-red-50 hover:text-red-600 hover:border-red-300"

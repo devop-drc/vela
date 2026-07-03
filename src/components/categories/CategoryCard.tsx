@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +28,7 @@ export const CategoryCard = ({
   onAddType,
   onDuplicate,
 }: CategoryCardProps) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const systemCount = templates.filter((t) => t.is_system).length;
   const customCount = templates.filter((t) => !t.is_system).length;
@@ -50,13 +52,15 @@ export const CategoryCard = ({
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <Badge variant="secondary" className="text-xs h-5">
-                {templates.length} type{templates.length !== 1 ? "s" : ""}
+                {templates.length === 1
+                  ? t("categories.type_count", { count: templates.length })
+                  : t("categories.type_count_plural", { count: templates.length })}
               </Badge>
               {totalSpecs > 0 && (
-                <span className="text-xs text-muted-foreground">{totalSpecs} specs</span>
+                <span className="text-xs text-muted-foreground">{t("categories.specs_count", { count: totalSpecs })}</span>
               )}
               {totalOptions > 0 && (
-                <span className="text-xs text-muted-foreground">{totalOptions} opts</span>
+                <span className="text-xs text-muted-foreground">{t("categories.opts_count", { count: totalOptions })}</span>
               )}
               {systemCount > 0 && (
                 <Lock className="h-3 w-3 text-muted-foreground/50" />
@@ -81,7 +85,7 @@ export const CategoryCard = ({
               onClick={() => onAddType(categoryName)}
             >
               <PlusCircle className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Add Type to {categoryName}</span>
+              <span className="text-sm text-muted-foreground">{t("categories.add_type_to", { name: categoryName })}</span>
             </button>
           </div>
         </CollapsibleContent>

@@ -10,6 +10,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { showError, showSuccess } from "@/utils/toast";
 import { KeywordEditorModal } from "@/components/KeywordEditorModal";
 import { KeywordsTable } from "@/components/KeywordsTable";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useTranslation } from "react-i18next";
 
 export interface Keyword {
@@ -35,6 +39,7 @@ const Keywords = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedKeyword, setSelectedKeyword] = useState<Keyword | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Keyword | null>(null);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -62,14 +67,21 @@ const Keywords = () => {
     setSelectedKeyword(null);
   };
 
-  const handleDelete = async (keywordId: string) => {
-    const { error } = await supabase.from("keywords").delete().eq("id", keywordId);
+  const handleDelete = (keywordId: string) => {
+    const kw = keywords.find((k) => k.id === keywordId);
+    if (kw) setDeleteTarget(kw);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from("keywords").delete().eq("id", deleteTarget.id);
     if (error) {
       showError(`Failed to delete keyword: ${error.message}`);
     } else {
       showSuccess("Keyword deleted.");
       fetchKeywords();
     }
+    setDeleteTarget(null);
   };
 
   const handleInlineUpdate = async (updated: Keyword) => {
@@ -128,6 +140,23 @@ const Keywords = () => {
         onSave={handleSave}
         keyword={selectedKeyword}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("keywords.delete_confirm_title")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("keywords.delete_confirm_desc", { keyword: deleteTarget?.keyword })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {t("common.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="space-y-6">
         {/* Page header */}

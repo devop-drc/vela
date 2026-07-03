@@ -1,3 +1,4 @@
+import { getStorefrontUrl } from "@/lib/storefront";
 import { useEffect, useState, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,7 +39,7 @@ export const ShopSettings = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [syncedData, setSyncedData] = useState<any>(null);
 
-  const { register, handleSubmit, reset, control, watch, formState: { isSubmitting, isDirty } } = useForm();
+  const { register, handleSubmit, reset, control, watch, formState: { isSubmitting, isDirty, errors } } = useForm();
   const watchedCurrency = watch('currency');
   const selectedCurrencyMeta = currencies.find(c => c.code === watchedCurrency);
 
@@ -84,10 +85,12 @@ export const ShopSettings = () => {
     const success = await updateShopDetails(data);
     if (success) {
       showSuccess("Shop details updated!");
+    } else {
+      showError("Couldn't save your shop details. Please try again.");
     }
   };
 
-  const shopUrl = shopDetails?.slug ? `${window.location.origin}/shop/${shopDetails.slug}` : null;
+  const shopUrl = shopDetails?.slug ? getStorefrontUrl(shopDetails.slug, shopDetails.storefront_type) : null;
 
   const handleCopyShopUrl = async () => {
     if (shopUrl) {
@@ -102,7 +105,9 @@ export const ShopSettings = () => {
     }
   };
 
-  if (isContextLoading || !syncedData) {
+  // Only block on the shop context loading — the Instagram-synced preview is
+  // optional, so a failed/absent IG fetch must not lock the whole settings form.
+  if (isContextLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-20 w-full" />
@@ -153,7 +158,8 @@ export const ShopSettings = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="shop_name" className="flex items-center gap-2"><Store className="h-4 w-4" /> {t("settings.shop_name")}</Label>
-                    <Input id="shop_name" {...register('shop_name')} />
+                    <Input id="shop_name" {...register('shop_name', { required: t("settings.shop_name_required") as string })} aria-invalid={!!errors.shop_name} />
+                    {errors.shop_name && <p className="text-sm text-destructive">{String(errors.shop_name.message)}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="headline" className="flex items-center gap-2"><Type className="h-4 w-4" /> {t("settings.headline")}</Label>
@@ -167,7 +173,8 @@ export const ShopSettings = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="contact_email" className="flex items-center gap-2"><Mail className="h-4 w-4" /> {t("settings.contact_email")}</Label>
-                    <Input id="contact_email" type="email" {...register('contact_email')} />
+                    <Input id="contact_email" type="email" {...register('contact_email', { pattern: { value: /^[^@\s]+@[^@\s]+\.[^@\s]+$/, message: t("settings.invalid_email") as string } })} aria-invalid={!!errors.contact_email} />
+                    {errors.contact_email && <p className="text-sm text-destructive">{String(errors.contact_email.message)}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="currency" className="flex items-center gap-2"><DollarSign className="h-4 w-4" /> {t("settings.default_currency")}</Label>

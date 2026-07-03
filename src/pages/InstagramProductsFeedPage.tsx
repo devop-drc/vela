@@ -24,9 +24,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatLargeNumber } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import { Marquee } from "@/components/ui/marquee";
-import * as LucideIcons from 'lucide-react';
+import { getIcon } from '@/lib/iconLibrary';
 // Select UI not needed here; header handles sorting controls on all viewports
-import { debounce } from 'lodash';
+import debounce from 'lodash/debounce';
 import { InstagramShopHeader } from "@/components/storefront/InstagramShopHeader"; // Import the updated header
 
 interface Product {
@@ -75,9 +75,9 @@ const containerVariants = {
   },
 };
 
-const getIconComponent = (iconName: keyof typeof LucideIcons) => {
-  const Icon = LucideIcons[iconName];
-  return Icon ? <Icon className="h-5 w-5 text-red-500" /> : <Sparkles className="h-5 w-5 text-red-500" />;
+const getIconComponent = (iconName: string) => {
+  const Icon = getIcon(iconName);
+  return <Icon className="h-5 w-5 text-red-500" />;
 };
 
 const InstagramProductsFeedPage = () => {
@@ -98,7 +98,8 @@ const InstagramProductsFeedPage = () => {
     convertCurrency, // Use convertCurrency from context
   } = useOutletContext<InstagramShopLayoutContext>();
 
-  const [sortOption, setSortOption] = useState(searchParams.get('sort') || "newest");
+  // Derive active sort directly from the URL (single source of truth)
+  const sortOption = searchParams.get('sort') || "newest";
 
   const productRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
 
@@ -119,17 +120,7 @@ const InstagramProductsFeedPage = () => {
     }
   }, [productIdFromUrl, allProducts]); // Re-run when products load or URL changes
 
-  useEffect(() => {
-    const urlSort = searchParams.get('sort');
-    if (urlSort !== null && urlSort !== sortOption) {
-      setSortOption(urlSort);
-    } else if (urlSort === null && sortOption !== 'newest') {
-      setSortOption('newest');
-    }
-  }, [searchParams, sortOption]);
-
   const handleSortChange = (value: string) => {
-    setSortOption(value);
     const newSearchParams = new URLSearchParams(searchParams);
     if (value !== 'newest') {
       newSearchParams.set('sort', value);
@@ -191,7 +182,7 @@ const InstagramProductsFeedPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white text-black flex flex-col items-center p-4">
+      <div className="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))] flex flex-col items-center p-4">
         <div className="flex flex-col items-center mb-8">
           <Skeleton className="h-24 w-24 rounded-full mb-4" />
           <Skeleton className="h-6 w-48 mb-2" />
@@ -213,11 +204,11 @@ const InstagramProductsFeedPage = () => {
   }
 
   if (error) {
-    return <div className="container py-8 text-red-600 text-base md:text-lg">{error}</div>;
+    return <div className="container py-8 text-red-500 text-base md:text-lg">{error}</div>;
   }
 
   if (!shopDetails) {
-    return <div className="container py-8 text-center text-gray-600 text-base md:text-lg">Shop details not found.</div>;
+    return <div className="container py-8 text-center text-[hsl(var(--muted-foreground))] text-base md:text-lg">Shop details not found.</div>;
   }
 
   return (
@@ -229,7 +220,7 @@ const InstagramProductsFeedPage = () => {
         {/* Product Grid */}
         <section className="mt-0">
           {filteredAndSortedProducts.length === 0 ? (
-            <div className="text-center py-16 text-gray-600 border-2 border-dashed rounded-lg mx-4">
+            <div className="text-center py-16 text-[hsl(var(--muted-foreground))] border-2 border-dashed border-[hsl(var(--border))] rounded-lg mx-4">
               <h3 className="text-xl md:text-2xl font-semibold">No Products Found</h3>
               <p className="text-sm md:text-base mt-1 md:mt-2">
                 {hasActiveFilters

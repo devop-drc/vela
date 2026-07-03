@@ -59,12 +59,20 @@ interface ProductEditorProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdate: () => void;
+  /** Open directly in edit mode (used for newly-created products). */
+  startInEdit?: boolean;
 }
 
-export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEditorProps) => {
+export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit = false }: ProductEditorProps) => {
   const [isEditing, setIsEditing] = useState(false);
+
+  // New products should open straight into the edit form.
+  useEffect(() => {
+    if (isOpen && startInEdit) setIsEditing(true);
+  }, [isOpen, startInEdit]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [mediaItems, setMediaItems] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [specs, setSpecs] = useState<any[]>([]);
@@ -211,9 +219,20 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
     setIsSubmitting(false); setIsDeleting(false);
   };
 
+  const doClose = () => { onClose(); setIsEditing(false); };
+
+  // Guard against losing edits: if the form has unsaved changes, confirm first.
+  const attemptClose = () => {
+    if (isEditing && form.formState.isDirty) {
+      setShowDiscardConfirm(true);
+    } else {
+      doClose();
+    }
+  };
+
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setIsEditing(false); } }}>
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) attemptClose(); }}>
         <DialogContent className="sm:max-w-6xl max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Product Details: {product?.name}</DialogTitle>
@@ -263,6 +282,18 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate }: ProductEdi
         </DialogContent>
       </Dialog>
       <AlertDialog open={isDeleting} onOpenChange={setIsDeleting}><AlertDialogContent><AlertDialogHeader><AlertDialogTitleComponent>Are you absolutely sure?</AlertDialogTitleComponent><AlertDialogDescriptionComponent>This action cannot be undone. This will permanently delete the product.</AlertDialogDescriptionComponent></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete product</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitleComponent>Discard your changes?</AlertDialogTitleComponent>
+            <AlertDialogDescriptionComponent>You have unsaved changes to this product. If you leave now, they'll be lost.</AlertDialogDescriptionComponent>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowDiscardConfirm(false); doClose(); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Discard changes</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

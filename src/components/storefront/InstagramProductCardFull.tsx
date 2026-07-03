@@ -306,7 +306,8 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
       const selectedOptions: { [key: string]: string | string[] } = { ...selectedValues };
 
-      const mediaType: 'image' | 'video' | undefined = product.media_type === 'video' ? 'video' : (product.media_type === 'image' ? 'image' : undefined);
+      const mt = product.media_type?.toUpperCase();
+      const mediaType: 'image' | 'video' | undefined = mt === 'VIDEO' ? 'video' : (mt === 'IMAGE' ? 'image' : undefined);
       addToCart({
         productId: product.id,
         name: product.name,
@@ -343,7 +344,8 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
       const selectedOptions: { [key: string]: string | string[] } = { ...selectedValues };
 
-      const mediaType: 'image' | 'video' | undefined = product.media_type === 'video' ? 'video' : (product.media_type === 'image' ? 'image' : undefined);
+      const mt = product.media_type?.toUpperCase();
+      const mediaType: 'image' | 'video' | undefined = mt === 'VIDEO' ? 'video' : (mt === 'IMAGE' ? 'image' : undefined);
       const variantKey = Object.keys(selectedOptions).length > 0
         ? JSON.stringify(Object.entries(selectedOptions).sort(([a],[b]) => a.localeCompare(b)))
         : undefined;
@@ -578,7 +580,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                   onClick={handleBuyNow}
                   disabled={isOutOfStock}
                 >
-                  <CreditCard className="mr-2 h-6 w-6" /> Buy
+                  <ShoppingBag className="mr-2 h-6 w-6" /> Buy Now
                 </Button>
 
                 {/* Add to Cart Button */}
@@ -593,7 +595,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                   disabled={isOutOfStock}
                 >
                   <ShoppingBag className="mr-2 h-6 w-6" />
-                  Add to cart
+                  Add to Cart
                 </Button>
               </div>
             </div>
@@ -623,7 +625,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
                   disabled={isOutOfStock}
                 >
                   <ShoppingBag className="mr-2 h-6 w-6" />
-                  Add to cart
+                  Add to Cart
                 </Button>
               </div>
           )}

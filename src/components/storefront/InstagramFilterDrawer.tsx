@@ -18,7 +18,7 @@ import { useStorefront } from "@/contexts/StorefrontContext";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
-import { debounce } from 'lodash';
+import debounce from 'lodash/debounce';
 
 interface Product {
   id: string;
@@ -161,20 +161,21 @@ export const InstagramFilterDrawer = ({
   }, [products, convertCurrency]);
 
   useEffect(() => {
-    setLocalFilters(prev => {
-      const currentMin = prev.priceRange[0];
-      const currentMax = prev.priceRange[1];
-      const newMax = maxPrice > 0 ? maxPrice : 100;
+    const currentMin = localFilters.priceRange[0];
+    const currentMax = localFilters.priceRange[1];
+    const newMax = maxPrice > 0 ? maxPrice : 100;
 
-      const adjustedMax = Math.min(currentMax, newMax);
-      const adjustedMin = Math.min(currentMin, adjustedMax);
+    const adjustedMax = Math.min(currentMax, newMax);
+    const adjustedMin = Math.min(currentMin, adjustedMax);
 
-      if (adjustedMin !== prev.priceRange[0] || adjustedMax !== prev.priceRange[1] || newMax !== (maxPrice > 0 ? maxPrice : 100)) {
-        setLocalPriceRange([adjustedMin, adjustedMax]);
-        return { ...prev, priceRange: [adjustedMin, adjustedMax] };
-      }
-      return prev;
-    });
+    if (adjustedMin !== currentMin || adjustedMax !== currentMax) {
+      const updated = { ...localFilters, priceRange: [adjustedMin, adjustedMax] as [number, number] };
+      setLocalPriceRange([adjustedMin, adjustedMax]);
+      setLocalFilters(updated);
+      // Propagate so the parent's active filter matches the clamped range (filters apply live).
+      onFilterChange(updated);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maxPrice]);
 
   const toTitle = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());

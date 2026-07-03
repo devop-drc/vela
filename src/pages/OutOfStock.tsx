@@ -95,6 +95,7 @@ interface VariantSubRowProps {
 }
 
 const VariantSubRow = ({ variant, isSelected, onSelect, onStockChange }: VariantSubRowProps) => {
+  const { t } = useTranslation();
   const [editVal, setEditVal] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const status = getStockStatus(variant.inventory);
@@ -240,28 +241,22 @@ const ProductAccordionRow = ({
     if (error) {
       showError(`Failed to load variants: ${error.message}`);
     } else {
-      // Parse option_values from combination_key if empty
+      // Parse option_values from combination_key if empty.
+      // Keys are stored as "Name:Value|Name:Value" (see CombinedVariantManager.normalizeKey).
       const rows = (data ?? []).map((v: any) => {
         let optVals = v.option_values || {};
         if (Object.keys(optVals).length === 0 && v.combination_key) {
           v.combination_key.split("|").forEach((part: string) => {
-            const [key, val] = part.split("=");
-            if (key && val) optVals[key] = val;
+            const idx = part.indexOf(":");
+            if (idx > 0) {
+              const key = part.slice(0, idx);
+              const val = part.slice(idx + 1);
+              if (key && val) optVals[key] = val;
+            }
           });
         }
         return { ...v, option_values: optVals } as VariantRow;
       });
-
-      // If ALL variants have 0 stock but product has base inventory, distribute evenly
-      const allZero = rows.length > 0 && rows.every((v: VariantRow) => v.inventory === 0);
-      const baseInventory = product.inventory ?? 0;
-      if (allZero && baseInventory > 0) {
-        const perVariant = Math.floor(baseInventory / rows.length);
-        const remainder = baseInventory % rows.length;
-        rows.forEach((v: VariantRow, i: number) => {
-          v.inventory = perVariant + (i < remainder ? 1 : 0);
-        });
-      }
 
       setLocalVariants(rows);
       onVariantsLoaded(product.id, rows);
@@ -518,25 +513,18 @@ const OutOfStock = () => {
         let optVals = v.option_values || {};
         if (Object.keys(optVals).length === 0 && v.combination_key) {
           v.combination_key.split("|").forEach((part: string) => {
-            const [key, val] = part.split("=");
-            if (key && val) optVals[key] = val;
+            const idx = part.indexOf(":");
+            if (idx > 0) {
+              const key = part.slice(0, idx);
+              const val = part.slice(idx + 1);
+              if (key && val) optVals[key] = val;
+            }
           });
         }
         const row: VariantRow = { ...v, option_values: optVals };
         if (!grouped[v.product_id]) grouped[v.product_id] = [];
         grouped[v.product_id].push(row);
       });
-
-      // Distribute base inventory to variants that all have 0
-      for (const pid of Object.keys(grouped)) {
-        const variants = grouped[pid];
-        const product = allProducts.find((p: any) => p.id === pid);
-        if (variants.every(v => v.inventory === 0) && product?.inventory > 0) {
-          const perVariant = Math.floor(product.inventory / variants.length);
-          const remainder = product.inventory % variants.length;
-          variants.forEach((v, i) => { v.inventory = perVariant + (i < remainder ? 1 : 0); });
-        }
-      }
 
       setVariantCache(prev => ({ ...prev, ...grouped }));
     })();

@@ -5,46 +5,47 @@ import { ShieldCheck, UserCircle, Mail, FileText, Loader2 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client'; // Import supabase client
 import { useState, useEffect } from 'react'; // Import useState and useEffect
 import { showError } from '@/utils/toast'; // Import showError
-
-const permissions = [
-  {
-    icon: UserCircle,
-    name: "Profile Information",
-    description: "To create your account with your name and profile picture.",
-  },
-  {
-    icon: Mail,
-    name: "Email Address",
-    description: "To securely log you into your dashboard.",
-  },
-  {
-    icon: FileText,
-    name: "Instagram Posts & Media",
-    description: "To access your posts, allowing you to import them as products.",
-  },
-];
+import { useTranslation } from "react-i18next";
 
 export const IntegrationPrompt = () => {
+  const { t } = useTranslation();
+  const permissions = [
+    {
+      icon: UserCircle,
+      name: t("integrations.perm_profile"),
+      description: t("integrations.perm_profile_desc"),
+    },
+    {
+      icon: Mail,
+      name: t("integrations.perm_email"),
+      description: t("integrations.perm_email_desc"),
+    },
+    {
+      icon: FileText,
+      name: t("integrations.perm_media"),
+      description: t("integrations.perm_media_desc"),
+    },
+  ];
   const { isPromptOpen, closePrompt } = useIntegration();
   const [userId, setUserId] = useState<string | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true); // Added loading state
 
   useEffect(() => {
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id || null);
-      setIsUserLoading(false); // Set loading to false after fetch
+      const { data: { session } } = await supabase.auth.getSession();
+      setUserId(session?.user?.id || null);
+      setIsUserLoading(false);
     };
     fetchUser();
   }, []);
 
   const handleConnect = () => {
     if (!userId) {
-      showError("User not authenticated. Please log in first.");
+      showError(t("integrations.not_authenticated"));
       return;
     }
     closePrompt();
-    const origin = `${window.location.origin}/`; // Redirect back to dashboard
+    const origin = `${window.location.origin}/dashboard`; // Redirect back to dashboard
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
 
@@ -56,13 +57,13 @@ export const IntegrationPrompt = () => {
     <Dialog open={isPromptOpen} onOpenChange={closePrompt}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center">Connect to Instagram</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-center">{t("integrations.prompt_title")}</DialogTitle>
           <DialogDescription className="pt-2 text-center text-base">
-            To get started, we need to securely connect to your Instagram Business account. This allows us to import your posts and turn them into products.
+            {t("integrations.prompt_desc")}
           </DialogDescription>
         </DialogHeader>
         <div className="py-6 space-y-4">
-          <h3 className="font-semibold text-center">We'll ask for the following permissions:</h3>
+          <h3 className="font-semibold text-center">{t("integrations.permissions_intro")}</h3>
           <div className="space-y-4 rounded-lg border p-4">
             {permissions.map((permission) => (
               <div key={permission.name} className="flex items-start gap-4">
@@ -77,13 +78,13 @@ export const IntegrationPrompt = () => {
             ))}
           </div>
           <p className="text-xs text-muted-foreground text-center">
-            We only request the permissions necessary to provide our services. We will never post on your behalf without your explicit action.
+            {t("integrations.permissions_note")}
           </p>
         </div>
         <DialogFooter>
           <Button onClick={handleConnect} className="w-full" size="lg" disabled={!userId || isUserLoading}>
             {isUserLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ShieldCheck className="mr-2 h-5 w-5" />}
-            Securely Connect with Facebook
+            {t("integrations.secure_connect")}
           </Button>
         </DialogFooter>
       </DialogContent>

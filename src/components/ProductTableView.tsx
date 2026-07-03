@@ -9,6 +9,7 @@ import { Badge } from "./ui/badge"; // Import Badge
 import { cn } from "@/lib/utils"; // Import cn
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect, useCallback } from "react";
+import { getStockStatus } from "@/lib/stock";
 
 interface Product {
   id: string;
@@ -21,6 +22,7 @@ interface Product {
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
   details: { [key: string]: any }; // Keep details for specs
+  updated_at?: string | null; // Used to bust the variant-stock cache when a product changes
 }
 
 interface ProductWithSales extends Product {
@@ -39,69 +41,81 @@ interface ProductTableViewProps {
   selectableRowsMode?: 'checkbox' | 'row';
 }
 
-// Cache for variant stock summaries to avoid re-fetching constantly
-const variantStockCache = new Map<string, { total: number, inStock: number, outOfStock: number, isLoading: boolean }>();
+type StockSummary = { total: number, inStock: number, outOfStock: number, isLoading: boolean };
+
+// Cache for variant stock summaries to avoid re-fetching constantly.
+// Keyed by `${productId}:${updated_at}` so that editing a product (which bumps
+// updated_at) busts the entry and forces a fresh fetch — without re-fetching on
+// every render.
+const variantStockCache = new Map<string, StockSummary>();
+
+const cacheKeyFor = (p: { id: string; updated_at?: string | null }) => `${p.id}:${p.updated_at ?? ''}`;
 
 export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSelectOne, onEdit, onDelete, showStatusColumn = true, selectableRowsMode = 'checkbox' }: ProductTableViewProps) => {
   const { shopDetails, convertCurrency } = useShop();
-  const [stockSummaries, setStockSummaries] = useState(new Map<string, { total: number, inStock: number, outOfStock: number, isLoading: boolean }>());
+  // Displayed summaries keyed by productId (the current cache key for that product).
+  const [stockSummaries, setStockSummaries] = useState(new Map<string, StockSummary>());
 
-  const fetchVariantStockSummary = useCallback(async (productId: string) => {
-    if (variantStockCache.has(productId) && !variantStockCache.get(productId)?.isLoading) {
-      return variantStockCache.get(productId);
+  const fetchVariantStockSummary = useCallback(async (productId: string, cacheKey: string) => {
+    const cached = variantStockCache.get(cacheKey);
+    if (cached && !cached.isLoading) {
+      setStockSummaries(prev => new Map(prev).set(productId, cached));
+      return cached;
     }
 
-    // Set loading state in cache
-    variantStockCache.set(productId, { total: 0, inStock: 0, outOfStock: 0, isLoading: true });
-    setStockSummaries(new Map(variantStockCache));
+    // Set loading state
+    const loading: StockSummary = { total: 0, inStock: 0, outOfStock: 0, isLoading: true };
+    variantStockCache.set(cacheKey, loading);
+    setStockSummaries(prev => new Map(prev).set(productId, loading));
 
+    let summary: StockSummary;
     try {
       const { data, error } = await supabase
-        .from('product_options')
-        .select('option_values(inventory)')
+        .from('product_variants')
+        .select('inventory')
         .eq('product_id', productId);
 
       if (error) throw error;
 
       let totalVariants = 0;
-      let totalStock = 0;
       let outOfStockCount = 0;
 
-      data.forEach(option => {
-        (option.option_values || []).forEach((val: any) => {
-          totalVariants++;
-          totalStock += val.inventory;
-          if (val.inventory <= 0) {
-            outOfStockCount++;
-          }
-        });
+      (data || []).forEach((variant: any) => {
+        totalVariants++;
+        if ((variant.inventory ?? 0) <= 0) {
+          outOfStockCount++;
+        }
       });
 
-      const summary = {
+      summary = {
         total: totalVariants,
         inStock: totalVariants - outOfStockCount,
         outOfStock: outOfStockCount,
         isLoading: false,
       };
-      
-      variantStockCache.set(productId, summary);
-      return summary;
-
     } catch (e) {
       console.error(`Failed to fetch variant stock for ${productId}:`, e);
-      variantStockCache.set(productId, { total: 0, inStock: 0, outOfStock: 0, isLoading: false });
-      return variantStockCache.get(productId);
-    } finally {
-      setStockSummaries(new Map(variantStockCache));
+      summary = { total: 0, inStock: 0, outOfStock: 0, isLoading: false };
     }
+
+    variantStockCache.set(cacheKey, summary);
+    setStockSummaries(prev => new Map(prev).set(productId, summary));
+    return summary;
   }, []);
 
   useEffect(() => {
-    // Trigger fetch for all products that might have variants
+    // Fetch (or refresh) the variant stock for each non-subscription product.
+    // The cache key includes updated_at, so an edited product re-fetches while
+    // unchanged products are served from cache.
     products.forEach(p => {
-      // Only fetch if we haven't already fetched and it's not a subscription product
-      if (p.pricing_type === 'one_time' && !variantStockCache.has(p.id)) {
-        fetchVariantStockSummary(p.id);
+      if (p.pricing_type !== 'one_time') return;
+      const key = cacheKeyFor(p);
+      const cached = variantStockCache.get(key);
+      if (cached && !cached.isLoading) {
+        // Ensure the displayed summary reflects the current cache entry.
+        setStockSummaries(prev => prev.get(p.id) === cached ? prev : new Map(prev).set(p.id, cached));
+      } else if (!cached) {
+        fetchVariantStockSummary(p.id, key);
       }
     });
   }, [products, fetchVariantStockSummary]);
@@ -113,10 +127,11 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
     if (inventory === null) {
       return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">N/A</Badge>;
     }
-    if (inventory > 10) {
+    const status = getStockStatus(inventory);
+    if (status === "in") {
       return <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-300">In Stock</Badge>;
     }
-    if (inventory > 0 && inventory <= 10) {
+    if (status === "low" || status === "critical") {
       return <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">Low Stock</Badge>;
     }
     return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">Out of Stock</Badge>;
@@ -169,8 +184,8 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
           <TableHead>Name</TableHead>
           {showStatusColumn && <TableHead>Status</TableHead>}
           <TableHead>Price</TableHead>
-          <TableHead>Inventory</TableHead>
-          <TableHead>Variant Stock</TableHead>
+          <TableHead>In stock</TableHead>
+          <TableHead>Variants</TableHead>
           <TableHead>Total Earned</TableHead>
           <TableHead className="text-right w-[150px]">Actions</TableHead>
         </TableRow>
@@ -183,7 +198,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
               "group transition-colors",
               selectedProducts.includes(product.id) && "bg-primary/10"
             )}
-            onClick={() => onSelectOne(product.id)}
+            onClick={() => (isRowSelect ? onSelectOne(product.id) : onEdit(product))}
           >
             {!isRowSelect && (
               <TableCell onClick={(e) => { e.stopPropagation(); }}>
@@ -195,7 +210,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
               </TableCell>
             )}
             <TableCell className="cursor-pointer py-3">
-              <img src={product.media_url} alt={product.name} className="h-12 w-12 object-cover rounded-md" />
+              <img src={product.media_url} alt={product.name} className="h-12 w-12 object-cover rounded-md bg-muted" referrerPolicy="no-referrer" loading="lazy" onError={(e) => { e.currentTarget.style.opacity = '0.3'; }} />
             </TableCell>
             <TableCell className="cursor-pointer py-3">
               <div className="font-medium flex items-center gap-2">
@@ -244,10 +259,10 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
             </TableCell>
             <TableCell className="text-right">
               <div className="flex items-center justify-end gap-2">
-                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(product); }}>
+                <Button variant="ghost" size="icon" aria-label={`Edit ${product.name}`} title="Edit" onClick={(e) => { e.stopPropagation(); onEdit(product); }}>
                   <Edit className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(product.id); }}>
+                <Button variant="ghost" size="icon" aria-label={`Delete ${product.name}`} title="Delete" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(product.id); }}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>

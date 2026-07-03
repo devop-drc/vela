@@ -1,8 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+import { getStorefrontUrl } from "@/lib/storefront";
+import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Banknote, Package, Users, CreditCard, BarChart2, Zap, Star, Activity } from "lucide-react";
+import { Banknote, Package, Users, CreditCard, BarChart2, Zap, Star, Activity, AlertTriangle, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { OverviewChart } from "@/components/dashboard/OverviewChart";
+// Lazy-load the chart (recharts is heavy) so the dashboard shell + stats render first.
+const OverviewChart = lazy(() => import("@/components/dashboard/OverviewChart").then(m => ({ default: m.OverviewChart })));
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { useShop } from "@/contexts/ShopContext";
@@ -15,7 +18,9 @@ import { QuickActions } from "@/components/dashboard/QuickActions";
 import { WelcomeHeader } from "@/components/dashboard/WelcomeHeader";
 import { useIntegration } from "@/contexts/IntegrationContext";
 import { useTranslation } from "react-i18next";
-import { RealtimeChannel } from "@supabase/supabase-js";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { showSuccess, showError } from "@/utils/toast";
+import { GetStartedCard } from "@/components/dashboard/GetStartedCard";
 import { DateRange } from "react-day-picker";
 import { subMonths, startOfMonth, endOfMonth, addDays, startOfDay, endOfDay } from "date-fns";
 
@@ -36,33 +41,22 @@ const useDashboardData = (
 ) => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const fetchData = useCallback(async () => {
-    if (!shopDetails) {
+    if (!shopDetails?.id) {
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
-
-    const { data: business, error: businessError } = await supabase
-      .from('businesses').select('id').eq('user_id', user.id).single();
-
-    if (businessError || !business) {
-      console.error("Could not fetch business:", businessError);
-      setIsLoading(false);
-      return;
-    }
+    setLoadError(false);
+    const businessId = shopDetails.id;
 
     let ordersQuery = supabase
       .from('orders')
       .select('total_amount, customer_name, customer_email, created_at, id, status, currency, payment_status')
-      .eq('business_id', business.id);
+      .eq('business_id', businessId);
 
     if (dateRange?.from) {
       ordersQuery = ordersQuery.gte('created_at', startOfDay(dateRange.from).toISOString());
@@ -73,11 +67,12 @@ const useDashboardData = (
 
     const [ordersRes, productsRes] = await Promise.all([
       ordersQuery.order('created_at', { ascending: false }),
-      supabase.from('products').select('status').eq('business_id', business.id)
+      supabase.from('products').select('status').eq('business_id', businessId)
     ]);
 
     if (ordersRes.error || productsRes.error) {
       console.error("Error fetching data:", ordersRes.error, productsRes.error);
+      setLoadError(true);
       setIsLoading(false);
       return;
     }
@@ -171,45 +166,26 @@ const useDashboardData = (
   }, [shopDetails, convertCurrency, dateRange, granularity]);
 
   useEffect(() => {
-    let channel: RealtimeChannel | null = null;
+    if (!shopDetails?.id) return;
+    const businessId = shopDetails.id;
 
-    const setupRealtimeListener = async () => {
-      if (!shopDetails) return;
+    fetchData();
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: business, error: businessError } = await supabase
-        .from('businesses').select('id').eq('user_id', user.id).single();
-
-      if (businessError || !business) {
-        console.error("Could not find business for order listener:", businessError);
-        return;
-      }
-
-      channel = supabase
-        .channel(`dashboard-orders:${business.id}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` },
-          () => { fetchData(); }
-        )
-        .subscribe();
-    };
-
-    if (shopDetails) {
-      fetchData();
-      setupRealtimeListener();
-    }
+    const channel = supabase
+      .channel(`dashboard-orders:${businessId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders', filter: `business_id=eq.${businessId}` },
+        () => { fetchData(); }
+      )
+      .subscribe();
 
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      supabase.removeChannel(channel);
     };
-  }, [fetchData, shopDetails]);
+  }, [fetchData, shopDetails?.id]);
 
-  return { data, isLoading, fetchData };
+  return { data, isLoading, loadError, fetchData };
 };
 
 const Index = () => {
@@ -221,8 +197,22 @@ const Index = () => {
     to: new Date(),
   });
   const [granularity, setGranularity] = useState<'day' | 'month'>('month');
-  const { data, isLoading: isDashboardDataLoading, fetchData } = useDashboardData(shopDetails, convertCurrency, dateRange, granularity);
+  const { data, isLoading: isDashboardDataLoading, loadError, fetchData } = useDashboardData(shopDetails, convertCurrency, dateRange, granularity);
   const { runWithIntegrationCheck } = useIntegration();
+  const navigate = useNavigate();
+  const [hasIntegration, setHasIntegration] = useState(false);
+
+  const handleShareShop = async () => {
+    const slug = (shopDetails as any)?.slug;
+    if (!slug) { showError("Your shop link isn't ready yet."); return; }
+    const url = getStorefrontUrl(slug, (shopDetails as any)?.storefront_type);
+    try {
+      await navigator.clipboard.writeText(url);
+      showSuccess("Shop link copied to clipboard!");
+    } catch {
+      showError("Couldn't copy the link. Please copy it from Settings.");
+    }
+  };
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -237,14 +227,12 @@ const Index = () => {
   }, [activeJob?.status, fetchData, fetchShopDetails]);
 
   useEffect(() => {
+    if (!shopDetails?.userId) return;
     const checkIntegrationStatus = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
       const { data: integration, error } = await supabase
         .from('integrations')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', shopDetails.userId)
         .eq('provider', 'facebook')
         .maybeSingle();
 
@@ -253,41 +241,63 @@ const Index = () => {
         return;
       }
 
-      if (!integration) {
-        runWithIntegrationCheck(() => {});
-      }
+      setHasIntegration(!!integration);
     };
     checkIntegrationStatus();
-  }, [runWithIntegrationCheck]);
+  }, [shopDetails?.userId]);
+
+  // Show feedback after returning from the Instagram/Facebook OAuth redirect.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('integration_success') === 'true') {
+      showSuccess(t("dashboard.ig_connected", "Instagram connected! You can now import your posts as products."));
+      searchParams.delete('integration_success');
+      setSearchParams(searchParams, { replace: true });
+      fetchShopDetails();
+    } else if (searchParams.get('integration_error')) {
+      const msg = searchParams.get('integration_error') || '';
+      showError(t("dashboard.ig_connect_failed", "Couldn't connect Instagram.") + (msg ? ` ${msg}` : ''));
+      searchParams.delete('integration_error');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, fetchShopDetails, t]);
 
   const isLoading = isShopLoading || isDashboardDataLoading;
 
   if (isLoading) {
     return (
-      <div className="space-y-8">
-        {/* Welcome header skeleton */}
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-96" />
+      <div className="lg:h-[calc(100vh-7rem)] flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1.5">
+            <Skeleton className="h-7 w-64" />
+            <Skeleton className="h-3 w-80" />
+          </div>
+          <div className="flex gap-1.5">
+            <Skeleton className="h-7 w-24" /><Skeleton className="h-7 w-20" /><Skeleton className="h-7 w-24" /><Skeleton className="h-7 w-20" />
+          </div>
         </div>
-        {/* Quick actions skeleton */}
-        <div className="flex flex-wrap gap-2">
-          <Skeleton className="h-8 w-28" /><Skeleton className="h-8 w-24" /><Skeleton className="h-8 w-28" /><Skeleton className="h-8 w-24" />
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 flex-shrink-0">
+          <Skeleton className="h-[78px]" /><Skeleton className="h-[78px]" /><Skeleton className="h-[78px]" /><Skeleton className="h-[78px]" />
         </div>
-        {/* Stat cards skeleton */}
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          <Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 flex-1 min-h-0">
+          <Skeleton className="lg:col-span-2 h-full w-full" />
+          <div className="lg:col-span-1 flex flex-col gap-3 min-h-0">
+            <Skeleton className="h-[120px] w-full flex-shrink-0" />
+            <Skeleton className="flex-1 w-full min-h-0" />
+          </div>
         </div>
-        {/* Main grid skeleton — row 1 */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <Skeleton className="lg:col-span-2 h-96 w-full" />
-          <Skeleton className="lg:col-span-1 h-40 w-full" />
-        </div>
-        {/* Main grid skeleton — row 2 */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <Skeleton className="lg:col-span-1 h-64 w-full" />
-          <Skeleton className="lg:col-span-2 h-64 w-full" />
-        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center py-16 gap-3">
+        <AlertTriangle className="h-8 w-8 text-amber-500" />
+        <p className="text-muted-foreground max-w-sm">{t("dashboard.load_error")}</p>
+        <Button variant="outline" onClick={() => fetchData()}>
+          <RefreshCw className="mr-2 h-4 w-4" /> {t("common.retry")}
+        </Button>
       </div>
     );
   }
@@ -301,9 +311,9 @@ const Index = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="h-[calc(100vh-7rem)] flex flex-col gap-3">
       {/* Welcome Header + Quick Actions on same row */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex items-start justify-between gap-4 flex-wrap flex-shrink-0">
         <WelcomeHeader
           pendingOrders={data.pendingOrders}
           activeProducts={data.activeProducts}
@@ -314,63 +324,96 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Stat Cards */}
-      <section>
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title={t("dashboard.total_revenue")}
-            value={formatCurrency(data.totalRevenue, shopDetails?.currency)}
-            icon={Banknote}
-            color="emerald"
-          />
-          <StatCard
-            title={t("dashboard.sales")}
-            value={`${data.salesCount}`}
-            icon={CreditCard}
-            color="blue"
-          />
-          <StatCard
-            title={t("dashboard.active_products")}
-            value={data.activeProducts.toString()}
-            icon={Package}
-            color="violet"
-          />
-          <StatCard
-            title={t("dashboard.total_customers")}
-            value={data.customers.toString()}
-            icon={Users}
-            color="amber"
-          />
-        </div>
-      </section>
+      {/* First-run guidance: shown until the shop has live products */}
+      {data.activeProducts === 0 && (
+        <GetStartedCard
+          hasIntegration={hasIntegration}
+          hasProducts={data.activeProducts > 0}
+          canShare={!!(shopDetails as any)?.slug}
+          onConnect={() => runWithIntegrationCheck(() => {})}
+          onAddProducts={() => navigate('/products')}
+          onShare={handleShareShop}
+        />
+      )}
 
-      {/* Row 1: Shop Profile (left) + Top Sellers (right) — side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div>
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Star className="h-3.5 w-3.5" />{t("dashboard.shop_profile")}</h2>
-          <ProfileStats />
-        </div>
-        <div>
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Zap className="h-3.5 w-3.5" />{t("dashboard.top_sellers")}</h2>
-          <TopProducts />
-        </div>
+      {/* Stat Cards */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 flex-shrink-0">
+        <StatCard
+          title={t("dashboard.total_revenue")}
+          value={formatCurrency(data.totalRevenue, shopDetails?.currency)}
+          icon={Banknote}
+          color="emerald"
+          to="/orders"
+        />
+        <StatCard
+          title={t("dashboard.sales")}
+          value={`${data.salesCount}`}
+          icon={CreditCard}
+          color="blue"
+          to="/orders"
+        />
+        <StatCard
+          title={t("dashboard.active_products")}
+          value={data.activeProducts.toString()}
+          icon={Package}
+          color="violet"
+          to="/products"
+        />
+        <StatCard
+          title={t("dashboard.total_customers")}
+          value={data.customers.toString()}
+          icon={Users}
+          color="amber"
+          to="/orders"
+        />
       </div>
 
-      {/* Row 2: Business Overview (left 2/3) + Live Activity (right 1/3) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-        <div className="lg:col-span-2">
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><BarChart2 className="h-3.5 w-3.5" />{t("dashboard.business_overview")}</h2>
-          <OverviewChart
-            data={data.chartData}
-            dateRange={dateRange}
-            setDateRange={setDateRange}
-            granularity={granularity}
-            setGranularity={setGranularity}
-          />
+      {/* Main area — fills remaining viewport */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 flex-1 min-h-0">
+        {/* Left: Overview Chart (2/3) */}
+        <div className="lg:col-span-2 flex flex-col min-h-0">
+          <h2 className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5 flex-shrink-0">
+            <BarChart2 className="h-3.5 w-3.5" />{t("dashboard.business_overview")}
+          </h2>
+          <div className="flex-1 min-h-0">
+            <Suspense fallback={<Skeleton className="h-full w-full min-h-[280px]" />}>
+              <OverviewChart
+                data={data.chartData}
+                dateRange={dateRange}
+                setDateRange={setDateRange}
+                granularity={granularity}
+                setGranularity={setGranularity}
+              />
+            </Suspense>
+          </div>
         </div>
-        <div className="lg:col-span-1">
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" />{t("dashboard.live_activity")}</h2>
-          <ActivityFeed />
+
+        {/* Right: Profile (fixed) + Top Products (flex) + Activity (flex) */}
+        <div className="lg:col-span-1 flex flex-col gap-3 min-h-0">
+          <div className="flex-shrink-0">
+            <h2 className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
+              <Star className="h-3.5 w-3.5" />{t("dashboard.shop_profile")}
+            </h2>
+            <ProfileStats />
+          </div>
+
+          <div className="flex flex-col min-h-0 flex-1 basis-0">
+            <h2 className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5 flex-shrink-0">
+              <Zap className="h-3.5 w-3.5" />{t("dashboard.top_sellers")}
+            </h2>
+            <div className="flex-1 min-h-0">
+              <TopProducts />
+            </div>
+          </div>
+
+          <div className="flex flex-col min-h-0 flex-1 basis-0">
+            <h2 className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5 flex-shrink-0">
+              <Activity className="h-3.5 w-3.5" />{t("dashboard.live_activity")}
+            </h2>
+            <div className="flex-1 min-h-0">
+              <ActivityFeed />
+            </div>
+          </div>
         </div>
       </div>
     </div>

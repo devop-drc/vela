@@ -5,11 +5,11 @@ import BottomNav from "./BottomNav";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { AnimatePresence, motion } from "framer-motion";
 import { useShop } from "@/contexts/ShopContext";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { SyncStatusWidget } from "./SyncStatusWidget";
 import NotificationSidebar from "./NotificationSidebar";
 import { useAppearance } from "@/contexts/AppearanceContext";
-import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const SIDEBAR_COLLAPSED_KEY = "sidebar-collapsed";
 
@@ -54,11 +54,11 @@ const DashboardLayout = () => {
           }
         } else {
           // Fallback to default favicon if none is provided
-          if (link) link.href = '/favicon.ico';
+          if (link) link.href = '/favicon.svg';
           else {
             link = document.createElement('link');
             link.rel = 'icon';
-            link.href = '/favicon.ico';
+            link.href = '/favicon.svg';
             document.head.appendChild(link);
           }
         }
@@ -68,9 +68,25 @@ const DashboardLayout = () => {
     } else {
       document.title = title; // Fallback if shopDetails not loaded yet
       const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-      if (link) link.href = '/favicon.ico';
+      if (link) link.href = '/favicon.svg';
     }
   }, [shopDetails, title]);
+
+  // Suspense lives inside the layout so the sidebar/header stay mounted while
+  // a lazy route chunk loads. Without it, navigation drops to the App-level
+  // fallback and feels like a full page reload.
+  const pageFallback = (
+    <div className="flex flex-col gap-3">
+      <Skeleton className="h-7 w-64" />
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <Skeleton className="h-[78px]" />
+        <Skeleton className="h-[78px]" />
+        <Skeleton className="h-[78px]" />
+        <Skeleton className="h-[78px]" />
+      </div>
+      <Skeleton className="h-72 w-full" />
+    </div>
+  );
 
   const content = (
     <AnimatePresence mode="wait">
@@ -81,7 +97,9 @@ const DashboardLayout = () => {
         exit={{ opacity: 0, y: -15 }}
         transition={{ duration: 0.25 }}
       >
-        <Outlet />
+        <Suspense fallback={pageFallback}>
+          <Outlet />
+        </Suspense>
       </motion.div>
     </AnimatePresence>
   );

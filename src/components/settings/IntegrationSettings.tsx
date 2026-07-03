@@ -3,13 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Loader2, Facebook, CheckCircle, XCircle } from 'lucide-react';
-import { showError, showSuccess } from '@/utils/toast';
+import { showError, showSuccess, toFriendlyError } from '@/utils/toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { User } from '@supabase/supabase-js';
+import { useTranslation } from "react-i18next";
 
 export const IntegrationSettings = () => {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [integration, setIntegration] = useState<any | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [disconnectOpen, setDisconnectOpen] = useState(false);
 
   const checkIntegration = async () => {
     setIsLoading(true);
@@ -24,7 +28,7 @@ export const IntegrationSettings = () => {
         .maybeSingle();
 
       if (error) {
-        showError("Failed to check integration status.");
+        showError(t("integrations.check_failed"));
       } else {
         setIntegration(data);
       }
@@ -38,7 +42,7 @@ export const IntegrationSettings = () => {
 
   const handleConnect = () => {
     if (!user) {
-      showError("You must be logged in to connect Instagram.");
+      showError(t("integrations.must_login_connect"));
       return;
     }
     const origin = `${window.location.origin}/settings`;
@@ -58,18 +62,19 @@ export const IntegrationSettings = () => {
       .eq('provider', 'facebook');
 
     if (error) {
-      showError(`Failed to disconnect: ${error.message}`);
+      showError(toFriendlyError(error, t("integrations.disconnect_failed")));
     } else {
-      showSuccess("Successfully disconnected from Facebook.");
+      showSuccess(t("integrations.disconnected"));
       setIntegration(null);
     }
+    setDisconnectOpen(false);
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Integrations</CardTitle>
-        <CardDescription>Connect your social accounts to import content and enable features.</CardDescription>
+        <CardTitle>{t("integrations.title")}</CardTitle>
+        <CardDescription>{t("integrations.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -81,29 +86,43 @@ export const IntegrationSettings = () => {
             <div className="flex items-center gap-3">
               <Facebook className="h-6 w-6" />
               <div>
-                <p className="font-semibold">Facebook & Instagram</p>
+                <p className="font-semibold">{t("integrations.fb_ig")}</p>
                 <div className="flex items-center gap-1 text-sm text-emerald-600">
                   <CheckCircle className="h-4 w-4" />
-                  <span>Connected</span>
+                  <span>{t("integrations.connected")}</span>
                 </div>
               </div>
             </div>
-            <Button variant="destructive" size="sm" onClick={handleDisconnect}>
+            <Button variant="destructive" size="sm" onClick={() => setDisconnectOpen(true)}>
               <XCircle className="mr-2 h-4 w-4" />
-              Disconnect
+              {t("integrations.disconnect")}
             </Button>
+            <AlertDialog open={disconnectOpen} onOpenChange={setDisconnectOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("integrations.disconnect_title")}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t("integrations.disconnect_desc")}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                  <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDisconnect(); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("integrations.disconnect")}</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         ) : (
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-3">
               <Facebook className="h-6 w-6" />
               <div>
-                <p className="font-semibold">Facebook & Instagram</p>
-                <p className="text-sm text-muted-foreground">Not connected</p>
+                <p className="font-semibold">{t("integrations.fb_ig")}</p>
+                <p className="text-sm text-muted-foreground">{t("integrations.not_connected")}</p>
               </div>
             </div>
             <Button onClick={handleConnect}>
-              Connect
+              {t("integrations.connect")}
             </Button>
           </div>
         )}

@@ -344,13 +344,18 @@ export const InstagramVariantDrawer: React.FC<InstagramVariantDrawerProps> = ({
                     <button className="h-9 w-9 hover:bg-[hsl(var(--muted))]" onClick={() => setQuantity(Math.min(99, quantity + 1))}>+</button>
                   </div>
                 </div>
+                {(!allSelected || !selectedVariant || (selectedVariant.inventory || 0) <= 0) && (
+                  <p className="text-xs text-center text-[hsl(var(--muted-foreground))] mb-2">
+                    {!allSelected ? "Select all options to continue." : "This combination is out of stock."}
+                  </p>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     className="w-full text-base bg-red-500 hover:bg-red-600 text-white"
                     onClick={() => onConfirm("buy")}
                     disabled={!allSelected || !selectedVariant || (selectedVariant.inventory||0) <= 0}
                   >
-                    Buy
+                    Buy Now
                   </Button>
                   <Button
                     variant="outline"

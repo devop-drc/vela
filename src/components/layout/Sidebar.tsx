@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home, Package, Archive, Layers, MessageSquareQuote, Megaphone,
-  ShoppingBag, Settings, ChevronsLeft, ChevronsRight, Globe, LogOut,
+  ShoppingBag, Settings, ChevronsLeft, ChevronsRight, Globe, LogOut, CreditCard, ShieldCheck,
 } from "lucide-react";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { cn } from "@/lib/utils";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { useShop } from "@/contexts/ShopContext";
@@ -19,7 +20,7 @@ type NavDivider = { divider: true; labelKey: string };
 type NavEntry = NavItem | NavDivider;
 
 const nav: NavEntry[] = [
-  { to: "/", icon: Home, labelKey: "nav.dashboard", end: true },
+  { to: "/dashboard", icon: Home, labelKey: "nav.dashboard", end: true },
   { divider: true, labelKey: "nav_groups.products" },
   { to: "/products", icon: Package, labelKey: "nav.products" },
   { to: "/out-of-stock", icon: Archive, labelKey: "nav.stock" },
@@ -29,6 +30,7 @@ const nav: NavEntry[] = [
   { divider: true, labelKey: "nav_groups.sales" },
   { to: "/orders", icon: ShoppingBag, labelKey: "nav.orders" },
   { divider: true, labelKey: "nav_groups.app" },
+  { to: "/billing", icon: CreditCard, labelKey: "nav.billing" },
   { to: "/settings", icon: Settings, labelKey: "nav.settings" },
 ];
 
@@ -46,9 +48,13 @@ export default function Sidebar({ collapsed, onToggleCollapsed }: Props) {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const [user, setUser] = useState<any>(null);
+  const { isAdmin } = useIsAdmin();
+  const navEntries: NavEntry[] = isAdmin
+    ? [...nav, { to: "/admin", icon: ShieldCheck, labelKey: "nav.admin" }]
+    : nav;
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
   }, []);
 
   const floating = settings.layoutStyle === "floating";
@@ -56,7 +62,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed }: Props) {
   const blur = settings.blurEnabled;
   const width = settings.sidebarWidth || "default";
 
-  const shopName = shopDetails?.shop_name || "InstaShop";
+  const shopName = shopDetails?.shop_name || "InstantShop";
   const initials = shopName.slice(0, 2).toUpperCase();
 
   // ── Palette ─────────────────────────────────────────────────────────────
@@ -189,7 +195,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed }: Props) {
 
         {/* ── Nav ─────────────────────────────────────────────────────── */}
         <nav className={cn("flex-1 overflow-y-auto overflow-x-hidden py-2", collapsed ? "px-1.5" : "px-2.5")}>
-          {nav.map((entry, i) => {
+          {navEntries.map((entry, i) => {
             // Divider
             if ("divider" in entry) {
               if (collapsed) {

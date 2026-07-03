@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +33,7 @@ export const TypeEditorModal = ({
   template,
   onSave,
 }: TypeEditorModalProps) => {
+  const { t } = useTranslation();
   const [typeName, setTypeName] = useState("");
   const [specs, setSpecs] = useState<SpecTemplate[]>([]);
   const [options, setOptions] = useState<OptionTemplate[]>([]);
@@ -57,7 +59,7 @@ export const TypeEditorModal = ({
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      showError("You must be logged in.");
+      showError(t("categories.must_login"));
       setSaving(false);
       return;
     }
@@ -82,9 +84,13 @@ export const TypeEditorModal = ({
     }
 
     if (error) {
-      showError(`Failed to save type: ${error.message}`);
+      showError(t("categories.save_type_failed", { message: error.message }));
     } else {
-      showSuccess(`Type "${typeName}" ${template && !template.is_system ? "updated" : "added"} successfully!`);
+      showSuccess(
+        template && !template.is_system
+          ? t("categories.type_updated", { name: typeName })
+          : t("categories.type_added", { name: typeName })
+      );
       onSave();
       onClose();
     }
@@ -96,23 +102,23 @@ export const TypeEditorModal = ({
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            {template && !template.is_system ? "Edit Type" : "New Type"}
+            {template && !template.is_system ? t("categories.edit_type") : t("categories.new_type")}
           </DialogTitle>
           <DialogDescription>
             {template && !template.is_system
-              ? `Edit the "${template.type_name}" type in "${categoryName}".`
-              : `Add a new type to the "${categoryName}" category.`}
+              ? t("categories.edit_type_desc", { type: template.type_name, category: categoryName })
+              : t("categories.new_type_desc", { category: categoryName })}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-1 pr-4">
           <div className="space-y-6 pt-4 pb-2">
             <div className="space-y-2">
-              <Label htmlFor="type-name">Type Name</Label>
+              <Label htmlFor="type-name">{t("categories.type_name")}</Label>
               <Input
                 id="type-name"
                 value={typeName}
                 onChange={(e) => setTypeName(e.target.value)}
-                placeholder="e.g. Smartphone"
+                placeholder={t("categories.type_name_placeholder")}
               />
             </div>
             <SpecificationEditor specs={specs} onChange={setSpecs} />
@@ -121,11 +127,11 @@ export const TypeEditorModal = ({
         </ScrollArea>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={saving || !typeName.trim()}>
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Type
+            {t("categories.save_type")}
           </Button>
         </DialogFooter>
       </DialogContent>

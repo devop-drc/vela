@@ -4,7 +4,9 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Package, Settings, Loader2, Wrench, Layers, Tag, ChevronRight, Save, Search, Filter } from "lucide-react";
+import { Edit, Trash2, Package, Settings, Loader2, Wrench, Layers, Tag, ChevronRight, Save, Search, Filter, Star } from "lucide-react";
+import { ProductReviewsManager } from "./ProductReviewsManager";
+import { useProductRating } from "@/hooks/useProductRating";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -15,6 +17,7 @@ import { useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
+import { getStockStatus, syncDerivedStockFromVariants } from "@/lib/stock";
 
 const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
@@ -24,6 +27,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
   const [variants, setVariants] = useState<any[]>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(true);
   const [stockModalOpen, setStockModalOpen] = useState(false);
+  const [reviewsOpen, setReviewsOpen] = useState(false);
+  const ratingSummary = useProductRating(product?.id);
   const [stockEdits, setStockEdits] = useState<Record<string, number>>({});
   const [isSavingStock, setIsSavingStock] = useState(false);
   const [stockSearch, setStockSearch] = useState('');
@@ -151,9 +156,10 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                               return vOpts[option.name] === val.value ? sum + (v.inventory || 0) : sum;
                             }, 0);
                             const stock = derivedStock;
-                            const isOOS = stock <= 0;
-                            const isCritical = stock > 0 && stock < 5;
-                            const isLow = stock >= 5 && stock < 10;
+                            const status = getStockStatus(stock);
+                            const isOOS = status === 'out';
+                            const isCritical = status === 'critical';
+                            const isLow = status === 'low';
                             return (
                               <div
                                 key={val.id}
@@ -215,16 +221,10 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               if (Object.keys(optVals).length === 0 && v.combination_key) {
                 v.combination_key.split('|').forEach((part: string) => { const [key, val] = part.split('='); if (key && val) optVals[key] = val; });
               }
-              let effectiveStock = v.inventory || 0;
-              if (effectiveStock === 0 && Object.keys(optVals).length > 0) {
-                let minStock = Infinity;
-                Object.entries(optVals).forEach(([optName, optVal]) => {
-                  const opt = options.find((o: any) => o.name === optName);
-                  const ov = opt?.option_values?.find((x: any) => x.value === optVal);
-                  if (ov) minStock = Math.min(minStock, ov.inventory || 0);
-                });
-                if (isFinite(minStock)) effectiveStock = minStock;
-              }
+              // product_variants.inventory is the single source of truth — do not
+              // fall back to option_value inventory, which would resurrect phantom
+              // stock for a genuinely zero variant.
+              const effectiveStock = v.inventory || 0;
               const totalPriceALL = (product.price || 0) + (v.price_difference || 0);
               const displayTotal = convertCurrency(totalPriceALL, 'ALL', currencyCode);
               return { ...v, optVals, effectiveStock, displayTotal };
@@ -296,9 +296,10 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 {filtered.length === 0 ? (
                   <div className="py-6 text-center text-xs text-muted-foreground">No variants match your search</div>
                 ) : filtered.map((v: any, i: number) => {
-                  const isOOS = v.effectiveStock <= 0;
-                  const isCritical = v.effectiveStock > 0 && v.effectiveStock < 5;
-                  const isLow = v.effectiveStock >= 5 && v.effectiveStock < 10;
+                  const status = getStockStatus(v.effectiveStock);
+                  const isOOS = status === 'out';
+                  const isCritical = status === 'critical';
+                  const isLow = status === 'low';
                   return (
                     <div key={v.id || i} className={cn(
                       "grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2 items-center",
@@ -345,9 +346,15 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
         </div>
       </ScrollArea>
       <DialogFooter className="p-4 border-t">
+        <Button variant="outline" onClick={() => setReviewsOpen(true)} disabled={isSubmitting} className="mr-auto">
+          <Star className="mr-2 h-4 w-4" />
+          Reviews{ratingSummary && ratingSummary.count > 0 ? ` (${ratingSummary.count} · ★ ${ratingSummary.avg.toFixed(1)})` : ''}
+        </Button>
         <Button variant="outline" onClick={onEdit} disabled={isSubmitting}><Edit className="mr-2 h-4 w-4" />Edit</Button>
         <Button variant="destructive" onClick={onDelete} disabled={isSubmitting}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>
       </DialogFooter>
+
+      <ProductReviewsManager open={reviewsOpen} onOpenChange={setReviewsOpen} productId={product.id} productName={product.name} />
 
       {/* Stock Management Modal */}
       <Dialog open={stockModalOpen} onOpenChange={(open) => { if (!open) { setStockSearch(''); setStockFilter('all'); } setStockModalOpen(open); }}>
@@ -401,9 +408,10 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   });
                 }
                 const currentStock = stockEdits[v.id] ?? (v.inventory || 0);
-                const isOOS = currentStock <= 0;
-                const isCritical = currentStock > 0 && currentStock < 5;
-                const isLow = currentStock >= 5 && currentStock < 10;
+                const status = getStockStatus(currentStock);
+                const isOOS = status === 'out';
+                const isCritical = status === 'critical';
+                const isLow = status === 'low';
                 return (
                   <div key={v.id || i} className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-lg",
@@ -455,7 +463,14 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                     supabase.from('product_variants').update({ inventory }).eq('id', id)
                   );
                   await Promise.all(updates);
-                  setVariants(prev => prev.map(v => stockEdits[v.id] !== undefined ? { ...v, inventory: stockEdits[v.id] } : v));
+                  // Compute the post-edit variant set so we can sync derived stock.
+                  const nextVariants = variants.map(v => stockEdits[v.id] !== undefined ? { ...v, inventory: stockEdits[v.id] } : v);
+                  // Sync option_values.inventory (derived sum per value) and the
+                  // product's base inventory/status — mirroring VariantsManager's
+                  // save — so option chips, the products list, and the storefront
+                  // all agree without requiring a full variant save.
+                  await syncDerivedStockFromVariants(product.id, nextVariants);
+                  setVariants(nextVariants);
                   setStockEdits({});
                   setStockModalOpen(false);
                 } catch (e: any) {

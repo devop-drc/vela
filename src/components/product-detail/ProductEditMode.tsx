@@ -24,7 +24,8 @@ import { useShop } from "@/contexts/ShopContext";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../ui/carousel";
 import { showError, showSuccess } from "@/utils/toast";
-import CombinedVariantManager from "./CombinedVariantManager";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import VariantsManager from "./VariantsManager";
 
 const statusConfig = {
   'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
@@ -116,10 +117,13 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             // If options are managed externally, base inventory is just the base inventory field
             // We rely on the OptionsManager to update the base inventory field if variants exist.
             
-            // Update status based on base stock (if no variants exist, or if variants are managed externally)
-            const newStatus = (baseInventory || 0) > 0 ? 'Active' : 'Out of Stock';
-            if (statusValue !== newStatus) {
-                setValue('status', newStatus, { shouldDirty: true });
+            // Update status based on base stock (if no variants exist, or if variants are managed externally).
+            // Never override a deliberate 'Draft' — that's the user's explicit choice to keep it unpublished.
+            if (statusValue !== 'Draft') {
+                const newStatus = (baseInventory || 0) > 0 ? 'Active' : 'Out of Stock';
+                if (statusValue !== newStatus) {
+                    setValue('status', newStatus, { shouldDirty: true });
+                }
             }
         } else {
             // For subscriptions, inventory is always 0 and status is always Active/Draft
@@ -285,8 +289,16 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
       <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
         <form onSubmit={handleSubmit(handleSave)} className="flex-1 flex flex-col min-h-0">
           <DialogHeader className="sr-only"><DialogTitle>Update Product</DialogTitle></DialogHeader>
-          <ScrollArea className="flex-1 overflow-y-auto">
+          <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
+            <div className="px-4 pt-3 border-b">
+              <TabsList className="h-9">
+                <TabsTrigger value="details" className="text-sm">Details</TabsTrigger>
+                <TabsTrigger value="variants" className="text-sm">Variants &amp; Inventory</TabsTrigger>
+              </TabsList>
+            </div>
+            <ScrollArea className="flex-1 overflow-y-auto">
             <div className="p-4 space-y-6">
+              <TabsContent value="details" className="mt-0 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
                 <div className="md:col-span-4">
                   {mediaItems.length > 0 && (
@@ -364,8 +376,8 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                       )} />
                     </div>
                     <div className="grid grid-cols-3 gap-4 pt-2">
-                        <div className="space-y-1 col-span-2"><Label htmlFor="price" className="text-xs">Base Price</Label><div className="flex items-center gap-2"><div className="relative flex-1"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{currencySymbol}</span><Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pl-8" /></div><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
-                        <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">Base Stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
+                        <div className="space-y-1 col-span-2"><Label htmlFor="price" className="text-xs">Price</Label><div className="flex items-center gap-2"><div className="relative flex-1"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{currencySymbol}</span><Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pl-8" /></div><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
+                        <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">Quantity in stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
                     </div>
                   </div>
                 </div>
@@ -409,19 +421,27 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 </Button>
               </div>
 
-              {/* Combined Options + Variants Manager */}
-              {product?.id && (
-                <CombinedVariantManager
-                  ref={combinedManagerRef}
-                  key={refreshKey}
-                  productId={product.id}
-                  basePriceALL={product.price}
-                  displayCurrency={currencyCode}
-                  convertCurrency={convertCurrency}
-                />
-              )}
+              </TabsContent>
+
+              <TabsContent value="variants" forceMount className="mt-0 data-[state=inactive]:hidden">
+                {product?.id ? (
+                  <VariantsManager
+                    ref={combinedManagerRef}
+                    key={refreshKey}
+                    productId={product.id}
+                    basePriceALL={product.price}
+                    displayCurrency={currencyCode}
+                    convertCurrency={convertCurrency}
+                  />
+                ) : (
+                  <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
+                    Save the product first to manage options &amp; variants.
+                  </div>
+                )}
+              </TabsContent>
             </div>
           </ScrollArea>
+          </Tabs>
           <DialogFooter className="p-4 border-t"><Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button></DialogFooter>
         </form>
       </motion.div>

@@ -9,7 +9,7 @@ const corsHeaders = {
 // Mock data arrays
 const firstNames = ["Alex", "Jordan", "Taylor", "Casey", "Riley", "Jamie", "Morgan", "Skyler", "Cameron", "Drew"];
 const lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez"];
-const statuses = ["Pending", "In Progress", "Fulfilled", "Fulfilled", "Fulfilled"]; // Skew towards fulfilled
+const statuses = ["Pending", "Order Seen", "Fulfilled", "Fulfilled", "Fulfilled"]; // Skew towards fulfilled (valid order_status_enum values)
 
 const getRandomElement = (arr: any[]) => arr[Math.floor(Math.random() * arr.length)];
 

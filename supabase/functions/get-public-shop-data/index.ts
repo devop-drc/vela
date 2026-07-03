@@ -91,13 +91,56 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
   return isActiveByRecurrence;
 };
 
+// Resolve the shop's Instagram profile picture from the connected integration,
+// mirroring what the dashboard does. Used as a fallback when shop_details.logo_url
+// is empty. Returns null on any failure (never throws).
+const resolveInstagramLogo = async (
+  supabaseAdmin: any,
+  userId: string,
+  igAccountIdFromShop: string | null,
+): Promise<string | null> => {
+  try {
+    const { data: integration } = await supabaseAdmin
+      .from('integrations')
+      .select('access_token, ig_account_id')
+      .eq('user_id', userId)
+      .eq('provider', 'facebook')
+      .maybeSingle();
+
+    const token = integration?.access_token;
+    if (!token) return null;
+
+    let igId: string | null = integration?.ig_account_id || igAccountIdFromShop || null;
+
+    // If we don't have the IG account id cached, discover it via the linked pages.
+    if (!igId) {
+      const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account&access_token=${token}`;
+      const pagesRes = await fetch(pagesUrl);
+      if (!pagesRes.ok) return null;
+      const pagesData = await pagesRes.json();
+      const acc = pagesData.data?.find((p: any) => p.instagram_business_account);
+      igId = acc?.instagram_business_account?.id || null;
+    }
+    if (!igId) return null;
+
+    const profileUrl = `https://graph.facebook.com/v19.0/${igId}?fields=profile_picture_url&access_token=${token}`;
+    const profileRes = await fetch(profileUrl);
+    if (!profileRes.ok) return null;
+    const profileData = await profileRes.json();
+    return profileData.profile_picture_url || null;
+  } catch (e) {
+    console.warn('[get-public-shop-data] Failed to resolve Instagram logo:', (e as Error)?.message);
+    return null;
+  }
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { shopSlug, page = 1, limit = 12, customerEmail, orderId } = await req.json(); // Add customerEmail and orderId
+    const { shopSlug, page = 1, limit = 12, customerEmail, orderId, orderIds } = await req.json(); // Add customerEmail, orderId(s)
     if (!shopSlug) {
       return new Response(JSON.stringify({ error: "Missing shopSlug" }), {
         status: 400,
@@ -121,6 +164,12 @@ serve(async (req) => {
 
     const businessId = shopDetails.businesses.id;
     const userId = shopDetails.businesses.user_id;
+
+    // Fall back to the live Instagram profile picture when no logo has been uploaded.
+    let resolvedLogoUrl = shopDetails.logo_url || null;
+    if (!resolvedLogoUrl) {
+      resolvedLogoUrl = await resolveInstagramLogo(supabaseAdmin, userId, shopDetails.ig_account_id || null);
+    }
 
     // Fetch design settings for the business owner
     const { data: designSettings, error: designSettingsError } = await supabaseAdmin
@@ -210,54 +259,75 @@ serve(async (req) => {
       });
     }
 
-    // Fetch orders for a specific customer email and/or order ID (for client-side order lookup)
+    // Fetch orders for a customer (for the public "My Orders" lookup).
+    // Match by email (case-insensitive) OR by any locally-saved order IDs, so a
+    // guest customer always sees the orders they just placed on this device.
+    // NOTE: inputs are validated/parameterized (no string-built filters) so a
+    // crafted email/id can't inject extra conditions and leak other orders.
     let customerOrders: any[] = [];
-    if (customerEmail) {
-      let ordersQuery = supabaseAdmin
-        .from('orders')
-        .select(`
-          id,
-          customer_name,
-          customer_email,
-          status,
-          total_amount,
-          created_at,
-          updated_at,
-          currency,
-          payment_method,
-          payment_status,
-          shipping_address,
-          shipping_city,
-          shipping_state,
-          shipping_zip,
-          shipping_country,
-          order_notes,
-          order_items (
-            quantity,
-            price_at_purchase,
-            selected_options,
-            products (
-              name,
-              media_url,
-              currency
-            )
-          )
-        `)
+
+    const ORDER_SELECT = `
+      id,
+      customer_name,
+      customer_email,
+      status,
+      total_amount,
+      created_at,
+      updated_at,
+      currency,
+      payment_method,
+      payment_status,
+      shipping_address,
+      shipping_city,
+      shipping_state,
+      shipping_zip,
+      shipping_country,
+      order_notes,
+      order_items (
+        product_id,
+        quantity,
+        price_at_purchase,
+        selected_options,
+        products (
+          name,
+          media_url,
+          currency
+        )
+      )
+    `;
+
+    // Only accept well-formed UUIDs as order IDs.
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const rawIds: string[] = Array.isArray(orderIds) ? orderIds : [];
+    if (typeof orderId === 'string') rawIds.push(orderId);
+    const idList = Array.from(new Set(rawIds.filter((id: any) => typeof id === 'string' && uuidRe.test(id))));
+
+    const normalizedEmail = typeof customerEmail === 'string' ? customerEmail.trim() : '';
+
+    const byId = new Map<string, any>();
+    const collect = (rows: any[] | null) => { for (const r of rows || []) byId.set(r.id, r); };
+
+    if (normalizedEmail) {
+      const { data, error } = await supabaseAdmin
+        .from('orders').select(ORDER_SELECT)
         .eq('business_id', businessId)
-        .eq('customer_email', customerEmail)
+        .ilike('customer_email', normalizedEmail) // parameterized, case-insensitive exact match
         .order('created_at', { ascending: false });
-
-      if (orderId) {
-        ordersQuery = ordersQuery.eq('id', orderId);
-      }
-
-      const { data: fetchedOrders, error: ordersFetchError } = await ordersQuery;
-      if (ordersFetchError) {
-        console.error(`[get-public-shop-data] Error fetching customer orders for ${customerEmail}:`, ordersFetchError);
-      } else {
-        customerOrders = fetchedOrders || [];
-      }
+      if (error) console.error('[get-public-shop-data] Error fetching orders by email:', error);
+      else collect(data);
     }
+    if (idList.length > 0) {
+      const { data, error } = await supabaseAdmin
+        .from('orders').select(ORDER_SELECT)
+        .eq('business_id', businessId)
+        .in('id', idList)
+        .order('created_at', { ascending: false });
+      if (error) console.error('[get-public-shop-data] Error fetching orders by id:', error);
+      else collect(data);
+    }
+
+    customerOrders = Array.from(byId.values())
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
 
     return new Response(JSON.stringify({
@@ -267,8 +337,8 @@ serve(async (req) => {
         name: shopDetails.businesses.name, // Business name from the join
         shop_name: shopDetails.shop_name,
         slug: shopDetails.slug,
-        logo_url: shopDetails.logo_url,
-        favicon_url: shopDetails.favicon_url,
+        logo_url: resolvedLogoUrl,
+        favicon_url: shopDetails.favicon_url || resolvedLogoUrl,
         currency: shopDetails.currency,
         headline: shopDetails.headline,
         about: shopDetails.about,
@@ -277,6 +347,7 @@ serve(async (req) => {
         media_count: shopDetails.media_count,
         instagram_url: shopDetails.instagram_url || null, // Use instagram_url from shop_details
         username: shopDetails.username || null, // Use username from shop_details
+        storefront_type: shopDetails.storefront_type || 'instagram',
       },
       appearanceSettings: designSettings?.settings || null,
       products: products || [],

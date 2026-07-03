@@ -135,8 +135,9 @@ export const KeywordsTable = ({ keywords, onInlineUpdate, onDelete }: KeywordsTa
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="h-7 w-7 text-destructive hover:text-destructive opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                     onClick={() => onDelete(kw.id)}
+                    aria-label="Delete keyword"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

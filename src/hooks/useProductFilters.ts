@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { debounce } from 'lodash';
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import debounce from 'lodash/debounce';
 import { Product, DetailsAttribute } from './useProductData';
 import { useShop } from "@/contexts/ShopContext";
 
@@ -54,13 +54,16 @@ export const useProductFilters = ({
     status: [],
   });
   const [localPriceRange, setLocalPriceRange] = useState<[number, number]>([0, 1000]);
+  // Track whether the user has manually adjusted the price slider. Until they do,
+  // the upper bound follows maxPrice; once touched, we stop clobbering their choice.
+  const userTouchedPrice = useRef(false);
 
-  // Initialize price range based on maxPrice
+  // Keep the price range's upper bound in sync with maxPrice — but only while the
+  // user hasn't set it themselves.
   useEffect(() => {
-    if (filters.priceRange[1] === 1000 || filters.priceRange[1] !== maxPrice) {
-      setFilters(prev => ({ ...prev, priceRange: [0, maxPrice] }));
-      setLocalPriceRange([0, maxPrice]);
-    }
+    if (userTouchedPrice.current) return;
+    setFilters(prev => (prev.priceRange[1] === maxPrice ? prev : { ...prev, priceRange: [prev.priceRange[0], maxPrice] }));
+    setLocalPriceRange(prev => (prev[1] === maxPrice ? prev : [prev[0], maxPrice]));
   }, [maxPrice]);
 
   const debouncedPriceRangeChange = useMemo(
@@ -72,6 +75,7 @@ export const useProductFilters = ({
   );
 
   const handlePriceRangeChange = (range: [number, number]) => {
+    userTouchedPrice.current = true;
     setLocalPriceRange(range);
     debouncedPriceRangeChange(range);
   };
@@ -96,6 +100,7 @@ export const useProductFilters = ({
     if (filterKey === 'status') {
       setStatusFilter([]);
     } else if (filterKey === 'priceRange') {
+      userTouchedPrice.current = false;
       setFilters(prev => ({ ...prev, priceRange: [0, maxPrice] }));
       setLocalPriceRange([0, maxPrice]);
     } else {
@@ -119,6 +124,7 @@ export const useProductFilters = ({
     setSearchTerm("");
     setSortOption("newest");
     setStatusFilter([]); // Reset status filter
+    userTouchedPrice.current = false;
     setFilters({
       categories: [],
       tags: [],

@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -12,7 +13,7 @@ import { Loader2, Sparkles, MessageSquareText, CalendarIcon, Repeat } from "luci
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { StorefrontAnnouncement } from "@/types/storefront";
-import * as LucideIcons from 'lucide-react';
+import { getIcon, ICON_NAMES } from '@/lib/iconLibrary';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,25 +24,13 @@ import { format } from "date-fns";
 import { Switch } from "@/components/ui/switch";
 
 // List of common Lucide icons for selection
-const availableIcons: (keyof typeof LucideIcons)[] = [
-  'Sparkles', 'MessageSquareText', 'Gift', 'Percent', 'DollarSign', 'Truck',
-  'Star', 'Heart', 'Package', 'Tag', 'Info', 'CheckCircle', 'XCircle',
-  'Bell', 'Megaphone', 'Award', 'Zap', 'Flame', 'Leaf', 'Gem', 'Crown',
-  'ShoppingCart', 'Wallet', 'CreditCard', 'MapPin', 'User', 'Calendar',
-  'Clock', 'Settings', 'Palette', 'Ruler', 'Layers', 'Weight', 'Cpu',
-  'Camera', 'Wifi', 'Battery', 'Fingerprint', 'ScanText', 'Home', 'Book',
-  'Monitor', 'Utensils', 'Car', 'Gamepad2', 'Tent', 'PawPrint', 'Music',
-  'Plane', 'FlaskConical', 'Hammer', 'Lamp', 'Globe', 'Rocket', 'Scissors',
-  'ScrollText', 'Shield', 'Snowflake', 'ToyBrick', 'TreePine', 'Watch', 'Wrench'
-];
+const availableIcons = ICON_NAMES;
 
 const storefrontAnnouncementSchema = z.object({
-  message: z.string().min(1, "Message is required"),
-  icon_name: z.custom<keyof typeof LucideIcons>(val => availableIcons.includes(val as keyof typeof LucideIcons), {
-    message: "Invalid icon selected",
-  }),
+  message: z.string().min(1, "announcement_editor.message_required"),
+  icon_name: z.string().min(1, "announcement_editor.icon_required"),
   is_active: z.boolean().default(true),
-  display_order: z.coerce.number().int().min(0, "Display order must be a non-negative integer").default(0),
+  display_order: z.coerce.number().int().min(0, "announcement_editor.display_order_int").default(0),
   start_date: z.date().optional().nullable(),
   end_date: z.date().optional().nullable(),
   repeat_interval: z.enum(['daily', 'weekly', 'monthly', 'yearly', 'none']).optional().nullable(),
@@ -57,6 +46,7 @@ interface StorefrontAnnouncementEditorModalProps {
 }
 
 export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, element }: StorefrontAnnouncementEditorModalProps) => {
+  const { t } = useTranslation();
   const { register, handleSubmit, reset, control, watch, setValue, formState: { errors, isSubmitting } } = useForm<StorefrontAnnouncementFormData>({
     resolver: zodResolver(storefrontAnnouncementSchema),
     defaultValues: { message: "", icon_name: "Sparkles", is_active: true, display_order: 0, start_date: null, end_date: null, repeat_interval: 'none' },
@@ -78,7 +68,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
   const onSubmit = async (data: StorefrontAnnouncementFormData) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      showError("You must be logged in.");
+      showError(t("announcement_editor.must_login"));
       return;
     }
 
@@ -98,16 +88,16 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
     }
 
     if (error) {
-      showError(`Failed to save storefront announcement: ${error.message}`);
+      showError(t("announcement_editor.save_failed", { message: error.message }));
     } else {
-      showSuccess(`Storefront announcement ${element ? 'updated' : 'added'} successfully!`);
+      showSuccess(element ? t("announcement_editor.saved_updated") : t("announcement_editor.saved_added"));
       onSave();
     }
   };
 
   const messageValue = watch('message');
   const selectedIconName = watch('icon_name');
-  const IconComponent = (LucideIcons as any)[selectedIconName] || Sparkles;
+  const IconComponent = getIcon(selectedIconName);
 
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [iconSearchTerm, setIconSearchTerm] = useState('');
@@ -122,23 +112,23 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-xl h-[90vh] flex flex-col p-6"> {/* Reverted DialogContent padding */}
         <DialogHeader className="pb-4">
-          <DialogTitle>{element ? "Edit Storefront Announcement" : "Add New Storefront Announcement"}</DialogTitle>
+          <DialogTitle>{element ? t("announcement_editor.edit_title") : t("announcement_editor.add_title")}</DialogTitle>
           <DialogDescription>
-            Create a scrolling message for your storefront.
+            {t("announcement_editor.modal_desc")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 flex flex-col overflow-hidden">
           <ScrollArea className="flex-1 pr-4"> {/* Removed horizontal padding from ScrollArea, added right padding */}
             <div className="space-y-6 py-4">
               <div className="space-y-2">
-                <Label htmlFor="message">Message</Label>
-                <Textarea id="message" {...register("message")} placeholder="e.g., Flash Sale! Get 20% off all items this week!" rows={3} className="h-auto min-h-[80px] px-3 py-2" />
-                {errors.message && <p className="text-sm text-destructive mt-1">{errors.message.message}</p>}
+                <Label htmlFor="message">{t("announcement_editor.message")}</Label>
+                <Textarea id="message" {...register("message")} placeholder={t("announcement_editor.message_placeholder")} rows={3} className="h-auto min-h-[80px] px-3 py-2" />
+                {errors.message && <p className="text-sm text-destructive mt-1">{t(errors.message.message)}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="icon_name">Icon</Label>
+                  <Label htmlFor="icon_name">{t("announcement_editor.icon")}</Label>
                   <Controller
                     name="icon_name"
                     control={control}
@@ -153,7 +143,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                           >
                             <div className="flex items-center gap-2"> {/* Wrapper for icon and text */}
                               <IconComponent className="h-4 w-4" />
-                              {field.value || "Select icon..."}
+                              {field.value || t("announcement_editor.select_icon")}
                             </div>
                             <Sparkles className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
@@ -161,17 +151,17 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                         <PopoverContent className="w-[300px] p-0">
                           <Command>
                             <CommandInput
-                              placeholder="Search icon..."
+                              placeholder={t("announcement_editor.search_icon")}
                               value={iconSearchTerm}
                               onValueChange={setIconSearchTerm}
                             />
                             <CommandList>
-                              <CommandEmpty>No icon found.</CommandEmpty>
+                              <CommandEmpty>{t("announcement_editor.no_icon_found")}</CommandEmpty>
                               <CommandGroup>
                                 <ScrollArea className="h-[200px]">
                                   <div className="grid grid-cols-5 gap-2 p-2">
                                     {filteredIcons.map((iconName) => {
-                                      const Icon = (LucideIcons as any)[iconName];
+                                      const Icon = getIcon(iconName);
                                       return (
                                         <CommandItem
                                           key={iconName}
@@ -197,18 +187,18 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                       </Popover>
                     )}
                   />
-                  {errors.icon_name && <p className="text-sm text-destructive mt-1">{errors.icon_name.message}</p>}
+                  {errors.icon_name && <p className="text-sm text-destructive mt-1">{t(errors.icon_name.message)}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="display_order">Display Order</Label>
+                  <Label htmlFor="display_order">{t("announcement_editor.display_order")}</Label>
                   <Input id="display_order" type="number" {...register("display_order", { valueAsNumber: true })} className="h-10 px-3 py-2" />
-                  {errors.display_order && <p className="text-sm text-destructive mt-1">{errors.display_order.message}</p>}
+                  {errors.display_order && <p className="text-sm text-destructive mt-1">{t(errors.display_order.message)}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date (Optional)</Label>
+                  <Label htmlFor="startDate">{t("announcement_editor.start_date")}</Label>
                   <Controller
                     name="start_date"
                     control={control}
@@ -223,7 +213,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                            {field.value ? format(field.value, "PPP") : <span>{t("announcement_editor.pick_date")}</span>}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -239,7 +229,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date (Optional)</Label>
+                  <Label htmlFor="endDate">{t("announcement_editor.end_date")}</Label>
                   <Controller
                     name="end_date"
                     control={control}
@@ -254,7 +244,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                            {field.value ? format(field.value, "PPP") : <span>{t("announcement_editor.pick_date")}</span>}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -272,7 +262,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="repeat_interval" className="flex items-center gap-2"><Repeat className="h-4 w-4" /> Repeat (Optional)</Label>
+                <Label htmlFor="repeat_interval" className="flex items-center gap-2"><Repeat className="h-4 w-4" /> {t("announcement_editor.repeat")}</Label>
                 <Controller
                   name="repeat_interval"
                   control={control}
@@ -281,15 +271,15 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                       <SelectTrigger id="repeat_interval" className="h-10 px-3 py-2">
                         <div className="flex items-center gap-2"> {/* Wrapper for icon and text */}
                           <Repeat className="h-4 w-4" />
-                          <SelectValue placeholder="No repeat" />
+                          <SelectValue placeholder={t("announcement_editor.no_repeat")} />
                         </div>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">No repeat</SelectItem>
-                        <SelectItem value="daily">Daily</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="yearly">Yearly</SelectItem>
+                        <SelectItem value="none">{t("announcement_editor.no_repeat")}</SelectItem>
+                        <SelectItem value="daily">{t("announcement_editor.daily")}</SelectItem>
+                        <SelectItem value="weekly">{t("announcement_editor.weekly")}</SelectItem>
+                        <SelectItem value="monthly">{t("announcement_editor.monthly")}</SelectItem>
+                        <SelectItem value="yearly">{t("announcement_editor.yearly")}</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
@@ -298,8 +288,8 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
 
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
-                  <Label htmlFor="isActive" className="text-base">Active</Label>
-                  <p className="text-sm text-muted-foreground">Enable or disable this announcement.</p>
+                  <Label htmlFor="isActive" className="text-base">{t("announcement_editor.active")}</Label>
+                  <p className="text-sm text-muted-foreground">{t("announcement_editor.active_desc")}</p>
                 </div>
                 <Controller
                   name="is_active"
@@ -316,12 +306,12 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
 
               {/* Live Preview */}
               <div className="space-y-2 pt-4">
-                <Label>Live Preview</Label>
+                <Label>{t("announcement_editor.live_preview")}</Label>
                 <div className="border rounded-lg p-2 bg-muted/50">
                   <Marquee pauseOnHover className="py-2 border-y-2 border-primary/20 bg-primary/10">
                     <div className="flex items-center gap-4 text-base font-semibold text-primary px-4">
                       <IconComponent className="h-5 w-5 text-primary" />
-                      <span>{messageValue || "Your announcement message will appear here."}</span>
+                      <span>{messageValue || t("announcement_editor.preview_placeholder")}</span>
                     </div>
                   </Marquee>
                 </div>
@@ -329,10 +319,10 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
             </div>
           </ScrollArea>
           <DialogFooter className="pt-4 px-6 flex-shrink-0">
-            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Announcement
+              {t("announcement_editor.save")}
             </Button>
           </DialogFooter>
         </form>

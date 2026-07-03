@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "../ui/skeleton";
+import { ScrollArea } from "../ui/scroll-area";
 import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency, formatLargeNumber } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { ImageOff } from "lucide-react";
 
 interface TopProduct {
   product_id: string;
@@ -31,15 +33,12 @@ export const TopProducts = () => {
   const { shopDetails, convertCurrency } = useShop();
 
   useEffect(() => {
+    if (!shopDetails?.id) return;
+    const businessId = shopDetails.id;
     const fetchTopProducts = async () => {
       setIsLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setIsLoading(false); return; }
 
-      const { data: business } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
-      if (!business) { setIsLoading(false); return; }
-
-      const { data, error } = await supabase.rpc('get_top_products', { p_business_id: business.id });
+      const { data, error } = await supabase.rpc('get_top_products', { p_business_id: businessId });
 
       if (error) {
         console.error("Failed to fetch top products:", error);
@@ -78,16 +77,16 @@ export const TopProducts = () => {
       setIsLoading(false);
     };
     fetchTopProducts();
-  }, []);
+  }, [shopDetails?.id]);
 
   if (!shopDetails) return <Skeleton className="h-full w-full" />;
 
   return (
-    <Card className="shadow-sm border border-border/60">
-      <CardHeader className="pb-3">
+    <Card className="shadow-sm border border-border/60 h-full flex flex-col">
+      <CardHeader className="pb-2 flex-shrink-0">
         <CardDescription className="text-sm">{t("dashboard.best_selling")}</CardDescription>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 px-3 pb-3 flex-1 min-h-0">
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -105,6 +104,7 @@ export const TopProducts = () => {
         ) : products.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">{t("dashboard.no_sales_data")}</p>
         ) : (
+          <ScrollArea className="h-full pr-2">
           <ol className="space-y-2">
             {products.map((product, index) => {
               const rank = RANK_CONFIG[index] ?? {
@@ -135,17 +135,29 @@ export const TopProducts = () => {
                   </span>
 
                   {/* Thumbnail */}
-                  <div className="h-11 w-11 flex-shrink-0 rounded-lg overflow-hidden bg-muted border border-border/40">
+                  <div className="h-11 w-11 flex-shrink-0 rounded-lg overflow-hidden bg-muted border border-border/40 flex items-center justify-center">
                     {product.media_url ? (
                       <img
                         src={product.media_url}
                         alt={product.name}
                         className="h-full w-full object-cover"
+                        referrerPolicy="no-referrer"
+                        loading="lazy"
+                        onError={(e) => {
+                          const img = e.currentTarget;
+                          img.style.display = 'none';
+                          const parent = img.parentElement;
+                          if (parent && !parent.querySelector('[data-fallback]')) {
+                            const fb = document.createElement('div');
+                            fb.setAttribute('data-fallback', 'true');
+                            fb.className = 'h-full w-full flex items-center justify-center text-muted-foreground';
+                            fb.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><path d="M10.41 10.41a2 2 0 1 1-2.83-2.83"/><line x1="13.5" y1="13.5" x2="6" y2="21"/><line x1="18" y1="12" x2="21" y2="15"/><path d="M3.59 3.59A1.99 1.99 0 0 0 3 5v14a2 2 0 0 0 2 2h14c.55 0 1.052-.22 1.41-.59"/><path d="M21 15V5a2 2 0 0 0-2-2H9"/></svg>';
+                            parent.appendChild(fb);
+                          }
+                        }}
                       />
                     ) : (
-                      <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs">
-                        —
-                      </div>
+                      <ImageOff className="h-4 w-4 text-muted-foreground" />
                     )}
                   </div>
 
@@ -168,6 +180,7 @@ export const TopProducts = () => {
               );
             })}
           </ol>
+          </ScrollArea>
         )}
       </CardContent>
     </Card>

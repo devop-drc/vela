@@ -46,15 +46,17 @@ export const useProductData = (): UseProductDataResult => {
 
   const fetchProductsAndMetadata = async (showLoading = false) => {
     if (showLoading) setIsLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     if (!user) {
       setIsLoading(false);
       return;
     }
 
     const [productsRes, categoriesRes, typesRes] = await Promise.all([
-      // Include gallery and media metadata so editors can show all images
-      supabase.from("products").select("id, name, status, price, currency, inventory, media_url, media_gallery, media_type, thumbnail_url, created_at, category, caption, tags, details, pricing_type, billing_interval, product_type").eq('user_id', user.id).order('created_at', { ascending: false }),
+      // Include gallery and media metadata so editors can show all images.
+      // `updated_at` (migration 20260703160000) busts the variant-stock cache.
+      supabase.from("products").select("id, name, status, price, currency, inventory, media_url, media_gallery, media_type, thumbnail_url, created_at, updated_at, category, caption, tags, details, pricing_type, billing_interval, product_type").eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from("categories").select("name").eq('user_id', user.id),
       supabase.from("types").select("name, attributes").eq('user_id', user.id),
     ]);
@@ -95,7 +97,8 @@ export const useProductData = (): UseProductDataResult => {
     let channel: any;
     
     const setupRealtime = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
         if (!user) return;
 
         // 1. Initial fetch (show loading spinner)
@@ -112,6 +115,8 @@ export const useProductData = (): UseProductDataResult => {
                     
                     setAllProducts(prevProducts => {
                         if (payload.eventType === 'INSERT') {
+                            // Guard against duplicates (the initial fetch may already include it).
+                            if (prevProducts.some(p => p.id === newProduct.id)) return prevProducts;
                             return [newProduct, ...prevProducts];
                         } else if (payload.eventType === 'UPDATE') {
                             return prevProducts.map(p => p.id === newProduct.id ? { ...p, ...newProduct } : p);
