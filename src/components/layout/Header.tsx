@@ -187,7 +187,7 @@ export default function Header({ title }: { title: string }) {
       <div className="flex-1" />
 
       {/* Right actions */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-2 shrink-0" data-tour="header-actions">
         {/* Storefront URL */}
         <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={copyUrl} disabled={!shopDetails?.slug}>
           <LinkIcon className="h-3.5 w-3.5 mr-1.5" />

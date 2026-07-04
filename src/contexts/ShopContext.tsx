@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { isDemoFrame } from '@/lib/isDemoFrame';
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
 import type { StorefrontType } from '@/lib/storefront';
@@ -52,6 +53,7 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
   const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(null);
 
   useEffect(() => {
+    if (isDemoFrame()) { setIsLoading(false); return; } // demo/preview iframes run on mock data
     let mounted = true;
     const fetchRates = async () => {
       // Try cache table first — much faster than invoking the edge function.
@@ -175,6 +177,7 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    if (isDemoFrame()) { setIsLoading(false); return; } // demo/preview iframes run on mock data
     fetchShopDetails();
 
     // Refetch on auth state changes so the dashboard hydrates after login

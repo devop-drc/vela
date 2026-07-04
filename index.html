@@ -3,6 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Warm up the connections every page needs before the JS asks for them:
+         the Supabase API and the Google Fonts CDN (fonts load at runtime). -->
+    <link rel="preconnect" href="https://hbsetjwlawuxasjbvpyx.supabase.co" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://api.fontshare.com" />
+    <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>InstantShop — Ktheje Instagramin në dyqan online</title>
     <meta name="description" content="AI i kthen postimet e tua të Instagramit në një dyqan të vërtetë — produkte, pagesa me kartë në Lekë, porosi. Pa kod. Provo falas 7 ditë." />

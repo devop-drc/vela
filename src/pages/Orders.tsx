@@ -11,6 +11,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { readCache, writeCache } from "@/lib/pageCache";
 import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OrderDetailModal } from "@/components/OrderDetailModal";
@@ -304,7 +305,7 @@ const OrderTable = ({
   const someSelected = orders.some((o) => selectedIds.has(o.id)) && !allSelected;
 
   return (
-    <Table>
+    <Table data-tour="orders-list">
       <TableHeader>
         <TableRow>
           <TableHead className="w-10 pr-0">
@@ -467,8 +468,8 @@ const Orders = () => {
   const { setTitle } = usePageTitle();
   const { t } = useTranslation();
   const { shopDetails, convertCurrency } = useShop();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [orders, setOrders] = useState<Order[]>(() => readCache<Order[]>("orders") ?? []);
+  const [isLoading, setIsLoading] = useState(() => !readCache<Order[]>("orders"));
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [activeTab, setActiveTab] = useState<TabValue>("All");
@@ -488,7 +489,9 @@ const Orders = () => {
   // `silent` skips the loading skeleton — used for realtime refreshes so the
   // list updates in place without flashing.
   const fetchOrders = useCallback(async (silent = false) => {
-    if (!silent) setIsLoading(true);
+    // No skeleton when we already have cached rows to show (or on silent
+    // realtime refreshes) — revalidate quietly instead.
+    if (!silent && !readCache("orders")) setIsLoading(true);
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -524,6 +527,7 @@ const Orders = () => {
         item_count: Array.isArray(o.order_items) ? (o.order_items[0]?.count ?? 0) : 0,
       }));
       setOrders(withCounts as Order[]);
+      writeCache("orders", withCounts as Order[]);
     }
     if (!silent) setIsLoading(false);
   }, []);
@@ -797,7 +801,7 @@ const Orders = () => {
             </div>
 
             {/* Row 2: Status tabs */}
-            <TabsList className="h-auto gap-1 flex-wrap">
+            <TabsList className="h-auto gap-1 flex-wrap" data-tour="orders-filters">
               {STATUS_TABS.map((tab) => (
                 <TabsTrigger key={tab.value} value={tab.value} className="text-xs gap-1">
                   {t(tab.labelKey)}

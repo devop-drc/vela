@@ -3,6 +3,7 @@
 // root by StorefrontThemeProvider (NOT to document.documentElement).
 
 import { StorefrontConfig, ColorToken } from './types';
+import { DEFAULT_LIGHT_TOKENS, DEFAULT_DARK_TOKENS } from './defaults';
 
 export interface TokenOutput {
   /** CSS custom properties keyed WITH the leading `--`. */
@@ -69,10 +70,16 @@ export function buildTokens(config: StorefrontConfig, prefersDark = false): Toke
   const mode = resolveMode(config, prefersDark);
 
   // ── Colors ──────────────────────────────────────────────────────────────
+  // EVERY token gets a concrete value (config → built-in defaults). A missing
+  // var would fall through to document-level CSS variables — e.g. the OWNER'S
+  // dashboard theme when they view their own shop — leaking foreign colors
+  // (the "dark red text" class of bug).
   const base = config.theme.tokens;
   const dark = config.theme.darkTokens || {};
   for (const t of COLOR_TOKENS) {
-    const val = mode === 'dark' ? (dark[t] ?? base[t]) : base[t];
+    const val = mode === 'dark'
+      ? (dark[t] ?? base[t] ?? (DEFAULT_DARK_TOKENS as Partial<Record<string, string>>)[t] ?? DEFAULT_LIGHT_TOKENS[t])
+      : (base[t] ?? DEFAULT_LIGHT_TOKENS[t]);
     if (val) vars[`--${t}`] = val;
   }
   if (mode === 'dark') classes.push('dark');

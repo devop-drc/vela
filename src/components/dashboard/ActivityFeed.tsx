@@ -210,17 +210,13 @@ export const ActivityFeed = () => {
         })
         .subscribe();
 
-      // Realtime filters can't span tables, so subscribe to all dispute
-      // inserts and confirm the order belongs to this business in the handler.
+      // Disputes carry business_id (stamped by a DB trigger), so the
+      // subscription is scoped server-side — no cross-business events, no
+      // follow-up lookup. The handler check covers pre-migration rows.
       disputesChannel = supabase.channel('dashboard-disputes-feed')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_disputes' }, async (payload) => {
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_disputes', filter: `business_id=eq.${businessId}` }, async (payload) => {
           const d = payload.new as any;
-          const { data: orderRow } = await supabase
-            .from('orders')
-            .select('business_id')
-            .eq('id', d.order_id)
-            .single();
-          if (orderRow?.business_id !== businessId) return;
+          if (d.business_id && d.business_id !== businessId) return;
           const a: Activity = { id: d.id, type: 'dispute', title: t('dashboard.new_dispute'), description: `${t('dashboard.reason')}: ${d.reason}`, value: 'Open', date: d.created_at, disputeId: d.id, orderId: d.order_id };
           if (isMounted) setActivities(prev => [a, ...prev].sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime()).slice(0, 20));
         })

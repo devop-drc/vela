@@ -131,6 +131,17 @@ export const StorefrontThemeProvider = ({ config, children, className }: Props) 
             );
           }
         });
+        // Parallax: hero media drifts slower than the scroll. The media is
+        // pre-overscaled via CSS `scale` (independent of GSAP's translate) so
+        // the drift never exposes gaps.
+        if (level !== 'subtle') {
+          root.querySelectorAll<HTMLElement>('[data-sf-parallax]').forEach((media) => {
+            gsap.fromTo(media, { yPercent: -5 }, {
+              yPercent: 5, ease: 'none',
+              scrollTrigger: { trigger: media.parentElement ?? media, start: 'top bottom', end: 'bottom top', scrub: true },
+            });
+          });
+        }
       }, root);
     })();
 

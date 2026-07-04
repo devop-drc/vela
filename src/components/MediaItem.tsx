@@ -18,6 +18,7 @@ export const MediaItem = ({ src, alt, type, className }: MediaItemProps) => {
         loop
         playsInline
         autoPlay
+        preload="metadata"
         className={cn("h-full w-full object-contain", className)}
         aria-label={alt}
       />
@@ -28,6 +29,8 @@ export const MediaItem = ({ src, alt, type, className }: MediaItemProps) => {
     <img
       src={src}
       alt={alt}
+      loading="lazy"
+      decoding="async"
       className={cn("h-full w-full object-contain", className)}
       referrerPolicy="no-referrer"
     />

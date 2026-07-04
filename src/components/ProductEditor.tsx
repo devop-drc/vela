@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { deleteProductMedia } from "@/lib/productCleanup";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -161,7 +162,9 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
       .replace(/^-+|-+$/g, '');
     const filePath = `${user.id}/${product!.id}/${Date.now()}-${safeName}`;
     const { error } = await supabase.storage.from('product-media').upload(filePath, file, {
-      cacheControl: '3600',
+      // Timestamped path = immutable file; cache in the browser for a year so
+      // product images reload instantly on repeat visits.
+      cacheControl: '31536000',
       upsert: false,
       contentType: file.type || undefined,
     });
@@ -207,14 +210,16 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
       }
     }
 
-    // Delete from products table (cascades to product_options and option_values)
+    // Delete from products table (cascades to options/variants/specs/reviews;
+    // order history is preserved via SET NULL), then clean up storage media.
     const { error } = await supabase.from('products').delete().eq('id', product!.id);
-    if (error) { 
-      showError(`Failed to delete product: ${error.message}`); 
-    } else { 
-      showSuccess("Product deleted."); 
+    if (error) {
+      showError(`Failed to delete product: ${error.message}`);
+    } else {
+      deleteProductMedia([product!]); // best-effort, never blocks
+      showSuccess("Product deleted.");
       onUpdate(); // <-- Call onUpdate here to trigger parent refresh
-      onClose(); 
+      onClose();
     }
     setIsSubmitting(false); setIsDeleting(false);
   };

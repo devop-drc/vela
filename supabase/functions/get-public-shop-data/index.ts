@@ -204,20 +204,24 @@ serve(async (req) => {
       console.error("Error fetching best sellers:", bestSellersError);
     }
 
-    // Fetch recommended products (e.g., 4 random active products, excluding best sellers)
-    const { data: allActiveProducts, error: allActiveProductsError } = await supabaseAdmin
+    // Fetch recommended products: 4 random-ish active products, excluding best
+    // sellers. A bounded sample of 24 rows is plenty of variety — reading the
+    // ENTIRE catalog on every storefront load just to pick 4 was pure IO waste.
+    const { data: recommendationPool, error: allActiveProductsError } = await supabaseAdmin
       .from('products')
       .select('*')
       .eq('business_id', businessId)
-      .eq('status', 'Active');
+      .eq('status', 'Active')
+      .order('updated_at', { ascending: false })
+      .limit(24);
 
     let recommendedProducts: any[] = [];
     if (allActiveProductsError) {
-      console.error("Error fetching all active products for recommendations:", allActiveProductsError);
-    } else if (allActiveProducts) {
+      console.error("Error fetching products for recommendations:", allActiveProductsError);
+    } else if (recommendationPool) {
       const bestSellerIds = new Set((bestSellers || []).map((p: any) => p.product_id));
-      const availableForRecommendation = allActiveProducts.filter(p => !bestSellerIds.has(p.id));
-      
+      const availableForRecommendation = recommendationPool.filter(p => !bestSellerIds.has(p.id));
+
       // Shuffle and pick up to 4 random products
       for (let i = availableForRecommendation.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -312,7 +316,8 @@ serve(async (req) => {
         .from('orders').select(ORDER_SELECT)
         .eq('business_id', businessId)
         .ilike('customer_email', normalizedEmail) // parameterized, case-insensitive exact match
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50);
       if (error) console.error('[get-public-shop-data] Error fetching orders by email:', error);
       else collect(data);
     }

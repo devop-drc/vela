@@ -1,6 +1,7 @@
 import { getStorefrontUrl } from "@/lib/storefront";
 import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { readCache, writeCache } from "@/lib/pageCache";
 import { Banknote, Package, Users, CreditCard, BarChart2, Zap, Star, Activity, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -33,14 +34,29 @@ interface DashboardData {
   chartData: { name: string; revenue: number; clients: number; orders: number }[];
 }
 
+const dashKey = (
+  shopDetails: any, dateRange: DateRange | undefined, granularity: string
+): string | null =>
+  shopDetails?.id
+    ? `dashboard:${shopDetails.id}:${dateRange?.from?.toISOString() ?? 'x'}:${dateRange?.to?.toISOString() ?? 'x'}:${granularity}`
+    : null;
+
 const useDashboardData = (
   shopDetails: any,
   convertCurrency: (amount: number | null | undefined, fromCurrency?: string, toCurrency?: string) => number,
   dateRange: DateRange | undefined,
   granularity: 'day' | 'month'
 ) => {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Seed from the last cached snapshot for this exact filter set → instant
+  // render on navigate-back; the fetch below still revalidates.
+  const [data, setData] = useState<DashboardData | null>(() => {
+    const k = dashKey(shopDetails, dateRange, granularity);
+    return k ? (readCache<DashboardData>(k) ?? null) : null;
+  });
+  const [isLoading, setIsLoading] = useState(() => {
+    const k = dashKey(shopDetails, dateRange, granularity);
+    return !(k && readCache<DashboardData>(k));
+  });
   const [loadError, setLoadError] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -49,9 +65,103 @@ const useDashboardData = (
       return;
     }
 
-    setIsLoading(true);
+    const key = dashKey(shopDetails, dateRange, granularity);
+    const cachedData = key ? readCache<DashboardData>(key) : undefined;
+    // Show cached data instantly and revalidate silently; only show the skeleton
+    // when there's nothing cached to display.
+    if (cachedData) { setData(cachedData); setIsLoading(false); }
+    else setIsLoading(true);
     setLoadError(false);
     const businessId = shopDetails.id;
+
+    // Shared helpers for both the RPC path and the legacy fallback so the
+    // chart is built exactly the same way in either case.
+    const chartWindow = (firstOrderAt: string | Date | null, lastOrderAt: string | Date | null): [Date, Date] => {
+      if (dateRange?.from && dateRange?.to) {
+        return [startOfDay(dateRange.from), endOfDay(dateRange.to)];
+      }
+      if (firstOrderAt && lastOrderAt) {
+        return [startOfDay(new Date(firstOrderAt)), endOfDay(new Date(lastOrderAt))];
+      }
+      const end = endOfDay(new Date());
+      return [startOfMonth(subMonths(end, 5)), end];
+    };
+
+    const bucketKey = (date: Date) =>
+      granularity === 'month'
+        ? date.toLocaleString('default', { month: 'short', year: '2-digit' })
+        : date.toLocaleString('default', { month: 'short', day: 'numeric' });
+
+    const buildChartSeries = (
+      aggregated: { [key: string]: { revenue: number; clients: number; orders: number } },
+      chartStartDate: Date,
+      chartEndDate: Date
+    ) => {
+      const chartData: { name: string; revenue: number; clients: number; orders: number }[] = [];
+      let currentDate = new Date(chartStartDate);
+      while (currentDate <= chartEndDate) {
+        const key = bucketKey(currentDate);
+        chartData.push({
+          name: key,
+          revenue: aggregated[key]?.revenue || 0,
+          clients: aggregated[key]?.clients || 0,
+          orders: aggregated[key]?.orders || 0,
+        });
+        currentDate = granularity === 'month'
+          ? startOfMonth(addDays(endOfMonth(currentDate), 1))
+          : addDays(currentDate, 1);
+      }
+      return chartData;
+    };
+
+    // Preferred path: one aggregate RPC instead of downloading every order and
+    // product. Revenue comes back as per-currency sums and is converted here
+    // with convertCurrency, exactly like the per-order path did.
+    const { data: summary, error: rpcError } = await supabase.rpc('get_dashboard_summary', {
+      p_business_id: businessId,
+      p_from: dateRange?.from ? startOfDay(dateRange.from).toISOString() : null,
+      p_to: dateRange?.to ? endOfDay(dateRange.to).toISOString() : null,
+      p_granularity: granularity,
+      p_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+
+    if (!rpcError && summary) {
+      const sumRevenue = (byCurrency: Record<string, number> | null | undefined) =>
+        Object.entries(byCurrency || {}).reduce(
+          (acc, [currency, amount]) => acc + convertCurrency(Number(amount), currency, shopDetails.currency),
+          0
+        );
+
+      const aggregated: { [key: string]: { revenue: number; clients: number; orders: number } } = {};
+      for (const bucket of (summary.chart || [])) {
+        const key = bucketKey(new Date(bucket.bucket));
+        if (!aggregated[key]) {
+          aggregated[key] = { revenue: 0, clients: 0, orders: 0 };
+        }
+        aggregated[key].revenue += sumRevenue(bucket.revenue);
+        aggregated[key].clients += bucket.clients || 0;
+        aggregated[key].orders += bucket.orders || 0;
+      }
+
+      const [chartStartDate, chartEndDate] = chartWindow(summary.first_order_at, summary.last_order_at);
+
+      const rpcResult: DashboardData = {
+        totalRevenue: sumRevenue(summary.total_revenue),
+        salesCount: summary.sales_count || 0,
+        activeProducts: summary.active_products || 0,
+        customers: summary.customers || 0,
+        pendingOrders: summary.pending_orders || 0,
+        chartData: buildChartSeries(aggregated, chartStartDate, chartEndDate),
+      };
+      setData(rpcResult);
+      if (key) writeCache(key, rpcResult);
+      setIsLoading(false);
+      return;
+    }
+
+    // Fallback: RPC unavailable (e.g. migration not pushed yet) — use the
+    // original client-side aggregation path unchanged.
+    console.warn('get_dashboard_summary RPC unavailable, falling back to client-side aggregation:', rpcError?.message);
 
     let ordersQuery = supabase
       .from('orders')
@@ -100,30 +210,16 @@ const useDashboardData = (
 
     const aggregatedData: { [key: string]: { revenue: number; clients: Set<string>; orders: number } } = {};
 
-    let chartStartDate: Date;
-    let chartEndDate: Date;
-
-    if (dateRange?.from && dateRange?.to) {
-      chartStartDate = startOfDay(dateRange.from);
-      chartEndDate = endOfDay(dateRange.to);
-    } else if (allOrders.length > 0) {
-      const sortedOrders = [...allOrders].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-      chartStartDate = startOfDay(new Date(sortedOrders[0].created_at));
-      chartEndDate = endOfDay(new Date(sortedOrders[sortedOrders.length - 1].created_at));
-    } else {
-      chartEndDate = endOfDay(new Date());
-      chartStartDate = startOfMonth(subMonths(chartEndDate, 5));
-    }
+    const sortedOrders = allOrders.length > 0
+      ? [...allOrders].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      : [];
+    const [chartStartDate, chartEndDate] = chartWindow(
+      sortedOrders[0]?.created_at || null,
+      sortedOrders[sortedOrders.length - 1]?.created_at || null
+    );
 
     allOrders.forEach(order => {
-      const orderDate = new Date(order.created_at);
-      let key: string;
-
-      if (granularity === 'month') {
-        key = orderDate.toLocaleString('default', { month: 'short', year: '2-digit' });
-      } else {
-        key = orderDate.toLocaleString('default', { month: 'short', day: 'numeric' });
-      }
+      const key = bucketKey(new Date(order.created_at));
 
       if (!aggregatedData[key]) {
         aggregatedData[key] = { revenue: 0, clients: new Set(), orders: 0 };
@@ -135,33 +231,15 @@ const useDashboardData = (
       aggregatedData[key].orders += 1;
     });
 
-    const chartData: { name: string; revenue: number; clients: number; orders: number }[] = [];
-    let currentDate = new Date(chartStartDate);
-
-    while (currentDate <= chartEndDate) {
-      let key: string;
-      if (granularity === 'month') {
-        key = currentDate.toLocaleString('default', { month: 'short', year: '2-digit' });
-        chartData.push({
-          name: key,
-          revenue: aggregatedData[key]?.revenue || 0,
-          clients: aggregatedData[key]?.clients.size || 0,
-          orders: aggregatedData[key]?.orders || 0,
-        });
-        currentDate = startOfMonth(addDays(endOfMonth(currentDate), 1));
-      } else {
-        key = currentDate.toLocaleString('default', { month: 'short', day: 'numeric' });
-        chartData.push({
-          name: key,
-          revenue: aggregatedData[key]?.revenue || 0,
-          clients: aggregatedData[key]?.clients.size || 0,
-          orders: aggregatedData[key]?.orders || 0,
-        });
-        currentDate = addDays(currentDate, 1);
-      }
+    const aggregatedCounts: { [key: string]: { revenue: number; clients: number; orders: number } } = {};
+    for (const [key, value] of Object.entries(aggregatedData)) {
+      aggregatedCounts[key] = { revenue: value.revenue, clients: value.clients.size, orders: value.orders };
     }
+    const chartData = buildChartSeries(aggregatedCounts, chartStartDate, chartEndDate);
 
-    setData({ totalRevenue, salesCount, activeProducts, customers: uniqueCustomers, pendingOrders, chartData });
+    const fallbackResult: DashboardData = { totalRevenue, salesCount, activeProducts, customers: uniqueCustomers, pendingOrders, chartData };
+    setData(fallbackResult);
+    if (key) writeCache(key, fallbackResult);
     setIsLoading(false);
   }, [shopDetails, convertCurrency, dateRange, granularity]);
 
@@ -171,17 +249,24 @@ const useDashboardData = (
 
     fetchData();
 
+    // Debounced: a burst of order events (multi-item checkout, status sweep)
+    // triggers ONE stats refresh instead of a full dashboard refetch per event.
+    let refetchTimer: ReturnType<typeof setTimeout> | undefined;
     const channel = supabase
       .channel(`dashboard-orders:${businessId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders', filter: `business_id=eq.${businessId}` },
-        () => { fetchData(); }
+        () => {
+          if (refetchTimer) clearTimeout(refetchTimer);
+          refetchTimer = setTimeout(() => fetchData(), 1500);
+        }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
+      if (refetchTimer) clearTimeout(refetchTimer);
     };
   }, [fetchData, shopDetails?.id]);
 
@@ -276,7 +361,7 @@ const Index = () => {
             <Skeleton className="h-7 w-24" /><Skeleton className="h-7 w-20" /><Skeleton className="h-7 w-24" /><Skeleton className="h-7 w-20" />
           </div>
         </div>
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 flex-shrink-0">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 flex-shrink-0" data-tour="stats">
           <Skeleton className="h-[78px]" /><Skeleton className="h-[78px]" /><Skeleton className="h-[78px]" /><Skeleton className="h-[78px]" />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 flex-1 min-h-0">
@@ -319,7 +404,7 @@ const Index = () => {
           activeProducts={data.activeProducts}
           totalOrders={data.salesCount}
         />
-        <div className="shrink-0">
+        <div className="shrink-0" data-tour="quick-actions">
           <QuickActions />
         </div>
       </div>
@@ -337,7 +422,7 @@ const Index = () => {
       )}
 
       {/* Stat Cards */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 flex-shrink-0">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 flex-shrink-0" data-tour="stats">
         <StatCard
           title={t("dashboard.total_revenue")}
           value={formatCurrency(data.totalRevenue, shopDetails?.currency)}
@@ -371,7 +456,7 @@ const Index = () => {
       {/* Main area — fills remaining viewport */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 flex-1 min-h-0">
         {/* Left: Overview Chart (2/3) */}
-        <div className="lg:col-span-2 flex flex-col min-h-0">
+        <div className="lg:col-span-2 flex flex-col min-h-0" data-tour="chart">
           <h2 className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5 flex-shrink-0">
             <BarChart2 className="h-3.5 w-3.5" />{t("dashboard.business_overview")}
           </h2>
@@ -406,7 +491,7 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="flex flex-col min-h-0 flex-1 basis-0">
+          <div className="flex flex-col min-h-0 flex-1 basis-0" data-tour="activity">
             <h2 className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5 flex-shrink-0">
               <Activity className="h-3.5 w-3.5" />{t("dashboard.live_activity")}
             </h2>

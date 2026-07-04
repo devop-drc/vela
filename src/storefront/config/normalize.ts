@@ -108,12 +108,33 @@ function legacyHomeSections(template?: string): SectionInstance[] {
 }
 
 /**
+ * Guarantee the homepage has an announcement-bar section. Three of the v2
+ * templates (galerie/velvet/noir) shipped without it, so shops that applied
+ * those saved a marquee-less layout. The bar only ever renders when the shop
+ * has active announcements and hasn't switched it off, so restoring it here is
+ * invisible for everyone else. Idempotent — a no-op once the section exists.
+ */
+function ensureAnnouncementSection(cfg: StorefrontConfig): StorefrontConfig {
+  const home = cfg.pages?.home;
+  if (!Array.isArray(home) || home.some((s) => s.type === 'announcementMarquee')) return cfg;
+  const heroIdx = home.findIndex((s) => s.type === 'hero');
+  const insertAt = heroIdx >= 0 ? heroIdx + 1 : 0; // right after the hero, else top
+  const section: SectionInstance = { id: 'marquee', type: 'announcementMarquee', enabled: true, props: {} };
+  const nextHome = [...home.slice(0, insertAt), section, ...home.slice(insertAt)];
+  return { ...cfg, pages: { ...cfg.pages, home: nextHome } };
+}
+
+/**
  * Accepts anything stored in design_settings.settings and returns a complete config.
  * - null / {} / undefined → DEFAULT_CONFIG
  * - { version: 2, ... }   → deep-merge over defaults (forward/backward safe)
  * - legacy flat blob       → mapped via fromLegacy
  */
 export function normalizeConfig(raw: any): StorefrontConfig {
+  return ensureAnnouncementSection(normalizeConfigInner(raw));
+}
+
+function normalizeConfigInner(raw: any): StorefrontConfig {
   if (!isObject(raw) || Object.keys(raw).length === 0) {
     return cloneConfig(DEFAULT_CONFIG);
   }

@@ -1,6 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useShop } from "@/contexts/ShopContext";
+import { readCache, writeCache } from "@/lib/pageCache";
+
+const PRODUCTS_CACHE_KEY = "products";
+interface ProductsSnapshot {
+  userId: string;
+  products: Product[];
+  categories: string[];
+  tags: string[];
+  attributes: DetailsAttribute[];
+}
 
 export interface Product {
   id: string;
@@ -38,11 +48,15 @@ interface UseProductDataResult {
 
 export const useProductData = (): UseProductDataResult => {
   const { convertCurrency } = useShop();
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [allCategories, setAllCategories] = useState<string[]>([]);
-  const [allTags, setAllTags] = useState<string[]>([]);
-  const [allDetailsAttributes, setAllDetailsAttributes] = useState<DetailsAttribute[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Seed from the last cached snapshot so returning to the page renders
+  // instantly; the effect below still revalidates in the background.
+  const [cached] = useState(() => readCache<ProductsSnapshot>(PRODUCTS_CACHE_KEY));
+  const [allProducts, setAllProducts] = useState<Product[]>(cached?.products ?? []);
+  const [allCategories, setAllCategories] = useState<string[]>(cached?.categories ?? []);
+  const [allTags, setAllTags] = useState<string[]>(cached?.tags ?? []);
+  const [allDetailsAttributes, setAllDetailsAttributes] = useState<DetailsAttribute[]>(cached?.attributes ?? []);
+  // No spinner when we already have something to show.
+  const [isLoading, setIsLoading] = useState(!cached);
 
   const fetchProductsAndMetadata = async (showLoading = false) => {
     if (showLoading) setIsLoading(true);
@@ -61,14 +75,20 @@ export const useProductData = (): UseProductDataResult => {
       supabase.from("types").select("name, attributes").eq('user_id', user.id),
     ]);
 
-    if (productsRes.error) { 
-      console.error("useProductData: Error fetching products:", productsRes.error); 
-    } else { 
-      setAllProducts(productsRes.data as Product[]); 
+    let nextProducts = allProducts;
+    let nextCategories = allCategories;
+    let nextTags = allTags;
+    let nextAttributes = allDetailsAttributes;
+
+    if (productsRes.error) {
+      console.error("useProductData: Error fetching products:", productsRes.error);
+    } else {
+      nextProducts = productsRes.data as Product[];
+      setAllProducts(nextProducts);
     }
 
     if (categoriesRes.error) { console.error("useProductData: Error fetching categories:", categoriesRes.error); }
-    else { setAllCategories(categoriesRes.data?.map(c => c.name) || []); }
+    else { nextCategories = categoriesRes.data?.map(c => c.name) || []; setAllCategories(nextCategories); }
 
     if (typesRes.error) { console.error("useProductData: Error fetching types:", typesRes.error); }
     else {
@@ -83,18 +103,32 @@ export const useProductData = (): UseProductDataResult => {
           }
         });
       });
-      setAllDetailsAttributes(Array.from(uniqueAttributes.entries()).map(([name, values]) => ({ name, values: Array.from(values).sort() })));
+      nextAttributes = Array.from(uniqueAttributes.entries()).map(([name, values]) => ({ name, values: Array.from(values).sort() }));
+      setAllDetailsAttributes(nextAttributes);
     }
 
-    const uniqueTags = new Set<string>();
-    productsRes.data?.forEach(p => p.tags?.forEach(tag => uniqueTags.add(tag)));
-    setAllTags(Array.from(uniqueTags).sort());
+    if (!productsRes.error) {
+      const uniqueTags = new Set<string>();
+      (productsRes.data as Product[])?.forEach(p => p.tags?.forEach(tag => uniqueTags.add(tag)));
+      nextTags = Array.from(uniqueTags).sort();
+      setAllTags(nextTags);
+    }
+
+    // Persist a fresh snapshot for instant display next time (only when the
+    // core products query succeeded, so we never cache a partial/failed load).
+    if (!productsRes.error) {
+      writeCache<ProductsSnapshot>(PRODUCTS_CACHE_KEY, {
+        userId: user.id, products: nextProducts, categories: nextCategories,
+        tags: nextTags, attributes: nextAttributes,
+      });
+    }
 
     setIsLoading(false);
   };
 
   useEffect(() => {
     let channel: any;
+    let metadataRefetchTimer: ReturnType<typeof setTimeout> | undefined;
     
     const setupRealtime = async () => {
         const { data: { session } } = await supabase.auth.getSession();
@@ -126,10 +160,14 @@ export const useProductData = (): UseProductDataResult => {
                         return prevProducts;
                     });
 
-                    // Only re-fetch full metadata on INSERT/DELETE (new categories/tags)
-                    // UPDATE events are handled inline above — no full refetch needed
+                    // Only re-fetch full metadata on INSERT/DELETE (new categories/tags).
+                    // UPDATE events are handled inline above — no full refetch needed.
+                    // Debounced: a sync inserts products in bursts, and refetching the
+                    // whole set once per row multiplied the read load for nothing —
+                    // one trailing refetch covers the entire burst.
                     if (payload.eventType === 'INSERT' || payload.eventType === 'DELETE') {
-                        fetchProductsAndMetadata();
+                        if (metadataRefetchTimer) clearTimeout(metadataRefetchTimer);
+                        metadataRefetchTimer = setTimeout(() => fetchProductsAndMetadata(), 2500);
                     }
                 }
             )
@@ -142,6 +180,7 @@ export const useProductData = (): UseProductDataResult => {
         if (channel) {
             supabase.removeChannel(channel);
         }
+        if (metadataRefetchTimer) clearTimeout(metadataRefetchTimer);
     };
   }, []); // Empty dependency array ensures setup runs once per component lifecycle
 

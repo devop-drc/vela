@@ -1,13 +1,18 @@
-// Eight comprehensive storefront templates. Each is a full StorefrontConfig
-// (colors + type + shape + effects + layout + component variants + page
-// composition). Authored by deep-merging salient overrides onto DEFAULT_CONFIG.
+// The template collection — eight from-scratch design languages. Each is a
+// COMPLETE StorefrontConfig: colors (light + dark), typography, shape,
+// effects, chrome (navbar presentation, footer), component styles and full
+// page compositions, so applying one restyles every option the Studio has.
 
 import { StorefrontConfig, StorefrontTemplate, ColorTokens, SectionInstance } from '../config/types';
 import { DEFAULT_CONFIG, cloneConfig } from '../config/defaults';
 
-/** Compact section-instance author for template home compositions. */
+/** Compact section-instance author for template page compositions. */
 const sec = (id: string, type: string, props: Record<string, any> = {}, enabled = true): SectionInstance =>
   ({ id, type, enabled, props });
+
+/** Product-detail composition with a chosen gallery style. */
+const detail = (gallery: 'carousel' | 'thumbs' | 'filmstrip' | 'grid'): SectionInstance[] =>
+  DEFAULT_CONFIG.pages.productDetail.map((s) => (s.type === 'gallery' ? { ...s, props: { ...s.props, variant: gallery } } : { ...s }));
 
 const isObj = (v: any) => v && typeof v === 'object' && !Array.isArray(v);
 function merge<T>(base: T, src: any): T {
@@ -19,7 +24,7 @@ function merge<T>(base: T, src: any): T {
   return out;
 }
 
-// Build a full token set from a handful of inputs (mirrors storefrontPresets).
+// Build a full token set from a handful of inputs.
 type PaletteInput = {
   bg: string; fg: string; card: string; cardFg?: string;
   primary: string; primaryFg: string;
@@ -53,164 +58,237 @@ const define = (
 };
 
 export const TEMPLATES: StorefrontTemplate[] = [
-  define('studio', 'Studio', 'Clean, modern and neutral — works for any catalog.', 'Universal', {
-    theme: { paletteId: 'studio', tokens: palette({ bg: '0 0% 100%', fg: '240 10% 8%', card: '0 0% 100%', primary: '240 6% 10%', primaryFg: '0 0% 98%', secondary: '240 5% 96%', accent: '240 5% 94%', muted: '240 5% 96%', mutedFg: '240 4% 46%', border: '240 6% 90%' }) },
-    typography: { headingFont: 'Manrope', bodyFont: 'Inter', headingWeight: 700, scaleRatio: 1.25 },
-    shape: { radius: 14, radiusStyle: 'soft' },
-    effects: { shadow: 'md', glass: { enabled: true, blur: 12, opacity: 70 }, motion: 'standard', hoverEffect: 'lift' },
-    components: { productCard: 'classic', cart: 'drawer' },
-    layout: { sectionHeader: 'left' },
-    pages: { home: [
-      sec('hero', 'hero', { variant: 'banner', showLogo: true, ctaLabel: 'Shop Now' }),
-      sec('marquee', 'announcementMarquee', { variant: 'marquee' }),
-      sec('valueProps', 'valueProps', { variant: 'row' }),
-      sec('categories', 'categoryGrid', { title: 'Shop by Category', variant: 'tiles' }),
-      sec('bestSellers', 'bestSellers', { title: 'Best Sellers', display: 'carousel' }),
-      sec('newArrivals', 'newArrivals', { title: 'New Arrivals', display: 'carousel', limit: 10 }),
-      sec('recommended', 'recommended', { title: 'Recommended For You', display: 'carousel' }),
-      sec('viewAll', 'viewAllCta', { label: 'View All Products', variant: 'button' }),
-    ] },
-  }),
 
-  define('aurora', 'Aurora', 'Glassmorphic and vibrant with a soft gradient backdrop.', 'Beauty & Cosmetics', {
-    theme: {
-      paletteId: 'aurora', mode: 'light',
-      tokens: palette({ bg: '250 60% 98%', fg: '250 30% 18%', card: '0 0% 100%', primary: '265 70% 56%', primaryFg: '0 0% 100%', secondary: '255 50% 94%', accent: '320 70% 64%', muted: '250 40% 94%', mutedFg: '250 12% 45%', border: '255 40% 90%' }),
-      gradient: { enabled: true, from: '265 80% 92%', to: '320 80% 92%', angle: 135 },
+  /* ── Studio — the refined neutral baseline ─────────────────────────── */
+  define('studio', 'Studio', 'Clean and modern — a quiet frame that lets any catalog shine.', 'Universal', {
+    theme: { paletteId: 'studio', mode: 'light', tokens: palette({ bg: '0 0% 100%', fg: '240 10% 8%', card: '0 0% 100%', primary: '240 6% 10%', primaryFg: '0 0% 98%', secondary: '240 5% 96%', accent: '240 5% 94%', muted: '240 5% 96%', mutedFg: '240 4% 46%', border: '240 6% 90%' }) },
+    typography: { headingFont: 'Manrope', bodyFont: 'Inter', headingWeight: 700, bodyWeight: 400, scaleRatio: 1.25, letterSpacing: -0.01, lineHeight: 1.6, headingTransform: 'none', baseSize: 16 },
+    shape: { radius: 14, radiusStyle: 'soft', borderWidth: 1, borderStyle: 'solid' },
+    effects: { shadow: 'md', glass: { enabled: true, blur: 12, opacity: 70 }, motion: 'standard', scrollReveal: true, hoverEffect: 'lift', grain: false, background: { type: 'solid', color: '0 0% 100%' } },
+    layout: {
+      containerWidth: 'standard', density: 'comfortable', sectionSpacing: 'normal', sectionHeader: 'left',
+      header: { variant: 'classic', presentation: 'bar', sticky: true, transparentOnHero: false, blur: true, showSearch: true, showAnnouncementBar: true },
+      nav: { desktop: 'topbar', showCategories: true, mobileBottomBar: true, bottomBarStyle: 'bar' },
+      footer: { variant: 'rich' }, productGrid: { columns: 4, gap: 'md' }, banner: { style: 'marquee' },
     },
-    typography: { headingFont: 'Syne', bodyFont: 'Manrope', headingWeight: 800, scaleRatio: 1.3 },
-    shape: { radius: 22, radiusStyle: 'round' },
-    effects: { shadow: 'lg', shadowColor: '265 70% 56%', glass: { enabled: true, blur: 18, opacity: 60 }, motion: 'expressive', hoverEffect: 'glow', scrollReveal: true, background: { type: 'gradient', gradient: { enabled: true, from: '265 80% 95%', to: '320 80% 95%', angle: 135 } } },
-    layout: { header: { variant: 'centered', blur: true }, footer: { variant: 'rich' }, productGrid: { columns: 4, gap: 'lg' }, density: 'spacious', sectionHeader: 'centered' },
-    components: { productCard: 'overlay', cart: 'drawer', button: 'gradient', productGalleryLayout: 'sticky-split' },
-    pages: { home: [
-      sec('hero', 'hero', { variant: 'full', showLogo: true, ctaLabel: 'Shop Now' }),
-      sec('marquee', 'announcementMarquee', { variant: 'gradient' }),
-      sec('categories', 'categoryGrid', { title: 'Shop by Category', variant: 'pills' }),
-      sec('bestSellers', 'bestSellers', { title: 'Best Sellers', display: 'carousel' }),
-      sec('newArrivals', 'newArrivals', { title: 'New Arrivals', display: 'masonry', limit: 10 }),
-      sec('promo', 'promoBanner', { variant: 'gradient' }),
-      sec('recommended', 'recommended', { title: 'Recommended For You', display: 'carousel' }),
-      sec('viewAll', 'viewAllCta', { label: 'View All Products', variant: 'banner' }),
-    ] },
-  }),
-
-  define('editorial', 'Editorial', 'Magazine-style fashion layout with large serif headings.', 'Clothing', {
-    theme: { paletteId: 'editorial', tokens: palette({ bg: '40 12% 97%', fg: '0 0% 8%', card: '0 0% 100%', primary: '0 0% 8%', primaryFg: '43 60% 72%', secondary: '40 10% 92%', accent: '43 74% 49%', accentFg: '0 0% 8%', muted: '40 10% 92%', mutedFg: '0 0% 40%', border: '0 0% 88%' }) },
-    typography: { headingFont: 'Playfair Display', bodyFont: 'Lato', headingWeight: 700, scaleRatio: 1.4, letterSpacing: -0.01 },
-    shape: { radius: 4, radiusStyle: 'soft' },
-    effects: { shadow: 'sm', glass: { enabled: false, blur: 0, opacity: 100 }, motion: 'subtle', hoverEffect: 'zoom' },
-    layout: { header: { variant: 'split', blur: false }, footer: { variant: 'columns' }, productGrid: { columns: 3, gap: 'lg' }, sectionSpacing: 'airy', containerWidth: 'wide', sectionHeader: 'editorial' },
-    components: { productCard: 'editorial', cart: 'modal', badge: 'outline' },
-    pages: { home: [
-      sec('hero', 'hero', { variant: 'editorial', showLogo: false, ctaLabel: 'Explore the Collection' }),
-      sec('marquee', 'announcementMarquee', { variant: 'static' }),
-      sec('categories', 'categoryGrid', { title: 'Shop by Category', variant: 'mosaic' }),
-      sec('bestSellers', 'bestSellers', { title: 'Best Sellers', display: 'editorial', limit: 3 }),
-      sec('newArrivals', 'newArrivals', { title: 'New Arrivals', display: 'grid', limit: 9 }),
-      sec('about', 'richText', { variant: 'split' }),
-      sec('viewAll', 'viewAllCta', { label: 'View All Products', variant: 'link' }),
-    ] },
-  }),
-
-  define('brutalist', 'Brutalist', 'Bold, high-contrast, sharp corners and thick borders.', 'Electronics', {
-    theme: { paletteId: 'brutalist', tokens: palette({ bg: '0 0% 100%', fg: '0 0% 4%', card: '0 0% 100%', primary: '0 0% 4%', primaryFg: '0 0% 100%', secondary: '0 0% 94%', accent: '54 100% 50%', accentFg: '0 0% 4%', muted: '0 0% 92%', mutedFg: '0 0% 30%', border: '0 0% 4%' }) },
-    typography: { headingFont: 'Space Grotesk', bodyFont: 'Work Sans', headingWeight: 700, headingTransform: 'uppercase', letterSpacing: -0.02, scaleRatio: 1.33 },
-    shape: { radius: 0, radiusStyle: 'sharp', borderWidth: 2 },
-    effects: { shadow: 'none', glass: { enabled: false, blur: 0, opacity: 100 }, motion: 'subtle', hoverEffect: 'none', grain: false },
-    layout: { header: { variant: 'minimal', blur: false }, footer: { variant: 'minimal' }, productGrid: { columns: 4, gap: 'sm' }, density: 'cozy', sectionHeader: 'left' },
-    components: { productCard: 'minimal', cart: 'page', button: 'solid', buttonShape: 'sharp', badge: 'solid' },
-    pages: { home: [
-      sec('hero', 'hero', { variant: 'compact', showLogo: true, ctaLabel: 'SHOP NOW' }),
-      sec('marquee', 'announcementMarquee', { variant: 'static' }),
-      sec('categories', 'categoryGrid', { title: 'Categories', variant: 'pills' }),
-      sec('newArrivals', 'newArrivals', { title: 'New Arrivals', display: 'grid', limit: 12 }),
-      sec('bestSellers', 'bestSellers', { title: 'Best Sellers', display: 'grid' }),
-      sec('viewAll', 'viewAllCta', { label: 'ALL PRODUCTS', variant: 'link' }),
-    ] },
-  }),
-
-  define('boutique', 'Boutique', 'Elegant luxury — muted gold & black, generous spacing.', 'Jewelry', {
-    theme: { paletteId: 'boutique', tokens: palette({ bg: '36 16% 96%', fg: '30 12% 14%', card: '0 0% 100%', primary: '30 14% 16%', primaryFg: '40 50% 82%', secondary: '36 14% 91%', accent: '40 60% 52%', muted: '36 12% 90%', mutedFg: '30 8% 42%', border: '36 14% 86%' }) },
-    typography: { headingFont: 'Cormorant Garamond', bodyFont: 'Nunito Sans', headingWeight: 600, scaleRatio: 1.4, letterSpacing: 0.01 },
-    shape: { radius: 6, radiusStyle: 'soft' },
-    effects: { shadow: 'md', glass: { enabled: false, blur: 0, opacity: 100 }, motion: 'subtle', hoverEffect: 'lift' },
-    layout: { header: { variant: 'centered', blur: false }, footer: { variant: 'rich' }, productGrid: { columns: 3, gap: 'lg' }, sectionSpacing: 'airy', density: 'spacious', containerWidth: 'standard', sectionHeader: 'editorial' },
-    components: { productCard: 'minimal', cart: 'drawer', badge: 'outline', productGalleryLayout: 'sticky-split' },
-    pages: { home: [
-      sec('hero', 'hero', { variant: 'collage', showLogo: true, ctaLabel: 'Discover' }),
-      sec('valueProps', 'valueProps', { variant: 'row' }),
-      sec('categories', 'categoryGrid', { title: 'Collections', variant: 'tiles' }),
-      sec('bestSellers', 'bestSellers', { title: 'Signature Pieces', display: 'editorial', limit: 3 }),
-      sec('newArrivals', 'newArrivals', { title: 'New Arrivals', display: 'masonry', limit: 8 }),
-      sec('about', 'richText', { variant: 'centered' }),
-      sec('viewAll', 'viewAllCta', { label: 'View All Products', variant: 'button' }),
-    ] },
-  }),
-
-  define('street', 'Street', 'Streetwear energy — dark, neon accent, dense grid.', 'Shoes', {
-    theme: {
-      paletteId: 'street', mode: 'dark',
-      tokens: palette({ bg: '0 0% 7%', fg: '0 0% 96%', card: '0 0% 11%', primary: '84 81% 50%', primaryFg: '0 0% 6%', secondary: '0 0% 15%', accent: '84 81% 50%', accentFg: '0 0% 6%', muted: '0 0% 16%', mutedFg: '0 0% 62%', border: '0 0% 20%' }),
+    components: { productCard: 'classic', button: 'solid', buttonShape: 'inherit', cart: 'drawer', productGalleryLayout: 'left', badge: 'soft' },
+    pages: {
+      home: [
+        sec('hero', 'hero', { variant: 'banner', showLogo: true, ctaLabel: 'Shop Now' }),
+        sec('marquee', 'announcementMarquee', { variant: 'marquee' }),
+        sec('valueProps', 'valueProps', { variant: 'row' }),
+        sec('categories', 'categoryGrid', { title: 'Shop by Category', variant: 'tiles' }),
+        sec('bestSellers', 'productSlider', { source: 'bestSellers', title: 'Best Sellers', variant: 'peek' }),
+        sec('newArrivals', 'newArrivals', { title: 'New Arrivals', display: 'grid', limit: 8 }),
+        sec('viewAll', 'viewAllCta', { label: 'View All Products', variant: 'button' }),
+      ],
+      products: { layout: 'grid', filters: 'sidebar' },
+      productDetail: detail('thumbs'),
+      orders: { style: 'cards' },
     },
-    typography: { headingFont: 'Space Grotesk', bodyFont: 'Work Sans', headingWeight: 700, headingTransform: 'uppercase', scaleRatio: 1.33 },
-    shape: { radius: 2, radiusStyle: 'sharp' },
-    effects: { shadow: 'dramatic', glass: { enabled: true, blur: 10, opacity: 50 }, motion: 'expressive', hoverEffect: 'tilt', grain: true },
-    layout: { header: { variant: 'minimal', blur: true }, footer: { variant: 'minimal' }, nav: { desktop: 'topbar', showCategories: true, mobileBottomBar: true }, productGrid: { columns: 5, gap: 'sm' }, density: 'cozy', sectionHeader: 'left' },
-    components: { productCard: 'compact', cart: 'drawer', button: 'solid' },
-    pages: { home: [
-      sec('hero', 'hero', { variant: 'full', showLogo: true, ctaLabel: 'Shop the Drop' }),
-      sec('marquee', 'announcementMarquee', { variant: 'marquee' }),
-      sec('categories', 'categoryGrid', { title: 'Categories', variant: 'mosaic' }),
-      sec('newArrivals', 'newArrivals', { title: 'Latest Drop', display: 'grid', limit: 10 }),
-      sec('promo', 'promoBanner', { variant: 'gradient' }),
-      sec('bestSellers', 'bestSellers', { title: 'Most Copped', display: 'carousel' }),
-      sec('viewAll', 'viewAllCta', { label: 'View All', variant: 'banner' }),
-    ] },
   }),
 
-  define('organic', 'Organic', 'Soft and natural — warm earthy tones, round corners.', 'Flower Shop', {
-    theme: { paletteId: 'organic', tokens: palette({ bg: '40 30% 96%', fg: '30 16% 22%', card: '40 30% 99%', primary: '140 30% 34%', primaryFg: '40 40% 96%', secondary: '90 24% 88%', accent: '24 50% 60%', muted: '40 20% 90%', mutedFg: '30 10% 44%', border: '40 20% 85%' }) },
-    typography: { headingFont: 'Lora', bodyFont: 'Karla', headingWeight: 600, scaleRatio: 1.28 },
-    shape: { radius: 26, radiusStyle: 'round' },
-    effects: { shadow: 'sm', glass: { enabled: false, blur: 0, opacity: 100 }, motion: 'standard', hoverEffect: 'lift', background: { type: 'solid', color: '40 30% 96%' } },
-    layout: { header: { variant: 'classic', blur: false }, footer: { variant: 'rich' }, productGrid: { columns: 3, gap: 'lg' }, sectionSpacing: 'airy', density: 'spacious', sectionHeader: 'centered' },
-    components: { productCard: 'polaroid', cart: 'drawer', badge: 'soft' },
-    pages: { home: [
-      sec('hero', 'hero', { variant: 'split', showLogo: true, ctaLabel: 'Shop Now' }),
-      sec('marquee', 'announcementMarquee', { variant: 'stacked' }),
-      sec('valueProps', 'valueProps', { variant: 'cards' }),
-      sec('categories', 'categoryGrid', { title: 'Shop by Category', variant: 'pills' }),
-      sec('newArrivals', 'newArrivals', { title: 'Fresh This Week', display: 'masonry', limit: 8 }),
-      sec('recommended', 'recommended', { title: 'Picked For You', display: 'carousel' }),
-      sec('about', 'richText', { variant: 'centered' }),
-      sec('viewAll', 'viewAllCta', { label: 'View All Products', variant: 'button' }),
-    ] },
-  }),
-
-  define('tech', 'Tech', 'Crisp SaaS/electronics look — dark blue, sharp shadows.', 'Electronics', {
+  /* ── Atelier — warm gallery, frame cards, filmstrip ────────────────── */
+  define('atelier', 'Atelier', 'A warm gallery — framed pieces, serif voice, ink on parchment.', 'Art, Craft & Fashion', {
     theme: {
-      paletteId: 'tech', mode: 'dark',
-      tokens: palette({ bg: '222 26% 9%', fg: '210 20% 94%', card: '222 22% 13%', primary: '210 100% 56%', primaryFg: '0 0% 100%', secondary: '222 18% 18%', accent: '190 90% 50%', muted: '222 16% 20%', mutedFg: '215 16% 66%', border: '222 16% 22%' }),
+      paletteId: 'atelier', mode: 'light',
+      tokens: palette({ bg: '38 38% 96%', fg: '24 30% 12%', card: '40 45% 98%', primary: '18 65% 42%', primaryFg: '40 45% 97%', secondary: '36 28% 90%', accent: '84 22% 40%', accentFg: '40 45% 97%', muted: '36 24% 90%', mutedFg: '26 14% 40%', border: '32 22% 84%' }),
     },
-    typography: { headingFont: 'Space Grotesk', bodyFont: 'Inter', headingWeight: 700, scaleRatio: 1.27 },
-    shape: { radius: 10, radiusStyle: 'soft' },
-    effects: { shadow: 'lg', shadowColor: '210 100% 56%', glass: { enabled: true, blur: 14, opacity: 65 }, motion: 'standard', hoverEffect: 'glow' },
-    layout: { header: { variant: 'split', blur: true }, footer: { variant: 'columns' }, productGrid: { columns: 4, gap: 'md' }, sectionHeader: 'left' },
-    components: { productCard: 'overlay', cart: 'drawer', button: 'solid', productGalleryLayout: 'sticky-split' },
-    pages: { home: [
-      sec('hero', 'hero', { variant: 'full', showLogo: true, ctaLabel: 'Shop Now' }),
-      sec('marquee', 'announcementMarquee', { variant: 'marquee' }),
-      sec('valueProps', 'valueProps', { variant: 'row' }),
-      sec('categories', 'categoryGrid', { title: 'Browse Categories', variant: 'tiles' }),
-      sec('bestSellers', 'bestSellers', { title: 'Best Sellers', display: 'grid' }),
-      sec('newArrivals', 'newArrivals', { title: 'Just Landed', display: 'carousel', limit: 10 }),
-      sec('promo', 'promoBanner', { variant: 'outline' }),
-      sec('viewAll', 'viewAllCta', { label: 'View All Products', variant: 'banner' }),
-    ] },
+    typography: { headingFont: 'Fraunces', bodyFont: 'Inter', headingWeight: 600, bodyWeight: 400, scaleRatio: 1.38, letterSpacing: 0, lineHeight: 1.7, headingTransform: 'none', baseSize: 16 },
+    shape: { radius: 6, radiusStyle: 'soft', borderWidth: 1, borderStyle: 'solid' },
+    effects: { shadow: 'sm', glass: { enabled: false, blur: 0, opacity: 100 }, motion: 'subtle', scrollReveal: true, hoverEffect: 'zoom', grain: true, background: { type: 'solid', color: '38 38% 96%' } },
+    layout: {
+      containerWidth: 'standard', density: 'spacious', sectionSpacing: 'airy', sectionHeader: 'editorial',
+      header: { variant: 'centered', presentation: 'minimal', sticky: true, transparentOnHero: false, blur: false, showSearch: true, showAnnouncementBar: true },
+      nav: { desktop: 'topbar', showCategories: true, mobileBottomBar: true, bottomBarStyle: 'minimal' },
+      footer: { variant: 'columns' }, productGrid: { columns: 3, gap: 'lg' }, banner: { style: 'static' },
+    },
+    components: { productCard: 'frame', button: 'outline', buttonShape: 'inherit', cart: 'drawer', productGalleryLayout: 'left', badge: 'outline' },
+    pages: {
+      home: [
+        sec('hero', 'hero', { variant: 'split-slideshow', showLogo: false, ctaLabel: 'Visit the Atelier', slideInterval: 5 }),
+        sec('marquee', 'announcementMarquee', { variant: 'static' }),
+        sec('categories', 'categoryGrid', { title: 'Collections', variant: 'mosaic' }),
+        sec('bestSellers', 'bestSellers', { title: 'Signature Pieces', display: 'editorial', limit: 3 }),
+        sec('newArrivals', 'productSlider', { source: 'newArrivals', title: 'New in the Studio', variant: 'peek' }),
+        sec('about', 'richText', { variant: 'split' }),
+        sec('viewAll', 'viewAllCta', { label: 'Browse Everything', variant: 'link' }),
+      ],
+      products: { layout: 'grid', filters: 'topbar' },
+      productDetail: detail('filmstrip'),
+      orders: { style: 'cards' },
+    },
   }),
 
-  define('noir', 'Noir', 'Dark luxury — product slideshow hero, serif type, gold details, sidebar navigation.', 'Jewelry & Fashion', {
+  /* ── Neon — dark electric, marquee type, caption-hover cards ───────── */
+  define('neon', 'Neon', 'Electric night-market energy — scrolling type, glowing accents.', 'Streetwear & Tech', {
+    theme: {
+      paletteId: 'neon', mode: 'dark',
+      tokens: palette({ bg: '260 25% 7%', fg: '260 20% 95%', card: '258 22% 11%', primary: '320 95% 60%', primaryFg: '260 25% 6%', secondary: '258 18% 16%', accent: '180 95% 50%', accentFg: '260 25% 6%', muted: '258 16% 17%', mutedFg: '258 12% 65%', border: '258 16% 22%' }),
+      gradient: { enabled: true, from: '320 95% 60%', to: '180 95% 50%', angle: 120 },
+    },
+    typography: { headingFont: 'Unbounded', bodyFont: 'Space Grotesk', headingWeight: 700, bodyWeight: 400, scaleRatio: 1.28, letterSpacing: 0, lineHeight: 1.6, headingTransform: 'none', baseSize: 16 },
+    shape: { radius: 12, radiusStyle: 'soft', borderWidth: 1, borderStyle: 'solid' },
+    effects: {
+      shadow: 'dramatic', shadowColor: '320 95% 60%', glass: { enabled: true, blur: 14, opacity: 55 }, motion: 'expressive', scrollReveal: true, hoverEffect: 'glow', grain: true,
+      background: { type: 'gradient', gradient: { enabled: true, from: '260 25% 6%', to: '285 30% 10%', angle: 160 } },
+    },
+    layout: {
+      containerWidth: 'wide', density: 'cozy', sectionSpacing: 'normal', sectionHeader: 'left',
+      header: { variant: 'split', presentation: 'floating', sticky: true, transparentOnHero: false, blur: true, showSearch: true, showAnnouncementBar: true },
+      nav: { desktop: 'topbar', showCategories: true, mobileBottomBar: true, bottomBarStyle: 'floating' },
+      footer: { variant: 'minimal' }, productGrid: { columns: 4, gap: 'sm' }, banner: { style: 'gradient' },
+    },
+    components: { productCard: 'caption-hover', button: 'gradient', buttonShape: 'pill', cart: 'drawer', productGalleryLayout: 'sticky-split', badge: 'solid' },
+    pages: {
+      home: [
+        sec('hero', 'hero', { variant: 'marquee-type', showLogo: false, ctaLabel: 'Shop the Drop' }),
+        sec('marquee', 'announcementMarquee', { variant: 'gradient' }),
+        sec('newArrivals', 'productSlider', { source: 'newArrivals', title: 'Latest Drop', variant: 'centered', limit: 10 }),
+        sec('categories', 'categoryGrid', { title: 'Sections', variant: 'pills' }),
+        sec('bestSellers', 'bestSellers', { title: 'Most Wanted', display: 'grid', limit: 8 }),
+        sec('promo', 'promoBanner', { variant: 'gradient' }),
+        sec('viewAll', 'viewAllCta', { label: 'Everything', variant: 'banner' }),
+      ],
+      products: { layout: 'grid', filters: 'drawer' },
+      productDetail: detail('carousel'),
+      orders: { style: 'table' },
+    },
+  }),
+
+  /* ── Galerie — stark white space, video hero, museum restraint ─────── */
+  define('galerie', 'Galerie', 'Museum whitespace — motion hero, sharp lines, nothing extra.', 'Design & Premium Goods', {
+    theme: {
+      paletteId: 'galerie', mode: 'light',
+      tokens: palette({ bg: '0 0% 99%', fg: '0 0% 7%', card: '0 0% 100%', primary: '0 0% 7%', primaryFg: '0 0% 99%', secondary: '0 0% 95%', accent: '220 90% 55%', accentFg: '0 0% 100%', muted: '0 0% 94%', mutedFg: '0 0% 42%', border: '0 0% 88%' }),
+    },
+    typography: { headingFont: 'Archivo', bodyFont: 'Archivo', headingWeight: 800, bodyWeight: 400, scaleRatio: 1.33, letterSpacing: -0.02, lineHeight: 1.55, headingTransform: 'none', baseSize: 16 },
+    shape: { radius: 0, radiusStyle: 'sharp', borderWidth: 1, borderStyle: 'solid' },
+    effects: { shadow: 'none', glass: { enabled: false, blur: 0, opacity: 100 }, motion: 'subtle', scrollReveal: true, hoverEffect: 'zoom', grain: false, background: { type: 'solid', color: '0 0% 99%' } },
+    layout: {
+      containerWidth: 'wide', density: 'spacious', sectionSpacing: 'airy', sectionHeader: 'editorial',
+      header: { variant: 'minimal', presentation: 'minimal', sticky: true, transparentOnHero: true, blur: false, showSearch: false, showAnnouncementBar: false },
+      nav: { desktop: 'topbar', showCategories: false, mobileBottomBar: false, bottomBarStyle: 'minimal' },
+      footer: { variant: 'minimal' }, productGrid: { columns: 3, gap: 'lg' }, banner: { style: 'static' },
+    },
+    components: { productCard: 'minimal', button: 'solid', buttonShape: 'sharp', cart: 'modal', productGalleryLayout: 'full-bleed', badge: 'outline' },
+    pages: {
+      home: [
+        sec('hero', 'hero', { variant: 'video', showLogo: false, ctaLabel: 'View the Collection', slideInterval: 6 }),
+        sec('marquee', 'announcementMarquee', { variant: 'static' }),
+        sec('newArrivals', 'newArrivals', { title: 'New Works', display: 'grid', limit: 9 }),
+        sec('bestSellers', 'bestSellers', { title: 'Selected', display: 'editorial', limit: 2 }),
+        sec('about', 'richText', { variant: 'split' }),
+        sec('viewAll', 'viewAllCta', { label: 'Full Catalogue', variant: 'link' }),
+      ],
+      products: { layout: 'grid', filters: 'topbar' },
+      productDetail: detail('filmstrip'),
+      orders: { style: 'table' },
+    },
+  }),
+
+  /* ── Bazaar — playful market, ticket cards, saturated warmth ───────── */
+  define('bazaar', 'Bazaar', 'A joyful market stall — ticket stubs, bold color, friendly type.', 'Gifts, Food & Family', {
+    theme: {
+      paletteId: 'bazaar', mode: 'light',
+      tokens: palette({ bg: '43 90% 96%', fg: '20 60% 16%', card: '0 0% 100%', primary: '16 90% 52%', primaryFg: '0 0% 100%', secondary: '43 80% 90%', accent: '174 62% 40%', accentFg: '0 0% 100%', muted: '43 60% 90%', mutedFg: '24 30% 42%', border: '38 50% 84%' }),
+      gradient: { enabled: true, from: '16 90% 60%', to: '340 80% 60%', angle: 100 },
+    },
+    typography: { headingFont: 'Baloo 2', bodyFont: 'Karla', headingWeight: 700, bodyWeight: 400, scaleRatio: 1.3, letterSpacing: 0, lineHeight: 1.65, headingTransform: 'none', baseSize: 16 },
+    shape: { radius: 16, radiusStyle: 'round', borderWidth: 1, borderStyle: 'solid' },
+    effects: { shadow: 'md', shadowColor: '16 90% 52%', glass: { enabled: false, blur: 0, opacity: 100 }, motion: 'expressive', scrollReveal: true, hoverEffect: 'tilt', grain: false, background: { type: 'solid', color: '43 90% 96%' } },
+    layout: {
+      containerWidth: 'standard', density: 'comfortable', sectionSpacing: 'normal', sectionHeader: 'centered',
+      header: { variant: 'classic', presentation: 'floating', sticky: true, transparentOnHero: false, blur: false, showSearch: true, showAnnouncementBar: true },
+      nav: { desktop: 'topbar', showCategories: true, mobileBottomBar: true, bottomBarStyle: 'floating' },
+      footer: { variant: 'rich' }, productGrid: { columns: 4, gap: 'md' }, banner: { style: 'gradient' },
+    },
+    components: { productCard: 'ticket', button: 'solid', buttonShape: 'pill', cart: 'drawer', productGalleryLayout: 'left', badge: 'solid' },
+    pages: {
+      home: [
+        sec('hero', 'hero', { variant: 'collage', showLogo: true, ctaLabel: 'Browse the Stalls' }),
+        sec('marquee', 'announcementMarquee', { variant: 'gradient' }),
+        sec('categories', 'categoryGrid', { title: 'Pick a Stall', variant: 'pills' }),
+        sec('newArrivals', 'productSlider', { source: 'newArrivals', title: 'Fresh Today', variant: 'peek', limit: 10 }),
+        sec('promo', 'promoBanner', { variant: 'gradient' }),
+        sec('bestSellers', 'bestSellers', { title: 'Crowd Favorites', display: 'masonry', limit: 8 }),
+        sec('viewAll', 'viewAllCta', { label: 'See Everything', variant: 'button' }),
+      ],
+      products: { layout: 'grid', filters: 'drawer' },
+      productDetail: detail('thumbs'),
+      orders: { style: 'cards' },
+    },
+  }),
+
+  /* ── Mono — strict black & white typography ─────────────────────────── */
+  define('mono', 'Mono', 'Strict black on white — typographic, gridded, zero ornament.', 'Fashion & Editorial', {
+    theme: {
+      paletteId: 'mono', mode: 'light',
+      tokens: palette({ bg: '0 0% 100%', fg: '0 0% 5%', card: '0 0% 100%', primary: '0 0% 5%', primaryFg: '0 0% 100%', secondary: '0 0% 96%', accent: '0 0% 5%', accentFg: '0 0% 100%', muted: '0 0% 94%', mutedFg: '0 0% 38%', border: '0 0% 10%' }),
+    },
+    typography: { headingFont: 'Oswald', bodyFont: 'Inter', headingWeight: 600, bodyWeight: 400, scaleRatio: 1.42, letterSpacing: 0.02, lineHeight: 1.55, headingTransform: 'uppercase', baseSize: 15 },
+    shape: { radius: 0, radiusStyle: 'sharp', borderWidth: 1, borderStyle: 'solid' },
+    effects: { shadow: 'none', glass: { enabled: false, blur: 0, opacity: 100 }, motion: 'subtle', scrollReveal: true, hoverEffect: 'none', grain: false, background: { type: 'solid', color: '0 0% 100%' } },
+    layout: {
+      containerWidth: 'standard', density: 'cozy', sectionSpacing: 'normal', sectionHeader: 'left',
+      header: { variant: 'split', presentation: 'bar', sticky: true, transparentOnHero: false, blur: false, showSearch: true, showAnnouncementBar: true },
+      nav: { desktop: 'topbar', showCategories: true, mobileBottomBar: true, bottomBarStyle: 'bar' },
+      footer: { variant: 'columns' }, productGrid: { columns: 4, gap: 'sm' }, banner: { style: 'static' },
+    },
+    components: { productCard: 'editorial', button: 'outline', buttonShape: 'sharp', cart: 'page', productGalleryLayout: 'top', badge: 'outline' },
+    pages: {
+      home: [
+        sec('hero', 'hero', { variant: 'editorial', showLogo: false, ctaLabel: 'SHOP' }),
+        sec('marquee', 'announcementMarquee', { variant: 'static' }),
+        sec('newArrivals', 'newArrivals', { title: 'New', display: 'grid', limit: 12 }),
+        sec('bestSellers', 'productSlider', { source: 'bestSellers', title: 'Essentials', variant: 'wide', limit: 8 }),
+        sec('viewAll', 'viewAllCta', { label: 'ALL PRODUCTS', variant: 'link' }),
+      ],
+      products: { layout: 'list', filters: 'topbar' },
+      productDetail: detail('grid'),
+      orders: { style: 'table' },
+    },
+  }),
+
+  /* ── Velvet — luxe evening, plum & gold, video glow ─────────────────── */
+  define('velvet', 'Velvet', 'An evening boutique — deep plum, candlelit gold, soft glass.', 'Beauty, Wine & Luxury', {
+    theme: {
+      paletteId: 'velvet', mode: 'dark',
+      tokens: palette({ bg: '290 30% 8%', fg: '35 40% 92%', card: '288 26% 12%', primary: '40 70% 58%', primaryFg: '290 30% 8%', secondary: '288 22% 16%', accent: '330 45% 55%', accentFg: '0 0% 100%', muted: '288 20% 17%', mutedFg: '300 12% 66%', border: '288 20% 22%' }),
+      gradient: { enabled: true, from: '290 30% 10%', to: '320 30% 14%', angle: 150 },
+    },
+    typography: { headingFont: 'Playfair Display', bodyFont: 'Jost', headingWeight: 600, bodyWeight: 300, scaleRatio: 1.36, letterSpacing: 0.01, lineHeight: 1.7, headingTransform: 'none', baseSize: 16 },
+    shape: { radius: 10, radiusStyle: 'soft', borderWidth: 1, borderStyle: 'solid' },
+    effects: {
+      shadow: 'dramatic', shadowColor: '40 70% 45%', glass: { enabled: true, blur: 18, opacity: 55 }, motion: 'standard', scrollReveal: true, hoverEffect: 'glow', grain: true,
+      background: { type: 'gradient', gradient: { enabled: true, from: '290 30% 7%', to: '320 28% 11%', angle: 165 } },
+    },
+    layout: {
+      containerWidth: 'standard', density: 'spacious', sectionSpacing: 'airy', sectionHeader: 'editorial',
+      header: { variant: 'centered', presentation: 'floating', sticky: true, transparentOnHero: false, blur: true, showSearch: true, showAnnouncementBar: true },
+      nav: { desktop: 'topbar', showCategories: true, mobileBottomBar: true, bottomBarStyle: 'floating' },
+      footer: { variant: 'rich' }, productGrid: { columns: 3, gap: 'lg' }, banner: { style: 'static' },
+    },
+    components: { productCard: 'frame', button: 'soft', buttonShape: 'inherit', cart: 'drawer', productGalleryLayout: 'sticky-split', badge: 'soft' },
+    pages: {
+      home: [
+        sec('hero', 'hero', { variant: 'video', showLogo: true, ctaLabel: 'Enter the Boutique', slideInterval: 6 }),
+        sec('marquee', 'announcementMarquee', { variant: 'marquee' }),
+        sec('valueProps', 'valueProps', { variant: 'row' }),
+        sec('bestSellers', 'productSlider', { source: 'bestSellers', title: 'The Edit', variant: 'centered', limit: 8 }),
+        sec('categories', 'categoryGrid', { title: 'Collections', variant: 'mosaic' }),
+        sec('newArrivals', 'newArrivals', { title: 'Just Arrived', display: 'masonry', limit: 8 }),
+        sec('about', 'richText', { variant: 'centered' }),
+        sec('viewAll', 'viewAllCta', { label: 'View Everything', variant: 'button' }),
+      ],
+      products: { layout: 'grid', filters: 'sidebar' },
+      productDetail: detail('thumbs'),
+      orders: { style: 'cards' },
+    },
+  }),
+
+  /* ── Noir — dark luxury, slideshow, sidebar navigation ─────────────── */
+  define('noir', 'Noir', 'Dark luxury — product slideshow, serif type, gold details, sidebar navigation.', 'Jewelry & Fashion', {
     theme: {
       paletteId: 'noir', mode: 'dark',
       tokens: palette({ bg: '30 8% 6%', fg: '40 30% 92%', card: '30 8% 10%', primary: '42 65% 55%', primaryFg: '30 10% 8%', secondary: '30 8% 14%', accent: '42 65% 55%', accentFg: '30 10% 8%', muted: '30 8% 15%', mutedFg: '35 12% 60%', border: '30 8% 20%' }),
@@ -224,57 +302,24 @@ export const TEMPLATES: StorefrontTemplate[] = [
       background: { type: 'gradient', gradient: { enabled: true, from: '30 8% 5%', to: '30 10% 9%', angle: 180 } },
     },
     layout: {
-      containerWidth: 'wide', density: 'spacious', sectionSpacing: 'airy',
-      header: { variant: 'centered', sticky: true, transparentOnHero: false, blur: true, showSearch: true, showAnnouncementBar: true },
+      containerWidth: 'wide', density: 'spacious', sectionSpacing: 'airy', sectionHeader: 'editorial',
+      header: { variant: 'centered', presentation: 'minimal', sticky: true, transparentOnHero: false, blur: true, showSearch: true, showAnnouncementBar: true },
       nav: { desktop: 'sidebar', showCategories: true, mobileBottomBar: true, bottomBarStyle: 'floating' },
-      footer: { variant: 'columns' }, productGrid: { columns: 3, gap: 'lg' }, banner: { style: 'static' }, sectionHeader: 'editorial',
+      footer: { variant: 'columns' }, productGrid: { columns: 3, gap: 'lg' }, banner: { style: 'static' },
     },
     components: { productCard: 'editorial', button: 'outline', buttonShape: 'sharp', cart: 'drawer', productGalleryLayout: 'sticky-split', badge: 'outline' },
     pages: {
       home: [
         sec('hero', 'hero', { variant: 'slideshow', showLogo: false, ctaLabel: 'Discover the Collection', slideInterval: 5 }),
+        sec('marquee', 'announcementMarquee', { variant: 'marquee' }),
         sec('categories', 'categoryGrid', { title: 'Collections', variant: 'mosaic' }),
         sec('bestSellers', 'bestSellers', { title: 'Signature Pieces', display: 'editorial', limit: 3 }),
-        sec('newArrivals', 'newArrivals', { title: 'New In', display: 'grid', limit: 9 }),
+        sec('newArrivals', 'productSlider', { source: 'newArrivals', title: 'New In', variant: 'peek', limit: 9 }),
         sec('about', 'richText', { variant: 'split' }),
         sec('viewAll', 'viewAllCta', { label: 'View Everything', variant: 'link' }),
       ],
       products: { layout: 'grid', filters: 'topbar' },
-      orders: { style: 'cards' },
-    },
-  }),
-
-  define('vitrine', 'Vitrine', 'Bright showcase — rolling product slideshow, playful pills, masonry wall.', 'Boutique & Gifts', {
-    theme: {
-      paletteId: 'vitrine', mode: 'light',
-      tokens: palette({ bg: '40 60% 98%', fg: '340 30% 16%', card: '0 0% 100%', primary: '340 75% 52%', primaryFg: '0 0% 100%', secondary: '40 60% 93%', accent: '160 60% 42%', accentFg: '0 0% 100%', muted: '40 40% 93%', mutedFg: '340 10% 44%', border: '40 40% 88%' }),
-      gradient: { enabled: true, from: '340 75% 92%', to: '40 90% 92%', angle: 120 },
-    },
-    typography: { headingFont: 'Syne', bodyFont: 'Karla', headingWeight: 800, bodyWeight: 400, scaleRatio: 1.3, letterSpacing: -0.01, lineHeight: 1.6, headingTransform: 'none', baseSize: 16 },
-    shape: { radius: 18, radiusStyle: 'round', borderWidth: 1, borderStyle: 'solid' },
-    effects: {
-      shadow: 'md', shadowColor: '340 75% 52%',
-      glass: { enabled: false, blur: 0, opacity: 100 }, motion: 'expressive', scrollReveal: true, hoverEffect: 'tilt', grain: false,
-      background: { type: 'solid', color: '40 60% 98%' },
-    },
-    layout: {
-      containerWidth: 'standard', density: 'comfortable', sectionSpacing: 'normal',
-      header: { variant: 'classic', sticky: true, transparentOnHero: false, blur: false, showSearch: true, showAnnouncementBar: true },
-      nav: { desktop: 'topbar', showCategories: true, mobileBottomBar: true, bottomBarStyle: 'bar' },
-      footer: { variant: 'rich' }, productGrid: { columns: 4, gap: 'md' }, banner: { style: 'gradient' }, sectionHeader: 'left',
-    },
-    components: { productCard: 'polaroid', button: 'gradient', buttonShape: 'pill', cart: 'drawer', productGalleryLayout: 'left', badge: 'solid' },
-    pages: {
-      home: [
-        sec('hero', 'hero', { variant: 'slideshow', showLogo: true, ctaLabel: 'Shop the Window', slideInterval: 4 }),
-        sec('marquee', 'announcementMarquee', { variant: 'gradient' }),
-        sec('categories', 'categoryGrid', { title: 'Pick a Shelf', variant: 'pills' }),
-        sec('newArrivals', 'newArrivals', { title: 'Fresh in the Vitrine', display: 'masonry', limit: 8 }),
-        sec('promo', 'promoBanner', { variant: 'gradient' }),
-        sec('recommended', 'recommended', { title: 'Handpicked For You', display: 'carousel' }),
-        sec('viewAll', 'viewAllCta', { label: 'See Everything', variant: 'button' }),
-      ],
-      products: { layout: 'grid', filters: 'drawer' },
+      productDetail: detail('filmstrip'),
       orders: { style: 'cards' },
     },
   }),

@@ -189,6 +189,65 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
     );
   }
 
+  // Frame — gallery-plaque feel: inset double border, serif-leaning centered text.
+  if (v === 'frame') {
+    return (
+      <Link to={to} className={cn('sf-hoverable group block border bg-card p-2', className)} style={{ borderRadius: 'var(--radius)' }}>
+        <div className="relative border p-1.5" style={{ borderRadius: 'calc(var(--radius) / 1.5)' }}>
+          <SoldOut /><Promo />
+          <Picture ratio="aspect-[4/5]" />
+        </div>
+        <div className="px-1 pb-1 pt-3 text-center">
+          <h3 className="sf-heading text-base font-semibold leading-snug line-clamp-1">{product.name}</h3>
+          <Rating className="mt-0.5" />
+          <div className="mx-auto my-2 h-px w-8 bg-border" aria-hidden />
+          <Price className="justify-center" />
+        </div>
+      </Link>
+    );
+  }
+
+  // Caption-hover — image only; the info panel slides up on hover (always
+  // visible on touch via focus-within/coarse pointer fallback).
+  if (v === 'caption-hover') {
+    return (
+      <Link to={to} className={cn('sf-hoverable group relative block overflow-hidden', className)} style={{ borderRadius: 'var(--radius)' }}>
+        <SoldOut /><Promo />
+        <Picture ratio="aspect-[4/5]" />
+        <div className="absolute inset-x-0 bottom-0 translate-y-full bg-card/95 p-3 backdrop-blur-sm transition-transform duration-300 group-hover:translate-y-0 group-focus-within:translate-y-0 [@media(pointer:coarse)]:translate-y-0">
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className="sf-heading min-w-0 truncate text-sm font-semibold">{product.name}</h3>
+            <Price className="shrink-0 text-sm" />
+          </div>
+          <Rating className="mt-0.5" />
+        </div>
+      </Link>
+    );
+  }
+
+  // Ticket — playful stub with a perforated divider between image and info.
+  if (v === 'ticket') {
+    return (
+      <Link to={to} className={cn('sf-hoverable group block overflow-hidden border bg-card', className)} style={{ borderRadius: 'var(--radius)' }}>
+        <div className="relative">
+          <SoldOut /><Promo />
+          <Picture ratio="aspect-square" />
+        </div>
+        <div className="relative border-t border-dashed">
+          <span className="absolute -left-2 -top-2 h-4 w-4 rounded-full border bg-background" aria-hidden />
+          <span className="absolute -right-2 -top-2 h-4 w-4 rounded-full border bg-background" aria-hidden />
+          <div className="flex items-center justify-between gap-2 p-3">
+            <div className="min-w-0">
+              <h3 className="sf-heading truncate text-sm font-bold uppercase tracking-wide">{product.name}</h3>
+              <Rating className="mt-0.5" />
+            </div>
+            <Price className="shrink-0" />
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
   // classic (default)
   return (
     <Link to={to} className={cn('sf-hoverable sf-glass group flex h-full flex-col overflow-hidden', isOutOfStock && 'opacity-80', className)}>

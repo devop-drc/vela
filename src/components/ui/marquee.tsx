@@ -10,6 +10,9 @@ interface MarqueeProps {
   vertical?: boolean;
   speed?: number; // pixels per second
   gap?: string; // CSS gap value
+  /** Duplicate content to fill the track — a short list then scrolls as a
+      continuous ticker instead of drifting across with a large empty gap. */
+  autoFill?: boolean;
 }
 
 export const Marquee = ({
@@ -20,6 +23,7 @@ export const Marquee = ({
   vertical = false,
   speed = 50, // default speed in pixels per second
   gap = "5rem",
+  autoFill = true,
   ...props
 }: MarqueeProps) => {
   return (
@@ -34,6 +38,7 @@ export const Marquee = ({
       speed={speed}
       delay={0}
       play={true}
+      autoFill={autoFill}
       style={{ '--gap': gap } as React.CSSProperties} // Keep --gap for potential custom styling of children if needed
       {...props}
     >

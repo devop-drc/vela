@@ -13,6 +13,11 @@ export default defineConfig(() => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Strip debug noise from production bundles; console.warn/error are kept.
+  esbuild: {
+    drop: ["debugger"],
+    pure: ["console.log", "console.debug", "console.info"],
+  },
   build: {
     target: "es2020",
     cssCodeSplit: true,

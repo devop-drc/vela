@@ -71,12 +71,16 @@ export function useStorefrontStudio() {
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
+  const [dashboardMatch, setDashboardMatch] = useState(false);
   // Undo/redo — history state so canUndo/canRedo re-render the toolbar.
   const [history, setHistory] = useState<{ past: StorefrontConfig[]; future: StorefrontConfig[] }>({ past: [], future: [] });
   const rawSettingsRef = useRef<Record<string, any>>({});
   const userIdRef = useRef<string | null>(null);
   // Bumps each time the "saved" indicator should auto-fade back to idle.
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Generation counter: each executed save claims a generation so retries from
+  // an older save abandon once a newer one is in flight.
+  const saveGenRef = useRef(0);
 
   useEffect(() => {
     let mounted = true;
@@ -91,6 +95,7 @@ export function useStorefrontStudio() {
       rawSettingsRef.current = raw;
       setConfig(normalizeConfig(raw));
       setCustomTemplates(Array.isArray(raw.customTemplates) ? raw.customTemplates : []);
+      setDashboardMatch(!!raw.dashboardMatchesStorefront);
       setIsLoading(false);
     })();
     return () => { mounted = false; };
@@ -101,21 +106,41 @@ export function useStorefrontStudio() {
   // 'saved' / 'error' once the network round-trip completes.
   const persist = useMemo(
     () => debounce(async (next: StorefrontConfig) => {
-      const uid = userIdRef.current;
+      const gen = ++saveGenRef.current;
+      // The session fetch on mount can fail when auth is slow — re-resolve the
+      // user here so saves recover instead of silently no-oping forever.
+      let uid = userIdRef.current;
+      if (!uid) {
+        const { data: { session } } = await supabase.auth.getSession();
+        uid = session?.user?.id ?? null;
+        userIdRef.current = uid;
+      }
       if (!uid) { setSaveStatus('idle'); return; }
       const merged = { ...rawSettingsRef.current, storefront: next };
-      const { error } = await supabase
-        .from('design_settings')
-        .upsert({ user_id: uid, settings: merged }, { onConflict: 'user_id' });
+      // Retry with backoff — a newer edit supersedes (its own persist run takes
+      // over), so stale retries bail via the generation check.
+      let error: unknown = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (gen !== saveGenRef.current) return;
+        ({ error } = await supabase
+          .from('design_settings')
+          .upsert({ user_id: uid, settings: merged }, { onConflict: 'user_id' }));
+        if (!error) break;
+        console.error(`Storefront Studio save failed (attempt ${attempt + 1}):`, error);
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 1200 * (attempt + 1)));
+      }
       if (error) {
-        console.error('Storefront Studio save failed:', error);
+        if (gen !== saveGenRef.current) return;
         setSaveStatus('error');
-        showError("Couldn't save your design changes — retrying.");
+        showError("Couldn't save your design — it will retry on your next change.");
         return;
       }
       // Only commit the merged raw settings on success so a failed save doesn't
       // poison the base used by the next attempt.
       rawSettingsRef.current = merged;
+      if (gen !== saveGenRef.current) return;
+      // Live-restyle the dashboard when "match my storefront" is on.
+      window.dispatchEvent(new CustomEvent('sf-settings-updated', { detail: merged }));
       setSaveStatus('saved');
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
@@ -253,10 +278,29 @@ export function useStorefrontStudio() {
     await persistCustomTemplates(customTemplates.filter((t) => t.id !== id));
   }, [customTemplates, persistCustomTemplates]);
 
+  /** Opt the dashboard in/out of the storefront design (persisted + live). */
+  const setDashboardMatchesStorefront = useCallback(async (on: boolean) => {
+    const uid = userIdRef.current;
+    setDashboardMatch(on);
+    const merged = { ...rawSettingsRef.current, dashboardMatchesStorefront: on };
+    window.dispatchEvent(new CustomEvent('sf-settings-updated', { detail: merged }));
+    if (!uid) return;
+    const { error } = await supabase
+      .from('design_settings')
+      .upsert({ user_id: uid, settings: merged }, { onConflict: 'user_id' });
+    if (error) {
+      console.error('Saving dashboard-match failed:', error);
+      showError("Couldn't save that setting.");
+      return;
+    }
+    rawSettingsRef.current = merged;
+  }, []);
+
   return {
     config, isLoading, saveStatus,
     update, applyTemplate, mergePartial, replaceConfig, reset, addSection, removeSection,
     undo, redo, canUndo: history.past.length > 0, canRedo: history.future.length > 0,
     customTemplates, saveAsTemplate, deleteCustomTemplate,
+    dashboardMatch, setDashboardMatchesStorefront,
   };
 }

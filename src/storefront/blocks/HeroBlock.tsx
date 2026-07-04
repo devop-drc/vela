@@ -8,7 +8,7 @@ import { useStorefront } from '@/contexts/StorefrontContext';
 import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
 import { SfButton } from '../components/SfButton';
 
-type HeroVariant = 'banner' | 'compact' | 'full' | 'split' | 'minimal' | 'gradient' | 'collage' | 'editorial' | 'slideshow';
+type HeroVariant = 'banner' | 'compact' | 'full' | 'split' | 'minimal' | 'gradient' | 'collage' | 'editorial' | 'slideshow' | 'split-slideshow' | 'marquee-type' | 'video';
 interface Props { props: { variant?: HeroVariant; showLogo?: boolean; ctaLabel?: string; slideshowImages?: string; slideInterval?: number } }
 
 /** Crossfading background slideshow. `sources` cycle on a timer; reduced-motion
@@ -85,6 +85,82 @@ export const HeroBlock = ({ props }: Props) => {
         {shopDetails.headline && <p className="text-lg md:text-xl text-muted-foreground mb-6 max-w-2xl mx-auto">{shopDetails.headline}</p>}
         <div>{cta}</div>
       </div>
+    );
+  }
+
+  // Split-slideshow — copy on the left, a rolling product slideshow on the right.
+  if (variant === 'split-slideshow') {
+    return (
+      <div className="grid items-stretch gap-6 md:grid-cols-2">
+        <div className="flex flex-col justify-center p-8 md:p-12">
+          {logo && <div className="mb-4">{logo}</div>}
+          <h1 className="sf-heading text-4xl md:text-5xl font-bold leading-tight mb-3">{shopDetails.shop_name}</h1>
+          {shopDetails.headline && <p className="text-lg text-muted-foreground mb-6 max-w-md">{shopDetails.headline}</p>}
+          <div>{cta}</div>
+        </div>
+        <div className="relative min-h-[300px] overflow-hidden md:min-h-[420px]" style={{ borderRadius: 'var(--radius)' }}>
+          {slideshowSources.length > 0 ? (
+            <Slideshow sources={slideshowSources} intervalMs={(props.slideInterval ?? 4) * 1000} />
+          ) : (
+            <div className="absolute inset-0" style={mediaStyle} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Marquee-type — huge scrolling shop name behind a floating product image.
+  if (variant === 'marquee-type') {
+    const img = slideshowSources[0];
+    const line = `${shopDetails.shop_name} — `;
+    return (
+      <div className="relative overflow-hidden py-10 md:py-16" style={{ borderRadius: 'var(--radius)' }}>
+        <div className="pointer-events-none select-none whitespace-nowrap leading-none" aria-hidden>
+          {[0, 1].map((row) => (
+            <div key={row} className={cn('sf-heading flex font-bold uppercase', row === 1 && 'opacity-30')} style={{ fontSize: 'clamp(3.5rem, 12vw, 9rem)' }}>
+              <span className="sf-marquee-row flex shrink-0" style={{ animationDirection: row === 1 ? 'reverse' : undefined }}>
+                <span className="text-primary/15">{line.repeat(4)}</span>
+                <span className="text-primary/15">{line.repeat(4)}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="pointer-events-auto flex flex-col items-center gap-5 text-center">
+            {img && (
+              <div className="w-44 overflow-hidden shadow-2xl md:w-56" style={{ borderRadius: 'var(--radius)' }}>
+                <MediaItem src={img} alt={shopDetails.shop_name} className="aspect-[4/5] w-full object-cover" />
+              </div>
+            )}
+            {shopDetails.headline && <p className="max-w-md px-4 text-base font-medium md:text-lg">{shopDetails.headline}</p>}
+            {cta}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Video — full-height motion hero (uses effects.hero media when it's a
+  // video; falls back to the slideshow so it never renders empty).
+  if (variant === 'video') {
+    const hasVideo = hero.mediaUrl && hero.mediaType === 'video';
+    return (
+      <section className="relative flex min-h-[70vh] items-center justify-center overflow-hidden text-center" style={{ borderRadius: 'var(--radius)' }}>
+        {hasVideo ? (
+          <video data-sf-parallax autoPlay loop muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" src={hero.mediaUrl} />
+        ) : slideshowSources.length > 0 ? (
+          <Slideshow sources={slideshowSources} intervalMs={(props.slideInterval ?? 5) * 1000} />
+        ) : (
+          <div className="absolute inset-0" style={mediaStyle} />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
+        <div className="relative z-10 flex max-w-3xl flex-col items-center p-8 text-white md:p-14">
+          {logo && <div className="mb-5">{logo}</div>}
+          <h1 className="sf-heading mb-3 text-4xl font-bold leading-tight drop-shadow-lg md:text-6xl">{shopDetails.shop_name}</h1>
+          {shopDetails.headline && <p className="mb-6 text-lg drop-shadow-md md:text-2xl">{shopDetails.headline}</p>}
+          {cta}
+        </div>
+      </section>
     );
   }
 
@@ -168,7 +244,7 @@ export const HeroBlock = ({ props }: Props) => {
         <Slideshow sources={slideshowSources} intervalMs={(props.slideInterval ?? 4) * 1000} />
       )}
       {hero.mediaUrl && hero.mediaType === 'video' && (
-        <video autoPlay loop muted playsInline className="absolute inset-0 h-full w-full object-cover z-0" src={hero.mediaUrl} />
+        <video data-sf-parallax autoPlay loop muted playsInline className="absolute inset-0 h-full w-full object-cover z-0" src={hero.mediaUrl} />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
       <div className="relative z-10 max-w-3xl mx-auto p-8 md:p-14 text-primary-foreground flex flex-col items-center">

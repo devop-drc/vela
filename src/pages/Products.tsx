@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Import, ChevronDown, LayoutGrid, List, CheckSquare, Group, Filter as FilterIcon, Settings2, Plus, Loader2 } from "lucide-react"; // Renamed Filter to FilterIcon
+import { RefreshCw, Import, ChevronDown, LayoutGrid, List, CheckSquare, Group, Filter as FilterIcon, Settings2, Plus, Loader2, AlertTriangle } from "lucide-react"; // Renamed Filter to FilterIcon
 import { useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchParams } from "react-router-dom";
 import { showError, showSuccess, toFriendlyError } from "@/utils/toast";
+import { deleteProductMedia } from "@/lib/productCleanup";
 import { InstagramPostModal } from "@/components/InstagramPostModal";
 import { ProductEditor } from "@/components/ProductEditor";
 import { ProductCard } from "@/components/ProductCard";
@@ -136,6 +137,7 @@ const Products = () => {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [isSelectionModeActive, setIsSelectionModeActive] = useState(false);
+  const [isBulkActivating, setIsBulkActivating] = useState(false);
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
   const [gridSize, setGridSize] = useState<GridSizeType>('md');
   const [grouping, setGrouping] = useState<GroupingType>('none');
@@ -412,6 +414,7 @@ const Products = () => {
 
   useEffect(() => {
     let channel: RealtimeChannel | null = null;
+    let refetchTimer: ReturnType<typeof setTimeout> | undefined;
 
     const setupRealtimeListener = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -421,11 +424,12 @@ const Products = () => {
         .channel(`products:${user.id}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'products', filter: `user_id=eq.${user.id}` },
           (payload) => {
-            // The useProductData hook already handles real-time updates to allProducts
-            // We just need to trigger a re-fetch of business data if a product is added/deleted
-            // to potentially update the product count in ProfileStats or sync status.
+            // The useProductData hook already handles real-time updates to allProducts.
+            // Sync-status metadata only needs ONE refresh per burst of inserts
+            // (a sync creates products in batches), so debounce it.
             if (payload.eventType === 'INSERT' || payload.eventType === 'DELETE') {
-              fetchBusinessDataForSyncStatus();
+              if (refetchTimer) clearTimeout(refetchTimer);
+              refetchTimer = setTimeout(() => fetchBusinessDataForSyncStatus(), 3000);
             }
           }
         ).subscribe();
@@ -435,6 +439,7 @@ const Products = () => {
 
     return () => {
       if (channel) supabase.removeChannel(channel);
+      if (refetchTimer) clearTimeout(refetchTimer);
     };
   }, []);
 
@@ -512,11 +517,14 @@ const Products = () => {
     else showSuccess(`Updated ${count} products.`);
   };
   // Shared deletion used by both the bulk action and the single-row trash button.
+  // Removes the product, its related rows (options/variants/specs/reviews via
+  // FK cascade — orders and history are preserved), its AI cache entries, and
+  // its media files in storage.
   const deleteProductsByIds = async (ids: string[]) => {
     if (ids.length === 0) return;
     const { data: productsToDelete, error: fetchError } = await supabase
       .from('products')
-      .select('id, instagram_post_id')
+      .select('id, instagram_post_id, media_url, thumbnail_url, media_gallery')
       .in('id', ids);
     if (fetchError) {
       showError(toFriendlyError(fetchError, "Couldn't delete the product. Please try again."));
@@ -531,6 +539,8 @@ const Products = () => {
     if (deleteError) {
       showError(toFriendlyError(deleteError, "Couldn't delete the product. Please try again."));
     } else {
+      // Storage cleanup after the rows are gone (best-effort, never blocks).
+      deleteProductMedia(productsToDelete || []);
       showSuccess(`Deleted ${ids.length} product${ids.length > 1 ? 's' : ''}.`);
       refetch();
     }
@@ -746,11 +756,39 @@ const Products = () => {
         </div>
       )}
 
+      {/* Drafts are invisible to shoppers — if the whole catalog is drafts
+          (fresh sync), the owner thinks the shop is broken. Make it one click. */}
+      {!isProductDataLoading && statsDraft > 0 && statsActive === 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <p className="min-w-0 flex-1 text-sm text-amber-800 dark:text-amber-300">
+            <b>{statsDraft === 1 ? '1 product is a draft' : `All ${statsDraft} products are drafts`}</b> — drafts don't appear on your storefront. Review them, or publish everything now.
+          </p>
+          <Button
+            size="sm"
+            className="shrink-0 bg-amber-600 text-white hover:bg-amber-700"
+            disabled={isBulkActivating}
+            onClick={async () => {
+              setIsBulkActivating(true);
+              const ids = allProducts.filter((p) => p.status === 'Draft').map((p) => p.id);
+              const { error } = await supabase.from('products').update({ status: 'Active' }).in('id', ids);
+              setIsBulkActivating(false);
+              if (error) { showError("Couldn't publish the drafts — try again."); return; }
+              showSuccess(`${ids.length} product${ids.length === 1 ? '' : 's'} published to your storefront.`);
+              refetch();
+            }}
+          >
+            {isBulkActivating ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+            Publish all drafts
+          </Button>
+        </div>
+      )}
+
       {/* ── Toolbar ── */}
-      <div className="sticky top-[0px] z-50 flex mb-3 items-center justify-between gap-2">
+      <div className="sticky top-[0px] z-50 flex mb-3 items-center justify-between gap-2" data-tour="products-toolbar">
           <div className="flex items-center gap-1 flex-wrap">
             {/* Primary action: create a product manually */}
-            <Button className="justify-start flex-1 md:flex-none shadow-sm bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddProduct} disabled={isCreatingProduct}>
+            <Button data-tour="add-product" className="justify-start flex-1 md:flex-none shadow-sm bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddProduct} disabled={isCreatingProduct}>
               {isCreatingProduct ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
               {t("products.add_product", "Add Product")}
             </Button>
@@ -986,7 +1024,7 @@ const Products = () => {
               ))}
             </div>
           ) : (
-            <Card>
+            <Card data-tour="products-table">
               <CardContent className="p-0">
                 <ProductTableView
                   products={filteredAndSortedProducts}

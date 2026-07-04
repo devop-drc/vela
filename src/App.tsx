@@ -20,6 +20,7 @@ import { PageTitleProvider } from "./contexts/PageTitleContext";
 import { AppearanceProvider } from "./contexts/AppearanceContext";
 import { CurrencyProvider } from "./contexts/CurrencyContext";
 import { supabase } from "./integrations/supabase/client";
+import { clearAllPageCache } from "./lib/pageCache";
 
 // Route-level code splitting — keeps the initial bundle small.
 const Landing = lazy(() => import("./pages/Landing"));
@@ -55,7 +56,12 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 60 * 1000,
+      gcTime: 10 * 60 * 1000,
       refetchOnWindowFocus: false,
+      // One quick retry instead of the default 3 with exponential backoff —
+      // a failing backend should surface fast, not spin for 15 seconds.
+      retry: 1,
+      retryDelay: 600,
     },
   },
 });
@@ -147,9 +153,25 @@ const AppContent = () => {
     idle(() => { if (!cancelled) setupDisputeListener(); });
     prefetchRoutes();
 
+    // Wipe the instant-display page cache when the account changes, so one user
+    // never briefly sees another's cached products/dashboard. A same-user reload
+    // keeps its cache (that's the whole point), so we compare the user id rather
+    // than clearing on every SIGNED_IN (which fires on ordinary reloads).
+    const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') { clearAllPageCache(); return; }
+      const uid = session?.user?.id;
+      if (!uid) return;
+      try {
+        const prev = localStorage.getItem('pgcache-uid');
+        if (prev && prev !== uid) clearAllPageCache();
+        if (prev !== uid) localStorage.setItem('pgcache-uid', uid);
+      } catch { /* storage disabled */ }
+    });
+
     return () => {
       cancelled = true;
       if (channel) supabase.removeChannel(channel);
+      authSub?.subscription?.unsubscribe();
     };
   }, [navigate]);
 

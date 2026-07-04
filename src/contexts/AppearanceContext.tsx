@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { isDemoFrame } from '@/lib/isDemoFrame';
 import { Session } from '@supabase/supabase-js';
 import { showError, showSuccess } from '@/utils/toast';
 import { hexToHsl } from '@/utils/colors';
@@ -191,6 +192,10 @@ const applySettingsToDOM = (settings: Partial<DesignSettings>) => {
   // appearance settings overwrite it — otherwise refetches on tab focus/auth
   // token refresh would clobber the shop's dark mode.
   if (root.dataset.instagramShopTheme) return;
+  // Public storefronts style themselves via scoped sf-root tokens — the
+  // OWNER'S dashboard theme must never repaint their shop while they browse
+  // it logged-in (this leaked e.g. a red dashboard foreground into shop text).
+  if (window.location.pathname.startsWith('/shop/')) return;
   for (const [key, value] of Object.entries(settings)) {
     if (key.startsWith('--')) {
       root.style.setProperty(key, value as string);
@@ -244,6 +249,7 @@ export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
+    if (isDemoFrame()) return; // demo/preview iframes run on mock data
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
     return () => subscription.unsubscribe();

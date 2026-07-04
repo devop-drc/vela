@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { isDemoFrame } from '@/lib/isDemoFrame';
 import { SyncContextType, SyncJob } from '@/types/sync';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -13,6 +14,7 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
+    if (isDemoFrame()) return; // demo/preview iframes run on mock data
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
@@ -65,6 +67,7 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
 
   // Set up real-time subscription for sync jobs
   useEffect(() => {
+    if (isDemoFrame()) return; // demo/preview iframes run on mock data
     if (!user) return;
 
     // Initial fetch

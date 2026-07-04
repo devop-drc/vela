@@ -17,6 +17,7 @@ import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
 import { getBlockDef, DETAIL_INFO_COLUMN_TYPES } from '../blocks/registry';
 import { ProductDetailContext, ProductDetailState } from '../blocks/detail/detailBlocks';
 import { DEFAULT_PRODUCT_DETAIL_SECTIONS } from '../config/defaults';
+import { flyToCart } from '../lib/flyToCart';
 import { SectionInstance } from '../config/types';
 import { activePromotionsFor, computePrice } from '../lib/pricing';
 
@@ -101,11 +102,12 @@ export const ProductDetailPage = () => {
   const options = details.filter(([k]) => optionKeys.includes(k)) as [string, string[]][];
   const specs = details.filter(([k]) => !optionKeys.includes(k));
 
-  const addToCartHandler = () => {
+  const addToCartHandler = (sourceEl?: HTMLElement) => {
     if (isOutOfStock) { toast.error('This product is currently out of stock.'); return; }
     // Require a choice for every option group (color/size/material) before adding.
     const missing = options.find(([key]) => !selected[key]);
     if (missing) { toast.error(`Please choose a ${missing[0]} first.`); return; }
+    if (sourceEl) flyToCart(sourceEl, product.media_type === 'video' ? undefined : product.media_url);
     addToCart({
       productId: product.id, name: product.name,
       price: hasDiscount ? discounted! : original!, originalPrice: original!, isDiscounted: hasDiscount,

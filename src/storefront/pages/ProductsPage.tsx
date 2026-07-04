@@ -3,7 +3,7 @@
 
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, Loader2 } from 'lucide-react';
+import { Search, SlidersHorizontal, Loader2, Tag, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -23,15 +23,28 @@ const SORTS = [
 ];
 
 export const ProductsPage = () => {
-  const { products, isLoading, hasMoreProducts, fetchMoreProducts, isLoadingMore, convertCurrency, shopDetails } = useStorefront();
+  const { products, promotions, isLoading, hasMoreProducts, fetchMoreProducts, isLoadingMore, convertCurrency, shopDetails } = useStorefront();
   const config = useStorefrontConfig();
   const token = useStorefrontTokenStyle();
   const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const category = params.get('category') || 'all';
   const sort = params.get('sort') || 'newest';
+  const promotionId = params.get('promotion');
   const layout = config.pages.products.layout;
   const filtersMode = config.pages.products.filters;
+
+  // When arriving from a promotion announcement, scope the list to that
+  // promotion's products. The promotion set comes from the storefront (already
+  // filtered to active + in-schedule), so this stays in sync automatically.
+  const activePromo = useMemo(
+    () => (promotionId ? promotions.find((p) => p.id === promotionId) : undefined),
+    [promotions, promotionId]
+  );
+  const promoProductIds = useMemo(
+    () => (activePromo?.target_products?.length ? new Set(activePromo.target_products) : null),
+    [activePromo]
+  );
 
   const setParam = (k: string, v: string) => {
     const next = new URLSearchParams(params);
@@ -47,6 +60,7 @@ export const ProductsPage = () => {
 
   const filtered = useMemo(() => {
     let list = [...products];
+    if (promoProductIds) list = list.filter((p) => promoProductIds.has(p.id));
     if (category !== 'all') list = list.filter((p) => p.category === category);
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -60,7 +74,7 @@ export const ProductsPage = () => {
       default: list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
     return list;
-  }, [products, category, search, sort, convertCurrency]);
+  }, [products, promoProductIds, category, search, sort, convertCurrency]);
 
   // Search / sort / filter only operate on already-loaded products (infinite
   // scroll), so matches living on not-yet-fetched pages are hidden. The
@@ -69,7 +83,7 @@ export const ProductsPage = () => {
   // StorefrontContext) would be the complete fix. Until then, when a search or
   // category filter is active we auto-page through the rest of the catalog so
   // results converge, and we surface a notice while that's still happening.
-  const isFiltering = search.trim().length > 0 || category !== 'all';
+  const isFiltering = search.trim().length > 0 || category !== 'all' || !!promoProductIds;
 
   useEffect(() => {
     if (isFiltering && hasMoreProducts && !isLoadingMore) fetchMoreProducts();
@@ -138,7 +152,20 @@ export const ProductsPage = () => {
 
   return (
     <div className="sf-container py-8">
-      <h1 className="sf-heading text-3xl md:text-4xl font-bold mb-6">{category !== 'all' ? category : 'All Products'}</h1>
+      <h1 className="sf-heading text-3xl md:text-4xl font-bold mb-6">
+        {activePromo ? activePromo.name : category !== 'all' ? category : 'All Products'}
+      </h1>
+      {activePromo && (
+        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3">
+          <Tag className="h-4 w-4 shrink-0 text-primary" />
+          <span className="text-sm font-medium">
+            Showing products in <span className="font-semibold">{activePromo.name}</span>
+          </span>
+          <Button variant="ghost" size="sm" className="ml-auto h-7 gap-1 text-xs" onClick={() => setParam('promotion', '')}>
+            <X className="h-3.5 w-3.5" /> Clear
+          </Button>
+        </div>
+      )}
       <div className={cn(filtersMode === 'sidebar' ? 'grid lg:grid-cols-[220px_1fr] gap-8' : 'block')}>
         {filtersMode === 'sidebar' && <aside className="hidden lg:block"><Filters /></aside>}
         <div>

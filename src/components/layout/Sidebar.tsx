@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home, Package, Archive, Layers, MessageSquareQuote, Megaphone,
-  ShoppingBag, Settings, ChevronsLeft, ChevronsRight, Globe, LogOut, CreditCard, ShieldCheck,
+  ShoppingBag, Settings, ChevronsLeft, ChevronsRight, Globe, LogOut, CreditCard, ShieldCheck, HelpCircle,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useTutorial } from "@/components/tutorial/TutorialProvider";
 import { cn } from "@/lib/utils";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { useShop } from "@/contexts/ShopContext";
@@ -49,6 +50,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed }: Props) {
   const { t, i18n } = useTranslation();
   const [user, setUser] = useState<any>(null);
   const { isAdmin } = useIsAdmin();
+  const { startTutorial, hasTour } = useTutorial();
   const navEntries: NavEntry[] = isAdmin
     ? [...nav, { to: "/admin", icon: ShieldCheck, labelKey: "nav.admin" }]
     : nav;
@@ -194,7 +196,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed }: Props) {
         </div>
 
         {/* ── Nav ─────────────────────────────────────────────────────── */}
-        <nav className={cn("flex-1 overflow-y-auto overflow-x-hidden py-2", collapsed ? "px-1.5" : "px-2.5")}>
+        <nav data-tour="sidebar-nav" className={cn("flex-1 overflow-y-auto overflow-x-hidden py-2", collapsed ? "px-1.5" : "px-2.5")}>
           {navEntries.map((entry, i) => {
             // Divider
             if ("divider" in entry) {
@@ -281,6 +283,27 @@ export default function Sidebar({ collapsed, onToggleCollapsed }: Props) {
                 </TooltipContent>
               </Tooltip>
 
+              {/* Page tutorial */}
+              {hasTour && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={startTutorial}
+                      data-tour="tutorial-button"
+                      className={cn(
+                        "flex items-center justify-center h-8 w-8 rounded-lg border transition-all duration-150",
+                        primary
+                          ? "border-primary-foreground/15 bg-primary-foreground/8 text-primary-foreground/70 hover:bg-primary-foreground/15 hover:text-primary-foreground"
+                          : "border-border bg-muted/60 text-muted-foreground hover:bg-accent hover:text-foreground"
+                      )}
+                    >
+                      <HelpCircle className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={12} className="text-xs">{i18n.language?.startsWith("sq") ? "Tutorial i faqes" : "Page tutorial"}</TooltipContent>
+                </Tooltip>
+              )}
+
               {/* Logout */}
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -338,6 +361,23 @@ export default function Sidebar({ collapsed, onToggleCollapsed }: Props) {
                   SQ
                 </button>
               </div>
+
+              {/* Page tutorial — replay the guided tour for the current page */}
+              {hasTour && (
+                <button
+                  onClick={startTutorial}
+                  data-tour="tutorial-button"
+                  className={cn(
+                    "w-full flex items-center justify-center gap-2 rounded-lg border py-2 text-xs font-medium transition-all duration-150",
+                    primary
+                      ? "border-primary-foreground/15 bg-primary-foreground/8 text-primary-foreground/70 hover:bg-primary-foreground/15 hover:text-primary-foreground"
+                      : "border-border bg-muted/60 text-muted-foreground hover:bg-accent hover:text-foreground"
+                  )}
+                >
+                  <HelpCircle className="h-3.5 w-3.5" />
+                  <span>{i18n.language?.startsWith("sq") ? "Tutorial i faqes" : "Page tutorial"}</span>
+                </button>
+              )}
 
               {/* Logout — bordered button with red tint */}
               <button

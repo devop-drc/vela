@@ -7,11 +7,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import {
   Instagram, Palette, Store, Check, RotateCcw,
   LayoutGrid, Type as TypeIcon, Sparkles, Component, ListOrdered, LayoutTemplate, PanelTop,
-  Plus, Loader2, CloudOff, Undo2, Redo2, Dices, BookmarkPlus, Trash2,
+  Plus, Loader2, CloudOff, Undo2, Redo2, Dices, BookmarkPlus, Trash2, Search as SearchIcon,
+  ChevronDown, PanelBottom, Image as ImageIcon, Sun, Moon, SwatchBook,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -27,7 +29,7 @@ import { LayoutSelector } from '@/storefront/preview/LayoutSelector';
 import { TEMPLATES } from '@/storefront/templates';
 import { BLOCK_REGISTRY } from '@/storefront/blocks/registry';
 import { hslToHex } from '@/utils/colors';
-import { idealForeground, idealMutedForeground, SURFACE_PAIRS, wcagGrade } from '@/storefront/lib/contrast';
+import { idealForeground, idealMutedForeground, SURFACE_PAIRS, wcagGrade, contrastRatio } from '@/storefront/lib/contrast';
 import { DEFAULT_DARK_TOKENS } from '@/storefront/config/defaults';
 import { Row, SelectRow, SwitchRow, SliderRow, SegmentRow, ColorRow } from './controls';
 import { OptionGrid } from './OptionGrid';
@@ -57,6 +59,31 @@ const Sub = ({ children }: { children: React.ReactNode }) => (
   <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mt-5 mb-1 first:mt-0">{children}</p>
 );
 
+/** Collapsible sub-section inside an accordion group — expanded by default,
+    collapsible via its small-caps header. */
+const SubSection = ({ title, icon: Icon, children, defaultOpen = true }: {
+  title: string; icon?: React.ComponentType<{ className?: string }>; children: React.ReactNode; defaultOpen?: boolean;
+}) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="mb-3 border-b border-border/60 pb-3 last:mb-0 last:border-b-0 last:pb-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="group flex w-full items-center justify-between py-1 text-left"
+      >
+        <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground transition-colors group-hover:text-foreground">
+          {Icon && <Icon className="h-3.5 w-3.5" />}
+          {title}
+        </span>
+        <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && <div className="pt-1">{children}</div>}
+    </div>
+  );
+};
+
 const SaveIndicator = ({ status }: { status: 'idle' | 'saving' | 'saved' | 'error' }) => {
   if (status === 'idle') return null;
   const map = {
@@ -73,33 +100,85 @@ const SaveIndicator = ({ status }: { status: 'idle' | 'saving' | 'saved' | 'erro
 };
 
 const GROUPS = [
-  { id: 'layout', label: 'Layout', icon: LayoutGrid },
-  { id: 'colors', label: 'Colors', icon: Palette },
-  { id: 'type', label: 'Type', icon: TypeIcon },
-  { id: 'style', label: 'Style', icon: Sparkles },
-  { id: 'parts', label: 'Parts', icon: Component },
-  { id: 'nav', label: 'Header & nav', icon: PanelTop },
-  { id: 'sections', label: 'Sections', icon: ListOrdered },
-  { id: 'themes', label: 'Templates', icon: LayoutTemplate },
+  { id: 'general', label: 'General', icon: Sparkles },
+  { id: 'homepage', label: 'Homepage', icon: PanelTop },
+  { id: 'shopPage', label: 'Shop page', icon: LayoutGrid },
+  { id: 'productPage', label: 'Product page', icon: Component },
+  { id: 'cartPage', label: 'Cart page', icon: ListOrdered },
+  { id: 'themes', label: 'My templates', icon: LayoutTemplate },
 ] as const;
 type GroupId = (typeof GROUPS)[number]['id'];
 
 const GROUP_META: Record<GroupId, { title: string; desc: string }> = {
-  layout: { title: 'Layout', desc: 'Pick a structure — arrangement only, your colors stay.' },
-  colors: { title: 'Colors', desc: 'Palette, mode and individual colors (text auto-contrasts).' },
-  type: { title: 'Typography', desc: 'Fonts, sizing and headings.' },
-  style: { title: 'Style & effects', desc: 'Corners, shadows, glass, motion and background.' },
-  parts: { title: 'Components', desc: 'Product cards, buttons, cart, gallery and spacing.' },
-  nav: { title: 'Header & navigation', desc: 'Header, hero, banner, bottom bar and footer styles.' },
-  sections: { title: 'Sections & pages', desc: 'Arrange the homepage and page options.' },
+  general: { title: 'General', desc: 'Design that applies everywhere — colors, light/dark, fonts, roundedness, glass, motion, components.' },
+  homepage: { title: 'Homepage', desc: 'Navbar, every section and the footer — toggle visibility, drag to reorder, expand to style.' },
+  shopPage: { title: 'Shop page', desc: 'The all-products listing — filters and layout.' },
+  productPage: { title: 'Product page', desc: 'Gallery layout and the blocks shown on every product page.' },
+  cartPage: { title: 'Cart page', desc: 'Settings for the full-page cart.' },
   themes: { title: 'My templates', desc: 'Save your current design and reuse it any time.' },
 };
+
+/** Pinned chrome row (Navbar / Footer) styled like a section row: visibility
+    switch + expandable settings. Not draggable — chrome position is fixed. */
+const ChromeRow = ({ icon: Icon, label, enabled, onToggle, children }: {
+  icon: any; label: string; enabled: boolean; onToggle: (on: boolean) => void; children: React.ReactNode;
+}) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-md border bg-card">
+      <div className="flex items-center gap-2 p-2">
+        <span className="w-4 shrink-0" aria-hidden />
+        <Switch checked={enabled} onCheckedChange={onToggle} />
+        <Icon className="h-4 w-4 text-muted-foreground" />
+        <span className={cn('flex-1 text-sm', !enabled && 'text-muted-foreground line-through decoration-muted-foreground/40')}>{label}</span>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setOpen((o) => !o)} aria-label={`Edit ${label}`} aria-expanded={open}>
+          <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-180')} />
+        </Button>
+      </div>
+      {open && <div className="space-y-1 border-t bg-muted/30 p-3">{children}</div>}
+    </div>
+  );
+};
+
+// Searchable index of every Studio setting → which accordion group holds it.
+const SETTINGS_INDEX: { label: string; group: GroupId; keywords?: string }[] = [
+  { label: 'Layout presets', group: 'general', keywords: 'structure arrangement wireframe preset' },
+  { label: 'Background — solid / gradient / photo', group: 'general', keywords: 'background color image gradient overlay brightness page' },
+  { label: 'Quick palettes', group: 'general', keywords: 'palette scheme colors preset' },
+  { label: 'Color mode (light / dark / auto)', group: 'general', keywords: 'dark light mode auto theme' },
+  { label: 'Text & muted text color', group: 'general', keywords: 'text foreground muted font color readable contrast' },
+  { label: 'Primary / accent / card colors', group: 'general', keywords: 'primary accent brand card secondary border' },
+  { label: 'Heading & body fonts', group: 'general', keywords: 'font typography typeface family' },
+  { label: 'Font size, scale & weights', group: 'general', keywords: 'size scale ratio letter spacing line height weight case uppercase' },
+  { label: 'Corners & border radius', group: 'general', keywords: 'rounded corners radius sharp pill soft border width' },
+  { label: 'Shadows & shadow tint', group: 'general', keywords: 'shadow depth elevation dramatic tint' },
+  { label: 'Motion & scroll reveal', group: 'general', keywords: 'animation motion gsap reveal expressive subtle' },
+  { label: 'Glassmorphism & film grain', group: 'general', keywords: 'glass blur transparency grain texture' },
+  { label: 'Card hover effect', group: 'general', keywords: 'hover lift zoom glow tilt' },
+  { label: 'Product card design', group: 'general', keywords: 'card overlay polaroid minimal editorial frame ticket caption' },
+  { label: 'Buttons & badges', group: 'general', keywords: 'button pill outline gradient soft badge' },
+  { label: 'Cart style (drawer / modal / page)', group: 'general', keywords: 'cart basket checkout drawer' },
+  { label: 'Product gallery layout', group: 'productPage', keywords: 'gallery images sticky split full bleed' },
+  { label: 'Section headings', group: 'general', keywords: 'headings eyebrow titles centered editorial rule' },
+  { label: 'Container width, density & grid', group: 'general', keywords: 'spacing width compact wide grid columns gap density' },
+  { label: 'Header content & navbar style', group: 'homepage', keywords: 'header navbar bar floating minimal sticky blur logo topbar' },
+  { label: 'Desktop navigation (topbar / sidebar)', group: 'homepage', keywords: 'sidebar navigation menu desktop categories' },
+  { label: 'Hero style', group: 'homepage', keywords: 'hero banner slideshow video marquee collage editorial full' },
+  { label: 'Announcement banner', group: 'homepage', keywords: 'announcement marquee ticker bar stacked' },
+  { label: 'Mobile bottom bar & hamburger', group: 'homepage', keywords: 'bottom bar mobile floating hamburger menu' },
+  { label: 'Footer style', group: 'homepage', keywords: 'footer columns rich minimal hidden' },
+  { label: 'Homepage sections (reorder / variants)', group: 'homepage', keywords: 'sections blocks reorder drag add hero slider' },
+  { label: 'Product page sections', group: 'productPage', keywords: 'product detail reviews related specifications gallery' },
+  { label: 'Products page filters & layout', group: 'shopPage', keywords: 'filters sidebar drawer topbar list grid' },
+  { label: 'My templates (saved designs)', group: 'themes', keywords: 'save template custom design reuse' },
+];
 
 export const StorefrontStudio = () => {
   const { shopDetails, updateShopDetails } = useShop();
   const {
     config, isLoading, saveStatus, update: rawUpdate, applyTemplate, mergePartial, reset, addSection, removeSection,
     undo, redo, canUndo, canRedo, customTemplates, saveAsTemplate, deleteCustomTemplate,
+    dashboardMatch, setDashboardMatchesStorefront,
   } = useStorefrontStudio();
   // Smart preview steering: after an edit that's only visible on a specific
   // page/element, point the live preview there. Colors/type/shape are visible
@@ -129,6 +208,22 @@ export const StorefrontStudio = () => {
   const [pendingTemplate, setPendingTemplate] = useState<{ config: any; id: string | null } | null>(null);
   const [templateName, setTemplateName] = useState('');
   const [saveOpen, setSaveOpen] = useState(false);
+  // Controlled accordion + settings search (suggestions open the right group).
+  const [openGroups, setOpenGroups] = useState<string[]>(['general']);
+  const [settingQuery, setSettingQuery] = useState('');
+  const settingMatches = settingQuery.trim().length > 0
+    ? SETTINGS_INDEX.filter((s) => {
+        const q = settingQuery.toLowerCase();
+        return s.label.toLowerCase().includes(q) || (s.keywords ?? '').toLowerCase().includes(q) || GROUP_META[s.group].title.toLowerCase().includes(q);
+      }).slice(0, 7)
+    : [];
+  const jumpToSetting = (group: GroupId) => {
+    setOpenGroups((prev) => (prev.includes(group) ? prev : [...prev, group]));
+    setSettingQuery('');
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-group-item="${group}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   useEffect(() => { if (shopDetails?.storefront_type) setType(shopDetails.storefront_type as StorefrontType); }, [shopDetails?.storefront_type]);
 
@@ -183,6 +278,28 @@ export const StorefrontStudio = () => {
   const applyPalette = (t: (typeof TEMPLATES)[number]) =>
     mergePartial({ theme: { ...config.theme, paletteId: t.id, tokens: t.config.theme.tokens, darkTokens: t.config.theme.darkTokens, mode: t.config.theme.mode } });
 
+  // Picking a page background must keep body text readable: if the current
+  // foreground fails WCAG on the new backdrop, re-derive foreground + muted
+  // text for it — writing into whichever token set is ACTIVE (dark mode edits
+  // must go to darkTokens or they'd be invisible).
+  const keepTextReadableOn = (bgHsl: string) => {
+    const prefersDarkNow = typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: dark)').matches;
+    const darkActive = config.theme.mode === 'dark' || (config.theme.mode === 'auto' && prefersDarkNow);
+    const currentFg = darkActive
+      ? ((config.theme.darkTokens as any)?.foreground ?? (DEFAULT_DARK_TOKENS as any).foreground ?? config.theme.tokens.foreground)
+      : config.theme.tokens.foreground;
+    if (contrastRatio(bgHsl, currentFg) >= 4.5) return;
+    const patch = {
+      foreground: idealForeground(bgHsl),
+      'muted-foreground': idealMutedForeground(bgHsl),
+    };
+    if (darkActive) {
+      mergePartial({ theme: { darkTokens: { ...(config.theme.darkTokens || {}), ...patch } } } as any);
+    } else {
+      mergePartial({ theme: { tokens: patch } } as any);
+    }
+  };
+
   const setColor = (tk: string, hsl: string) => {
     const pair = SURFACE_PAIRS[tk];
     if (!pair) { update(`theme.tokens.${tk}`, hsl); return; }
@@ -202,71 +319,280 @@ export const StorefrontStudio = () => {
     <OptionGrid label={label} kind={kind} value={value} options={Array.isArray(vals) && typeof vals[0] === 'string' ? opts(vals as string[]) : (vals as any)} onChange={onChange} token={token} cols={cols} />
   );
 
-  const panel = (group: GroupId) => {
+  // `group` accepts the accordion GroupIds plus internal atomic panel names
+  // that 'general' composes (layout/colors/type/style/parts).
+  const panel = (group: string) => {
     switch (group) {
+      case 'general':
+        return (
+          <div>
+            <SubSection title="Layout presets" icon={LayoutTemplate}>{panel('layout')}</SubSection>
+            <SubSection title="Colors & background" icon={Palette}>{panel('colors')}</SubSection>
+            <SubSection title="Typography" icon={TypeIcon}>{panel('type')}</SubSection>
+            <SubSection title="Style & effects" icon={Sparkles}>{panel('style')}</SubSection>
+            <SubSection title="Components & spacing" icon={Component}>{panel('parts')}</SubSection>
+          </div>
+        );
+
+      case 'homepage': {
+        const addableBlocks = Object.entries(BLOCK_REGISTRY).filter(([, def]) => def.scope === 'home' || def.scope === 'both');
+        return (
+          <div>
+            <p className="mb-2 text-[11px] text-muted-foreground">Toggle any part on or off, drag sections to reorder them on your storefront, expand to pick a layout and edit content.</p>
+            <div className="space-y-2">
+              <ChromeRow
+                icon={PanelTop}
+                label="Navbar"
+                enabled={!config.layout.header.hidden}
+                onToggle={(on) => update('layout.header.hidden', !on)}
+              >
+                {grid('Header content', 'header', config.layout.header.variant, ['classic', 'minimal', 'centered', 'split'], (v) => update('layout.header.variant', v), 4)}
+                {grid('Navbar style', 'navbarPresentation', config.layout.header.presentation ?? 'bar', [
+                  { value: 'bar', label: 'Bar' },
+                  { value: 'floating', label: 'Floating' },
+                  { value: 'minimal', label: 'Minimal' },
+                ], (v) => update('layout.header.presentation', v))}
+                <div className="grid grid-cols-1 gap-x-6 lg:grid-cols-2">
+                  <SwitchRow label="Sticky" checked={config.layout.header.sticky} onChange={(v) => update('layout.header.sticky', v)} />
+                  <SwitchRow label="Blur" checked={config.layout.header.blur} onChange={(v) => update('layout.header.blur', v)} />
+                  <SwitchRow label="Show search" checked={config.layout.header.showSearch} onChange={(v) => update('layout.header.showSearch', v)} />
+                  <SwitchRow label="Transparent over hero" checked={config.layout.header.transparentOnHero} onChange={(v) => update('layout.header.transparentOnHero', v)} />
+                  <SegmentRow label="Desktop nav" value={config.layout.nav.desktop} onChange={(v) => update('layout.nav.desktop', v)} options={opts(['topbar', 'sidebar'])} />
+                  <SwitchRow label="Announcements" hint="Global on/off for the announcement section" checked={config.layout.header.showAnnouncementBar !== false} onChange={(v) => update('layout.header.showAnnouncementBar', v)} />
+                </div>
+                <Sub>Mobile bottom bar</Sub>
+                <SwitchRow label="Show bottom bar" hint="Off = a hamburger menu appears in the navbar on phones" checked={config.layout.nav.mobileBottomBar} onChange={(v) => update('layout.nav.mobileBottomBar', v)} />
+                {config.layout.nav.mobileBottomBar && grid('Bottom bar style', 'bottomBarStyle', config.layout.nav.bottomBarStyle || 'bar', ['bar', 'floating', 'minimal'], (v) => update('layout.nav.bottomBarStyle', v))}
+              </ChromeRow>
+
+              <SectionList
+                sections={home}
+                onChange={(next) => update('pages.home', next)}
+                onRemove={(i) => removeSection(i)}
+              />
+
+              <ChromeRow
+                icon={PanelBottom}
+                label="Footer"
+                enabled={config.layout.footer.variant !== 'hidden'}
+                onToggle={(on) => update('layout.footer.variant', on ? 'rich' : 'hidden')}
+              >
+                {grid('Footer style', 'footer', config.layout.footer.variant === 'hidden' ? 'rich' : config.layout.footer.variant, ['rich', 'columns', 'minimal'], (v) => update('layout.footer.variant', v))}
+              </ChromeRow>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="mt-2"><Plus className="h-3.5 w-3.5 mr-1.5" /> Add section</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
+                {addableBlocks.map(([type, def]) => {
+                  const Icon = def.icon;
+                  return (
+                    <DropdownMenuItem key={type} onClick={() => addSection(type)}>
+                      <Icon className="h-4 w-4 mr-2 text-muted-foreground" /> {def.label}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      }
+
+      case 'shopPage':
+        return (
+          <div>
+            {grid('Filters', 'filters', config.pages.products.filters, ['sidebar', 'drawer', 'topbar'], (v) => update('pages.products.filters', v))}
+            {grid('Layout', 'productsLayout', config.pages.products.layout, ['grid', 'list'], (v) => update('pages.products.layout', v), 2)}
+            {grid('Grid columns', 'gridColumns', String(config.layout.productGrid.columns), [{ value: '2', label: '2' }, { value: '3', label: '3' }, { value: '4', label: '4' }, { value: '5', label: '5' }], (v) => update('layout.productGrid.columns', Number(v)), 4)}
+          </div>
+        );
+
+      case 'productPage': {
+        const addableDetailBlocks = Object.entries(BLOCK_REGISTRY).filter(([, def]) => def.scope === 'productDetail' || def.scope === 'both');
+        return (
+          <div>
+            {grid('Gallery layout', 'gallery', config.components.productGalleryLayout, [{ value: 'left', label: 'Left' }, { value: 'top', label: 'Top' }, { value: 'sticky-split', label: 'Sticky split' }, { value: 'full-bleed', label: 'Full bleed' }], (v) => update('components.productGalleryLayout', v), 4)}
+            <Sub>Sections</Sub>
+            <p className="mb-2 text-[11px] text-muted-foreground">The gallery and info blocks sit side by side on desktop; the rest render below.</p>
+            <SectionList
+              sections={config.pages.productDetail}
+              onChange={(next) => update('pages.productDetail', next)}
+              onRemove={(i) => removeSection(i, 'productDetail')}
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="mt-2"><Plus className="h-3.5 w-3.5 mr-1.5" /> Add section</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
+                {addableDetailBlocks.map(([type, def]) => {
+                  const Icon = def.icon;
+                  return (
+                    <DropdownMenuItem key={type} onClick={() => addSection(type, 'productDetail')}>
+                      <Icon className="h-4 w-4 mr-2 text-muted-foreground" /> {def.label}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      }
+
+      case 'cartPage':
+        return (
+          <div>
+            <p className="mb-2 text-[11px] text-muted-foreground">Your cart opens as its own page (change under General → Components → Cart).</p>
+            {grid('Orders page style', 'ordersStyle', config.pages.orders.style, ['cards', 'table'], (v) => update('pages.orders.style', v), 2)}
+          </div>
+        );
+
       case 'layout':
         return <LayoutSelector activeId={config.layoutId} onApply={(l) => { mergePartial(l.structure); showSuccess(`“${l.name}” layout applied.`); }} />;
 
       case 'colors':
         return (
           <div>
-            <Sub>Quick palettes</Sub>
-            <div className="flex flex-wrap gap-2">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} type="button" onClick={() => applyPalette(t)} title={t.name}
-                  className={cn('flex items-center gap-1 rounded-full border p-1 pr-2.5 transition-colors', config.theme.paletteId === t.id ? 'border-primary ring-1 ring-primary' : 'hover:border-primary/40')}>
-                  <span className="flex -space-x-1">{(['primary', 'background', 'accent'] as const).map((k) => <span key={k} className="h-4 w-4 rounded-full border border-black/10" style={{ background: hslToHex(t.config.theme.tokens[k]) }} />)}</span>
-                  <span className="text-[11px] font-medium">{t.name}</span>
-                </button>
-              ))}
-            </div>
-            {grid('Color mode', 'mode', config.theme.mode, ['light', 'dark', 'auto'], (v) => update('theme.mode', v))}
-            <Sub>Individual colors</Sub>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6">
-              {(['primary', 'background', 'card', 'accent', 'secondary', 'muted', 'border'] as const).map((tk) => {
+            <SubSection title="Palettes & mode" icon={SwatchBook}>
+              <div className="flex flex-wrap gap-2">
+                {TEMPLATES.map((t) => (
+                  <button key={t.id} type="button" onClick={() => applyPalette(t)} title={t.name}
+                    className={cn('flex items-center gap-1 rounded-full border p-1 pr-2.5 transition-colors', config.theme.paletteId === t.id ? 'border-primary ring-1 ring-primary' : 'hover:border-primary/40')}>
+                    <span className="flex -space-x-1">{(['primary', 'background', 'accent'] as const).map((k) => <span key={k} className="h-4 w-4 rounded-full border border-black/10" style={{ background: hslToHex(t.config.theme.tokens[k]) }} />)}</span>
+                    <span className="text-[11px] font-medium">{t.name}</span>
+                  </button>
+                ))}
+              </div>
+              {grid('Color mode', 'mode', config.theme.mode, ['light', 'dark', 'auto'], (v) => update('theme.mode', v))}
+            </SubSection>
+            {(() => {
+              // ── Mode-aware color editing ─────────────────────────────────
+              // The MAIN section always edits what the visitor actually sees:
+              // in dark mode that's darkTokens (editing light tokens there is
+              // invisible — the "pickers don't work" trap). The inactive set
+              // is editable below.
+              const prefersDark = typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: dark)').matches;
+              const editingDark = config.theme.mode === 'dark' || (config.theme.mode === 'auto' && prefersDark);
+              const TOKEN_ROWS = [
+                { tk: 'primary', label: 'Primary' },
+                { tk: 'card', label: 'Card' },
+                { tk: 'accent', label: 'Accent' },
+                { tk: 'secondary', label: 'Secondary' },
+                { tk: 'muted', label: 'Muted' },
+                { tk: 'foreground', label: 'Text', vs: 'background' },
+                { tk: 'muted-foreground', label: 'Muted text', vs: 'background' },
+                { tk: 'border', label: 'Border' },
+              ] as const;
+              const lightVal = (tk: string): string => (config.theme.tokens as any)[tk];
+              const darkVal = (tk: string): string =>
+                (config.theme.darkTokens as any)?.[tk] ?? (DEFAULT_DARK_TOKENS as any)[tk] ?? lightVal(tk);
+              const setDarkColor = (tk: string, hsl: string) => {
                 const pair = SURFACE_PAIRS[tk];
-                const grade = pair ? wcagGrade(config.theme.tokens[tk], config.theme.tokens[pair as keyof typeof config.theme.tokens]) : null;
-                return (
-                  <ColorRow
-                    key={tk} label={cap(tk)} hsl={config.theme.tokens[tk]} onChange={(hsl) => setColor(tk, hsl)}
-                    badge={grade && (
-                      <span
-                        title={`Text contrast on ${tk}: WCAG ${grade === 'fail' ? 'below AA' : grade}`}
-                        className={cn(
-                          'rounded px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
-                          grade === 'fail' ? 'bg-destructive/15 text-destructive' : 'bg-emerald-500/15 text-emerald-600'
-                        )}
-                      >
-                        {grade === 'fail' ? '!' : grade}
-                      </span>
-                    )}
-                  />
-                );
-              })}
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-2">Text colors adjust automatically for contrast — badges show the WCAG grade.</p>
-            {config.theme.mode !== 'light' && (
-              <>
-                <Sub>Dark mode colors</Sub>
-                <p className="text-[11px] text-muted-foreground mb-1">Overrides used when the storefront renders dark{config.theme.mode === 'auto' ? ' (auto follows the visitor)' : ''}.</p>
+                const patch: Record<string, string> = { [tk]: hsl };
+                if (pair) patch[pair] = tk === 'muted' ? idealMutedForeground(hsl) : idealForeground(hsl);
+                mergePartial({ theme: { darkTokens: { ...(config.theme.darkTokens || {}), ...patch } } } as any);
+              };
+              const TokenGrid = ({ val, set }: { val: (tk: string) => string; set: (tk: string, hsl: string) => void }) => (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6">
-                  {(['primary', 'background', 'card', 'accent', 'secondary', 'muted', 'border'] as const).map((tk) => {
-                    const current = config.theme.darkTokens?.[tk] ?? DEFAULT_DARK_TOKENS[tk] ?? config.theme.tokens[tk];
+                  {TOKEN_ROWS.map(({ tk, label, ...rest }) => {
+                    const pair = SURFACE_PAIRS[tk];
+                    const vs = (rest as any).vs as string | undefined;
+                    const grade = pair ? wcagGrade(val(tk), val(pair)) : vs ? wcagGrade(val(vs), val(tk)) : null;
                     return (
                       <ColorRow
-                        key={tk} label={cap(tk)} hsl={current}
-                        onChange={(hsl) => {
-                          const pair = SURFACE_PAIRS[tk];
-                          const patch: Record<string, string> = { [tk]: hsl };
-                          if (pair) patch[pair] = tk === 'muted' ? idealMutedForeground(hsl) : idealForeground(hsl);
-                          mergePartial({ theme: { darkTokens: { ...(config.theme.darkTokens || {}), ...patch } } } as any);
-                        }}
+                        key={tk} label={label} hsl={val(tk)} onChange={(hsl) => set(tk, hsl)}
+                        badge={grade && (
+                          <span
+                            title={`Contrast: WCAG ${grade === 'fail' ? 'below AA' : grade}`}
+                            className={cn(
+                              'rounded px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
+                              grade === 'fail' ? 'bg-destructive/15 text-destructive' : 'bg-emerald-500/15 text-emerald-600'
+                            )}
+                          >
+                            {grade === 'fail' ? '!' : grade}
+                          </span>
+                        )}
                       />
                     );
                   })}
                 </div>
-              </>
-            )}
+              );
+              // The ONE background control: solid / gradient / photo. Picking a
+              // solid color also updates the active token set's `background`
+              // (cards, headers etc. key off it) and re-derives readable text.
+              const setSolidBackground = (hsl: string) => {
+                update('effects.background.color', hsl);
+                (editingDark ? setDarkColor : setColor)('background', hsl);
+              };
+              return (
+                <>
+                  <SubSection title="Background" icon={ImageIcon}>
+                  <SelectRow label="Type" value={config.effects.background.type} onChange={(v) => update('effects.background.type', v)} options={opts(['solid', 'gradient', 'image'])} />
+                  {config.effects.background.type === 'solid' && (
+                    <ColorRow
+                      label="Background color"
+                      hsl={config.effects.background.color || (editingDark ? darkVal('background') : lightVal('background'))}
+                      onChange={setSolidBackground}
+                    />
+                  )}
+                  {config.effects.background.type === 'image' && (
+                    <Row label="Image URL"><Input className="w-[150px] h-8 text-xs" value={config.effects.background.imageUrl || ''} onChange={(e) => update('effects.background.imageUrl', e.target.value)} placeholder="https://…" /></Row>
+                  )}
+                  {config.effects.background.type === 'gradient' && (() => {
+                    const g = config.effects.background.gradient ?? { enabled: true, from: config.theme.tokens.secondary, to: config.theme.tokens.accent, angle: 135 };
+                    const setG = (patch: Partial<typeof g>) => {
+                      const next = { ...g, enabled: true, ...patch };
+                      update('effects.background.gradient', next);
+                      // Pair text against the top of the gradient — most content
+                      // sits there; the overlay slider is the escape hatch.
+                      keepTextReadableOn(next.from);
+                    };
+                    return (
+                      <div>
+                        <div
+                          className="mb-1 mt-2 h-10 w-full rounded-md border"
+                          style={{ background: `linear-gradient(${g.angle}deg, hsl(${g.from}), hsl(${g.to}))` }}
+                          aria-hidden
+                        />
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6">
+                          <ColorRow label="From" hsl={g.from} onChange={(hsl) => setG({ from: hsl })} />
+                          <ColorRow label="To" hsl={g.to} onChange={(hsl) => setG({ to: hsl })} />
+                        </div>
+                        <SliderRow label="Angle" value={g.angle} min={0} max={360} step={5} unit="°" onChange={(v) => setG({ angle: v })} />
+                      </div>
+                    );
+                  })()}
+                  {config.effects.background.type !== 'solid' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6">
+                      <SliderRow label="Brightness" value={config.effects.background.brightness ?? 100} min={50} max={150} unit="%" onChange={(v) => update('effects.background.brightness', v)} />
+                      <SliderRow label="Overlay" value={config.effects.background.overlay ?? 0} min={0} max={80} unit="%" onChange={(v) => update('effects.background.overlay', v)} />
+                    </div>
+                  )}
+                  </SubSection>
+
+                  <SubSection title={editingDark ? 'Colors (dark mode — what visitors see now)' : 'Individual colors'} icon={editingDark ? Moon : Sun}>
+                    <TokenGrid
+                      val={editingDark ? darkVal : lightVal}
+                      set={editingDark ? setDarkColor : setColor}
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-2">Badges show the WCAG contrast grade. Changing a surface re-derives its text automatically; the Text pickers override that manually.</p>
+                  </SubSection>
+                  {config.theme.mode !== 'light' && (
+                    <SubSection title={editingDark ? 'Light mode colors (inactive)' : 'Dark mode colors'} icon={editingDark ? Sun : Moon}>
+                      <p className="text-[11px] text-muted-foreground mb-1">
+                        {editingDark
+                          ? (config.theme.mode === 'auto' ? 'Used when a visitor prefers light mode.' : 'Not shown while your shop is set to dark.')
+                          : 'Overrides used when the storefront renders dark (auto follows the visitor).'}
+                      </p>
+                      <TokenGrid
+                        val={editingDark ? lightVal : darkVal}
+                        set={editingDark ? setColor : setDarkColor}
+                      />
+                    </SubSection>
+                  )}
+                </>
+              );
+            })()}
           </div>
         );
 
@@ -325,44 +651,16 @@ export const StorefrontStudio = () => {
                 <SliderRow label="Glass opacity" value={config.effects.glass.opacity} min={20} max={100} unit="%" onChange={(v) => update('effects.glass.opacity', v)} />
               </div>
             )}
-            <Sub>Background</Sub>
-            <SelectRow label="Type" value={config.effects.background.type} onChange={(v) => update('effects.background.type', v)} options={opts(['solid', 'gradient', 'image'])} />
-            {config.effects.background.type === 'image' && (
-              <Row label="Image URL"><Input className="w-[150px] h-8 text-xs" value={config.effects.background.imageUrl || ''} onChange={(e) => update('effects.background.imageUrl', e.target.value)} placeholder="https://…" /></Row>
-            )}
-            {config.effects.background.type === 'gradient' && (() => {
-              const g = config.effects.background.gradient ?? { enabled: true, from: config.theme.tokens.secondary, to: config.theme.tokens.accent, angle: 135 };
-              const setG = (patch: Partial<typeof g>) => update('effects.background.gradient', { ...g, enabled: true, ...patch });
-              return (
-                <div>
-                  <div
-                    className="mb-1 mt-2 h-10 w-full rounded-md border"
-                    style={{ background: `linear-gradient(${g.angle}deg, hsl(${g.from}), hsl(${g.to}))` }}
-                    aria-hidden
-                  />
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6">
-                    <ColorRow label="From" hsl={g.from} onChange={(hsl) => setG({ from: hsl })} />
-                    <ColorRow label="To" hsl={g.to} onChange={(hsl) => setG({ to: hsl })} />
-                  </div>
-                  <SliderRow label="Angle" value={g.angle} min={0} max={360} step={5} unit="°" onChange={(v) => setG({ angle: v })} />
-                </div>
-              );
-            })()}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6">
-              <SliderRow label="Brightness" value={config.effects.background.brightness ?? 100} min={50} max={150} unit="%" onChange={(v) => update('effects.background.brightness', v)} />
-              <SliderRow label="Overlay" value={config.effects.background.overlay ?? 0} min={0} max={80} unit="%" onChange={(v) => update('effects.background.overlay', v)} />
-            </div>
           </div>
         );
 
       case 'parts':
         return (
           <div>
-            {grid('Product card', 'productCard', config.components.productCard, ['classic', 'overlay', 'minimal', 'editorial', 'compact', 'polaroid'], (v) => update('components.productCard', v))}
+            {grid('Product card', 'productCard', config.components.productCard, ['classic', 'overlay', 'minimal', 'editorial', 'compact', 'polaroid', 'frame', 'caption-hover', 'ticket'], (v) => update('components.productCard', v))}
             {grid('Button', 'button', config.components.button, ['solid', 'outline', 'soft', 'gradient'], (v) => update('components.button', v), 4)}
             {grid('Badges', 'badge', config.components.badge, ['solid', 'soft', 'outline'], (v) => update('components.badge', v))}
             {grid('Cart', 'cart', config.components.cart, ['drawer', 'modal', 'page'], (v) => update('components.cart', v))}
-            {grid('Product gallery', 'gallery', config.components.productGalleryLayout, [{ value: 'left', label: 'Left' }, { value: 'top', label: 'Top' }, { value: 'sticky-split', label: 'Sticky split' }, { value: 'full-bleed', label: 'Full bleed' }], (v) => update('components.productGalleryLayout', v), 4)}
             {grid('Section headings', 'sectionHeader', config.layout.sectionHeader ?? 'centered', [
               { value: 'centered', label: 'Centered' },
               { value: 'left', label: 'Eyebrow left' },
@@ -371,89 +669,8 @@ export const StorefrontStudio = () => {
             <Sub>Spacing</Sub>
             {grid('Container width', 'container', config.layout.containerWidth, ['compact', 'standard', 'wide', 'full'], (v) => update('layout.containerWidth', v), 4)}
             {grid('Density', 'density', config.layout.density, ['comfortable', 'cozy', 'spacious'], (v) => update('layout.density', v))}
-            {grid('Grid columns', 'gridColumns', String(config.layout.productGrid.columns), [{ value: '2', label: '2' }, { value: '3', label: '3' }, { value: '4', label: '4' }, { value: '5', label: '5' }], (v) => update('layout.productGrid.columns', Number(v)), 4)}
           </div>
         );
-
-      case 'nav':
-        return (
-          <div>
-            <Sub>Header</Sub>
-            {grid('Header style', 'header', config.layout.header.variant, ['classic', 'minimal', 'centered', 'split'], (v) => update('layout.header.variant', v), 4)}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6">
-              <SwitchRow label="Sticky header" checked={config.layout.header.sticky} onChange={(v) => update('layout.header.sticky', v)} />
-              <SwitchRow label="Header blur" checked={config.layout.header.blur} onChange={(v) => update('layout.header.blur', v)} />
-              <SwitchRow label="Show search" checked={config.layout.header.showSearch} onChange={(v) => update('layout.header.showSearch', v)} />
-              <SegmentRow label="Desktop nav" value={config.layout.nav.desktop} onChange={(v) => update('layout.nav.desktop', v)} options={opts(['topbar', 'sidebar'])} />
-            </div>
-            <Sub>Hero</Sub>
-            {grid('Hero style', 'hero', heroVariant, heroVariantOptions, setHeroVariant, 4)}
-            <Sub>Announcement banner</Sub>
-            {grid('Banner style', 'banner', config.layout.banner?.style || 'marquee', ['marquee', 'static', 'gradient'], (v) => update('layout.banner.style', v))}
-            <Sub>Mobile bottom bar</Sub>
-            <SwitchRow label="Show bottom bar" checked={config.layout.nav.mobileBottomBar} onChange={(v) => update('layout.nav.mobileBottomBar', v)} />
-            {config.layout.nav.mobileBottomBar && grid('Bottom bar style', 'bottomBarStyle', config.layout.nav.bottomBarStyle || 'bar', ['bar', 'floating', 'minimal'], (v) => update('layout.nav.bottomBarStyle', v))}
-            <Sub>Footer</Sub>
-            {grid('Footer style', 'footer', config.layout.footer.variant, ['rich', 'columns', 'minimal', 'hidden'], (v) => update('layout.footer.variant', v), 4)}
-          </div>
-        );
-
-      case 'sections': {
-        const addableBlocks = Object.entries(BLOCK_REGISTRY).filter(([, def]) => def.scope === 'home' || def.scope === 'both');
-        const addableDetailBlocks = Object.entries(BLOCK_REGISTRY).filter(([, def]) => def.scope === 'productDetail' || def.scope === 'both');
-        const detail = config.pages.productDetail;
-        return (
-          <div>
-            <Sub>Homepage sections</Sub>
-            <p className="text-[11px] text-muted-foreground mb-2">Drag to reorder. Expand a section to pick its layout style and edit its content.</p>
-            <SectionList
-              sections={home}
-              onChange={(next) => update('pages.home', next)}
-              onRemove={(i) => removeSection(i)}
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="mt-2"><Plus className="h-3.5 w-3.5 mr-1.5" /> Add section</Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
-                {addableBlocks.map(([type, def]) => {
-                  const Icon = def.icon;
-                  return (
-                    <DropdownMenuItem key={type} onClick={() => addSection(type)}>
-                      <Icon className="h-4 w-4 mr-2 text-muted-foreground" /> {def.label}
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Sub>Product page sections</Sub>
-            <p className="text-[11px] text-muted-foreground mb-2">The gallery and info blocks sit side by side on desktop; the rest render below.</p>
-            <SectionList
-              sections={detail}
-              onChange={(next) => update('pages.productDetail', next)}
-              onRemove={(i) => removeSection(i, 'productDetail')}
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="mt-2"><Plus className="h-3.5 w-3.5 mr-1.5" /> Add section</Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
-                {addableDetailBlocks.map(([type, def]) => {
-                  const Icon = def.icon;
-                  return (
-                    <DropdownMenuItem key={type} onClick={() => addSection(type, 'productDetail')}>
-                      <Icon className="h-4 w-4 mr-2 text-muted-foreground" /> {def.label}
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Sub>Products page</Sub>
-            {grid('Filters', 'filters', config.pages.products.filters, ['sidebar', 'drawer', 'topbar'], (v) => update('pages.products.filters', v))}
-            {grid('Layout', 'productsLayout', config.pages.products.layout, ['grid', 'list'], (v) => update('pages.products.layout', v), 2)}
-          </div>
-        );
-      }
 
       case 'themes':
         return (
@@ -505,16 +722,34 @@ export const StorefrontStudio = () => {
     <>
       {/* ── Controls (the preview floats above on the right) ──────── */}
       <div className="space-y-6 min-w-0">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Store className="h-5 w-5" /> Storefront style</CardTitle>
-            <CardDescription>Choose what visitors see when they open your shop link.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col sm:flex-row gap-3">
-            <TypeCard value="instagram" icon={Instagram} title="Instagram style" desc="Looks exactly like Instagram. Fixed design." />
-            <TypeCard value="custom" icon={Palette} title="Custom design" desc="Fully customisable — layout, colors, fonts and more." />
-          </CardContent>
-        </Card>
+        {/* Storefront type — a simple toggle. Instagram = fixed look, preview only. */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Store className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-semibold leading-tight">Storefront style</p>
+              <p className="text-xs text-muted-foreground">What visitors see when they open your shop link.</p>
+            </div>
+          </div>
+          <div className="flex rounded-lg border p-1">
+            <button
+              type="button"
+              onClick={() => changeType('instagram')}
+              className={cn('flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors', type === 'instagram' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent')}
+              aria-pressed={type === 'instagram'}
+            >
+              <Instagram className="h-4 w-4" /> Instagram
+            </button>
+            <button
+              type="button"
+              onClick={() => changeType('custom')}
+              className={cn('flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors', type === 'custom' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent')}
+              aria-pressed={type === 'custom'}
+            >
+              <Palette className="h-4 w-4" /> Custom design
+            </button>
+          </div>
+        </div>
 
         {type === 'instagram' ? (
           /* Fixed design — just show how it looks on both devices. */
@@ -551,13 +786,7 @@ export const StorefrontStudio = () => {
           <Card><CardContent className="py-10"><Skeleton className="h-48 w-full" /></CardContent></Card>
         ) : (
           <>
-          {/* Template shelf — live homepage renders, click to apply. */}
-          <TemplateMarquee
-            activeTemplateId={config.templateId}
-            onPick={(c, id) => setPendingTemplate({ config: c, id })}
-          />
-
-          {/* ── Studio workspace: control rail + docked live preview ─────── */}
+          {/* ── Studio workspace: control rail + preview + template rail ── */}
           <div className="overflow-hidden rounded-xl border bg-card">
             {/* Toolbar */}
             <div className="flex flex-wrap items-center gap-2 border-b bg-muted/40 px-3 py-2">
@@ -584,6 +813,13 @@ export const StorefrontStudio = () => {
               </div>
               <div className="ml-auto flex items-center gap-2">
                 <SaveIndicator status={saveStatus} />
+                <label
+                  className="flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium"
+                  title="Apply this design's colors to your dashboard too — updates live as you edit"
+                >
+                  <Switch checked={dashboardMatch} onCheckedChange={setDashboardMatchesStorefront} className="scale-90" />
+                  <span className="hidden xl:inline">Match dashboard</span>
+                </label>
                 <Button variant="outline" size="sm" className="shrink-0" onClick={() => setSaveOpen(true)}>
                   <BookmarkPlus className="h-3.5 w-3.5 mr-1.5" /> Save design
                 </Button>
@@ -607,14 +843,42 @@ export const StorefrontStudio = () => {
               </div>
             </div>
 
-            {/* Rail + preview */}
-            <div className="grid lg:grid-cols-[380px_minmax(0,1fr)]">
-              <div className="max-h-[520px] overflow-y-auto border-b lg:max-h-[calc(100vh-280px)] lg:min-h-[560px] lg:border-b-0 lg:border-r">
-                <Accordion type="multiple" defaultValue={['colors']} className="px-3 py-1">
-                  {GROUPS.map((g) => {
+            {/* Rail + preview + vertical template marquee */}
+            <div className="grid lg:grid-cols-[380px_minmax(0,1fr)_216px]">
+              <div data-tour="studio-options" className="max-h-[520px] overflow-y-auto border-b lg:max-h-[calc(100vh-280px)] lg:min-h-[560px] lg:border-b-0 lg:border-r">
+                {/* Settings search — type anything, jump straight to the control. */}
+                <div className="sticky top-0 z-10 border-b bg-card px-3 py-2">
+                  <div className="relative">
+                    <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={settingQuery}
+                      onChange={(e) => setSettingQuery(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && settingMatches[0]) jumpToSetting(settingMatches[0].group); if (e.key === 'Escape') setSettingQuery(''); }}
+                      placeholder="Search settings… (e.g. navbar, shadows, hero)"
+                      className="h-8 pl-8 text-xs"
+                    />
+                    {settingMatches.length > 0 && (
+                      <div className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-md border bg-popover shadow-lg">
+                        {settingMatches.map((s) => (
+                          <button
+                            key={s.label}
+                            type="button"
+                            onClick={() => jumpToSetting(s.group)}
+                            className="flex w-full items-baseline justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-accent"
+                          >
+                            <span className="min-w-0 truncate font-medium">{s.label}</span>
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">{GROUP_META[s.group].title}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <Accordion type="multiple" value={openGroups} onValueChange={setOpenGroups} className="px-3 py-1">
+                  {GROUPS.filter((g) => g.id !== 'cartPage' || config.components.cart === 'page').map((g) => {
                     const Icon = g.icon;
                     return (
-                      <AccordionItem key={g.id} value={g.id} className="border-b last:border-b-0">
+                      <AccordionItem key={g.id} value={g.id} data-group-item={g.id} className="border-b last:border-b-0">
                         <AccordionTrigger className="py-3 text-sm hover:no-underline">
                           <span className="flex items-center gap-2.5">
                             <Icon className="h-4 w-4 text-muted-foreground" />
@@ -630,13 +894,21 @@ export const StorefrontStudio = () => {
                   })}
                 </Accordion>
               </div>
-              <div className="p-3">
+              <div className="p-3" data-tour="studio-preview">
                 <DockedPreview
                   previewPath={previewPath}
                   previewUrl={previewUrl}
                   config={config}
                   navTarget={navTarget}
                   className="h-[480px] lg:h-[calc(100vh-304px)] lg:min-h-[536px]"
+                />
+              </div>
+              {/* Vertical auto-scrolling template rail (desktop only). */}
+              <div className="hidden border-l lg:block" data-tour="studio-templates">
+                <TemplateMarquee
+                  activeTemplateId={config.templateId}
+                  onPick={(c, id) => setPendingTemplate({ config: c, id })}
+                  className="lg:h-[calc(100vh-280px)] lg:min-h-[560px]"
                 />
               </div>
             </div>

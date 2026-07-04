@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { readCache, writeCache } from "@/lib/pageCache";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,8 +36,8 @@ const SUGGESTED_KEYWORDS = [
 const Keywords = () => {
   const { setTitle } = usePageTitle();
   const { t } = useTranslation();
-  const [keywords, setKeywords] = useState<Keyword[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [keywords, setKeywords] = useState<Keyword[]>(() => readCache<Keyword[]>("keywords") ?? []);
+  const [isLoading, setIsLoading] = useState(() => !readCache<Keyword[]>("keywords"));
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedKeyword, setSelectedKeyword] = useState<Keyword | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Keyword | null>(null);
@@ -47,12 +48,14 @@ const Keywords = () => {
   }, [setTitle, t]);
 
   const fetchKeywords = async () => {
-    setIsLoading(true);
+    if (!readCache("keywords")) setIsLoading(true); // spinner only when nothing cached
     const { data, error } = await supabase.from("keywords").select("*").order("keyword");
     if (error) {
       showError("Could not fetch keywords.");
     } else {
-      setKeywords(data as Keyword[]);
+      const rows = data as Keyword[];
+      setKeywords(rows);
+      writeCache("keywords", rows);
     }
     setIsLoading(false);
   };
@@ -167,7 +170,7 @@ const Keywords = () => {
               {t("keywords.description")}
             </p>
           </div>
-          <Button onClick={() => setIsEditorOpen(true)} className="shrink-0">
+          <Button onClick={() => setIsEditorOpen(true)} className="shrink-0" data-tour="keywords-add">
             <PlusCircle className="mr-2 h-4 w-4" />
             {t("keywords.add_keyword")}
           </Button>
@@ -241,7 +244,7 @@ const Keywords = () => {
               )}
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent data-tour="keywords-table">
             {isLoading ? (
               <div className="space-y-2">
                 <Skeleton className="h-10 w-full" />

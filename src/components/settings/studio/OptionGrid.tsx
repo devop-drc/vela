@@ -1,6 +1,7 @@
 // A labelled grid of visual option cards. Each card shows a rendered Demo of the
-// option (themed by the live storefront tokens) + its label. Responsive: more
-// columns on wider screens. Replaces plain dropdowns for visual choices.
+// option (themed by the live storefront tokens) + its label. The Studio options
+// panel is a narrow rail, so cards never exceed two per row — viewport-based
+// column counts would squish them. Replaces plain dropdowns for visual choices.
 
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -19,16 +20,14 @@ interface Props {
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
   token: TokenStyle;
-  /** Columns at the lg breakpoint (default 3). */
+  /** Kept for call-site compatibility; the rail always renders 2-up. */
   cols?: 2 | 3 | 4;
 }
 
-const COLS: Record<number, string> = { 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 4: 'lg:grid-cols-4' };
-
-export const OptionGrid = ({ label, kind, value, options, onChange, token, cols = 3 }: Props) => (
+export const OptionGrid = ({ label, kind, value, options, onChange, token }: Props) => (
   <div className="py-2">
     <p className="text-sm font-medium mb-2">{label}</p>
-    <div className={cn('grid grid-cols-2 gap-2', COLS[cols])}>
+    <div className="grid grid-cols-2 gap-2">
       {options.map((o) => {
         const active = value === o.value;
         return (

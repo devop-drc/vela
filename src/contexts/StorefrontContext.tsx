@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeWithRetry } from '@/lib/edgeInvoke';
+import { readCache, writeCache } from '@/lib/pageCache';
 import { showError } from '@/utils/toast';
 import { DesignSettings } from './AppearanceContext'; // Re-use DesignSettings type
 import { StorefrontAnnouncement } from '@/types/storefront';
@@ -123,6 +125,18 @@ const generateSlug = (name: string): string => {
 
 const PRODUCTS_PER_PAGE = 12; // Define a constant for limit
 
+// Shop-level snapshot cached per slug for instant paint on reload.
+interface StorefrontSnapshot {
+  shopDetails: ShopDetails;
+  appearanceSettings: DesignSettings;
+  products: Product[];
+  bestSellers: TopProduct[];
+  recommendedProducts: Product[];
+  promotions: Promotion[];
+  marqueeElements: StorefrontAnnouncement[];
+  hasMore: boolean;
+}
+
 export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
   const { shopSlug } = useParams<{ shopSlug: string }>();
   const [shopDetails, setShopDetails] = useState<ShopDetails | null>(null);
@@ -140,14 +154,26 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
   const [marqueeElements, setMarqueeElements] = useState<StorefrontAnnouncement[]>([]); // New state for marquee elements
   const [customerOrders, setCustomerOrders] = useState<OrderDetails[]>([]); // New state for customer orders
 
-  // Fetch exchange rates once on mount
+  // Fetch exchange rates once on mount — cache table first (one cheap read),
+  // edge function only on a stale/missing cache. Same pattern as ShopContext.
   useEffect(() => {
     const fetchRates = async () => {
+      const { data: cached } = await supabase
+        .from('exchange_rates_cache')
+        .select('rates, last_fetched_at')
+        .eq('id', 1)
+        .maybeSingle();
+      const isFresh = cached?.last_fetched_at
+        && Date.now() - new Date(cached.last_fetched_at).getTime() < 24 * 60 * 60 * 1000;
+      if (cached?.rates && isFresh) {
+        setExchangeRates(cached.rates as ExchangeRates);
+        return;
+      }
       const { data, error } = await supabase.functions.invoke('exchange-rates');
       if (error || (data && data.error)) {
         const errorMessage = error?.message || (data && data.error) || "An unknown error occurred.";
         console.error("Failed to fetch exchange rates for storefront:", errorMessage);
-        showError(`Could not load currency rates for storefront: ${errorMessage}`);
+        if (cached?.rates) setExchangeRates(cached.rates as ExchangeRates); // stale beats nothing
       } else if (data) {
         setExchangeRates(data.rates);
       }
@@ -163,28 +189,46 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    const cacheKey = `storefront:${shopSlug}`;
     if (pageToFetch === 1) {
-      setIsLoading(true);
-      setProducts([]); // Clear products for initial load
-      setHasMoreProducts(true); // Assume more until proven otherwise
-      setCurrentPage(1);
-      setBestSellers([]); // Clear best sellers for initial load
-      setRecommendedProducts([]); // Clear recommended products for initial load
-      setPromotions([]); // Clear promotions for initial load
-      setMarqueeElements([]); // Clear marquee elements for initial load
-      setCustomerOrders([]); // Clear customer orders for initial load
+      // Instant paint from the last successful load so a reload isn't a 13s
+      // blank screen against the slow backend; we still revalidate below.
+      const cached = readCache<StorefrontSnapshot>(cacheKey);
+      if (cached) {
+        setShopDetails(cached.shopDetails);
+        setAppearanceSettings(cached.appearanceSettings);
+        setProducts(cached.products);
+        setBestSellers(cached.bestSellers);
+        setRecommendedProducts(cached.recommendedProducts);
+        setPromotions(cached.promotions);
+        setMarqueeElements(cached.marqueeElements);
+        setHasMoreProducts(cached.hasMore);
+        setCurrentPage(1);
+        setIsLoading(false);
+      } else {
+        setIsLoading(true);
+        setProducts([]); // Clear products for initial load
+        setHasMoreProducts(true); // Assume more until proven otherwise
+        setCurrentPage(1);
+        setBestSellers([]); // Clear best sellers for initial load
+        setRecommendedProducts([]); // Clear recommended products for initial load
+        setPromotions([]); // Clear promotions for initial load
+        setMarqueeElements([]); // Clear marquee elements for initial load
+      }
+      setCustomerOrders([]); // orders are per-customer — never cached
     } else {
       setIsLoadingMore(true);
     }
     setError(null);
 
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke('get-public-shop-data', {
+      // Retry transient connection drops — the slow backend intermittently
+      // resets fetches, and a blank storefront is far worse than a slower load.
+      const data = await invokeWithRetry<any>('get-public-shop-data', {
         body: { shopSlug, page: pageToFetch, limit: PRODUCTS_PER_PAGE },
       });
 
-      if (invokeError) throw invokeError;
-      if (data.error) throw new Error(data.error);
+      if (data?.error) throw new Error(data.error);
 
       const incomingDetails = {
         id: data.shopDetails.id,
@@ -273,6 +317,18 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         setPromotions(data.promotions || []); // Set promotions
         setMarqueeElements(data.marqueeElements || []); // Set marquee elements
         setCustomerOrders(data.customerOrders || []); // Set customer orders
+        // Snapshot the shop-level data for instant paint on the next reload
+        // (customer orders excluded — they're per-visitor, not shop-wide).
+        writeCache<StorefrontSnapshot>(cacheKey, {
+          shopDetails: incomingDetails,
+          appearanceSettings: data.appearanceSettings,
+          products: data.products || [],
+          bestSellers: data.bestSellers || [],
+          recommendedProducts: data.recommendedProducts || [],
+          promotions: data.promotions || [],
+          marqueeElements: data.marqueeElements || [],
+          hasMore: data.hasMore,
+        });
       } else {
         // De-dupe by id so a double-trigger can't append the same page twice.
         setProducts(prevProducts => {
@@ -284,8 +340,15 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
 
     } catch (err: any) {
       console.error("Failed to fetch storefront data:", err);
-      showError(`Failed to load shop: ${err.message || "An unknown error occurred."}`);
-      setError(err.message || "An unknown error occurred.");
+      // Distinguish a genuine "shop not found" from the backend being slow/
+      // unreachable, so a temporary hiccup reads as retryable, not broken.
+      const msg = String(err?.message || '');
+      const isNetwork = err?.name === 'FunctionsFetchError' || /failed to send a request|network|timeout|connection/i.test(msg);
+      const friendly = isNetwork
+        ? "The shop is taking too long to respond. Please check your connection and refresh."
+        : `Failed to load shop: ${msg || "An unknown error occurred."}`;
+      showError(friendly);
+      setError(friendly);
     } finally {
       if (pageToFetch === 1) {
         setIsLoading(false);

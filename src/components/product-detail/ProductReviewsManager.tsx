@@ -50,15 +50,14 @@ export const ProductReviewsManager = ({ open, onOpenChange, productId, productNa
     if (!open) return;
     let cancelled = false;
     setReviews(null);
+    // Owner-scoped RPC: customer emails are PII and not readable via the
+    // public table grants — only the owning shop gets them through here.
     supabase
-      .from('product_reviews')
-      .select('id, customer_name, customer_email, rating, comment, created_at, reply_text, replied_at')
-      .eq('product_id', productId)
-      .order('created_at', { ascending: false })
+      .rpc('get_product_reviews_owner', { p_product_id: productId })
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error) { showError('Could not load reviews.'); setReviews([]); return; }
-        setReviews(data as Review[]);
+        setReviews((data ?? []) as Review[]);
         setDrafts(Object.fromEntries((data ?? []).map((r: any) => [r.id, r.reply_text ?? ''])));
       });
     return () => { cancelled = true; };

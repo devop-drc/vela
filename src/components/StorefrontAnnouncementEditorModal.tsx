@@ -66,15 +66,22 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
   }, [element, reset]);
 
   const onSubmit = async (data: StorefrontAnnouncementFormData) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    // getSession() reads the token from local storage (instant, offline-safe);
+    // getUser() makes a network round-trip that can hang/fail on a slow backend
+    // and was silently blocking saves.
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     if (!user) {
       showError(t("announcement_editor.must_login"));
       return;
     }
 
-    const payload = {
-      ...data,
-      user_id: user.id,
+    // Only the editable columns — never spread id/created_at/updated_at back in.
+    const fields = {
+      message: data.message,
+      icon_name: data.icon_name,
+      is_active: data.is_active,
+      display_order: data.display_order,
       start_date: data.start_date ? data.start_date.toISOString() : null,
       end_date: data.end_date ? data.end_date.toISOString() : null,
       repeat_interval: data.repeat_interval === 'none' ? null : data.repeat_interval,
@@ -82,9 +89,10 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
     let error;
 
     if (element) {
-      ({ error } = await supabase.from("marquee_elements").update(payload).eq("id", element.id));
+      // RLS enforces ownership on update; user_id isn't needed (and mustn't change).
+      ({ error } = await supabase.from("marquee_elements").update(fields).eq("id", element.id));
     } else {
-      ({ error } = await supabase.from("marquee_elements").insert(payload));
+      ({ error } = await supabase.from("marquee_elements").insert({ ...fields, user_id: user.id }));
     }
 
     if (error) {
@@ -93,6 +101,13 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
       showSuccess(element ? t("announcement_editor.saved_updated") : t("announcement_editor.saved_added"));
       onSave();
     }
+  };
+
+  // Surface validation failures that would otherwise make "Save" silently do
+  // nothing (the date/repeat fields have no inline error text).
+  const onInvalid = (errs: typeof errors) => {
+    const first = Object.values(errs)[0]?.message as string | undefined;
+    showError(first ? t(first) : "Please check the announcement fields and try again.");
   };
 
   const messageValue = watch('message');
@@ -117,7 +132,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
             {t("announcement_editor.modal_desc")}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 flex flex-col overflow-hidden">
+        <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4 flex-1 flex flex-col overflow-hidden">
           <ScrollArea className="flex-1 pr-4"> {/* Removed horizontal padding from ScrollArea, added right padding */}
             <div className="space-y-6 py-4">
               <div className="space-y-2">

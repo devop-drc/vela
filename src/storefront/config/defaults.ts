@@ -131,6 +131,7 @@ export const DEFAULT_CONFIG: StorefrontConfig = {
     sectionHeader: 'centered',
     header: {
       variant: 'classic',
+      presentation: 'bar',
       sticky: true,
       transparentOnHero: false,
       blur: true,

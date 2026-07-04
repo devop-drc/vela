@@ -28,7 +28,7 @@ export const BottomNav = ({ onOpenCart }: Props) => {
     <>
       <Link to={base} className={item(pathname === base)}><Home className="h-5 w-5" />{showLabel && 'Home'}</Link>
       <Link to={`${base}/products`} className={item(pathname.includes('/products'))}><Package className="h-5 w-5" />{showLabel && 'Shop'}</Link>
-      <button onClick={onOpenCart} className={item(false)}>
+      <button onClick={onOpenCart} className={item(false)} data-sf-cart-target>
         <span className="relative"><ShoppingBag className="h-5 w-5" />{totalItems > 0 && <span className="absolute -top-1 -right-2 h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">{totalItems}</span>}</span>
         {showLabel && 'Cart'}
       </button>

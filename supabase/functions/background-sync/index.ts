@@ -103,6 +103,9 @@ const persistPostMedia = async (
         .from('product-media')
         .upload(path, blob, {
           contentType: resp.headers.get('content-type') || 'image/jpeg',
+          // Paths are timestamped (immutable), so cache long-term in the browser
+          // — synced product images then reload instantly on repeat visits.
+          cacheControl: '31536000',
           upsert: true,
         });
       if (upErr) {
@@ -163,44 +166,6 @@ const convertCurrency = (amount: number, fromCurrency: string, toCurrency: strin
 
 // Database Functions
 // Variant helpers: create product_options, option_values, and product_variants from AI options
-const upsertProductOption = async (supabase: SupabaseClient, productId: string, name: string, position: number) => {
-  const normalized = toTitleCase(name);
-  const { data: existing, error: selErr } = await supabase
-    .from('product_options')
-    .select('id')
-    .eq('product_id', productId)
-    .eq('name', normalized)
-    .maybeSingle();
-  if (selErr && selErr.code !== 'PGRST116') throw selErr;
-  if (existing) return existing.id;
-  const { data: inserted, error: insErr } = await supabase
-    .from('product_options')
-    .insert({ product_id: productId, name: normalized, position, is_active: true })
-    .select('id')
-    .single();
-  if (insErr) throw insErr;
-  return inserted!.id;
-};
-
-const upsertOptionValue = async (supabase: SupabaseClient, optionId: string, value: string, priceDifference: number = 0, inventory: number = 10) => {
-  const val = String(value).trim();
-  const { data: existing, error: selErr } = await supabase
-    .from('option_values')
-    .select('id')
-    .eq('option_id', optionId)
-    .eq('value', val)
-    .maybeSingle();
-  if (selErr && selErr.code !== 'PGRST116') throw selErr;
-  if (existing) return existing.id;
-  const { data: inserted, error: insErr } = await supabase
-    .from('option_values')
-    .insert({ option_id: optionId, value: val, is_active: true, price_difference: priceDifference, inventory })
-    .select('id')
-    .single();
-  if (insErr) throw insErr;
-  return inserted!.id;
-};
-
 const combinations = <T,>(arrays: T[][]): T[][] => {
   if (arrays.length === 0) return [];
   return arrays.reduce<T[][]>((acc, curr) => {
@@ -218,22 +183,58 @@ const buildVariantKey = (orderedOptionNames: string[], valueLabels: string[]) =>
   return parts.join('|');
 };
 
+// Bulk version: 3 SELECTs + up to 3 bulk INSERTs per product, instead of a
+// SELECT-then-INSERT round trip per option and per value. Uniqueness rules and
+// the generated variant combinations are unchanged.
 const upsertVariantsFromOptions = async (supabase: SupabaseClient, productId: string, aiOptions: Record<string, string[]>) => {
   const optionEntries = Object.entries(aiOptions || {}).filter(([_, vals]) => Array.isArray(vals) && vals.length > 0);
   if (optionEntries.length === 0) return;
 
   const orderedNames = optionEntries.map(([name]) => toTitleCase(name));
-  const optionIds: string[] = [];
-  for (let i = 0; i < orderedNames.length; i++) {
-    const optionId = await upsertProductOption(supabase, productId, orderedNames[i], i);
-    optionIds.push(optionId);
+
+  // 1) Read existing options + variants for this product (2 queries, in parallel)
+  const [optionsRes, variantsRes] = await Promise.all([
+    supabase.from('product_options').select('id, name').eq('product_id', productId),
+    supabase.from('product_variants').select('id, combination_key').eq('product_id', productId),
+  ]);
+  if (optionsRes.error) throw optionsRes.error;
+  if (variantsRes.error) throw variantsRes.error;
+  const optionIdByName = new Map<string, string>((optionsRes.data || []).map((o: any) => [o.name, o.id]));
+
+  // 2) Read existing values of the options we're touching (1 query, .in())
+  const relevantOptionIds = Array.from(new Set(orderedNames.map(n => optionIdByName.get(n)).filter(Boolean))) as string[];
+  const existingValueKeys = new Set<string>();
+  if (relevantOptionIds.length > 0) {
+    const { data: existingValues, error: valSelErr } = await supabase
+      .from('option_values')
+      .select('option_id, value')
+      .in('option_id', relevantOptionIds);
+    if (valSelErr) throw valSelErr;
+    for (const v of existingValues || []) existingValueKeys.add(`${v.option_id} ${v.value}`);
   }
 
-  const valueIdMatrix: string[][] = [];
+  // 3) ONE bulk insert for missing options (uniqueness: title-cased name per product)
+  const optionsToInsert: any[] = [];
+  orderedNames.forEach((name, i) => {
+    if (!optionIdByName.has(name) && !optionsToInsert.some(o => o.name === name)) {
+      optionsToInsert.push({ product_id: productId, name, position: i, is_active: true });
+    }
+  });
+  if (optionsToInsert.length > 0) {
+    const { data: insertedOptions, error: optInsErr } = await supabase
+      .from('product_options')
+      .insert(optionsToInsert)
+      .select('id, name');
+    if (optInsErr) throw optInsErr;
+    for (const o of insertedOptions || []) optionIdByName.set(o.name, o.id);
+  }
+
+  // 4) ONE bulk insert for missing values (uniqueness: trimmed value per option)
   const valueLabelMatrix: string[][] = [];
+  const valuesToInsert: any[] = [];
   for (let i = 0; i < optionEntries.length; i++) {
     const [, values] = optionEntries[i];
-    const ids: string[] = [];
+    const optionId = optionIdByName.get(orderedNames[i]);
     const labels: string[] = [];
     for (const raw of values) {
       let val: string;
@@ -248,22 +249,22 @@ const upsertVariantsFromOptions = async (supabase: SupabaseClient, productId: st
         val = String(raw).trim();
       }
 
-      const id = await upsertOptionValue(supabase, optionIds[i], val, priceDiff, optInventory);
-      ids.push(id);
       labels.push(val);
+      const valueKey = `${optionId} ${val}`;
+      if (optionId && !existingValueKeys.has(valueKey)) {
+        existingValueKeys.add(valueKey); // also dedupes repeats within this batch
+        valuesToInsert.push({ option_id: optionId, value: val, is_active: true, price_difference: priceDiff, inventory: optInventory });
+      }
     }
-    valueIdMatrix.push(ids);
     valueLabelMatrix.push(labels);
   }
+  if (valuesToInsert.length > 0) {
+    const { error: valInsErr } = await supabase.from('option_values').insert(valuesToInsert);
+    if (valInsErr) throw valInsErr;
+  }
 
-  const combosIds = combinations(valueIdMatrix);
   const combosLabels = combinations(valueLabelMatrix);
-
-  const { data: existingVariants } = await supabase
-    .from('product_variants')
-    .select('id, combination_key')
-    .eq('product_id', productId);
-  const existingKeys = new Set((existingVariants || []).map(v => v.combination_key));
+  const existingKeys = new Set((variantsRes.data || []).map(v => v.combination_key));
 
   // Build a lookup for option value inventory: { "Color": { "Red": 10, "Blue": 5 } }
   const valueInventoryMap: Record<string, Record<string, number>> = {};
@@ -281,9 +282,10 @@ const upsertVariantsFromOptions = async (supabase: SupabaseClient, productId: st
   }
 
   const toInsert: any[] = [];
-  for (let i = 0; i < combosIds.length; i++) {
+  for (let i = 0; i < combosLabels.length; i++) {
     const variantKey = buildVariantKey(orderedNames, combosLabels[i]);
     if (existingKeys.has(variantKey)) continue;
+    existingKeys.add(variantKey); // dedupe combos that repeat within this batch
     const optionValuesObj: Record<string, string> = {};
     // Calculate variant inventory as minimum of its option values' inventories
     let variantInventory = Infinity;
@@ -343,6 +345,14 @@ const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, categoryId
 
 const updateJobProgress = async (supabase: SupabaseClient, jobId: string, update: Partial<any>): Promise<void> => {
   const payload = { ...update, updated_at: new Date().toISOString() };
+  // Interim progress writes carry only the summary COUNTERS — the item arrays
+  // grow with every processed post, and rewriting the full jsonb dozens of
+  // times per sync was a major disk-IO drain. Terminal writes keep everything.
+  const terminal = update.status === 'completed' || update.status === 'failed';
+  if (payload.summary && !terminal) {
+    const { skipped_items: _s, created_items: _c, updated_items: _u, ...counters } = payload.summary;
+    payload.summary = counters;
+  }
   await supabase.from('sync_jobs').update(payload).eq('id', jobId);
 };
 
@@ -356,6 +366,14 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     updated_items: [] as ProductPayload[],
     total_ai_tokens_used: { prompt: 0, candidates: 0 },
   };
+
+  // Per-run caches: many products share a category/type, and re-reading and
+  // re-writing the same categories/types/templates rows for every product was
+  // a large share of the sync's disk IO. Rows are touched again only when a
+  // product introduces attribute/spec keys not yet seen this run.
+  const categoryIdCache = new Map<string, string>();
+  const ensuredTypeAttrs = new Map<string, Set<string>>();
+  const mergedTemplateKeys = new Map<string, Set<string>>();
 
   try {
     await updateJobProgress(supabaseAdmin, jobId, { progress: 0, total: 0, message: "Starting sync...", status: 'in_progress', summary });
@@ -795,11 +813,22 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         const normCat = toTitleCase(categoryName);
         const normType = toTitleCase(typeName);
         try {
-          const catId = await upsertCategory(supabaseAdmin, normCat, user.id);
+          let catId = categoryIdCache.get(normCat);
+          if (!catId) {
+            catId = await upsertCategory(supabaseAdmin, normCat, user.id);
+            categoryIdCache.set(normCat, catId);
+          }
           const attrList: any[] = [];
           if (specifications) for (const [name] of Object.entries(specifications)) attrList.push({ name, inputType: 'text', isOption: false });
           if (options) for (const [name, vals] of Object.entries(options)) attrList.push({ name, inputType: name.toLowerCase().includes('color') ? 'color' : 'tags', isOption: true, possibleValues: vals });
-          await upsertTypeAndMergeAttributes(supabaseAdmin, catId, normType, attrList, user.id);
+          const typeKey = `${catId}:${normType}`;
+          const ensuredAttrs = ensuredTypeAttrs.get(typeKey);
+          if (!ensuredAttrs || attrList.some((a) => !ensuredAttrs.has(a.name))) {
+            await upsertTypeAndMergeAttributes(supabaseAdmin, catId, normType, attrList, user.id);
+            const s = ensuredAttrs ?? new Set<string>();
+            attrList.forEach((a) => s.add(a.name));
+            ensuredTypeAttrs.set(typeKey, s);
+          }
 
           // Auto-create/update category template so the system learns from new products
           const templateSpecs = specifications ? (Array.isArray(rawSpecifications)
@@ -810,7 +839,17 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             name, common_values: Array.isArray(vals) ? vals.map((v: any) => typeof v === 'object' ? v.value : String(v)).filter(Boolean) : []
           })) : [];
 
-          if (templateSpecs.length > 0 || templateOpts.length > 0) {
+          // Re-merge the template only when this product brings spec/option
+          // keys not already merged for this (category, type) during this run.
+          const tplKey = `${normCat}:${normType}`;
+          const mergedKeys = mergedTemplateKeys.get(tplKey);
+          const newTplKeys = [...templateSpecs.map((s: any) => `s:${s.key}`), ...templateOpts.map((o: any) => `o:${o.name}`)];
+          const tplNeedsWork = (templateSpecs.length > 0 || templateOpts.length > 0)
+            && (!mergedKeys || newTplKeys.some((k) => !mergedKeys.has(k)));
+          if (tplNeedsWork) {
+            const ks = mergedKeys ?? new Set<string>();
+            newTplKeys.forEach((k) => ks.add(k));
+            mergedTemplateKeys.set(tplKey, ks);
             // Merge with existing template if one exists
             const { data: existingTpl } = await supabaseAdmin.from('category_templates')
               .select('id, default_specifications, default_options')
@@ -881,11 +920,24 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       await updateJobProgress(supabaseAdmin, jobId, { message: `Finding specifications for ${allProductsCreated.length} products...`, summary });
       const { data: allProds } = await supabaseAdmin.from('products').select('id, name, category, instagram_post_id').in('instagram_post_id', allProductsCreated);
       if (allProds?.length) {
-        const specPromises = allProds.map(p =>
-          supabaseAdmin.functions.invoke('find-product-specs', {
-            body: { product_id: p.id, product_name: p.name, category: p.category, user_id: user.id, caption: postsToProcess.find(pp => pp.id === p.instagram_post_id)?.caption || '' }
-          }).catch(e => console.error('Spec waterfall failed for', p.name, e))
-        );
+        // One invoke per chunk of 10 products instead of one invoke per product;
+        // find-product-specs accepts a `products: [...]` batch payload.
+        const SPEC_CHUNK_SIZE = 10;
+        const specPromises: Promise<any>[] = [];
+        for (let i = 0; i < allProds.length; i += SPEC_CHUNK_SIZE) {
+          const chunk = allProds.slice(i, i + SPEC_CHUNK_SIZE);
+          specPromises.push(
+            supabaseAdmin.functions.invoke('find-product-specs', {
+              body: {
+                user_id: user.id,
+                products: chunk.map(p => ({
+                  product_id: p.id, product_name: p.name, category: p.category,
+                  caption: postsToProcess.find(pp => pp.id === p.instagram_post_id)?.caption || ''
+                }))
+              }
+            }).catch(e => console.error('Spec waterfall batch failed:', e))
+          );
+        }
         await Promise.allSettled(specPromises);
       }
     }

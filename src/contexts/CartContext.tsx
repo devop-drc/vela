@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStorefront } from './StorefrontContext';
-import { showError, showSuccess } from '@/utils/toast';
+import { showSuccess } from '@/utils/toast';
 
 export interface CartItem {
   uid: string; // stable identifier for a unique line (product + variant options)
@@ -84,50 +84,27 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [savedItems]);
 
   const addToCart = useCallback(async (item: Omit<CartItem, 'quantity' | 'uid' | 'variantKey'>, quantity: number = 1) => {
-    if (!shopDetails) {
-      setTimeout(() => showError("Shop details not loaded. Cannot add to cart."), 0);
-      return;
-    }
-
-    // Fetch product details to ensure we have the latest pricing_type, product_type, and billing_interval
-    // We are NOT using the price/currency from this fetch for the cart item, as `item.price` is already
-    // the converted display price from the product card/detail page.
-    const { data: productDbData, error } = await supabase
-      .from('products')
-      .select('pricing_type, product_type, billing_interval')
-      .eq('id', item.productId)
-      .single();
-
-    if (error || !productDbData) {
-      setTimeout(() => showError("Failed to fetch product details for cart."), 0);
-      console.error("Error fetching product for cart:", error);
-      return;
-    }
-
-    // The `item` argument already contains the price and originalPrice in the shop's display currency,
-    // and item.currency is also the shop's display currency. We should use these directly.
-    const priceInDisplayCurrency = item.price;
-    const originalPriceInDisplayCurrency = item.originalPrice;
-    const isDiscounted = item.isDiscounted; // Trust the `isDiscounted` flag passed from the product card/detail
+    // Optimistic: the item lands in the cart instantly with the data the card/
+    // detail page already has. pricing_type / product_type / billing_interval
+    // are refreshed from the DB in the background — a slow or failed fetch must
+    // never block the add.
+    const currency = shopDetails?.currency ?? item.currency;
+    const variantKey = item.selectedOptions && typeof item.selectedOptions === 'object'
+      ? JSON.stringify(Object.entries(item.selectedOptions).sort(([a],[b]) => a.localeCompare(b)))
+      : undefined;
+    const uid = `${item.productId}::${variantKey || 'base'}`;
 
     setCartItems(prevItems => {
-      const variantKey = item.selectedOptions && typeof item.selectedOptions === 'object'
-        ? JSON.stringify(Object.entries(item.selectedOptions).sort(([a],[b]) => a.localeCompare(b)))
-        : undefined;
-      const uid = `${item.productId}::${variantKey || 'base'}`;
       const existingIndex = prevItems.findIndex(ci => ci.productId === item.productId && ci.variantKey === variantKey);
       if (existingIndex > -1) {
         const updated = [...prevItems];
         updated[existingIndex] = {
           ...updated[existingIndex],
           quantity: updated[existingIndex].quantity + quantity,
-          price: priceInDisplayCurrency,
-          originalPrice: originalPriceInDisplayCurrency,
-          isDiscounted,
-          pricing_type: productDbData.pricing_type,
-          product_type: productDbData.product_type,
-          billing_interval: productDbData.billing_interval,
-          currency: shopDetails.currency,
+          price: item.price,
+          originalPrice: item.originalPrice,
+          isDiscounted: item.isDiscounted,
+          currency,
         };
         setTimeout(() => showSuccess(`${item.name} quantity updated in cart!`), 0);
         return updated;
@@ -140,16 +117,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           uid,
           variantKey,
           quantity,
-          price: priceInDisplayCurrency,
-          originalPrice: originalPriceInDisplayCurrency,
-          isDiscounted,
-          pricing_type: productDbData.pricing_type,
-          product_type: productDbData.product_type,
-          billing_interval: productDbData.billing_interval,
-          currency: shopDetails.currency,
+          currency,
         },
       ];
     });
+
+    // Background refresh of billing metadata (needed at checkout for
+    // subscriptions). Failures are logged, never surfaced — the item is
+    // already in the cart.
+    supabase
+      .from('products')
+      .select('pricing_type, product_type, billing_interval')
+      .eq('id', item.productId)
+      .single()
+      .then(({ data, error }) => {
+        if (error || !data) { console.warn('Cart: metadata refresh failed', error); return; }
+        setCartItems(prev => prev.map(ci => ci.uid === uid
+          ? { ...ci, pricing_type: data.pricing_type, product_type: data.product_type, billing_interval: data.billing_interval }
+          : ci));
+      });
   }, [shopDetails]);
 
   const updateQuantity = useCallback((uid: string, quantity: number) => {

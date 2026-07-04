@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
+import { readCache, writeCache } from "@/lib/pageCache";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,8 +34,8 @@ const Categories = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"all" | "custom" | "system">("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [templates, setTemplates] = useState<CategoryTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [templates, setTemplates] = useState<CategoryTemplate[]>(() => readCache<CategoryTemplate[]>("categories") ?? []);
+  const [loading, setLoading] = useState(() => !readCache<CategoryTemplate[]>("categories"));
 
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [typeModalOpen, setTypeModalOpen] = useState(false);
@@ -46,14 +47,18 @@ const Categories = () => {
   useEffect(() => { setTitle(t("categories.title")); }, [setTitle, t]);
 
   const fetchTemplates = async () => {
-    setLoading(true);
+    if (!readCache("categories")) setLoading(true); // spinner only when nothing cached
     const { data, error } = await supabase
       .from("category_templates")
       .select("*")
       .order("category_name")
       .order("type_name");
     if (error) showError("Could not fetch category templates.");
-    else setTemplates((data as CategoryTemplate[]) ?? []);
+    else {
+      const rows = (data as CategoryTemplate[]) ?? [];
+      setTemplates(rows);
+      writeCache("categories", rows);
+    }
     setLoading(false);
   };
 
@@ -142,7 +147,7 @@ const Categories = () => {
       </div>
     );
     return (
-      <div className="space-y-2">
+      <div className="space-y-2" data-tour="categories-grid">
         {categoryNames.map(name => (
           <CategoryCard
             key={name}
@@ -198,7 +203,7 @@ const Categories = () => {
             <span className="text-muted-foreground">{t("categories.options_label")}</span>
           </div>
           <div className="ml-auto">
-            <Button onClick={handleAddCategory} size="sm">
+            <Button onClick={handleAddCategory} size="sm" data-tour="categories-add">
               <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
               {t("categories.add_category")}
             </Button>

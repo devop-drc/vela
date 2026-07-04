@@ -9,7 +9,11 @@ import { Suspense, useEffect, useState } from "react";
 import { SyncStatusWidget } from "./SyncStatusWidget";
 import NotificationSidebar from "./NotificationSidebar";
 import { useAppearance } from "@/contexts/AppearanceContext";
+import { useStorefrontMatchTheme } from "@/hooks/useStorefrontMatchTheme";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { TutorialProvider } from "@/components/tutorial/TutorialProvider";
+import { LanguagePromptModal } from "@/components/layout/LanguagePromptModal";
 
 const SIDEBAR_COLLAPSED_KEY = "sidebar-collapsed";
 
@@ -18,6 +22,8 @@ const DashboardLayout = () => {
   const location = useLocation();
   const { shopDetails } = useShop();
   const { settings } = useAppearance();
+  // Opt-in: dashboard adopts the storefront's colors/radius (live from Studio).
+  const matchTheme = useStorefrontMatchTheme();
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
@@ -26,6 +32,26 @@ const DashboardLayout = () => {
       return false;
     }
   });
+
+  // Warm the most-visited route chunks once the browser is idle so sidebar
+  // navigation is instant (no lazy-chunk spinner on first visit).
+  useEffect(() => {
+    const warm = () => {
+      import("@/pages/Products");
+      import("@/pages/Orders");
+      import("@/pages/Settings");
+      import("@/pages/Categories");
+      import("@/pages/Promotions");
+    };
+    const w = window as any;
+    const id = typeof w.requestIdleCallback === "function"
+      ? w.requestIdleCallback(warm, { timeout: 5000 })
+      : setTimeout(warm, 2500);
+    return () => {
+      if (typeof w.cancelIdleCallback === "function") w.cancelIdleCallback(id);
+      else clearTimeout(id);
+    };
+  }, []);
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -120,8 +146,8 @@ const DashboardLayout = () => {
   if (settings.layoutStyle === 'docked') {
     return (
       <div
-        className="relative flex h-screen bg-transparent"
-        style={{ '--sidebar-width': sidebarWidthValue } as React.CSSProperties}
+        className={cn("relative flex h-screen bg-transparent", matchTheme?.className)}
+        style={{ ...matchTheme?.style, '--sidebar-width': sidebarWidthValue } as React.CSSProperties}
       >
         <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
         <Sidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
@@ -137,15 +163,17 @@ const DashboardLayout = () => {
 
   return (
     <div
-      className="relative h-screen bg-transparent"
-      style={{ '--sidebar-width': sidebarWidthValue } as React.CSSProperties}
+      className={cn("relative h-screen bg-transparent", matchTheme?.className)}
+      style={{ ...matchTheme?.style, '--sidebar-width': sidebarWidthValue } as React.CSSProperties}
     >
       <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
       <Sidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
       <Header title={title} />
+      {/* Sidebar offset only applies at md+ — on mobile the sidebar is hidden
+          (bottom nav instead), so an unconditional inline padding-left crushed
+          all content into a right-edge sliver. */}
       <main
-        className="absolute inset-0 overflow-y-auto md:px-6 md:pb-4 transition-all duration-300 pt-24"
-        style={{ paddingLeft: `calc(var(--sidebar-width) + 1.8rem)` }}
+        className="absolute inset-0 overflow-y-auto px-3 pb-24 md:px-6 md:pb-4 transition-all duration-300 pt-24 md:!pl-[calc(var(--sidebar-width)+1.8rem)]"
       >
         {content}
       </main>
@@ -156,4 +184,13 @@ const DashboardLayout = () => {
   );
 };
 
-export default DashboardLayout;
+// Tours wrap the whole admin: autoplay on first visit per page + the sidebar's
+// "Page tutorial" button (see TutorialProvider).
+const DashboardLayoutWithTutorial = () => (
+  <TutorialProvider>
+    <LanguagePromptModal />
+    <DashboardLayout />
+  </TutorialProvider>
+);
+
+export default DashboardLayoutWithTutorial;

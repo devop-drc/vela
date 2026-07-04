@@ -100,6 +100,11 @@ export interface EffectsConfig {
 // ─── Layout ──────────────────────────────────────────────────────────────────
 export interface HeaderConfig {
   variant: 'minimal' | 'centered' | 'split' | 'classic';
+  /** Hide the navbar entirely (the mobile bottom bar / sidebar still navigate). */
+  hidden?: boolean;
+  /** How the bar itself presents: full-width bar, detached floating pill, or
+      chromeless minimal — independent of the content `variant`. */
+  presentation?: 'bar' | 'floating' | 'minimal';
   sticky: boolean;
   transparentOnHero: boolean;
   blur: boolean;
@@ -131,7 +136,7 @@ export type HeroVariant = 'banner' | 'compact' | 'full' | 'split' | 'minimal' | 
 
 // ─── Component variants ──────────────────────────────────────────────────────
 export interface ComponentVariants {
-  productCard: 'classic' | 'overlay' | 'minimal' | 'editorial' | 'compact' | 'polaroid';
+  productCard: 'classic' | 'overlay' | 'minimal' | 'editorial' | 'compact' | 'polaroid' | 'frame' | 'caption-hover' | 'ticket';
   button: 'solid' | 'outline' | 'soft' | 'gradient';
   buttonShape: 'inherit' | 'pill' | 'sharp';
   cart: 'drawer' | 'modal' | 'page';

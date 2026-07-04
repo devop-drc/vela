@@ -3,7 +3,7 @@
 // every block here consumes that context so config.pages.productDetail can
 // compose/reorder/disable them freely.
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Minus, Plus, Truck, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -32,7 +32,7 @@ export interface ProductDetailState {
   setSelected: (updater: (s: Record<string, string>) => Record<string, string>) => void;
   quantity: number;
   setQuantity: (updater: (q: number) => number) => void;
-  addToCartHandler: () => void;
+  addToCartHandler: (sourceEl?: HTMLElement) => void;
   related: ProductLike[];
 }
 
@@ -45,18 +45,47 @@ export const useProductDetail = () => {
 
 /* ── Gallery ───────────────────────────────────────────────────────────── */
 // variant: carousel (default) | grid (all media at once) | thumbs (main image
-// with a clickable thumbnail rail — the classic premium e-commerce gallery).
-export const GalleryBlock = ({ props }: { props: { variant?: 'carousel' | 'grid' | 'thumbs' } }) => {
+// + clickable thumbnail rail) | filmstrip (horizontal snap strip + counter).
+export const GalleryBlock = ({ props }: { props: { variant?: 'carousel' | 'grid' | 'thumbs' | 'filmstrip' } }) => {
   const { product, media, isOutOfStock } = useProductDetail();
   const [active, setActive] = useState(0);
+  const stripRef = useRef<HTMLDivElement>(null);
   useEffect(() => { setActive(0); }, [product.id]);
   if (media.length === 0) return null;
+
+  if (props.variant === 'filmstrip' && media.length > 1) {
+    const onStripScroll = () => {
+      const el = stripRef.current;
+      if (!el) return;
+      setActive(Math.min(media.length - 1, Math.round(el.scrollLeft / el.clientWidth)));
+    };
+    return (
+      <div className="relative">
+        <div
+          ref={stripRef}
+          onScroll={onStripScroll}
+          className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {media.map((url, i) => (
+            <div key={i} className="sf-zoomable w-full shrink-0 snap-center overflow-hidden border bg-muted sf-card" style={{ borderRadius: 'var(--radius)' } as any}>
+              <div className="aspect-square w-full">
+                <MediaItem src={url} alt={`${product.name} ${i + 1}`} type={product.media_type} className={cn('h-full w-full object-cover', isOutOfStock && 'grayscale')} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <span className="absolute bottom-4 right-3 rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-white tabular-nums">
+          {active + 1} / {media.length}
+        </span>
+      </div>
+    );
+  }
 
   if (props.variant === 'thumbs' && media.length > 1) {
     const current = media[Math.min(active, media.length - 1)];
     return (
       <div className="space-y-3">
-        <div className="relative aspect-square w-full overflow-hidden border bg-muted sf-card" style={{ borderRadius: 'var(--radius)' } as any}>
+        <div className="sf-zoomable relative aspect-square w-full overflow-hidden border bg-muted sf-card" style={{ borderRadius: 'var(--radius)' } as any}>
           <MediaItem
             key={current}
             src={current}
@@ -176,7 +205,7 @@ export const AddToCartBlock = () => {
           <span className="w-12 text-center tabular-nums">{quantity}</span>
           <button aria-label="Increase quantity" onClick={() => setQuantity((q) => Math.min(99, q + 1))} className="h-full w-10 flex items-center justify-center"><Plus className="h-4 w-4" /></button>
         </div>
-        <SfButton size="lg" className="flex-1" disabled={isOutOfStock} onClick={addToCartHandler}>
+        <SfButton size="lg" className="flex-1" disabled={isOutOfStock} onClick={(e) => addToCartHandler(e.currentTarget)}>
           <ShoppingCart className="mr-2 h-5 w-5" /> {isOutOfStock ? 'Sold Out' : 'Add to Cart'}
         </SfButton>
       </div>

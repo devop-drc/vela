@@ -83,7 +83,7 @@ export const SidebarNav = ({ onOpenCart }: Props) => {
         )}
 
         <div className="mt-auto">
-          <Button variant="outline" className="w-full justify-start gap-2" onClick={onOpenCart}>
+          <Button variant="outline" className="w-full justify-start gap-2" onClick={onOpenCart} data-sf-cart-target>
             <ShoppingBag className="h-4 w-4" /> Cart
             {totalItems > 0 && (
               <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold text-primary-foreground">{totalItems}</span>

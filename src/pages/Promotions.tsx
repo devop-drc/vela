@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { readCache, writeCache } from "@/lib/pageCache";
+import { isAnnouncementLiveNow, announcementStatus } from "@/lib/announcementSchedule";
+type PromoSnapshot = { promotions: Promotion[]; announcements: StorefrontAnnouncement[] };
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -264,9 +267,9 @@ const EmptyPromotions = ({ onCreateClick }: { onCreateClick: () => void }) => {
 const Promotions = () => {
   const { setTitle } = usePageTitle();
   const { t } = useTranslation();
-  const [promotions, setPromotions] = useState<Promotion[]>([]);
-  const [storefrontAnnouncements, setStorefrontAnnouncements] = useState<StorefrontAnnouncement[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [promotions, setPromotions] = useState<Promotion[]>(() => readCache<PromoSnapshot>("promotions")?.promotions ?? []);
+  const [storefrontAnnouncements, setStorefrontAnnouncements] = useState<StorefrontAnnouncement[]>(() => readCache<PromoSnapshot>("promotions")?.announcements ?? []);
+  const [isLoading, setIsLoading] = useState(() => !readCache("promotions"));
   const [isPromotionEditorOpen, setIsPromotionEditorOpen] = useState(false);
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
   const [isAnnouncementEditorOpen, setIsAnnouncementEditorOpen] = useState(false);
@@ -278,17 +281,21 @@ const Promotions = () => {
   useEffect(() => { setTitle(t("nav.promotions")); }, [setTitle, t]);
 
   const fetchPromotionsAndAnnouncements = async () => {
-    setIsLoading(true);
+    if (!readCache("promotions")) setIsLoading(true); // spinner only when nothing cached
     const [{ data: promotionsData, error: promotionsError }, { data: announcementsData, error: announcementsError }] = await Promise.all([
       supabase.from("promotions").select("*").order("created_at", { ascending: false }),
       supabase.from("marquee_elements").select("*").order("display_order", { ascending: true }),
     ]);
 
+    const promos = (promotionsData as Promotion[]) ?? [];
+    const announcements = (announcementsData as StorefrontAnnouncement[]) ?? [];
     if (promotionsError) showError("Could not fetch promotions.");
-    else setPromotions(promotionsData as Promotion[]);
+    else setPromotions(promos);
 
     if (announcementsError) showError("Could not fetch storefront announcements.");
-    else setStorefrontAnnouncements(announcementsData as StorefrontAnnouncement[]);
+    else setStorefrontAnnouncements(announcements);
+
+    if (!promotionsError && !announcementsError) writeCache<PromoSnapshot>("promotions", { promotions: promos, announcements });
 
     setIsLoading(false);
   };
@@ -453,7 +460,7 @@ const Promotions = () => {
               {t("promotions.page_desc")}
             </p>
           </div>
-          <Button onClick={() => setIsPromotionEditorOpen(true)}>
+          <Button onClick={() => setIsPromotionEditorOpen(true)} data-tour="promotions-create">
             <PlusCircle className="mr-2 h-4 w-4" />
             {t("promotions.create")}
           </Button>
@@ -521,7 +528,7 @@ const Promotions = () => {
               </div>
             )
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-tour="promotions-list">
               {filteredPromotions.map(promo => (
                 <PromotionCard
                   key={promo.id}
@@ -551,14 +558,16 @@ const Promotions = () => {
             </Button>
           </div>
 
-          {storefrontAnnouncements.filter(e => e.is_active).length > 0 && (
+          {/* Preview shows only what customers actually see right now: enabled
+              AND within schedule — mirroring the storefront exactly. */}
+          {storefrontAnnouncements.some(e => isAnnouncementLiveNow(e as any)) ? (
             <div className="space-y-2">
               <h3 className="font-medium text-sm flex items-center gap-2 text-muted-foreground">
                 <Megaphone className="h-4 w-4" /> {t("promotions.live_preview")}
               </h3>
               <div className="border rounded-lg p-2 bg-muted/50">
                 <Marquee pauseOnHover className="py-2 border-y-2 border-primary/20 bg-primary/10">
-                  {storefrontAnnouncements.filter(e => e.is_active).map(element => (
+                  {storefrontAnnouncements.filter(e => isAnnouncementLiveNow(e as any)).map(element => (
                     <div key={element.id} className="flex items-center gap-6 text-base font-semibold text-primary px-8">
                       {getAnnouncementIconComponent(element.icon_name)}
                       <span>{element.message}</span>
@@ -567,7 +576,14 @@ const Promotions = () => {
                 </Marquee>
               </div>
             </div>
-          )}
+          ) : storefrontAnnouncements.some(e => e.is_active) ? (
+            // Enabled announcements exist but none is within its schedule right
+            // now — explain why the storefront bar is empty.
+            <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+              <Clock className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>None of your enabled announcements are within their scheduled dates today, so the storefront bar is hidden. Edit an announcement and clear its dates (or set the repeat to “None”) to show it now.</span>
+            </div>
+          ) : null}
 
           <Card>
             <CardHeader className="pb-3">
@@ -600,7 +616,23 @@ const Promotions = () => {
                         <TableRow key={element.id}>
                           <TableCell>{element.display_order}</TableCell>
                           <TableCell>{getAnnouncementIconComponent(element.icon_name)}</TableCell>
-                          <TableCell className="font-medium max-w-[300px] truncate">{element.message}</TableCell>
+                          <TableCell className="font-medium max-w-[300px]">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate">{element.message}</span>
+                              {(() => {
+                                const st = announcementStatus(element as any);
+                                if (st === 'live' || st === 'off') return null;
+                                const label = st === 'scheduled'
+                                  ? (element.start_date ? `Scheduled from ${format(parseISO(element.start_date), 'MMM d')}` : 'Scheduled')
+                                  : `Off schedule${element.end_date ? ` (window ended ${format(parseISO(element.end_date), 'MMM d')})` : ''}`;
+                                return (
+                                  <Badge variant="outline" className="shrink-0 gap-1 border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-400">
+                                    <Clock className="h-3 w-3" /> {label}
+                                  </Badge>
+                                );
+                              })()}
+                            </div>
+                          </TableCell>
                           <TableCell className="text-center">
                             <Switch
                               checked={element.is_active}

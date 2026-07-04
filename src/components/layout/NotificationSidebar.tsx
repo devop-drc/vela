@@ -573,10 +573,11 @@ export default function NotificationSidebar() {
     fetchActivity();
   }, [businessId, fetchOrders, fetchDisputes, fetchActivity]);
 
-  // Activity auto-refresh every 30s
+  // Slow safety-net refresh only — realtime subscriptions below deliver the
+  // actual updates. Polling every 30s was redundant load on the database.
   useEffect(() => {
     if (!businessId) return;
-    const interval = setInterval(fetchActivity, 30000);
+    const interval = setInterval(fetchActivity, 180000);
     return () => clearInterval(interval);
   }, [businessId, fetchActivity]);
 

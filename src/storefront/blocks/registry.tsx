@@ -14,6 +14,7 @@ import {
   AddToCartBlock, SpecificationsBlock, RelatedProductsBlock, ReviewsBlock,
 } from './detail/detailBlocks';
 import { ValuePropsBlock, RichTextBlock, PromoBannerBlock } from './ContentBlocks';
+import { ProductSliderBlock } from './ProductSliderBlock';
 
 export interface BlockVariantOption {
   value: string;
@@ -54,6 +55,9 @@ export const BLOCK_REGISTRY: Record<string, BlockDef> = {
     variants: [
       { value: 'banner', label: 'Banner' },
       { value: 'slideshow', label: 'Product slideshow' },
+      { value: 'split-slideshow', label: 'Split + slideshow' },
+      { value: 'marquee-type', label: 'Marquee type' },
+      { value: 'video', label: 'Video' },
       { value: 'full', label: 'Full-screen' },
       { value: 'split', label: 'Image split' },
       { value: 'collage', label: 'Photo collage' },
@@ -146,6 +150,20 @@ export const BLOCK_REGISTRY: Record<string, BlockDef> = {
     ],
     editableProps: [{ key: 'label', label: 'Button label', kind: 'text' }],
   },
+  productSlider: {
+    component: ProductSliderBlock, label: 'Product slider', icon: MousePointerClick, scope: 'home',
+    defaultProps: { source: 'newArrivals', title: 'New Arrivals', variant: 'peek', limit: 10 },
+    variantProp: 'variant',
+    variants: [
+      { value: 'peek', label: 'Peek' },
+      { value: 'centered', label: 'Centered focus' },
+      { value: 'wide', label: 'Wide cards' },
+    ],
+    editableProps: [
+      { key: 'title', label: 'Title', kind: 'text' },
+      { key: 'limit', label: 'Max items', kind: 'number', min: 2, max: 24 },
+    ],
+  },
   valueProps: {
     component: ValuePropsBlock, label: 'Value props', icon: BadgeCheck, scope: 'home',
     defaultProps: { variant: 'row' },
@@ -191,6 +209,7 @@ export const BLOCK_REGISTRY: Record<string, BlockDef> = {
     variants: [
       { value: 'carousel', label: 'Carousel' },
       { value: 'thumbs', label: 'Thumbnail rail' },
+      { value: 'filmstrip', label: 'Filmstrip' },
       { value: 'grid', label: 'Media grid' },
     ],
   },

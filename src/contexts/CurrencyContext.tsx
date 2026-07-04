@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { isDemoFrame } from '@/lib/isDemoFrame';
 import { supabase } from "@/integrations/supabase/client";
 
 export type ExchangeRate = { code: string; rate: number; as_of: string };
@@ -22,6 +23,7 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode; defaultDisp
   const [rates, setRates] = useState<Record<string, number>>({ ALL: 1 });
 
   useEffect(() => {
+    if (isDemoFrame()) return; // demo/preview iframes run on mock data
     let mounted = true;
     (async () => {
       // 1) Try cache table first

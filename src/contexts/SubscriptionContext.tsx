@@ -5,6 +5,7 @@
  */
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isDemoFrame } from "@/lib/isDemoFrame";
 
 export interface Plan {
   id: string;
@@ -22,6 +23,7 @@ export interface Subscription {
   status: "incomplete" | "trialing" | "active" | "past_due" | "canceled" | "expired";
   billing_cycle: "monthly" | "annual";
   trial_ends_at: string | null;
+  current_period_start: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
 }
@@ -63,6 +65,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    if (isDemoFrame()) { setLoading(false); return; } // demo/preview iframes run on mock data
     refresh();
     const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(() => refresh());
     return () => authSub.unsubscribe();

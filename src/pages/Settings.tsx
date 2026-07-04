@@ -35,7 +35,7 @@ export default function Settings() {
     <div className="mx-auto w-full max-w-[1800px]">
       <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v }, { replace: true })}>
         {/* Tab bar */}
-        <TabsList className="w-full grid grid-cols-3 h-12 mb-6">
+        <TabsList className="w-full grid grid-cols-3 h-12 mb-6" data-tour="settings-tabs">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;

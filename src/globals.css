@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Galada&display=swap');
 @import url('https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700&display=swap');
 
 @tailwind base;
@@ -276,6 +275,11 @@
   .sf-root {
     font-family: var(--font-sans);
     line-height: var(--sf-leading, 1.6);
+    /* Without this, plain text (headings, nav links, titles) INHERITS the
+       app body's computed color — the shop's Text token was ignored for
+       everything lacking an explicit text-* class. */
+    color: hsl(var(--foreground));
+    font-weight: var(--sf-weight-body, 400);
   }
   .sf-root h1, .sf-root h2, .sf-root h3, .sf-root h4,
   .sf-root .sf-heading {
@@ -333,6 +337,25 @@
   /* When GSAP owns the reveal it writes inline styles frame-by-frame — the CSS
      reveal transition would double-ease every frame, so it's disabled. */
   .sf-gsap .sf-reveal { transition: none; }
+
+  /* Marquee-type hero: two rows of giant type drifting in opposite directions. */
+  .sf-root .sf-marquee-row { animation: sf-marquee 26s linear infinite; }
+  @keyframes sf-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) { .sf-root .sf-marquee-row { animation: none; } }
+
+  /* Parallax hero media: pre-overscaled with the independent `scale` property
+     so GSAP's translate drift (yPercent ±5) never exposes edges. */
+  .sf-root [data-sf-parallax] { scale: 1.12; will-change: transform; }
+  @media (prefers-reduced-motion: reduce) { .sf-root [data-sf-parallax] { scale: 1; } }
+
+  /* Hover-zoom for product gallery media. */
+  .sf-root .sf-zoomable { overflow: hidden; }
+  .sf-root .sf-zoomable img, .sf-root .sf-zoomable video { transition: transform .7s cubic-bezier(.2, .6, .2, 1); }
+  @media (hover: hover) { .sf-root .sf-zoomable:hover img, .sf-root .sf-zoomable:hover video { transform: scale(1.06); } }
+  @media (prefers-reduced-motion: reduce) {
+    .sf-root .sf-zoomable img, .sf-root .sf-zoomable video { transition: none; }
+    .sf-root .sf-zoomable:hover img, .sf-root .sf-zoomable:hover video { transform: none; }
+  }
 }
 
 /* ─── Landing page (scoped under .landing) ──────────────────────────────── */
