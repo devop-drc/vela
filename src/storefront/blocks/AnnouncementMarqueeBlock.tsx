@@ -37,9 +37,16 @@ export const AnnouncementMarqueeBlock = ({ props }: Props) => {
   const config = useStorefrontConfig();
   const navigate = useNavigate();
 
-  // Promotions (clickable deals) first, then manual info announcements.
+  // Promotions (clickable deals) first, then manual info announcements. Promo
+  // chips are only offered as clickable when we have a slug to link to;
+  // otherwise they'd look interactive but no-op, so fall back to plain info.
+  const canLinkPromos = !!shopDetails?.slug;
   const items: BarItem[] = [
-    ...(promotions || []).map((p) => ({ key: `promo-${p.id}`, message: p.name, kind: 'promo' as const, promotionId: p.id })),
+    ...(promotions || []).map((p) => ({
+      key: `promo-${p.id}`, message: p.name,
+      kind: (canLinkPromos ? 'promo' : 'info') as 'promo' | 'info',
+      promotionId: canLinkPromos ? p.id : undefined,
+    })),
     ...(marqueeElements || []).map((el) => ({ key: `info-${el.id}`, message: el.message, kind: 'info' as const, iconName: el.icon_name })),
   ];
 

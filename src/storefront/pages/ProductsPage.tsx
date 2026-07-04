@@ -176,8 +176,10 @@ export const ProductsPage = () => {
               Showing matches from loaded products — loading the rest of the catalog…
             </p>
           )}
-          {filtered.length === 0 ? (
+          {filtered.length === 0 && !(isFiltering && hasMoreProducts) ? (
             <p className="text-muted-foreground py-16 text-center">No products match your filters.</p>
+          ) : filtered.length === 0 ? (
+            null
           ) : layout === 'list' ? (
             <div className="space-y-3">{filtered.map((p) => <ProductCard key={p.id} product={p} variant="compact" />)}</div>
           ) : (

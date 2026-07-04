@@ -135,8 +135,9 @@ export const useProductData = (): UseProductDataResult => {
         const user = session?.user;
         if (!user) return;
 
-        // 1. Initial fetch (show loading spinner)
-        await fetchProductsAndMetadata(true);
+        // 1. Initial fetch — show the spinner only when we have nothing cached
+        //    to display; otherwise revalidate silently behind the seeded data.
+        await fetchProductsAndMetadata(!cached);
 
         // 2. Setup Realtime Listener
         channel = supabase

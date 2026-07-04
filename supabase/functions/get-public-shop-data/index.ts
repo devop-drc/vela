@@ -19,24 +19,20 @@ const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatI
   const todayUtcStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const todayUtcEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
-  // 1. Check absolute start and end dates (using UTC normalized dates)
-  // If today is before the start date, it's inactive.
-  if (startDate && todayUtcEnd.getTime() < startDate.getTime()) {
-    return false;
-  }
-  // If today is after the end date, it's inactive.
-  if (endDate && todayUtcStart.getTime() > endDate.getTime()) {
-    return false;
-  }
+  const recurring = !!repeatInterval && repeatInterval !== 'none';
 
-  // 2. If no repeat interval or 'none', and it passed step 1, it's active
-  if (!repeatInterval || repeatInterval === 'none') {
+  // 1. Absolute start/end dates apply ONLY to non-recurring items. For a
+  // recurring item the dates define the in-year day/month pattern (read in the
+  // switch below), not a one-time cutoff — otherwise a 'yearly' element would
+  // die forever once its original end_date passed.
+  if (!recurring) {
+    if (startDate && todayUtcEnd.getTime() < startDate.getTime()) return false;
+    if (endDate && todayUtcStart.getTime() > endDate.getTime()) return false;
     return true;
   }
 
-  // 3. Handle specific recurring intervals
+  // 2. Recurring: needs a start date to anchor the pattern.
   if (!startDate) {
-    // If it has a repeat interval but no start date, it's invalid/inactive
     return false;
   }
 
@@ -230,18 +226,26 @@ serve(async (req) => {
       recommendedProducts = availableForRecommendation.slice(0, 4);
     }
 
-    // Fetch active promotions for the business
-    const { data: promotions, error: promotionsError } = await supabaseAdmin
+    // Fetch active promotions and apply the SAME schedule logic as announcements
+    // (absolute window for one-off promos, recurrence pattern for repeating
+    // ones) so a recurring promotion actually recurs instead of dying at its
+    // first end_date.
+    const { data: rawPromotions, error: promotionsError } = await supabaseAdmin
       .from('promotions')
       .select('*')
       .eq('user_id', userId)
-      .eq('is_active', true)
-      .or(`start_date.is.null,start_date.lte.${new Date().toISOString()}`)
-      .or(`end_date.is.null,end_date.gte.${new Date().toISOString()}`);
+      .eq('is_active', true);
 
     if (promotionsError) {
       console.error("Error fetching promotions:", promotionsError);
     }
+    const promotions = (rawPromotions || []).filter((p: any) => isRecurringActive(
+      p.start_date ? new Date(p.start_date) : null,
+      p.end_date ? new Date(p.end_date) : null,
+      p.repeat_interval || null,
+      p.id,
+      p.name || ''
+    ));
 
     // Fetch active marquee elements for the business, only filtering by is_active in SQL
     const { data: rawMarqueeElements, error: marqueeElementsError } = await supabaseAdmin

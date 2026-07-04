@@ -23,12 +23,17 @@ export function isWithinSchedule(a: AnnouncementLike, now: Date = new Date()): b
   const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
-  // Absolute window bounds.
-  if (start && todayEnd.getTime() < start.getTime()) return false;
-  if (end && todayStart.getTime() > end.getTime()) return false;
+  const recurring = !!repeat && repeat !== 'none';
 
-  // No recurrence → passing the absolute window is enough.
-  if (!repeat || repeat === 'none') return true;
+  // Absolute start/end bounds apply ONLY to non-recurring items. For recurring
+  // items the dates supply the in-year day/month pattern (read below), not a
+  // one-time cutoff — otherwise a "yearly" sale would die forever once its
+  // original end_date passed.
+  if (!recurring) {
+    if (start && todayEnd.getTime() < start.getTime()) return false;
+    if (end && todayStart.getTime() > end.getTime()) return false;
+    return true;
+  }
   if (!start) return false; // recurring needs an anchor date
 
   const sM = start.getUTCMonth(), sD = start.getUTCDate();

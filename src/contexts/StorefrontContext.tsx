@@ -190,10 +190,12 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const cacheKey = `storefront:${shopSlug}`;
+    // Read once, up here, so the catch can tell whether we already have cached
+    // content on screen (a failed revalidation must not replace it with an error).
+    const cached = pageToFetch === 1 ? readCache<StorefrontSnapshot>(cacheKey) : null;
     if (pageToFetch === 1) {
       // Instant paint from the last successful load so a reload isn't a 13s
       // blank screen against the slow backend; we still revalidate below.
-      const cached = readCache<StorefrontSnapshot>(cacheKey);
       if (cached) {
         setShopDetails(cached.shopDetails);
         setAppearanceSettings(cached.appearanceSettings);
@@ -340,15 +342,19 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
 
     } catch (err: any) {
       console.error("Failed to fetch storefront data:", err);
-      // Distinguish a genuine "shop not found" from the backend being slow/
-      // unreachable, so a temporary hiccup reads as retryable, not broken.
-      const msg = String(err?.message || '');
-      const isNetwork = err?.name === 'FunctionsFetchError' || /failed to send a request|network|timeout|connection/i.test(msg);
-      const friendly = isNetwork
-        ? "The shop is taking too long to respond. Please check your connection and refresh."
-        : `Failed to load shop: ${msg || "An unknown error occurred."}`;
-      showError(friendly);
-      setError(friendly);
+      // If cached content is already on screen (or this was a "load more"),
+      // keep it and fail quietly — don't replace a working page with an error.
+      if (cached || pageToFetch > 1) {
+        console.warn("Storefront revalidation failed; keeping displayed data.");
+      } else {
+        const msg = String(err?.message || '');
+        const isNetwork = err?.name === 'FunctionsFetchError' || /failed to send a request|network|timeout|connection/i.test(msg);
+        const friendly = isNetwork
+          ? "The shop is taking too long to respond. Please check your connection and refresh."
+          : `Failed to load shop: ${msg || "An unknown error occurred."}`;
+        showError(friendly);
+        setError(friendly);
+      }
     } finally {
       if (pageToFetch === 1) {
         setIsLoading(false);

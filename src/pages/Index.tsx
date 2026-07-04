@@ -37,8 +37,11 @@ interface DashboardData {
 const dashKey = (
   shopDetails: any, dateRange: DateRange | undefined, granularity: string
 ): string | null =>
+  // Date-only (YYYY-MM-DD), NOT full ISO: the default range's `to` is `new
+  // Date()` which differs by milliseconds each mount, so a millisecond-precision
+  // key would never hit the cache on reload. Day precision is the right grain.
   shopDetails?.id
-    ? `dashboard:${shopDetails.id}:${dateRange?.from?.toISOString() ?? 'x'}:${dateRange?.to?.toISOString() ?? 'x'}:${granularity}`
+    ? `dashboard:${shopDetails.id}:${dateRange?.from?.toISOString().slice(0, 10) ?? 'x'}:${dateRange?.to?.toISOString().slice(0, 10) ?? 'x'}:${granularity}`
     : null;
 
 const useDashboardData = (

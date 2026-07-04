@@ -839,11 +839,17 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             name, common_values: Array.isArray(vals) ? vals.map((v: any) => typeof v === 'object' ? v.value : String(v)).filter(Boolean) : []
           })) : [];
 
-          // Re-merge the template only when this product brings spec/option
-          // keys not already merged for this (category, type) during this run.
+          // Re-merge the template only when this product brings something not
+          // already merged this run. Track key+VALUE tuples (not just keys) —
+          // the merge also learns new common_values into existing keys, so a
+          // second product adding "Blue" to an existing "Color" option must not
+          // be skipped just because the "Color" key was already seen.
           const tplKey = `${normCat}:${normType}`;
           const mergedKeys = mergedTemplateKeys.get(tplKey);
-          const newTplKeys = [...templateSpecs.map((s: any) => `s:${s.key}`), ...templateOpts.map((o: any) => `o:${o.name}`)];
+          const newTplKeys = [
+            ...templateSpecs.flatMap((s: any) => [`s:${s.key}`, ...((s.common_values || []).map((v: any) => `s:${s.key}=${v}`))]),
+            ...templateOpts.flatMap((o: any) => [`o:${o.name}`, ...((o.common_values || []).map((v: any) => `o:${o.name}=${v}`))]),
+          ];
           const tplNeedsWork = (templateSpecs.length > 0 || templateOpts.length > 0)
             && (!mergedKeys || newTplKeys.some((k) => !mergedKeys.has(k)));
           if (tplNeedsWork) {
