@@ -118,8 +118,16 @@ export function buildTokens(config: StorefrontConfig, prefersDark = false): Toke
     'text-xs': -2, 'text-sm': -1, 'text-base': 0, 'text-lg': 1,
     'text-xl': 2, 'text-2xl': 3, 'text-3xl': 4, 'text-4xl': 5, 'text-5xl': 6,
   };
-  const fluid = (minRem: number, maxRem: number) =>
-    `clamp(${minRem.toFixed(3)}rem, calc(${minRem.toFixed(3)}rem + ${(maxRem - minRem).toFixed(3)}rem * (100vw - 360px) / 880px), ${maxRem.toFixed(3)}rem)`;
+  // Fluid size between `minRem` (at 360px) and `maxRem` (at 1240px), expressed
+  // as `calc(<rem> + <vw>)` — the only dimensionally-valid form. (Multiplying two
+  // lengths, e.g. `rem * (100vw - 360px)`, is invalid CSS: Chrome tolerates it
+  // but Firefox rejects the whole declaration, which shrank every heading.)
+  const fluid = (minRem: number, maxRem: number) => {
+    const minVw = 360, maxVw = 1240;
+    const slope = ((maxRem - minRem) * 16) / (maxVw - minVw); // px per px (unitless)
+    const yInterceptRem = (minRem * 16 - slope * minVw) / 16;
+    return `clamp(${minRem.toFixed(3)}rem, calc(${yInterceptRem.toFixed(4)}rem + ${(slope * 100).toFixed(4)}vw), ${maxRem.toFixed(3)}rem)`;
+  };
   for (const [name, step] of Object.entries(sizes)) {
     const desktop = (ty.baseSize * Math.pow(r, step)) / 16; // rem
     if (step >= 2) {
