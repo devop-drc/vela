@@ -173,7 +173,7 @@ const TOURS: { match: (path: string) => boolean; tour: PageTour }[] = [
       steps: [
         intro(
           { en: 'Billing', sq: 'Faturimi' },
-          { en: 'Your InstantShop subscription lives here: current plan, trial status, payment method and invoices.', sq: 'Abonimi yt në InstantShop jeton këtu: plani aktual, statusi i provës falas, mënyra e pagesës dhe faturat.' }
+          { en: 'Your Vela subscription lives here: current plan, trial status, payment method and invoices.', sq: 'Abonimi yt në Vela jeton këtu: plani aktual, statusi i provës falas, mënyra e pagesës dhe faturat.' }
         ),
         at('billing-plan',
           { en: 'Your plan', sq: 'Plani yt' },
@@ -188,12 +188,24 @@ const TOURS: { match: (path: string) => boolean; tour: PageTour }[] = [
       steps: [
         intro(
           { en: 'Settings', sq: 'Cilësimet' },
-          { en: 'Three areas live here: your Shop details (name, logo, currency, shipping), the Storefront Studio (your shop\'s entire look), and Integrations (Instagram connection). Let\'s look at the Studio — it\'s the most powerful part.', sq: 'Këtu ka tri zona: të dhënat e Dyqanit (emri, logoja, monedha, transporti), Studio e Dyqanit (e gjithë pamja e dyqanit), dhe Integrimet (lidhja me Instagram). Le të shohim Studion — pjesa më e fuqishme.' }
+          { en: 'Three tabs live here: Account (your profile and Instagram connection), Shop (business details — name, logo, currency, shipping), and Appearance (how this dashboard looks). Your storefront\'s design now has its own Storefront Studio in the sidebar.', sq: 'Këtu ka tri skeda: Llogaria (profili yt dhe lidhja me Instagram), Dyqani (të dhënat e biznesit — emri, logoja, monedha, transporti), dhe Pamja (si duket ky panel). Dizajni i dyqanit tani ka Studion e vet të Dyqanit në menynë anësore.' }
         ),
         at('settings-tabs',
           { en: 'The three tabs', sq: 'Tri skedat' },
-          { en: 'Shop for business details, Storefront for design, Integrations for your Instagram link. Changes save automatically as you make them — watch for the "Saved" indicator.', sq: '"Dyqani" për të dhënat e biznesit, "Dyqani online" për dizajnin, "Integrimet" për lidhjen me Instagram. Ndryshimet ruhen automatikisht — shiko treguesin "U ruajt".' },
+          { en: 'Account for your profile & Instagram, Shop for business details, Appearance for how this dashboard looks. Changes save automatically as you make them.', sq: 'Llogaria për profilin & Instagram, Dyqani për të dhënat e biznesit, Pamja për mënyrën si duket paneli. Ndryshimet ruhen automatikisht ndërsa i bën.' },
           'bottom'),
+      ],
+    },
+  },
+  {
+    match: (p) => p.startsWith('/storefront-studio'),
+    tour: {
+      key: 'storefront',
+      steps: [
+        intro(
+          { en: 'Storefront Studio', sq: 'Studio e Dyqanit' },
+          { en: 'This is where you design your public shop — pick a template, then fine-tune colors, fonts, layout and sections. Everything updates in the live preview.', sq: 'Këtu dizajnon dyqanin tënd publik — zgjidh një shabllon, pastaj rregullo ngjyrat, shkronjat, faqosjen dhe seksionet. Gjithçka përditësohet në pamjen paraprake të drejtpërdrejtë.' }
+        ),
         at('studio-templates',
           { en: 'Templates', sq: 'Shabllonet' },
           { en: 'Start from a professionally designed template — each one restyles your whole storefront: colors, fonts, layout, animations. The rail scrolls on its own; drag it to browse, click one to apply. You can then customize every detail.', sq: 'Nis nga një shabllon i dizajnuar profesionalisht — secili ristilon gjithë dyqanin: ngjyrat, shkronjat, faqosjen, animacionet. Shiriti lëviz vetë; tërhiqe për të shfletuar, kliko një për ta zbatuar. Pastaj personalizon çdo detaj.' },

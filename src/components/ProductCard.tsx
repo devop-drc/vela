@@ -1,8 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
 import { Checkbox } from "./ui/checkbox";
 import { AlertTriangle, Palette, Ruler, Tag, Frame, ScanText, Package, Layers, Star } from "lucide-react"; // Import Package & Layers icons
+import { StatusDot } from "@/components/ui-app";
 import { useProductRating } from "@/hooks/useProductRating";
 
 import { ProductStatusDropdown } from "./ProductStatusDropdown";
@@ -82,30 +82,33 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
   
 
+  // Stock chip — tokenised (dark-safe) via the shared StatusDot tones so the
+  // card matches the table + filter rail. "in" → success, low/critical →
+  // warning, out → danger, subscription → success, unknown → neutral.
   const getStockDot = (inventory: number | null) => {
     if (product.pricing_type === 'subscription') {
-      return <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-medium"><span className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />Sub</span>;
+      return <span className="inline-flex items-center gap-1 text-[10px] font-medium text-success"><StatusDot tone="success" />Sub</span>;
     }
     if (inventory === null) {
-      return <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground font-medium"><span className="h-2 w-2 rounded-full bg-gray-400 flex-shrink-0" />N/A</span>;
+      return <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground"><StatusDot tone="neutral" />N/A</span>;
     }
     const status = getStockStatus(inventory);
     if (status === "in") {
-      return <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-medium"><span className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />{inventory}</span>;
+      return <span className="inline-flex items-center gap-1 text-[10px] font-medium text-success"><StatusDot tone="success" />{inventory}</span>;
     }
     if (status === "low" || status === "critical") {
-      return <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-medium"><span className="h-2 w-2 rounded-full bg-amber-500 flex-shrink-0" />{inventory} left</span>;
+      return <span className="inline-flex items-center gap-1 text-[10px] font-medium text-warning"><StatusDot tone="warning" />{inventory} left</span>;
     }
-    return <span className="inline-flex items-center gap-1 text-[10px] text-red-500 font-medium"><span className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />Out</span>;
+    return <span className="inline-flex items-center gap-1 text-[10px] font-medium text-destructive"><StatusDot tone="danger" />Out</span>;
   };
 
   return (
-    <motion.div layout whileHover={{ y: -5, transition: { duration: 0.2 } }} className="relative h-full overflow-visible">
+    <div className="relative h-full overflow-visible transition-transform duration-200 hover:-translate-y-1">
       <Card
         className={cn(
           "group w-full overflow-hidden rounded-lg transition-all duration-300 flex flex-col cursor-pointer h-full shadow-sm hover:shadow-md",
-          isSelectionModeActive && "ring-2 ring-gray-400 shadow-md",
-          isSelected && "ring-primary ring-offset-2 shadow-2xl"
+          isSelectionModeActive && "ring-2 ring-border/60 shadow-md",
+          isSelected && "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-md"
         )}
       >
         <Carousel 
@@ -150,7 +153,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
 
             {rating && rating.count > 0 && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                <Star className="h-3.5 w-3.5 fill-warning text-warning" />
                 {rating.avg.toFixed(1)} <span className="text-muted-foreground/70">({rating.count})</span>
               </span>
             )}
@@ -177,7 +180,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
             )}
           </div>
 
-          <div className="flex items-end justify-between pt-1 gap-2">
+          <div className="flex flex-wrap items-end justify-between gap-x-2 gap-y-1 pt-1">
             {product.details?.multi_product ? (
               <div className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground">
                 <Layers className="h-4 w-4" />
@@ -187,7 +190,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
               <div className="flex flex-col min-w-0">
                 {product.price != null && shopDetails ? (
                   <>
-                    <p className="font-bold text-xl leading-tight">
+                    <p className="font-bold text-xl leading-tight whitespace-nowrap">
                       {displayPrice != null ? (
                         <>
                           {new Intl.NumberFormat('en-US', {
@@ -208,7 +211,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
                     </div>
                   </>
                 ) : (
-                  <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-600">
+                  <div className="flex items-center gap-1.5 text-sm font-semibold text-warning">
                     <AlertTriangle className="h-4 w-4" />
                     Set Price
                   </div>
@@ -224,6 +227,6 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
           </div>
         </div>
       </Card>
-    </motion.div>
+    </div>
   );
 };

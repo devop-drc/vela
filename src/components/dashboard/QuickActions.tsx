@@ -1,5 +1,5 @@
 import { getStorefrontUrl } from "@/lib/storefront";
-import { ReactNode, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSync } from "@/hooks/useSync";
 import { useIntegration } from "@/contexts/IntegrationContext";
@@ -15,51 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useShop } from "@/contexts/ShopContext";
-import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-
-interface QuickActionCardProps {
-  icon: ReactNode;
-  title: string;
-  description: string;
-  onClick: () => void;
-  disabled?: boolean;
-  colorClass: string;
-}
-
-const QuickActionCard = ({
-  icon,
-  title,
-  description,
-  onClick,
-  disabled,
-  colorClass,
-}: QuickActionCardProps) => (
-  <motion.button
-    whileHover={{ y: -3, transition: { duration: 0.15 } }}
-    whileTap={{ scale: 0.97 }}
-    onClick={onClick}
-    disabled={disabled}
-    className={cn(
-      "w-full text-left rounded-xl border bg-card p-4 shadow-sm transition-colors",
-      "hover:border-primary/40 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-      disabled && "opacity-60 cursor-not-allowed pointer-events-none"
-    )}
-  >
-    <div
-      className={cn(
-        "mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg",
-        colorClass
-      )}
-    >
-      {icon}
-    </div>
-    <p className="font-semibold text-sm">{title}</p>
-    <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-      {description}
-    </p>
-  </motion.button>
-);
 
 export const QuickActions = () => {
   const navigate = useNavigate();
@@ -119,46 +75,41 @@ export const QuickActions = () => {
     {
       icon: (
         <RefreshCw
-          className={cn("h-4 w-4 text-blue-600", isSyncing && "animate-spin")}
+          className={cn("h-4 w-4 text-info", isSyncing && "animate-spin")}
         />
       ),
       title: isSyncing ? t("dashboard.syncing") : t("dashboard.quick_sync"),
       description: t("dashboard.quick_sync_desc"),
       onClick: handleQuickSync,
       disabled: isSyncing,
-      colorClass: "bg-blue-50 text-blue-600",
     },
     {
-      icon: <Archive className="h-4 w-4 text-amber-600" />,
+      icon: <Archive className="h-4 w-4 text-warning" />,
       title: t("dashboard.restock"),
       description: t("dashboard.restock_desc"),
       onClick: () => navigate("/out-of-stock"),
       disabled: false,
-      colorClass: "bg-amber-50 text-amber-600",
     },
     {
-      icon: <ShoppingBag className="h-4 w-4 text-emerald-600" />,
+      icon: <ShoppingBag className="h-4 w-4 text-success" />,
       title: t("dashboard.check_orders"),
       description: t("dashboard.check_orders_desc"),
       onClick: () => navigate("/orders"),
       disabled: false,
-      colorClass: "bg-emerald-50 text-emerald-600",
     },
     {
-      icon: <ImageIcon className={cn("h-4 w-4 text-pink-600", isRefreshingImages && "animate-pulse")} />,
+      icon: <ImageIcon className={cn("h-4 w-4 text-primary", isRefreshingImages && "animate-pulse")} />,
       title: isRefreshingImages ? "Refreshing…" : "Fix Images",
       description: "Re-upload broken product images",
       onClick: handleRefreshImages,
       disabled: isRefreshingImages,
-      colorClass: "bg-pink-50 text-pink-600",
     },
     {
-      icon: <Palette className="h-4 w-4 text-violet-600" />,
+      icon: <Palette className="h-4 w-4 text-primary" />,
       title: t("dashboard.customize"),
       description: t("dashboard.customize_desc"),
-      onClick: () => navigate("/settings?tab=appearance"),
+      onClick: () => navigate("/storefront-studio"),
       disabled: false,
-      colorClass: "bg-violet-50 text-violet-600",
     },
   ];
 
@@ -182,9 +133,10 @@ export const QuickActions = () => {
             onClick={action.onClick}
             disabled={action.disabled}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1.5 text-xs font-medium transition-colors shadow-sm",
-              "hover:bg-accent hover:text-accent-foreground",
-              action.disabled && "opacity-50 cursor-not-allowed"
+              "inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1.5 text-xs font-medium shadow-sm transition-all duration-200",
+              "hover:-translate-y-0.5 hover:border-primary/40 hover:bg-accent hover:text-accent-foreground hover:shadow-md",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              action.disabled && "opacity-50 cursor-not-allowed hover:translate-y-0 hover:shadow-sm"
             )}
           >
             {action.icon}

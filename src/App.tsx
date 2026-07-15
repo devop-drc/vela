@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
 import SubscriptionGuard from "./components/layout/SubscriptionGuard";
 import DashboardLayout from "./components/layout/DashboardLayout";
+import { AuthProvider } from "./contexts/AuthContext";
 import { SubscriptionProvider } from "./contexts/SubscriptionContext";
 import { IntegrationProvider } from "./contexts/IntegrationContext";
 import { IntegrationPrompt } from "./components/layout/IntegrationPrompt";
@@ -41,6 +42,7 @@ const Promotions = lazy(() => import("./pages/Promotions"));
 const FilterVisibility = lazy(() => import("./pages/FilterVisibility"));
 const Billing = lazy(() => import("./pages/Billing"));
 const Admin = lazy(() => import("./pages/Admin"));
+const StorefrontStudioPage = lazy(() => import("./pages/StorefrontStudioPage"));
 // Custom storefront — Storefront Studio (src/storefront)
 const StorefrontLayout = lazy(() => import("./storefront/layout/StorefrontLayout"));
 const StorefrontIndex = lazy(() => import("./storefront/pages/HomePage").then((m) => ({ default: m.HomePage })));
@@ -219,6 +221,7 @@ const AppContent = () => {
               <Route path="/categories" element={<Categories />} />
               <Route path="/out-of-stock" element={<OutOfStock />} />
               <Route path="/promotions" element={<Promotions />} />
+              <Route path="/storefront-studio" element={<StorefrontStudioPage />} />
               <Route path="/filters" element={<FilterVisibility />} />
             </Route>
           </Route>
@@ -237,20 +240,22 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <PageTitleProvider>
-            <CurrencyProvider>
-              <ShopProvider>
-                <SubscriptionProvider>
-                  <IntegrationProvider>
-                    <SyncProvider>
-                      <AppContent />
-                      <IntegrationPrompt />
-                    </SyncProvider>
-                  </IntegrationProvider>
-                </SubscriptionProvider>
-              </ShopProvider>
-            </CurrencyProvider>
-          </PageTitleProvider>
+          <AuthProvider>
+            <PageTitleProvider>
+              <CurrencyProvider>
+                <ShopProvider>
+                  <SubscriptionProvider>
+                    <IntegrationProvider>
+                      <SyncProvider>
+                        <AppContent />
+                        <IntegrationPrompt />
+                      </SyncProvider>
+                    </IntegrationProvider>
+                  </SubscriptionProvider>
+                </ShopProvider>
+              </CurrencyProvider>
+            </PageTitleProvider>
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "../ui/skeleton";
 import { ScrollArea } from "../ui/scroll-area";
 import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency, formatLargeNumber } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { ImageOff } from "lucide-react";
+import { ImageOff, Package } from "lucide-react";
+import { EmptyState } from "@/components/ui-app";
 
 interface TopProduct {
   product_id: string;
@@ -20,11 +21,36 @@ interface TopProduct {
   category?: string | null;
 }
 
+// Token-based rank badges (dark-safe). #1 reads as a subtle "gold" via the
+// warning tone; the rest stay neutral. Only the badge is tinted — rows stay
+// clean instead of the whole list carrying colour.
 const RANK_CONFIG = [
-  { label: '#1', bg: 'bg-amber-400/15', text: 'text-amber-500', border: 'border-amber-400/40', dot: 'bg-amber-400' },
-  { label: '#2', bg: 'bg-slate-400/10', text: 'text-slate-500', border: 'border-slate-400/30', dot: 'bg-slate-400' },
-  { label: '#3', bg: 'bg-orange-400/10', text: 'text-orange-500', border: 'border-orange-400/30', dot: 'bg-orange-400' },
+  { label: '#1', badge: 'bg-warning/10 text-warning ring-warning/20' },
+  { label: '#2', badge: 'bg-muted text-muted-foreground ring-border' },
+  { label: '#3', badge: 'bg-muted text-muted-foreground ring-border' },
 ];
+
+// Product thumbnail that falls back to the ImageOff icon on load error —
+// React-driven, no imperative innerHTML/createElement.
+const ProductThumb = ({ src, alt }: { src: string | null | undefined; alt: string }) => {
+  const [errored, setErrored] = useState(false);
+  return (
+    <div className="h-11 w-11 flex-shrink-0 rounded-lg overflow-hidden bg-muted border border-border/40 flex items-center justify-center">
+      {src && !errored ? (
+        <img
+          src={src}
+          alt={alt}
+          className="h-full w-full object-cover"
+          referrerPolicy="no-referrer"
+          loading="lazy"
+          onError={() => setErrored(true)}
+        />
+      ) : (
+        <ImageOff className="h-4 w-4 text-muted-foreground" />
+      )}
+    </div>
+  );
+};
 
 export const TopProducts = () => {
   const { t } = useTranslation();
@@ -83,10 +109,7 @@ export const TopProducts = () => {
 
   return (
     <Card className="shadow-sm border border-border/60 h-full flex flex-col">
-      <CardHeader className="pb-2 flex-shrink-0">
-        <CardDescription className="text-sm">{t("dashboard.best_selling")}</CardDescription>
-      </CardHeader>
-      <CardContent className="pt-0 px-3 pb-3 flex-1 min-h-0">
+      <CardContent className="pt-3 px-3 pb-3 flex-1 min-h-0">
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -102,17 +125,14 @@ export const TopProducts = () => {
             ))}
           </div>
         ) : products.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">{t("dashboard.no_sales_data")}</p>
+          <EmptyState compact icon={Package} title={t("dashboard.no_sales_data")} />
         ) : (
           <ScrollArea className="h-full pr-2">
           <ol className="space-y-2">
             {products.map((product, index) => {
               const rank = RANK_CONFIG[index] ?? {
                 label: `#${index + 1}`,
-                bg: 'bg-muted/50',
-                text: 'text-muted-foreground',
-                border: 'border-border/40',
-                dot: 'bg-muted-foreground',
+                badge: 'bg-muted text-muted-foreground ring-border',
               };
 
               const revenueDisplay = formatCurrency(
@@ -123,43 +143,15 @@ export const TopProducts = () => {
               return (
                 <li
                   key={product.product_id}
-                  className={cn(
-                    'flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors',
-                    rank.bg,
-                    rank.border
-                  )}
+                  className="flex items-center gap-3 rounded-xl border border-border/60 bg-card px-3 py-2.5 transition-colors hover:bg-muted/40"
                 >
-                  {/* Rank badge */}
-                  <span className={cn('w-7 text-center text-xs font-bold tabular-nums flex-shrink-0', rank.text)}>
+                  {/* Rank badge (only the badge is tinted) */}
+                  <span className={cn('grid h-7 w-7 flex-shrink-0 place-items-center rounded-md text-xs font-bold tabular-nums ring-1 ring-inset', rank.badge)}>
                     {rank.label}
                   </span>
 
                   {/* Thumbnail */}
-                  <div className="h-11 w-11 flex-shrink-0 rounded-lg overflow-hidden bg-muted border border-border/40 flex items-center justify-center">
-                    {product.media_url ? (
-                      <img
-                        src={product.media_url}
-                        alt={product.name}
-                        className="h-full w-full object-cover"
-                        referrerPolicy="no-referrer"
-                        loading="lazy"
-                        onError={(e) => {
-                          const img = e.currentTarget;
-                          img.style.display = 'none';
-                          const parent = img.parentElement;
-                          if (parent && !parent.querySelector('[data-fallback]')) {
-                            const fb = document.createElement('div');
-                            fb.setAttribute('data-fallback', 'true');
-                            fb.className = 'h-full w-full flex items-center justify-center text-muted-foreground';
-                            fb.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><path d="M10.41 10.41a2 2 0 1 1-2.83-2.83"/><line x1="13.5" y1="13.5" x2="6" y2="21"/><line x1="18" y1="12" x2="21" y2="15"/><path d="M3.59 3.59A1.99 1.99 0 0 0 3 5v14a2 2 0 0 0 2 2h14c.55 0 1.052-.22 1.41-.59"/><path d="M21 15V5a2 2 0 0 0-2-2H9"/></svg>';
-                            parent.appendChild(fb);
-                          }
-                        }}
-                      />
-                    ) : (
-                      <ImageOff className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </div>
+                  <ProductThumb src={product.media_url} alt={product.name} />
 
                   {/* Name + category */}
                   <div className="flex-1 min-w-0">

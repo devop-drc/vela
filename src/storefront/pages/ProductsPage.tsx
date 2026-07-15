@@ -3,11 +3,10 @@
 
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, Loader2, Tag, X } from 'lucide-react';
+import { Search, SlidersHorizontal, Loader2, Tag, X, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,9 +26,20 @@ export const ProductsPage = () => {
   const config = useStorefrontConfig();
   const token = useStorefrontTokenStyle();
   const [params, setParams] = useSearchParams();
+  // `searchInput` drives the field; `search` (debounced) drives filtering +
+  // auto-paging so keystrokes don't hammer fetchMoreProducts across the catalog.
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 250);
+    return () => clearTimeout(t);
+  }, [searchInput]);
   const category = params.get('category') || 'all';
-  const sort = params.get('sort') || 'newest';
+  // Section "View all" links can pass ?sort=bestSellers|newArrivals|recommended,
+  // which aren't real sort options — fall back to newest so the Select never
+  // renders blank and ordering stays sensible.
+  const rawSort = params.get('sort');
+  const sort = SORTS.some((s) => s.value === rawSort) ? (rawSort as string) : 'newest';
   const promotionId = params.get('promotion');
   const layout = config.pages.products.layout;
   const filtersMode = config.pages.products.filters;
@@ -100,7 +110,15 @@ export const ProductsPage = () => {
   }, [hasMoreProducts, fetchMoreProducts]);
 
   const cols = config.layout.productGrid.columns;
-  const gridCls = cn('grid gap-[var(--sf-grid-gap)] grid-cols-2 sm:grid-cols-3', cols >= 4 && 'lg:grid-cols-4', cols >= 5 && 'xl:grid-cols-5');
+  // Respect the chosen columns distinctly (2 ≠ 3 ≠ 4 ≠ 5) at desktop, with a
+  // sensible responsive ramp. Literal class strings so Tailwind detects them.
+  const COL_MAP: Record<number, string> = {
+    2: 'grid-cols-1 sm:grid-cols-2',
+    3: 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-3',
+    4: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4',
+    5: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
+  };
+  const gridCls = cn('grid gap-[var(--sf-grid-gap)]', COL_MAP[cols] ?? COL_MAP[4]);
 
   const Filters = () => (
     <div className="space-y-5">
@@ -120,7 +138,13 @@ export const ProductsPage = () => {
     <div className="flex flex-wrap items-center gap-3 mb-6">
       <div className="relative flex-1 min-w-[200px]">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search products…" className="pl-9" />
+        <Input value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Search products…" className="pl-9 pr-9" />
+        {searchInput && (
+          <button type="button" onClick={() => setSearchInput('')} aria-label="Clear search"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
       {filtersMode !== 'sidebar' && categories.length > 0 && (
         <Select value={category} onValueChange={(v) => setParam('category', v)}>
@@ -177,7 +201,16 @@ export const ProductsPage = () => {
             </p>
           )}
           {filtered.length === 0 && !(isFiltering && hasMoreProducts) ? (
-            <p className="text-muted-foreground py-16 text-center">No products match your filters.</p>
+            <div className="py-16 text-center text-muted-foreground">
+              {products.length === 0 ? (
+                <><Package className="mx-auto mb-4 h-12 w-12 opacity-40" /><p>No products have been added yet — check back soon!</p></>
+              ) : (
+                <>
+                  <p className="mb-4">No products match your filters.</p>
+                  <Button variant="outline" size="sm" onClick={() => { setSearchInput(''); setParam('category', 'all'); setParam('promotion', ''); }}>Clear filters</Button>
+                </>
+              )}
+            </div>
           ) : filtered.length === 0 ? (
             null
           ) : layout === 'list' ? (

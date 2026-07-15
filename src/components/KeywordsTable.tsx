@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trash2, Check, X } from "lucide-react";
+import { Trash2, Check, X, Pencil } from "lucide-react";
 import { Keyword } from "@/pages/Keywords";
 import { useTranslation } from "react-i18next";
 
@@ -83,7 +83,7 @@ export const KeywordsTable = ({ keywords, onInlineUpdate, onDelete }: KeywordsTa
                         onKeyDown={(e) => handleKeyDown(e, kw)}
                         className="h-7 text-sm font-mono"
                       />
-                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-green-600 hover:text-green-700" onClick={() => commitEdit(kw)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-success hover:text-success/80" onClick={() => commitEdit(kw)}>
                         <Check className="h-3.5 w-3.5" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={cancelEdit}>
@@ -91,13 +91,17 @@ export const KeywordsTable = ({ keywords, onInlineUpdate, onDelete }: KeywordsTa
                       </Button>
                     </div>
                   ) : (
-                    <span
-                      className="font-mono text-sm bg-muted px-1.5 py-0.5 rounded cursor-pointer hover:bg-muted/80 transition-colors"
+                    <button
+                      type="button"
+                      className="group/cell -mx-1 flex items-center gap-1.5 rounded px-1 py-0.5 text-left transition-colors hover:bg-muted/50"
                       title={t("keywords.click_to_edit")}
                       onClick={() => startEdit(kw, "keyword")}
                     >
-                      {kw.keyword}
-                    </span>
+                      <span className="font-mono text-sm bg-muted px-1.5 py-0.5 rounded transition-colors group-hover/cell:bg-muted/80">
+                        {kw.keyword}
+                      </span>
+                      <Pencil className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/cell:opacity-100" />
+                    </button>
                   )}
                 </TableCell>
 
@@ -112,7 +116,7 @@ export const KeywordsTable = ({ keywords, onInlineUpdate, onDelete }: KeywordsTa
                         onKeyDown={(e) => handleKeyDown(e, kw)}
                         className="h-7 text-sm"
                       />
-                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-green-600 hover:text-green-700" onClick={() => commitEdit(kw)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-success hover:text-success/80" onClick={() => commitEdit(kw)}>
                         <Check className="h-3.5 w-3.5" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={cancelEdit}>
@@ -120,13 +124,17 @@ export const KeywordsTable = ({ keywords, onInlineUpdate, onDelete }: KeywordsTa
                       </Button>
                     </div>
                   ) : (
-                    <span
-                      className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                    <button
+                      type="button"
+                      className="group/cell -mx-1 flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left transition-colors hover:bg-muted/50"
                       title={t("keywords.click_to_edit")}
                       onClick={() => startEdit(kw, "description")}
                     >
-                      {kw.description}
-                    </span>
+                      <span className="text-sm text-muted-foreground transition-colors group-hover/cell:text-foreground">
+                        {kw.description}
+                      </span>
+                      <Pencil className="ml-auto h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/cell:opacity-100" />
+                    </button>
                   )}
                 </TableCell>
 
@@ -137,7 +145,7 @@ export const KeywordsTable = ({ keywords, onInlineUpdate, onDelete }: KeywordsTa
                     size="icon"
                     className="h-7 w-7 text-destructive hover:text-destructive opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                     onClick={() => onDelete(kw.id)}
-                    aria-label="Delete keyword"
+                    aria-label={t("keywords.delete_aria")}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

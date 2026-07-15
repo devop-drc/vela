@@ -6,7 +6,8 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { Users, Gift, ShieldCheck, TrendingUp, Search, Loader2, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
+import { Users, Gift, ShieldCheck, TrendingUp, Search, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,7 +38,21 @@ const STATUS_TONE: Record<string, string> = {
 
 const call = async (body: Record<string, unknown>) => {
   const { data, error } = await supabase.functions.invoke("admin-api", { body });
-  if (error || data?.error) throw new Error(error?.message || data?.error);
+  if (error) {
+    // invoke() reports a generic "non-2xx" message; dig out the real server
+    // error from the response body so the admin sees the actual cause
+    // (e.g. "Unknown action" → the function needs a redeploy).
+    let msg = error.message;
+    try {
+      const ctx = (error as any).context;
+      if (ctx && typeof ctx.json === "function") {
+        const b = await ctx.json();
+        if (b?.error) msg = b.error;
+      }
+    } catch { /* body already consumed / not json */ }
+    throw new Error(msg);
+  }
+  if (data?.error) throw new Error(data.error);
   return data;
 };
 
@@ -61,8 +76,28 @@ export default function Admin() {
   const [acting, setActing] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [nu, setNu] = useState({ email: "", password: "", firstName: "", lastName: "", admin: false });
+  const [plans, setPlans] = useState<{ id: string; name: string }[]>([]);
+  const [planForm, setPlanForm] = useState({ planId: "", endDate: "", billingCycle: "monthly" });
 
   useEffect(() => { setTitle("Admin"); }, [setTitle]);
+
+  // Available plans (public-read) for the manual plan-assignment control.
+  useEffect(() => {
+    if (!isAdmin) return;
+    supabase.from("plans").select("id, name").eq("is_active", true).order("display_order")
+      .then(({ data }) => setPlans(data ?? []));
+  }, [isAdmin]);
+
+  // Prefill the plan form from the opened client's current subscription.
+  useEffect(() => {
+    if (!detail?.id) return;
+    const sub = detail.subscription;
+    setPlanForm({
+      planId: sub?.plan_id ?? "",
+      billingCycle: sub?.billing_cycle ?? "monthly",
+      endDate: sub?.current_period_end ? new Date(sub.current_period_end).toISOString().slice(0, 10) : "",
+    });
+  }, [detail?.id, detail?.subscription]);
 
   const load = useCallback(async (p = 1, q = "") => {
     setLoading(true);
@@ -232,7 +267,7 @@ export default function Admin() {
                 setActing(false);
               }}
             >
-              {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Krijo llogarinë"}
+              {acting ? <Spinner className="h-4 w-4" /> : "Krijo llogarinë"}
             </Button>
           </div>
         </DialogContent>
@@ -293,14 +328,64 @@ export default function Admin() {
                 </div>
               )}
 
+              {/* Manual plan assignment: choose a plan + end date and activate. */}
+              <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+                <p className="text-xs font-semibold text-muted-foreground">Cakto planin manualisht</p>
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Plani</Label>
+                    <select
+                      value={planForm.planId}
+                      onChange={(e) => setPlanForm({ ...planForm, planId: e.target.value })}
+                      className="h-9 rounded-md border border-input bg-background px-2 text-sm capitalize outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <option value="">Zgjidh planin…</option>
+                      {plans.map((p) => <option key={p.id} value={p.id} className="capitalize">{p.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Cikli</Label>
+                    <select
+                      value={planForm.billingCycle}
+                      onChange={(e) => setPlanForm({ ...planForm, billingCycle: e.target.value })}
+                      className="h-9 rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <option value="monthly">Mujor</option>
+                      <option value="annual">Vjetor</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Mbaron më</Label>
+                    <Input
+                      type="date"
+                      value={planForm.endDate}
+                      onChange={(e) => setPlanForm({ ...planForm, endDate: e.target.value })}
+                      className="h-9 w-[9.5rem]"
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={acting || !planForm.planId || !planForm.endDate}
+                    onClick={() => act(
+                      {
+                        action: "set_plan",
+                        userId: detail.id,
+                        planId: planForm.planId,
+                        billingCycle: planForm.billingCycle,
+                        endDate: new Date(`${planForm.endDate}T23:59:59`).toISOString(),
+                      },
+                      "Plani u aktivizua",
+                    )}
+                  >
+                    {acting ? <Spinner className="h-3.5 w-3.5" /> : "Aktivizo planin"}
+                  </Button>
+                </div>
+              </div>
+
               <div className="flex flex-wrap gap-2 border-t border-border pt-3">
                 <Button size="sm" variant="outline" disabled={acting}
                   onClick={() => act({ action: "extend_trial", userId: detail.id, days: 7 }, "Prova u zgjat 7 ditë")}>
-                  {acting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "+7 ditë provë"}
-                </Button>
-                <Button size="sm" variant="outline" disabled={acting}
-                  onClick={() => act({ action: "set_status", userId: detail.id, status: "active" }, "U aktivizua (30 ditë)")}>
-                  Aktivizo
+                  {acting ? <Spinner className="h-3.5 w-3.5" /> : "+7 ditë provë"}
                 </Button>
                 <Button size="sm" variant="outline" className="text-destructive" disabled={acting}
                   onClick={() => act({ action: "set_status", userId: detail.id, status: "canceled" }, "Abonimi u anulua")}>

@@ -21,7 +21,7 @@ export const SfButton = forwardRef<HTMLButtonElement, ButtonProps>(({ className,
   if (b === 'soft')
     return <Button ref={ref} variant="ghost" className={cn(shapeCls, 'bg-primary/15 text-primary hover:bg-primary/25', className)} style={style} {...props} />;
   if (b === 'gradient')
-    return <Button ref={ref} className={cn(shapeCls, 'text-primary-foreground border-0 hover:opacity-90', className)} style={{ backgroundImage: 'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)))', ...style }} {...props} />;
+    return <Button ref={ref} className={cn(shapeCls, 'text-primary-foreground border-0 hover:opacity-90', className)} style={{ backgroundImage: 'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--sf-primary-2)))', ...style }} {...props} />;
 
   // solid (default)
   return <Button ref={ref} className={cn(shapeCls, className)} style={style} {...props} />;

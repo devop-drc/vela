@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui-app/StatusBadge";
+import { EmptyState } from "@/components/ui-app/EmptyState";
+import { orderStatusTone, toneText } from "@/lib/status";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { useAuth } from "@/contexts/AuthContext";
+import { MessageScroller, MessageScrollerProvider, MessageScrollerViewport } from "@/components/ui/message-scroller";
 import {
   Select,
   SelectContent,
@@ -25,6 +30,7 @@ import {
   ChevronDown,
   ChevronUp,
   XCircle,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -98,26 +104,6 @@ function timeAgo(dateStr: string, t: (key: string, opts?: any) => string): strin
   return t("notifications.days_ago", { count: days });
 }
 
-function statusColor(status: string): string {
-  switch (status) {
-    case "Pending":
-      return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    case "Order Seen":
-      return "bg-blue-100 text-blue-800 border-blue-200";
-    case "Order Packaged":
-      return "bg-indigo-100 text-indigo-800 border-indigo-200";
-    case "Given to Courier":
-      return "bg-purple-100 text-purple-800 border-purple-200";
-    case "Fulfilled":
-      return "bg-green-100 text-green-800 border-green-200";
-    case "Problematic":
-      return "bg-orange-100 text-orange-800 border-orange-200";
-    case "Cancelled":
-      return "bg-red-100 text-red-800 border-red-200";
-    default:
-      return "bg-gray-100 text-gray-800 border-gray-200";
-  }
-}
 
 const STATUS_LABEL_KEYS: Record<string, string> = {
   "Pending": "notifications.status_pending",
@@ -153,12 +139,10 @@ function formatAmount(amount: number, currency: string): string {
 function OrderCard({
   order,
   isNew,
-  businessId,
   onStatusChange,
 }: {
   order: Order;
   isNew: boolean;
-  businessId: string;
   onStatusChange: (id: string, status: string) => void;
 }) {
   const { t } = useTranslation();
@@ -187,8 +171,9 @@ function OrderCard({
 
   return (
     <div
+      data-reveal
       className={cn(
-        "border rounded-lg p-3 transition-all duration-300",
+        "border rounded-lg p-3 transition-all duration-300 animate-in fade-in-0 slide-in-from-bottom-1",
         isNew && "animate-pulse-once ring-2 ring-primary/40 bg-primary/5"
       )}
     >
@@ -206,9 +191,9 @@ function OrderCard({
           </p>
         </div>
         <div className="flex items-center gap-2 ml-2 shrink-0">
-          <Badge className={cn("text-[10px] px-1.5 py-0", statusColor(order.status))}>
+          <StatusBadge tone={orderStatusTone(order.status)} size="sm">
             {statusLabel(order.status, t)}
-          </Badge>
+          </StatusBadge>
           {expanded ? (
             <ChevronUp className="h-4 w-4 text-muted-foreground" />
           ) : (
@@ -218,9 +203,12 @@ function OrderCard({
       </button>
 
       {expanded && (
-        <div className="mt-3 space-y-3 border-t pt-3">
+        <div className="mt-3 space-y-3 border-t pt-3 animate-in fade-in-0 slide-in-from-top-1 duration-200">
           {loadingItems ? (
-            <p className="text-xs text-muted-foreground">{t("common.loading")}</p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Spinner className="h-3.5 w-3.5" />
+              {t("common.loading")}
+            </div>
           ) : (
             <>
               {items.length > 0 && (
@@ -305,7 +293,7 @@ function DisputeCard({
   };
 
   return (
-    <div className="border rounded-lg p-3">
+    <div data-reveal className="border rounded-lg p-3 animate-in fade-in-0 slide-in-from-bottom-1">
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between text-left"
@@ -319,16 +307,9 @@ function DisputeCard({
           </p>
         </div>
         <div className="flex items-center gap-2 ml-2 shrink-0">
-          <Badge
-            className={cn(
-              "text-[10px] px-1.5 py-0",
-              dispute.status === "Open"
-                ? "bg-red-100 text-red-800 border-red-200"
-                : "bg-green-100 text-green-800 border-green-200"
-            )}
-          >
+          <StatusBadge tone={dispute.status === "Open" ? "danger" : "success"} size="sm">
             {dispute.status === "Open" ? t("notifications.open") : t("notifications.resolved")}
-          </Badge>
+          </StatusBadge>
           <span className="text-[10px] text-muted-foreground">
             {timeAgo(dispute.created_at, t)}
           </span>
@@ -341,7 +322,7 @@ function DisputeCard({
       </button>
 
       {expanded && (
-        <div className="mt-3 border-t pt-3 space-y-2">
+        <div className="mt-3 border-t pt-3 space-y-2 animate-in fade-in-0 slide-in-from-top-1 duration-200">
           {/* Chat bubbles */}
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {/* Customer message */}
@@ -372,13 +353,12 @@ function DisputeCard({
 
           {/* Reply input */}
           <div className="flex gap-2">
-            <input
-              type="text"
+            <Input
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder={t("notifications.type_reply")}
-              className="flex-1 h-8 px-3 text-xs border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+              className="h-8 flex-1 text-xs"
             />
             <Button
               size="sm"
@@ -414,8 +394,13 @@ function DisputeCard({
 
 export default function NotificationSidebar() {
   const { t } = useTranslation();
+  // businessId is resolved & cached once by AuthProvider (hydrates instantly
+  // from localStorage) — no local getSession→businesses waterfall needed here.
+  const { businessId } = useAuth();
   const [open, setOpen] = useState(false);
-  const [businessId, setBusinessId] = useState<string | null>(null);
+  // Distinguishes "still loading the first fetch" from a genuinely empty list
+  // so we don't flash a false "nothing here" state before data arrives.
+  const [firstLoadDone, setFirstLoadDone] = useState(false);
 
   // Data state
   const [orders, setOrders] = useState<Order[]>([]);
@@ -460,32 +445,6 @@ export default function NotificationSidebar() {
       } catch {}
     }
   }, [open]);
-
-  // Fetch businessId once on mount
-  useEffect(() => {
-    let cancelled = false;
-    const fetchBusiness = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const user = session?.user;
-      if (!user || cancelled) return;
-
-      const { data: business } = await supabase
-        .from("businesses")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (business && !cancelled) {
-        setBusinessId(business.id);
-      }
-    };
-    fetchBusiness();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // ── Fetch orders ────────────────────────────────────────────────────
   const fetchOrders = useCallback(async () => {
@@ -568,9 +527,13 @@ export default function NotificationSidebar() {
   // Initial data load
   useEffect(() => {
     if (!businessId) return;
-    fetchOrders();
-    fetchDisputes();
-    fetchActivity();
+    let cancelled = false;
+    Promise.all([fetchOrders(), fetchDisputes(), fetchActivity()]).finally(() => {
+      if (!cancelled) setFirstLoadDone(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [businessId, fetchOrders, fetchDisputes, fetchActivity]);
 
   // Slow safety-net refresh only — realtime subscriptions below deliver the
@@ -721,39 +684,55 @@ export default function NotificationSidebar() {
 
   // ── Render ──────────────────────────────────────────────────────────
 
-  return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <button className="fixed bottom-24 right-4 md:bottom-4 z-50 flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2.5 shadow-lg hover:bg-primary/90 transition-all focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-          <Bell className="h-4 w-4" />
-          <span className="text-sm font-medium hidden sm:inline">{t("notifications.title")}</span>
-          {/* Colored dot badges */}
-          <div className="flex items-center gap-1">
-            {unreadCounts.orders > 0 && (
-              <span className="flex items-center justify-center h-5 min-w-[20px] rounded-full bg-blue-500 text-white text-[10px] font-bold px-1">
-                {unreadCounts.orders > 99 ? "99+" : unreadCounts.orders}
-              </span>
-            )}
-            {unreadCounts.disputes > 0 && (
-              <span className="flex items-center justify-center h-5 min-w-[20px] rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
-                {unreadCounts.disputes > 99 ? "99+" : unreadCounts.disputes}
-              </span>
-            )}
-            {unreadCounts.activity > 0 && (
-              <span className="flex items-center justify-center h-5 min-w-[20px] rounded-full bg-green-500 text-white text-[10px] font-bold px-1">
-                {unreadCounts.activity > 99 ? "99+" : unreadCounts.activity}
-              </span>
-            )}
-          </div>
-        </button>
-      </SheetTrigger>
+  // Show a loading affordance until the first fetch resolves; only then does an
+  // empty list mean "genuinely nothing here".
+  const loading = !!businessId && !firstLoadDone;
 
-      <SheetContent side="bottom" className="h-[80vh] rounded-t-xl p-0 flex flex-col">
-        <div className="px-4 pt-4 pb-2">
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          aria-label={t("notifications.title")}
+          className="flex h-12 items-center gap-1.5 rounded-full bg-primary px-3.5 text-primary-foreground shadow-lg transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <Bell className="h-5 w-5" aria-hidden="true" />
+          {/* Per-type counters */}
+          {(unreadCounts.orders > 0 || unreadCounts.disputes > 0 || unreadCounts.activity > 0) && (
+            <span className="flex items-center gap-1">
+              {unreadCounts.orders > 0 && (
+                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-info px-1 text-[10px] font-bold text-info-foreground" aria-label={`${unreadCounts.orders} ${t("notifications.orders")}`}>
+                  {unreadCounts.orders > 99 ? "99+" : unreadCounts.orders}
+                </span>
+              )}
+              {unreadCounts.disputes > 0 && (
+                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground" aria-label={`${unreadCounts.disputes} ${t("notifications.disputes")}`}>
+                  {unreadCounts.disputes > 99 ? "99+" : unreadCounts.disputes}
+                </span>
+              )}
+              {unreadCounts.activity > 0 && (
+                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-success px-1 text-[10px] font-bold text-success-foreground" aria-label={`${unreadCounts.activity} ${t("notifications.activity")}`}>
+                  {unreadCounts.activity > 99 ? "99+" : unreadCounts.activity}
+                </span>
+              )}
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+
+      <PopoverContent
+        side="top"
+        align="end"
+        sideOffset={14}
+        className="flex h-[min(600px,calc(100dvh-7rem))] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border p-0 shadow-2xl sm:w-[400px]"
+      >
+        <div className="flex items-center justify-between border-b px-4 py-3">
           <h2 className="text-lg font-semibold">{t("notifications.title")}</h2>
+          <button onClick={() => setOpen(false)} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
-        <Tabs defaultValue="orders" className="flex-1 flex flex-col min-h-0">
+        <Tabs defaultValue="orders" className="flex min-h-0 flex-1 flex-col pt-2">
           <TabsList className="mx-4 mb-2 grid grid-cols-3">
             <TabsTrigger value="orders" className="text-xs">
               <Package className="h-3.5 w-3.5 mr-1" />
@@ -771,11 +750,18 @@ export default function NotificationSidebar() {
 
           {/* Orders Tab */}
           <TabsContent value="orders" className="flex-1 m-0 min-h-0">
-            <ScrollArea className="h-full px-4 pb-4">
-              {orders.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  {t("notifications.no_orders")}
-                </p>
+            <MessageScrollerProvider><MessageScroller className="h-full"><MessageScrollerViewport className="px-4 pb-4">
+              {loading ? (
+                <div className="flex justify-center py-10">
+                  <Spinner className="h-5 w-5 text-muted-foreground" />
+                </div>
+              ) : orders.length === 0 ? (
+                <EmptyState
+                  compact
+                  icon={Package}
+                  title={t("notifications.no_orders")}
+                  description={t("notifications.no_orders_desc")}
+                />
               ) : (
                 <div className="space-y-2 pb-2">
                   {orders.map((order) => (
@@ -783,22 +769,28 @@ export default function NotificationSidebar() {
                       key={order.id}
                       order={order}
                       isNew={newOrderIds.has(order.id)}
-                      businessId={businessId!}
                       onStatusChange={handleOrderStatusChange}
                     />
                   ))}
                 </div>
               )}
-            </ScrollArea>
+            </MessageScrollerViewport></MessageScroller></MessageScrollerProvider>
           </TabsContent>
 
           {/* Disputes Tab */}
           <TabsContent value="disputes" className="flex-1 m-0 min-h-0">
-            <ScrollArea className="h-full px-4 pb-4">
-              {disputes.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  {t("notifications.no_disputes")}
-                </p>
+            <MessageScrollerProvider><MessageScroller className="h-full"><MessageScrollerViewport className="px-4 pb-4">
+              {loading ? (
+                <div className="flex justify-center py-10">
+                  <Spinner className="h-5 w-5 text-muted-foreground" />
+                </div>
+              ) : disputes.length === 0 ? (
+                <EmptyState
+                  compact
+                  icon={AlertTriangle}
+                  title={t("notifications.no_disputes")}
+                  description={t("notifications.no_disputes_desc")}
+                />
               ) : (
                 <div className="space-y-2 pb-2">
                   {disputes.map((dispute) => (
@@ -811,32 +803,40 @@ export default function NotificationSidebar() {
                   ))}
                 </div>
               )}
-            </ScrollArea>
+            </MessageScrollerViewport></MessageScroller></MessageScrollerProvider>
           </TabsContent>
 
           {/* Activity Tab */}
           <TabsContent value="activity" className="flex-1 m-0 min-h-0">
-            <ScrollArea className="h-full px-4 pb-4">
-              {activity.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  {t("notifications.no_activity")}
-                </p>
+            <MessageScrollerProvider><MessageScroller className="h-full"><MessageScrollerViewport className="px-4 pb-4">
+              {loading ? (
+                <div className="flex justify-center py-10">
+                  <Spinner className="h-5 w-5 text-muted-foreground" />
+                </div>
+              ) : activity.length === 0 ? (
+                <EmptyState
+                  compact
+                  icon={Activity}
+                  title={t("notifications.no_activity")}
+                  description={t("notifications.no_activity_desc")}
+                />
               ) : (
                 <div className="space-y-2 pb-2">
                   {activity.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-start gap-2 border rounded-lg p-3"
+                      data-reveal
+                      className="flex items-start gap-2 border rounded-lg p-3 animate-in fade-in-0 slide-in-from-bottom-1"
                     >
                       <div className="mt-0.5 shrink-0">
                         {item.type === "new_order" && (
-                          <Package className="h-4 w-4 text-blue-500" />
+                          <Package className={cn("h-4 w-4", toneText.info)} />
                         )}
                         {item.type === "status_change" && (
-                          <Activity className="h-4 w-4 text-purple-500" />
+                          <Activity className="h-4 w-4 text-primary" />
                         )}
                         {item.type === "low_stock" && (
-                          <AlertTriangle className="h-4 w-4 text-amber-500" />
+                          <AlertTriangle className={cn("h-4 w-4", toneText.warning)} />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -849,10 +849,10 @@ export default function NotificationSidebar() {
                   ))}
                 </div>
               )}
-            </ScrollArea>
+            </MessageScrollerViewport></MessageScroller></MessageScrollerProvider>
           </TabsContent>
         </Tabs>
-      </SheetContent>
-    </Sheet>
+      </PopoverContent>
+    </Popover>
   );
 }

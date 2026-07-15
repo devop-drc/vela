@@ -16,22 +16,32 @@ const pending = new Set<string>();
 const listeners = new Map<string, Set<(s: ReviewSummary) => void>>();
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
+// `product_reviews.product_id` is a uuid column. Placeholder / sample / demo
+// products (e.g. the Studio preview's stand-ins, or mock ids like "d1") carry
+// non-uuid ids; sending those to `.in('product_id', …)` makes PostgREST 400
+// ("invalid input syntax for type uuid"). They can't have real reviews anyway,
+// so resolve them to an empty summary without hitting the network.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function flush() {
   flushTimer = null;
   const ids = Array.from(pending);
   pending.clear();
   if (ids.length === 0) return;
-  const { data, error } = await supabase
-    .from('product_reviews')
-    .select('product_id, rating')
-    .in('product_id', ids);
+  const validIds = ids.filter((id) => UUID_RE.test(id));
   const sums = new Map<string, { total: number; count: number }>();
-  if (!error) {
-    for (const r of data ?? []) {
-      const s = sums.get(r.product_id) ?? { total: 0, count: 0 };
-      s.total += r.rating;
-      s.count += 1;
-      sums.set(r.product_id, s);
+  if (validIds.length > 0) {
+    const { data, error } = await supabase
+      .from('product_reviews')
+      .select('product_id, rating')
+      .in('product_id', validIds);
+    if (!error) {
+      for (const r of data ?? []) {
+        const s = sums.get(r.product_id) ?? { total: 0, count: 0 };
+        s.total += r.rating;
+        s.count += 1;
+        sums.set(r.product_id, s);
+      }
     }
   }
   for (const id of ids) {

@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/vela-icon.svg" />
     <!-- Warm up the connections every page needs before the JS asks for them:
          the Supabase API and the Google Fonts CDN (fonts load at runtime). -->
     <link rel="preconnect" href="https://hbsetjwlawuxasjbvpyx.supabase.co" crossorigin />
@@ -11,14 +11,14 @@
     <link rel="preconnect" href="https://api.fontshare.com" />
     <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>InstantShop — Ktheje Instagramin në dyqan online</title>
-    <meta name="description" content="AI i kthen postimet e tua të Instagramit në një dyqan të vërtetë — produkte, pagesa me kartë në Lekë, porosi. Pa kod. Provo falas 7 ditë." />
-    <meta name="keywords" content="instagram shop, dyqan online, shqipëri, e-commerce, pagesa me kartë, raiaccept, shitje instagram" />
-    <meta name="author" content="InstantShop" />
+    <title>Vela — Ktheje Instagramin në dyqan online</title>
+    <meta name="description" content="AI i kthen postimet e tua të Instagramit në një dyqan të plotë — produkte, pagesa me kartë në Lekë, porosi. Pa kod. Provo falas 7 ditë." />
+    <meta name="keywords" content="vela, instagram shop, dyqan online, shqipëri, e-commerce, pagesa me kartë, raiaccept, shitje instagram" />
+    <meta name="author" content="Vela" />
     <link rel="canonical" href="https://instantshop.al/" />
     <!-- Open Graph -->
-    <meta property="og:site_name" content="InstantShop" />
-    <meta property="og:title" content="InstantShop — Ktheje Instagramin në dyqan online" />
+    <meta property="og:site_name" content="Vela" />
+    <meta property="og:title" content="Vela — Ktheje Instagramin në dyqan online" />
     <meta property="og:description" content="AI i kthen postimet e tua në dyqan të vërtetë — produkte, pagesa, porosi. Pa kod. Provo falas 7 ditë." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://instantshop.al/" />
@@ -27,9 +27,93 @@
     <meta property="og:locale:alternate" content="en_US" />
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="InstantShop — Ktheje Instagramin në dyqan online" />
+    <meta name="twitter:title" content="Vela — Ktheje Instagramin në dyqan online" />
     <meta name="twitter:description" content="AI i kthen postimet e tua në dyqan të vërtetë. Provo falas 7 ditë." />
     <meta name="twitter:image" content="https://instantshop.al/demo/p1.jpg" />
+    <meta name="theme-color" content="#d62976" />
+    <link rel="alternate" hreflang="sq" href="https://instantshop.al/" />
+    <link rel="alternate" hreflang="en" href="https://instantshop.al/" />
+    <link rel="alternate" hreflang="x-default" href="https://instantshop.al/" />
+
+    <!-- Structured data: helps Google rich results AND lets AI assistants (ChatGPT, Gemini, Claude)
+         answer factual questions about Vela. Keep in sync with the pricing/FAQ copy. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://instantshop.al/#organization",
+          "name": "Vela",
+          "url": "https://instantshop.al/",
+          "logo": "https://instantshop.al/vela-icon.svg",
+          "description": "Vela turns an Instagram Business profile into a full online shop using AI — for sellers in Albania.",
+          "areaServed": { "@type": "Country", "name": "Albania" },
+          "sameAs": []
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://instantshop.al/#software",
+          "name": "Vela",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://instantshop.al/",
+          "publisher": { "@id": "https://instantshop.al/#organization" },
+          "description": "Vela uses AI to turn your Instagram posts into a sellable online store — products, card payments in Albanian Lek (RaiAccept), and orders — with no code. Start free; try Pro for 7 days with no credit card.",
+          "inLanguage": ["sq", "en"],
+          "offers": [
+            {
+              "@type": "Offer",
+              "name": "Starter",
+              "price": "0",
+              "priceCurrency": "ALL",
+              "description": "Free forever. Instagram storefront with up to 10 products and cash-on-delivery orders. No credit card."
+            },
+            {
+              "@type": "Offer",
+              "name": "Pro",
+              "price": "1990",
+              "priceCurrency": "ALL",
+              "description": "Unlimited products, online card payments (RaiAccept), Storefront Studio and full analytics. 7-day free trial, no credit card."
+            },
+            {
+              "@type": "Offer",
+              "name": "Business",
+              "price": "3990",
+              "priceCurrency": "ALL",
+              "description": "Everything in Pro plus priority support, advanced analytics and higher AI sync limits."
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://instantshop.al/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "How does the 7-day free trial work?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Sign up and connect Instagram with no credit card. You get full Pro access for 7 days. When the trial ends, pick a plan to keep your shop online; otherwise your storefront goes offline, but your products are saved and return when you activate a plan." }
+            },
+            {
+              "@type": "Question",
+              "name": "Do I need a website or coding skills to sell on Instagram in Albania?",
+              "acceptedAnswer": { "@type": "Answer", "text": "No. Vela turns your Instagram posts into a hosted online storefront automatically. You connect your account and share your shop link — no website or code needed." }
+            },
+            {
+              "@type": "Question",
+              "name": "How do customers pay?",
+              "acceptedAnswer": { "@type": "Answer", "text": "You can accept secure card payments through Raiffeisen Bank Albania (RaiAccept) and/or cash on delivery. Prices are shown in Albanian Lek (ALL)." }
+            },
+            {
+              "@type": "Question",
+              "name": "How much does Vela cost?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Vela has a free-forever Starter plan for a catalogue of up to 10 products. Pro is 1,990 ALL/month (unlimited products and card payments) and Business is 3,990 ALL/month. Paid plans include a 7-day free trial with no credit card." }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
   </head>
 
   <body>

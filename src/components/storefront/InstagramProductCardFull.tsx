@@ -601,7 +601,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
             </div>
           )}
           {product.pricing_type === 'one_time' && (product.inventory === null || product.inventory <= 0 || isOutOfStock) && (
-            <Button size="lg" className="w-full text-base bg-gray-500 hover:bg-gray-600 text-white rounded-md" disabled>
+            <Button size="lg" className="w-full text-base bg-muted text-muted-foreground rounded-md" disabled>
               Out of Stock
             </Button>
           )}

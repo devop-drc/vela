@@ -7,7 +7,6 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import { MediaItem } from '@/components/MediaItem';
 import { getCategoryIcon } from '@/lib/categoryIcons';
 import { useStorefront } from '@/contexts/StorefrontContext';
@@ -81,7 +80,7 @@ export const CategoryGridBlock = ({ props }: Props) => {
                 'sf-hoverable group relative block overflow-hidden bg-muted',
                 i === 0 && 'col-span-2 row-span-2'
               )}
-              style={{ borderRadius: 'var(--radius)' }}
+              style={{ borderRadius: 'var(--sf-radius-card)' }}
             >
               {img ? (
                 <MediaItem src={img} alt={category} className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -108,9 +107,11 @@ export const CategoryGridBlock = ({ props }: Props) => {
           const Icon = getCategoryIcon(category);
           return (
             <Link key={category} to={linkTo(category)} className="sf-hoverable sf-glass group flex flex-col items-center justify-center p-6 text-center">
-              <Icon className="h-12 w-12 mb-3 text-primary" />
+              <span className="mb-3 grid h-14 w-14 place-items-center rounded-full bg-primary/10 text-primary transition-transform group-hover:scale-110">
+                <Icon className="h-6 w-6" />
+              </span>
               <h3 className="sf-heading font-semibold text-base leading-tight mb-1 line-clamp-2">{category}</h3>
-              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">{count} Products</Badge>
+              <span className="sf-badge">{count} Products</span>
             </Link>
           );
         })}

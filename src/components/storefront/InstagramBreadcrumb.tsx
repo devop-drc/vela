@@ -35,15 +35,15 @@ export const InstagramBreadcrumb = () => {
   });
 
   return (
-    <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-4 px-4">
+    <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-4 px-4">
       {breadcrumbs.map((item, index) => (
         <div key={item.path} className="flex items-center">
-          {index > 0 && <ChevronRight className="h-4 w-4 mx-1 text-gray-400" />}
+          {index > 0 && <ChevronRight className="h-4 w-4 mx-1 text-muted-foreground" />}
           <Link
             to={item.path}
             className={cn(
-              "hover:text-gray-800 transition-colors",
-              index === breadcrumbs.length - 1 && "text-gray-800 font-medium"
+              "hover:text-foreground transition-colors",
+              index === breadcrumbs.length - 1 && "text-foreground font-medium"
             )}
           >
             {index === 0 && <ArrowLeft className="h-4 w-4 inline-block mr-1" />}

@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Import, ChevronDown, LayoutGrid, List, CheckSquare, Group, Filter as FilterIcon, Settings2, Plus, Loader2, AlertTriangle } from "lucide-react"; // Renamed Filter to FilterIcon
+import { BrandButton } from "@/components/BrandButton";
+import { RefreshCw, Import, ChevronDown, LayoutGrid, List, CheckSquare, Group, Filter as FilterIcon, Settings2, Plus, AlertTriangle, X } from "lucide-react"; // Renamed Filter to FilterIcon
+import { Spinner } from "@/components/ui/spinner";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,18 +16,19 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { BulkActionsToolbar } from "@/components/BulkActionsToolbar";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { SaleModal, SaleFormData } from "@/components/SaleModal";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/contexts/PageTitleContext";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
+import { CommandBar, SearchInput, EmptyState } from "@/components/ui-app";
+import { useReveal, STAGGER } from "@/lib/anim";
+import { productStatusTone, toneDotBg } from "@/lib/status";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIntegration } from "@/contexts/IntegrationContext";
 import { toast } from "sonner";
 import { useSync } from "@/hooks/useSync";
-import { RealtimeChannel } from "@supabase/supabase-js";
+import { useAuth } from "@/contexts/AuthContext";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { useShop } from "@/contexts/ShopContext";
 import { useProductData } from "@/hooks/useProductData"; // Import useProductData
@@ -65,27 +68,36 @@ interface Product {
   instagram_post_id?: string; // Added instagram_post_id
 }
 
+// Target-width auto-fill columns: cards hold a consistent size per detail
+// level and the column count grows automatically with the viewport (so they
+// never balloon on ultrawide) while adapting to the filter-rail width. The 3
+// sizes set the card's target min-width (Less Detail → More Detail → Large).
+// Mobile stays a fixed 2-up.
 const gridSizeClasses: { [key: string]: string } = {
-  sm: "lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5",
-  md: "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5",
-  lg: "lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4",
+  sm: "grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(190px,1fr))]",
+  md: "grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(250px,1fr))]",
+  lg: "grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(330px,1fr))]",
 };
 
 const sizeLabels: { [key in GridSizeType]: string } = { sm: 'Less Detail', md: 'More Detail', lg: 'Large' };
 const sizeCycle: GridSizeType[] = ['sm', 'md', 'lg'];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.05 },
-  },
-};
-
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: { y: 0, opacity: 1 },
-};
+/** A stat that doubles as a status filter — count + label, active when its
+    status is in the current filter (or, for "All", when no status is set). */
+const StatusPill = ({ active, dot, count, label, onClick }: { active: boolean; dot?: string; count: number; label: string; onClick: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={cn(
+      "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium shadow-sm transition-colors",
+      active ? "border-primary bg-primary/10 text-primary" : "border-border bg-card hover:bg-accent",
+    )}
+  >
+    {dot ? <span className={cn("h-2 w-2 rounded-full", dot)} /> : <Package className="h-3.5 w-3.5 text-muted-foreground" />}
+    <span className="font-semibold tabular-nums">{count}</span>
+    <span className="opacity-70">{label}</span>
+  </button>
+);
 
 const Products = () => {
   const { setTitle } = usePageTitle();
@@ -93,6 +105,13 @@ const Products = () => {
   const { runWithIntegrationCheck } = useIntegration();
   const { isSyncing, startNewSync } = useSync();
   const { settings } = useAppearance();
+  // Resolved once by the shared AuthProvider — no per-call getUser() waterfall.
+  const { userId } = useAuth();
+  const userIdRef = useRef<string | null>(userId);
+  userIdRef.current = userId;
+  // Latest business-sync refresher, called by useProductData's products channel
+  // on INSERT/DELETE bursts (so we don't open a second products subscription).
+  const refreshBizSyncRef = useRef<(() => void) | null>(null);
   const [isImporterOpen, setIsImporterOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
@@ -171,9 +190,10 @@ const Products = () => {
     allDetailsAttributes,
     maxPrice,
     isLoading: isProductDataLoading,
+    error: productError,
     refetch,
     updateProduct,
-  } = useProductData();
+  } = useProductData({ onProductsMutated: () => refreshBizSyncRef.current?.() });
 
   // Use Product Filters Hook
   const {
@@ -388,8 +408,8 @@ const Products = () => {
 
   // Simplified fetchBusinessDataForSyncStatus to only get business data for sync status
   const fetchBusinessDataForSyncStatus = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const uid = userIdRef.current;
+    if (!uid) {
       setHasDoneFullSync(null);
       return;
     }
@@ -397,7 +417,7 @@ const Products = () => {
     const { data: businessData, error: businessError } = await supabase
       .from('businesses')
       .select('id, last_full_sync_at')
-      .eq('user_id', user.id)
+      .eq('user_id', uid)
       .single();
 
     if (businessError) {
@@ -407,41 +427,14 @@ const Products = () => {
       setHasDoneFullSync(!!businessData?.last_full_sync_at);
     }
   };
+  // Keep the ref pointed at the latest fetcher so useProductData's products
+  // channel (folded here — no second subscription) refreshes sync status.
+  refreshBizSyncRef.current = fetchBusinessDataForSyncStatus;
 
   useEffect(() => {
-    fetchBusinessDataForSyncStatus();
-  }, []);
-
-  useEffect(() => {
-    let channel: RealtimeChannel | null = null;
-    let refetchTimer: ReturnType<typeof setTimeout> | undefined;
-
-    const setupRealtimeListener = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      channel = supabase
-        .channel(`products:${user.id}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'products', filter: `user_id=eq.${user.id}` },
-          (payload) => {
-            // The useProductData hook already handles real-time updates to allProducts.
-            // Sync-status metadata only needs ONE refresh per burst of inserts
-            // (a sync creates products in batches), so debounce it.
-            if (payload.eventType === 'INSERT' || payload.eventType === 'DELETE') {
-              if (refetchTimer) clearTimeout(refetchTimer);
-              refetchTimer = setTimeout(() => fetchBusinessDataForSyncStatus(), 3000);
-            }
-          }
-        ).subscribe();
-    };
-
-    setupRealtimeListener();
-
-    return () => {
-      if (channel) supabase.removeChannel(channel);
-      if (refetchTimer) clearTimeout(refetchTimer);
-    };
-  }, []);
+    if (userId) fetchBusinessDataForSyncStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   useEffect(() => {
     if (selectedProduct) {
@@ -484,9 +477,9 @@ const Products = () => {
         }
 
         if (syncType === 'full') {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            supabase.from('businesses').update({ last_full_sync_at: new Date().toISOString() }).eq('user_id', user.id)
+          const uid = userIdRef.current;
+          if (uid) {
+            supabase.from('businesses').update({ last_full_sync_at: new Date().toISOString() }).eq('user_id', uid)
               .then(() => setHasDoneFullSync(true));
           }
         }
@@ -636,6 +629,16 @@ const Products = () => {
   const statsDraft = allProducts.filter(p => p.status === 'Draft').length;
   const statsOos = allProducts.filter(p => p.status === 'Out of Stock').length;
 
+  // Subtle staggered entrance for the card grid (GSAP, reduced-motion aware).
+  // Replaces the old uncapped framer stagger + per-card layout animation. The
+  // per-item delay is capped so a large catalog still finishes in ~0.6s, and it
+  // only replays on mount / grouping / card-size change — not on every filter
+  // keystroke — so filtering no longer reflow-animates the whole grid.
+  const gridRevealRef = useReveal<HTMLDivElement>(
+    { stagger: Math.min(STAGGER.base, 0.6 / Math.max(filteredAndSortedProducts.length, 1)) },
+    [grouping, gridSize, isProductDataLoading],
+  );
+
   return (
     <>
       {isImporterOpen && <InstagramPostModal onClose={() => setIsImporterOpen(false)} onImport={() => {}} />}
@@ -705,11 +708,162 @@ const Products = () => {
         allProducts={allProducts}
       />
 
-      {/* ── Main layout: filter panel + content ── */}
-      <div className="flex gap-4 w-full">
-        {/* Inline filter panel (desktop only) */}
+      {/* ── Command bar ── */}
+      <div data-tour="products-toolbar" className="mb-3">
+        <CommandBar>
+          {/* Search */}
+          <SearchInput
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+            placeholder={t("products.search_placeholder", "Search products…")}
+            containerClassName="h-10 min-w-[200px] flex-1"
+          />
+
+          {/* Primary: Add Product */}
+          <Button data-tour="add-product" className="h-10 shadow-sm" onClick={handleAddProduct} disabled={isCreatingProduct}>
+            {isCreatingProduct ? <Spinner className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+            <span className="hidden sm:inline">{t("products.add_product", "Add Product")}</span>
+          </Button>
+
+          {/* Sync */}
+          {hasDoneFullSync === null ? (
+            <Skeleton className="h-10 w-28" />
+          ) : !hasDoneFullSync ? (
+            <Button onClick={() => handleSync('full')} disabled={isSyncing} className="h-10 border-0 bg-primary text-primary-foreground shadow-sm hover:bg-primary/90" title={t("products.full_sync_hint")}>
+              <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+              {t("products.full_sync")}
+            </Button>
+          ) : (
+            <div className="flex items-center">
+              <Button onClick={() => handleSync('quick')} disabled={isSyncing} variant="outline" className="h-10 rounded-r-none border-primary/40 text-primary shadow-sm hover:border-primary hover:bg-primary/10" title={t("products.quick_sync_hint")}>
+                <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+                <span className="hidden sm:inline">{t("dashboard.quick_sync")}</span>
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button disabled={isSyncing} variant="outline" className="h-10 rounded-l-none border-l-0 border-primary/40 px-2 text-primary shadow-sm hover:bg-primary/10">
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="max-w-[260px]">
+                  <DropdownMenuItem onClick={() => handleSync('full')} disabled={isSyncing} className="flex-col items-start gap-0.5">
+                    <span className="font-medium">{t("products.run_full_sync")}</span>
+                    <span className="whitespace-normal text-xs text-muted-foreground">{t("products.full_sync_hint")}</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+
+          {/* Import */}
+          <Button onClick={() => runWithIntegrationCheck(() => setIsImporterOpen(true))} variant="outline" className="h-10 shadow-sm transition-colors hover:border-primary/40 hover:bg-accent">
+            <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+            <span className="hidden md:inline">{t("products.import")}</span>
+          </Button>
+        </CommandBar>
+      </div>
+
+      {/* ── Status pills (also quick status filters) + view toggle ── */}
+      {!isProductDataLoading && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <StatusPill active={statusFilter.length === 0} count={statsTotal} label={t("products.total")} onClick={() => handleClearSection('status')} />
+          <StatusPill active={statusFilter.includes('Active')} dot={toneDotBg[productStatusTone('Active')]} count={statsActive} label={t("common.active")} onClick={() => handleToggleStatusFilter('Active')} />
+          <StatusPill active={statusFilter.includes('Draft')} dot={toneDotBg[productStatusTone('Draft')]} count={statsDraft} label={t("common.draft")} onClick={() => handleToggleStatusFilter('Draft')} />
+          <StatusPill active={statusFilter.includes('Out of Stock')} dot={toneDotBg[productStatusTone('Out of Stock')]} count={statsOos} label={t("common.out_of_stock")} onClick={() => handleToggleStatusFilter('Out of Stock')} />
+          {!isMobile && (
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              {/* Sort */}
+              <Select value={sortOption} onValueChange={setSortOption}>
+                <SelectTrigger className="h-9 w-[150px] shadow-sm"><SelectValue placeholder={t("common.sort")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">{t("products.newest")}</SelectItem>
+                  <SelectItem value="oldest">{t("products.oldest")}</SelectItem>
+                  <SelectItem value="price-asc">{t("products.price_low_high")}</SelectItem>
+                  <SelectItem value="price-desc">{t("products.price_high_low")}</SelectItem>
+                  <SelectItem value="name-asc">{t("products.name_az")}</SelectItem>
+                  <SelectItem value="name-desc">{t("products.name_za")}</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Group */}
+              <Select value={grouping} onValueChange={(v) => setGrouping(v as GroupingType)}>
+                <SelectTrigger className="h-9 w-[150px] shadow-sm">
+                  <Group className="mr-1.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t("products.no_grouping", "No grouping")}</SelectItem>
+                  <SelectItem value="category">{t("products.by_category")}</SelectItem>
+                  <SelectItem value="type">{t("products.by_type")}</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Card size (grid only) */}
+              {viewMode === 'grid' && (
+                <Button variant="outline" size="sm" className="h-9 w-28 justify-start shadow-sm" onClick={cycleGridSize} title={t("products.card_size", "Card size")}>
+                  <LayoutGrid className="mr-2 h-4 w-4" />{sizeLabels[gridSize]}
+                </Button>
+              )}
+
+              {/* Filters toggle */}
+              <Button variant={showFilters ? "secondary" : "outline"} size="sm" className="h-9 shadow-sm" onClick={() => { if (isMobile) setIsFilterDrawerOpen(true); else setShowFilters((v) => !v); }}>
+                <FilterIcon className="mr-2 h-4 w-4" />{t("common.filters")}
+                {hasActiveFilters && <span className="ml-1 text-xs text-primary">({t("common.active")})</span>}
+              </Button>
+
+              {/* Multi-select mode (grid only) */}
+              {viewMode === 'grid' && (
+                <Button variant={isSelectionModeActive ? "secondary" : "outline"} size="sm" className="h-9 shadow-sm" onClick={toggleSelectionMode}>
+                  <CheckSquare className="mr-2 h-4 w-4" />{isSelectionModeActive ? t('common.cancel') : t('products.select')}
+                </Button>
+              )}
+
+              {/* Storefront filters config */}
+              <Button variant="outline" size="icon" className="h-9 w-9 shadow-sm" onClick={() => setIsVisibilitySheetOpen(true)} title={t("products.filter_management")}>
+                <Settings2 className="h-4 w-4" />
+              </Button>
+
+              {/* Grid / Table toggle */}
+              <div className="flex items-center rounded-lg border border-border bg-muted/60 p-0.5 shadow-sm">
+                <button type="button" onClick={() => setViewMode('grid')} className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-all duration-150", viewMode === 'grid' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")} aria-label="Grid view">
+                  <LayoutGrid className="h-4 w-4" /><span className="hidden xl:inline">{t("products.grid")}</span>
+                </button>
+                <button type="button" onClick={() => setViewMode('table')} className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-all duration-150", viewMode === 'table' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")} aria-label="Table view">
+                  <List className="h-4 w-4" /><span className="hidden xl:inline">{t("products.table")}</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Draft warning banner */}
+      {!isProductDataLoading && statsDraft > 0 && statsActive === 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
+          <p className="min-w-0 flex-1 text-sm text-warning">
+            <b>{statsDraft === 1 ? '1 product is a draft' : `All ${statsDraft} products are drafts`}</b> — drafts don't appear on your storefront. Review them, or publish everything now.
+          </p>
+          <Button size="sm" className="shrink-0 bg-warning text-warning-foreground hover:bg-warning/90" disabled={isBulkActivating}
+            onClick={async () => {
+              setIsBulkActivating(true);
+              const ids = allProducts.filter((p) => p.status === 'Draft').map((p) => p.id);
+              const { error } = await supabase.from('products').update({ status: 'Active' }).in('id', ids);
+              setIsBulkActivating(false);
+              if (error) { showError("Couldn't publish the drafts — try again."); return; }
+              showSuccess(`${ids.length} product${ids.length === 1 ? '' : 's'} published to your storefront.`);
+              refetch();
+            }}>
+            {isBulkActivating ? <Spinner className="mr-1.5 h-3.5 w-3.5" /> : null}
+            Publish all drafts
+          </Button>
+        </div>
+      )}
+
+      {/* ── Filter rail + product content ── */}
+      <div className="flex w-full gap-4">
         {!isMobile && showFilters && (
-          <div className="w-[260px] shrink-0 h-[calc(100vh-80px)] sticky top-0">
+          <div className="sticky top-0 h-[calc(100vh-80px)] w-[260px] shrink-0">
             <ProductFilterPanel
               allCategories={allCategories}
               allTags={allTags}
@@ -728,368 +882,137 @@ const Products = () => {
           </div>
         )}
 
-        {/* Main content column — grows to fill all space the sidebar isn't using */}
-        <div className="flex-1 min-w-0">
-      {/* ── Stats summary bar ── */}
-      {!isProductDataLoading && (
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/70 border border-border text-sm font-medium text-foreground shadow-sm">
-            <Package className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="font-semibold">{statsTotal}</span>
-            <span className="text-muted-foreground">{t("products.total")}</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-sm font-medium text-emerald-700 dark:text-emerald-400 shadow-sm">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-            <span className="font-semibold">{statsActive}</span>
-            <span className="opacity-80">{t("common.active")}</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-sm font-medium text-amber-700 dark:text-amber-400 shadow-sm">
-            <span className="h-2 w-2 rounded-full bg-amber-500 inline-block" />
-            <span className="font-semibold">{statsDraft}</span>
-            <span className="opacity-80">{t("common.draft")}</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/25 text-sm font-medium text-red-700 dark:text-red-400 shadow-sm">
-            <span className="h-2 w-2 rounded-full bg-red-500 inline-block" />
-            <span className="font-semibold">{statsOos}</span>
-            <span className="opacity-80">{t("common.out_of_stock")}</span>
-          </div>
-        </div>
-      )}
+        <div className="min-w-0 flex-1">
+          {/* View indicator */}
+          {!isProductDataLoading && filteredAndSortedProducts.length > 0 && (
+            <p className="mb-3 text-xs text-muted-foreground">
+              {t("common.showing")} <span className="font-semibold text-foreground">{filteredAndSortedProducts.length}</span> {t("common.of")}{' '}
+              <span className="font-semibold text-foreground">{statsTotal}</span> {t("nav.products").toLowerCase()}
+              {hasActiveFilters && <span className="ml-1 text-primary">({t("products.filtered")})</span>}
+            </p>
+          )}
 
-      {/* Drafts are invisible to shoppers — if the whole catalog is drafts
-          (fresh sync), the owner thinks the shop is broken. Make it one click. */}
-      {!isProductDataLoading && statsDraft > 0 && statsActive === 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-          <p className="min-w-0 flex-1 text-sm text-amber-800 dark:text-amber-300">
-            <b>{statsDraft === 1 ? '1 product is a draft' : `All ${statsDraft} products are drafts`}</b> — drafts don't appear on your storefront. Review them, or publish everything now.
-          </p>
-          <Button
-            size="sm"
-            className="shrink-0 bg-amber-600 text-white hover:bg-amber-700"
-            disabled={isBulkActivating}
-            onClick={async () => {
-              setIsBulkActivating(true);
-              const ids = allProducts.filter((p) => p.status === 'Draft').map((p) => p.id);
-              const { error } = await supabase.from('products').update({ status: 'Active' }).in('id', ids);
-              setIsBulkActivating(false);
-              if (error) { showError("Couldn't publish the drafts — try again."); return; }
-              showSuccess(`${ids.length} product${ids.length === 1 ? '' : 's'} published to your storefront.`);
-              refetch();
-            }}
-          >
-            {isBulkActivating ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
-            Publish all drafts
-          </Button>
-        </div>
-      )}
-
-      {/* ── Toolbar ── */}
-      <div className="sticky top-[0px] z-50 flex mb-3 items-center justify-between gap-2" data-tour="products-toolbar">
-          <div className="flex items-center gap-1 flex-wrap">
-            {/* Primary action: create a product manually */}
-            <Button data-tour="add-product" className="justify-start flex-1 md:flex-none shadow-sm bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddProduct} disabled={isCreatingProduct}>
-              {isCreatingProduct ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-              {t("products.add_product", "Add Product")}
-            </Button>
-
-            {/* Storefront filter configuration (controls the customer shop's filter UI) */}
-            <Button variant="outline" className="justify-start flex-1 md:flex-none shadow-sm" onClick={() => setIsVisibilitySheetOpen(true)} title="Configure which filters customers see in your shop">
-              <Settings2 className="mr-2 h-4 w-4" />
-              {t("products.filter_management")}
-            </Button>
-
-            {/* Filter Button — toggles inline panel on desktop, opens drawer on mobile */}
-            <Button
-              variant={showFilters && !isMobile ? "secondary" : "outline"}
-              className="justify-start flex-1 md:flex-none shadow-lg"
-              onClick={() => {
-                if (isMobile) {
-                  setIsFilterDrawerOpen(true);
-                } else {
-                  setShowFilters(prev => !prev);
-                }
-              }}
-            >
-              <FilterIcon className="mr-2 h-4 w-4" />
-              {t("common.filters")}
-              {hasActiveFilters && <span className="ml-1 text-xs text-primary">({t("common.active")})</span>}
-            </Button>
-
-            {/* Sort Select */}
-            <Select value={sortOption} onValueChange={setSortOption}>
-              <SelectTrigger className="w-full sm:w-[180px] shadow-lg">
-                <SelectValue placeholder={t("common.sort")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">{t("products.newest")}</SelectItem>
-                <SelectItem value="oldest">{t("products.oldest")}</SelectItem>
-                <SelectItem value="price-asc">{t("products.price_low_high")}</SelectItem>
-                <SelectItem value="price-desc">{t("products.price_high_low")}</SelectItem>
-                <SelectItem value="name-asc">{t("products.name_az")}</SelectItem>
-                <SelectItem value="name-desc">{t("products.name_za")}</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* View/Grouping/Selection Controls (Desktop Only) */}
-            <AnimatePresence>
-              {!isMobile && (
-                <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 'auto', opacity: 1 }} exit={{ width: 0, opacity: 0 }} className="flex items-center gap-2 overflow-visible">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="shadow-lg"><Group className="mr-2 h-4 w-4" />{t("products.group")}</Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuRadioGroup value={grouping} onValueChange={(v) => setGrouping(v as GroupingType)}>
-                        <DropdownMenuRadioItem value="none">{t("common.none")}</DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="category">{t("products.by_category")}</DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="type">{t("products.by_type")}</DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {/* Segmented view toggle */}
-                  <div className="flex items-center rounded-lg border border-border bg-muted/60 p-0.5 shadow-lg">
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('grid')}
-                      className={cn(
-                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all duration-150",
-                        viewMode === 'grid'
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                      aria-label="Grid view"
-                    >
-                      <LayoutGrid className="h-4 w-4" />
-                      <span className="hidden lg:inline">{t("products.grid")}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('table')}
-                      className={cn(
-                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all duration-150",
-                        viewMode === 'table'
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                      aria-label="Table view"
-                    >
-                      <List className="h-4 w-4" />
-                      <span className="hidden lg:inline">{t("products.table")}</span>
-                    </button>
+          {/* Product list/grid */}
+          {isProductDataLoading ? (
+            currentView === 'grid' ? (
+              <div className={cn("grid gap-4", gridSizeClasses[gridSize])}>
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="aspect-square w-full rounded-lg" />
+                    <Skeleton className="h-4 w-2/3" />
+                    <Skeleton className="h-4 w-1/2" />
                   </div>
-
-                  {viewMode === 'grid' && (
-                    <Button variant="outline" onClick={cycleGridSize} className="w-28 justify-start shadow-lg">
-                      <LayoutGrid className="mr-2 h-4 w-4" />{sizeLabels[gridSize]}
-                    </Button>
-                  )}
-                  {viewMode === 'grid' && (
-                    <Button variant={isSelectionModeActive ? "secondary" : "outline"} onClick={toggleSelectionMode} className="shadow-lg">
-                      <CheckSquare className="mr-2 h-4 w-4" />{isSelectionModeActive ? t('common.cancel') : t('products.select')}
-                    </Button>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Sync Actions — more prominent */}
-          <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
-            {/* Import from Instagram — visually distinct */}
-            <Button
-              onClick={() => runWithIntegrationCheck(() => setIsImporterOpen(true))}
-              variant="outline"
-              className="flex-1 md:flex-none border-foreground/20 text-foreground hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors"
-            >
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-              <span className="hidden sm:inline">{t("products.import")}</span>
-              <span className="sm:hidden">{t("products.import")}</span>
-            </Button>
-
-            {/* Sync buttons */}
-            {hasDoneFullSync === null ? (
-              <Skeleton className="h-10 w-32" />
-            ) : !hasDoneFullSync ? (
-              <Button
-                onClick={() => handleSync('full')}
-                disabled={isSyncing}
-                variant="outline"
-                className="flex-1 shadow-sm bg-red-600 text-white hover:bg-red-700 border-0"
-                title={t("products.full_sync_hint")}
-              >
-                <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
-                {t("products.full_sync")}
-              </Button>
-            ) : (
-              <div className="flex items-center">
-                <Button
-                  onClick={() => handleSync('quick')}
-                  disabled={isSyncing}
-                  variant="outline"
-                  className="rounded-r-none flex-1 shadow-lg border-primary/40 text-primary hover:bg-primary/10 hover:border-primary"
-                  title={t("products.quick_sync_hint")}
-                >
-                  <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
-                  {t("dashboard.quick_sync")}
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      disabled={isSyncing}
-                      variant="outline"
-                      className="rounded-l-none px-2 border-l border-red-700 bg-red-600 text-white hover:bg-red-700 shadow-sm"
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="max-w-[260px]">
-                    <DropdownMenuItem onClick={() => handleSync('full')} disabled={isSyncing} className="flex-col items-start gap-0.5">
-                      <span className="font-medium">{t("products.run_full_sync")}</span>
-                      <span className="text-xs text-muted-foreground whitespace-normal">{t("products.full_sync_hint")}</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                ))}
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── View indicator ── */}
-        {!isProductDataLoading && filteredAndSortedProducts.length > 0 && (
-          <p className="text-xs text-muted-foreground mb-3">
-            {t("common.showing")} <span className="font-semibold text-foreground">{filteredAndSortedProducts.length}</span> {t("common.of")}{' '}
-            <span className="font-semibold text-foreground">{statsTotal}</span> {statsTotal !== 1 ? t("nav.products").toLowerCase() : t("nav.products").toLowerCase()}
-            {hasActiveFilters && <span className="ml-1 text-primary">({t("products.filtered")})</span>}
-          </p>
-        )}
-
-        {/* ── Product List/Grid ── */}
-        {isProductDataLoading ? (
-          currentView === 'grid' ? (
-            <div className={cn("grid grid-cols-2 md:grid-cols-3 gap-4", gridSizeClasses[gridSize])}>
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="aspect-square w-full rounded-lg" />
-                  <Skeleton className="h-4 w-2/3" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-6 space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          )
-        ) : filteredAndSortedProducts.length > 0 ? (
-          currentView === 'grid' ? (
-            <div className="space-y-8">
-              {Object.entries(groupedProducts).map(([groupName, products]) => (
-                <div key={groupName}>
-                  <div className="flex items-center gap-4 mb-4">
-                    <h2 className={cn("text-xl font-bold capitalize inline-block", settings.backgroundImageUrl && "bg-card/60 backdrop-blur-[20px] px-3 py-1 rounded-md")}>
-                      {groupName} ({products.length})
-                    </h2>
-                    {grouping === 'category' && products.length > 0 && (
-                      <Button variant="outline" size="sm" onClick={() => handleSelectAllInGroup(products)}>
-                        <CheckSquare className="mr-2 h-4 w-4" />
-                        {products.every(p => selectedProducts.includes(p.id)) ? t('products.deselect_all') : t('products.select_all')}
-                      </Button>
-                    )}
-                  </div>
-                  <motion.div
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className={cn("grid grid-cols-2 md:grid-cols-3 gap-4 items-stretch", gridSizeClasses[gridSize])}
-                  >
-                    {products.map((product) => (
-                      <motion.div key={product.id} variants={itemVariants} className="h-full">
-                        <ProductCard
-                          product={product}
-                          gridSize={gridSize}
-                          isSelected={selectedProducts.includes(product.id)}
-                          isSelectionModeActive={isSelectionModeActive || selectedProducts.length > 0}
-                          onSelect={handleSelectProduct}
-                          onEdit={setSelectedProduct}
-                          onStatusChange={handleStatusChange}
-                        />
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <Card data-tour="products-table">
-              <CardContent className="p-0">
-                <ProductTableView
-                  products={filteredAndSortedProducts}
-                  selectedProducts={selectedProducts}
-                  onSelectAll={(checked) => setSelectedProducts(checked ? filteredAndSortedProducts.map(p => p.id) : [])}
-                  onSelectOne={handleSelectProduct}
-                  onEdit={setSelectedProduct}
-                  onDelete={(id) => setDeleteTargetId(id)}
-                />
-              </CardContent>
-            </Card>
-          )
-        ) : (
-          /* ── Improved empty state ── */
-          <div className="flex flex-col items-center justify-center py-24 px-6 text-center border-2 border-dashed rounded-xl border-border/60 bg-muted/20">
-            <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-muted mb-4">
-              <Package className="h-8 w-8 text-muted-foreground" />
-            </div>
-            {hasActiveFilters ? (
-              <>
-                <h3 className="text-lg font-semibold mb-1">{t("products.no_match")}</h3>
-                <p className="text-sm text-muted-foreground max-w-sm mb-4">
-                  {t("products.no_match_desc")}
-                </p>
-                <Button variant="outline" onClick={handleResetAllFilters}>
-                  {t("common.clear_all")} {t("common.filters").toLowerCase()}
-                </Button>
-              </>
             ) : (
-              <>
-                <h3 className="text-lg font-semibold mb-1">{t("products.no_products")}</h3>
-                <p className="text-sm text-muted-foreground max-w-sm mb-6">
-                  {t("products.no_products_desc")}
-                </p>
-                <div className="flex flex-col sm:flex-row items-center gap-3">
-                  <Button onClick={handleAddProduct} disabled={isCreatingProduct} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                    {isCreatingProduct ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                    {t("products.add_product", "Add Product")}
-                  </Button>
-                  <Button
-                    onClick={() => runWithIntegrationCheck(() => setIsImporterOpen(true))}
-                    variant="outline" className="border-foreground/20 text-foreground hover:bg-red-50 hover:text-red-600 hover:border-red-300"
-                  >
-                    <Import className="mr-2 h-4 w-4" />
-                    {t("products.import_instagram")}
-                  </Button>
-                  {hasDoneFullSync === false && (
-                    <Button
-                      variant="outline"
-                      onClick={() => handleSync('full')}
-                      disabled={isSyncing}
-                      className="border-primary/40 text-primary hover:bg-primary/10"
-                    >
-                      <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
-                      {t("products.run_full_sync")}
+              <div className="space-y-2 p-6">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            )
+          ) : filteredAndSortedProducts.length > 0 ? (
+            currentView === 'grid' ? (
+              <div ref={gridRevealRef} className="space-y-8">
+                {Object.entries(groupedProducts).map(([groupName, products]) => (
+                  <div key={groupName}>
+                    <div className="mb-4 flex items-center gap-4">
+                      <h2 className={cn("inline-block text-lg font-semibold capitalize", settings.backgroundImageUrl && "rounded-md bg-card/60 px-3 py-1 backdrop-blur-[20px]")}>
+                        {groupName} <span className="text-muted-foreground">({products.length})</span>
+                      </h2>
+                      {grouping === 'category' && products.length > 0 && (
+                        <Button variant="outline" size="sm" onClick={() => handleSelectAllInGroup(products)}>
+                          <CheckSquare className="mr-2 h-4 w-4" />
+                          {products.every((p) => selectedProducts.includes(p.id)) ? t('products.deselect_all') : t('products.select_all')}
+                        </Button>
+                      )}
+                    </div>
+                    <div className={cn("grid items-stretch gap-4", gridSizeClasses[gridSize])}>
+                      {products.map((product) => (
+                        <div key={product.id} data-reveal className="h-full">
+                          <ProductCard
+                            product={product}
+                            gridSize={gridSize}
+                            isSelected={selectedProducts.includes(product.id)}
+                            isSelectionModeActive={isSelectionModeActive || selectedProducts.length > 0}
+                            onSelect={handleSelectProduct}
+                            onEdit={setSelectedProduct}
+                            onStatusChange={handleStatusChange}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Card data-tour="products-table">
+                <CardContent className="p-0">
+                  <ProductTableView
+                    products={filteredAndSortedProducts}
+                    selectedProducts={selectedProducts}
+                    onSelectAll={(checked) => setSelectedProducts(checked ? filteredAndSortedProducts.map((p) => p.id) : [])}
+                    onSelectOne={handleSelectProduct}
+                    onEdit={setSelectedProduct}
+                    onDelete={(id) => setDeleteTargetId(id)}
+                  />
+                </CardContent>
+              </Card>
+            )
+          ) : (
+            <div className="rounded-xl border-2 border-dashed border-primary/20 bg-primary/[0.03] px-6">
+              {productError ? (
+                <EmptyState
+                  icon={AlertTriangle}
+                  title={t("products.load_error_title", "Couldn't load products")}
+                  description={t("products.load_error_desc", "Something went wrong loading your products. Check your connection and try again.")}
+                  action={
+                    <Button variant="outline" onClick={() => refetch(true)}>
+                      <RefreshCw className={cn("mr-2 h-4 w-4", isProductDataLoading && "animate-spin")} />
+                      {t("common.try_again", "Try again")}
                     </Button>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        </div>{/* end main content column */}
-      </div>{/* end flex layout */}
+                  }
+                />
+              ) : hasActiveFilters ? (
+                <EmptyState
+                  icon={Package}
+                  title={t("products.no_match")}
+                  description={t("products.no_match_desc")}
+                  action={
+                    <Button variant="outline" onClick={handleResetAllFilters}>
+                      {t("common.clear_all")} {t("common.filters").toLowerCase()}
+                    </Button>
+                  }
+                />
+              ) : (
+                <EmptyState
+                  icon={Package}
+                  title={t("products.no_products")}
+                  description={t("products.no_products_desc")}
+                  action={
+                    <>
+                      <BrandButton onClick={handleAddProduct} disabled={isCreatingProduct} className="rounded-full">
+                        {isCreatingProduct ? <Spinner className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+                        {t("products.add_product", "Add Product")}
+                      </BrandButton>
+                      <Button onClick={() => runWithIntegrationCheck(() => setIsImporterOpen(true))} variant="outline" className="hover:border-primary/40 hover:bg-accent hover:text-foreground">
+                        <Import className="mr-2 h-4 w-4" />
+                        {t("products.import_instagram")}
+                      </Button>
+                      {hasDoneFullSync === false && (
+                        <Button variant="outline" onClick={() => handleSync('full')} disabled={isSyncing} className="border-primary/40 text-primary hover:bg-primary/10">
+                          <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+                          {t("products.run_full_sync")}
+                        </Button>
+                      )}
+                    </>
+                  }
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
       <AnimatePresence>
         {selectedProducts.length > 0 && (

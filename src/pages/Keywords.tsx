@@ -1,16 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { readCache, writeCache } from "@/lib/pageCache";
 import { usePageTitle } from "@/contexts/PageTitleContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
 import { PlusCircle, Search, Sparkles, Tag } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { showError, showSuccess } from "@/utils/toast";
+import { showError, showSuccess, toFriendlyError } from "@/utils/toast";
 import { KeywordEditorModal } from "@/components/KeywordEditorModal";
 import { KeywordsTable } from "@/components/KeywordsTable";
+import { CommandBar, SearchInput, EmptyState, StatCard } from "@/components/ui-app";
+import { useReveal } from "@/lib/anim";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -36,12 +38,16 @@ const SUGGESTED_KEYWORDS = [
 const Keywords = () => {
   const { setTitle } = usePageTitle();
   const { t } = useTranslation();
+  const { userId } = useAuth();
   const [keywords, setKeywords] = useState<Keyword[]>(() => readCache<Keyword[]>("keywords") ?? []);
   const [isLoading, setIsLoading] = useState(() => !readCache<Keyword[]>("keywords"));
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedKeyword, setSelectedKeyword] = useState<Keyword | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Keyword | null>(null);
   const [search, setSearch] = useState("");
+  const [pendingSuggestion, setPendingSuggestion] = useState<string | null>(null);
+
+  const revealRef = useReveal<HTMLDivElement>({}, [isLoading]);
 
   useEffect(() => {
     setTitle(t("keywords.title"));
@@ -51,7 +57,7 @@ const Keywords = () => {
     if (!readCache("keywords")) setIsLoading(true); // spinner only when nothing cached
     const { data, error } = await supabase.from("keywords").select("*").order("keyword");
     if (error) {
-      showError("Could not fetch keywords.");
+      showError(toFriendlyError(error, t("keywords.fetch_failed")));
     } else {
       const rows = data as Keyword[];
       setKeywords(rows);
@@ -77,30 +83,43 @@ const Keywords = () => {
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-    const { error } = await supabase.from("keywords").delete().eq("id", deleteTarget.id);
-    if (error) {
-      showError(`Failed to delete keyword: ${error.message}`);
-    } else {
-      showSuccess("Keyword deleted.");
-      fetchKeywords();
-    }
+    const target = deleteTarget;
+    const prev = keywords;
+    const next = keywords.filter((k) => k.id !== target.id);
+    // Optimistic remove — reconcile from the server only on failure.
+    setKeywords(next);
+    writeCache("keywords", next);
     setDeleteTarget(null);
+
+    const { error } = await supabase.from("keywords").delete().eq("id", target.id);
+    if (error) {
+      showError(toFriendlyError(error, t("keywords.delete_failed")));
+      setKeywords(prev);
+      writeCache("keywords", prev);
+    } else {
+      showSuccess(t("keywords.deleted"));
+    }
   };
 
   const handleInlineUpdate = async (updated: Keyword) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { showError("You must be logged in."); return; }
+    const prev = keywords;
+    const next = keywords.map((k) => (k.id === updated.id ? updated : k));
+    // Optimistic in-place update so the single cell doesn't flash a full reload.
+    setKeywords(next);
+    writeCache("keywords", next);
 
+    // RLS scopes rows to the owner, so user_id isn't needed on update.
     const { error } = await supabase
       .from("keywords")
-      .update({ keyword: updated.keyword, description: updated.description, user_id: user.id })
+      .update({ keyword: updated.keyword, description: updated.description })
       .eq("id", updated.id);
 
     if (error) {
-      showError(`Failed to update keyword: ${error.message}`);
+      showError(toFriendlyError(error, t("keywords.update_failed")));
+      setKeywords(prev);
+      writeCache("keywords", prev);
     } else {
-      showSuccess("Keyword updated.");
-      fetchKeywords();
+      showSuccess(t("keywords.updated"));
     }
   };
 
@@ -109,31 +128,40 @@ const Keywords = () => {
       (k) => k.keyword.toLowerCase() === suggestion.keyword.toLowerCase()
     );
     if (alreadyExists) {
-      showError(`"${suggestion.keyword}" is already in your keywords.`);
+      showError(t("keywords.already_exists", { keyword: suggestion.keyword }));
       return;
     }
+    if (!userId) { showError(t("keywords.must_login")); return; }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { showError("You must be logged in."); return; }
+    setPendingSuggestion(suggestion.keyword);
+    const { data, error } = await supabase
+      .from("keywords")
+      .insert({ keyword: suggestion.keyword, description: t(suggestion.descKey), user_id: userId })
+      .select()
+      .single();
 
-    const { error } = await supabase.from("keywords").insert({ keyword: suggestion.keyword, description: t(suggestion.descKey), user_id: user.id });
     if (error) {
-      showError(`Failed to add keyword: ${error.message}`);
-    } else {
-      showSuccess(`"${suggestion.keyword}" added.`);
-      fetchKeywords();
+      showError(toFriendlyError(error, t("keywords.add_failed")));
+    } else if (data) {
+      const next = [...keywords, data as Keyword].sort((a, b) => a.keyword.localeCompare(b.keyword));
+      setKeywords(next);
+      writeCache("keywords", next);
+      showSuccess(t("keywords.added", { keyword: suggestion.keyword }));
     }
+    setPendingSuggestion(null);
   };
 
-  const filteredKeywords = keywords.filter((k) => {
+  const filteredKeywords = useMemo(() => {
     const q = search.toLowerCase();
-    return k.keyword.toLowerCase().includes(q) || k.description.toLowerCase().includes(q);
-  });
+    return keywords.filter(
+      (k) => k.keyword.toLowerCase().includes(q) || k.description.toLowerCase().includes(q)
+    );
+  }, [keywords, search]);
 
-  const existingKeywordsLower = new Set(keywords.map((k) => k.keyword.toLowerCase()));
-  const availableSuggestions = SUGGESTED_KEYWORDS.filter(
-    (s) => !existingKeywordsLower.has(s.keyword.toLowerCase())
-  );
+  const availableSuggestions = useMemo(() => {
+    const existing = new Set(keywords.map((k) => k.keyword.toLowerCase()));
+    return SUGGESTED_KEYWORDS.filter((s) => !existing.has(s.keyword.toLowerCase()));
+  }, [keywords]);
 
   return (
     <>
@@ -161,36 +189,44 @@ const Keywords = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="space-y-6">
+      <div className="space-y-6" ref={revealRef}>
         {/* Page header */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold">{t("keywords.title")}</h1>
-            <p className="text-muted-foreground max-w-2xl">
-              {t("keywords.description")}
-            </p>
-          </div>
-          <Button onClick={() => setIsEditorOpen(true)} className="shrink-0" data-tour="keywords-add">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            {t("keywords.add_keyword")}
-          </Button>
+        <div data-reveal className="space-y-1">
+          <h1 className="text-2xl font-bold">{t("keywords.title")}</h1>
+          <p className="text-muted-foreground max-w-2xl">
+            {t("keywords.description")}
+          </p>
         </div>
 
-        {/* Stats bar */}
-        {!isLoading && (
-          <div className="flex items-center gap-2">
-            <Tag className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              {keywords.length === 0
-                ? t("keywords.no_keywords")
-                : t("keywords.keywords_count", { count: keywords.length })}
-            </span>
+        {/* Stats */}
+        {!isLoading && keywords.length > 0 && (
+          <div data-reveal className="grid gap-4 sm:grid-cols-2 lg:max-w-xl">
+            <StatCard title={t("keywords.stat_total")} value={keywords.length} icon={Tag} tone="brand" />
+            <StatCard title={t("keywords.stat_suggestions")} value={availableSuggestions.length} icon={Sparkles} tone="info" />
+          </div>
+        )}
+
+        {/* Command bar: search + add */}
+        {!isLoading && keywords.length > 0 && (
+          <div data-reveal>
+            <CommandBar>
+              <SearchInput
+                value={search}
+                onValueChange={setSearch}
+                placeholder={t("keywords.search_keywords")}
+                containerClassName="min-w-[200px] flex-1"
+              />
+              <Button onClick={() => setIsEditorOpen(true)} className="shrink-0" data-tour="keywords-add">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                {t("keywords.add_keyword")}
+              </Button>
+            </CommandBar>
           </div>
         )}
 
         {/* Suggested keywords */}
         {!isLoading && availableSuggestions.length > 0 && (
-          <Card className="border-dashed">
+          <Card data-reveal className="border-dashed">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
@@ -202,47 +238,40 @@ const Keywords = () => {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {availableSuggestions.map((s) => (
-                  <button
-                    key={s.keyword}
-                    onClick={() => handleAddSuggestion(s)}
-                    className="group flex items-center gap-1.5 rounded-full border bg-background px-3 py-1.5 text-sm hover:border-primary hover:bg-primary/5 transition-colors"
-                    title={t(s.descKey)}
-                  >
-                    <span className="font-mono font-medium">{s.keyword}</span>
-                    <span className="text-muted-foreground text-xs group-hover:text-primary transition-colors">
-                      — {t(s.descKey)}
-                    </span>
-                    <PlusCircle className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors ml-0.5" />
-                  </button>
-                ))}
+                {availableSuggestions.map((s) => {
+                  const isPending = pendingSuggestion === s.keyword;
+                  return (
+                    <button
+                      key={s.keyword}
+                      onClick={() => handleAddSuggestion(s)}
+                      disabled={isPending}
+                      className="group flex max-w-[260px] items-center gap-1.5 rounded-full border bg-background px-3 py-1.5 text-sm transition-colors hover:border-primary hover:bg-primary/5 disabled:opacity-60"
+                      title={t(s.descKey)}
+                    >
+                      <span className="shrink-0 font-mono font-medium">{s.keyword}</span>
+                      <span className="truncate text-xs text-muted-foreground transition-colors group-hover:text-primary">
+                        — {t(s.descKey)}
+                      </span>
+                      {isPending ? (
+                        <Spinner className="ml-0.5 h-3.5 w-3.5 shrink-0" />
+                      ) : (
+                        <PlusCircle className="ml-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
         )}
 
         {/* Keywords table */}
-        <Card>
+        <Card data-reveal>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <CardTitle>{t("keywords.your_keywords")}</CardTitle>
-                <CardDescription>
-                  {t("keywords.your_keywords_desc")}
-                </CardDescription>
-              </div>
-              {!isLoading && keywords.length > 0 && (
-                <div className="relative shrink-0 w-56">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  <Input
-                    placeholder={t("keywords.search_keywords")}
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-8 h-9 text-sm"
-                  />
-                </div>
-              )}
-            </div>
+            <CardTitle>{t("keywords.your_keywords")}</CardTitle>
+            <CardDescription>
+              {t("keywords.your_keywords_desc")}
+            </CardDescription>
           </CardHeader>
           <CardContent data-tour="keywords-table">
             {isLoading ? (
@@ -251,19 +280,31 @@ const Keywords = () => {
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
               </div>
+            ) : keywords.length === 0 ? (
+              <EmptyState
+                icon={Tag}
+                title={t("keywords.empty_title")}
+                description={t("keywords.empty_desc")}
+                action={
+                  <Button onClick={() => setIsEditorOpen(true)} data-tour="keywords-add">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    {t("keywords.add_keyword")}
+                  </Button>
+                }
+              />
+            ) : filteredKeywords.length === 0 ? (
+              <EmptyState
+                compact
+                icon={Search}
+                title={t("keywords.no_match")}
+                description={t("keywords.no_match_desc", { search })}
+              />
             ) : (
-              <>
-                <KeywordsTable
-                  keywords={filteredKeywords}
-                  onInlineUpdate={handleInlineUpdate}
-                  onDelete={handleDelete}
-                />
-                {search && filteredKeywords.length === 0 && (
-                  <p className="text-center text-sm text-muted-foreground py-4">
-                    {t("keywords.no_match")} <Badge variant="secondary">{search}</Badge>
-                  </p>
-                )}
-              </>
+              <KeywordsTable
+                keywords={filteredKeywords}
+                onInlineUpdate={handleInlineUpdate}
+                onDelete={handleDelete}
+              />
             )}
           </CardContent>
         </Card>

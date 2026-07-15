@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, MessageSquareText, CalendarIcon, Repeat } from "lucide-react";
+import { ChevronsUpDown, MessageSquareText, CalendarIcon, Repeat } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { StorefrontAnnouncement } from "@/types/storefront";
@@ -160,7 +161,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                               <IconComponent className="h-4 w-4" />
                               {field.value || t("announcement_editor.select_icon")}
                             </div>
-                            <Sparkles className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[300px] p-0">
@@ -206,7 +207,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="display_order">{t("announcement_editor.display_order")}</Label>
-                  <Input id="display_order" type="number" {...register("display_order", { valueAsNumber: true })} className="h-10 px-3 py-2" />
+                  <Input id="display_order" type="number" {...register("display_order", { valueAsNumber: true })} />
                   {errors.display_order && <p className="text-sm text-destructive mt-1">{t(errors.display_order.message)}</p>}
                 </div>
               </div>
@@ -336,7 +337,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
           <DialogFooter className="pt-4 px-6 flex-shrink-0">
             <Button type="button" variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
               {t("announcement_editor.save")}
             </Button>
           </DialogFooter>

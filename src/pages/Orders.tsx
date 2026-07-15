@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,23 +20,29 @@ import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency } from "@/lib/formatters";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { DateRange } from "react-day-picker";
-import { Input } from "@/components/ui/input";
 import {
-  Search,
   Banknote,
   ShoppingBag,
-  FileBarChart,
   Clock,
   CheckCircle2,
-  AlertTriangle,
-  Loader2,
+  Truck,
   PackageCheck,
   Download,
   X,
+  ChevronRight,
 } from "lucide-react";
-import { StatCard } from "@/components/dashboard/StatCard";
+import { gsap } from "gsap";
+import { Spinner } from "@/components/ui/spinner";
+import { StatCard } from "@/components/ui-app/StatCard";
+import { CommandBar } from "@/components/ui-app/CommandBar";
+import { SearchInput } from "@/components/ui-app/SearchInput";
+import { StatusBadge } from "@/components/ui-app/StatusBadge";
+import { orderStatusTone } from "@/lib/status";
+import { useReveal, useGsap, DURATION, EASE } from "@/lib/anim";
+import { useAuth } from "@/contexts/AuthContext";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 
 type OrderStatus =
   | "Pending"
@@ -88,25 +93,6 @@ const IN_PROGRESS_STATUSES: OrderStatus[] = [
   "Given to Courier",
 ];
 
-const getStatusColor = (status: OrderStatus) => {
-  switch (status) {
-    case "Fulfilled":
-      return "bg-emerald-100 text-emerald-800 border-emerald-300";
-    case "Given to Courier":
-    case "Order Packaged":
-      return "bg-blue-100 text-blue-800 border-blue-300";
-    case "Order Seen":
-    case "Pending":
-      return "bg-amber-100 text-amber-800 border-amber-300";
-    case "Problematic":
-      return "bg-destructive/10 text-destructive border-destructive/30";
-    case "Cancelled":
-      return "bg-gray-100 text-gray-500 border-gray-300";
-    default:
-      return "bg-gray-100 text-gray-800 border-gray-300";
-  }
-};
-
 const ALL_STATUSES: OrderStatus[] = [
   "Pending",
   "Order Seen",
@@ -117,16 +103,16 @@ const ALL_STATUSES: OrderStatus[] = [
   "Cancelled",
 ];
 
-function relativeTime(dateStr: string): string {
+function relativeTime(dateStr: string, t: TFunction): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 60) return t("notifications.just_now");
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return t("notifications.minutes_ago", { count: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t("notifications.hours_ago", { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) return t("notifications.days_ago", { count: days });
   return new Date(dateStr).toLocaleDateString();
 }
 
@@ -189,6 +175,7 @@ const InlineStatusDropdown = ({
   currentStatus,
   onOptimisticUpdate,
 }: InlineStatusDropdownProps) => {
+  const { t } = useTranslation();
   const [isUpdating, setIsUpdating] = useState(false);
   const [pendingCancel, setPendingCancel] = useState(false);
 
@@ -244,29 +231,24 @@ const InlineStatusDropdown = ({
       disabled={isUpdating}
     >
       <SelectTrigger
-        className="h-7 text-xs w-[150px] border-0 shadow-none bg-transparent focus:ring-0"
+        title={t("orders.change_status")}
+        className="h-7 w-[150px] rounded-md border-0 bg-transparent px-2 text-xs shadow-none transition-colors hover:bg-muted focus:ring-0"
         onClick={(e) => e.stopPropagation()}
       >
         {isUpdating ? (
-          <Loader2 className="h-3 w-3 animate-spin" />
+          <Spinner className="h-3 w-3" />
         ) : (
-          <Badge
-            variant="outline"
-            className={cn("font-normal text-xs", getStatusColor(currentStatus))}
-          >
+          <StatusBadge tone={orderStatusTone(currentStatus)} size="sm">
             {currentStatus}
-          </Badge>
+          </StatusBadge>
         )}
       </SelectTrigger>
       <SelectContent onClick={(e) => e.stopPropagation()}>
         {ALL_STATUSES.map((s) => (
           <SelectItem key={s} value={s} className="text-xs">
-            <Badge
-              variant="outline"
-              className={cn("font-normal text-xs", getStatusColor(s))}
-            >
+            <StatusBadge tone={orderStatusTone(s)} size="sm">
               {s}
-            </Badge>
+            </StatusBadge>
           </SelectItem>
         ))}
       </SelectContent>
@@ -298,6 +280,8 @@ const OrderTable = ({
 }: OrderTableProps) => {
   const { t } = useTranslation();
   const { shopDetails, convertCurrency } = useShop();
+  // Subtle staggered entrance for the rows on first load (reduced-motion safe).
+  const tableRef = useReveal<HTMLTableElement>({ y: 8, stagger: 0.03 }, []);
 
   if (!shopDetails) return null;
 
@@ -305,7 +289,7 @@ const OrderTable = ({
   const someSelected = orders.some((o) => selectedIds.has(o.id)) && !allSelected;
 
   return (
-    <Table data-tour="orders-list">
+    <Table ref={tableRef} data-tour="orders-list">
       <TableHeader>
         <TableRow>
           <TableHead className="w-10 pr-0">
@@ -317,11 +301,11 @@ const OrderTable = ({
           </TableHead>
           <TableHead>{t("orders.order")}</TableHead>
           <TableHead>{t("orders.customer")}</TableHead>
-          <TableHead>{t("orders.items")}</TableHead>
+          <TableHead className="hidden sm:table-cell">{t("orders.items")}</TableHead>
           <TableHead>{t("orders.created")}</TableHead>
           <TableHead>{t("orders.status")}</TableHead>
           <TableHead className="text-right">{t("orders.total")}</TableHead>
-          <TableHead className="w-[90px]" />
+          <TableHead className="w-[44px]" />
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -329,6 +313,7 @@ const OrderTable = ({
           orders.map((order) => (
             <TableRow
               key={order.id}
+              data-reveal
               className={cn(
                 "cursor-pointer transition-colors",
                 selectedIds.has(order.id) && "bg-muted/60"
@@ -349,12 +334,12 @@ const OrderTable = ({
                 <div className="font-medium leading-tight">{order.customer_name}</div>
                 <div className="text-xs text-muted-foreground">{order.customer_email}</div>
               </TableCell>
-              <TableCell className="text-muted-foreground text-sm">
+              <TableCell className="hidden text-muted-foreground text-sm sm:table-cell">
                 {order.item_count != null ? order.item_count : "—"}
               </TableCell>
               <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                 <span title={new Date(order.created_at).toLocaleString()}>
-                  {relativeTime(order.created_at)}
+                  {relativeTime(order.created_at, t)}
                 </span>
               </TableCell>
               <TableCell onClick={(e) => e.stopPropagation()}>
@@ -377,15 +362,8 @@ const OrderTable = ({
                   </div>
                 )}
               </TableCell>
-              <TableCell onClick={(e) => e.stopPropagation()}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => onSelectOrder(order)}
-                >
-                  {t("orders.details")}
-                </Button>
+              <TableCell className="text-right">
+                <ChevronRight className="inline-block h-4 w-4 text-muted-foreground/50" aria-label={t("orders.details")} />
               </TableCell>
             </TableRow>
           ))
@@ -420,43 +398,54 @@ const BulkActionBar = ({
 }: BulkActionBarProps) => {
   const { t } = useTranslation();
   const count = selectedIds.size;
+  // Floating bar (no layout shift) with a subtle slide-up entrance. Centering is
+  // handled by the flex wrapper so GSAP's y transform never fights an x-translate.
+  const barRef = useGsap<HTMLDivElement>((el) => {
+    gsap.from(el, { y: 24, opacity: 0, duration: DURATION.base, ease: EASE.out });
+  }, [count > 0]);
+
   if (count === 0) return null;
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2 bg-primary/5 border border-primary/20 rounded-lg text-sm">
-      <span className="font-medium">
-        {t("orders.selected", { count })}
-      </span>
-      <div className="flex items-center gap-2 ml-auto">
-        <Select onValueChange={(v) => onBulkStatusChange(v as OrderStatus)} disabled={isUpdating}>
-          <SelectTrigger className="h-7 text-xs w-[160px]">
-            <SelectValue placeholder={t("orders.change_status")} />
-          </SelectTrigger>
-          <SelectContent>
-            {ALL_STATUSES.map((s) => (
-              <SelectItem key={s} value={s} className="text-xs">
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs gap-1"
-          onClick={onExport}
-        >
-          <Download className="h-3 w-3" />
-          {t("common.export")}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 w-7 p-0"
-          onClick={onClearSelection}
-        >
-          <X className="h-3 w-3" />
-        </Button>
+    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[60] flex justify-center px-4">
+      <div
+        ref={barRef}
+        className="pointer-events-auto flex max-w-[calc(100vw-2rem)] items-center gap-3 overflow-x-auto rounded-xl border bg-background/80 px-4 py-2.5 text-sm shadow-lg backdrop-blur-xl"
+      >
+        <span className="whitespace-nowrap font-medium">
+          {t("orders.selected", { count })}
+        </span>
+        <div className="flex items-center gap-2">
+          <Select onValueChange={(v) => onBulkStatusChange(v as OrderStatus)} disabled={isUpdating}>
+            <SelectTrigger className="h-8 text-xs w-[160px]">
+              <SelectValue placeholder={t("orders.change_status")} />
+            </SelectTrigger>
+            <SelectContent>
+              {ALL_STATUSES.map((s) => (
+                <SelectItem key={s} value={s} className="text-xs">
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1 text-xs"
+            onClick={onExport}
+          >
+            <Download className="h-3.5 w-3.5" />
+            {t("common.export")}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={onClearSelection}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -468,9 +457,11 @@ const Orders = () => {
   const { setTitle } = usePageTitle();
   const { t } = useTranslation();
   const { shopDetails, convertCurrency } = useShop();
+  // Business id is resolved once by the shared AuthProvider (cached, instant) —
+  // no getUser() + businesses waterfall on every fetch/realtime refresh.
+  const { businessId, ensureBusinessId } = useAuth();
   const [orders, setOrders] = useState<Order[]>(() => readCache<Order[]>("orders") ?? []);
   const [isLoading, setIsLoading] = useState(() => !readCache<Order[]>("orders"));
-  const [businessId, setBusinessId] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [activeTab, setActiveTab] = useState<TabValue>("All");
   const [searchTerm, setSearchTerm] = useState("");
@@ -492,31 +483,18 @@ const Orders = () => {
     // No skeleton when we already have cached rows to show (or on silent
     // realtime refreshes) — revalidate quietly instead.
     if (!silent && !readCache("orders")) setIsLoading(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setIsLoading(false);
+    // Resolve the business id from the shared AuthProvider cache (instant if
+    // already known) instead of a getUser() → businesses round-trip each call.
+    const bizId = await ensureBusinessId();
+    if (!bizId) {
+      if (!silent) setIsLoading(false);
       return;
     }
-
-    const { data: business, error: businessError } = await supabase
-      .from("businesses")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (businessError || !business) {
-      showError("Could not find your business profile.");
-      setIsLoading(false);
-      return;
-    }
-    setBusinessId(business.id);
 
     const { data, error } = await supabase
       .from("orders")
       .select("*, updated_at, order_items(count)")
-      .eq("business_id", business.id)
+      .eq("business_id", bizId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -530,7 +508,7 @@ const Orders = () => {
       writeCache("orders", withCounts as Order[]);
     }
     if (!silent) setIsLoading(false);
-  }, []);
+  }, [ensureBusinessId]);
 
   useEffect(() => {
     fetchOrders();
@@ -538,17 +516,22 @@ const Orders = () => {
 
   // Live-update the list when orders change for this business (new orders,
   // status changes from elsewhere) so the seller doesn't need to refresh.
+  // Bursts of changes are debounced into a single quiet refetch.
   useEffect(() => {
     if (!businessId) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const channel = supabase
       .channel(`orders_list:${businessId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders", filter: `business_id=eq.${businessId}` },
-        () => { fetchOrders(true); }
+        () => {
+          clearTimeout(timer);
+          timer = setTimeout(() => fetchOrders(true), 400);
+        }
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { clearTimeout(timer); supabase.removeChannel(channel); };
   }, [businessId, fetchOrders]);
 
   // Open OrderDetailModal if orderId is in URL
@@ -707,6 +690,10 @@ const Orders = () => {
 
   const hasFilters = !!(searchTerm || dateRange?.from || activeTab !== "All" || paymentFilter !== "all" || paymentStatusFilter !== "all");
 
+  // Subtle staggered entrance for the stat cards once they become available.
+  const statsReady = !isLoading && !!stats && !!shopDetails;
+  const statsRef = useReveal({}, [statsReady]);
+
   return (
     <>
       <OrderDetailModal
@@ -720,98 +707,100 @@ const Orders = () => {
       />
 
       <div className="space-y-4">
-        {/* ── Stats — compact inline chips ── */}
+        {/* ── Stats — canonical StatCards (token tones + count-up) ── */}
         {!isLoading && stats && shopDetails && (
-          <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-card">
-              <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xl font-bold tabular-nums">{stats.total}</span>
-              <span className="text-sm text-muted-foreground">{t("orders.orders")}</span>
+          <div ref={statsRef} className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <div data-reveal>
+              <StatCard title={t("orders.orders")} value={stats.total} icon={ShoppingBag} tone="brand" />
             </div>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-card">
-              <Banknote className="h-4 w-4 text-emerald-500" />
-              <span className="text-xl font-bold tabular-nums">{formatCurrency(stats.totalRevenue, shopDetails.currency)}</span>
-              <span className="text-sm text-muted-foreground">{t("orders.revenue")}</span>
+            <div data-reveal>
+              <StatCard
+                title={t("orders.revenue")}
+                value={stats.totalRevenue}
+                icon={Banknote}
+                tone="success"
+                formatValue={(n) => formatCurrency(n, shopDetails.currency)}
+              />
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium">
-              <Clock className="h-3.5 w-3.5" />{stats.pending} {t("orders.pending")}
+            <div data-reveal>
+              <StatCard title={t("orders.pending")} value={stats.pending} icon={Clock} tone="warning" />
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium">
-              <Loader2 className="h-3.5 w-3.5" />{stats.inProgress} {t("orders.in_progress")}
+            <div data-reveal>
+              <StatCard title={t("orders.in_progress")} value={stats.inProgress} icon={Truck} tone="info" />
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
-              <CheckCircle2 className="h-3.5 w-3.5" />{stats.fulfilled} {t("orders.fulfilled")}
+            <div data-reveal>
+              <StatCard title={t("orders.fulfilled")} value={stats.fulfilled} icon={CheckCircle2} tone="success" />
             </div>
           </div>
         )}
 
-        {/* ── Toolbar ── */}
+        {/* ── Toolbar — canonical CommandBar (search + filters) with the status
+             tabs as the secondary row ── */}
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as TabValue); setSelectedIds(new Set()); }}>
-          <div className="space-y-2">
-            {/* Row 1: Search + Date + Clear */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="relative flex-1 min-w-[200px] max-w-sm">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input placeholder={t("orders.search_orders")} className="h-8 pl-8 text-sm" value={searchTerm}
-                  onChange={(e) => { setSearchTerm(e.target.value); setSelectedIds(new Set()); }} />
-              </div>
-              <DateRangePicker date={dateRange} onDateChange={(d) => { setDateRange(d); setSelectedIds(new Set()); }} />
+          <CommandBar
+            secondary={
+              <TabsList className="h-auto gap-1 flex-wrap" data-tour="orders-filters">
+                {STATUS_TABS.map((tab) => (
+                  <TabsTrigger key={tab.value} value={tab.value} className="text-xs gap-1">
+                    {t(tab.labelKey)}
+                    {tabCounts[tab.value] > 0 && (
+                      <Badge variant="secondary" className="h-4 px-1 text-xs ml-0.5">{tabCounts[tab.value]}</Badge>
+                    )}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            }
+          >
+            <SearchInput
+              value={searchTerm}
+              onValueChange={(v) => { setSearchTerm(v); setSelectedIds(new Set()); }}
+              placeholder={t("orders.search_orders")}
+              containerClassName="min-w-[200px] flex-1"
+            />
+            <DateRangePicker date={dateRange} onDateChange={(d) => { setDateRange(d); setSelectedIds(new Set()); }} />
 
-              {/* Sort */}
-              <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-                <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">{t("products.newest")}</SelectItem>
-                  <SelectItem value="oldest">{t("products.oldest")}</SelectItem>
-                  <SelectItem value="amount_high">{t("orders.amount_desc")}</SelectItem>
-                  <SelectItem value="amount_low">{t("orders.amount_asc")}</SelectItem>
-                  <SelectItem value="name">{t("products.name_az")}</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Sort */}
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+              <SelectTrigger className="h-9 w-[150px] text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">{t("products.newest")}</SelectItem>
+                <SelectItem value="oldest">{t("products.oldest")}</SelectItem>
+                <SelectItem value="amount_high">{t("orders.amount_desc")}</SelectItem>
+                <SelectItem value="amount_low">{t("orders.amount_asc")}</SelectItem>
+                <SelectItem value="name">{t("products.name_az")}</SelectItem>
+              </SelectContent>
+            </Select>
 
-              {/* Payment filters */}
-              <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
-                <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("orders.all_pay")}</SelectItem>
-                  <SelectItem value="card">{t("orders.card")}</SelectItem>
-                  <SelectItem value="cash_on_delivery">{t("orders.cash")}</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Payment filters */}
+            <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
+              <SelectTrigger className="h-9 w-[120px] text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("orders.all_pay")}</SelectItem>
+                <SelectItem value="card">{t("orders.card")}</SelectItem>
+                <SelectItem value="cash_on_delivery">{t("orders.cash")}</SelectItem>
+              </SelectContent>
+            </Select>
 
-              <Select value={paymentStatusFilter} onValueChange={(v) => setPaymentStatusFilter(v as any)}>
-                <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("orders.all_status")}</SelectItem>
-                  <SelectItem value="pending">{t("orders.pay_pending")}</SelectItem>
-                  <SelectItem value="processing">{t("orders.processing")}</SelectItem>
-                  <SelectItem value="paid">{t("orders.paid")}</SelectItem>
-                  <SelectItem value="failed">{t("orders.pay_failed")}</SelectItem>
-                </SelectContent>
-              </Select>
+            <Select value={paymentStatusFilter} onValueChange={(v) => setPaymentStatusFilter(v as any)}>
+              <SelectTrigger className="h-9 w-[140px] text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("orders.all_status")}</SelectItem>
+                <SelectItem value="pending">{t("orders.pay_pending")}</SelectItem>
+                <SelectItem value="processing">{t("orders.processing")}</SelectItem>
+                <SelectItem value="paid">{t("orders.paid")}</SelectItem>
+                <SelectItem value="failed">{t("orders.pay_failed")}</SelectItem>
+              </SelectContent>
+            </Select>
 
-              {hasFilters && (
-                <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => {
-                  setSearchTerm(""); setDateRange(undefined); setActiveTab("All");
-                  setSelectedIds(new Set()); setSortBy("newest"); setPaymentFilter("all"); setPaymentStatusFilter("all");
-                }}>
-                  <X className="h-3 w-3" />{t("common.clear")}
-                </Button>
-              )}
-            </div>
-
-            {/* Row 2: Status tabs */}
-            <TabsList className="h-auto gap-1 flex-wrap" data-tour="orders-filters">
-              {STATUS_TABS.map((tab) => (
-                <TabsTrigger key={tab.value} value={tab.value} className="text-xs gap-1">
-                  {t(tab.labelKey)}
-                  {tabCounts[tab.value] > 0 && (
-                    <Badge variant="secondary" className="h-4 px-1 text-xs ml-0.5">{tabCounts[tab.value]}</Badge>
-                  )}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
+            {hasFilters && (
+              <Button variant="ghost" size="sm" className="h-9 gap-1 text-xs" onClick={() => {
+                setSearchTerm(""); setDateRange(undefined); setActiveTab("All");
+                setSelectedIds(new Set()); setSortBy("newest"); setPaymentFilter("all"); setPaymentStatusFilter("all");
+              }}>
+                <X className="h-3 w-3" />{t("common.clear")}
+              </Button>
+            )}
+          </CommandBar>
 
           {/* Bulk actions */}
           <BulkActionBar selectedIds={selectedIds} onClearSelection={() => setSelectedIds(new Set())}
@@ -824,9 +813,12 @@ const Orders = () => {
                 {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
               </div>
             ) : (
-              <OrderTable orders={filteredOrders} onSelectOrder={setSelectedOrder} selectedIds={selectedIds}
-                onToggleSelect={handleToggleSelect} onToggleAll={handleToggleAll}
-                onOptimisticUpdate={handleOptimisticUpdate} hasFilters={hasFilters} />
+              // Wide table scrolls within its own container — never the page.
+              <div className="overflow-x-auto">
+                <OrderTable orders={filteredOrders} onSelectOrder={setSelectedOrder} selectedIds={selectedIds}
+                  onToggleSelect={handleToggleSelect} onToggleAll={handleToggleAll}
+                  onOptimisticUpdate={handleOptimisticUpdate} hasFilters={hasFilters} />
+              </div>
             )}
           </div>
 

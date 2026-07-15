@@ -1,44 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { Loader2, Facebook, CheckCircle, XCircle } from 'lucide-react';
+import { Facebook, CheckCircle, XCircle } from 'lucide-react';
+import { Spinner } from "@/components/ui/spinner";
 import { showError, showSuccess, toFriendlyError } from '@/utils/toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { User } from '@supabase/supabase-js';
 import { useTranslation } from "react-i18next";
+import { useAuth } from '@/contexts/AuthContext';
 
-export const IntegrationSettings = () => {
+interface IntegrationSettingsProps {
+  /** Integration row (provider='facebook'), fetched once by the parent. */
+  integration: any | null;
+  /** True while the parent is still resolving the integration. */
+  isLoading?: boolean;
+  /** Called after a successful disconnect so the parent can clear its state. */
+  onDisconnected?: () => void;
+}
+
+export const IntegrationSettings = ({ integration, isLoading = false, onDisconnected }: IntegrationSettingsProps) => {
   const { t } = useTranslation();
-  const [isLoading, setIsLoading] = useState(true);
-  const [integration, setIntegration] = useState<any | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const { user, userId } = useAuth();
   const [disconnectOpen, setDisconnectOpen] = useState(false);
-
-  const checkIntegration = async () => {
-    setIsLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    setUser(user);
-    if (user) {
-      const { data, error } = await supabase
-        .from('integrations')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('provider', 'facebook')
-        .maybeSingle();
-
-      if (error) {
-        showError(t("integrations.check_failed"));
-      } else {
-        setIntegration(data);
-      }
-    }
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-    checkIntegration();
-  }, []);
 
   const handleConnect = () => {
     if (!user) {
@@ -54,18 +37,18 @@ export const IntegrationSettings = () => {
   };
 
   const handleDisconnect = async () => {
-    if (!user) return;
+    if (!userId) return;
     const { error } = await supabase
       .from('integrations')
       .delete()
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('provider', 'facebook');
 
     if (error) {
       showError(toFriendlyError(error, t("integrations.disconnect_failed")));
     } else {
       showSuccess(t("integrations.disconnected"));
-      setIntegration(null);
+      onDisconnected?.();
     }
     setDisconnectOpen(false);
   };
@@ -79,15 +62,17 @@ export const IntegrationSettings = () => {
       <CardContent>
         {isLoading ? (
           <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
+            <Spinner className="h-8 w-8" />
           </div>
         ) : integration ? (
-          <div className="flex items-center justify-between p-4 border rounded-lg bg-accent text-accent-foreground">
+          <div className="flex items-center justify-between p-4 border border-success/25 rounded-lg bg-success/5">
             <div className="flex items-center gap-3">
-              <Facebook className="h-6 w-6" />
+              <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/15">
+                <Facebook className="h-5 w-5" />
+              </span>
               <div>
                 <p className="font-semibold">{t("integrations.fb_ig")}</p>
-                <div className="flex items-center gap-1 text-sm text-emerald-600">
+                <div className="flex items-center gap-1 text-sm text-success">
                   <CheckCircle className="h-4 w-4" />
                   <span>{t("integrations.connected")}</span>
                 </div>

@@ -138,13 +138,13 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[90vh] p-0 flex flex-col bg-white text-black rounded-t-xl">
-        <SheetHeader className="p-4 border-b border-gray-200 flex-row items-center justify-between flex-shrink-0">
-          <SheetTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
+      <SheetContent side="bottom" className="h-[90vh] p-0 flex flex-col bg-background text-foreground rounded-t-xl">
+        <SheetHeader className="p-4 border-b border-border flex-row items-center justify-between flex-shrink-0">
+          <SheetTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
             <ShoppingBag className="h-6 w-6 text-red-500" />
             {getDrawerTitle()}
           </SheetTitle>
-          <Button variant="ghost" size="icon" onClick={handleBack} className="text-gray-800 hover:bg-gray-100">
+          <Button variant="ghost" size="icon" onClick={handleBack} className="text-foreground hover:bg-muted">
             <X className="h-5 w-5" />
             <span className="sr-only">Close</span>
           </Button>
@@ -162,9 +162,9 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                   transition={{ duration: 0.2 }}
                   className="flex flex-col items-center justify-center flex-1 p-8 text-center h-full"
                 >
-                  <ShoppingBag className="h-20 w-20 text-gray-400 mb-6" />
+                  <ShoppingBag className="h-20 w-20 text-muted-foreground mb-6" />
                   <h3 className="text-2xl font-bold mb-4">Your cart is empty</h3>
-                  <p className="text-base text-gray-500 mb-8">Looks like you haven't added anything to your cart yet.</p>
+                  <p className="text-base text-muted-foreground mb-8">Looks like you haven't added anything to your cart yet.</p>
                   <Button onClick={onClose} className="text-base bg-red-500 hover:bg-red-600 text-white">Start Shopping</Button>
                 </motion.div>
               ) : (
@@ -172,7 +172,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                   <div className="space-y-6">
                     {cartItems.length > 0 && (
                       <div className="space-y-4">
-                        <h2 className="text-lg font-bold text-gray-800">Items in Cart ({cartItems.length})</h2>
+                        <h2 className="text-lg font-bold text-foreground">Items in Cart ({cartItems.length})</h2>
                         {hasSubscriptionProducts && (
                           <div className="flex items-center gap-2 p-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md">
                             <Info className="h-4 w-4 flex-shrink-0" />
@@ -189,19 +189,19 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                               exit={{ opacity: 0, x: -100 }}
                               transition={{ duration: 0.2 }}
                             >
-                              <Card className="flex items-start p-3 gap-3 shadow-sm border border-gray-200 bg-white">
+                              <Card className="flex items-start p-3 gap-3 shadow-sm border border-border bg-card">
                                 <Link to={`/instagramShop/${shopSlug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
-                                  <div className="h-20 w-20 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                                  <div className="h-20 w-20 rounded-md overflow-hidden bg-muted border border-border">
                                     <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                   </div>
                                 </Link>
                                 <div className="flex-1 flex flex-col justify-between">
                                   <Link to={`/instagramShop/${shopSlug}/product/${item.productId}`} onClick={onClose}>
-                                    <h3 className="font-semibold text-base hover:underline leading-tight text-gray-800">{item.name}</h3>
+                                    <h3 className="font-semibold text-base hover:underline leading-tight text-foreground">{item.name}</h3>
                                   </Link>
 
                                   {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-xs text-muted-foreground mt-1">
                                       {Object.entries(item.selectedOptions).map(([key, value]) => (
                                         <span key={key} className="capitalize">
                                           {key}: {Array.isArray(value) ? value.join(', ') : value}
@@ -210,20 +210,20 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                     </p>
                                   )}
                                   {item.pricing_type === 'subscription' && (
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-xs text-muted-foreground mt-1">
                                       Subscription: {item.billing_interval === 'month' ? 'Monthly' : 'Yearly'}
                                     </p>
                                   )}
 
                                   <div className="flex items-center justify-between gap-2 mt-2">
-                                    <div className="flex items-center border border-gray-300 rounded-md h-9 flex-shrink-0">
+                                    <div className="flex items-center border border-border rounded-md h-9 flex-shrink-0">
                                       <motion.button
                                         type="button"
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                                         disabled={item.quantity <= 1}
-                                        className="h-full w-8 rounded-r-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
+                                        className="h-full w-8 rounded-r-none flex items-center justify-center text-foreground hover:bg-muted"
                                         whileHover={{ scale: 1.1 }}
                                         whileTap={{ scale: 0.9 }}
                                       >
@@ -233,7 +233,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                         type="number"
                                         value={item.quantity}
                                         onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
-                                        className="w-14 text-center border-y-0 border-x border-gray-300 focus-visible:ring-0 text-sm h-full rounded-none bg-white"
+                                        className="w-14 text-center border-y-0 border-x border-border focus-visible:ring-0 text-sm h-full rounded-none bg-transparent"
                                         min={1}
                                       />
                                       <motion.button
@@ -242,7 +242,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                         size="icon"
                                         onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                                         disabled={item.quantity >= 99}
-                                        className="h-full w-8 rounded-l-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
+                                        className="h-full w-8 rounded-l-none flex items-center justify-center text-foreground hover:bg-muted"
                                         whileHover={{ scale: 1.1 }}
                                         whileTap={{ scale: 0.9 }}
                                       >
@@ -252,7 +252,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                     
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                       {item.isDiscounted && (
-                                        <p className="text-sm text-gray-500 line-through">
+                                        <p className="text-sm text-muted-foreground line-through">
                                           {formatCurrency(convertCurrency(item.originalPrice, item.currency, shopDetails?.currency), shopDetails?.currency)}
                                         </p>
                                       )}
@@ -267,7 +267,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                         variant="outline"
                                         size="sm"
                                         onClick={() => saveForLater(item)}
-                                        className="text-sm h-9 px-3 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                                        className="text-sm h-9 px-3 bg-muted text-foreground border-border hover:bg-accent"
                                       >
                                           <Bookmark className="mr-2 h-4 w-4" />
                                           Save
@@ -277,7 +277,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                         variant="destructive"
                                         size="icon"
                                         onClick={() => removeFromCart(item.productId)}
-                                        className="text-red-500 hover:text-red-600 h-9 w-9 rounded-full bg-red-50 hover:bg-red-100"
+                                        className="text-destructive hover:text-destructive h-9 w-9 rounded-full bg-destructive/10 hover:bg-destructive/20"
                                         whileHover={{ scale: 1.1 }}
                                         whileTap={{ scale: 0.9 }}
                                       >
@@ -295,7 +295,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
 
                     {savedItems.length > 0 && (
                       <div className="space-y-4 mt-6">
-                        <h2 className="text-lg font-bold text-gray-800">Saved ({savedItems.length})</h2>
+                        <h2 className="text-lg font-bold text-foreground">Saved ({savedItems.length})</h2>
                         <AnimatePresence>
                           {savedItems.map(item => (
                             <motion.div
@@ -306,19 +306,19 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                               exit={{ opacity: 0, x: -100 }}
                               transition={{ duration: 0.2 }}
                             >
-                              <Card className="flex items-start p-3 gap-3 shadow-sm border border-gray-200 bg-white">
+                              <Card className="flex items-start p-3 gap-3 shadow-sm border border-border bg-card">
                                 <Link to={`/instagramShop/${shopSlug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
-                                  <div className="h-20 w-20 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                                  <div className="h-20 w-20 rounded-md overflow-hidden bg-muted border border-border">
                                     <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
                                   </div>
                                 </Link>
                                 <div className="flex-1 flex flex-col justify-between">
                                   <Link to={`/instagramShop/${shopSlug}/product/${item.productId}`} onClick={onClose}>
-                                    <h3 className="font-semibold text-base hover:underline leading-tight text-gray-800">{item.name}</h3>
+                                    <h3 className="font-semibold text-base hover:underline leading-tight text-foreground">{item.name}</h3>
                                   </Link>
 
                                   {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-xs text-muted-foreground mt-1">
                                       {Object.entries(item.selectedOptions).map(([key, value]) => (
                                         <span key={key} className="capitalize">
                                           {key}: {Array.isArray(value) ? value.join(', ') : value}
@@ -327,7 +327,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                     </p>
                                   )}
                                   {item.pricing_type === 'subscription' && (
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-xs text-muted-foreground mt-1">
                                       Subscription: {item.billing_interval === 'month' ? 'Monthly' : 'Yearly'}
                                     </p>
                                   )}
@@ -335,7 +335,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                   <div className="flex items-center justify-between gap-2 mt-2">
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                       {item.isDiscounted && (
-                                        <p className="text-sm text-gray-500 line-through">
+                                        <p className="text-sm text-muted-foreground line-through">
                                           {formatCurrency(convertCurrency(item.originalPrice, item.currency, shopDetails?.currency), shopDetails?.currency)}
                                         </p>
                                       )}
@@ -350,7 +350,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                         variant="outline"
                                         size="sm"
                                         onClick={() => moveToCart(item.productId)}
-                                        className="text-sm h-9 bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                                        className="text-sm h-9 bg-muted text-foreground border-border hover:bg-accent"
                                       >
                                           <MoveRight className="mr-2 h-4 w-4" />
                                           Move to Cart
@@ -360,7 +360,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                         variant="destructive"
                                         size="icon"
                                         onClick={() => removeSavedItem(item.productId)}
-                                        className="text-red-500 hover:text-red-600 h-9 w-9 rounded-full bg-red-50 hover:bg-red-100"
+                                        className="text-destructive hover:text-destructive h-9 w-9 rounded-full bg-destructive/10 hover:bg-destructive/20"
                                         whileHover={{ scale: 1.1 }}
                                         whileTap={{ scale: 0.9 }}
                                       >

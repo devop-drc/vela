@@ -11,6 +11,9 @@ dist
 dist-ssr
 *.local
 
+# Puppeteer's Chromium download (used only by the build-time prerender step)
+.cache
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -26,3 +29,8 @@ dist-ssr
 .playwright-mcp/
 supabase/.temp/
 .claude/
+
+# Remotion
+out/
+.remotion/
+build/

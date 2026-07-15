@@ -1,14 +1,15 @@
 import { useIntegration } from '@/contexts/IntegrationContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, UserCircle, Mail, FileText, Loader2 } from "lucide-react";
-import { supabase } from '@/integrations/supabase/client'; // Import supabase client
-import { useState, useEffect } from 'react'; // Import useState and useEffect
+import { ShieldCheck, UserCircle, Mail, FileText } from "lucide-react";
+import { useAuth } from '@/contexts/AuthContext';
+import { useReveal } from '@/lib/anim';
 import { showError } from '@/utils/toast'; // Import showError
 import { useTranslation } from "react-i18next";
 
 export const IntegrationPrompt = () => {
   const { t } = useTranslation();
+  const { userId } = useAuth();
   const permissions = [
     {
       icon: UserCircle,
@@ -27,17 +28,7 @@ export const IntegrationPrompt = () => {
     },
   ];
   const { isPromptOpen, closePrompt } = useIntegration();
-  const [userId, setUserId] = useState<string | null>(null);
-  const [isUserLoading, setIsUserLoading] = useState(true); // Added loading state
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUserId(session?.user?.id || null);
-      setIsUserLoading(false);
-    };
-    fetchUser();
-  }, []);
+  const revealRef = useReveal<HTMLDivElement>({}, [isPromptOpen]);
 
   const handleConnect = () => {
     if (!userId) {
@@ -57,16 +48,16 @@ export const IntegrationPrompt = () => {
     <Dialog open={isPromptOpen} onOpenChange={closePrompt}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center">{t("integrations.prompt_title")}</DialogTitle>
+          <DialogTitle className="text-2xl font-heading font-bold tracking-tight text-center">{t("integrations.prompt_title")}</DialogTitle>
           <DialogDescription className="pt-2 text-center text-base">
             {t("integrations.prompt_desc")}
           </DialogDescription>
         </DialogHeader>
         <div className="py-6 space-y-4">
           <h3 className="font-semibold text-center">{t("integrations.permissions_intro")}</h3>
-          <div className="space-y-4 rounded-lg border p-4">
+          <div ref={revealRef} className="space-y-4 rounded-lg border p-4">
             {permissions.map((permission) => (
-              <div key={permission.name} className="flex items-start gap-4">
+              <div key={permission.name} data-reveal className="flex items-start gap-4">
                 <div className="flex-shrink-0 bg-primary/10 text-primary rounded-lg p-2">
                   <permission.icon className="h-6 w-6" />
                 </div>
@@ -82,8 +73,8 @@ export const IntegrationPrompt = () => {
           </p>
         </div>
         <DialogFooter>
-          <Button onClick={handleConnect} className="w-full" size="lg" disabled={!userId || isUserLoading}>
-            {isUserLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ShieldCheck className="mr-2 h-5 w-5" />}
+          <Button onClick={handleConnect} className="w-full" size="lg" disabled={!userId}>
+            <ShieldCheck className="mr-2 h-5 w-5" />
             {t("integrations.secure_connect")}
           </Button>
         </DialogFooter>

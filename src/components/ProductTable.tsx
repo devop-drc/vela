@@ -1,11 +1,11 @@
 import React from 'react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
 import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency } from "@/lib/formatters";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui-app/StatusBadge";
+import { productStatusTone } from "@/lib/status";
 import { Product } from "@/hooks/useProductData";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -30,7 +30,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
     <ScrollArea className="flex-1">
       {isLoading ? (
         <div className="p-4 space-y-2">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+          <Spinner className="h-8 w-8 mx-auto" />
           <p className="text-center text-muted-foreground">Loading products...</p>
         </div>
       ) : (
@@ -66,13 +66,9 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                   </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={cn(
-                      product.status === 'Active' && 'bg-emerald-100 text-emerald-800 border-emerald-300',
-                      product.status === 'Draft' && 'bg-amber-100 text-amber-800 border-amber-300',
-                      product.status === 'Out of Stock' && 'bg-slate-100 text-slate-800 border-slate-300'
-                    )}>
+                    <StatusBadge tone={productStatusTone(product.status)} size="sm">
                       {product.status}
-                    </Badge>
+                    </StatusBadge>
                   </TableCell>
                   <TableCell>
                     {product.price != null ? (

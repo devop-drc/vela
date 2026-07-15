@@ -1,7 +1,11 @@
 const loadedFonts = new Set();
 
+// Fonts already loaded app-wide via the Fontshare @import in globals.css — never
+// try to fetch these from Google Fonts (they'd 404).
+const PRELOADED_FONTS = new Set(['Inter', 'Clash Display', 'Satoshi']);
+
 export const loadGoogleFont = (fontName: string) => {
-  if (!fontName || loadedFonts.has(fontName) || fontName === 'Inter' || fontName.includes('system-ui')) {
+  if (!fontName || loadedFonts.has(fontName) || PRELOADED_FONTS.has(fontName) || fontName.includes('system-ui')) {
     return;
   }
   // Ensure preconnects are added once for faster and more reliable mobile loading

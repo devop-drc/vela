@@ -47,10 +47,25 @@ const generateSlug = (name: string): string => {
     .replace(/\s+/g, '-'); // Replace spaces with single hyphens
 };
 
+// ── Instant-hydration cache ──────────────────────────────────────────────
+// Shop details + rates are persisted to localStorage so a returning user sees
+// their real shop name/logo/currency IMMEDIATELY on load (no skeleton wait),
+// while the network fetch revalidates in the background (SWR). Cleared on
+// sign-out so a different user never sees stale data.
+const SHOP_CACHE_KEY = 'vela:shopDetails:v1';
+const RATES_CACHE_KEY = 'vela:exchangeRates:v1';
+const readCache = <T,>(key: string): T | null => {
+  try { const s = localStorage.getItem(key); return s ? (JSON.parse(s) as T) : null; } catch { return null; }
+};
+const writeCache = (key: string, val: unknown) => {
+  try { val == null ? localStorage.removeItem(key) : localStorage.setItem(key, JSON.stringify(val)); } catch { /* private mode / quota */ }
+};
+
 export const ShopProvider = ({ children }: { children: ReactNode }) => {
-  const [shopDetails, setShopDetails] = useState<ShopDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(null);
+  // Hydrate synchronously from cache so returning users never wait on a skeleton.
+  const [shopDetails, setShopDetails] = useState<ShopDetails | null>(() => isDemoFrame() ? null : readCache<ShopDetails>(SHOP_CACHE_KEY));
+  const [isLoading, setIsLoading] = useState(() => isDemoFrame() ? false : readCache<ShopDetails>(SHOP_CACHE_KEY) === null);
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(() => isDemoFrame() ? null : readCache<ExchangeRates>(RATES_CACHE_KEY));
 
   useEffect(() => {
     if (isDemoFrame()) { setIsLoading(false); return; } // demo/preview iframes run on mock data
@@ -67,7 +82,7 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
         ts ? Date.now() - new Date(ts).getTime() < 24 * 60 * 60 * 1000 : false;
 
       if (cached?.rates && fresh(cached.last_fetched_at)) {
-        if (mounted) setExchangeRates(cached.rates as ExchangeRates);
+        if (mounted) { setExchangeRates(cached.rates as ExchangeRates); writeCache(RATES_CACHE_KEY, cached.rates); }
         return;
       }
 
@@ -84,6 +99,7 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
         showError(`Could not load currency rates: ${errorMessage}`);
       } else if (data) {
         setExchangeRates(data.rates);
+        writeCache(RATES_CACHE_KEY, data.rates);
       }
     };
     fetchRates();
@@ -91,7 +107,9 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const fetchShopDetails = useCallback(async () => {
-    setIsLoading(true);
+    // Note: we deliberately do NOT flip isLoading→true here. For returning users
+    // this runs as a background revalidation over cached data, and blanking to a
+    // skeleton would defeat the instant-hydration cache.
     // Use the locally cached session — avoids an auth network round-trip.
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
@@ -147,6 +165,7 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
 
     setShopDetails(initialDetails);
     setIsLoading(false);
+    writeCache(SHOP_CACHE_KEY, initialDetails);
 
     // Background-augment with Instagram details (non-blocking).
     if (integrationRes.data) {
@@ -160,18 +179,23 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
         if (!igDetails) return;
-        setShopDetails(prev => prev ? {
-          ...prev,
-          shop_name: dbDetails?.shop_name || igDetails.shop_name || prev.shop_name,
-          slug: dbDetails?.slug || generateSlug(dbDetails?.shop_name || igDetails.shop_name || prev.shop_name),
-          logo_url: dbDetails?.logo_url || igDetails.logo_url || prev.logo_url,
-          favicon_url: dbDetails?.favicon_url || igDetails.favicon_url || prev.favicon_url,
-          about: dbDetails?.about || igDetails.description || prev.about,
-          followers_count: igDetails.followers_count,
-          media_count: igDetails.media_count,
-          instagram_url: dbDetails?.instagram_url || igDetails.instagram_url || prev.instagram_url,
-          username: igDetails.username || prev.username,
-        } : prev);
+        setShopDetails(prev => {
+          if (!prev) return prev;
+          const next: ShopDetails = {
+            ...prev,
+            shop_name: dbDetails?.shop_name || igDetails.shop_name || prev.shop_name,
+            slug: dbDetails?.slug || generateSlug(dbDetails?.shop_name || igDetails.shop_name || prev.shop_name),
+            logo_url: dbDetails?.logo_url || igDetails.logo_url || prev.logo_url,
+            favicon_url: dbDetails?.favicon_url || igDetails.favicon_url || prev.favicon_url,
+            about: dbDetails?.about || igDetails.description || prev.about,
+            followers_count: igDetails.followers_count,
+            media_count: igDetails.media_count,
+            instagram_url: dbDetails?.instagram_url || igDetails.instagram_url || prev.instagram_url,
+            username: igDetails.username || prev.username,
+          };
+          writeCache(SHOP_CACHE_KEY, next);
+          return next;
+        });
       });
     }
   }, []);
@@ -188,6 +212,7 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
       } else if (event === 'SIGNED_OUT') {
         setShopDetails(null);
         setIsLoading(false);
+        writeCache(SHOP_CACHE_KEY, null);
       }
     });
 

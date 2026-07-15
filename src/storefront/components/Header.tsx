@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { useCart } from '@/contexts/CartContext';
+import { SfButton } from './SfButton';
 import { useStorefrontConfig, useStorefrontTokenStyle } from '../theme/StorefrontThemeProvider';
 
 interface Props {
@@ -53,19 +54,49 @@ export const Header = ({ onOpenCart, onOpenSearch }: Props) => {
   const transparent = h.transparentOnHero && pathname === base && !scrolled;
 
   const Brand = ({ center }: { center?: boolean }) => (
-    <Link to={base} className={cn('flex items-center gap-2.5', center && 'flex-col')}>
+    <Link to={base} className={cn('flex min-w-0 items-center gap-2.5', center && 'flex-col')}>
       {shopDetails.logo_url ? (
-        <Avatar className="h-9 w-9"><AvatarImage src={shopDetails.logo_url} /><AvatarFallback>{shopDetails.shop_name?.[0]}</AvatarFallback></Avatar>
+        <Avatar className="h-9 w-9 shrink-0"><AvatarImage src={shopDetails.logo_url} /><AvatarFallback>{shopDetails.shop_name?.[0]}</AvatarFallback></Avatar>
       ) : null}
-      <span className="sf-heading font-bold text-lg leading-none">{shopDetails.shop_name}</span>
+      <span className={cn('sf-heading font-bold text-lg leading-none', !center && 'truncate')}>{shopDetails.shop_name}</span>
     </Link>
   );
 
+  // Active-underline nav item. Over a transparent hero the ink flips to white.
+  const NavItem = ({ to, label, active }: { to: string; label: string; active: boolean }) => (
+    <Link to={to} className={cn('group relative py-1 text-sm font-medium transition-colors', active ? (transparent ? 'text-white' : 'text-primary') : 'hover:text-primary')}>
+      {label}
+      <span
+        className={cn('absolute inset-x-0 -bottom-1 h-0.5 origin-left rounded-full transition-transform duration-300',
+          transparent ? 'bg-white' : 'bg-primary',
+          active ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100')}
+        aria-hidden
+      />
+    </Link>
+  );
+
+  const showCategories = config.layout.nav.showCategories && categories.length > 0;
+
   const navLinks = (
-    <nav className="flex items-center gap-6 text-sm font-medium">
-      <Link to={base} className={cn('hover:text-primary transition-colors', pathname === base && 'text-primary')}>Home</Link>
-      <Link to={`${base}/products`} className={cn('hover:text-primary transition-colors', pathname.includes('/products') && 'text-primary')}>Shop</Link>
-      <Link to={`${base}/orders`} className={cn('hover:text-primary transition-colors', pathname.includes('/orders') && 'text-primary')}>Orders</Link>
+    <nav className="flex items-center gap-7">
+      <NavItem to={base} label="Home" active={pathname === base} />
+      {/* Shop — with a hover categories dropdown when enabled. */}
+      <div className="group relative">
+        <NavItem to={`${base}/products`} label="Shop" active={pathname.includes('/products')} />
+        {showCategories && (
+          <div className="invisible absolute left-1/2 top-full z-50 min-w-[13rem] -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100">
+            <div className="rounded-xl border bg-card p-2 text-foreground shadow-xl">
+              {categories.map((c) => (
+                <Link key={c} to={`${base}/products?category=${encodeURIComponent(c)}`}
+                  className="block rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+                  {c}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <NavItem to={`${base}/orders`} label="Orders" active={pathname.includes('/orders')} />
     </nav>
   );
 
@@ -103,22 +134,22 @@ export const Header = ({ onOpenCart, onOpenSearch }: Props) => {
             ))}
           </div>
         )}
-        <Button className="mt-6 w-full" onClick={() => { setMenuOpen(false); onOpenCart?.(); }}>
+        <SfButton className="mt-6 w-full" onClick={() => { setMenuOpen(false); onOpenCart?.(); }}>
           <ShoppingBag className="mr-2 h-4 w-4" /> Cart{totalItems > 0 ? ` (${totalItems})` : ''}
-        </Button>
+        </SfButton>
       </SheetContent>
     </Sheet>
   );
 
   const actions = (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5">
       {h.showSearch && (
-        <Button variant="ghost" size="icon" onClick={onOpenSearch} aria-label="Search"><Search className="h-5 w-5" /></Button>
+        <Button variant="ghost" size="icon" onClick={onOpenSearch} aria-label="Search" className="rounded-full hover:bg-foreground/10"><Search className="h-5 w-5" /></Button>
       )}
-      <Button variant="ghost" size="icon" onClick={onOpenCart} aria-label="Cart" className="relative" data-sf-cart-target>
+      <Button variant="ghost" size="icon" onClick={onOpenCart} aria-label={`Cart${totalItems > 0 ? `, ${totalItems} items` : ''}`} className="relative rounded-full hover:bg-foreground/10" data-sf-cart-target>
         <ShoppingBag className="h-5 w-5" />
         {totalItems > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">{totalItems}</span>
+          <span aria-hidden className="absolute -top-0.5 -right-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground ring-2 ring-card">{totalItems}</span>
         )}
       </Button>
     </div>
@@ -127,7 +158,7 @@ export const Header = ({ onOpenCart, onOpenSearch }: Props) => {
   const presentation = h.presentation ?? 'bar';
 
   const inner = (
-    <div className={cn('flex items-center justify-between gap-4', presentation === 'minimal' ? 'h-12' : 'h-14', presentation === 'floating' ? 'px-4' : 'sf-container')}>
+    <div className={cn('flex items-center justify-between gap-4 transition-colors', presentation === 'minimal' ? 'h-14' : 'h-16', presentation === 'floating' ? 'px-4' : 'sf-container', transparent && 'text-white')}>
       {h.variant === 'centered' ? (
         <>
           {/* Nav collapses below md; the hamburger (if enabled) or the empty
@@ -168,7 +199,7 @@ export const Header = ({ onOpenCart, onOpenSearch }: Props) => {
             h.blur ? 'glass-enabled' : '',
             transparent ? '!border-transparent !bg-transparent !shadow-none' : 'bg-card/85 sf-glass'
           )}
-          style={{ borderRadius: 'calc(var(--radius) + 6px)' }}
+          style={{ borderRadius: 'calc(var(--sf-radius-card) + 6px)' }}
         >
           {inner}
         </div>
@@ -188,12 +219,13 @@ export const Header = ({ onOpenCart, onOpenSearch }: Props) => {
   return (
     <header
       className={cn(
-        'top-0 z-40 w-full border-b transition-colors duration-300',
+        'top-0 z-40 w-full border-b transition-all duration-300',
         h.sticky && 'sticky',
         h.blur ? 'glass-enabled' : '',
         transparent
           ? '!border-transparent !bg-transparent !backdrop-blur-0 !shadow-none'
-          : 'bg-card/80 sf-glass !rounded-none !border-x-0 !border-t-0'
+          : 'bg-card/80 sf-glass !rounded-none !border-x-0 !border-t-0',
+        scrolled && !transparent && 'shadow-sm'
       )}
     >
       <div className="relative">{inner}</div>

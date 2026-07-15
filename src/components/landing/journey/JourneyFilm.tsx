@@ -140,8 +140,8 @@ const AdminShell = ({ children, active, headerTitle, badge }: { children: React.
   <div className="flex h-full">
     <aside className="hidden w-44 flex-col border-r border-border bg-card p-3 md:flex">
       <div className="mb-3 flex items-center gap-2 px-1">
-        <span className={cn("grid h-6 w-6 place-items-center rounded-lg text-white", BRAND)}><ShoppingBag className="h-3.5 w-3.5" /></span>
-        <span className="text-sm font-bold">InstantShop</span>
+        <img src="/vela-icon.svg" alt="" className="h-6 w-6 rounded-lg" />
+        <span className="font-display-brand text-sm font-bold">Vela</span>
       </div>
       {[
         { l: "Paneli", I: Home }, { l: "Produktet", I: Package }, { l: "Stoku", I: Archive },
@@ -260,8 +260,8 @@ const S2_Login = ({ copy }: { copy: LandingCopy }) => {
     <div className="grid h-full place-items-center bg-muted/40">
       <Card className="w-[340px] shadow-xl">
         <CardHeader className="items-center text-center">
-          <span className={cn("mb-1 grid h-10 w-10 place-items-center rounded-xl text-white", BRAND)}><ShoppingBag className="h-5 w-5" /></span>
-          <CardTitle className="text-lg">InstantShop</CardTitle>
+          <img src="/vela-icon.svg" alt="" className="mb-1 h-10 w-10 rounded-xl" />
+          <CardTitle className="font-display-brand text-lg">Vela</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <Input value={typed(frame, "elira@butiku.al", 14)} readOnly placeholder="Email" className="h-10" />

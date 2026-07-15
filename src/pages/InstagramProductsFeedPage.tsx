@@ -1,33 +1,14 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { Link, useParams, useNavigate, useSearchParams, useOutletContext } from "react-router-dom"; // Import useOutletContext
-import { 
-  Link as LinkIcon,
-  Package,
-  Users,
-  Image as ImageIcon,
-  Share2,
-  ShoppingCart as ShoppingCartIcon,
-  ArrowUpNarrowWide,
-  LayoutGrid,
-  List,
-  XCircle,
-  Sparkles,
-} from "lucide-react";
+import { useMemo, useCallback, useEffect, useRef } from "react";
+import { useParams, useNavigate, useSearchParams, useOutletContext } from "react-router-dom";
+import { Package, XCircle } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { InstagramProductCardFull } from "@/components/storefront/InstagramProductCardFull";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatLargeNumber } from "@/lib/formatters";
-import { motion } from "framer-motion";
-import { Marquee } from "@/components/ui/marquee";
-import { getIcon } from '@/lib/iconLibrary';
-// Select UI not needed here; header handles sorting controls on all viewports
-import debounce from 'lodash/debounce';
-import { InstagramShopHeader } from "@/components/storefront/InstagramShopHeader"; // Import the updated header
+import { EmptyState } from "@/components/ui-app";
+import { useReveal } from "@/lib/anim";
 
 interface Product {
   id: string;
@@ -67,22 +48,9 @@ interface InstagramShopLayoutContext {
   convertCurrency: (amount: number | null | undefined, fromCurrency?: string) => number;
 }
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
-};
-
-const getIconComponent = (iconName: string) => {
-  const Icon = getIcon(iconName);
-  return <Icon className="h-5 w-5 text-red-500" />;
-};
-
 const InstagramProductsFeedPage = () => {
   const { shopSlug, productId: productIdFromUrl } = useParams<{ shopSlug: string; productId: string }>();
-  const { shopDetails, products: allProductsFromContext, isLoading, error, convertCurrency: convertCurrencyFromContext, marqueeElements, promotions } = useStorefront();
+  const { shopDetails, products: allProductsFromContext, isLoading, error, convertCurrency: convertCurrencyFromContext, promotions } = useStorefront();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -180,23 +148,23 @@ const InstagramProductsFeedPage = () => {
     return filters.categories.length > 0 || filters.tags.length > 0 || filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice;
   }, [filters, maxPrice]);
 
+  // Subtle GSAP entrance for the feed (reduced-motion aware).
+  const feedRevealRef = useReveal<HTMLDivElement>({}, [isLoading]);
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))] flex flex-col items-center p-4">
-        <div className="flex flex-col items-center mb-8">
-          <Skeleton className="h-24 w-24 rounded-full mb-4" />
-          <Skeleton className="h-6 w-48 mb-2" />
-          <div className="flex gap-4 mb-4">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-4 w-16" />
-          </div>
-          <Skeleton className="h-4 w-64 mb-2" />
-          <Skeleton className="h-4 w-48" />
-        </div>
-        <div className="grid grid-cols-3 gap-1 w-full max-w-md">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-square w-full" />
+      <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4">
+        <div className="w-full md:max-w-[630px] flex flex-col gap-6">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+              <Skeleton className="aspect-square w-full rounded-md" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
           ))}
         </div>
       </div>
@@ -204,15 +172,15 @@ const InstagramProductsFeedPage = () => {
   }
 
   if (error) {
-    return <div className="container py-8 text-red-500 text-base md:text-lg">{error}</div>;
+    return <div className="container py-8 text-destructive text-base md:text-lg">{error}</div>;
   }
 
   if (!shopDetails) {
-    return <div className="container py-8 text-center text-[hsl(var(--muted-foreground))] text-base md:text-lg">Shop details not found.</div>;
+    return <div className="container py-8 text-center text-muted-foreground text-base md:text-lg">Shop details not found.</div>;
   }
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))] flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* InstagramFilterDrawer is now rendered in InstagramShopLayout */}
 
       <main className="flex-1 pt-0 flex justify-center">
@@ -220,27 +188,26 @@ const InstagramProductsFeedPage = () => {
         {/* Product Grid */}
         <section className="mt-0">
           {filteredAndSortedProducts.length === 0 ? (
-            <div className="text-center py-16 text-[hsl(var(--muted-foreground))] border-2 border-dashed border-[hsl(var(--border))] rounded-lg mx-4">
-              <h3 className="text-xl md:text-2xl font-semibold">No Products Found</h3>
-              <p className="text-sm md:text-base mt-1 md:mt-2">
-                {hasActiveFilters
+            <EmptyState
+              className="mx-4"
+              icon={Package}
+              title="No products found"
+              description={
+                hasActiveFilters
                   ? "No products match your current filters or search criteria."
-                  : "It looks like this store doesn't have any products yet."}
-              </p>
-              {hasActiveFilters && (
-                <Button onClick={handleResetFilters} className="mt-4 text-sm md:text-base bg-red-500 hover:bg-red-600 text-white">
-                  <XCircle className="mr-2 h-4 w-4" />
-                  Clear All Filters
-                </Button>
-              )}
-            </div>
+                  : "It looks like this store doesn't have any products yet."
+              }
+              action={
+                hasActiveFilters ? (
+                  <Button variant="outline" onClick={handleResetFilters}>
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Clear all filters
+                  </Button>
+                ) : undefined
+              }
+            />
           ) : (
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="flex flex-col" // Changed to flex-col for feed-like layout
-            >
+            <div ref={feedRevealRef} className="flex flex-col">
               {filteredAndSortedProducts.map((product) => (
                 <InstagramProductCardFull
                   key={product.id}
@@ -251,7 +218,7 @@ const InstagramProductsFeedPage = () => {
                   promotions={promotions}
                 />
               ))}
-            </motion.div>
+            </div>
           )}
         </section>
         </div>

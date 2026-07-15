@@ -45,6 +45,10 @@ export default {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
@@ -72,8 +76,18 @@ export default {
         heading: ["var(--font-heading)", ...defaultTheme.fontFamily.sans],
       },
       boxShadow: {
-        'card': '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05)',
-        premium: '0 25px 50px -12px rgba(0, 0, 0, 0.1), 0 10px 20px -10px rgba(0, 0, 0, 0.08)',
+        // Premium, soft & layered — faintly violet-tinted to match the brand,
+        // so every card / dropdown / popover / button that uses the default
+        // shadow scale reads as elevated glass rather than a hard drop shadow.
+        xs: '0 1px 2px 0 rgba(46, 33, 64, 0.04)',
+        sm: '0 1px 2px 0 rgba(46, 33, 64, 0.05), 0 1px 3px 0 rgba(46, 33, 64, 0.04)',
+        DEFAULT: '0 2px 4px -1px rgba(46, 33, 64, 0.05), 0 4px 10px -2px rgba(46, 33, 64, 0.06)',
+        md: '0 4px 8px -2px rgba(46, 33, 64, 0.06), 0 10px 24px -6px rgba(46, 33, 64, 0.08)',
+        lg: '0 8px 16px -6px rgba(46, 33, 64, 0.07), 0 18px 40px -10px rgba(46, 33, 64, 0.10)',
+        xl: '0 14px 28px -8px rgba(46, 33, 64, 0.10), 0 28px 60px -14px rgba(46, 33, 64, 0.12)',
+        '2xl': '0 24px 56px -14px rgba(46, 33, 64, 0.16)',
+        card: '0 1px 2px 0 rgba(46, 33, 64, 0.04), 0 6px 16px -8px rgba(46, 33, 64, 0.10)',
+        premium: '0 24px 48px -18px rgba(46, 33, 64, 0.16), 0 8px 20px -12px rgba(46, 33, 64, 0.10)',
       },
       keyframes: {
         "accordion-down": {

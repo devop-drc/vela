@@ -1,16 +1,17 @@
 // Token-driven product card with selectable variants. Reads design from the
 // StorefrontConfig (components.productCard) and data/currency from StorefrontContext.
 
-import { Link } from 'react-router-dom';
-import { Star } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Star, Plus, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import { MediaItem } from '@/components/MediaItem';
-import { Badge } from '@/components/ui/badge';
 import { useProductRating } from '@/hooks/useProductRating';
 import { useStorefront } from '@/contexts/StorefrontContext';
+import { useCart } from '@/contexts/CartContext';
 import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
 import { activePromotionsFor, computePrice, promotionBadgeLabel } from '../lib/pricing';
+import { flyToCart } from '../lib/flyToCart';
 import type { ComponentVariants } from '../config/types';
 
 export interface ProductLike {
@@ -42,6 +43,8 @@ interface Props {
 export const ProductCard = ({ product, className, variant, ratio }: Props) => {
   const config = useStorefrontConfig();
   const { shopDetails, convertCurrency, promotions } = useStorefront();
+  const { addToCart } = useCart();
+  const navigate = useNavigate();
   const rating = useProductRating(product.id);
   const v = variant ?? config.components.productCard;
 
@@ -89,7 +92,7 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
         {promos.map((p) => {
           const label = promotionBadgeLabel(p);
           return label ? (
-            <Badge key={p.id} className="bg-emerald-500 text-white border-0 text-[11px]">{label}</Badge>
+            <span key={p.id} className="sf-badge">{label}</span>
           ) : null;
         })}
       </div>
@@ -97,24 +100,57 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
 
   const SoldOut = () =>
     isOutOfStock ? (
-      <Badge className="absolute top-2 left-2 z-10 bg-amber-500 text-white border-0 text-[11px]">Sold Out</Badge>
+      <span className="sf-badge absolute top-2 left-2 z-10" style={{ background: 'hsl(var(--warning))', color: 'hsl(var(--warning-foreground))' }}>Sold Out</span>
     ) : null;
 
-  const Picture = ({ ratio: defaultRatio = 'aspect-square', round = '' }: { ratio?: string; round?: string }) => (
-    <div className={cn('w-full overflow-hidden bg-muted', ratio ?? defaultRatio, round)}>
+  // Quick-add: products with option groups (colour/size/material) open the
+  // detail page to choose; option-less products add straight to the cart with a
+  // fly-to-cart animation. Shown on hover (always visible on touch).
+  const hasOptions = ['color', 'size', 'material'].some((k) => {
+    const val: any = (product.details || {})[k];
+    return Array.isArray(val) ? val.length > 0 : !!val;
+  });
+  const quickAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isOutOfStock) return;
+    if (hasOptions) { navigate(to); return; }
+    flyToCart(e.currentTarget as HTMLElement, product.media_type === 'video' ? undefined : img);
+    addToCart({
+      productId: product.id, name: product.name,
+      price: hasDiscount ? discounted! : original!, originalPrice: original!, isDiscounted: hasDiscount,
+      currency, media_url: product.media_url, media_type: product.media_type as any,
+      pricing_type: product.pricing_type, billing_interval: product.billing_interval,
+    } as any, 1);
+  };
+  const QuickAdd = () =>
+    isOutOfStock ? null : (
+      <button
+        type="button"
+        onClick={quickAdd}
+        aria-label={hasOptions ? `Choose options for ${product.name}` : `Add ${product.name} to cart`}
+        className="absolute bottom-2 right-2 z-10 grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground shadow-md transition-all hover:scale-105 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(pointer:coarse)]:opacity-100"
+      >
+        {hasOptions ? <SlidersHorizontal className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+      </button>
+    );
+
+  const Picture = ({ ratio: defaultRatio = 'aspect-square', round = '', add = true }: { ratio?: string; round?: string; add?: boolean }) => (
+    <div className={cn('relative w-full overflow-hidden bg-muted', ratio ?? defaultRatio, round)}>
       <MediaItem
         src={img}
         alt={product.name}
         type={product.media_type}
         className={cn('h-full w-full object-cover transition-transform duration-300 group-hover:scale-105', isOutOfStock && 'grayscale')}
       />
+      {add && <QuickAdd />}
     </div>
   );
 
   // ── Variants ───────────────────────────────────────────────────────────────
   if (v === 'overlay') {
     return (
-      <Link to={to} className={cn('sf-hoverable group relative block overflow-hidden sf-card', className)} style={{ borderRadius: 'var(--radius)' }}>
+      <Link to={to} className={cn('sf-hoverable group relative block overflow-hidden sf-card', className)} style={{ borderRadius: 'var(--sf-radius-card)' }}>
         <SoldOut /><Promo />
         <Picture ratio="aspect-[4/5]" />
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 pt-12 text-white">
@@ -146,7 +182,7 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
     return (
       <Link to={to} className={cn('sf-hoverable group flex gap-3 items-center sf-glass p-2', className)}>
         <div className="relative h-16 w-16 shrink-0">
-          <Picture ratio="h-16 w-16" round="" />
+          <Picture ratio="h-16 w-16" round="" add={false} />
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="sf-heading text-sm font-medium truncate">{product.name}</h3>
@@ -158,13 +194,13 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
 
   if (v === 'polaroid') {
     return (
-      <Link to={to} className={cn('sf-hoverable group block bg-white p-3 pb-5 shadow-md', className)} style={{ borderRadius: 'var(--radius-sm)' }}>
+      <Link to={to} className={cn('sf-hoverable group block bg-card text-card-foreground p-3 pb-5 shadow-md', className)} style={{ borderRadius: 'var(--sf-radius-card)' }}>
         <div className="relative">
           <SoldOut /><Promo />
           <Picture ratio="aspect-square" />
         </div>
         <div className="pt-3 text-center">
-          <h3 className="sf-heading text-sm font-semibold leading-tight line-clamp-1 text-zinc-800">{product.name}</h3>
+          <h3 className="sf-heading text-sm font-semibold leading-tight line-clamp-1">{product.name}</h3>
           <div className="flex justify-center"><Rating className="mt-0.5" /></div>
           <Price className="text-sm justify-center mt-1" />
         </div>
@@ -180,7 +216,7 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
           <Picture ratio="aspect-[3/4]" round="" />
         </div>
         <div className="pt-4">
-          {product.category && <p className="text-[11px] uppercase tracking-widest text-muted-foreground mb-1">{product.category}</p>}
+          {product.category && <p className="sf-eyebrow mb-1">{product.category}</p>}
           <h3 className="sf-heading text-lg font-semibold leading-snug line-clamp-2">{product.name}</h3>
           <Rating className="mt-1" />
           <Price className="mt-2 text-lg" />
@@ -192,8 +228,8 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
   // Frame — gallery-plaque feel: inset double border, serif-leaning centered text.
   if (v === 'frame') {
     return (
-      <Link to={to} className={cn('sf-hoverable group block border bg-card p-2', className)} style={{ borderRadius: 'var(--radius)' }}>
-        <div className="relative border p-1.5" style={{ borderRadius: 'calc(var(--radius) / 1.5)' }}>
+      <Link to={to} className={cn('sf-hoverable group block border bg-card p-2', className)} style={{ borderRadius: 'var(--sf-radius-card)' }}>
+        <div className="relative border p-1.5" style={{ borderRadius: 'calc(var(--sf-radius-card) / 1.5)' }}>
           <SoldOut /><Promo />
           <Picture ratio="aspect-[4/5]" />
         </div>
@@ -211,9 +247,9 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
   // visible on touch via focus-within/coarse pointer fallback).
   if (v === 'caption-hover') {
     return (
-      <Link to={to} className={cn('sf-hoverable group relative block overflow-hidden', className)} style={{ borderRadius: 'var(--radius)' }}>
+      <Link to={to} className={cn('sf-hoverable group relative block overflow-hidden', className)} style={{ borderRadius: 'var(--sf-radius-card)' }}>
         <SoldOut /><Promo />
-        <Picture ratio="aspect-[4/5]" />
+        <Picture ratio="aspect-[4/5]" add={false} />
         <div className="absolute inset-x-0 bottom-0 translate-y-full bg-card/95 p-3 backdrop-blur-sm transition-transform duration-300 group-hover:translate-y-0 group-focus-within:translate-y-0 [@media(pointer:coarse)]:translate-y-0">
           <div className="flex items-baseline justify-between gap-2">
             <h3 className="sf-heading min-w-0 truncate text-sm font-semibold">{product.name}</h3>
@@ -228,7 +264,7 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
   // Ticket — playful stub with a perforated divider between image and info.
   if (v === 'ticket') {
     return (
-      <Link to={to} className={cn('sf-hoverable group block overflow-hidden border bg-card', className)} style={{ borderRadius: 'var(--radius)' }}>
+      <Link to={to} className={cn('sf-hoverable group block overflow-hidden border bg-card', className)} style={{ borderRadius: 'var(--sf-radius-card)' }}>
         <div className="relative">
           <SoldOut /><Promo />
           <Picture ratio="aspect-square" />
@@ -260,7 +296,7 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
           <h3 className="sf-heading font-semibold text-base leading-tight mb-1 line-clamp-2">{product.name}</h3>
           <Rating className="mb-1" />
           {product.category && (
-            <Badge variant="outline" className="text-[11px] bg-primary/10 text-primary border-primary/30 mb-2">{product.category}</Badge>
+            <span className="sf-badge mb-2">{product.category}</span>
           )}
           {product.caption && <p className="text-xs text-muted-foreground line-clamp-2">{product.caption}</p>}
         </div>

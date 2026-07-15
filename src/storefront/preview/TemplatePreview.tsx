@@ -44,7 +44,7 @@ export const TemplatePreview = ({ config, className, device = 'desktop' }: Props
           </div>
         </div>
         {/* hero */}
-        <div className="m-2 flex flex-col items-center justify-center text-center h-16 bg-primary text-primary-foreground" style={{ borderRadius: 'var(--radius)' }}>
+        <div className="m-2 flex flex-col items-center justify-center text-center h-16 bg-primary text-primary-foreground" style={{ borderRadius: 'var(--sf-radius-card)' }}>
           <div className="h-2.5 w-20 rounded-full bg-current opacity-90 mb-1" />
           <div className="h-3 w-10 rounded-full bg-current opacity-60" style={{ borderRadius: 'var(--radius-full)' }} />
         </div>

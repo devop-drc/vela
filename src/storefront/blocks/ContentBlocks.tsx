@@ -96,7 +96,7 @@ export const PromoBannerBlock = ({ props }: { props: { variant?: 'gradient' | 'o
 
   if (props.variant === 'outline') {
     return (
-      <div className="flex flex-col items-center gap-4 border-2 border-primary/30 px-6 py-8 text-center md:flex-row md:justify-between md:px-10 md:text-left" style={{ borderRadius: 'var(--radius)' }}>
+      <div className="flex flex-col items-center gap-4 border-2 border-primary/30 px-6 py-8 text-center md:flex-row md:justify-between md:px-10 md:text-left" style={{ borderRadius: 'var(--sf-radius-card)' }}>
         <div>
           <h2 className="sf-heading text-xl md:text-2xl font-bold">{heading}</h2>
           {props.text && <p className="mt-1 text-sm text-muted-foreground">{props.text}</p>}
@@ -112,8 +112,8 @@ export const PromoBannerBlock = ({ props }: { props: { variant?: 'gradient' | 'o
     <div
       className="relative overflow-hidden px-6 py-10 text-center md:py-14"
       style={{
-        borderRadius: 'var(--radius)',
-        background: `linear-gradient(120deg, hsl(${config.theme.tokens.primary}), hsl(${config.theme.tokens.accent}))`,
+        borderRadius: 'var(--sf-radius-card)',
+        background: 'linear-gradient(120deg, hsl(var(--primary)), hsl(var(--sf-primary-2)))',
       }}
     >
       <h2 className="sf-heading text-2xl md:text-4xl font-bold text-primary-foreground drop-shadow-sm">{heading}</h2>

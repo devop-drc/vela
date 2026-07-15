@@ -47,13 +47,13 @@ export const Footer = forwardRef<HTMLDivElement>((_, ref) => {
   if (variant === 'columns') {
     const Col = ({ title, children }: { title: string; children: React.ReactNode }) => (
       <div>
-        <h4 className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{title}</h4>
+        <h4 className="sf-eyebrow mb-3">{title}</h4>
         {children}
       </div>
     );
     return (
       <footer ref={ref} className="border-t mt-16 py-12">
-        <div className="sf-container grid grid-cols-2 gap-8 md:grid-cols-4">
+        <div className="sf-container grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4 md:gap-8">
           <Col title="Pages">{links}</Col>
           <Col title="Categories">
             <div className="flex flex-col gap-2 text-sm text-muted-foreground">

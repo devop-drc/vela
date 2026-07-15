@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useState, ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Minus, Plus, XCircle, ArrowRight, ArrowLeft, CheckCircle, Loader2, Info } from 'lucide-react';
+import { ShoppingBag, Minus, Plus, XCircle, ArrowRight, ArrowLeft, CheckCircle, Loader2, Info, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -35,7 +35,7 @@ export const CartUIProvider = ({ children }: { children: ReactNode }) => {
 // ── Cart body (used in all presentations) ────────────────────────────────────
 type Step = 'cart' | 'contact-shipping' | 'payment';
 
-export const CartContents = ({ onClose }: { onClose?: () => void }) => {
+export const CartContents = ({ onClose, variant = 'drawer' }: { onClose?: () => void; variant?: 'drawer' | 'page' }) => {
   const { cartItems, subtotal, shipping, total, totalItems, totalSaved, freeShippingThreshold, updateQuantity, removeFromCart, hasSubscriptionProducts } = useCart();
   const { shopDetails, convertCurrency } = useStorefront();
   const navigate = useNavigate();
@@ -50,7 +50,118 @@ export const CartContents = ({ onClose }: { onClose?: () => void }) => {
         <ShoppingBag className="h-20 w-20 text-muted-foreground mb-6" />
         <h3 className="sf-heading text-2xl font-bold mb-3">Your cart is empty</h3>
         <p className="text-muted-foreground mb-6">Looks like you haven't added anything yet.</p>
-        <Button onClick={onClose}>Start Shopping</Button>
+        <SfButton onClick={onClose}>Start Shopping</SfButton>
+      </div>
+    );
+  }
+
+  // ── Reusable pieces (shared by the drawer and the two-column page) ──────────
+  const price = (n: number, cur?: string) => formatCurrency(convertCurrency(n, cur, shopDetails?.currency), shopDetails?.currency);
+
+  const freeShipHint = step === 'cart' && shipping > 0 && freeShippingThreshold > subtotal ? (
+    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+      <Info className="h-3.5 w-3.5 shrink-0" />
+      <span>Add {formatCurrency(freeShippingThreshold - subtotal, shopDetails?.currency)} more for free shipping.</span>
+    </div>
+  ) : null;
+
+  const totals = (
+    <div className="space-y-3">
+      <div className="flex justify-between text-sm"><span>Subtotal ({totalItems})</span><span className="font-semibold">{formatCurrency(subtotal, shopDetails?.currency)}</span></div>
+      <div className="flex justify-between text-sm"><span>Shipping</span><span className={cn('font-semibold', shipping === 0 && 'text-emerald-600 dark:text-emerald-400')}>{shipping === 0 ? 'FREE' : formatCurrency(shipping, shopDetails?.currency)}</span></div>
+      {totalSaved > 0 && <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400"><span>You saved</span><span className="font-semibold">{formatCurrency(totalSaved, shopDetails?.currency)}</span></div>}
+      <Separator />
+      <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{formatCurrency(total, shopDetails?.currency)}</span></div>
+    </div>
+  );
+
+  const cta = (
+    <>
+      {step === 'cart' && <SfButton className="w-full" onClick={() => setStep('contact-shipping')}>Proceed to Checkout <ArrowRight className="ml-2 h-4 w-4" /></SfButton>}
+      {step === 'contact-shipping' && <SfButton type="submit" form="sf-checkout-form" className="w-full">Continue to Payment <ArrowRight className="ml-2 h-4 w-4" /></SfButton>}
+      {step === 'payment' && (
+        <SfButton type="submit" form="sf-checkout-form" className="w-full" disabled={isSubmitting}>
+          {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Placing Order…</> : <><CheckCircle className="mr-2 h-4 w-4" /> Place Order</>}
+        </SfButton>
+      )}
+    </>
+  );
+
+  const subscriptionNote = hasSubscriptionProducts ? (
+    <div
+      className="flex items-center gap-2 rounded-md border p-3 text-sm text-foreground"
+      style={{ background: 'hsl(var(--warning) / 0.12)', borderColor: 'hsl(var(--warning) / 0.35)' }}
+    >
+      <Info className="h-4 w-4 shrink-0" style={{ color: 'hsl(var(--warning))' }} /> Cart includes subscriptions. Cash on Delivery is unavailable.
+    </div>
+  ) : null;
+
+  const itemRows = cartItems.map((item) => (
+    <div key={item.uid} className="flex gap-3 sf-glass p-3">
+      <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="shrink-0">
+        <div className="h-20 w-20 rounded-md overflow-hidden bg-muted border"><MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover h-full w-full" /></div>
+      </Link>
+      <div className="flex-1 min-w-0">
+        <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}><h3 className="font-semibold leading-tight hover:underline line-clamp-1">{item.name}</h3></Link>
+        {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{Object.entries(item.selectedOptions).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' · ')}</p>
+        )}
+        <div className="flex items-center justify-between mt-2 gap-2">
+          <div className="flex h-10 items-center rounded-md border md:h-8">
+            <button aria-label="Decrease quantity" onClick={() => updateQuantity(item.uid, item.quantity - 1)} disabled={item.quantity <= 1} className="flex h-full w-10 items-center justify-center disabled:opacity-40 md:w-8"><Minus className="h-3.5 w-3.5" /></button>
+            <span className="w-8 text-center text-sm tabular-nums">{item.quantity}</span>
+            <button aria-label="Increase quantity" onClick={() => updateQuantity(item.uid, item.quantity + 1)} disabled={item.quantity >= 99} className="flex h-full w-10 items-center justify-center disabled:opacity-40 md:w-8"><Plus className="h-3.5 w-3.5" /></button>
+          </div>
+          <span className={cn('font-semibold', item.isDiscounted && 'text-emerald-600 dark:text-emerald-400')}>{price(item.price * item.quantity, item.currency)}</span>
+          <button aria-label={`Remove ${item.name} from cart`} onClick={() => removeFromCart(item.uid)} className="-m-2 p-2 text-muted-foreground hover:text-destructive"><XCircle className="h-5 w-5" /></button>
+        </div>
+      </div>
+    </div>
+  ));
+
+  // ── Two-column page layout: form/items on the left, sticky summary on the right ──
+  if (variant === 'page') {
+    return (
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+        <div className="min-w-0 space-y-5">
+          <div className="flex items-center gap-2">
+            {step !== 'cart' && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={back}><ArrowLeft className="h-4 w-4" /></Button>}
+            <h1 className="sf-heading text-2xl font-bold flex items-center gap-2"><ShoppingBag className="h-6 w-6" /> {step === 'cart' ? 'Your Cart' : 'Checkout'}</h1>
+          </div>
+          {step === 'cart' ? (
+            <div className="space-y-4">{subscriptionNote}{itemRows}</div>
+          ) : (
+            <CheckoutSteps step={step} hasSubscriptionProducts={hasSubscriptionProducts} onContinue={() => setStep('payment')} onPlaceOrder={placeOrder} />
+          )}
+        </div>
+
+        <aside className="lg:sticky lg:top-24">
+          <div className="sf-glass p-5 space-y-4">
+            <h2 className="sf-heading text-lg font-bold">Order Summary</h2>
+            <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+              {cartItems.map((item) => (
+                <div key={item.uid} className="flex items-center gap-3">
+                  <div className="relative h-14 w-14 shrink-0 rounded-md overflow-hidden bg-muted border">
+                    <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover h-full w-full" />
+                    <span className="absolute -top-1.5 -right-1.5 h-5 min-w-[1.25rem] px-1 rounded-full bg-primary text-primary-foreground text-[11px] font-semibold grid place-items-center">{item.quantity}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium leading-tight line-clamp-1">{item.name}</p>
+                    {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                      <p className="text-xs text-muted-foreground line-clamp-1">{Object.entries(item.selectedOptions).map(([k, v]) => `${Array.isArray(v) ? v.join(', ') : v}`).join(' · ')}</p>
+                    )}
+                  </div>
+                  <span className="text-sm font-semibold whitespace-nowrap">{price(item.price * item.quantity, item.currency)}</span>
+                </div>
+              ))}
+            </div>
+            <Separator />
+            {freeShipHint}
+            {totals}
+            {cta}
+            <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5" /> Secure checkout</div>
+          </div>
+        </aside>
       </div>
     );
   }
@@ -64,60 +175,16 @@ export const CartContents = ({ onClose }: { onClose?: () => void }) => {
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {step === 'cart' ? (
-          <>
-            {hasSubscriptionProducts && (
-              <div className="flex items-center gap-2 p-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md">
-                <Info className="h-4 w-4 shrink-0" /> Cart includes subscriptions. Cash on Delivery is unavailable.
-              </div>
-            )}
-            {cartItems.map((item) => (
-              <div key={item.uid} className="flex gap-3 sf-glass p-3">
-                <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose} className="shrink-0">
-                  <div className="h-20 w-20 rounded-md overflow-hidden bg-muted border"><MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover h-full w-full" /></div>
-                </Link>
-                <div className="flex-1 min-w-0">
-                  <Link to={`/shop/${shopDetails?.slug}/product/${item.productId}`} onClick={onClose}><h3 className="font-semibold leading-tight hover:underline line-clamp-1">{item.name}</h3></Link>
-                  {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{Object.entries(item.selectedOptions).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' · ')}</p>
-                  )}
-                  <div className="flex items-center justify-between mt-2 gap-2">
-                    <div className="flex items-center border rounded-md h-8">
-                      <button aria-label="Decrease quantity" onClick={() => updateQuantity(item.uid, item.quantity - 1)} disabled={item.quantity <= 1} className="h-full w-8 flex items-center justify-center disabled:opacity-40"><Minus className="h-3.5 w-3.5" /></button>
-                      <span className="w-8 text-center text-sm tabular-nums">{item.quantity}</span>
-                      <button aria-label="Increase quantity" onClick={() => updateQuantity(item.uid, item.quantity + 1)} disabled={item.quantity >= 99} className="h-full w-8 flex items-center justify-center disabled:opacity-40"><Plus className="h-3.5 w-3.5" /></button>
-                    </div>
-                    <span className={cn('font-semibold', item.isDiscounted && 'text-emerald-600 dark:text-emerald-400')}>{formatCurrency(convertCurrency(item.price * item.quantity, item.currency, shopDetails?.currency), shopDetails?.currency)}</span>
-                    <button aria-label={`Remove ${item.name} from cart`} onClick={() => removeFromCart(item.uid)} className="text-muted-foreground hover:text-destructive"><XCircle className="h-5 w-5" /></button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </>
+          <>{subscriptionNote}{itemRows}</>
         ) : (
           <CheckoutSteps step={step} hasSubscriptionProducts={hasSubscriptionProducts} onContinue={() => setStep('payment')} onPlaceOrder={placeOrder} />
         )}
       </div>
 
-      <div className="border-t p-4 space-y-3 shrink-0">
-        {step === 'cart' && cartItems.length > 0 && shipping > 0 && freeShippingThreshold > subtotal && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
-            <Info className="h-3.5 w-3.5 shrink-0" />
-            <span>Add {formatCurrency(freeShippingThreshold - subtotal, shopDetails?.currency)} more for free shipping.</span>
-          </div>
-        )}
-        <div className="flex justify-between text-sm"><span>Subtotal ({totalItems})</span><span className="font-semibold">{formatCurrency(subtotal, shopDetails?.currency)}</span></div>
-        <div className="flex justify-between text-sm"><span>Shipping</span><span className={cn('font-semibold', shipping === 0 && 'text-emerald-600 dark:text-emerald-400')}>{shipping === 0 ? 'FREE' : formatCurrency(shipping, shopDetails?.currency)}</span></div>
-        {totalSaved > 0 && <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400"><span>You saved</span><span className="font-semibold">{formatCurrency(totalSaved, shopDetails?.currency)}</span></div>}
-        <Separator />
-        <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{formatCurrency(total, shopDetails?.currency)}</span></div>
-
-        {step === 'cart' && <SfButton className="w-full" onClick={() => setStep('contact-shipping')}>Proceed to Checkout <ArrowRight className="ml-2 h-4 w-4" /></SfButton>}
-        {step === 'contact-shipping' && <SfButton type="submit" form="sf-checkout-form" className="w-full">Continue to Payment <ArrowRight className="ml-2 h-4 w-4" /></SfButton>}
-        {step === 'payment' && (
-          <SfButton type="submit" form="sf-checkout-form" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Placing Order…</> : <><CheckCircle className="mr-2 h-4 w-4" /> Place Order</>}
-          </SfButton>
-        )}
+      <div className="shrink-0 space-y-3 border-t p-4 pb-[calc(1rem+var(--sab,0px))]">
+        {freeShipHint}
+        {totals}
+        {cta}
       </div>
     </div>
   );

@@ -7,15 +7,18 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { User as SupabaseUser } from '@supabase/supabase-js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Facebook, ExternalLink, Languages, Bell, Trash2, User, Mail, Phone, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Facebook, ExternalLink, Languages, Bell, Trash2, User, Mail, Phone, CheckCircle2, XCircle, Info } from 'lucide-react';
+import { Spinner } from "@/components/ui/spinner";
+import { StatusBadge } from "@/components/ui-app";
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { IntegrationSettings } from './IntegrationSettings';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from "react-i18next";
 import { showError, showSuccess, toFriendlyError } from "@/utils/toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useReveal } from "@/lib/anim";
 
 const PreferenceRow = ({ id, title, description, defaultChecked = false, comingSoon = false, comingSoonLabel }: { id: string, title: string, description: string, defaultChecked?: boolean, comingSoon?: boolean, comingSoonLabel?: string }) => (
   <div className="flex items-center justify-between p-3 border rounded-lg">
@@ -31,15 +34,19 @@ const PreferenceRow = ({ id, title, description, defaultChecked = false, comingS
 );
 
 export const AccountSettings = () => {
-  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const { user, userId } = useAuth();
   const [profile, setProfile] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [facebookId, setFacebookId] = useState<string | null>(null);
   const [integration, setIntegration] = useState<any | null>(null);
   const [searchParams] = useSearchParams();
   const { t, i18n } = useTranslation();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  // Facebook identity is available instantly from the cached session user.
+  const facebookId = user?.identities?.find(i => i.provider === 'facebook')?.id ?? null;
+
+  const revealRef = useReveal({}, [isLoading]);
 
   const handleDeleteAccount = async () => {
     setIsDeletingAccount(true);
@@ -57,44 +64,40 @@ export const AccountSettings = () => {
     }
   };
 
-  const fetchUserAndProfile = async () => {
+  // Fetch profile + the (single) integration row once, using the cached user id
+  // from AuthContext — no getUser() round-trip. IntegrationSettings receives the
+  // same integration via props so the two connection surfaces can't diverge.
+  const fetchProfileAndIntegration = async (uid: string) => {
     setIsLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    setUser(user);
 
-    if (user) {
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, avatar_url, phone_number')
-        .eq('id', user.id)
-        .single();
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, avatar_url, phone_number')
+      .eq('id', uid)
+      .single();
 
-      if (profileError) {
-        console.error("Error fetching profile:", profileError);
-      } else {
-        setProfile(profileData);
-      }
-
-      const facebookIdentity = user.identities?.find(i => i.provider === 'facebook');
-      if (facebookIdentity) {
-        setFacebookId(facebookIdentity.id);
-      }
-
-      const { data: integrationData } = await supabase
-        .from('integrations')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('provider', 'facebook')
-        .maybeSingle();
-
-      setIntegration(integrationData);
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
+    } else {
+      setProfile(profileData);
     }
+
+    const { data: integrationData } = await supabase
+      .from('integrations')
+      .select('*')
+      .eq('user_id', uid)
+      .eq('provider', 'facebook')
+      .maybeSingle();
+
+    setIntegration(integrationData);
     setIsLoading(false);
   };
 
   useEffect(() => {
-    fetchUserAndProfile();
-  }, [searchParams.get('integration_success')]);
+    if (!userId) return;
+    fetchProfileAndIntegration(userId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, searchParams.get('integration_success')]);
 
   if (isLoading) {
     return (
@@ -111,9 +114,9 @@ export const AccountSettings = () => {
   const initials = (profile?.first_name?.[0] || user?.user_metadata?.first_name?.[0] || '?').toUpperCase();
 
   return (
-    <div className="space-y-6">
+    <div ref={revealRef} className="space-y-6">
       {/* Profile hero card */}
-      <Card>
+      <Card data-reveal>
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
             <Avatar className="h-20 w-20 ring-2 ring-border flex-shrink-0">
@@ -134,21 +137,19 @@ export const AccountSettings = () => {
                   {profile.phone_number}
                 </p>
               )}
-              {/* Integration status pill */}
-              <div className="pt-2">
+              {/* Integration status pill — at-a-glance summary (actions live in the card below) */}
+              <div className="pt-2 flex justify-center sm:justify-start">
                 {integration ? (
-                  <Badge variant="secondary" className="gap-1.5 text-emerald-600 border-emerald-200 bg-emerald-50 dark:bg-emerald-950 dark:border-emerald-800">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  <StatusBadge tone="success" icon={<CheckCircle2 />}>
                     {t("settings.connected_ig")}
                     {integration.metadata?.username && (
-                      <span className="text-muted-foreground font-normal">· @{integration.metadata.username}</span>
+                      <span className="ml-1 font-normal opacity-80">@{integration.metadata.username}</span>
                     )}
-                  </Badge>
+                  </StatusBadge>
                 ) : (
-                  <Badge variant="outline" className="gap-1.5 text-muted-foreground">
-                    <XCircle className="h-3.5 w-3.5" />
+                  <StatusBadge tone="neutral" icon={<XCircle />}>
                     {t("settings.not_connected_ig")}
-                  </Badge>
+                  </StatusBadge>
                 )}
               </div>
             </div>
@@ -173,7 +174,7 @@ export const AccountSettings = () => {
       </Card>
 
       {/* Profile fields — read-only info */}
-      <Card>
+      <Card data-reveal>
         <CardHeader>
           <CardTitle>{t("settings.profile_details")}</CardTitle>
           <CardDescription>{t("settings.profile_desc")}</CardDescription>
@@ -197,14 +198,20 @@ export const AccountSettings = () => {
               <p className="font-medium">{profile?.phone_number || <span className="text-muted-foreground italic">{t("settings.not_set")}</span>}</p>
             </div>
           </div>
+          <p className="mt-4 flex items-start gap-1.5 text-xs text-muted-foreground">
+            <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+            <span>{t("settings.profile_readonly_hint")}</span>
+          </p>
         </CardContent>
       </Card>
 
-      {/* Integrations */}
-      <IntegrationSettings />
+      {/* Integrations — owns the connect/disconnect action, driven by the shared fetch */}
+      <div data-reveal>
+        <IntegrationSettings integration={integration} isLoading={isLoading} onDisconnected={() => setIntegration(null)} />
+      </div>
 
       {/* Preferences + Danger in a 2-col layout on larger screens */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div data-reveal className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>{t("settings.preferences")}</CardTitle>
@@ -231,7 +238,7 @@ export const AccountSettings = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-destructive">
+        <Card className="border-destructive/30 bg-destructive/5">
           <CardHeader>
             <CardTitle className="text-destructive flex items-center gap-2">
               <Trash2 className="h-5 w-5" /> {t("settings.danger_zone")}
@@ -252,7 +259,7 @@ export const AccountSettings = () => {
                 <AlertDialogFooter>
                   <AlertDialogCancel disabled={isDeletingAccount}>{t("common.cancel")}</AlertDialogCancel>
                   <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteAccount(); }} disabled={isDeletingAccount} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    {isDeletingAccount && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isDeletingAccount && <Spinner className="mr-2 h-4 w-4" />}
                     {t("settings.delete_account_confirm")}
                   </AlertDialogAction>
                 </AlertDialogFooter>

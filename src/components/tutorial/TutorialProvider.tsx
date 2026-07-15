@@ -7,7 +7,7 @@ import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useR
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { CallBackProps, Step, TooltipRenderProps } from 'react-joyride';
-import { Home, Package, ShoppingBag, MessageSquareQuote, Layers, Megaphone, CreditCard, Settings, Sparkles, ChevronRight, X, EyeOff } from 'lucide-react';
+import { Home, Package, ShoppingBag, MessageSquareQuote, Layers, Megaphone, CreditCard, Settings, Store, Sparkles, ChevronRight, X, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { tourForPath, type TourLang } from './tours';
 
@@ -31,7 +31,7 @@ const DONT_SHOW_LABEL: Record<TourLang, string> = {
 
 const TOUR_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   dashboard: Home, products: Package, orders: ShoppingBag, keywords: MessageSquareQuote,
-  categories: Layers, promotions: Megaphone, billing: CreditCard, settings: Settings,
+  categories: Layers, promotions: Megaphone, billing: CreditCard, settings: Settings, storefront: Store,
 };
 
 /** Split a step's prose into a lead sentence + scannable bullets. Splits only
@@ -149,9 +149,10 @@ export const TutorialProvider = ({ children }: { children: ReactNode }) => {
 
   const begin = useCallback((manual: boolean) => {
     if (!tour) return;
-    // A manual replay (sidebar button) re-enables tutorials — the user asked
-    // for it explicitly, so honour that over a prior global opt-out.
-    if (manual) setSkipAll(false);
+    // A manual replay (sidebar "Page tutorial" button) runs regardless of the
+    // global opt-out — begin() isn't gated by isSkipAll(). It deliberately does
+    // NOT clear the opt-out, so replaying one page never re-arms autoplay on
+    // every other page.
     // Lazy pages + data need a moment to mount their anchors: poll up to ~6s
     // for at least one anchored step, then start with whatever is available.
     if (pollRef.current) clearTimeout(pollRef.current);
@@ -204,6 +205,11 @@ export const TutorialProvider = ({ children }: { children: ReactNode }) => {
     if (ended) {
       setRun(false);
       if (activeKeyRef.current) markDone(activeKeyRef.current);
+      // Once the user finishes OR dismisses a tour, stop auto-popping tours on
+      // every other page — that page-by-page interruption is the reported
+      // annoyance. Tours stay available on demand via the sidebar "Page
+      // tutorial" button (which calls begin(true), bypassing this flag).
+      setSkipAll(true);
     }
   }, []);
 

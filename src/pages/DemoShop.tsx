@@ -69,7 +69,7 @@ export const SHOP = {
   logo_url: null,
   favicon_url: null,
   instagram_url: null,
-  contact_email: "demo@instantshop.al",
+  contact_email: "demo@vela.al",
 };
 
 export const MOCK_CONTEXT = {
@@ -126,7 +126,7 @@ export default function DemoShop() {
   }, [idx, requested, cycle]);
 
   useEffect(() => {
-    document.title = "InstantShop — Demo Shop";
+    document.title = "Vela — Demo Shop";
   }, []);
 
   // ?view=products → header + product grid only (used by the landing's

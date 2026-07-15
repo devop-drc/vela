@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 interface CategoryEditorModalProps {
   open: boolean;
@@ -73,7 +73,7 @@ export const CategoryEditorModal = ({
             {t("common.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={saving || !name.trim()}>
-            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {saving && <Spinner className="mr-2 h-4 w-4" />}
             {t("common.save")}
           </Button>
         </DialogFooter>

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardDescription } from "../ui/card";
+import { Card, CardContent } from "../ui/card";
 import { Skeleton } from "../ui/skeleton";
-import { Banknote, Package, CheckCircle, XCircle, Archive, MessageSquareWarning, Handshake, ShoppingBag } from "lucide-react";
+import { Banknote, Package, CheckCircle, XCircle, Archive, MessageSquareWarning, Handshake, ShoppingBag, Activity as ActivityIconLucide } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { formatDistanceToNowStrict } from 'date-fns';
@@ -10,9 +10,11 @@ import { ProductEditor } from "../ProductEditor";
 import { OrderDetailModal } from "../OrderDetailModal";
 import { showError } from "@/utils/toast";
 import { ScrollArea } from "../ui/scroll-area";
-import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Badge } from "../ui/badge";
+import { StatusBadge } from "@/components/ui-app/StatusBadge";
+import { EmptyState } from "@/components/ui-app";
+import { useReveal } from "@/lib/anim";
+import { orderStatusTone, productStatusTone, ORDER_STATUS_TONE } from "@/lib/status";
 import { useTranslation } from "react-i18next";
 
 type Activity = {
@@ -32,12 +34,12 @@ const TYPE_CONFIG: Record<
   Activity['type'],
   { dot: string; iconBg: string; iconText: string; rowBg: string }
 > = {
-  sale:                { dot: 'bg-emerald-500', iconBg: 'bg-emerald-100', iconText: 'text-emerald-600', rowBg: 'hover:bg-emerald-500/5' },
-  order_fulfilled:     { dot: 'bg-emerald-500', iconBg: 'bg-emerald-100', iconText: 'text-emerald-600', rowBg: 'hover:bg-emerald-500/5' },
-  new_order:           { dot: 'bg-blue-500',    iconBg: 'bg-blue-100',    iconText: 'text-blue-600',    rowBg: 'hover:bg-blue-500/5'    },
-  order_status_update: { dot: 'bg-blue-400',    iconBg: 'bg-blue-50',     iconText: 'text-blue-500',    rowBg: 'hover:bg-blue-500/5'    },
-  dispute:             { dot: 'bg-amber-500',   iconBg: 'bg-amber-100',   iconText: 'text-amber-600',   rowBg: 'hover:bg-amber-500/5'   },
-  product:             { dot: 'bg-violet-500',  iconBg: 'bg-violet-100',  iconText: 'text-violet-600',  rowBg: 'hover:bg-violet-500/5'  },
+  sale:                { dot: 'bg-success', iconBg: 'bg-success/15', iconText: 'text-success', rowBg: 'hover:bg-success/5' },
+  order_fulfilled:     { dot: 'bg-success', iconBg: 'bg-success/15', iconText: 'text-success', rowBg: 'hover:bg-success/5' },
+  new_order:           { dot: 'bg-info',    iconBg: 'bg-info/15',    iconText: 'text-info',    rowBg: 'hover:bg-info/5'    },
+  order_status_update: { dot: 'bg-info',    iconBg: 'bg-info/10',    iconText: 'text-info',    rowBg: 'hover:bg-info/5'    },
+  dispute:             { dot: 'bg-warning', iconBg: 'bg-warning/15', iconText: 'text-warning', rowBg: 'hover:bg-warning/5' },
+  product:             { dot: 'bg-primary', iconBg: 'bg-primary/15', iconText: 'text-primary', rowBg: 'hover:bg-primary/5' },
 };
 
 const getConfig = (type: Activity['type']) => TYPE_CONFIG[type] ?? TYPE_CONFIG.product;
@@ -69,25 +71,14 @@ const ActivityValue = ({ activity }: { activity: Activity }) => {
 
   if (activity.type === 'product' || activity.type === 'order_status_update') {
     const status = activity.value as string;
-    const statusClass: Record<string, string> = {
-      'Active':          'bg-emerald-100 text-emerald-800',
-      'Draft':           'bg-amber-100 text-amber-800',
-      'Out of Stock':    'bg-slate-100 text-slate-800',
-      'Pending':         'bg-amber-100 text-amber-800',
-      'Order Seen':      'bg-blue-100 text-blue-800',
-      'Order Packaged':  'bg-blue-100 text-blue-800',
-      'Given to Courier':'bg-blue-100 text-blue-800',
-      'Fulfilled':       'bg-emerald-100 text-emerald-800',
-      'Problematic':     'bg-destructive/10 text-destructive',
-      'Cancelled':       'bg-gray-100 text-gray-800',
-    };
-    if (statusClass[status]) {
-      return <Badge variant="outline" className={cn('font-normal text-xs', statusClass[status])}>{status}</Badge>;
+    if (status) {
+      const tone = status in ORDER_STATUS_TONE ? orderStatusTone(status) : productStatusTone(status);
+      return <StatusBadge tone={tone} size="sm">{status}</StatusBadge>;
     }
   }
 
   if (activity.type === 'dispute') {
-    return <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 text-xs">New</Badge>;
+    return <StatusBadge tone="warning" size="sm">New</StatusBadge>;
   }
 
   return <span className="font-semibold text-xs">{activity.value}</span>;
@@ -119,6 +110,8 @@ export const ActivityFeed = () => {
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [selectedOrder, setSelectedOrder]     = useState<any | null>(null);
   const [selectedDispute, setSelectedDispute] = useState<any | null>(null);
+  // Subtle staggered entrance once the feed first populates (GSAP, reduced-motion safe).
+  const listRef = useReveal<HTMLDivElement>({ y: 8 }, [isLoading]);
 
   useEffect(() => {
     let isMounted = true;
@@ -258,10 +251,7 @@ export const ActivityFeed = () => {
       )}
 
       <Card className="shadow-sm border border-border/60 h-full flex flex-col">
-        <CardHeader className="pb-2 flex-shrink-0">
-          <CardDescription className="text-sm">{t("dashboard.click_event")}</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-0 px-4 pb-3 flex-1 min-h-0">
+        <CardContent className="pt-3 px-4 pb-3 flex-1 min-h-0">
           <ScrollArea className="h-full pr-2">
             {isLoading ? (
               <div className="space-y-4 pt-1">
@@ -276,63 +266,56 @@ export const ActivityFeed = () => {
                 ))}
               </div>
             ) : activities.length > 0 ? (
-              <AnimatePresence initial={false}>
-                <div className="relative">
-                  {/* Vertical timeline line */}
-                  <div className="absolute left-[13px] top-2 bottom-2 w-px bg-border/60 pointer-events-none" />
+              <div className="relative" ref={listRef}>
+                {/* Vertical timeline line */}
+                <div className="absolute left-[13px] top-2 bottom-2 w-px bg-border/60 pointer-events-none" />
 
-                  <div className="space-y-1 pt-1">
-                    {activities.map((activity, idx) => {
-                      const cfg = getConfig(activity.type);
-                      const isLast = idx === activities.length - 1;
+                <div className="space-y-1 pt-1">
+                  {activities.map((activity) => {
+                    const cfg = getConfig(activity.type);
 
-                      return (
-                        <motion.button
-                          key={activity.id}
-                          layout
-                          initial={{ opacity: 0, y: -16 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-                          onClick={() => handleActivityClick(activity)}
-                          className={cn(
-                            'relative w-full text-left flex items-start gap-3 rounded-lg px-2 py-2 transition-colors',
-                            cfg.rowBg
-                          )}
-                        >
-                          {/* Timeline dot + icon */}
-                          <div className="relative flex-shrink-0 mt-0.5">
-                            <div className={cn(
-                              'h-7 w-7 rounded-full flex items-center justify-center ring-2 ring-background z-10 relative',
-                              cfg.iconBg, cfg.iconText
-                            )}>
-                              <ActivityIcon activity={activity} />
+                    return (
+                      <button
+                        key={activity.id}
+                        data-reveal
+                        onClick={() => handleActivityClick(activity)}
+                        className={cn(
+                          'relative w-full text-left flex items-start gap-3 rounded-lg px-2 py-2 transition-colors',
+                          cfg.rowBg
+                        )}
+                      >
+                        {/* Timeline dot + icon */}
+                        <div className="relative flex-shrink-0 mt-0.5">
+                          <div className={cn(
+                            'h-7 w-7 rounded-full flex items-center justify-center ring-2 ring-background z-10 relative',
+                            cfg.iconBg, cfg.iconText
+                          )}>
+                            <ActivityIcon activity={activity} />
+                          </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0 pt-0.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-xs leading-snug truncate">{activity.title}</p>
+                              <p className="text-xs text-muted-foreground truncate leading-snug">{activity.description}</p>
+                            </div>
+                            <div className="flex-shrink-0 text-right">
+                              <ActivityValue activity={activity} />
                             </div>
                           </div>
-
-                          {/* Content */}
-                          <div className="flex-1 min-w-0 pt-0.5">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <p className="font-semibold text-xs leading-snug truncate">{activity.title}</p>
-                                <p className="text-xs text-muted-foreground truncate leading-snug">{activity.description}</p>
-                              </div>
-                              <div className="flex-shrink-0 text-right">
-                                <ActivityValue activity={activity} />
-                              </div>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground/70 mt-0.5 tabular-nums">
-                              {relativeTime(activity.date)}
-                            </p>
-                          </div>
-                        </motion.button>
-                      );
-                    })}
-                  </div>
+                          <p className="text-[10px] text-muted-foreground/70 mt-0.5 tabular-nums">
+                            {relativeTime(activity.date)}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
-              </AnimatePresence>
+              </div>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-10">{t("notifications.no_activity")}</p>
+              <EmptyState compact icon={ActivityIconLucide} title={t("notifications.no_activity")} />
             )}
           </ScrollArea>
         </CardContent>

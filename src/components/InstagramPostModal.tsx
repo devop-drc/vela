@@ -1,15 +1,19 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { showError, showSuccess } from "@/utils/toast";
+import { showError } from "@/utils/toast";
 import { Skeleton } from "./ui/skeleton";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { CheckCircle, Image as ImageIcon, Loader2, RefreshCw, Sparkles, X, Plus, Package, Eye } from "lucide-react";
+import { CheckCircle, Image as ImageIcon, RefreshCw, Sparkles, Plus, Package, EyeOff, AlertTriangle } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { MediaItem } from "./MediaItem";
 import { ProductEditor } from "./ProductEditor";
+import { EmptyState, StatusBadge, StatusDot } from "@/components/ui-app";
+import { useAuth } from "@/contexts/AuthContext";
+import { useReveal } from "@/lib/anim";
 import { toast } from "sonner";
 
 interface InstagramPost {
@@ -50,6 +54,12 @@ const POSTS_CACHE_KEY = 'instagram_posts_raw';
 const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
 export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProps) => {
+  const { userId, session, ensureBusinessId } = useAuth();
+  // Refs so the memoized fetchPosts callback always reads the freshest auth.
+  const sessionRef = useRef(session);
+  const userIdRef = useRef(userId);
+  useEffect(() => { sessionRef.current = session; userIdRef.current = userId; }, [session, userId]);
+
   const [posts, setPosts] = useState<InstagramPost[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,9 +92,9 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
     }
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const headers: any = {};
-      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      const token = sessionRef.current?.access_token;
+      if (token) headers.Authorization = `Bearer ${token}`;
 
       const { data, error: err } = await supabase.functions.invoke('instagram-posts', { headers });
       if (err) throw err;
@@ -126,7 +136,7 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
       const { data, error: err } = await supabase.functions.invoke('ai-product-classifier', {
         body: {
           caption: post.caption || '',
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: userIdRef.current,
           include_images: !post.caption || post.caption.trim().length < 15,
           post_media: {
             media_url: post.media_url,
@@ -150,10 +160,9 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
   const handleCreateProduct = async (post: InstagramPost, useAnalysis: boolean) => {
     const toastId = toast.loading("Creating product...");
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated.");
-      const { data: business } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
-      if (!business) throw new Error("No business profile found.");
+      if (!userId) throw new Error("Not authenticated.");
+      const businessId = await ensureBusinessId();
+      if (!businessId) throw new Error("No business profile found.");
 
       const analysis = useAnalysis ? analysisMap.get(post.id) : null;
 
@@ -168,8 +177,8 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
       }
 
       const payload = {
-        business_id: business.id,
-        user_id: user.id,
+        business_id: businessId,
+        user_id: userId,
         name: analysis?.productName || post.caption?.split('\n')[0]?.slice(0, 60) || "New Product",
         caption: analysis?.description || post.caption || "",
         category: analysis?.categoryName ? toTitleCase(analysis.categoryName) : "Uncategorized",
@@ -210,6 +219,11 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
   const analysis = selectedPost ? analysisMap.get(selectedPost.id) : null;
   const isAnalyzing = selectedPost ? analyzingIds.has(selectedPost.id) : false;
 
+  // Subtle GSAP entrance (reduced-motion aware).
+  const gridRevealRef = useReveal<HTMLDivElement>({}, [visiblePosts.length, isLoadingPosts]);
+  const heroRevealRef = useReveal<HTMLDivElement>({}, [selectedPost?.id]);
+  const analysisRevealRef = useReveal<HTMLDivElement>({}, [selectedPost?.id, isAnalyzing, !!analysis]);
+
   return (
     <>
       <Dialog open={true} onOpenChange={onClose}>
@@ -234,16 +248,36 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
             {/* Left: Post grid */}
             <div className="md:col-span-1 border-r flex flex-col min-h-0">
               <ScrollArea className="flex-1">
-                <div className="grid grid-cols-3 gap-1 p-2">
+                <div ref={gridRevealRef} className="grid grid-cols-3 gap-1 p-2">
                   {isLoadingPosts ? (
                     Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="aspect-square rounded" />)
                   ) : error ? (
-                    <div className="col-span-3 p-4 text-sm text-destructive">{error}</div>
+                    <div className="col-span-3">
+                      <EmptyState
+                        compact
+                        icon={AlertTriangle}
+                        title="Couldn't load posts"
+                        description={error}
+                        action={
+                          <Button size="sm" variant="outline" onClick={() => fetchPosts(true)}>
+                            <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                            Retry
+                          </Button>
+                        }
+                      />
+                    </div>
                   ) : visiblePosts.length === 0 ? (
-                    <div className="col-span-3 p-8 text-center text-muted-foreground text-sm">No posts found</div>
+                    <div className="col-span-3">
+                      <EmptyState
+                        compact
+                        icon={ImageIcon}
+                        title="No posts found"
+                        description="Refresh to pull the latest posts from your connected Instagram account."
+                      />
+                    </div>
                   ) : (
                     visiblePosts.map(post => (
-                      <div key={post.id} className="relative group">
+                      <div key={post.id} data-reveal className="relative group">
                         <button
                           onClick={() => setSelectedPost(post)}
                           className={`w-full relative aspect-square rounded overflow-hidden transition-all ${
@@ -258,17 +292,19 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                           )}
                           {analysisMap.has(post.id) && !post.isImported && (
                             <div className="absolute top-1 left-1">
-                              <span className="h-2 w-2 bg-emerald-500 rounded-full block" />
+                              <StatusDot tone="success" pulse />
                             </div>
                           )}
                         </button>
                         <Button
-                          variant="destructive"
+                          variant="secondary"
                           size="icon"
-                          className="absolute top-0.5 right-0.5 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Hide from this list"
+                          title="Hide from this list"
+                          className="absolute top-0.5 right-0.5 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                           onClick={() => setDismissedIds(prev => new Set(prev).add(post.id))}
                         >
-                          <X className="h-3 w-3" />
+                          <EyeOff className="h-3 w-3" />
                         </Button>
                       </div>
                     ))
@@ -282,6 +318,7 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
               {selectedPost ? (
                 <ScrollArea className="flex-1">
                   <div className="p-4 space-y-4">
+                    <div ref={heroRevealRef} className="space-y-4">
                     {/* Top: Media + Caption side by side */}
                     <div className="flex gap-4">
                       <button
@@ -296,12 +333,9 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                         />
                       </button>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            {selectedPost.isImported && <Badge variant="secondary" className="text-[10px]"><CheckCircle className="h-3 w-3 mr-1" />Imported</Badge>}
-                            {selectedPost.media_type !== 'IMAGE' && <Badge variant="outline" className="text-[10px]">{selectedPost.media_type}</Badge>}
-                          </div>
-                          <span className="text-[10px] text-muted-foreground font-mono">{selectedPost.id.slice(0, 12)}...</span>
+                        <div className="flex items-center gap-2 mb-2">
+                          {selectedPost.isImported && <StatusBadge tone="success" size="sm" icon={<CheckCircle />}>Imported</StatusBadge>}
+                          {selectedPost.media_type !== 'IMAGE' && <Badge variant="outline" className="text-[10px]">{selectedPost.media_type}</Badge>}
                         </div>
                         <p className="text-sm whitespace-pre-wrap text-foreground leading-relaxed max-h-36 overflow-y-auto">
                           {selectedPost.caption || <span className="text-muted-foreground italic">No caption</span>}
@@ -310,49 +344,49 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                     </div>
 
                     {/* Action buttons */}
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => analyzePost(selectedPost)}
-                        disabled={isAnalyzing || analyzingIds.has(selectedPost.id)}
-                        className="flex-1"
+                        disabled={isAnalyzing}
+                        className="flex-1 min-w-[140px]"
                       >
-                        {isAnalyzing ? (
-                          <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Sparkles className="mr-2 h-3.5 w-3.5 text-amber-500" />
-                        )}
-                        {analysis ? 'Re-analyze' : 'Analyze with AI'}
+                        <Sparkles className="mr-2 h-3.5 w-3.5 text-warning" />
+                        {isAnalyzing ? 'Analyzing…' : analysis ? 'Re-analyze' : 'Analyze with AI'}
                       </Button>
-                      {analysis && !selectedPost.isImported && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleCreateProduct(selectedPost, true)}
-                          className="flex-1"
-                        >
-                          <Package className="mr-2 h-3.5 w-3.5" />
-                          Create Product
-                        </Button>
-                      )}
                       {!selectedPost.isImported && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleCreateProduct(selectedPost, false)}
-                          title="Create product without AI analysis"
-                        >
-                          <Plus className="mr-2 h-3.5 w-3.5" />
-                          Manual
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => handleCreateProduct(selectedPost, true)}
+                            className="flex-1 min-w-[140px]"
+                          >
+                            <Package className="mr-2 h-3.5 w-3.5" />
+                            Create product
+                          </Button>
+                          {analysis && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleCreateProduct(selectedPost, false)}
+                              title="Create the product without applying AI analysis"
+                            >
+                              <Plus className="mr-2 h-3.5 w-3.5" />
+                              Without AI
+                            </Button>
+                          )}
+                        </>
                       )}
                     </div>
+                    </div>
 
+                    <div ref={analysisRevealRef} className="space-y-4">
                     {/* AI Analysis results */}
                     {isAnalyzing && (
                       <Card>
                         <CardContent className="py-8 flex flex-col items-center gap-3 text-muted-foreground">
-                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                          <Spinner className="h-8 w-8 text-primary" />
                           <p className="text-sm">Analyzing post with AI...</p>
                         </CardContent>
                       </Card>
@@ -362,12 +396,12 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                       <Card>
                         <CardHeader className="pb-2">
                           <CardTitle className="text-sm flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-amber-500" />
+                            <Sparkles className="h-4 w-4 text-warning" />
                             AI Analysis
                             {analysis.isProductPost ? (
-                              <Badge className="ml-auto text-[10px]">Product</Badge>
+                              <StatusBadge tone="success" size="sm" className="ml-auto">Product</StatusBadge>
                             ) : (
-                              <Badge variant="secondary" className="ml-auto text-[10px]">Not a Product</Badge>
+                              <StatusBadge tone="neutral" size="sm" className="ml-auto">Not a Product</StatusBadge>
                             )}
                           </CardTitle>
                         </CardHeader>
@@ -473,12 +507,17 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                         </CardContent>
                       </Card>
                     )}
+                    </div>
                   </div>
                 </ScrollArea>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                  <ImageIcon className="h-12 w-12 mb-3 opacity-30" />
-                  <p className="text-sm">Select a post to view details</p>
+                <div className="flex h-full items-center justify-center">
+                  <EmptyState
+                    compact
+                    icon={ImageIcon}
+                    title="Select a post"
+                    description="Choose a post to preview and import it as a product."
+                  />
                 </div>
               )}
             </div>
@@ -489,6 +528,10 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
       {isImageViewerOpen && selectedPost && (
         <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
           <DialogContent className="max-w-4xl h-[90vh] p-2 flex items-center justify-center">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Post preview</DialogTitle>
+              <DialogDescription>Full-size preview of the selected Instagram post.</DialogDescription>
+            </DialogHeader>
             <MediaItem src={selectedPost.media_url} alt="Full size" type={selectedPost.media_type} className="max-w-full max-h-full object-contain" />
           </DialogContent>
         </Dialog>

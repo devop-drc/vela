@@ -2,11 +2,11 @@
 // SectionRenderer. Handles loading / empty / error states.
 
 import { Wrench, Mail } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
 import { SectionRenderer } from '../blocks/SectionRenderer';
+import { SfButton } from '../components/SfButton';
 
 export const HomePage = () => {
   const { shopDetails, products, isLoading, isLoadingMore, hasMoreProducts, bestSellers, recommendedProducts, error } = useStorefront();
@@ -46,9 +46,9 @@ export const HomePage = () => {
         <h1 className="sf-heading text-4xl font-bold mb-4">Store Under Construction</h1>
         <p className="text-lg max-w-xl mb-8">We're busy curating amazing products for you! Our shop will be available soon.</p>
         {shopDetails.contact_email && (
-          <Button asChild variant="outline" size="lg">
+          <SfButton asChild variant="outline" size="lg">
             <a href={`mailto:${shopDetails.contact_email}`} className="flex items-center gap-2"><Mail className="h-5 w-5" /> Contact Us</a>
-          </Button>
+          </SfButton>
         )}
       </div>
     );

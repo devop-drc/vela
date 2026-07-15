@@ -5,8 +5,9 @@
  */
 import { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Check, Instagram, ShoppingBag, Bell } from "lucide-react";
+import { ArrowLeft, Check, Instagram, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useReveal } from "@/lib/anim";
 
 const BRAND = "brand-gradient";
 
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export default function AuthLayout({ title, subtitle, children, points, lang }: Props) {
+  const pointsRef = useReveal<HTMLUListElement>({ y: 8, delay: 0.1 }, [points.length]);
   return (
     <div className="font-sans-brand grid min-h-screen bg-background text-foreground lg:grid-cols-[1fr_1.05fr]">
       {/* ── Form column ── */}
@@ -30,10 +32,8 @@ export default function AuthLayout({ title, subtitle, children, points, lang }: 
               <ArrowLeft className="h-4 w-4" /> {lang === "sq" ? "Kthehu" : "Back"}
             </Link>
             <Link to="/" className="flex items-center gap-2">
-              <span className={cn("grid h-8 w-8 place-items-center rounded-[10px] text-white shadow-md shadow-fuchsia-500/25 ring-1 ring-inset ring-white/25", BRAND)}>
-                <ShoppingBag className="h-4 w-4" />
-              </span>
-              <span className="font-display-brand text-[17px] font-semibold">InstantShop</span>
+              <img src="/vela-icon.svg" alt="Vela" className="h-8 w-8 rounded-[10px] shadow-md shadow-fuchsia-500/25 ring-1 ring-inset ring-border" />
+              <span className="font-display-brand text-[17px] font-semibold">Vela</span>
             </Link>
           </div>
 
@@ -44,7 +44,7 @@ export default function AuthLayout({ title, subtitle, children, points, lang }: 
           </div>
 
           <p className="text-center text-xs text-muted-foreground">
-            © {new Date().getFullYear()} InstantShop · {lang === "sq" ? "Pagesa të sigurta me Raiffeisen (RaiAccept)" : "Secure payments by Raiffeisen (RaiAccept)"}
+            © {new Date().getFullYear()} Vela · {lang === "sq" ? "Pagesa të sigurta me Raiffeisen (RaiAccept)" : "Secure payments by Raiffeisen (RaiAccept)"}
           </p>
         </div>
       </div>
@@ -65,9 +65,9 @@ export default function AuthLayout({ title, subtitle, children, points, lang }: 
           <h2 className="font-display-brand max-w-lg text-3xl font-semibold leading-tight xl:text-[2.6rem] xl:leading-[1.15] 2xl:max-w-2xl 2xl:text-5xl">
             {lang === "sq" ? "Ktheje Instagramin tënd në një dyqan të vërtetë." : "Turn your Instagram into a real store."}
           </h2>
-          <ul className="mt-7 space-y-3">
+          <ul ref={pointsRef} className="mt-7 space-y-3">
             {points.map((p) => (
-              <li key={p} className="flex items-center gap-2.5 text-[15px] text-white/95">
+              <li key={p} data-reveal className="flex items-center gap-2.5 text-[15px] text-white/95">
                 <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white/25"><Check className="h-3 w-3" /></span>
                 {p}
               </li>
@@ -76,13 +76,13 @@ export default function AuthLayout({ title, subtitle, children, points, lang }: 
 
           {/* Story: DM → product → order, gently floating */}
           <div className="mt-12 grid max-w-xl grid-cols-2 items-start gap-5">
-            <div className="ls-float -rotate-2 rounded-2xl bg-white p-3.5 text-foreground shadow-2xl">
-              <div className="flex items-center gap-2 border-b border-border pb-2">
+            <div className="ls-float -rotate-2 rounded-2xl bg-white p-3.5 text-zinc-900 shadow-2xl">
+              <div className="flex items-center gap-2 border-b border-zinc-200 pb-2">
                 <span className={cn("h-5 w-5 rounded-full", BRAND)} />
                 <span className="text-xs font-semibold">Butiku i Elirës</span>
-                <Instagram className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
+                <Instagram className="ml-auto h-3.5 w-3.5 text-zinc-400" />
               </div>
-              <div className="mt-2.5 w-fit rounded-2xl rounded-bl-sm bg-muted px-3 py-1.5 text-xs">
+              <div className="mt-2.5 w-fit rounded-2xl rounded-bl-sm bg-zinc-100 px-3 py-1.5 text-xs text-zinc-700">
                 {lang === "sq" ? "Sa kushton fustani? 🙏" : "How much is the dress? 🙏"}
               </div>
               <div className={cn("ml-auto mt-2 w-fit rounded-2xl rounded-br-sm px-3 py-1.5 text-xs text-white", BRAND)}>
@@ -91,14 +91,14 @@ export default function AuthLayout({ title, subtitle, children, points, lang }: 
             </div>
 
             <div className="flex flex-col gap-5">
-              <div className="ls-float2 flex rotate-2 items-center gap-3 rounded-2xl bg-white p-3.5 text-foreground shadow-2xl">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-500"><Bell className="h-4 w-4" /></span>
+              <div className="ls-float2 flex rotate-2 items-center gap-3 rounded-2xl bg-white p-3.5 text-zinc-900 shadow-2xl">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-600"><Bell className="h-4 w-4" /></span>
                 <div className="min-w-0">
                   <div className="text-xs font-bold">{lang === "sq" ? "Porosi e re! 🎉" : "New order! 🎉"}</div>
-                  <div className="truncate text-[11px] text-muted-foreground">+3,500 ALL · {lang === "sq" ? "paguar me kartë" : "paid by card"}</div>
+                  <div className="truncate text-[11px] text-zinc-500">+3,500 ALL · {lang === "sq" ? "paguar me kartë" : "paid by card"}</div>
                 </div>
               </div>
-              <div className="ls-float3 w-[170px] rotate-1 self-end overflow-hidden rounded-2xl bg-white p-2.5 text-foreground shadow-2xl">
+              <div className="ls-float3 w-[170px] rotate-1 self-end overflow-hidden rounded-2xl bg-white p-2.5 text-zinc-900 shadow-2xl">
                 <img src="/demo/p1.jpg" alt="" className="aspect-[4/3] w-full rounded-xl object-cover" />
                 <div className="mt-2 flex items-baseline justify-between">
                   <span className="text-xs font-semibold">Fustan liri</span>

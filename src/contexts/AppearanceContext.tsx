@@ -69,6 +69,8 @@ const createTheme = (name: string, p: string, s: string, a: string, bg: string, 
 };
 
 export const presetThemes: Theme[] = [
+  // Vela — the brand default: magenta-purple primary, fuchsia ring, violet-cast neutrals.
+  createTheme('Vela', '300 72% 45%', '300 25% 95%', '300 40% 95%', '300 20% 99%', '290 18% 14%'),
   createTheme('Midnight Blush', '255 50% 40%', '330 80% 95%', '330 80% 88%', '255 30% 98%', '255 50% 15%'),
   createTheme('Emerald Sands', '150 60% 30%', '45 50% 95%', '45 50% 88%', '45 30% 99%', '150 50% 10%'),
   createTheme('Solar Flare', '35 95% 55%', '20 20% 25%', '20 20% 35%', '20 15% 12%', '35 100% 95%'),
@@ -146,20 +148,21 @@ export interface DesignSettings extends ColorScheme {
 }
 
 export const defaultSettings: DesignSettings = {
-  themeName: 'Onyx',
+  themeName: 'Vela',
   isAdvanced: false,
-  sidebarStyle: 'primary',
-  ...presetThemes[7].light,
+  sidebarStyle: 'card',
+  ...presetThemes[0].light,
+  '--ring': '292 84% 55%', // Vela fuchsia focus ring (brighter than the primary)
   '--radius': '1.5rem',
   fontSans: 'Inter',
-  fontHeading: 'Inter',
+  fontHeading: 'Clash Display',
   backgroundBrightness: 100,
   backgroundContrast: 100,
   backgroundSaturation: 100,
   backgroundHue: 0,
-  layoutStyle: 'floating',
+  layoutStyle: 'docked',
   sidebarWidth: 'default',
-  blurEnabled: true,
+  blurEnabled: false,
   customThemes: [],
   // Default Hero Card settings
   heroBackgroundMediaUrl: undefined,
@@ -243,50 +246,45 @@ const applySettingsToDOM = (settings: Partial<DesignSettings>) => {
 
 const getRandomItem = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
+// Instant-hydration cache: the user's resolved design settings are persisted so
+// their theme/layout/fonts apply IMMEDIATELY on next load (no flash of defaults
+// while design_settings fetches). Revalidated in the background; cleared on
+// sign-out. See the same pattern in ShopContext.
+const APPEARANCE_CACHE_KEY = 'vela:appearance:v1';
+const readAppearanceCache = (): DesignSettings | null => {
+  try { const s = localStorage.getItem(APPEARANCE_CACHE_KEY); return s ? (JSON.parse(s) as DesignSettings) : null; } catch { return null; }
+};
+const writeAppearanceCache = (val: DesignSettings | null) => {
+  try { val == null ? localStorage.removeItem(APPEARANCE_CACHE_KEY) : localStorage.setItem(APPEARANCE_CACHE_KEY, JSON.stringify(val)); } catch { /* private mode / quota */ }
+};
+
 export const AppearanceProvider = ({ children }: { children: ReactNode }) => {
-  const [settings, setSettings] = useState<DesignSettings>(defaultSettings);
+  // The admin app now uses ONE fixed, standard Vela design — no per-user app
+  // theme is loaded (theme customisation was removed; the merchant customises
+  // their STOREFRONT in the Storefront Studio, not the dashboard).
+  const [settings] = useState<DesignSettings>(defaultSettings);
+  const setSettings = (_v: any) => {}; // no-op: app appearance is fixed
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
     if (isDemoFrame()) return; // demo/preview iframes run on mock data
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      if (event === 'SIGNED_OUT') writeAppearanceCache(null);
+    });
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const fetchSettings = async () => {
-      if (!session?.user) {
-        setIsLoading(false);
-        return;
-      }
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from('design_settings').select('settings').eq('user_id', session.user.id).single();
+  // The app no longer fetches a per-user design theme — it always renders the
+  // fixed Vela standard. (Merchant customisation is the STOREFRONT's job.)
+  useEffect(() => { setIsLoading(false); }, [session]);
 
-      if (data?.settings) {
-        const savedSettings = data.settings as Partial<DesignSettings>;
-        const theme = presetThemes.find(t => t.name === savedSettings.themeName) || presetThemes[0];
-        
-        const themeColors = theme.light;
-        const finalSettings = {
-          ...defaultSettings,
-          ...themeColors,
-          ...savedSettings,
-        };
-        setSettings(finalSettings);
-      } else if (error && error.code !== 'PGRST116') {
-        console.error("Error fetching design settings:", error);
-      }
-      setIsLoading(false);
-    };
-    fetchSettings();
-  }, [session]);
-
+  // Apply the single fixed Vela design to the document once on mount.
   useEffect(() => {
-    applySettingsToDOM(settings);
-  }, [settings]);
+    applySettingsToDOM(defaultSettings);
+  }, []);
 
   // Keep the latest session reachable without recreating the debounced saver —
   // recreating it on every session change (e.g. token refresh) would drop a

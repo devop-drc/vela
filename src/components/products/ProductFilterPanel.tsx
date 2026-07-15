@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { FilterState } from "@/hooks/useProductFilters";
 import { useTranslation } from "react-i18next";
+import { productStatusTone, toneDotBg, type StatusTone } from "@/lib/status";
 
 interface ProductFilterPanelProps {
   allCategories: string[];
@@ -25,11 +26,16 @@ interface ProductFilterPanelProps {
   onClose: () => void;
 }
 
-const statusConfig = [
-  { value: "Active", color: "bg-emerald-500", activeClass: "border-emerald-500 bg-emerald-50 text-emerald-700" },
-  { value: "Draft", color: "bg-amber-500", activeClass: "border-amber-500 bg-amber-50 text-amber-700" },
-  { value: "Out of Stock", color: "bg-red-500", activeClass: "border-red-500 bg-red-50 text-red-700" },
-];
+const STATUS_VALUES = ["Active", "Draft", "Out of Stock"];
+
+/** Selected-pill styling per tone (dark-safe, token-based — mirrors the Orders stat pills). */
+const statusActivePill: Record<StatusTone, string> = {
+  success: "border-success/50 bg-success/15 text-success",
+  warning: "border-warning/50 bg-warning/15 text-warning",
+  info: "border-info/50 bg-info/15 text-info",
+  danger: "border-destructive/50 bg-destructive/15 text-destructive",
+  neutral: "border-muted-foreground/40 bg-muted text-foreground",
+};
 
 export const ProductFilterPanel = ({
   allCategories, allTags, maxPrice, filters, statusFilter, localPriceRange,
@@ -81,18 +87,19 @@ export const ProductFilterPanel = ({
           {/* Status — toggle pills */}
           <Section icon={CircleDot} title={t("products.status")} active={isSectionActive("status")} onClear={() => handleClearSection("status")}>
             <div className="flex flex-wrap gap-1.5">
-              {statusConfig.map(({ value, color, activeClass }) => {
+              {STATUS_VALUES.map((value) => {
                 const isOn = statusFilter.includes(value);
+                const tone = productStatusTone(value);
                 return (
                   <button
                     key={value}
                     onClick={() => handleToggleStatusFilter(value)}
                     className={cn(
                       "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-all",
-                      isOn ? activeClass : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+                      isOn ? statusActivePill[tone] : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
                     )}
                   >
-                    <span className={cn("h-2 w-2 rounded-full shrink-0", isOn ? color : "bg-muted-foreground/30")} />
+                    <span className={cn("h-2 w-2 rounded-full shrink-0", isOn ? toneDotBg[tone] : "bg-muted-foreground/30")} />
                     {value}
                   </button>
                 );

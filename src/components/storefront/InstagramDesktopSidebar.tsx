@@ -43,7 +43,7 @@ export const InstagramDesktopSidebar: React.FC<SidebarProps> = ({ onToggleTheme,
     >
       <div className="flex flex-col w-full h-full px-2 py-9 gap-6">
         <div className="px-2 h-12 w-full flex items-center">
-          <span className="text-2xl font-light fancyFont">InstaShop</span>
+          <span className="text-2xl font-light fancyFont">Vela</span>
         </div>
         <nav className="flex-1 flex flex-col gap-3">
           {items.map(({ to, label, Icon }) => (

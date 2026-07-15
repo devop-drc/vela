@@ -125,7 +125,7 @@ export const InstagramProductCard = ({
           isOutOfStock && "opacity-80"
         )}>
           <CardContent className={cn("p-0 relative")}>
-            <div className="aspect-[3/4] w-full overflow-hidden bg-gray-100">
+            <div className="aspect-[3/4] w-full overflow-hidden bg-muted">
               <MediaItem
                 src={mediaUrl}
                 alt={product.name}

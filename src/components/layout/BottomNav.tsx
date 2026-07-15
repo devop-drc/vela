@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Home, Package, ShoppingBag, Archive, Settings, MoreHorizontal,
-  Layers, MessageSquareQuote, Megaphone, Globe, LogOut,
+  Layers, MessageSquareQuote, Megaphone, Globe, LogOut, Store,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ const moreLinks = [
   { to: "/categories", icon: Layers, labelKey: "nav.categories" },
   { to: "/keywords", icon: MessageSquareQuote, labelKey: "nav.keywords" },
   { to: "/promotions", icon: Megaphone, labelKey: "nav.promotions" },
+  { to: "/storefront-studio", icon: Store, labelKey: "nav.storefront" },
   { to: "/settings", icon: Settings, labelKey: "nav.settings" },
 ];
 

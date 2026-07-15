@@ -1,3 +1,15 @@
+import { currencies } from "@/lib/currencies";
+
+/**
+ * Leading symbol for a currency code (e.g. "USD" → "$", "ALL" → "L").
+ * Falls back to the raw code for anything not in the known list — one source of
+ * truth for currency affixes across cards, editors, and inputs.
+ */
+export const currencySymbol = (currency: string | null | undefined): string => {
+  const code = currency || 'ALL';
+  return currencies.find((c) => c.code === code)?.symbol ?? code;
+};
+
 export const formatCurrency = (
   amount: number | null | undefined,
   currency: string | null | undefined,

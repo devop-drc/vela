@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, Loader2, Percent, DollarSign, Gift, Package, XCircle, Repeat, Truck } from "lucide-react";
+import { CalendarIcon, Percent, DollarSign, Gift, Package, XCircle, Repeat, Truck } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Calendar } from "@/components/ui/calendar";
@@ -19,7 +20,8 @@ import { ProductSelector } from "./ProductSelector";
 import { ScrollArea } from "./ui/scroll-area";
 import { Badge } from "./ui/badge";
 import { useShop } from "@/contexts/ShopContext";
-import { formatCurrency } from "@/lib/formatters";
+import { useAuth } from "@/contexts/AuthContext";
+import { formatCurrency, currencySymbol } from "@/lib/formatters";
 import { Switch } from "@/components/ui/switch";
 
 const promotionSchema = z.object({
@@ -92,6 +94,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
   // Opt-in: also show this promotion as a scrolling banner on the storefront.
   const [createAnnouncement, setCreateAnnouncement] = useState(false);
   const { shopDetails } = useShop();
+  const { user } = useAuth();
 
   const { register, handleSubmit, reset, control, watch, setValue, formState: { errors, isSubmitting } } = useForm<PromotionFormData>({
     resolver: zodResolver(promotionSchema),
@@ -156,7 +159,8 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
   }, [targetProducts]);
 
   const onSubmit = async (data: PromotionFormData) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    // user comes from AuthContext (cached session) — no per-save network round-
+    // trip to getUser(), which could hang/fail and silently block the save.
     if (!user) {
       showError("You must be logged in.");
       return;
@@ -237,6 +241,15 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
     }
   };
 
+  // Surface validation failures (discount type/value live in a conditional
+  // section with no inline error), so "Save" never silently does nothing.
+  const onInvalid = (errs: typeof errors) => {
+    const first = Object.values(errs)[0] as { message?: string } | undefined;
+    const nested = first && !first.message ? Object.values(first)[0] as { message?: string } | undefined : undefined;
+    const message = first?.message || nested?.message;
+    showError(message || "Please check the promotion fields and try again.");
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl h-[90vh] flex flex-col p-6"> {/* Reverted DialogContent padding */}
@@ -246,12 +259,12 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
             Define your marketing campaigns, discounts, and special offers.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
+        <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="flex-1 flex flex-col overflow-hidden">
           <ScrollArea className="flex-1 pr-4"> {/* Removed horizontal padding from ScrollArea, added right padding */}
             <div className="space-y-6 py-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Promotion Name</Label>
-                <Input id="name" {...register("name")} placeholder="e.g., Summer Sale, Free Shipping" className="h-10 px-3 py-2" />
+                <Input id="name" {...register("name")} placeholder="e.g., Summer Sale, Free Shipping" />
                 {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
               </div>
 
@@ -311,7 +324,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                     <div className="relative">
                       {discountType === 'flat' && shopDetails?.currency && (
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                          {shopDetails.currency === 'USD' ? '$' : shopDetails.currency === 'EUR' ? '€' : shopDetails.currency}
+                          {currencySymbol(shopDetails.currency)}
                         </span>
                       )}
                       <Input
@@ -320,7 +333,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                         step="0.01"
                         {...register("value.discountValue", { valueAsNumber: true })}
                         placeholder={discountType === 'percentage' ? "e.g., 15" : "e.g., 10.00"}
-                        className={cn("h-10 px-3 py-2", discountType === 'flat' && "pl-8")}
+                        className={cn(discountType === 'flat' && "pl-8")}
                       />
                     </div>
                     {errors.value?.discountValue && <p className="text-sm text-destructive mt-1">{errors.value.discountValue.message}</p>}
@@ -357,7 +370,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                       <div className="relative">
                         {shopDetails?.currency && (
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                            {shopDetails.currency === 'USD' ? '$' : shopDetails.currency === 'EUR' ? '€' : shopDetails.currency}
+                            {currencySymbol(shopDetails.currency)}
                           </span>
                         )}
                         <Input
@@ -366,7 +379,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                           step="0.01"
                           {...register("value.minOrderValue", { valueAsNumber: true })}
                           placeholder="e.g., 50.00"
-                          className="h-10 px-3 py-2 pl-8"
+                          className="pl-8"
                         />
                       </div>
                       {errors.value?.minOrderValue && <p className="text-sm text-destructive mt-1">{errors.value.minOrderValue.message}</p>}
@@ -521,7 +534,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
           <DialogFooter className="pt-4 px-6 flex-shrink-0">
             <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
               Save Promotion
             </Button>
           </DialogFooter>

@@ -1,15 +1,21 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui-app/StatusBadge";
+import { orderStatusTone, paymentStatusTone, type StatusTone } from "@/lib/status";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye, XCircle, CreditCard, MessageSquareWarning, Hash, Reply, Handshake, MapPin, StickyNote } from "lucide-react"; // Import StickyNote
+import { Package, User, Mail, Calendar, Banknote, CheckCircle, Truck, Box, Eye, XCircle, CreditCard, MessageSquareWarning, Hash, Reply, MapPin, StickyNote } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "./ui/skeleton";
 import { Separator } from "./ui/separator";
 import { ScrollArea } from "./ui/scroll-area";
 import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency } from "@/lib/formatters";
-import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Label } from "./ui/label"; // Import Label
 import { Textarea } from "./ui/textarea"; // Import Textarea
@@ -22,8 +28,28 @@ interface OrderItem {
   products: {
     name: string;
     media_url: string;
-  };
+  } | null;
 }
+
+/** Product thumbnail with a graceful placeholder for missing/broken images. */
+const ProductThumb = ({ src, alt }: { src?: string | null; alt?: string }) => {
+  const [errored, setErrored] = useState(false);
+  if (!src || errored) {
+    return (
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+        <Package className="h-6 w-6" />
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt || ""}
+      onError={() => setErrored(true)}
+      className="h-16 w-16 shrink-0 rounded-md bg-muted object-cover"
+    />
+  );
+};
 
 interface Dispute {
   id: string;
@@ -74,6 +100,7 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
   const [isLoadingDispute, setIsLoadingDispute] = useState(false);
   const [replyMessage, setReplyMessage] = useState('');
   const [disputeStatus, setDisputeStatus] = useState<Dispute['status']>('Open');
+  const [pendingCancel, setPendingCancel] = useState(false);
 
   useEffect(() => {
     if (order) {
@@ -127,6 +154,17 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
     }
   }, [order]);
 
+  // Cancelling restores inventory and can't be undone — confirm first, matching
+  // the inline table dropdown's guard so both entry points behave identically.
+  const handleStatusSelect = (newStatus: OrderStatusType) => {
+    if (newStatus === currentStatus) return;
+    if (newStatus === 'Cancelled') {
+      setPendingCancel(true);
+      return;
+    }
+    handleStatusUpdate(newStatus);
+  };
+
   const handleStatusUpdate = async (newStatus: OrderStatusType) => {
     if (!order) return;
     setIsUpdating(true);
@@ -169,37 +207,13 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
 
   if (!order || !shopDetails) return null; // Ensure shopDetails is available
 
-  const getStatusColor = (status: OrderStatusType | Dispute['status']) => {
+  const disputeStatusTone = (status: Dispute['status']): StatusTone => {
     switch (status) {
-      case 'Fulfilled':
-      case 'Resolved': return 'bg-emerald-500';
-      case 'Given to Courier':
-      case 'Order Packaged':
-      case 'In Review': return 'bg-blue-500';
-      case 'Order Seen':
-      case 'Pending':
-      case 'Open': return 'bg-amber-500';
-      case 'Problematic': return 'bg-destructive';
-      case 'Cancelled':
-      case 'Closed': return 'bg-gray-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const getStatusIcon = (status: OrderStatusType | Dispute['status']) => {
-    switch (status) {
-      case "Fulfilled": return <CheckCircle className="h-5 w-5" />;
-      case "Given to Courier": return <Truck className="h-5 w-5" />;
-      case "Order Packaged": return <Box className="h-5 w-5" />;
-      case "Order Seen": return <Eye className="h-5 w-5" />;
-      case "Pending": return <Package className="h-5 w-5" />;
-      case "Problematic": return <XCircle className="h-5 w-5" />;
-      case "Cancelled": return <XCircle className="h-5 w-5" />;
-      case "Open": return <MessageSquareWarning className="h-5 w-5" />;
-      case "In Review": return <Reply className="h-5 w-5" />;
-      case "Resolved": return <Handshake className="h-5 w-5" />;
-      case "Closed": return <XCircle className="h-5 w-5" />;
-      default: return <Package className="h-5 w-5" />;
+      case 'Resolved': return 'success';
+      case 'In Review': return 'info';
+      case 'Open': return 'warning';
+      case 'Closed': return 'neutral';
+      default: return 'neutral';
     }
   };
 
@@ -213,7 +227,48 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
     { value: 'Cancelled', label: 'Cancelled', icon: XCircle },
   ];
 
+  // Enable the dispute action when EITHER the reply text or the status changed,
+  // so a seller can advance a dispute without being forced to type a reply.
+  const disputeDirty =
+    !!dispute &&
+    (replyMessage !== (dispute.reply_message || '') || disputeStatus !== dispute.status);
+
+  // Formatted shipping block — omit empty fields instead of "N/A" rows.
+  const cityLine = [order.shipping_city, order.shipping_state, order.shipping_zip]
+    .filter((p) => p && String(p).trim())
+    .join(', ');
+  const shippingLines = [order.shipping_address, cityLine, order.shipping_country].filter(
+    (l) => l && String(l).trim(),
+  );
+
+  // Order money summary.
+  const itemsSubtotal = items.reduce(
+    (sum, it) => sum + convertCurrency(it.price_at_purchase * it.quantity, 'ALL', shopDetails.currency),
+    0,
+  );
+  const orderTotal = convertCurrency(order.total_amount, order.currency, shopDetails.currency);
+
   return (
+    <>
+      <AlertDialog open={pendingCancel} onOpenChange={setPendingCancel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The reserved stock will be returned to your inventory. This can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep order</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { setPendingCancel(false); handleStatusUpdate('Cancelled'); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cancel order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
@@ -230,42 +285,75 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
               <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" /> Date</div><p>{new Date(order.created_at).toLocaleString()}</p></div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground"><Banknote className="h-4 w-4" /> Total</div>
-                <p className="font-semibold">
+                <p className="text-lg font-bold leading-tight text-foreground">
                   {/* Convert order.total_amount from its stored currency (order.currency) to shopDetails.currency */}
-                  {formatCurrency(convertCurrency(order.total_amount, order.currency, shopDetails.currency), shopDetails.currency)}
+                  {formatCurrency(orderTotal, shopDetails.currency)}
                   {order.currency !== shopDetails.currency && (
-                    <span className="text-sm font-normal text-muted-foreground ml-2">
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
                       (~{formatCurrency(order.total_amount, order.currency)})
                     </span>
                   )}
                 </p>
               </div>
               <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><CreditCard className="h-4 w-4" /> Payment Method</div><p className="capitalize">{order.payment_method.replace(/_/g, ' ')}</p></div>
-              <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><CheckCircle className="h-4 w-4" /> Payment Status</div><p className="capitalize">{order.payment_status}</p></div>
-            </div>
-            <Separator />
-            <div>
-              <h3 className="font-semibold mb-4 flex items-center gap-2"><MapPin className="h-5 w-5" /> Shipping Details</h3>
-              <div className="space-y-2 text-sm text-muted-foreground p-3 border rounded-md bg-muted/50">
-                <p><span className="font-medium">Address:</span> {order.shipping_address || 'N/A'}</p>
-                <p><span className="font-medium">City:</span> {order.shipping_city || 'N/A'}</p>
-                <p><span className="font-medium">State/Province:</span> {order.shipping_state || 'N/A'}</p>
-                <p><span className="font-medium">Zip/Postal Code:</span> {order.shipping_zip || 'N/A'}</p>
-                <p><span className="font-medium">Country:</span> {order.shipping_country || 'N/A'}</p>
-                {order.shipping_notes_seller && <p><span className="font-medium flex items-center gap-1"><StickyNote className="h-4 w-4" /> Notes for Seller:</span> {order.shipping_notes_seller}</p>}
-                {order.shipping_notes_courier && <p><span className="font-medium flex items-center gap-1"><Truck className="h-4 w-4" /> Notes for Courier:</span> {order.shipping_notes_courier}</p>}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground"><CheckCircle className="h-4 w-4" /> Payment Status</div>
+                <StatusBadge tone={paymentStatusTone(order.payment_status)} className="capitalize">{order.payment_status}</StatusBadge>
               </div>
             </div>
             <Separator />
             <div>
+              <h3 className="font-semibold mb-3 flex items-center gap-2"><MapPin className="h-5 w-5" /> Shipping Details</h3>
+              {shippingLines.length > 0 ? (
+                <div className="rounded-md border bg-muted/50 p-3 text-sm">
+                  <p className="font-medium text-foreground">{order.customer_name}</p>
+                  {shippingLines.map((line, i) => (
+                    <p key={i} className="text-muted-foreground">{line}</p>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No shipping address provided.</p>
+              )}
+              {(order.shipping_notes_seller || order.shipping_notes_courier) && (
+                <div className="mt-2 space-y-2">
+                  {order.shipping_notes_seller && (
+                    <div className="flex items-start gap-2 rounded-md border border-info/25 bg-info/10 p-2.5 text-sm text-info">
+                      <StickyNote className="mt-0.5 h-4 w-4 shrink-0" />
+                      <div><span className="font-medium">Notes for Seller: </span><span className="text-foreground">{order.shipping_notes_seller}</span></div>
+                    </div>
+                  )}
+                  {order.shipping_notes_courier && (
+                    <div className="flex items-start gap-2 rounded-md border border-warning/25 bg-warning/10 p-2.5 text-sm text-warning">
+                      <Truck className="mt-0.5 h-4 w-4 shrink-0" />
+                      <div><span className="font-medium">Notes for Courier: </span><span className="text-foreground">{order.shipping_notes_courier}</span></div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <Separator />
+            <div>
               <h3 className="font-semibold mb-4 flex items-center gap-2"><Package className="h-5 w-5" /> Items Ordered</h3>
-              {isLoadingItems ? <Loader2 className="animate-spin" /> : (
+              {isLoadingItems ? (
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-4">
+                      <Skeleton className="h-16 w-16 rounded-md" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-3 w-1/4" />
+                      </div>
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
                 <div className="space-y-4">
                   {items.map((item, index) => (
                     <div key={index} className="flex items-center gap-4">
-                      <img src={item.products.media_url} alt={item.products.name} className="h-16 w-16 rounded-md object-cover bg-muted" />
+                      <ProductThumb src={item.products?.media_url} alt={item.products?.name} />
                       <div className="flex-1">
-                        <p className="font-medium">{item.products.name}</p>
+                        <p className="font-medium">{item.products?.name || 'Deleted product'}</p>
                         <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                       </div>
                       <p className="font-medium">
@@ -274,17 +362,29 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                       </p>
                     </div>
                   ))}
+                  {items.length > 0 && (
+                    <div className="space-y-1 border-t pt-3 text-sm">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Subtotal</span>
+                        <span>{formatCurrency(itemsSubtotal, shopDetails.currency)}</span>
+                      </div>
+                      <div className="flex justify-between font-semibold text-foreground">
+                        <span>Total</span>
+                        <span>{formatCurrency(orderTotal, shopDetails.currency)}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
             <Separator />
             <div>
               <h3 className="font-semibold mb-4 flex items-center gap-2"><MessageSquareWarning className="h-5 w-5" /> Client Dispute</h3>
-              {isLoadingDispute ? <Loader2 className="animate-spin" /> : dispute ? (
+              {isLoadingDispute ? <Spinner /> : dispute ? (
                 <div className="space-y-3 p-3 border rounded-md bg-muted/50">
                   <div className="flex items-center justify-between">
                     <p className="font-medium flex items-center gap-2"><Hash className="h-4 w-4" /> Dispute ID: {dispute.id.substring(0, 8)}</p>
-                    <Badge className={cn("text-white", getStatusColor(dispute.status))}>{dispute.status}</Badge>
+                    <StatusBadge tone={disputeStatusTone(dispute.status)}>{dispute.status}</StatusBadge>
                   </div>
                   <p className="text-sm"><span className="font-medium">Reason:</span> {dispute.reason}</p>
                   {dispute.message && <p className="text-sm"><span className="font-medium">Customer's Message:</span> {dispute.message}</p>}
@@ -306,8 +406,8 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button onClick={handleDisputeUpdate} disabled={isUpdating || !replyMessage.trim()} size="sm">
-                    {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Button onClick={handleDisputeUpdate} disabled={isUpdating || !disputeDirty} size="sm">
+                    {isUpdating && <Spinner className="mr-2 h-4 w-4" />}
                     Update Dispute
                   </Button>
                 </div>
@@ -320,10 +420,10 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
         <DialogFooter className="pt-4 flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
           <div className="flex items-center gap-2 mr-auto">
             <span className="text-sm">Status:</span>
-            <Badge className={cn("text-white", getStatusColor(currentStatus))}>{currentStatus}</Badge>
+            <StatusBadge tone={orderStatusTone(currentStatus)}>{currentStatus}</StatusBadge>
           </div>
           <div className="flex gap-2">
-            <Select value={currentStatus} onValueChange={(value: OrderStatusType) => handleStatusUpdate(value)} disabled={isUpdating}>
+            <Select value={currentStatus} onValueChange={(value: OrderStatusType) => handleStatusSelect(value)} disabled={isUpdating}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Change Status" />
               </SelectTrigger>
@@ -343,5 +443,6 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   );
 };

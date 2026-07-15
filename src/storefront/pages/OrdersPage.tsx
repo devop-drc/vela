@@ -4,15 +4,15 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { Loader2, Search, Package, ChevronDown, Star } from 'lucide-react';
+import { Loader2, Search, Package, ChevronDown, Star, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
+import { SfButton } from '../components/SfButton';
 import LeaveReviewDialog from '@/components/storefront/ProductReviews';
 
 // Alpha backgrounds + dark-mode text shades so badges read on every scheme.
@@ -38,6 +38,7 @@ export const OrdersPage = () => {
   const [email, setEmail] = useState('');
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(params.get('orderId'));
   // Review state: which order/product the dialog targets + already-reviewed pairs.
   const [reviewTarget, setReviewTarget] = useState<{ orderId: string; productId: string; productName: string; customerEmail: string } | null>(null);
@@ -63,6 +64,7 @@ export const OrdersPage = () => {
     const ids = Array.from(new Set([...localOrderIds(), ...(params.get('orderId') ? [params.get('orderId')!] : [])]));
     if (!customerEmail && ids.length === 0) return;
     setLoading(true);
+    setErr(null);
     try {
       const { data, error } = await supabase.functions.invoke('get-public-shop-data', {
         body: { shopSlug, customerEmail: customerEmail || undefined, orderIds: ids },
@@ -71,6 +73,7 @@ export const OrdersPage = () => {
       setOrders(data?.customerOrders || []);
     } catch (e) {
       console.error('Order lookup failed', e);
+      setErr("We couldn't load your orders. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -88,17 +91,23 @@ export const OrdersPage = () => {
 
       <form onSubmit={(e) => { e.preventDefault(); lookup(email); }} className="flex gap-2 mb-8">
         <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="flex-1" />
-        <Button type="submit" disabled={loading}>{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}<span className="ml-2 hidden sm:inline">Find Orders</span></Button>
+        <SfButton type="submit" disabled={loading}>{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}<span className="ml-2 hidden sm:inline">Find Orders</span></SfButton>
       </form>
 
       {loading && orders.length === 0 ? (
         <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+      ) : err && orders.length === 0 ? (
+        <div className="py-16 text-center">
+          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-destructive opacity-70" />
+          <p className="mb-4 text-muted-foreground">{err}</p>
+          <SfButton onClick={() => lookup(email)}>Try again</SfButton>
+        </div>
       ) : orders.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground"><Package className="h-12 w-12 mx-auto mb-4 opacity-40" /><p>No orders found yet.</p></div>
       ) : style === 'table' ? (
         /* Compact table presentation (config.pages.orders.style === 'table'). */
         <div className="sf-glass overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="px-4 py-3 font-semibold">Order</th>
@@ -169,12 +178,12 @@ export const OrdersPage = () => {
                               alreadyReviewed ? (
                                 <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400"><Star className="h-3.5 w-3.5 fill-emerald-500 text-emerald-500" /> Reviewed</span>
                               ) : (
-                                <Button
+                                <SfButton
                                   variant="outline" size="sm" className="h-7 px-2 text-xs"
                                   onClick={() => setReviewTarget({ orderId: o.id, productId: it.product_id, productName: it.products?.name || 'this product', customerEmail: o.customer_email })}
                                 >
                                   <Star className="mr-1 h-3.5 w-3.5" /> Leave review
-                                </Button>
+                                </SfButton>
                               )
                             )}
                             <span className="font-medium">{formatCurrency(it.price_at_purchase * it.quantity, o.currency)}</span>

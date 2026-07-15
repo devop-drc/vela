@@ -38,7 +38,7 @@ export const SectionHeader = ({ title, icon: Icon, eyebrow, action, className }:
     return (
       <div className={cn('mb-8 flex items-end justify-between gap-4', className)}>
         <div className="min-w-0">
-          {eyebrow && <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{eyebrow}</p>}
+          {eyebrow && <p className="sf-eyebrow mb-1.5 !text-primary">{eyebrow}</p>}
           <h2 className="sf-heading text-2xl md:text-3xl font-bold leading-tight">{title}</h2>
         </div>
         {actionLink}

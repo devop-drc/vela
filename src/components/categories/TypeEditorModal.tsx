@@ -11,8 +11,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { showError, showSuccess } from "@/utils/toast";
 import { SpecificationEditor, SpecTemplate } from "./SpecificationEditor";
 import { OptionEditor, OptionTemplate } from "./OptionEditor";
@@ -34,6 +35,7 @@ export const TypeEditorModal = ({
   onSave,
 }: TypeEditorModalProps) => {
   const { t } = useTranslation();
+  const { userId } = useAuth();
   const [typeName, setTypeName] = useState("");
   const [specs, setSpecs] = useState<SpecTemplate[]>([]);
   const [options, setOptions] = useState<OptionTemplate[]>([]);
@@ -53,16 +55,11 @@ export const TypeEditorModal = ({
 
   const handleSave = async () => {
     if (!typeName.trim()) return;
-    setSaving(true);
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+    if (!userId) {
       showError(t("categories.must_login"));
-      setSaving(false);
       return;
     }
+    setSaving(true);
 
     const payload = {
       category_name: categoryName,
@@ -70,7 +67,7 @@ export const TypeEditorModal = ({
       default_specifications: specs.filter((s) => s.key.trim()),
       default_options: options.filter((o) => o.name.trim()),
       is_system: false,
-      user_id: user.id,
+      user_id: userId,
     };
 
     let error;
@@ -130,7 +127,7 @@ export const TypeEditorModal = ({
             {t("common.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={saving || !typeName.trim()}>
-            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {saving && <Spinner className="mr-2 h-4 w-4" />}
             {t("categories.save_type")}
           </Button>
         </DialogFooter>

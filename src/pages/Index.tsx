@@ -4,7 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { readCache, writeCache } from "@/lib/pageCache";
 import { Banknote, Package, Users, CreditCard, BarChart2, Zap, Star, Activity, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { StatCard } from "@/components/dashboard/StatCard";
+import { StatCard } from "@/components/ui-app/StatCard";
+import { EmptyState, StatusDot } from "@/components/ui-app";
+import { useReveal } from "@/lib/anim";
 // Lazy-load the chart (recharts is heavy) so the dashboard shell + stats render first.
 const OverviewChart = lazy(() => import("@/components/dashboard/OverviewChart").then(m => ({ default: m.OverviewChart })));
 import { Skeleton } from "@/components/ui/skeleton";
@@ -352,6 +354,10 @@ const Index = () => {
 
   const isLoading = isShopLoading || isDashboardDataLoading;
 
+  // Subtle staggered entrance for the main dashboard blocks (GSAP, reduced-motion
+  // safe). Re-keyed on isLoading so it fires when real content mounts after load.
+  const revealRef = useReveal<HTMLDivElement>({}, [isLoading]);
+
   if (isLoading) {
     return (
       <div className="lg:h-[calc(100vh-7rem)] flex flex-col gap-3">
@@ -380,28 +386,28 @@ const Index = () => {
 
   if (loadError) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-16 gap-3">
-        <AlertTriangle className="h-8 w-8 text-amber-500" />
-        <p className="text-muted-foreground max-w-sm">{t("dashboard.load_error")}</p>
-        <Button variant="outline" onClick={() => fetchData()}>
-          <RefreshCw className="mr-2 h-4 w-4" /> {t("common.retry")}
-        </Button>
-      </div>
+      <EmptyState
+        icon={AlertTriangle}
+        title={t("dashboard.load_error")}
+        action={
+          <Button variant="outline" onClick={() => fetchData()}>
+            <RefreshCw className="mr-2 h-4 w-4" /> {t("common.retry")}
+          </Button>
+        }
+      />
     );
   }
 
   if (!data) {
     return (
-      <div className="text-center py-10">
-        {t("dashboard.no_data")}
-      </div>
+      <EmptyState icon={BarChart2} title={t("dashboard.no_data")} />
     );
   }
 
   return (
-    <div className="h-[calc(100vh-7rem)] flex flex-col gap-3">
+    <div ref={revealRef} className="h-[calc(100vh-7rem)] flex flex-col gap-3">
       {/* Welcome Header + Quick Actions on same row */}
-      <div className="flex items-start justify-between gap-4 flex-wrap flex-shrink-0">
+      <div data-reveal className="flex items-start justify-between gap-4 flex-wrap flex-shrink-0">
         <WelcomeHeader
           pendingOrders={data.pendingOrders}
           activeProducts={data.activeProducts}
@@ -425,33 +431,34 @@ const Index = () => {
       )}
 
       {/* Stat Cards */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 flex-shrink-0" data-tour="stats">
+      <div data-reveal className="grid gap-3 grid-cols-2 lg:grid-cols-4 flex-shrink-0" data-tour="stats">
         <StatCard
           title={t("dashboard.total_revenue")}
-          value={formatCurrency(data.totalRevenue, shopDetails?.currency)}
+          value={data.totalRevenue}
+          formatValue={(n) => formatCurrency(n, shopDetails?.currency)}
           icon={Banknote}
-          color="emerald"
+          tone="success"
           to="/orders"
         />
         <StatCard
           title={t("dashboard.sales")}
-          value={`${data.salesCount}`}
+          value={data.salesCount}
           icon={CreditCard}
-          color="blue"
+          tone="info"
           to="/orders"
         />
         <StatCard
           title={t("dashboard.active_products")}
-          value={data.activeProducts.toString()}
+          value={data.activeProducts}
           icon={Package}
-          color="violet"
+          tone="brand"
           to="/products"
         />
         <StatCard
           title={t("dashboard.total_customers")}
-          value={data.customers.toString()}
+          value={data.customers}
           icon={Users}
-          color="amber"
+          tone="warning"
           to="/orders"
         />
       </div>
@@ -459,7 +466,7 @@ const Index = () => {
       {/* Main area — fills remaining viewport */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 flex-1 min-h-0">
         {/* Left: Overview Chart (2/3) */}
-        <div className="lg:col-span-2 flex flex-col min-h-0" data-tour="chart">
+        <div data-reveal className="lg:col-span-2 flex flex-col min-h-0" data-tour="chart">
           <h2 className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5 flex-shrink-0">
             <BarChart2 className="h-3.5 w-3.5" />{t("dashboard.business_overview")}
           </h2>
@@ -477,7 +484,7 @@ const Index = () => {
         </div>
 
         {/* Right: Profile (fixed) + Top Products (flex) + Activity (flex) */}
-        <div className="lg:col-span-1 flex flex-col gap-3 min-h-0">
+        <div data-reveal className="lg:col-span-1 flex flex-col gap-3 min-h-0">
           <div className="flex-shrink-0">
             <h2 className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
               <Star className="h-3.5 w-3.5" />{t("dashboard.shop_profile")}
@@ -497,6 +504,7 @@ const Index = () => {
           <div className="flex flex-col min-h-0 flex-1 basis-0" data-tour="activity">
             <h2 className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5 flex-shrink-0">
               <Activity className="h-3.5 w-3.5" />{t("dashboard.live_activity")}
+              <StatusDot tone="success" pulse className="ml-0.5" />
             </h2>
             <div className="flex-1 min-h-0">
               <ActivityFeed />

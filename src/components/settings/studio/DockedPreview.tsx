@@ -25,8 +25,10 @@ const MOBILE = { w: 390, h: 780 };
 
 /** An iframe rendered at a real device size and scaled to fill its parent
     width (height follows the aspect). Used for static side-by-side previews. */
-export const ScaledFrame = ({ src, virtualW, virtualH, title, className }: {
+export const ScaledFrame = ({ src, virtualW, virtualH, title, className, interactive }: {
   src: string; virtualW: number; virtualH: number; title: string; className?: string;
+  /** When true the iframe is clickable/scrollable (a live, usable preview). */
+  interactive?: boolean;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(320);
@@ -41,13 +43,13 @@ export const ScaledFrame = ({ src, virtualW, virtualH, title, className }: {
   }, []);
   const scale = w / virtualW;
   return (
-    <div ref={ref} className={cn('overflow-hidden rounded-lg border bg-white', className)} style={{ height: virtualH * scale }}>
+    <div ref={ref} className={cn('overflow-hidden rounded-lg border bg-muted', className)} style={{ height: virtualH * scale }}>
       <iframe
         src={src}
         title={title}
         loading="lazy"
-        tabIndex={-1}
-        className="pointer-events-none block origin-top-left border-0 bg-white"
+        tabIndex={interactive ? 0 : -1}
+        className={cn('block origin-top-left border-0 bg-background', !interactive && 'pointer-events-none')}
         style={{ width: virtualW, height: virtualH, transform: `scale(${scale})` }}
       />
     </div>
@@ -88,11 +90,24 @@ export const DockedPreview = ({ previewPath, previewUrl, config, navTarget, clas
   useEffect(() => { if (ready) post(); }, [ready, post, config]);
   useEffect(() => { setReady(false); }, [reloadKey, device, previewPath]);
 
-  // Steer the preview to where the last edit is visible.
+  // Heartbeat: re-send the current config a few times a second. Fast edits (or a
+  // config message that lands mid-navigation) can otherwise be dropped and the
+  // preview appears "stuck"; the storefront ignores a re-send when nothing
+  // changed, so this is a cheap self-heal that removes the need to reload.
+  useEffect(() => {
+    if (!ready) return;
+    const iv = setInterval(post, 500);
+    return () => clearInterval(iv);
+  }, [ready, post]);
+
+  // Steer the preview to where the last edit is visible, then re-apply the
+  // config on the freshly-shown page.
   useEffect(() => {
     if (!ready || !navTarget) return;
     iframeRef.current?.contentWindow?.postMessage({ type: 'sf-preview-navigate', target: navTarget.target }, '*');
-  }, [ready, navTarget]);
+    const t = setTimeout(post, 80);
+    return () => clearTimeout(t);
+  }, [ready, navTarget, post]);
 
   // Bridge fallback: reload once if it never connects.
   useEffect(() => {
@@ -138,7 +153,7 @@ export const DockedPreview = ({ previewPath, previewUrl, config, navTarget, clas
       <div ref={holderRef} className="relative min-h-0 flex-1">
         {previewPath ? (
           <div
-            className="absolute left-1/2 top-1/2 overflow-hidden rounded-lg border bg-white shadow-lg"
+            className="absolute left-1/2 top-1/2 overflow-hidden rounded-lg border bg-muted shadow-lg"
             style={{ width: vp.w, height: vp.h, transform: `translate(-50%, -50%) scale(${scale})` }}
           >
             <iframe
@@ -146,7 +161,7 @@ export const DockedPreview = ({ previewPath, previewUrl, config, navTarget, clas
               key={`${device}-${reloadKey}`}
               src={previewPath}
               title="Storefront preview"
-              className="block border-0 bg-white"
+              className="block border-0 bg-background"
               style={{ width: vp.w, height: vp.h }}
             />
           </div>

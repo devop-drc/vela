@@ -4,8 +4,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, Loader2, X, Info, ChevronDown, ChevronUp, Bug, Zap, Clock, Package, SkipForward, AlertTriangle, List } from 'lucide-react';
+import { StatusBadge } from '@/components/ui-app/StatusBadge';
+import { CheckCircle, XCircle, X, Info, Bug, Zap, Clock, Package, SkipForward, AlertTriangle, List } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { useCountUp } from '@/lib/anim';
 import { SyncSummaryModal } from './SyncSummaryModal';
 import { SyncLiveFeedModal } from './SyncLiveFeedModal';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +21,12 @@ const formatTime = (ms: number) => {
   const seconds = totalSeconds % 60;
   if (minutes === 0) return `${seconds}s`;
   return `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
+};
+
+/** Small count-up number for the live/finished sync stat badges. */
+const CountUp = ({ value }: { value: number }) => {
+  const ref = useCountUp<HTMLSpanElement>(value, { duration: 0.5 });
+  return <span ref={ref} className="tabular-nums">{value}</span>;
 };
 
 export const SyncStatusWidget = () => {
@@ -67,8 +75,8 @@ export const SyncStatusWidget = () => {
       .from('sync_jobs')
       .update({ status: 'failed', message: 'Sync aborted by user.' })
       .eq('id', activeJob.id);
-    if (error) showError(`Failed to abort: ${error.message}`);
-    else showSuccess("Sync aborted.");
+    if (error) showError(t('sync.abort_failed', { message: error.message }));
+    else showSuccess(t('sync.aborted'));
     setIsAborting(false);
   };
 
@@ -135,7 +143,7 @@ export const SyncStatusWidget = () => {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.95 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="fixed bottom-4 left-4 z-40 w-80"
+          className="fixed bottom-24 left-4 z-40 w-[calc(100vw-2rem)] sm:w-80 md:bottom-4"
         >
           <Card className="shadow-xl border-border/50 backdrop-blur-sm">
             <CardContent className="p-3 space-y-2.5">
@@ -144,11 +152,11 @@ export const SyncStatusWidget = () => {
                 <div className="flex items-center gap-2">
                   {isRunning ? (
                     <div className="relative">
-                      <Loader2 className="h-4 w-4 text-primary animate-spin" />
-                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
+                      <Spinner className="h-4 w-4 text-primary" />
+                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-info rounded-full animate-pulse" />
                     </div>
                   ) : isSuccess ? (
-                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    <CheckCircle className="h-4 w-4 text-success" />
                   ) : (
                     <XCircle className="h-4 w-4 text-destructive" />
                   )}
@@ -188,26 +196,26 @@ export const SyncStatusWidget = () => {
 
               {/* Live stats counters */}
               {isRunning && activeJob.progress > 0 && (
-                <div className="flex gap-1.5">
+                <div className="flex gap-1.5 flex-wrap">
                   {(liveStats?.created ?? 0) > 0 && (
-                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5 gap-1 bg-emerald-500/10 text-emerald-600 border-0">
-                      <Package className="h-2.5 w-2.5" />{liveStats!.created} {t('sync.new')}
-                    </Badge>
+                    <StatusBadge tone="success" size="sm" icon={<Package />}>
+                      <CountUp value={liveStats!.created} /> {t('sync.new')}
+                    </StatusBadge>
                   )}
                   {(liveStats?.updated ?? 0) > 0 && (
-                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5 gap-1 bg-blue-500/10 text-blue-600 border-0">
-                      <Zap className="h-2.5 w-2.5" />{liveStats!.updated} {t('sync.updated')}
-                    </Badge>
+                    <StatusBadge tone="info" size="sm" icon={<Zap />}>
+                      <CountUp value={liveStats!.updated} /> {t('sync.updated')}
+                    </StatusBadge>
                   )}
                   {(liveStats?.skipped ?? 0) > 0 && (
-                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5 gap-1 bg-muted text-muted-foreground border-0">
-                      <SkipForward className="h-2.5 w-2.5" />{liveStats!.skipped} {t('sync.skipped')}
-                    </Badge>
+                    <StatusBadge tone="neutral" size="sm" icon={<SkipForward />}>
+                      <CountUp value={liveStats!.skipped} /> {t('sync.skipped')}
+                    </StatusBadge>
                   )}
                   {(liveStats?.cached ?? 0) > 0 && (
-                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5 gap-1 bg-amber-500/10 text-amber-600 border-0">
-                      <Zap className="h-2.5 w-2.5" />{liveStats!.cached} {t('sync.cached')}
-                    </Badge>
+                    <StatusBadge tone="warning" size="sm" icon={<Zap />}>
+                      <CountUp value={liveStats!.cached} /> {t('sync.cached')}
+                    </StatusBadge>
                   )}
                 </div>
               )}
@@ -241,15 +249,15 @@ export const SyncStatusWidget = () => {
               {/* Finished stats */}
               {isFinished && summary && (
                 <div className="flex gap-1.5 flex-wrap">
-                  <Badge variant="outline" className="text-[10px] h-5 gap-1">
-                    <Package className="h-2.5 w-2.5 text-emerald-500" />{summary.created} {t('sync.created')}
-                  </Badge>
-                  <Badge variant="outline" className="text-[10px] h-5 gap-1">
-                    <Zap className="h-2.5 w-2.5 text-blue-500" />{summary.updated} {t('sync.updated')}
-                  </Badge>
-                  <Badge variant="outline" className="text-[10px] h-5 gap-1">
-                    <SkipForward className="h-2.5 w-2.5" />{summary.skipped} {t('sync.skipped')}
-                  </Badge>
+                  <StatusBadge tone="success" size="sm" icon={<Package />}>
+                    <CountUp value={summary.created} /> {t('sync.created')}
+                  </StatusBadge>
+                  <StatusBadge tone="info" size="sm" icon={<Zap />}>
+                    <CountUp value={summary.updated} /> {t('sync.updated')}
+                  </StatusBadge>
+                  <StatusBadge tone="neutral" size="sm" icon={<SkipForward />}>
+                    <CountUp value={summary.skipped} /> {t('sync.skipped')}
+                  </StatusBadge>
                 </div>
               )}
 
@@ -277,7 +285,7 @@ export const SyncStatusWidget = () => {
                     onClick={handleAbort}
                     disabled={isAborting}
                   >
-                    {isAborting ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <XCircle className="mr-1.5 h-3 w-3" />}
+                    {isAborting ? <Spinner className="mr-1.5 h-3 w-3" /> : <XCircle className="mr-1.5 h-3 w-3" />}
                     {t('sync.abort')}
                   </Button>
                 )}
@@ -286,48 +294,54 @@ export const SyncStatusWidget = () => {
                   variant="outline"
                   className="h-7 text-xs px-2 shrink-0"
                   onClick={() => setIsLiveFeedOpen(true)}
-                  title="View live product feed"
+                  title={t('sync.live_feed')}
+                  aria-label={t('sync.live_feed')}
                 >
                   <List className="h-3 w-3" />
                 </Button>
-                <Button
-                  size="icon"
-                  variant={showDevLog ? 'secondary' : 'ghost'}
-                  className="h-7 w-7 shrink-0"
-                  onClick={() => setShowDevLog(v => !v)}
-                  title="Toggle dev log"
-                >
-                  <Bug className="h-3 w-3" />
-                </Button>
+                {import.meta.env.DEV && (
+                  <Button
+                    size="icon"
+                    variant={showDevLog ? 'secondary' : 'ghost'}
+                    className="h-7 w-7 shrink-0"
+                    onClick={() => setShowDevLog(v => !v)}
+                    title={t('sync.dev_log')}
+                    aria-label={t('sync.dev_log')}
+                  >
+                    <Bug className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
 
-              {/* Dev log panel */}
-              <AnimatePresence>
-                {showDevLog && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="p-2 rounded-md bg-zinc-950 text-zinc-300 font-mono text-[10px] leading-relaxed max-h-40 overflow-y-auto border border-zinc-800">
-                      <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-zinc-800">
-                        <span className="text-zinc-500 uppercase tracking-wider text-[9px] font-bold">Dev Log</span>
-                        <span className="text-zinc-600">{devLogs.length} entries</span>
+              {/* Dev log panel — DEV only, never shipped to the merchant UI */}
+              {import.meta.env.DEV && (
+                <AnimatePresence>
+                  {showDevLog && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-2 rounded-md bg-foreground text-background/90 font-mono text-[10px] leading-relaxed max-h-40 overflow-y-auto border border-border">
+                        <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-background/20">
+                          <span className="text-background/50 uppercase tracking-wider text-[9px] font-bold">{t('sync.dev_log')}</span>
+                          <span className="text-background/40">{devLogs.length} entries</span>
+                        </div>
+                        {devLogs.length === 0 ? (
+                          <p className="text-background/40">{t('sync.waiting')}</p>
+                        ) : (
+                          devLogs.map((log, i) => (
+                            <div key={i} className={`py-0.5 ${i === 0 ? 'text-background' : 'text-background/60'}`}>
+                              {log}
+                            </div>
+                          ))
+                        )}
                       </div>
-                      {devLogs.length === 0 ? (
-                        <p className="text-zinc-600">{t('sync.waiting')}</p>
-                      ) : (
-                        devLogs.map((log, i) => (
-                          <div key={i} className={`py-0.5 ${i === 0 ? 'text-zinc-200' : 'text-zinc-500'}`}>
-                            {log}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              )}
             </CardContent>
           </Card>
         </motion.div>

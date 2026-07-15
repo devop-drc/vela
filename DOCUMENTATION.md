@@ -87,10 +87,10 @@ The application is structured into several distinct pages, each serving a specif
     -   Includes bulk actions for selected products (set status, add sale, delete) via `BulkActionsToolbar`.
     -   Allows importing new products from Instagram posts (`InstagramPostModal`).
     -   Provides a `ProductEditor` modal for detailed product editing.
--   **`/out-of-stock` (Out of Stock Page):**
-    -   Dedicated page for managing products marked as 'Out of Stock'.
-    -   Similar filtering, searching, and sorting capabilities as the Products page.
-    -   Offers bulk actions specifically for out-of-stock items (`OutOfStockActionsToolbar`), such as marking as 'Active' (restocked) or 'Draft'.
+-   **`/out-of-stock` (Stock / Inventory Page):**
+    -   Dedicated page for viewing and adjusting inventory across all physical products and their variants.
+    -   Filter by stock level (all / in stock / low stock / out of stock), search, and filter by category.
+    -   Expand any product to edit per-variant stock inline, apply set/add-to-all per product, or bulk set/add/zero-out across the selected variants (with a confirm step for zero-out and an undo affordance).
 -   **`/orders` (Orders Page):**
     -   Lists all customer orders.
     -   Allows filtering by order status (All, Pending, In Progress, Fulfilled), searching by customer name/email, and filtering by date range.

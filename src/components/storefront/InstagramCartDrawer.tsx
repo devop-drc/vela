@@ -281,9 +281,9 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                     transition={{ duration: 0.2 }}
                     className="flex flex-col items-center justify-center flex-1 p-8 text-center h-full"
                   >
-                    <ShoppingBag className="h-20 w-20 text-gray-400 mb-6" />
+                    <ShoppingBag className="h-20 w-20 text-muted-foreground mb-6" />
                     <h3 className="text-2xl font-bold mb-4">Your cart is empty</h3>
-                    <p className="text-base text-gray-500 mb-8">Looks like you haven't added anything to your cart yet.</p>
+                    <p className="text-base text-muted-foreground mb-8">Looks like you haven't added anything to your cart yet.</p>
                     <Button onClick={onClose} className="text-base bg-[hsl(var(--primary))] text-white">Start Shopping</Button>
                   </motion.div>
                 ) : (

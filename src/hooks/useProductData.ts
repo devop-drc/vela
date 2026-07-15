@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useShop } from "@/contexts/ShopContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { readCache, writeCache } from "@/lib/pageCache";
 
 const PRODUCTS_CACHE_KEY = "products";
@@ -44,10 +45,32 @@ interface UseProductDataResult {
   allDetailsAttributes: DetailsAttribute[];
   maxPrice: number;
   isLoading: boolean;
+  /** True when the last products fetch failed (distinct from an empty catalog). */
+  error: boolean;
+  refetch: (showLoading?: boolean) => Promise<void>;
+  updateProduct: (productId: string, updates: Partial<Product>) => void;
 }
 
-export const useProductData = (): UseProductDataResult => {
+interface UseProductDataOptions {
+  /**
+   * Fired (debounced) after a realtime products INSERT/DELETE burst. Lets the
+   * page piggyback on this hook's single products subscription instead of
+   * opening a second, duplicate channel just to refresh derived state.
+   */
+  onProductsMutated?: () => void;
+}
+
+export const useProductData = (opts?: UseProductDataOptions): UseProductDataResult => {
   const { convertCurrency } = useShop();
+  // The user id comes from the shared AuthProvider (resolved once at app start)
+  // instead of each hook re-calling getSession() — removes the startup waterfall.
+  const { userId } = useAuth();
+  const userIdRef = useRef<string | null>(userId);
+  userIdRef.current = userId;
+  // Keep the latest mutation callback in a ref so the realtime handler (bound
+  // once) always calls the current version without re-subscribing.
+  const onMutatedRef = useRef(opts?.onProductsMutated);
+  onMutatedRef.current = opts?.onProductsMutated;
   // Seed from the last cached snapshot so returning to the page renders
   // instantly; the effect below still revalidates in the background.
   const [cached] = useState(() => readCache<ProductsSnapshot>(PRODUCTS_CACHE_KEY));
@@ -57,12 +80,14 @@ export const useProductData = (): UseProductDataResult => {
   const [allDetailsAttributes, setAllDetailsAttributes] = useState<DetailsAttribute[]>(cached?.attributes ?? []);
   // No spinner when we already have something to show.
   const [isLoading, setIsLoading] = useState(!cached);
+  // Distinguishes a failed fetch from a genuinely empty catalog so the page can
+  // show a retry state instead of the onboarding empty state.
+  const [error, setError] = useState(false);
 
   const fetchProductsAndMetadata = async (showLoading = false) => {
     if (showLoading) setIsLoading(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    const user = session?.user;
-    if (!user) {
+    const uid = userIdRef.current;
+    if (!uid) {
       setIsLoading(false);
       return;
     }
@@ -70,9 +95,9 @@ export const useProductData = (): UseProductDataResult => {
     const [productsRes, categoriesRes, typesRes] = await Promise.all([
       // Include gallery and media metadata so editors can show all images.
       // `updated_at` (migration 20260703160000) busts the variant-stock cache.
-      supabase.from("products").select("id, name, status, price, currency, inventory, media_url, media_gallery, media_type, thumbnail_url, created_at, updated_at, category, caption, tags, details, pricing_type, billing_interval, product_type").eq('user_id', user.id).order('created_at', { ascending: false }),
-      supabase.from("categories").select("name").eq('user_id', user.id),
-      supabase.from("types").select("name, attributes").eq('user_id', user.id),
+      supabase.from("products").select("id, name, status, price, currency, inventory, media_url, media_gallery, media_type, thumbnail_url, created_at, updated_at, category, caption, tags, details, pricing_type, billing_interval, product_type").eq('user_id', uid).order('created_at', { ascending: false }),
+      supabase.from("categories").select("name").eq('user_id', uid),
+      supabase.from("types").select("name, attributes").eq('user_id', uid),
     ]);
 
     let nextProducts = allProducts;
@@ -82,7 +107,9 @@ export const useProductData = (): UseProductDataResult => {
 
     if (productsRes.error) {
       console.error("useProductData: Error fetching products:", productsRes.error);
+      setError(true);
     } else {
+      setError(false);
       nextProducts = productsRes.data as Product[];
       setAllProducts(nextProducts);
     }
@@ -118,7 +145,7 @@ export const useProductData = (): UseProductDataResult => {
     // core products query succeeded, so we never cache a partial/failed load).
     if (!productsRes.error) {
       writeCache<ProductsSnapshot>(PRODUCTS_CACHE_KEY, {
-        userId: user.id, products: nextProducts, categories: nextCategories,
+        userId: uid, products: nextProducts, categories: nextCategories,
         tags: nextTags, attributes: nextAttributes,
       });
     }
@@ -127,24 +154,21 @@ export const useProductData = (): UseProductDataResult => {
   };
 
   useEffect(() => {
+    if (!userId) return;
     let channel: any;
     let metadataRefetchTimer: ReturnType<typeof setTimeout> | undefined;
-    
-    const setupRealtime = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        const user = session?.user;
-        if (!user) return;
 
+    const setupRealtime = async () => {
         // 1. Initial fetch — show the spinner only when we have nothing cached
         //    to display; otherwise revalidate silently behind the seeded data.
         await fetchProductsAndMetadata(!cached);
 
         // 2. Setup Realtime Listener
         channel = supabase
-            .channel(`products_channel_${user.id}`)
+            .channel(`products_channel_${userId}`)
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'products', filter: `user_id=eq.${user.id}` },
+                { event: '*', schema: 'public', table: 'products', filter: `user_id=eq.${userId}` },
                 (payload) => {
                     const newProduct = payload.new as Product;
                     
@@ -168,7 +192,13 @@ export const useProductData = (): UseProductDataResult => {
                     // one trailing refetch covers the entire burst.
                     if (payload.eventType === 'INSERT' || payload.eventType === 'DELETE') {
                         if (metadataRefetchTimer) clearTimeout(metadataRefetchTimer);
-                        metadataRefetchTimer = setTimeout(() => fetchProductsAndMetadata(), 2500);
+                        metadataRefetchTimer = setTimeout(() => {
+                            fetchProductsAndMetadata();
+                            // One debounce covers both metadata + any page-level
+                            // derived refresh (e.g. sync-status), so a single
+                            // products channel serves the whole page.
+                            onMutatedRef.current?.();
+                        }, 2500);
                     }
                 }
             )
@@ -183,7 +213,10 @@ export const useProductData = (): UseProductDataResult => {
         }
         if (metadataRefetchTimer) clearTimeout(metadataRefetchTimer);
     };
-  }, []); // Empty dependency array ensures setup runs once per component lifecycle
+    // Re-run when the resolved user changes (login/logout); userIdRef keeps the
+    // fetch/realtime callbacks pointed at the current user.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   const maxPrice = useMemo(() => {
     let currentMax = 0;
@@ -209,6 +242,7 @@ export const useProductData = (): UseProductDataResult => {
     allDetailsAttributes,
     maxPrice,
     isLoading,
+    error,
     refetch: fetchProductsAndMetadata,
     updateProduct,
   };

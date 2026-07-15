@@ -7,8 +7,8 @@ import Lenis from "lenis";
 import Marquee from "react-fast-marquee";
 import {
   Instagram, Sparkles, ShoppingBag, ArrowRight, Check, Wand2,
-  Package, BarChart3, CreditCard, Zap, Menu, X, Lock, Search,
-  TrendingUp, Bell, Sun, Moon, Mail, Send, Gift,
+  Package, BarChart3, CreditCard, Menu, X, Lock, Search,
+  TrendingUp, Bell, Sun, Moon, Mail, Send, Gift, Star, ShieldCheck,
 } from "lucide-react";
 import {
   RiTShirt2Line, RiBrushLine, RiVipDiamondLine, RiRunLine, RiHome5Line,
@@ -25,6 +25,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useReveal } from "@/components/landing/useReveal";
+import { VelaMark } from "@/components/landing/VelaMark";
 import { Counter, Magnetic, prefersReducedMotion } from "@/components/landing/anim";
 import {
   SplitText, BlurText, ShinyText, SpotlightCard, Tilted, StarBorder, Particles, CircularText,
@@ -32,8 +33,17 @@ import {
 import { en, sq, type LandingCopy } from "@/components/landing/copy";
 import "@/components/landing/landing.css";
 
-// Remotion journey film — heavy, so it loads only when the section is reached.
-const JourneySection = lazy(() => import("@/components/landing/journey/JourneySection"));
+// Remotion film — heavy, so it loads only when its section is reached. One
+// combined motion graphic serves both the hero and the "how it works" section.
+const HeroSplit = lazy(() => import("@/components/landing/story/StoryHero"));
+const SplashScreen = lazy(() => import("@/components/landing/SplashScreen"));
+const MomentumBand = lazy(() => import("@/components/landing/MomentumBand"));
+const ComparisonTable = lazy(() => import("@/components/landing/ComparisonTable"));
+const ProblemSection = lazy(() => import("@/components/landing/ProblemSection"));
+const TrustStrip = lazy(() => import("@/components/landing/TrustStrip"));
+const HowItWorks = lazy(() => import("@/components/landing/HowItWorks"));
+const FeatureShowcase = lazy(() => import("@/components/landing/FeatureShowcase"));
+const Calculator = lazy(() => import("@/components/landing/Calculator"));
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -68,12 +78,9 @@ const THEME_KEY = "landing-theme";
 const LANG_CHOSEN_KEY = "landing-lang-chosen";
 
 /* ─────────────────────────────── Nav ─────────────────────────────── */
-const BrandMark = ({ size = "h-8 w-8" }: { size?: string }) => (
-  <span className={cn("relative grid place-items-center rounded-[10px] text-white shadow-md shadow-fuchsia-500/25 ring-1 ring-white/25 ring-inset", size, BRAND)}>
-    <ShoppingBag className="h-4 w-4" />
-    <span className={cn("absolute inset-0 -z-10 rounded-[10px] opacity-50 blur-md", BRAND)} />
-  </span>
-);
+// The Vela sailboat app-mark (public/vela-icon.svg). Kept as a thin wrapper so
+// every prior BrandMark call site now renders the real brand logo.
+const BrandMark = ({ size = "h-9 w-9" }: { size?: string }) => <VelaMark size={size} />;
 
 /** Editorial section eyebrow — part of the brand language. */
 const Eyebrow = ({ children }: { children: React.ReactNode }) => (
@@ -135,9 +142,9 @@ const LandingNav = ({ active, copy, dark, onToggleTheme, lang, onSetLang }: NavP
           "glass-surface flex items-center justify-between rounded-2xl px-4 py-2.5 transition-all duration-300",
           scrolled && "shadow-xl"
         )}>
-          <a href="#top" className="flex items-center gap-2.5">
+          <a href="#top" className="flex items-center gap-3">
             <BrandMark />
-            <span className="text-[17px] font-bold tracking-tight">InstantShop</span>
+            <span className="font-display-brand text-[19px] font-semibold tracking-tight">Vela</span>
           </a>
 
           <div className="hidden items-center gap-1 lg:flex">
@@ -257,7 +264,7 @@ const BrowserMock = ({ screen, iframeOn }: { screen: Screen; iframeOn: boolean }
         {iframeOn && (
           <iframe
             src="/demo"
-            title="InstantShop demo"
+            title="Vela demo"
             loading="lazy"
             onLoad={() => setReady(true)}
             className={cn("absolute left-0 top-0 origin-top-left transition-opacity duration-700", ready ? "opacity-100" : "opacity-0")}
@@ -298,7 +305,7 @@ const PhoneMock = ({ screen, iframeOn }: { screen: Screen; iframeOn: boolean }) 
       {iframeOn && (
         <iframe
           src="/demo-shop?view=products"
-          title="InstantShop storefront demo"
+          title="Vela storefront demo"
           loading="lazy"
           onLoad={() => setReady(true)}
           className={cn("absolute left-0 top-0 origin-top-left transition-opacity duration-700", ready ? "opacity-100" : "opacity-0")}
@@ -445,7 +452,7 @@ const BentoArt = ({ index, screen }: { index: number; screen: Screen }) => {
 };
 
 /* ─────────────────────────────── Page ─────────────────────────────── */
-const PLAN_PRICES: Record<string, number> = { starter: 990, pro: 1990, business: 3990 };
+const PLAN_PRICES: Record<string, number> = { starter: 0, pro: 1990, business: 3990 };
 const fmt = (n: number) => n.toLocaleString("en-US");
 
 export default function Landing() {
@@ -454,6 +461,9 @@ export default function Landing() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [annual, setAnnual] = useState(true);
   const [activeSection, setActiveSection] = useState("");
+  const [splash, setSplash] = useState(() => {
+    try { return !sessionStorage.getItem("vela-splash-seen"); } catch { return false; }
+  });
   const [dark, setDark] = useState(() => {
     try { return localStorage.getItem(THEME_KEY) === "dark"; } catch { return false; }
   });
@@ -461,6 +471,18 @@ export default function Landing() {
   const [studioReady, setStudioReady] = useState(false);
   const [interestName, setInterestName] = useState("");
   const [interestMsg, setInterestMsg] = useState("");
+  const [activeTesti, setActiveTesti] = useState(0);
+  const [vp, setVp] = useState(() => ({
+    w: typeof window !== "undefined" ? window.innerWidth : 1440,
+    h: typeof window !== "undefined" ? window.innerHeight : 900,
+  }));
+  // The hero motion graphic only lives in the hero on roomy desktops; on short,
+  // tall or mobile screens it drops to its own "how it works" section so the
+  // hero itself always fits perfectly.
+  const filmInHero = vp.w >= 1024 && vp.h >= 760;
+  // The walkthrough film is desktop-shaped; always render it landscape (it
+  // scales to fit its container width on smaller screens).
+  const filmLayout: "landscape" | "portrait" = "landscape";
 
   // Lenis inertia scrolling, driven by GSAP's ticker and feeding
   // ScrollTrigger so scrubbed animations stay in sync. Anchor links glide
@@ -524,8 +546,8 @@ export default function Landing() {
 
   useEffect(() => {
     document.title = lang === "sq"
-      ? "InstantShop — Ktheje Instagramin në dyqan"
-      : "InstantShop — Turn your Instagram into a store";
+      ? "Vela — Ktheje Instagramin në dyqan"
+      : "Vela — Turn your Instagram into a store";
     let cancelled = false;
     supabase.auth.getSession().then(({ data }) => {
       if (!cancelled && data.session) navigate("/dashboard", { replace: true });
@@ -546,9 +568,22 @@ export default function Landing() {
 
   useReveal(rootRef);
 
+  // Floating testimonials: gently shift which review is elevated on a loop.
+  useEffect(() => {
+    const t = setInterval(() => setActiveTesti((i) => (i + 1) % 3), 3600);
+    return () => clearInterval(t);
+  }, []);
+
+  // Track viewport so the hero film can relocate responsively.
+  useEffect(() => {
+    const onResize = () => setVp({ w: window.innerWidth, h: window.innerHeight });
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   useLayoutEffect(() => {
     const reduced = prefersReducedMotion();
-    let removeMove: (() => void) | undefined;
 
     const ctx = gsap.context(() => {
       gsap.to(".scroll-progress", {
@@ -561,62 +596,13 @@ export default function Landing() {
       // Hero entrance
       const tl = gsap.timeline({ defaults: { ease: "power4.out" }, delay: 0.1 });
       tl.from(".hero-fade", { opacity: 0, y: 22, duration: 0.8, stagger: 0.09 })
-        .from(".hero-grad", { opacity: 0, y: 26, filter: "blur(8px)", duration: 0.9 }, 0.55)
-        .from(".hv-stage", { opacity: 0, y: 60, scale: 0.95, duration: 1, stagger: 0.15 }, "-=0.5")
-        .from(".hv-enter", { opacity: 0, scale: 0.85, y: 16, duration: 0.7, stagger: 0.12 }, "-=0.7");
-
-      // Mouse parallax on floating cards
-      const items = gsap.utils.toArray<HTMLElement>(".hv-item");
-      const setters = items.map((el) => ({
-        depth: Number(el.dataset.depth || 20),
-        xTo: gsap.quickTo(el, "x", { duration: 0.8, ease: "power3" }),
-        yTo: gsap.quickTo(el, "y", { duration: 0.8, ease: "power3" }),
-      }));
-      const hero = rootRef.current?.querySelector(".hero-visual") as HTMLElement | null;
-      const onMove = (e: MouseEvent) => {
-        if (!hero) return;
-        const r = hero.getBoundingClientRect();
-        const nx = (e.clientX - (r.left + r.width / 2)) / r.width;
-        const ny = (e.clientY - (r.top + r.height / 2)) / r.height;
-        setters.forEach((s) => { s.xTo(-nx * s.depth); s.yTo(-ny * s.depth); });
-      };
-      window.addEventListener("mousemove", onMove);
-      removeMove = () => window.removeEventListener("mousemove", onMove);
+        .from(".hero-grad", { opacity: 0, y: 26, filter: "blur(8px)", duration: 0.9 }, 0.55);
 
       // Hero visual scroll parallax + gentle scale-away
       gsap.to(".hero-visual", {
         yPercent: 12, scale: 0.97, opacity: 0.6, ease: "none",
         scrollTrigger: { trigger: ".hero-visual", start: "top 35%", end: "bottom top", scrub: true },
       });
-
-      // Studio: morph the demo accent through template colors
-      const accents = ["#e11d63", "#0ea5e9", "#10b981", "#8b5cf6", "#f59e0b", "#ec4899"];
-      const morph = gsap.timeline({ repeat: -1, scrollTrigger: { trigger: "#studio", start: "top 80%" } });
-      accents.forEach((c) => {
-        morph.to(".studio-accent", { backgroundColor: c, duration: 1.1, ease: "sine.inOut" })
-             .to(".studio-accent-text", { color: c, duration: 1.1, ease: "sine.inOut" }, "<");
-      });
-
-      // Studio color swatches pulse in sequence
-      gsap.utils.toArray<HTMLElement>(".studio-swatch").forEach((el, i) => {
-        gsap.to(el, {
-          scale: 1.25, duration: 0.55, ease: "sine.inOut", yoyo: true, repeat: -1, repeatDelay: 2.75,
-          delay: i * 1.1,
-          scrollTrigger: { trigger: "#studio", start: "top 80%" },
-        });
-      });
-
-      // DM story: question → typing → shop-link reply, replaying gently.
-      gsap.set(".dm-b1", { opacity: 0, scale: 0.8, transformOrigin: "bottom left" });
-      gsap.set(".dm-b2", { opacity: 0, scale: 0.8, transformOrigin: "bottom right" });
-      gsap.set(".dm-typing", { opacity: 0 });
-      gsap.timeline({ repeat: -1, repeatDelay: 5, delay: 1.9 })
-        .to(".dm-b1", { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2)" })
-        .to(".dm-typing", { opacity: 1, duration: 0.2 }, "+=0.55")
-        .to(".dm-typing", { opacity: 0, duration: 0.2 }, "+=1.1")
-        .to(".dm-b2", { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.8)" }, "<")
-        .to({}, { duration: 3 })
-        .to(".dm-b1, .dm-b2", { opacity: 0, duration: 0.45 });
 
       // CTA lightning bolt: periodic wiggle
       gsap.timeline({ repeat: -1, repeatDelay: 2.6, scrollTrigger: { trigger: ".cta-panel", start: "top 85%" } })
@@ -632,7 +618,7 @@ export default function Landing() {
       });
     }, rootRef);
 
-    return () => { removeMove?.(); ctx.revert(); };
+    return () => ctx.revert();
   }, []);
 
   const priceFor = (id: string) => {
@@ -645,6 +631,11 @@ export default function Landing() {
 
   return (
     <div id="top" ref={rootRef} className={cn("landing min-h-screen bg-background font-sans text-foreground antialiased", dark && "landing-dark")}>
+      {splash && (
+        <Suspense fallback={null}>
+          <SplashScreen onDone={() => { setSplash(false); try { sessionStorage.setItem("vela-splash-seen", "1"); } catch { /* private mode */ } }} />
+        </Suspense>
+      )}
       <div className="landing-noise" />
       <LandingNav active={activeSection} copy={copy} dark={dark} onToggleTheme={toggleTheme} lang={lang} onSetLang={setLang} />
 
@@ -656,14 +647,15 @@ export default function Landing() {
         <div className={cn("ls-aurora pointer-events-none absolute -top-44 left-1/4 h-[480px] w-[580px] rounded-full blur-[130px]", dark ? "bg-fuchsia-600/20" : "bg-fuchsia-400/25")} />
         <div className={cn("ls-aurora pointer-events-none absolute -top-24 right-1/4 h-[440px] w-[540px] rounded-full blur-[130px]", dark ? "bg-amber-500/10" : "bg-amber-300/25")} style={{ animationDelay: "-8s" }} />
 
-        <div className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col">
-          <div className="mx-auto mt-32 max-w-3xl text-center sm:mt-36">
-            <div className="hero-fade mx-auto mb-7 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-4 py-1.5 text-sm backdrop-blur">
+        <div className="relative mx-auto grid w-full max-w-[92rem] flex-1 grid-cols-1 items-center gap-8 pb-16 pt-28 lg:grid-cols-[minmax(0,0.66fr)_minmax(0,1.66fr)] lg:gap-6 lg:pb-0 lg:pt-0">
+          {/* LEFT — copy (kept above the film via z-20 so it stays readable where the film slides under it) */}
+          <div className="relative z-20 mx-auto max-w-lg text-center lg:mx-0 lg:text-left">
+            <div className="hero-fade mb-7 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-4 py-1.5 text-sm backdrop-blur">
               <span className={cn("h-2 w-2 rounded-full", BRAND)} />
               <ShinyText>{copy.hero.badge}</ShinyText>
             </div>
 
-            <h1 className="text-[2.5rem] leading-[1.05] tracking-tight sm:text-6xl lg:text-[4rem]">
+            <h1 className="text-[2.5rem] leading-[1.05] tracking-tight sm:text-6xl lg:text-[3.5rem]">
               <span className="block"><SplitText text={copy.hero.h1a} delay={0.15} /></span>
               <span className="block"><SplitText text={copy.hero.h1b} delay={0.35} /></span>
               <span className="hero-grad block"><GradientText>{copy.hero.h1c}</GradientText></span>
@@ -673,7 +665,7 @@ export default function Landing() {
               <BlurText delay={0.7} text={copy.hero.sub} />
             </p>
 
-            <div className="hero-fade mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <div className="hero-fade mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start">
               <Magnetic>
                 <StarBorder>
                   <Button asChild size="lg" className={cn("h-12 gap-2 rounded-full px-8 text-base text-white hover:opacity-90", BRAND)}>
@@ -690,97 +682,50 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="relative mt-10 flex-1">
-            <HeroVisual copy={copy} iframeOn={iframeOn} />
-          </div>
+          {/* RIGHT — the story film, scaled up from its right edge. The composition has
+              transparent margins around the window, so this grows the window bigger while its
+              left edge stays clear of the copy; overflow-visible lets its drop-shadow breathe. */}
+          {filmInHero && (
+            <div className="relative z-0 w-full overflow-visible lg:origin-right lg:scale-[1.15]">
+              <Suspense fallback={<div className="aspect-[16/10] w-full rounded-[1.75rem] border border-border bg-card" />}>
+                <div className="hero-visual w-full">
+                  <HeroSplit copy={copy} lang={lang} dark={dark} layout="landscape" />
+                </div>
+              </Suspense>
+            </div>
+          )}
         </div>
 
         {/* fade into the next section */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
       </section>
 
-      {/* ── Problem → Solution ── */}
-      <section className="px-5 py-12">
-        <div className="mx-auto grid max-w-4xl gap-5 sm:grid-cols-2">
-          <SpotlightCard spotColor="rgba(239, 68, 68, 0.08)" className="reveal ls-card rounded-3xl border border-border bg-card p-8">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-destructive/10 text-destructive"><X className="h-5 w-5" /></span>
-            <h3 className="mt-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">{copy.problem.title}</h3>
-            <ul className="mt-4 space-y-3 text-muted-foreground">
-              {copy.problem.items.map((t) => (
-                <li key={t} className="flex gap-2.5"><X className="mt-0.5 h-4 w-4 shrink-0 text-destructive/70" /> {t}</li>
-              ))}
-            </ul>
-          </SpotlightCard>
-          <SpotlightCard className="reveal ls-card grad-border rounded-3xl p-8">
-            <span className={cn("grid h-10 w-10 place-items-center rounded-xl text-white shadow-md shadow-fuchsia-500/25", BRAND)}><Check className="h-5 w-5" /></span>
-            <h3 className="mt-4 text-sm font-semibold uppercase tracking-wide"><GradientText>{copy.solution.title}</GradientText></h3>
-            <ul className="mt-4 space-y-3">
-              {copy.solution.items.map((t) => (
-                <li key={t} className="flex gap-2.5"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" /> {t}</li>
-              ))}
-            </ul>
-          </SpotlightCard>
-        </div>
-      </section>
+      {/* ── Trust strip (S3) — for every kind of shop ── */}
+      <Suspense fallback={<div className="h-[140px]" />}>
+        <TrustStrip lang={lang} cats={copy.marquee.cats} />
+      </Suspense>
 
-      {/* ── AWWWards-style typographic divider ── */}
-      <div className="overflow-hidden py-10">
-        <Marquee gradient={false} speed={45} autoFill>
-          <span className="ls-outline-text mx-4 text-6xl sm:text-7xl">
-            {copy.journey.divider.split("·")[0]} · <span className="fill">{copy.journey.divider.split("·")[1]}</span> ·
-          </span>
-        </Marquee>
+      {/* ── Problem (S4) — personified pain, GSAP ── */}
+      <Suspense fallback={<div className="h-[600px]" />}>
+        <ProblemSection lang={lang} />
+      </Suspense>
+
+      {/* ── How it works (S6) — sticky-scroll steps, GSAP ── */}
+      <Suspense fallback={<div className="h-[700px]" />}>
+        <HowItWorks lang={lang} />
+      </Suspense>
+
+      {/* CTA at peak understanding — right after seeing the flow */}
+      <div className="reveal flex flex-col items-center gap-3 px-5 pb-8">
+        <Magnetic>
+          <StarBorder>
+            <Button asChild size="lg" className={cn("h-12 gap-2 rounded-full px-8 text-base text-white hover:opacity-90", BRAND)}>
+              <Link to="/register">{copy.hero.ctaPrimary} <ArrowRight className="h-4 w-4" /></Link>
+            </Button>
+          </StarBorder>
+        </Magnetic>
+        <p className="text-sm text-muted-foreground"><Check className="mr-1 inline h-4 w-4 text-emerald-500" /> {copy.hero.risk}</p>
       </div>
-
-      {/* ── The full journey — Remotion motion graphic of the real flow ── */}
-      <section id="how" className="px-5 py-20">
-        <div className="mx-auto max-w-[88rem]">
-          <div className="reveal mx-auto max-w-2xl text-center">
-            <Eyebrow>{copy.journey.badge}</Eyebrow>
-            <h2 className="text-3xl tracking-tight sm:text-[2.6rem] sm:leading-tight">{copy.journey.title}</h2>
-            <p className="mt-3 text-lg text-muted-foreground">{copy.journey.sub}</p>
-          </div>
-          <div className="reveal mt-12">
-            <Suspense fallback={<div className="grid h-[420px] place-items-center rounded-3xl border border-border bg-card text-sm text-muted-foreground">…</div>}>
-              <JourneySection copy={copy} />
-            </Suspense>
-          </div>
-          {/* CTA at peak understanding — right after seeing the full flow */}
-          <div className="reveal mt-12 flex flex-col items-center gap-3">
-            <Magnetic>
-              <StarBorder>
-                <Button asChild size="lg" className={cn("h-12 gap-2 rounded-full px-8 text-base text-white hover:opacity-90", BRAND)}>
-                  <Link to="/register">{copy.hero.ctaPrimary} <ArrowRight className="h-4 w-4" /></Link>
-                </Button>
-              </StarBorder>
-            </Magnetic>
-            <p className="text-sm text-muted-foreground"><Check className="mr-1 inline h-4 w-4 text-emerald-500" /> {copy.hero.risk}</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Category marquee — breather after the film ── */}
-      <section className="overflow-hidden border-y border-border/60 bg-card/40 py-7">
-        <p className="mb-5 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{copy.marquee.title}</p>
-        <div className="ls-marquee-mask flex flex-col gap-3.5">
-          {[copy.marquee.cats.slice(0, 6), copy.marquee.cats.slice(6)].map((row, r) => (
-            <Marquee key={r} gradient={false} speed={r === 0 ? 36 : 28} direction={r === 0 ? "left" : "right"} pauseOnHover autoFill>
-              {row.map((c, i) => {
-                const Icon = CAT_ICONS[r * 6 + i];
-                const tint = CAT_TINTS[(r * 6 + i) % CAT_TINTS.length];
-                return (
-                  <span key={c} className="mx-2 flex items-center gap-2.5 rounded-full border border-border bg-card py-2 pl-2.5 pr-4 text-sm text-muted-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-fuchsia-500/40 hover:text-foreground hover:shadow-md">
-                    <span className={cn("grid h-6 w-6 place-items-center rounded-full", tint)}>
-                      <Icon className="h-3.5 w-3.5" />
-                    </span>
-                    {c}
-                  </span>
-                );
-              })}
-            </Marquee>
-          ))}
-        </div>
-      </section>
 
       {/* ── Stats — quiet receipt strip ── */}
       <section className="px-5 py-14">
@@ -798,101 +743,77 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Features (bento) ── */}
-      <section id="features" className="px-5 py-24">
+      {/* ── Feature showcase (S7) — alternating real-UI rows, GSAP ── */}
+      <Suspense fallback={<div className="h-[800px]" />}>
+        <FeatureShowcase lang={lang} />
+      </Suspense>
+
+      {/* ── Momentum band — "Ti fle. Vela shet." (dark, GSAP) ── */}
+      <Suspense fallback={<div className="h-[400px] bg-[#0b0a0e]" />}>
+        <MomentumBand lang={lang} />
+      </Suspense>
+
+      {/* ── Comparison — Instagram / Shopify / Vela (GSAP) ── */}
+      <Suspense fallback={<div className="h-[500px]" />}>
+        <ComparisonTable lang={lang} />
+      </Suspense>
+
+      {/* ── Calculator (S11) — "sa po lë në tavolinë?" ── */}
+      <Suspense fallback={<div className="h-[500px]" />}>
+        <Calculator lang={lang} />
+      </Suspense>
+
+      {/* ── Social proof & trust ── */}
+      <section id="reviews" className="px-5 py-24">
         <div className="mx-auto max-w-6xl">
           <div className="reveal mx-auto max-w-2xl text-center">
-            <Eyebrow>{copy.features.badge}</Eyebrow>
-            <h2 className="text-3xl tracking-tight sm:text-[2.6rem] sm:leading-tight">{copy.features.title}</h2>
-            <p className="mt-3 text-lg text-muted-foreground">{copy.features.sub}</p>
+            <Eyebrow>{copy.testimonials.title}</Eyebrow>
+            <h2 className="text-3xl tracking-tight sm:text-[2.6rem] sm:leading-tight">
+              {lang === "sq" ? "Shitësit që kaluan te Vela" : "Sellers who made the switch"}
+            </h2>
           </div>
-          <div className="mt-14 grid auto-rows-[1fr] gap-5 sm:grid-cols-3">
-            {copy.features.items.map((f, i) => {
-              const Icon = BENTO_ICONS[i];
+          <div className="mt-14 grid gap-5 sm:grid-cols-3">
+            {copy.testimonials.items.map((t, i) => {
+              const active = i === activeTesti;
+              const floatClass = ["ls-float", "ls-float2", "ls-float3"][i % 3];
               return (
-                <SpotlightCard key={f.title} className={cn("reveal ls-card glare-hover group relative overflow-hidden rounded-3xl border border-border bg-card p-7 transition-all duration-300 hover:-translate-y-1 hover:border-fuchsia-500/30", BENTO_SPANS[i])}>
-                  <span className="grid h-11 w-11 place-items-center rounded-2xl bg-muted text-foreground transition-colors group-hover:bg-foreground group-hover:text-background">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <h3 className={cn("mt-4 text-lg", BENTO_SPANS[i] && "lg:max-w-[55%]")}>{f.title}</h3>
-                  <p className={cn("mt-2 text-sm leading-relaxed text-muted-foreground", BENTO_SPANS[i] && "lg:max-w-[55%]")}>{f.body}</p>
-                  <BentoArt index={i} screen={copy.screen} />
-                </SpotlightCard>
+                <figure
+                  key={t.name}
+                  className={cn(
+                    "reveal ls-card relative rounded-3xl border bg-card p-7 transition-all duration-700",
+                    floatClass,
+                    active
+                      ? "-translate-y-1.5 border-fuchsia-500/40 shadow-[0_0_50px_-20px_rgba(217,70,239,0.5)]"
+                      : "border-border"
+                  )}
+                >
+                  <div className="flex gap-0.5 text-amber-400">
+                    {Array.from({ length: 5 }).map((_, s) => <Star key={s} className="h-4 w-4 fill-current" />)}
+                  </div>
+                  <blockquote className="mt-4 text-sm leading-relaxed text-foreground/90">“{t.quote}”</blockquote>
+                  <figcaption className="mt-5 flex items-center gap-3">
+                    <span className={cn("grid h-10 w-10 place-items-center rounded-full text-sm font-bold text-white", BRAND)}>
+                      {t.name.charAt(0)}
+                    </span>
+                    <div>
+                      <div className="text-sm font-semibold">{t.name}</div>
+                      <div className="text-xs text-muted-foreground">{t.role}</div>
+                    </div>
+                  </figcaption>
+                </figure>
               );
             })}
           </div>
-        </div>
-      </section>
-
-      {/* ── Storefront Studio spotlight ── */}
-      <section id="studio" className="px-5 py-24">
-        <div className="reveal ls-card relative mx-auto grid max-w-6xl items-center gap-12 overflow-hidden rounded-[2rem] border border-border bg-card p-8 sm:p-12 lg:grid-cols-2">
-          <div className={cn("ls-aurora pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full blur-3xl", dark ? "bg-fuchsia-600/15" : "bg-fuchsia-300/25")} />
-          <div>
-            <Eyebrow>{copy.studio.badge}</Eyebrow>
-            <h2 className="text-3xl tracking-tight sm:text-[2.6rem] sm:leading-tight">{copy.studio.titleA} <GradientText>{copy.studio.titleB}</GradientText></h2>
-            <p className="mt-4 text-lg leading-relaxed text-muted-foreground">{copy.studio.body}</p>
-            <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-              {copy.studio.checklist.map((t) => (
-                <li key={t} className="flex gap-2 text-sm"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" /> {t}</li>
-              ))}
-            </ul>
-            <Magnetic>
-              <Button asChild size="lg" className={cn("mt-8 gap-2 rounded-full px-7 text-white hover:opacity-90", BRAND)}>
-                <Link to="/register">{copy.studio.cta} <ArrowRight className="h-4 w-4" /></Link>
-              </Button>
-            </Magnetic>
-          </div>
-
-          <div className="relative">
-            {/* floating swatches */}
-            <div className="absolute -top-5 left-6 z-10 flex gap-2">
-              {["#e11d63", "#0ea5e9", "#10b981", "#8b5cf6", "#f59e0b"].map((c) => (
-                <span key={c} className="studio-swatch h-5 w-5 rounded-full border-2 border-background shadow-md" style={{ backgroundColor: c }} />
-              ))}
-            </div>
-            <Tilted max={6}>
-              <div className="relative rounded-2xl border border-border bg-background p-4 shadow-2xl shadow-black/10">
-                <div className="flex items-center gap-1.5 pb-3">
-                  <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
-                </div>
-                <div className="relative h-[420px] overflow-hidden rounded-xl border border-border">
-                  {/* Fallback: color-morphing mock (mobile + until the iframe loads) */}
-                  <div className={cn("absolute inset-0 transition-opacity duration-700", studioReady && "opacity-0")}>
-                    <div className="studio-accent flex items-center justify-between px-4 py-3 text-white" style={{ backgroundColor: "#e11d63" }}>
-                      <span className="text-sm font-semibold">{copy.studio.demoShop}</span>
-                      <ShoppingBag className="h-4 w-4" />
-                    </div>
-                    <div className="grid grid-cols-3 gap-2.5 p-3">
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className="rounded-lg border border-border p-2">
-                          <div className="aspect-square rounded-md bg-gradient-to-br from-muted to-accent" />
-                          <div className="mt-1.5 h-1.5 w-full rounded bg-muted-foreground/20" />
-                          <div className="studio-accent-text mt-1 text-[10px] font-bold" style={{ color: "#e11d63" }}>1,990 ALL</div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="p-3 pt-0">
-                      <div className="studio-accent rounded-lg py-2 text-center text-xs font-medium text-white" style={{ backgroundColor: "#e11d63" }}>{copy.screen.addToCart}</div>
-                    </div>
-                  </div>
-
-                  {/* The REAL storefront cycling through real Studio templates */}
-                  {iframeOn && (
-                    <iframe
-                      src="/demo-shop?cycle=1"
-                      title="Storefront Studio demo"
-                      loading="lazy"
-                      onLoad={() => setStudioReady(true)}
-                      className={cn("absolute left-0 top-0 origin-top-left transition-opacity duration-700", studioReady ? "opacity-100" : "opacity-0")}
-                      style={{ width: 1100, height: 970, transform: "scale(0.4327)", border: 0, pointerEvents: "none" }}
-                    />
-                  )}
-                </div>
-              </div>
-            </Tilted>
+          {/* trust badges */}
+          <div className="reveal mt-10 flex flex-wrap items-center justify-center gap-3">
+            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-muted-foreground shadow-sm">
+              <ShieldCheck className="h-4 w-4 text-emerald-500" />
+              {lang === "sq" ? "Enkriptim i nivelit bankar" : "Bank-level encryption"}
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-muted-foreground shadow-sm">
+              <Lock className="h-4 w-4" />
+              {lang === "sq" ? "Pagesa të sigurta · Raiffeisen (RaiAccept)" : "Payments secured · Raiffeisen (RaiAccept)"}
+            </span>
           </div>
         </div>
       </section>
@@ -914,6 +835,7 @@ export default function Landing() {
           <div className="mt-12 grid items-start gap-6 lg:grid-cols-3">
             {copy.pricing.plans.map((p) => {
               const featured = p.id === "pro";
+              const isFree = (PLAN_PRICES[p.id] ?? 0) === 0;
               return (
                 <SpotlightCard
                   key={p.id}
@@ -929,7 +851,7 @@ export default function Landing() {
                   )}
                   <h3 className="text-lg font-semibold">{p.name}</h3>
                   <p className="mt-1 text-sm text-muted-foreground">{p.blurb}</p>
-                  {(ANNUAL_FREE_MONTHS[p.id] ?? 0) > 0 && (
+                  {!isFree && (ANNUAL_FREE_MONTHS[p.id] ?? 0) > 0 && (
                     <div className={cn(
                       "grid transition-all duration-500 ease-out",
                       annual ? "mt-3 grid-rows-[1fr] opacity-100" : "mt-0 grid-rows-[0fr] opacity-0"
@@ -944,16 +866,30 @@ export default function Landing() {
                       </div>
                     </div>
                   )}
-                  <div className="mt-5 flex items-end gap-1.5">
-                    <span className={cn("text-4xl font-bold", featured && "brand-text")}>{fmt(priceFor(p.id))}</span>
-                    <span className="mb-1 text-sm text-muted-foreground">{copy.pricing.perMonth}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {annual ? copy.pricing.billedYearly(fmt(yearlyTotal(p.id))) : copy.pricing.billedMonthly}
-                  </p>
+                  {isFree ? (
+                    <>
+                      <div className="mt-5 flex items-end gap-1.5">
+                        <span className="text-4xl font-bold">{copy.pricing.freeLabel}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">{copy.pricing.freeForever}</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="mt-5 flex items-end gap-1.5">
+                        <span className={cn("text-4xl font-bold", featured && "brand-text")}>{fmt(priceFor(p.id))}</span>
+                        <span className="mb-1 text-sm text-muted-foreground">{copy.pricing.perMonth}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {annual ? copy.pricing.billedYearly(fmt(yearlyTotal(p.id))) : copy.pricing.billedMonthly}
+                      </p>
+                    </>
+                  )}
                   <Button asChild className={cn("mt-6 w-full rounded-full", featured && cn("text-white hover:opacity-90", BRAND))} variant={featured ? "default" : "outline"}>
-                    <Link to="/register">{copy.pricing.cta}</Link>
+                    <Link to="/register">{isFree ? copy.pricing.freeCta : copy.pricing.trialCta}</Link>
                   </Button>
+                  {!isFree && (
+                    <p className="mt-2 text-center text-[11px] text-muted-foreground">{copy.pricing.trialNote}</p>
+                  )}
                   <ul className="mt-6 space-y-3">
                     {p.features.map((f) => (
                       <li key={f} className="flex gap-2 text-sm"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" /> {f}</li>
@@ -963,6 +899,9 @@ export default function Landing() {
               );
             })}
           </div>
+
+          {/* trial reassurance — low friction to start, clear why to keep paying */}
+          <p className="reveal mx-auto mt-8 max-w-2xl text-center text-sm text-muted-foreground">{copy.pricing.reassure}</p>
         </div>
       </section>
 
@@ -981,27 +920,34 @@ export default function Landing() {
                 size="lg"
                 className={cn("mt-8 gap-2 rounded-full px-7 text-white hover:opacity-90", BRAND)}
                 onClick={() => {
-                  const subject = encodeURIComponent(lang === "sq" ? "Interes për InstantShop" : "Interested in InstantShop");
+                  const subject = encodeURIComponent(lang === "sq" ? "Interes për Vela" : "Interested in Vela");
                   const body = encodeURIComponent(copy.interest.placeholder);
-                  window.location.href = `mailto:info@squaddcrm.com?subject=${subject}&body=${body}`;
+                  window.location.href = `mailto:info@vela.al?subject=${subject}&body=${body}`;
                 }}
               >
                 <Sparkles className="h-4 w-4" /> {copy.interest.quick}
               </Button>
             </Magnetic>
             <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-              <Mail className="h-4 w-4" /> info@squaddcrm.com
+              <Mail className="h-4 w-4" /> info@vela.al
             </p>
           </div>
 
           <div className="flex flex-col gap-3">
+            <label htmlFor="interest-name" className="sr-only">{copy.interest.name}</label>
             <Input
+              id="interest-name"
+              name="name"
+              autoComplete="name"
               value={interestName}
               onChange={(e) => setInterestName(e.target.value)}
               placeholder={copy.interest.name}
               className="h-11 rounded-xl"
             />
+            <label htmlFor="interest-message" className="sr-only">{copy.interest.placeholder}</label>
             <Textarea
+              id="interest-message"
+              name="message"
               value={interestMsg}
               onChange={(e) => setInterestMsg(e.target.value)}
               placeholder={copy.interest.placeholder}
@@ -1012,9 +958,9 @@ export default function Landing() {
               variant="outline"
               className="h-11 gap-2 rounded-xl"
               onClick={() => {
-                const subject = encodeURIComponent(lang === "sq" ? "Interes për InstantShop" : "Interested in InstantShop");
+                const subject = encodeURIComponent(lang === "sq" ? "Interes për Vela" : "Interested in Vela");
                 const bodyText = `${interestMsg || copy.interest.placeholder}${interestName ? `\n\n— ${interestName}` : ""}`;
-                window.location.href = `mailto:info@squaddcrm.com?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
+                window.location.href = `mailto:info@vela.al?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
               }}
             >
               <Send className="h-4 w-4" /> {copy.interest.send}
@@ -1027,6 +973,7 @@ export default function Landing() {
       <section id="faq" className="px-5 py-24">
         <div className="mx-auto max-w-3xl">
           <div className="reveal text-center">
+            <Eyebrow>{lang === "sq" ? "Ndihmë" : "Help"}</Eyebrow>
             <h2 className="text-3xl tracking-tight sm:text-[2.6rem] sm:leading-tight">{copy.faq.title}</h2>
           </div>
           <div className="reveal ls-card mt-10 rounded-3xl border border-border bg-card px-6 sm:px-8">
@@ -1048,7 +995,7 @@ export default function Landing() {
           <div className="cta-grid pointer-events-none absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)", backgroundSize: "42px 42px" }} />
           <div className="ls-aurora pointer-events-none absolute -left-10 -top-10 h-60 w-60 rounded-full bg-white/20 blur-3xl" />
           <div className="ls-aurora pointer-events-none absolute -bottom-10 -right-10 h-60 w-60 rounded-full bg-white/10 blur-3xl" style={{ animationDelay: "-6s" }} />
-          <Zap className="cta-zap relative mx-auto h-10 w-10" />
+          <img src="/ship-icon-white.svg" alt="" className="cta-zap relative mx-auto h-12 w-12" />
           <h2 className="relative mt-4 text-3xl tracking-tight sm:text-[2.6rem] sm:leading-tight">{copy.cta.title}</h2>
           <p className="relative mx-auto mt-3 max-w-xl text-lg text-white/90">{copy.cta.sub}</p>
           <Magnetic>
@@ -1064,9 +1011,9 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col justify-between gap-10 sm:flex-row">
             <div className="max-w-xs">
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-3">
                 <BrandMark />
-                <span className="font-semibold">InstantShop</span>
+                <span className="font-display-brand text-lg font-semibold">Vela</span>
               </div>
               <p className="mt-3 text-sm text-muted-foreground">{copy.footer.tagline}</p>
             </div>
@@ -1089,7 +1036,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 sm:flex-row">
-            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} InstantShop</p>
+            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Vela</p>
             <p className="text-xs text-muted-foreground">{copy.footer.made}</p>
           </div>
         </div>

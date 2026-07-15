@@ -1,5 +1,6 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui-app";
 import { Lock, Pencil, Trash2, Copy, Wrench, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +12,7 @@ interface TypeCardProps {
 }
 
 export const TypeCard = ({ template, onEdit, onDelete, onDuplicate }: TypeCardProps) => {
+  const { t } = useTranslation();
   const specs: any[] = template.default_specifications ?? [];
   const options: any[] = template.default_options ?? [];
 
@@ -25,7 +27,9 @@ export const TypeCard = ({ template, onEdit, onDelete, onDuplicate }: TypeCardPr
           <div className="flex items-center gap-2 mb-2">
             {template.is_system && <Lock className="h-3 w-3 text-muted-foreground shrink-0" />}
             <span className="font-medium text-sm">{template.type_name}</span>
-            {!template.is_system && <Badge variant="outline" className="text-xs h-4 px-1 border-primary/30 text-primary">Custom</Badge>}
+            {!template.is_system && (
+              <StatusBadge tone="brand" size="sm">{t("categories.custom")}</StatusBadge>
+            )}
           </div>
 
           {/* Specs */}
@@ -34,7 +38,7 @@ export const TypeCard = ({ template, onEdit, onDelete, onDuplicate }: TypeCardPr
               <Wrench className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
               <div className="flex flex-wrap gap-1">
                 {specs.slice(0, 8).map((spec: any, i: number) => (
-                  <span key={i} className="text-xs text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded">
+                  <span key={i} className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                     {spec.label || spec.key}
                     {spec.unit && <span className="opacity-50 ml-0.5">({spec.unit})</span>}
                   </span>
@@ -50,9 +54,9 @@ export const TypeCard = ({ template, onEdit, onDelete, onDuplicate }: TypeCardPr
               <Palette className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
               <div className="flex flex-wrap gap-1">
                 {options.map((opt: any, i: number) => (
-                  <span key={i} className="text-xs text-primary/80 bg-primary/5 border border-primary/20 px-1.5 py-0.5 rounded">
+                  <span key={i} className="text-xs text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded">
                     {opt.name}
-                    {opt.common_values?.length > 0 && <span className="opacity-50 ml-0.5">({opt.common_values.length})</span>}
+                    {opt.common_values?.length > 0 && <span className="opacity-60 ml-0.5">({opt.common_values.length})</span>}
                   </span>
                 ))}
               </div>
@@ -61,7 +65,7 @@ export const TypeCard = ({ template, onEdit, onDelete, onDuplicate }: TypeCardPr
 
           {/* Empty state */}
           {specs.length === 0 && options.length === 0 && (
-            <p className="text-xs text-muted-foreground/50">No specifications or options defined</p>
+            <p className="text-xs text-muted-foreground/60">{t("categories.no_specs_options")}</p>
           )}
         </div>
 
@@ -70,7 +74,7 @@ export const TypeCard = ({ template, onEdit, onDelete, onDuplicate }: TypeCardPr
           {template.is_system ? (
             <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onDuplicate}>
               <Copy className="mr-1 h-3 w-3" />
-              Duplicate
+              {t("categories.duplicate")}
             </Button>
           ) : (
             <>

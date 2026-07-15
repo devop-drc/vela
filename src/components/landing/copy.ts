@@ -33,6 +33,7 @@ export interface LandingCopy {
   pricing: {
     badge: string; title: string; sub: string; monthly: string; annual: string; save: string;
     perMonth: string; billedMonthly: string; billedYearly: (n: string) => string; popular: string; cta: string;
+    freeLabel: string; freeForever: string; freeCta: string; trialCta: string; trialNote: string; reassure: string;
     plans: { id: string; name: string; blurb: string; features: string[] }[];
   };
   testimonials: { title: string; items: { name: string; role: string; quote: string }[] };
@@ -46,13 +47,13 @@ export const sq: LandingCopy = {
   hero: {
     badge: "Ndërtuar për shitësit e Instagramit në Shqipëri",
     h1a: "Ktheje Instagramin tënd",
-    h1b: "në një dyqan të vërtetë",
-    h1c: "brenda minutash.",
+    h1b: "në një dyqan të plotë",
+    h1c: "brenda pak minutash.",
     sub: "AI i kthen postimet e tua në dyqan të vërtetë — produkte, pagesa, porosi. Pa kod.",
-    ctaPrimary: "Nis provën falas 7-ditore",
+    ctaPrimary: "Fillo falas",
     ctaSecondary: "Shiko një demo live",
-    risk: "Anulo kurdo para ditës së 7-të · Pa rrezik",
-    circular: "INSTANTSHOP • DYQANI YT ONLINE • ",
+    risk: "Pa kartë krediti · Fillo në 2 minuta",
+    circular: "VELA • DYQANI YT ONLINE • ",
     dm: {
       ask: "Sa kushton fustani? 🙏",
       reply: "Porosite direkt këtu 👇",
@@ -66,7 +67,7 @@ export const sq: LandingCopy = {
     sub: "Dërgo interesimin tënd me një klik, ose na shkruaj një mesazh — të kthehemi brenda ditës.",
     name: "Emri yt",
     message: "Mesazhi",
-    placeholder: "Përshëndetje! Jam i interesuar për InstantShop për dyqanin tim në Instagram…",
+    placeholder: "Përshëndetje! Jam i interesuar për Vela për dyqanin tim në Instagram…",
     send: "Dërgo mesazhin",
     quick: "Shpreh interes me një klik",
     or: "ose",
@@ -106,7 +107,7 @@ export const sq: LandingCopy = {
     ],
   },
   solution: {
-    title: "Me InstantShop",
+    title: "Me Vela",
     items: [
       "Klientët porosisin vetë",
       "Gjithçka në një panel",
@@ -133,7 +134,7 @@ export const sq: LandingCopy = {
     phases: ["Lidhja", "Lansimi", "Klienti", "Porosia"],
     steps: [
       { t: "Postimet e tua në Instagram", d: "Gjithçka nis me katalogun që ke ndërtuar tashmë — postimet e tua.", phase: 0 },
-      { t: "Hyr në InstantShop", d: "Krijo llogarinë dhe lidh Instagram Business me një klik.", phase: 0 },
+      { t: "Hyr në Vela", d: "Krijo llogarinë dhe lidh Instagram Business me një klik.", phase: 0 },
       { t: "Sinkronizo produktet", d: "AI lexon çdo postim dhe nxjerr emrin, çmimin dhe kategorinë.", phase: 0 },
       { t: "Produktet gati në panel", d: "Katalogu yt shfaqet i plotë në panelin e administrimit.", phase: 1 },
       { t: "Vitrina live", d: "Dyqani publikohet në linkun tënd — gati për klientë.", phase: 1 },
@@ -169,7 +170,7 @@ export const sq: LandingCopy = {
   pricing: {
     badge: "Çmimet",
     title: "Çmime të thjeshta, në Lekë",
-    sub: "Nis me provë falas 7-ditore. Anulo kurdo para se të mbarojë.",
+    sub: "Fillo falas me katalogun tënd. Kur je gati të shesësh vërtet, provo Pro 7 ditë — pa kartë krediti.",
     monthly: "Mujore",
     annual: "Vjetore",
     save: "2 muaj falas me faturim vjetor",
@@ -178,9 +179,15 @@ export const sq: LandingCopy = {
     billedYearly: (n) => `Faturohet ${n} ALL në vit`,
     popular: "Më i zgjedhuri",
     cta: "Nis provën falas",
+    freeLabel: "Falas",
+    freeForever: "Përgjithmonë falas · pa kartë",
+    freeCta: "Fillo falas",
+    trialCta: "Provo 7 ditë falas",
+    trialNote: "7 ditë falas · pa kartë · anulo kurdo",
+    reassure: "Regjistrohu dhe lidh Instagram-in për 2 minuta. Pas provës, zgjidh një plan që dyqani të mbetet online — produktet e tua ruhen gjithmonë.",
     plans: [
-      { id: "starter", name: "Starter", blurb: "Nxirr dyqanin e parë online.", features: ["Vitrinë Instagram", "Deri në 50 produkte", "Porosi me para në dorë", "Analitikë bazë", "1 vitrinë"] },
-      { id: "pro", name: "Pro", blurb: "Gjithçka për të shitur seriozisht.", features: ["Produkte pa limit", "Storefront Studio (dizajn i personalizuar)", "Pagesa online me kartë", "Promocione & oferta", "Vlerësime produktesh", "Analitikë e plotë"] },
+      { id: "starter", name: "Starter", blurb: "Katalogu yt online — falas, përgjithmonë.", features: ["Vitrinë Instagram me linkun tënd", "Deri në 10 produkte", "Porosi me para në dorë (COD)", "Ndaje dyqanin kudo", "Analitikë bazë"] },
+      { id: "pro", name: "Pro", blurb: "Gjithçka për të shitur vërtet.", features: ["Produkte pa limit", "Pagesa online me kartë (RaiAccept)", "Storefront Studio (dizajn i personalizuar)", "Promocione & oferta", "Vlerësime produktesh", "Analitikë e plotë"] },
       { id: "business", name: "Business", blurb: "Për dyqane në rritje, me volum të lartë.", features: ["Gjithçka e Pro-s", "Suport me përparësi", "Analitikë e avancuar", "Limite më të larta të AI sync", "Shumë përdorues (së shpejti)"] },
     ],
   },
@@ -195,8 +202,8 @@ export const sq: LandingCopy = {
   faq: {
     title: "Pyetjet, të përgjigjura",
     items: [
-      { q: "Si funksionon prova falas 7-ditore?", a: "Ke akses të plotë në planin Pro për 7 ditë. Kartën ta kërkojmë në regjistrim dhe tarifohesh vetëm kur mbaron prova — anulo kurdo më parë dhe nuk paguan asgjë." },
-      { q: "Më duhet faqe interneti apo njohuri kodimi?", a: "Jo. InstantShop i kthen postimet e tua të Instagramit automatikisht në një vitrinë online. Ti thjesht lidh llogarinë dhe ndan linkun e dyqanit." },
+      { q: "Si funksionon prova falas 7-ditore?", a: "Regjistrohu dhe lidh Instagram-in — pa kartë krediti. Ke akses të plotë në Pro për 7 ditë. Kur mbaron prova, zgjidh një plan që dyqani të mbetet online; përndryshe vitrina kalon offline, por produktet e tua ruhen dhe rikthehen sapo aktivizon një plan." },
+      { q: "Më duhet faqe interneti apo njohuri kodimi?", a: "Jo. Vela i kthen postimet e tua të Instagramit automatikisht në një vitrinë online. Ti thjesht lidh llogarinë dhe ndan linkun e dyqanit." },
       { q: "Si paguajnë klientët?", a: "Mund të pranosh pagesa të sigurta me kartë përmes Raiffeisen Bank Albania (RaiAccept) dhe/ose para në dorë. Çmimet shfaqen në Lekë." },
       { q: "A mund ta personalizoj pamjen e dyqanit?", a: "Po — Storefront Studio të lejon të kontrollosh ngjyrat, fontet, strukturën, seksionet dhe kartat e produkteve me pamje live, ose nis nga një prej shablloneve tona." },
       { q: "Çfarë ndodh me postimet e mia në Instagram?", a: "Asgjë nuk ndryshon në Instagram. Ne lexojmë postimet e tua publike për të ndërtuar produktet në panelin tënd; ti vendos çfarë publikohet." },
@@ -204,9 +211,9 @@ export const sq: LandingCopy = {
     ],
   },
   cta: {
-    title: "Dyqani yt mund të jetë live që sot",
-    sub: "Nis provën falas — zgjat vetëm pak minuta.",
-    button: "Nis provën falas 7-ditore",
+    title: "Çfarë po pret? Ngri velën!",
+    sub: "Nga Instagram në e-commerce brenda pak minutave.",
+    button: "Fillo falas",
   },
   footer: {
     signup: "Regjistrohu",
@@ -222,13 +229,13 @@ export const en: LandingCopy = {
   hero: {
     badge: "Built for Instagram sellers in Albania",
     h1a: "Turn your Instagram",
-    h1b: "into a real store",
-    h1c: "in minutes.",
+    h1b: "into a full-scale store",
+    h1c: "in a couple minutes.",
     sub: "AI turns your posts into a real store — products, payments, orders. No code.",
-    ctaPrimary: "Start your 7-day free trial",
+    ctaPrimary: "Get Started for Free",
     ctaSecondary: "See a live demo",
-    risk: "Cancel anytime before day 7 · No risk",
-    circular: "INSTANTSHOP • YOUR SHOP ONLINE • ",
+    risk: "No credit card · Start in 2 minutes",
+    circular: "VELA • YOUR SHOP ONLINE • ",
     dm: {
       ask: "How much is the dress? 🙏",
       reply: "Order it right here 👇",
@@ -242,7 +249,7 @@ export const en: LandingCopy = {
     sub: "Send your interest with one click, or write us a message — we reply within the day.",
     name: "Your name",
     message: "Message",
-    placeholder: "Hi! I'm interested in InstantShop for my Instagram shop…",
+    placeholder: "Hi! I'm interested in Vela for my Instagram shop…",
     send: "Send message",
     quick: "Express interest in one click",
     or: "or",
@@ -282,7 +289,7 @@ export const en: LandingCopy = {
     ],
   },
   solution: {
-    title: "With InstantShop",
+    title: "With Vela",
     items: [
       "Customers order themselves",
       "Everything in one panel",
@@ -309,7 +316,7 @@ export const en: LandingCopy = {
     phases: ["Connect", "Launch", "Customer", "Orders"],
     steps: [
       { t: "Your Instagram posts", d: "It all starts with the catalog you've already built — your posts.", phase: 0 },
-      { t: "Log in to InstantShop", d: "Create your account and connect Instagram Business in one click.", phase: 0 },
+      { t: "Log in to Vela", d: "Create your account and connect Instagram Business in one click.", phase: 0 },
       { t: "Sync your products", d: "AI reads every post and extracts the name, price and category.", phase: 0 },
       { t: "Products ready in the panel", d: "Your full catalog appears in the admin dashboard.", phase: 1 },
       { t: "Storefront goes live", d: "Your shop is published on your link — ready for customers.", phase: 1 },
@@ -345,7 +352,7 @@ export const en: LandingCopy = {
   pricing: {
     badge: "Pricing",
     title: "Simple pricing, in Lek",
-    sub: "Start with a 7-day free trial. Cancel anytime before it ends.",
+    sub: "Start free with your catalogue. When you're ready to really sell, try Pro for 7 days — no credit card.",
     monthly: "Monthly",
     annual: "Annual",
     save: "2 months free with annual billing",
@@ -354,9 +361,15 @@ export const en: LandingCopy = {
     billedYearly: (n) => `Billed ${n} ALL yearly`,
     popular: "Most popular",
     cta: "Start free trial",
+    freeLabel: "Free",
+    freeForever: "Free forever · no card",
+    freeCta: "Start free",
+    trialCta: "Try 7 days free",
+    trialNote: "7 days free · no card · cancel anytime",
+    reassure: "Sign up and connect Instagram in 2 minutes. After the trial, pick a plan to keep your shop online — your products are always saved.",
     plans: [
-      { id: "starter", name: "Starter", blurb: "Get your first shop online.", features: ["Instagram storefront", "Up to 50 products", "Cash-on-delivery orders", "Basic analytics", "1 storefront"] },
-      { id: "pro", name: "Pro", blurb: "Everything to sell seriously.", features: ["Unlimited products", "Storefront Studio (custom design)", "Online card payments", "Promotions & sales", "Product reviews", "Full analytics"] },
+      { id: "starter", name: "Starter", blurb: "Your catalogue online — free, forever.", features: ["Instagram storefront with your link", "Up to 10 products", "Cash-on-delivery orders", "Share your shop anywhere", "Basic analytics"] },
+      { id: "pro", name: "Pro", blurb: "Everything to really sell.", features: ["Unlimited products", "Online card payments (RaiAccept)", "Storefront Studio (custom design)", "Promotions & sales", "Product reviews", "Full analytics"] },
       { id: "business", name: "Business", blurb: "For growing, high-volume shops.", features: ["Everything in Pro", "Priority support", "Advanced analytics", "Higher AI sync limits", "Multi-user (coming soon)"] },
     ],
   },
@@ -371,8 +384,8 @@ export const en: LandingCopy = {
   faq: {
     title: "Questions, answered",
     items: [
-      { q: "How does the 7-day free trial work?", a: "You get full Pro access for 7 days. We ask for a card at signup and you're only charged when the trial ends — cancel anytime before then and you won't pay anything." },
-      { q: "Do I need a website or coding skills?", a: "No. InstantShop turns your Instagram posts into a hosted storefront automatically. You just connect your account and share your shop link." },
+      { q: "How does the 7-day free trial work?", a: "Sign up and connect Instagram — no credit card. You get full Pro access for 7 days. When the trial ends, pick a plan to keep your shop online; otherwise your storefront goes offline, but your products are saved and come right back when you activate a plan." },
+      { q: "Do I need a website or coding skills?", a: "No. Vela turns your Instagram posts into a hosted storefront automatically. You just connect your account and share your shop link." },
       { q: "How do customers pay?", a: "You can accept secure card payments through Raiffeisen Bank Albania (RaiAccept) and/or cash on delivery. Prices are shown in Albanian Lek." },
       { q: "Can I customize how my shop looks?", a: "Yes — Storefront Studio lets you control colors, fonts, layout, sections and product cards with a live preview, or start from one of our templates." },
       { q: "What happens to my Instagram posts?", a: "Nothing changes on Instagram. We read your public posts to build products in your dashboard; you decide what goes live." },
@@ -380,9 +393,9 @@ export const en: LandingCopy = {
     ],
   },
   cta: {
-    title: "Your shop could be live today",
-    sub: "Start your free trial — it takes minutes.",
-    button: "Start your 7-day free trial",
+    title: "What are you waiting for? Raise the sail!",
+    sub: "From Instagram to e-commerce in minutes.",
+    button: "Get Started for Free",
   },
   footer: {
     signup: "Sign up",

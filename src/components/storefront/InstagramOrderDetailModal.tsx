@@ -275,16 +275,16 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
       )}
 
       <AlertDialog open={isConfirmReceiptAlertOpen} onOpenChange={setIsConfirmReceiptAlertOpen}>
-        <AlertDialogContent className="bg-white text-black rounded-lg">
+        <AlertDialogContent className="bg-background text-foreground rounded-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-bold text-gray-800">Confirm Order Receipt?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-gray-500">
+            <AlertDialogTitle className="text-xl font-bold text-foreground">Confirm Order Receipt?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground">
               By confirming receipt, you are marking this order as **Fulfilled**. This action cannot be reversed.
               Please ensure you have received all items in good condition.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isUpdatingOrder} className="text-gray-800 hover:bg-gray-100">Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isUpdatingOrder} className="text-foreground hover:bg-muted">Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmReceipt} disabled={isUpdatingOrder} className="bg-red-500 hover:bg-red-600 text-white">
               {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirm Receipt
@@ -294,15 +294,15 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
       </AlertDialog>
 
       <AlertDialog open={isMarkCompletedAlertOpen} onOpenChange={setIsMarkCompletedAlertOpen}>
-        <AlertDialogContent className="bg-white text-black rounded-lg">
+        <AlertDialogContent className="bg-background text-foreground rounded-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-bold text-gray-800">Confirm you received this order?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-gray-500">
+            <AlertDialogTitle className="text-xl font-bold text-foreground">Confirm you received this order?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground">
               This confirms you've received your order and paid on delivery. Once confirmed, you'll be able to leave a review. This can't be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isUpdatingOrder} className="text-gray-800 hover:bg-gray-100">Not yet</AlertDialogCancel>
+            <AlertDialogCancel disabled={isUpdatingOrder} className="text-foreground hover:bg-muted">Not yet</AlertDialogCancel>
             <AlertDialogAction onClick={handleMarkCompletedAndPaid} disabled={isUpdatingOrder} className="bg-green-600 hover:bg-green-700 text-white">
               {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Yes, I received it
@@ -312,15 +312,15 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
       </AlertDialog>
 
       <AlertDialog open={isCancelOrderAlertOpen} onOpenChange={setIsCancelOrderAlertOpen}>
-        <AlertDialogContent className="bg-white text-black rounded-lg">
+        <AlertDialogContent className="bg-background text-foreground rounded-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-bold text-gray-800">Are you sure you want to cancel this order?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-gray-500">
+            <AlertDialogTitle className="text-xl font-bold text-foreground">Are you sure you want to cancel this order?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground">
               This action cannot be undone. Your order will be marked as **Cancelled**, and if applicable, product inventory will be restored.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isUpdatingOrder} className="text-gray-800 hover:bg-gray-100">No, keep order</AlertDialogCancel>
+            <AlertDialogCancel disabled={isUpdatingOrder} className="text-foreground hover:bg-muted">No, keep order</AlertDialogCancel>
             <AlertDialogAction onClick={handleCancelOrder} disabled={isUpdatingOrder} className="bg-red-500 hover:bg-red-600 text-white">
               {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Yes, cancel order
@@ -330,13 +330,13 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
       </AlertDialog>
 
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl bg-white text-black rounded-lg h-[90vh] flex flex-col" aria-describedby="instagram-order-detail-description">
-          <DialogHeader className="p-4 border-b border-gray-200 pb-4 flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
+        <DialogContent className="max-w-2xl bg-background text-foreground rounded-lg h-[90vh] flex flex-col" aria-describedby="instagram-order-detail-description">
+          <DialogHeader className="p-4 border-b border-border pb-4 flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
               {getStatusIcon(order.status)}
               Order #{order.id.substring(0, 8)}
             </DialogTitle>
-            <DialogDescription className="text-sm text-gray-500">
+            <DialogDescription className="text-sm text-muted-foreground">
               Details for your order placed on {formatDate(order.created_at)}.
             </DialogDescription>
           </DialogHeader>
@@ -346,22 +346,22 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
           <ScrollArea className="flex-1 pr-4 md:pr-6">
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><User className="h-4 w-4 text-red-500" /> Customer</div><p className="text-gray-800">{order.customer_name}</p></div>
-                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><Mail className="h-4 w-4 text-red-500" /> Email</div><p className="text-gray-800">{order.customer_email}</p></div>
-                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><Calendar className="h-4 w-4 text-red-500" /> Date</div><p className="text-gray-800">{formatDateTime(order.created_at)}</p></div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-muted-foreground"><User className="h-4 w-4 text-red-500" /> Customer</div><p className="text-foreground">{order.customer_name}</p></div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-muted-foreground"><Mail className="h-4 w-4 text-red-500" /> Email</div><p className="text-foreground">{order.customer_email}</p></div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4 text-red-500" /> Date</div><p className="text-foreground">{formatDateTime(order.created_at)}</p></div>
                 <div className="space-y-2 text-sm md:text-base">
-                  <div className="flex items-center gap-2 text-gray-500"><Banknote className="h-4 w-4 text-red-500" /> Total</div>
-                  <p className="font-semibold text-gray-800">
+                  <div className="flex items-center gap-2 text-muted-foreground"><Banknote className="h-4 w-4 text-red-500" /> Total</div>
+                  <p className="font-semibold text-foreground">
                     {formatCurrency(convertCurrency(order.total_amount, order.currency), shopDetails?.currency)}
                   </p>
                 </div>
-                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><CreditCard className="h-4 w-4 text-red-500" /> Payment Method</div><p className="capitalize text-gray-800">{order.payment_method.replace(/_/g, ' ')}</p></div>
-                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-gray-500"><CheckCircle className="h-4 w-4 text-red-500" /> Payment Status</div><p className="capitalize text-gray-800">{order.payment_status}</p></div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-muted-foreground"><CreditCard className="h-4 w-4 text-red-500" /> Payment Method</div><p className="capitalize text-foreground">{order.payment_method.replace(/_/g, ' ')}</p></div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-muted-foreground"><CheckCircle className="h-4 w-4 text-red-500" /> Payment Status</div><p className="capitalize text-foreground">{order.payment_status}</p></div>
               </div>
-              <Separator className="bg-gray-200" />
+              <Separator className="bg-border" />
               <div>
-                <h3 className="font-semibold mb-4 flex items-center gap-2 text-gray-800 text-base md:text-lg"><MapPin className="h-5 w-5 text-red-500" /> Shipping Details</h3>
-                <div className="space-y-2 text-sm text-gray-500 p-3 border rounded-md bg-gray-50">
+                <h3 className="font-semibold mb-4 flex items-center gap-2 text-foreground text-base md:text-lg"><MapPin className="h-5 w-5 text-red-500" /> Shipping Details</h3>
+                <div className="space-y-2 text-sm text-muted-foreground p-3 border rounded-md bg-muted">
                   <p><span className="font-medium">Address:</span> {order.shipping_address || 'N/A'}</p>
                   <p><span className="font-medium">City:</span> {order.shipping_city || 'N/A'}</p>
                   <p><span className="font-medium">State/Province:</span> {order.shipping_state || 'N/A'}</p>
@@ -370,21 +370,21 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
                   {order.shipping_notes_seller && <p><span className="font-medium flex items-center gap-1"><StickyNote className="h-4 w-4" /> Notes for Seller:</span> {order.shipping_notes_seller}</p>}
                   {order.shipping_notes_courier && <p><span className="font-medium flex items-center gap-1"><Truck className="h-4 w-4" /> Notes for Courier:</span> {order.shipping_notes_courier}</p>}
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-muted-foreground mt-2">
                   Shipping address cannot be changed after an order is placed. Please contact support for urgent changes.
                 </p>
               </div>
-              <Separator className="bg-gray-200" />
+              <Separator className="bg-border" />
               <div>
-                <h3 className="font-semibold mb-4 flex items-center gap-2 text-gray-800 text-base md:text-lg"><Package className="h-5 w-5 text-red-500" /> Items Ordered</h3>
-                {isLoadingItems ? <Loader2 className="animate-spin text-gray-500" /> : (
+                <h3 className="font-semibold mb-4 flex items-center gap-2 text-foreground text-base md:text-lg"><Package className="h-5 w-5 text-red-500" /> Items Ordered</h3>
+                {isLoadingItems ? <Loader2 className="animate-spin text-muted-foreground" /> : (
                   <div className="space-y-4">
                     {items.map((item, index) => (
-                      <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-2 border rounded-md bg-gray-50"> {/* Added responsive flex */}
-                        <MediaItem src={item.products.media_url} alt={item.products.name} className="h-16 w-16 rounded-md object-cover bg-gray-100 flex-shrink-0" />
+                      <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-2 border rounded-md bg-muted"> {/* Added responsive flex */}
+                        <MediaItem src={item.products.media_url} alt={item.products.name} className="h-16 w-16 rounded-md object-cover bg-muted flex-shrink-0" />
                         <div className="flex-1 w-full"> {/* Ensure text wraps */}
-                          <p className="font-medium text-gray-800 text-sm md:text-base">{item.products.name}</p>
-                          <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                          <p className="font-medium text-foreground text-sm md:text-base">{item.products.name}</p>
+                          <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                           {/* Reviews allowed only after the order is received/paid (Fulfilled). */}
                           {order.status === 'Fulfilled' && item.product_id && (
                             reviewedProductIds.has(item.product_id) ? (
@@ -396,7 +396,7 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
                             )
                           )}
                         </div>
-                        <p className="font-medium text-gray-800 text-sm md:text-base flex-shrink-0">
+                        <p className="font-medium text-foreground text-sm md:text-base flex-shrink-0">
                           {formatCurrency(convertCurrency(item.price_at_purchase * item.quantity, 'ALL', shopDetails?.currency), shopDetails?.currency)}
                         </p>
                       </div>
@@ -404,33 +404,33 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
                   </div>
                 )}
               </div>
-              <Separator className="bg-gray-200" />
+              <Separator className="bg-border" />
               <div>
-                <h3 className="font-semibold mb-4 flex items-center gap-2 text-gray-800 text-base md:text-lg"><MessageSquareWarning className="h-5 w-5 text-red-500" /> Issue Report</h3>
-                {isLoadingDispute ? <Loader2 className="animate-spin text-gray-500" /> : dispute ? (
-                  <div className="space-y-3 p-3 border rounded-md bg-gray-50">
+                <h3 className="font-semibold mb-4 flex items-center gap-2 text-foreground text-base md:text-lg"><MessageSquareWarning className="h-5 w-5 text-red-500" /> Issue Report</h3>
+                {isLoadingDispute ? <Loader2 className="animate-spin text-muted-foreground" /> : dispute ? (
+                  <div className="space-y-3 p-3 border rounded-md bg-muted">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"> {/* Responsive flex */}
-                      <p className="font-medium flex items-center gap-2 text-gray-800 text-sm md:text-base"><Hash className="h-4 w-4" /> Dispute ID: {dispute.id.substring(0, 8)}</p>
+                      <p className="font-medium flex items-center gap-2 text-foreground text-sm md:text-base"><Hash className="h-4 w-4" /> Dispute ID: {dispute.id.substring(0, 8)}</p>
                       <Badge className={cn("text-white text-xs md:text-sm", getStatusColor(dispute.status))}>{dispute.status}</Badge>
                     </div>
-                    <p className="text-sm text-gray-800"><span className="font-medium">Reason:</span> {dispute.reason}</p>
-                    {dispute.message && <p className="text-sm text-gray-800"><span className="font-medium">Customer's Message:</span> {dispute.message}</p>}
+                    <p className="text-sm text-foreground"><span className="font-medium">Reason:</span> {dispute.reason}</p>
+                    {dispute.message && <p className="text-sm text-foreground"><span className="font-medium">Customer's Message:</span> {dispute.message}</p>}
                     {dispute.reply_message && (
                       <div className="space-y-2 mt-3">
-                        <Label className="flex items-center gap-2 text-sm text-gray-700"><Reply className="h-4 w-4" /> Seller's Reply</Label>
-                        <Textarea id="replyMessage" rows={3} value={dispute.reply_message} readOnly className="pl-3 pt-3 h-auto min-h-[80px] px-3 py-2 border-gray-300 bg-gray-100 text-gray-800 text-sm md:text-base" /> {/* Adjusted padding */}
+                        <Label className="flex items-center gap-2 text-sm text-foreground"><Reply className="h-4 w-4" /> Seller's Reply</Label>
+                        <Textarea id="replyMessage" rows={3} value={dispute.reply_message} readOnly className="pl-3 pt-3 h-auto min-h-[80px] px-3 py-2 border-border bg-background text-foreground text-sm md:text-base" /> {/* Adjusted padding */}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500">No dispute reported for this order.</p>
+                  <p className="text-sm text-muted-foreground">No dispute reported for this order.</p>
                 )}
               </div>
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 border-t border-gray-200 flex-col sm:flex-row sm:justify-end sm:items-center gap-2 flex-shrink-0">
+          <DialogFooter className="pt-4 border-t border-border flex-col sm:flex-row sm:justify-end sm:items-center gap-2 flex-shrink-0">
             <div className="flex items-center gap-2 mr-auto sm:mr-0">
-              <span className="text-sm text-gray-700">Status:</span>
+              <span className="text-sm text-foreground">Status:</span>
               <Badge className={cn("text-white text-sm md:text-base", getStatusColor(order.status))}>{order.status}</Badge>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -456,12 +456,12 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
                 </Button>
               )}
               {!dispute && order.status !== 'Cancelled' && (
-                <Button variant="outline" onClick={() => setIsReportIssueModalOpen(true)} disabled={isUpdatingOrder} className="text-gray-800 hover:bg-gray-100 w-full sm:w-auto text-sm md:text-base">
+                <Button variant="outline" onClick={() => setIsReportIssueModalOpen(true)} disabled={isUpdatingOrder} className="text-foreground hover:bg-muted w-full sm:w-auto text-sm md:text-base">
                   <MessageSquareWarning className="mr-2 h-4 w-4" />
                   Report Issue
                 </Button>
               )}
-              <Button variant="ghost" onClick={onClose} className="text-gray-800 hover:bg-gray-100 w-full sm:w-auto text-sm md:text-base">Close</Button>
+              <Button variant="ghost" onClick={onClose} className="text-foreground hover:bg-muted w-full sm:w-auto text-sm md:text-base">Close</Button>
             </div>
           </DialogFooter>
         </DialogContent>

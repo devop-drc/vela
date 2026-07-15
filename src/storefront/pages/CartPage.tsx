@@ -7,10 +7,8 @@ import { CartContents } from '../components/Cart';
 export const CartPage = () => {
   const navigate = useNavigate();
   return (
-    <div className="sf-container py-8 max-w-3xl">
-      <div className="sf-glass min-h-[60vh] flex flex-col overflow-hidden">
-        <CartContents onClose={() => navigate(-1)} />
-      </div>
+    <div className="sf-container py-8 max-w-6xl">
+      <CartContents variant="page" onClose={() => navigate(-1)} />
     </div>
   );
 };

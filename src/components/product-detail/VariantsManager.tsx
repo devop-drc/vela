@@ -10,13 +10,16 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Plus, Trash2, Search, Settings2, RefreshCw, Layers, X, ArrowUpDown,
+  Plus, Trash2, Settings2, RefreshCw, Layers, X, ArrowUpDown,
   CheckCircle2, AlertTriangle, XCircle, PackageX,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { currencies } from "@/lib/currencies";
 import { getStockStatus } from "@/lib/stock";
+import { stockTone, toneDotBg } from "@/lib/status";
+import { StatCard, SearchInput, EmptyState } from "@/components/ui-app";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type OptionValue = { id?: string; value: string; price_difference: number; is_active: boolean; is_default: boolean; inventory?: number };
@@ -84,6 +87,10 @@ const serializeState = (options: ProductOption[], variants: VariantRow[]): strin
 };
 
 const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurrency, convertCurrency }: VariantsManagerProps, ref: any) => {
+  const { user } = useAuth();
+  // Kept in a ref so handleSave's useCallback identity doesn't churn on auth changes.
+  const userIdRef = React.useRef<string | null>(user?.id ?? null);
+  React.useEffect(() => { userIdRef.current = user?.id ?? null; }, [user?.id]);
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<ProductOption[]>([]);
   const [variants, setVariants] = useState<VariantRow[]>([]);
@@ -286,8 +293,7 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
 
   // ── Save (hardened: syncs option_values stock + product base inventory/status) ─
   const handleSave = useCallback(async () => {
-    const { data: { user } = {} } = await supabase.auth.getUser();
-    if (!user) throw new Error("You're not signed in. Please sign in to save options and variants.");
+    if (!userIdRef.current) throw new Error("You're not signed in. Please sign in to save options and variants.");
 
     // Only save options that have a name, and values that have a value — blank
     // rows are incomplete and would collide on the unique (product_id, name) /
@@ -375,12 +381,17 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
         </div>
 
         {options.length === 0 ? (
-          <div className="rounded-lg border border-dashed py-8 text-center">
-            <Layers className="h-7 w-7 text-muted-foreground/40 mx-auto mb-2" />
-            <p className="text-sm font-medium">No options yet</p>
-            <p className="text-xs text-muted-foreground mt-0.5 mb-3">Add an option like <b>Size</b> or <b>Color</b> to generate variants.</p>
-            <Button type="button" size="sm" variant="outline" className="h-8" onClick={addOption}><Plus className="h-3.5 w-3.5 mr-1.5" /> Add your first option</Button>
-          </div>
+          <EmptyState
+            compact
+            icon={Layers}
+            title="No options yet"
+            description={<>Add an option like <b>Size</b> or <b>Color</b> to generate variants.</>}
+            action={
+              <Button type="button" size="sm" variant="outline" className="h-8" onClick={addOption}>
+                <Plus className="h-3.5 w-3.5 mr-1.5" /> Add your first option
+              </Button>
+            }
+          />
         ) : (
           <div className="space-y-3">
             {options.map((opt, idx) => (
@@ -427,25 +438,20 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
 
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {[
-              { label: "Total units", value: stats.units.toLocaleString(), cls: "text-foreground", Icon: Layers },
-              { label: "In stock", value: stats.inS, cls: "text-emerald-600", Icon: CheckCircle2 },
-              { label: "Low stock", value: stats.low, cls: "text-amber-600", Icon: AlertTriangle },
-              { label: "Out of stock", value: stats.out, cls: "text-red-600", Icon: XCircle },
-            ].map(s => (
-              <div key={s.label} className="rounded-lg border px-3 py-2">
-                <div className={cn("text-lg font-bold flex items-center gap-1.5", s.cls)}><s.Icon className="h-4 w-4" />{s.value}</div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">{s.label}</div>
-              </div>
-            ))}
+            <StatCard title="Total units" value={stats.units} icon={Layers} tone="brand" />
+            <StatCard title="In stock" value={stats.inS} icon={CheckCircle2} tone="success" />
+            <StatCard title="Low stock" value={stats.low} icon={AlertTriangle} tone="warning" />
+            <StatCard title="Out of stock" value={stats.out} icon={XCircle} tone="danger" />
           </div>
 
           {/* Toolbar */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 min-w-[180px]">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input placeholder="Search variants or SKU…" value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-sm" />
-            </div>
+            <SearchInput
+              value={search}
+              onValueChange={setSearch}
+              placeholder="Search variants or SKU…"
+              containerClassName="h-8 flex-1 min-w-[180px]"
+            />
             <div className="flex items-center rounded-md border p-0.5 gap-0.5">
               {([["all", "All"], ["in", "In"], ["low", "Low"], ["out", "Out"]] as [StatusFilter, string][]).map(([k, lbl]) => (
                 <button key={k} type="button" onClick={() => setStatusFilter(k)} className={cn("px-2.5 h-7 text-xs rounded transition-colors", statusFilter === k ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground")}>{lbl}</button>
@@ -503,7 +509,6 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
             ) : (
               <div className="divide-y max-h-[420px] overflow-y-auto">
                 {sorted.map((r, ri) => {
-                  const st = stockStatus(r.inventory || 0);
                   return (
                     <div key={r.combination_key} className={cn("grid items-center gap-2 px-3 py-1.5 hover:bg-muted/20", ri % 2 === 1 && "bg-muted/[0.04]", !r.is_active && "opacity-55")} style={{ gridTemplateColumns: '28px 1fr 96px 110px 1fr 48px 52px' }}>
                       <Checkbox checked={!!selected[r.combination_key]} onCheckedChange={c => setSelected(prev => ({ ...prev, [r.combination_key]: !!c }))} className="mx-auto" />
@@ -513,7 +518,7 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
                         ))}
                       </div>
                       <div className="flex items-center justify-end gap-1.5">
-                        <span className={cn("h-1.5 w-1.5 rounded-full flex-shrink-0", st === "in" ? "bg-emerald-500" : st === "low" ? "bg-amber-500" : "bg-red-500")} />
+                        <span className={cn("h-1.5 w-1.5 rounded-full flex-shrink-0", toneDotBg[stockTone(r.inventory || 0)])} />
                         <Input type="number" min={0} value={r.inventory} onChange={e => patchVariant(r.combination_key, { inventory: Math.max(0, parseInt(e.target.value || '0', 10) || 0) })} className="h-7 w-16 text-sm text-right" />
                       </div>
                       <span className="text-sm font-medium tabular-nums">{formatCurrency(convertCurrency(rowPriceALL(r), 'ALL', displayCurrency), displayCurrency)}</span>

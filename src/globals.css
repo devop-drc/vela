@@ -11,37 +11,39 @@
 
 @layer base {
   :root {
-    /* Color Palette */
-    --background: 220 10% 98%; /* Light, cool grey */
-    --foreground: 220 10% 20%; /* Charcoal grey */
-    --muted: 220 10% 95%;
-    --muted-foreground: 220 10% 45%; /* Lighter shade of grey */
-    
-    --card: 220 10% 100%; /* White card background */
-    --card-foreground: 220 10% 20%;
+    /* Color Palette — Vela brand (magenta→purple, violet-cast neutrals) */
+    --background: 300 20% 99%; /* violet-cast near-white */
+    --foreground: 290 18% 14%; /* violet-cast charcoal */
+    --muted: 300 18% 96%;
+    --muted-foreground: 290 8% 44%;
 
-    --popover: 220 10% 100%;
-    --popover-foreground: 220 10% 20%;
+    --card: 0 0% 100%; /* white card background */
+    --card-foreground: 290 18% 14%;
 
-    --primary: 220 10% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 290 18% 14%;
+
+    --primary: 300 72% 45%; /* Vela magenta-purple */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 10% 95%;
-    --secondary-foreground: 220 10% 15%;
+    --secondary: 300 25% 95%;
+    --secondary-foreground: 300 40% 25%;
 
-    --accent: 220 10% 92%;
-    --accent-foreground: 220 10% 15%;
+    --accent: 300 40% 95%; /* soft brand tint for hover/selected */
+    --accent-foreground: 300 55% 30%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --warning: 48 96% 59%;
-    --warning-foreground: 48 96% 10%;
-    --info: 210 90% 50%;
-    --info-foreground: 0 0% 98%;
+    --success: 142 64% 38%; /* emerald — positive / fulfilled / in-stock (dark enough for AA text on /10 tint) */
+    --success-foreground: 0 0% 100%;
+    --warning: 35 92% 42%; /* amber — pending / low-stock (darkened for AA text) */
+    --warning-foreground: 40 96% 10%;
+    --info: 214 84% 46%; /* blue — in-progress / neutral-info */
+    --info-foreground: 0 0% 100%;
 
-    --border: 220 10% 85%; /* Subtle border for inputs */
-    --input: 220 10% 85%; /* Input line color */
-    --ring: 220 10% 15%; /* Focus ring color */
+    --border: 295 18% 89%; /* subtle violet-grey border */
+    --input: 295 18% 89%;
+    --ring: 292 84% 55%; /* Vela fuchsia focus ring */
 
     /* Safe area insets */
     --sat: env(safe-area-inset-top, 0px);
@@ -54,37 +56,43 @@
 
     /* Typography */
     --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-    --font-heading: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --font-heading: "Clash Display", "Space Grotesk", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   }
 
   .dark {
-    /* Dark theme variables */
-    --background: 220 10% 8%;
-    --foreground: 220 10% 96%;
-    --muted: 220 10% 14%;
-    --muted-foreground: 220 10% 70%;
+    /* Dark theme — Vela brand (violet-cast neutrals, fuchsia primary) */
+    --background: 265 22% 6%;
+    --foreground: 285 15% 96%;
+    --muted: 265 16% 15%;
+    --muted-foreground: 280 10% 68%;
 
-    --card: 220 10% 10%;
-    --card-foreground: 220 10% 96%;
+    --card: 264 20% 9%;
+    --card-foreground: 285 15% 96%;
 
-    --popover: 220 10% 10%;
-    --popover-foreground: 220 10% 96%;
+    --popover: 264 20% 9%;
+    --popover-foreground: 285 15% 96%;
 
-    --primary: 220 10% 92%;
-    --primary-foreground: 220 10% 10%;
+    --primary: 300 80% 65%;
+    --primary-foreground: 300 40% 8%;
 
-    --secondary: 220 10% 16%;
-    --secondary-foreground: 220 10% 92%;
+    --secondary: 265 18% 16%;
+    --secondary-foreground: 285 15% 92%;
 
-    --accent: 220 10% 16%;
-    --accent-foreground: 220 10% 92%;
+    --accent: 280 25% 18%;
+    --accent-foreground: 285 15% 92%;
 
-    --destructive: 0 72% 50%;
+    --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 98%;
+    --success: 142 55% 55%; /* lighter emerald so tinted chips read on dark */
+    --success-foreground: 150 40% 8%;
+    --warning: 42 92% 60%; /* lighter amber for dark surfaces */
+    --warning-foreground: 40 96% 8%;
+    --info: 213 90% 66%; /* lighter blue for dark surfaces */
+    --info-foreground: 214 60% 10%;
 
-    --border: 220 10% 22%;
-    --input: 220 10% 22%;
-    --ring: 220 10% 65%;
+    --border: 265 16% 20%;
+    --input: 265 16% 20%;
+    --ring: 292 84% 62%;
   }
 }
 
@@ -95,24 +103,56 @@
 
   body {
     @apply bg-background text-foreground font-sans;
+    /* Crisper type rendering for a more premium feel. */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* Proportional numerals by default; data surfaces opt into tabular-nums. */
+    font-feature-settings: "cv11", "ss01";
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading font-light tracking-wide;
+    /* Clash Display reads best at medium weight with tight tracking. */
+    @apply font-heading font-medium tracking-tight;
+    /* Balance short headings so they don't leave a lonely last word. */
+    text-wrap: balance;
   }
 
-  /* Custom Scrollbar */
-  ::-webkit-scrollbar { width: 14px; height: 14px; }
+  /* Avoid typographic orphans in body copy for a more polished read. */
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Brand-tinted text selection. */
+  ::selection { background: hsl(292 84% 55% / 0.22); }
+
+  /* Custom Scrollbar — slim & elegant. */
+  ::-webkit-scrollbar { width: 11px; height: 11px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--accent-foreground) / 0);
-    border-radius: 7px;
-    border: 4px solid transparent;
+    background-color: hsl(var(--muted-foreground) / 0);
+    border-radius: 8px;
+    border: 3px solid transparent;
     background-clip: content-box;
     transition: background-color .3s;
   }
-  :hover::-webkit-scrollbar-thumb { background-color: hsl(var(--accent-foreground) / 0.3); }
-  ::-webkit-scrollbar-thumb:hover { background-color: hsl(var(--accent-foreground) / 0.5); }
+  :hover::-webkit-scrollbar-thumb { background-color: hsl(var(--muted-foreground) / 0.25); }
+  ::-webkit-scrollbar-thumb:hover { background-color: hsl(var(--muted-foreground) / 0.45); }
+  * { scrollbar-width: thin; scrollbar-color: hsl(var(--muted-foreground) / 0.25) transparent; }
+
+  /* Any element that elevates on hover animates smoothly (premium micro-feel). */
+  [class*="hover:shadow"] { transition: box-shadow .22s ease, transform .22s ease; }
+
+  /* Global reduced-motion floor — the JS motion hooks also honour this, but this
+     covers CSS transitions/animations everywhere so the whole app calms down. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer components {
@@ -288,18 +328,54 @@
     letter-spacing: var(--sf-tracking, 0);
     text-transform: var(--sf-heading-transform, none);
   }
+
+  /* ── Modular type scale ──────────────────────────────────────────────────
+     The Studio's Base size + Scale ratio compute --sf-text-xs…5xl (tokens.ts).
+     We remap the text-* utilities INSIDE the storefront root to that scale, so
+     every existing component's `text-3xl` etc. instantly responds to the
+     controls — no per-component rewrite. Line-heights tighten as size grows. */
+  .sf-root { font-size: var(--sf-text-base, 1rem); }
+  .sf-root .text-xs   { font-size: var(--sf-text-xs);   }
+  .sf-root .text-sm   { font-size: var(--sf-text-sm);   }
+  .sf-root .text-base { font-size: var(--sf-text-base); }
+  .sf-root .text-lg   { font-size: var(--sf-text-lg);   line-height: 1.4; }
+  .sf-root .text-xl   { font-size: var(--sf-text-xl);   line-height: 1.35; }
+  .sf-root .text-2xl  { font-size: var(--sf-text-2xl);  line-height: 1.25; }
+  .sf-root .text-3xl  { font-size: var(--sf-text-3xl);  line-height: 1.15; }
+  .sf-root .text-4xl  { font-size: var(--sf-text-4xl);  line-height: 1.1;  }
+  .sf-root .text-5xl  { font-size: var(--sf-text-5xl);  line-height: 1.05; }
+  .sf-root .text-6xl  { font-size: calc(var(--sf-text-5xl) * 1.25); line-height: 1; }
+  /* Hero display title — large, fluid, independent of the text-* cap. */
+  .sf-root .sf-hero-title { font-size: var(--sf-text-hero, 4.5rem); line-height: 1.04; }
+
   .sf-root .sf-container {
     width: 100%;
     max-width: var(--sf-container-max, 1280px);
     margin-inline: auto;
-    padding-inline: 1.5rem;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 640px) {
+    .sf-root .sf-container { padding-inline: 1.5rem; }
+  }
+
+  /* Keyboard focus — one on-brand ring for every interactive element in the
+     storefront (cards, nav, cart, controls) so keyboard users always see focus. */
+  .sf-root a:focus-visible,
+  .sf-root button:focus-visible,
+  .sf-root [tabindex]:focus-visible,
+  .sf-root input:focus-visible,
+  .sf-root select:focus-visible,
+  .sf-root textarea:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: var(--sf-radius-card, 6px);
   }
 
   /* Glassmorphism: opt-in surfaces use .sf-glass; effect only when enabled. */
   .sf-glass {
     background: hsl(var(--card));
     border: var(--sf-border-width, 1px) solid hsl(var(--border));
-    border-radius: var(--radius);
+    border-radius: var(--sf-radius-card, var(--radius));
     box-shadow: var(--shadow-card);
   }
   .glass-enabled .sf-glass {
@@ -309,6 +385,83 @@
   }
 
   .sf-card { box-shadow: var(--shadow-card); }
+
+  /* ── Element system — atomic, token-driven, variant-switchable ──────────
+     Sections/components compose from these so every Studio control is live and
+     the whole storefront stays visually consistent. */
+
+  /* Surface: the card/panel base (glass-aware). */
+  .sf-root .sf-surface {
+    background: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border: var(--sf-border-width, 1px) solid hsl(var(--border));
+    border-radius: var(--sf-radius-card, var(--radius));
+    box-shadow: var(--shadow-card);
+  }
+  .glass-enabled .sf-surface {
+    background: hsl(var(--card) / var(--sf-glass-alpha, 0.7));
+    backdrop-filter: blur(var(--sf-glass-blur, 12px));
+    -webkit-backdrop-filter: blur(var(--sf-glass-blur, 12px));
+  }
+
+  /* Spacing helpers driven by density/section tokens. */
+  .sf-root .sf-section { padding-block: var(--sf-section-space, 4rem); }
+  .sf-root .sf-pad     { padding: var(--sf-card-pad, 1rem); }
+  .sf-root .sf-gap     { gap: var(--sf-gap, 1rem); }
+  .sf-root .sf-grid    { display: grid; gap: var(--sf-grid-gap, 1.5rem); }
+
+  /* Eyebrow / section label. */
+  .sf-root .sf-eyebrow {
+    font-size: var(--sf-text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-weight: 600;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Chip / tag pill. */
+  .sf-root .sf-chip {
+    display: inline-flex; align-items: center; gap: .35em;
+    padding: .25em .7em;
+    border-radius: var(--radius-full);
+    background: hsl(var(--muted));
+    color: hsl(var(--muted-foreground));
+    font-size: var(--sf-text-xs);
+    line-height: 1.2;
+  }
+
+  /* Button element — variant via [data-btn], shape via [data-btn-shape]. */
+  .sf-root .sf-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: .5em;
+    padding: .7em 1.4em;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: var(--sf-text-sm);
+    border: var(--sf-border-width, 1px) solid transparent;
+    cursor: pointer;
+    transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, opacity .18s ease;
+  }
+  .sf-root .sf-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); }
+  .sf-root .sf-btn:disabled { opacity: .5; pointer-events: none; }
+  [data-btn="solid"]    .sf-btn { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  [data-btn="outline"]  .sf-btn { background: transparent; color: hsl(var(--primary)); border-color: hsl(var(--primary)); }
+  [data-btn="soft"]     .sf-btn { background: hsl(var(--primary) / .12); color: hsl(var(--primary)); }
+  [data-btn="gradient"] .sf-btn { background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--sf-primary-2))); color: hsl(var(--primary-foreground)); }
+  [data-btn-shape="pill"]  .sf-btn { border-radius: var(--radius-full); }
+  [data-btn-shape="sharp"] .sf-btn { border-radius: 0; }
+
+  /* Badge element — variant via [data-badge]. */
+  .sf-root .sf-badge {
+    display: inline-flex; align-items: center; gap: .3em;
+    padding: .2em .6em;
+    border-radius: var(--radius-sm);
+    font-size: var(--sf-text-xs);
+    font-weight: 600;
+    line-height: 1;
+  }
+  [data-badge="solid"]   .sf-badge { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  [data-badge="soft"]    .sf-badge { background: hsl(var(--primary) / .12); color: hsl(var(--primary)); }
+  [data-badge="outline"] .sf-badge { background: transparent; color: hsl(var(--primary)); border: 1px solid hsl(var(--primary) / .4); }
 
   /* Hover effects — gated by data-hover so it's a single switch. */
   .sf-hoverable { transition: transform .25s ease, box-shadow .25s ease; }
@@ -386,6 +539,19 @@
     background-size: 46px 46px;
     -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 78%);
             mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 78%);
+  }
+
+  /* Let the hero story-film's drop-shadow spill past the Remotion composition box.
+     @remotion/player wraps the composition in a couple of overflow:hidden divs
+     (ancestors of .__remotion-player) that clip to the display box, boxing the
+     window's soft shadow at the top/bottom edges — most visibly on the big
+     landscape cards. We unclip ONLY those player wrappers (direct child + grandchild
+     of the stage) and the player itself; the inner cards/Ken-Burns <Img> keep their
+     own overflow:hidden much deeper in the tree. */
+  .film-stage > div,
+  .film-stage > div > div,
+  .film-stage .__remotion-player {
+    overflow: visible !important;
   }
 
   @media (prefers-reduced-motion: reduce) {

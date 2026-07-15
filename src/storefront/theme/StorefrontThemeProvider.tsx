@@ -168,10 +168,13 @@ export const StorefrontThemeProvider = ({ config, children, className }: Props) 
     } else if (bg.type === 'gradient' && bg.gradient) {
       s.backgroundImage = `linear-gradient(${bg.gradient.angle}deg, hsl(${bg.gradient.from}), hsl(${bg.gradient.to}))`;
     } else {
-      s.backgroundColor = bg.color ? `hsl(${bg.color})` : `hsl(${tokens.vars['--background']})`;
+      // A stored solid `bg.color` is authored for LIGHT surfaces. In dark mode
+      // it would paint the page light while the chrome goes dark (the "horrible
+      // dark mode" bug), so fall through to the derived dark `--background`.
+      s.backgroundColor = bg.color && mode === 'light' ? `hsl(${bg.color})` : `hsl(${tokens.vars['--background']})`;
     }
     return s;
-  }, [bg, tokens.vars]);
+  }, [bg, tokens.vars, mode]);
 
   return (
     <StorefrontConfigContext.Provider value={config}>

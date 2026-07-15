@@ -64,21 +64,21 @@ export const InstagramReportIssueModal = ({ isOpen, onClose, orderId, customerEm
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md bg-white text-black rounded-lg">
-        <DialogHeader className="border-b border-gray-200 pb-4">
-          <DialogTitle className="text-xl font-bold text-gray-800">Report an Issue with Order #{orderId.substring(0, 8)}</DialogTitle>
-          <DialogDescription className="text-sm text-gray-500">
+      <DialogContent className="max-w-md bg-background text-foreground rounded-lg">
+        <DialogHeader className="border-b border-border pb-4">
+          <DialogTitle className="text-xl font-bold text-foreground">Report an Issue with Order #{orderId.substring(0, 8)}</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
             Please tell us what went wrong with your order. We'll review it and get back to you.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="reason" className="text-sm text-gray-700">Reason for Issue</Label>
+            <Label htmlFor="reason" className="text-sm text-foreground">Reason for Issue</Label>
             <Select value={reason} onValueChange={setReason}>
-              <SelectTrigger id="reason" className="border-gray-300 bg-gray-50 text-gray-800">
+              <SelectTrigger id="reason" className="border-border bg-background text-foreground">
                 <SelectValue placeholder="Select a reason" />
               </SelectTrigger>
-              <SelectContent className="bg-white text-gray-800">
+              <SelectContent className="bg-card text-foreground">
                 <SelectItem value="Delivery Late">Delivery Late</SelectItem>
                 <SelectItem value="Product Missing">Product Missing</SelectItem>
                 <SelectItem value="Product Damaged">Product Damaged</SelectItem>
@@ -88,11 +88,11 @@ export const InstagramReportIssueModal = ({ isOpen, onClose, orderId, customerEm
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="message" className="text-sm text-gray-700">Your Message (Optional)</Label>
-            <Textarea id="message" rows={4} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Provide more details about the issue..." className="border-gray-300 bg-gray-50 text-gray-800" />
+            <Label htmlFor="message" className="text-sm text-foreground">Your Message (Optional)</Label>
+            <Textarea id="message" rows={4} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Provide more details about the issue..." className="border-border bg-background text-foreground" />
           </div>
-          <DialogFooter className="border-t border-gray-200 pt-4">
-            <Button type="button" variant="ghost" onClick={onClose} className="text-gray-800 hover:bg-gray-100">Cancel</Button>
+          <DialogFooter className="border-t border-border pt-4">
+            <Button type="button" variant="ghost" onClick={onClose} className="text-foreground hover:bg-muted">Cancel</Button>
             <Button type="submit" disabled={isSubmitting || !reason} className="bg-red-500 hover:bg-red-600 text-white">
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Submit Report

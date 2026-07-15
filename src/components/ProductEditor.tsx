@@ -11,6 +11,7 @@ import { showError, showSuccess } from "@/utils/toast";
 import { ProductViewMode } from "./product-detail/ProductViewMode";
 import { ProductEditMode } from "./product-detail/ProductEditMode";
 import { useShop } from "@/contexts/ShopContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const productSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -79,6 +80,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
   const [specs, setSpecs] = useState<any[]>([]);
   const [viewRefreshKey, setViewRefreshKey] = useState(0);
   const { shopDetails, convertCurrency } = useShop();
+  const { user } = useAuth();
 
   // Fetch specs when product loads
   useEffect(() => {
@@ -145,7 +147,6 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
     if (!file) return;
 
     setIsUploading(true);
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       showError("You must be logged in to upload an image.");
       setIsUploading(false);
@@ -182,7 +183,6 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
     const fileName = urlToDelete.split('/').pop();
     if (!fileName) return;
 
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     const filePath = `${user.id}/${product!.id}/${fileName}`;

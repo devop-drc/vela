@@ -39,8 +39,8 @@ export const ViewAllCtaBlock = ({ props }: Props) => {
       <div
         className="flex flex-col items-center gap-5 px-6 py-10 text-center md:flex-row md:justify-between md:px-12 md:text-left"
         style={{
-          borderRadius: 'var(--radius)',
-          background: `linear-gradient(120deg, hsl(${config.theme.tokens.primary}), hsl(${config.theme.tokens.accent}))`,
+          borderRadius: 'var(--sf-radius-card)',
+          background: 'linear-gradient(120deg, hsl(var(--primary)), hsl(var(--sf-primary-2)))',
         }}
       >
         <div>

@@ -813,13 +813,6 @@ export const StorefrontStudio = () => {
               </div>
               <div className="ml-auto flex items-center gap-2">
                 <SaveIndicator status={saveStatus} />
-                <label
-                  className="flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium"
-                  title="Apply this design's colors to your dashboard too — updates live as you edit"
-                >
-                  <Switch checked={dashboardMatch} onCheckedChange={setDashboardMatchesStorefront} className="scale-90" />
-                  <span className="hidden xl:inline">Match dashboard</span>
-                </label>
                 <Button variant="outline" size="sm" className="shrink-0" onClick={() => setSaveOpen(true)}>
                   <BookmarkPlus className="h-3.5 w-3.5 mr-1.5" /> Save design
                 </Button>

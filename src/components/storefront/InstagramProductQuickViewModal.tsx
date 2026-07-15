@@ -27,7 +27,7 @@ interface InstagramProductQuickViewModalProps {
 
 const DetailDisplayRow = ({ label, icon: Icon, children }: { label: string, icon: React.ElementType, children: React.ReactNode }) => (
     <div className="flex flex-col">
-        <Label className="text-xs text-gray-500 flex items-center gap-1">
+        <Label className="text-xs text-muted-foreground flex items-center gap-1">
           <Icon className="h-3 w-3 text-red-500" />
           {label}
         </Label>
@@ -128,12 +128,12 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
   if (isLoading || !shopDetails) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md bg-white text-black rounded-lg h-[90vh] flex flex-col p-0">
-          <DialogHeader className="p-4 border-b border-gray-200 pb-4 flex-shrink-0">
-            <DialogTitle className="text-xl font-bold text-gray-800">Product Details</DialogTitle>
+        <DialogContent className="max-w-md bg-background text-foreground rounded-lg h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-4 border-b border-border pb-4 flex-shrink-0">
+            <DialogTitle className="text-xl font-bold text-foreground">Product Details</DialogTitle>
           </DialogHeader>
           <div className="flex justify-center items-center py-8 flex-1">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         </DialogContent>
       </Dialog>
@@ -143,11 +143,11 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
   if (error || !product) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md bg-white text-black rounded-lg h-[90vh] flex flex-col p-0">
-          <DialogHeader className="p-4 border-b border-gray-200 pb-4 flex-shrink-0">
-            <DialogTitle className="text-xl font-bold text-gray-800">Product Not Found</DialogTitle>
+        <DialogContent className="max-w-md bg-background text-foreground rounded-lg h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-4 border-b border-border pb-4 flex-shrink-0">
+            <DialogTitle className="text-xl font-bold text-foreground">Product Not Found</DialogTitle>
           </DialogHeader>
-          <div className="text-center py-8 text-gray-600 flex-1">
+          <div className="text-center py-8 text-muted-foreground flex-1">
             <p>The product you are looking for does not exist or is no longer available.</p>
           </div>
         </DialogContent>
@@ -256,20 +256,20 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md bg-white text-black rounded-lg h-[90vh] flex flex-col p-0">
-        <DialogHeader className="p-4 border-b border-gray-200 flex-shrink-0">
-          <DialogTitle className="text-xl font-bold text-gray-800">Product Details</DialogTitle>
-          <DialogDescription className="text-sm text-gray-500">Quick view of {product.name}</DialogDescription>
+      <DialogContent className="max-w-md bg-background text-foreground rounded-lg h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-4 border-b border-border flex-shrink-0">
+          <DialogTitle className="text-xl font-bold text-foreground">Product Details</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">Quick view of {product.name}</DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-1 pr-4">
           <div className="p-4 space-y-4">
             {/* Product Media */}
             <div>
-              <Carousel setApi={setApi} className="w-full rounded-lg overflow-hidden border border-gray-200">
+              <Carousel setApi={setApi} className="w-full rounded-lg overflow-hidden border border-border">
                 <CarouselContent>
                   {mediaItems.map((url: string, index: number) => (
                     <CarouselItem key={index}>
-                      <div className="relative aspect-square w-full bg-gray-100 flex items-center justify-center">
+                      <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
                         <MediaItem src={url} alt={`${product.name} - image ${index + 1}`} className={cn(isOutOfStock && "grayscale")} />
                       </div>
                     </CarouselItem>
@@ -290,7 +290,7 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
                         key={index}
                         className={cn(
                           "h-1.5 w-1.5 rounded-full",
-                          index === currentSlide ? "bg-red-500" : "bg-gray-300"
+                          index === currentSlide ? "bg-red-500" : "bg-muted-foreground/40"
                         )}
                       />
                     ))}
@@ -302,11 +302,11 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
 
             {/* Product Info */}
             <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-500">
+              <p className="text-sm font-medium text-muted-foreground">
                 <span>{product.category || 'Uncategorized'}</span>
                 {product.details?.type && <span> &middot; {product.details.type}</span>}
               </p>
-              <h1 className="text-2xl font-bold text-gray-800 leading-tight flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold text-foreground leading-tight flex flex-wrap items-center gap-2">
                 {product.name}
                 {isOutOfStock && (
                   <Badge variant="secondary" className="text-sm bg-amber-500 text-white flex-shrink-0">
@@ -326,32 +326,32 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
               <div className="flex items-baseline gap-3">
                 {hasDiscount && originalDisplayPrice !== null ? (
                   <>
-                    <p className="text-base text-gray-500 line-through">
+                    <p className="text-base text-muted-foreground line-through">
                       {formatCurrency(originalDisplayPrice, shopDetails?.currency)}
                     </p>
-                    <p className={cn("text-2xl font-bold", isOutOfStock ? "text-gray-500" : "text-green-600")}>
+                    <p className={cn("text-2xl font-bold", isOutOfStock ? "text-muted-foreground" : "text-green-600")}>
                       {formatCurrency(discountedPrice, shopDetails?.currency)}
                       {product.pricing_type === 'subscription' && (
-                          <span className="text-base font-light text-gray-500">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                          <span className="text-base font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                       )}
                     </p>
                   </>
                 ) : (
-                  <p className="text-2xl font-bold text-gray-800">
+                  <p className="text-2xl font-bold text-foreground">
                     {originalDisplayPrice != null ? formatCurrency(originalDisplayPrice, shopDetails?.currency) : 'N/A'}
                     {product.pricing_type === 'subscription' && (
-                        <span className="text-base font-light text-gray-500">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                        <span className="text-base font-light text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
                     )}
                   </p>
                 )}
               </div>
             </div>
 
-            <p className="text-sm text-gray-600 leading-relaxed">{product.caption || "No description provided."}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{product.caption || "No description provided."}</p>
 
             {product.tags && product.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {product.tags.map((tag: string) => <Badge key={tag} variant="outline" className="text-xs bg-gray-100 text-gray-700 border-gray-300">{tag}</Badge>)}
+                {product.tags.map((tag: string) => <Badge key={tag} variant="outline" className="text-xs bg-muted text-foreground border-border">{tag}</Badge>)}
               </div>
             )}
 
@@ -360,7 +360,7 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
               <div className="space-y-4 pt-2">
                 {options.length > 0 && options.map((opt) => (
                   <div key={opt.id} className="space-y-2">
-                    <Label className="text-sm text-gray-700 capitalize">{opt.name}</Label>
+                    <Label className="text-sm text-foreground capitalize">{opt.name}</Label>
                     <div className="flex flex-wrap gap-2">
                       {opt.values.map(val => {
                         const isOOS = val.inventory <= 0 || !val.is_active;
@@ -374,7 +374,7 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
                             disabled={isOOS}
                             className={cn(
                               "text-sm h-9 px-3",
-                              isSelected ? "bg-red-500 text-white border-red-500 hover:bg-red-600" : "bg-gray-50 text-gray-800 border-gray-300 hover:bg-gray-100",
+                              isSelected ? "bg-red-500 text-white border-red-500 hover:bg-red-600" : "bg-muted text-foreground border-border hover:bg-accent",
                               isOOS && "opacity-60 cursor-not-allowed"
                             )}
                             title={isOOS ? "Out of stock / inactive" : undefined}
@@ -394,7 +394,7 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
                       const Icon = getAttributeIcon(key);
                       return (
                         <DetailDisplayRow key={key} label={key.replace(/_/g, ' ')} icon={Icon}>
-                          <p className="font-medium text-sm text-gray-800 pt-1">{Array.isArray(value) ? value.join(', ') : String(value)}</p>
+                          <p className="font-medium text-sm text-foreground pt-1">{Array.isArray(value) ? value.join(', ') : String(value)}</p>
                         </DetailDisplayRow>
                       );
                     })}
@@ -406,13 +406,13 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
             {/* Quantity & Add to Cart */}
             {product.pricing_type === 'one_time' && product.inventory !== null && product.inventory > 0 && (
               <div className="flex items-center gap-4 pt-3">
-                <div className="flex items-center border border-gray-300 rounded-md">
+                <div className="flex items-center border border-border rounded-md">
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
                     disabled={quantity <= 1}
-                    className="h-9 w-9 rounded-r-none text-gray-800 hover:bg-gray-100"
+                    className="h-9 w-9 rounded-r-none text-foreground hover:bg-accent"
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
@@ -420,7 +420,7 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
                     type="number"
                     value={quantity}
                     onChange={(e) => setQuantity(Math.max(1, Math.min(product.inventory || 1, parseInt(e.target.value) || 1)))}
-                    className="w-14 text-center border-y-0 border-x border-gray-300 focus-visible:ring-0 text-sm h-9 rounded-none bg-white"
+                    className="w-14 text-center border-y-0 border-x border-border focus-visible:ring-0 text-sm h-9 rounded-none bg-transparent"
                     min={1}
                     max={product.inventory || 1}
                   />
@@ -429,7 +429,7 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
                     size="icon"
                     onClick={() => setQuantity(prev => Math.min(product.inventory || 1, prev + 1))}
                     disabled={quantity >= (product.inventory || 1)}
-                    className="h-9 w-9 rounded-l-none flex items-center justify-center text-gray-800 hover:bg-gray-100"
+                    className="h-9 w-9 rounded-l-none flex items-center justify-center text-foreground hover:bg-accent"
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -441,7 +441,7 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
               </div>
             )}
             {product.pricing_type === 'one_time' && (product.inventory === null || product.inventory <= 0) && (
-              <Button size="lg" className="w-full text-base bg-gray-500 hover:bg-gray-600 text-white rounded-md" disabled>
+              <Button size="lg" className="w-full text-base bg-muted text-muted-foreground rounded-md" disabled>
                 Out of Stock
               </Button>
             )}

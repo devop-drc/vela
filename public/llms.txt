@@ -1,0 +1,41 @@
+# Vela
+
+> Vela turns an Instagram Business profile into a full online shop using AI. It is built for sellers in Albania who currently sell through Instagram DMs. AI reads a seller's Instagram posts and turns them into products (names, prices, categories, variants); customers then buy from a real storefront with card payments in Albanian Lek (via Raiffeisen Bank Albania's RaiAccept) or cash on delivery. No website or coding is required.
+
+## What Vela does
+
+- **Connect Instagram**: A seller links their Instagram Business account (via Facebook OAuth). No code, no separate website to build.
+- **AI builds the catalogue**: Google Gemini analyzes each post's photo and caption to extract the product name, price, category, attributes and variants automatically.
+- **Sell with a real storefront**: The seller shares a shop link. Customers browse products and check out — instead of negotiating in DMs.
+- **Payments**: Secure card payments in Albanian Lek (ALL) through Raiffeisen Bank Albania (RaiAccept), and/or cash on delivery (COD), which is common in Albania.
+- **Storefront Studio**: Sellers customize colors, fonts, layout and sections with a live preview, or start from a template.
+- **Dashboard**: Orders, inventory, promotions, product reviews and live analytics in one place.
+
+## Who it is for
+
+Instagram-based sellers and small businesses in Albania — boutiques, resellers, handmade/artisan brands — who get customers on Instagram but lose sales in DM chaos, have no checkout, track stock by hand, and have no sales data.
+
+## Pricing
+
+All prices are in Albanian Lek (ALL). Monthly or annual billing (annual gives 2 months free on paid plans).
+
+- **Starter — Free forever (no credit card).** An Instagram-style storefront/catalogue with up to 10 products and cash-on-delivery orders. Good for using Vela as a shareable product catalogue.
+- **Pro — 1,990 ALL/month.** Unlimited products, online card payments (RaiAccept), Storefront Studio (custom design), promotions, product reviews and full analytics.
+- **Business — 3,990 ALL/month.** Everything in Pro plus priority support, advanced analytics and higher AI sync limits.
+
+Paid plans include a **7-day free trial that requires no credit card** — sellers just sign up and connect Instagram. After the trial, they choose a plan to keep the storefront online; otherwise the storefront goes offline while their products stay saved.
+
+## Key facts
+
+- Language: Albanian (primary) and English.
+- Currency: Albanian Lek (ALL).
+- Country served: Albania.
+- Payment provider: Raiffeisen Bank Albania — RaiAccept (card), plus cash on delivery.
+- AI: Google Gemini for product extraction from Instagram posts.
+- No coding or separate website required.
+
+## Links
+
+- Homepage: https://instantshop.al/
+- Live demo shop: https://instantshop.al/demo
+- Sign up: https://instantshop.al/register

@@ -68,15 +68,16 @@ export const AnnouncementMarqueeBlock = ({ props }: Props) => {
 
   // Promotion → clickable, underlined, tag icon. Info → plain, its own icon,
   // slightly lighter weight so the two read as clearly different kinds.
-  const Chip = ({ item, light }: { item: BarItem; light?: boolean }) => {
+  const Chip = ({ item, light, wrap }: { item: BarItem; light?: boolean; wrap?: boolean }) => {
     const color = light ? 'text-primary-foreground' : 'text-primary';
+    const nowrap = wrap ? 'max-w-full text-center' : 'whitespace-nowrap';
     if (item.kind === 'promo') {
       return (
         <button
           type="button"
           onClick={() => openPromotion(item.promotionId!)}
           aria-label={`Shop the “${item.message}” promotion`}
-          className={cn('group flex items-center gap-2 whitespace-nowrap px-4 text-base font-bold transition-opacity hover:opacity-80', color)}
+          className={cn('group flex items-center gap-2 px-4 text-base font-bold transition-opacity hover:opacity-80', nowrap, color)}
         >
           <Tag className="h-4 w-4 shrink-0" />
           <span className="underline decoration-current/40 decoration-2 underline-offset-4 group-hover:decoration-current">{item.message}</span>
@@ -85,7 +86,7 @@ export const AnnouncementMarqueeBlock = ({ props }: Props) => {
     }
     const Icon = getIcon(item.iconName);
     return (
-      <div className={cn('flex items-center gap-2 whitespace-nowrap px-4 text-base font-medium opacity-90', color)}>
+      <div className={cn('flex items-center gap-2 px-4 text-base font-medium opacity-90', nowrap, color)}>
         <Icon className="h-4 w-4 shrink-0 opacity-70" />
         <span>{item.message}</span>
       </div>
@@ -94,11 +95,11 @@ export const AnnouncementMarqueeBlock = ({ props }: Props) => {
 
   if (style === 'static') {
     return (
-      <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2 py-3 border-y-2 border-primary/20 bg-primary/10">
+      <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2 px-3 py-3 border-y-2 border-primary/20 bg-primary/10">
         {items.map((item, i) => (
-          <div key={item.key} className="flex items-center">
+          <div key={item.key} className="flex min-w-0 items-center">
             {i > 0 && <Sep />}
-            <Chip item={item} />
+            <Chip item={item} wrap />
           </div>
         ))}
       </div>
@@ -129,7 +130,7 @@ export const AnnouncementMarqueeBlock = ({ props }: Props) => {
 
   if (style === 'gradient') {
     return (
-      <div className="overflow-hidden py-3 text-center" style={{ background: `linear-gradient(90deg, hsl(${config.theme.tokens.primary}), hsl(${config.theme.tokens.accent}))`, borderRadius: 'var(--radius)' }}>
+      <div className="overflow-hidden py-3 text-center" style={{ background: 'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--sf-primary-2)))', borderRadius: 'var(--sf-radius-card)' }}>
         <Marquee pauseOnHover>
           {items.map((item) => (
             <span key={item.key} className="flex items-center">

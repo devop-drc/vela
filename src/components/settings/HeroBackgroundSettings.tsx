@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Upload, Trash2, Image as ImageIcon, Video, Sparkles } from "lucide-react";
+import { Upload, Trash2, Image as ImageIcon, Video, Sparkles } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -70,7 +71,7 @@ export const HeroBackgroundSettings = () => {
           <div className="flex items-center gap-4">
             <Button asChild variant="outline">
               <label htmlFor="hero-media-upload" className="cursor-pointer">
-                {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                {isUploading ? <Spinner className="mr-2 h-4 w-4" /> : <Upload className="mr-2 h-4 w-4" />}
                 Upload Image/Video
               </label>
             </Button>

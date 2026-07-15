@@ -222,7 +222,7 @@ export const InstagramCheckoutForm = ({
   if (!shopDetails || cartItems.length === 0) {
     return (
       <div className="flex justify-center items-center h-full">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -255,7 +255,7 @@ export const InstagramCheckoutForm = ({
           <div className="space-y-6">
             {/* Address Selection Card */}
             {savedAddresses.length > 0 && (
-              <Card className="shadow-sm border border-gray-200 bg-[hsl(var(--card))] border-[hsl(var(--border))]">
+              <Card className="shadow-sm border border-border bg-[hsl(var(--card))] border-[hsl(var(--border))]">
                 <CardHeader>
                   <CardTitle className="text-xl flex items-center gap-2 text-[hsl(var(--foreground))]">
                     <MapPin className="h-6 w-6 text-[hsl(var(--primary))]" />
@@ -296,7 +296,7 @@ export const InstagramCheckoutForm = ({
                         <SelectItem key={address.id} value={address.id} className="py-2 overflow-hidden bg-[hsl(var(--card))]">
                           <div className="flex flex-col items-start w-full bg-[hsl(var(--card))]">
                             <span className="font-medium text-[hsl(var(--foreground))] text-sm">{address.label}</span>
-                            <span className="text-xs text-gray-500 text-wrap break-words max-w-full min-w-0">
+                            <span className="text-xs text-muted-foreground text-wrap break-words max-w-full min-w-0">
                               {address.address}, {address.city}, {address.zip_code}, {address.country}
                             </span>
                           </div>
@@ -367,7 +367,7 @@ export const InstagramCheckoutForm = ({
                         <Input placeholder="Phone" id="phone" type="tel" {...register("phone")} className="border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))]" />
                       </div>
                     </div>
-                    <Separator className="bg-gray-200" />
+                    <Separator className="bg-border" />
                     <div className="space-y-2">
                       <Label htmlFor="shippingAddress" className="flex items-center gap-2 text-base text-[hsl(var(--foreground))]"><MapPin className="h-4 w-4" /> Shipping Address</Label>
                       <Input placeholder="Shipping Address" id="shippingAddress" {...register("shippingAddress")} className="border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))]" />

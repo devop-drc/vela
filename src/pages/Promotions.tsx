@@ -7,15 +7,22 @@ import { usePageTitle } from "@/contexts/PageTitleContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Loader2, PlusCircle, Percent, Gift, Edit, Trash2, CalendarIcon,
-  Sparkles, Megaphone, Repeat2, LayoutGrid, Clock, CheckCircle2,
+  PlusCircle, Percent, Gift, Edit, Trash2, CalendarIcon,
+  Megaphone, Repeat2, LayoutGrid, Clock, CheckCircle2,
   XCircle, Tag, Package, Truck, TrendingDown, Zap,
+  ArrowUp, ArrowDown,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { showError, showSuccess, toFriendlyError } from "@/utils/toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/ui-app/StatusBadge";
+import { StatCard } from "@/components/ui-app/StatCard";
+import { EmptyState } from "@/components/ui-app/EmptyState";
+import { promotionStatusTone } from "@/lib/status";
+import { useReveal } from "@/lib/anim";
+import { useShop } from "@/contexts/ShopContext";
+import { formatCurrency } from "@/lib/formatters";
 import { PromotionEditorModal } from "@/components/PromotionEditorModal";
 import { StorefrontAnnouncementEditorModal } from "@/components/StorefrontAnnouncementEditorModal";
 import { StorefrontAnnouncement } from "@/types/storefront";
@@ -24,7 +31,6 @@ import { getIcon } from '@/lib/iconLibrary';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Marquee from "react-fast-marquee";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
 
 interface Promotion {
@@ -51,19 +57,28 @@ const getPromotionStatus = (promo: Promotion): 'active' | 'scheduled' | 'expired
   return 'inactive';
 };
 
-const getPromotionDetails = (promotion: Promotion): string => {
+const getPromotionDetails = (promotion: Promotion, currency?: string | null): string => {
   switch (promotion.type) {
     case 'discount':
       if (promotion.value?.discountType === 'percentage') return `${promotion.value.discountValue}% Off`;
-      if (promotion.value?.discountType === 'flat') return `$${promotion.value.discountValue} Off`;
+      if (promotion.value?.discountType === 'flat') return `${formatCurrency(promotion.value.discountValue, currency)} Off`;
       return 'Discount';
     case 'offer':
       if (promotion.value?.offerType === 'free_shipping')
-        return `Free Shipping${promotion.value.minOrderValue ? ` (Min $${promotion.value.minOrderValue})` : ''}`;
+        return `Free Shipping${promotion.value.minOrderValue ? ` (Min ${formatCurrency(promotion.value.minOrderValue, currency)})` : ''}`;
       return 'Offer';
     default:
       return '';
   }
+};
+
+/**
+ * Single token source for a promotion's accent, keyed off its type — so the
+ * icon tile and the value pill always share one dark-safe semantic colour.
+ */
+const TYPE_TILE: Record<Promotion['type'], string> = {
+  discount: "bg-primary/10 text-primary",
+  offer: "bg-info/10 text-info",
 };
 
 const getTypeLabel = (promotion: Promotion): string => {
@@ -92,29 +107,6 @@ const getTypeIcon = (promotion: Promotion) => {
   return <Tag className="h-4 w-4" />;
 };
 
-// ─── Stat Card ───────────────────────────────────────────────────────────────
-
-interface StatCardProps {
-  label: string;
-  value: number | string;
-  icon: React.ReactNode;
-  colorClass: string;
-}
-
-const StatCard = ({ label, value, icon, colorClass }: StatCardProps) => (
-  <Card className="flex-1 min-w-0">
-    <CardContent className="p-4 flex items-center gap-3">
-      <div className={cn("flex items-center justify-center h-10 w-10 rounded-lg shrink-0", colorClass)}>
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-2xl font-bold leading-none">{value}</p>
-        <p className="text-xs text-muted-foreground mt-1 truncate">{label}</p>
-      </div>
-    </CardContent>
-  </Card>
-);
-
 // ─── Promotion Card ───────────────────────────────────────────────────────────
 
 interface PromotionCardProps {
@@ -127,19 +119,20 @@ interface PromotionCardProps {
 
 const PromotionCard = ({ promo, onEdit, onDelete, onRerun, onToggle }: PromotionCardProps) => {
   const { t } = useTranslation();
+  const { shopDetails } = useShop();
   const status = getPromotionStatus(promo);
-  const details = getPromotionDetails(promo);
+  const details = getPromotionDetails(promo, shopDetails?.currency);
   const typeLabel = getTypeLabel(promo);
   const typeIcon = getTypeIcon(promo);
 
-  const statusConfig: Record<string, { label: string; className: string }> = {
-    active: { label: 'Active', className: 'bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-800' },
-    scheduled: { label: 'Scheduled', className: 'bg-blue-500/10 text-blue-600 border-blue-200 dark:border-blue-800' },
-    expired: { label: 'Expired', className: 'bg-zinc-500/10 text-zinc-500 border-zinc-200 dark:border-zinc-700' },
-    inactive: { label: 'Inactive', className: 'bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-800' },
+  const statusLabels: Record<string, string> = {
+    active: t('common.active'),
+    scheduled: t('promotions.scheduled'),
+    expired: t('promotions.expired'),
+    inactive: t('common.inactive'),
   };
 
-  const { label: statusLabel, className: statusClass } = statusConfig[status] ?? statusConfig.inactive;
+  const statusLabel = statusLabels[status] ?? statusLabels.inactive;
 
   const hasDates = promo.start_date || promo.end_date;
 
@@ -154,9 +147,7 @@ const PromotionCard = ({ promo, onEdit, onDelete, onRerun, onToggle }: Promotion
           <div className="flex items-center gap-2 min-w-0">
             <div className={cn(
               "flex items-center justify-center h-9 w-9 rounded-lg shrink-0",
-              promo.type === 'discount'
-                ? "bg-violet-500/10 text-violet-600"
-                : "bg-cyan-500/10 text-cyan-600"
+              TYPE_TILE[promo.type]
             )}>
               {typeIcon}
             </div>
@@ -165,18 +156,16 @@ const PromotionCard = ({ promo, onEdit, onDelete, onRerun, onToggle }: Promotion
               <p className="text-xs text-muted-foreground mt-0.5">{typeLabel}</p>
             </div>
           </div>
-          <Badge variant="outline" className={cn("shrink-0 text-xs", statusClass)}>
+          <StatusBadge tone={promotionStatusTone(status)} className="shrink-0">
             {statusLabel}
-          </Badge>
+          </StatusBadge>
         </div>
 
         {/* Value pill */}
         <div className="flex items-center gap-2">
           <span className={cn(
             "inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold",
-            promo.type === 'discount'
-              ? "bg-violet-500/10 text-violet-700 dark:text-violet-400"
-              : "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400"
+            TYPE_TILE[promo.type]
           )}>
             {details}
           </span>
@@ -246,19 +235,17 @@ const PromotionCard = ({ promo, onEdit, onDelete, onRerun, onToggle }: Promotion
 const EmptyPromotions = ({ onCreateClick }: { onCreateClick: () => void }) => {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-primary/10 mb-4">
-        <Tag className="h-8 w-8 text-primary" />
-      </div>
-      <h3 className="text-lg font-semibold mb-1">{t("promotions.no_promotions")}</h3>
-      <p className="text-sm text-muted-foreground max-w-xs mb-6">
-        {t("promotions.no_promotions_desc")}
-      </p>
-      <Button onClick={onCreateClick}>
-        <PlusCircle className="mr-2 h-4 w-4" />
-        {t("promotions.create_first")}
-      </Button>
-    </div>
+    <EmptyState
+      icon={Tag}
+      title={t("promotions.no_promotions")}
+      description={t("promotions.no_promotions_desc")}
+      action={
+        <Button onClick={onCreateClick}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          {t("promotions.create_first")}
+        </Button>
+      }
+    />
   );
 };
 
@@ -289,10 +276,10 @@ const Promotions = () => {
 
     const promos = (promotionsData as Promotion[]) ?? [];
     const announcements = (announcementsData as StorefrontAnnouncement[]) ?? [];
-    if (promotionsError) showError("Could not fetch promotions.");
+    if (promotionsError) showError(t("promotions.fetch_error"));
     else setPromotions(promos);
 
-    if (announcementsError) showError("Could not fetch storefront announcements.");
+    if (announcementsError) showError(t("promotions.announcements_fetch_error"));
     else setStorefrontAnnouncements(announcements);
 
     if (!promotionsError && !announcementsError) writeCache<PromoSnapshot>("promotions", { promotions: promos, announcements });
@@ -376,6 +363,33 @@ const Promotions = () => {
     }
   };
 
+  // Swap an announcement's display_order with its neighbour (optimistic; the
+  // rendered table sorts by display_order so the row moves immediately).
+  const handleMoveAnnouncement = async (element: StorefrontAnnouncement, direction: 'up' | 'down') => {
+    const sorted = [...storefrontAnnouncements].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+    const idx = sorted.findIndex(e => e.id === element.id);
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const other = sorted[swapIdx];
+    const a = element.display_order ?? 0;
+    const b = other.display_order ?? 0;
+
+    setStorefrontAnnouncements(prev => prev.map(e => {
+      if (e.id === element.id) return { ...e, display_order: b };
+      if (e.id === other.id) return { ...e, display_order: a };
+      return e;
+    }));
+
+    const [{ error: e1 }, { error: e2 }] = await Promise.all([
+      supabase.from('marquee_elements').update({ display_order: b }).eq('id', element.id),
+      supabase.from('marquee_elements').update({ display_order: a }).eq('id', other.id),
+    ]);
+    if (e1 || e2) {
+      showError(toFriendlyError(e1 || e2, "Couldn't reorder the announcement. Please try again."));
+      fetchPromotionsAndAnnouncements();
+    }
+  };
+
   const getAnnouncementIconComponent = (iconName: string) => {
     const Icon = getIcon(iconName);
     return <Icon className="h-4 w-4" />;
@@ -416,6 +430,21 @@ const Promotions = () => {
     return true;
   });
 
+  // Announcements always render in display_order so the up/down controls take
+  // effect immediately after an optimistic swap.
+  const sortedAnnouncements = [...storefrontAnnouncements].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+
+  // Name the item in the delete confirmation so a mis-click is reassuring.
+  const deletingName = itemToDelete
+    ? (itemToDelete.type === 'promotion'
+        ? promotions.find(p => p.id === itemToDelete.id)?.name
+        : storefrontAnnouncements.find(e => e.id === itemToDelete.id)?.message)
+    : null;
+
+  // Subtle staggered entrance (reduced-motion safe) on the stat + card grids.
+  const statsRef = useReveal<HTMLDivElement>({ selector: ":scope > *" }, [isLoading]);
+  const gridRef = useReveal<HTMLDivElement>({ selector: ":scope > *" }, [filteredPromotions.length]);
+
   // ── render ───────────────────────────────────────────────────────────────────
 
   return (
@@ -436,7 +465,9 @@ const Promotions = () => {
       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("promotions.delete_confirm")}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {deletingName ? t("promotions.delete_named_title", { name: deletingName }) : t("promotions.delete_confirm")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {t("promotions.delete_warning")}
             </AlertDialogDescription>
@@ -450,15 +481,13 @@ const Promotions = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="space-y-8">
+      <div className="space-y-6">
 
         {/* ── Page header ── */}
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">{t("nav.promotions")}</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">
-              {t("promotions.page_desc")}
-            </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-1">
+            <h1 className="font-heading text-xl font-semibold tracking-tight sm:text-2xl">{t("nav.promotions")}</h1>
+            <p className="text-sm text-muted-foreground">{t("promotions.page_desc")}</p>
           </div>
           <Button onClick={() => setIsPromotionEditorOpen(true)} data-tour="promotions-create">
             <PlusCircle className="mr-2 h-4 w-4" />
@@ -466,36 +495,44 @@ const Promotions = () => {
           </Button>
         </div>
 
-        {/* ── Stats bar ── */}
+        {/* ── Stat counters double as the promotion filter ── */}
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div ref={statsRef} className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <StatCard
-              label={t("promotions.active_promotions")}
+              title={t("promotions.active_promotions")}
               value={activeCount}
-              icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}
-              colorClass="bg-emerald-500/10"
+              icon={CheckCircle2}
+              tone="success"
+              active={filter === 'active'}
+              onClick={() => setFilter(filter === 'active' ? 'all' : 'active')}
             />
             <StatCard
-              label={t("promotions.scheduled")}
+              title={t("promotions.scheduled")}
               value={scheduledCount}
-              icon={<Clock className="h-5 w-5 text-blue-600" />}
-              colorClass="bg-blue-500/10"
+              icon={Clock}
+              tone="info"
+              active={filter === 'scheduled'}
+              onClick={() => setFilter(filter === 'scheduled' ? 'all' : 'scheduled')}
             />
             <StatCard
-              label={t("promotions.expired")}
+              title={t("promotions.expired")}
               value={expiredCount}
-              icon={<XCircle className="h-5 w-5 text-zinc-500" />}
-              colorClass="bg-zinc-500/10"
+              icon={XCircle}
+              tone="neutral"
+              active={filter === 'expired'}
+              onClick={() => setFilter(filter === 'expired' ? 'all' : 'expired')}
             />
             <StatCard
-              label={t("promotions.total_promotions")}
+              title={t("promotions.total_promotions")}
               value={promotions.length}
-              icon={<LayoutGrid className="h-5 w-5 text-primary" />}
-              colorClass="bg-primary/10"
+              icon={LayoutGrid}
+              tone="brand"
+              active={filter === 'all'}
+              onClick={() => setFilter('all')}
             />
           </div>
         )}
@@ -504,14 +541,11 @@ const Promotions = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h2 className="text-lg font-semibold">{t("promotions.your_promotions")}</h2>
-            <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterTab)}>
-              <TabsList className="h-8">
-                <TabsTrigger value="all" className="text-xs px-3">{t("common.all")} ({promotions.length})</TabsTrigger>
-                <TabsTrigger value="active" className="text-xs px-3">{t("common.active")} ({activeCount})</TabsTrigger>
-                <TabsTrigger value="scheduled" className="text-xs px-3">{t("promotions.scheduled")} ({scheduledCount})</TabsTrigger>
-                <TabsTrigger value="expired" className="text-xs px-3">{t("promotions.expired")} ({expiredCount})</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            {filter !== 'all' && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setFilter('all')}>
+                {t("promotions.show_all")}
+              </Button>
+            )}
           </div>
 
           {isLoading ? (
@@ -522,13 +556,10 @@ const Promotions = () => {
             filter === 'all' ? (
               <EmptyPromotions onCreateClick={() => setIsPromotionEditorOpen(true)} />
             ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
-                <Tag className="h-8 w-8 mb-3 opacity-40" />
-                <p className="text-sm">{t("promotions.no_filtered", { filter })}</p>
-              </div>
+              <EmptyState compact icon={Tag} title={t("promotions.no_filtered", { filter })} />
             )
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-tour="promotions-list">
+            <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-tour="promotions-list">
               {filteredPromotions.map(promo => (
                 <PromotionCard
                   key={promo.id}
@@ -579,9 +610,9 @@ const Promotions = () => {
           ) : storefrontAnnouncements.some(e => e.is_active) ? (
             // Enabled announcements exist but none is within its schedule right
             // now — explain why the storefront bar is empty.
-            <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+            <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
               <Clock className="h-4 w-4 mt-0.5 shrink-0" />
-              <span>None of your enabled announcements are within their scheduled dates today, so the storefront bar is hidden. Edit an announcement and clear its dates (or set the repeat to “None”) to show it now.</span>
+              <span>{t("promotions.off_schedule_warning")}</span>
             </div>
           ) : null}
 
@@ -603,7 +634,7 @@ const Promotions = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[50px]">{t("promotions.order_col")}</TableHead>
+                      <TableHead className="w-[64px]">{t("promotions.order_col")}</TableHead>
                       <TableHead className="w-[50px]">{t("promotions.icon")}</TableHead>
                       <TableHead>{t("promotions.message")}</TableHead>
                       <TableHead className="w-[80px] text-center">{t("common.active")}</TableHead>
@@ -611,10 +642,34 @@ const Promotions = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {storefrontAnnouncements.length > 0 ? (
-                      storefrontAnnouncements.map((element) => (
+                    {sortedAnnouncements.length > 0 ? (
+                      sortedAnnouncements.map((element, idx) => (
                         <TableRow key={element.id}>
-                          <TableCell>{element.display_order}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <div className="flex flex-col">
+                                <Button
+                                  variant="ghost" size="icon" className="h-5 w-5"
+                                  disabled={idx === 0}
+                                  onClick={() => handleMoveAnnouncement(element, 'up')}
+                                  aria-label={t("promotions.move_up")}
+                                  title={t("promotions.move_up")}
+                                >
+                                  <ArrowUp className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost" size="icon" className="h-5 w-5"
+                                  disabled={idx === sortedAnnouncements.length - 1}
+                                  onClick={() => handleMoveAnnouncement(element, 'down')}
+                                  aria-label={t("promotions.move_down")}
+                                  title={t("promotions.move_down")}
+                                >
+                                  <ArrowDown className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                              <span className="text-xs text-muted-foreground tabular-nums">{element.display_order}</span>
+                            </div>
+                          </TableCell>
                           <TableCell>{getAnnouncementIconComponent(element.icon_name)}</TableCell>
                           <TableCell className="font-medium max-w-[300px]">
                             <div className="flex items-center gap-2">
@@ -623,12 +678,12 @@ const Promotions = () => {
                                 const st = announcementStatus(element as any);
                                 if (st === 'live' || st === 'off') return null;
                                 const label = st === 'scheduled'
-                                  ? (element.start_date ? `Scheduled from ${format(parseISO(element.start_date), 'MMM d')}` : 'Scheduled')
-                                  : `Off schedule${element.end_date ? ` (window ended ${format(parseISO(element.end_date), 'MMM d')})` : ''}`;
+                                  ? (element.start_date ? t("promotions.scheduled_from", { date: format(parseISO(element.start_date), 'MMM d') }) : t("promotions.scheduled"))
+                                  : (element.end_date ? t("promotions.off_schedule_ended", { date: format(parseISO(element.end_date), 'MMM d') }) : t("promotions.off_schedule"));
                                 return (
-                                  <Badge variant="outline" className="shrink-0 gap-1 border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-400">
-                                    <Clock className="h-3 w-3" /> {label}
-                                  </Badge>
+                                  <StatusBadge tone="warning" size="sm" icon={<Clock />} className="shrink-0">
+                                    {label}
+                                  </StatusBadge>
                                 );
                               })()}
                             </div>
@@ -642,10 +697,10 @@ const Promotions = () => {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <Button variant="ghost" size="icon" onClick={() => handleAnnouncementEdit(element)}>
+                              <Button variant="ghost" size="icon" onClick={() => handleAnnouncementEdit(element)} aria-label={t("common.edit")} title={t("common.edit")}>
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleAnnouncementDelete(element.id)}>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleAnnouncementDelete(element.id)} aria-label={t("common.delete")} title={t("common.delete")}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>

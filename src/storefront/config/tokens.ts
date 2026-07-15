@@ -4,6 +4,7 @@
 
 import { StorefrontConfig, ColorToken } from './types';
 import { DEFAULT_LIGHT_TOKENS, DEFAULT_DARK_TOKENS } from './defaults';
+import { deriveDarkTokens } from '../lib/palette';
 
 export interface TokenOutput {
   /** CSS custom properties keyed WITH the leading `--`. */
@@ -76,13 +77,27 @@ export function buildTokens(config: StorefrontConfig, prefersDark = false): Toke
   // (the "dark red text" class of bug).
   const base = config.theme.tokens;
   const dark = config.theme.darkTokens || {};
+  // Auto-derive a cohesive dark palette from the LIGHT base so dark mode never
+  // falls back to the light tokens (templates ship no dark tokens → that used to
+  // look broken). Any explicit darkTokens the palette DOES set still win.
+  const darkAuto = mode === 'dark' ? deriveDarkTokens(base) : null;
   for (const t of COLOR_TOKENS) {
     const val = mode === 'dark'
-      ? (dark[t] ?? base[t] ?? (DEFAULT_DARK_TOKENS as Partial<Record<string, string>>)[t] ?? DEFAULT_LIGHT_TOKENS[t])
+      ? (dark[t] ?? darkAuto![t] ?? (DEFAULT_DARK_TOKENS as Partial<Record<string, string>>)[t] ?? DEFAULT_LIGHT_TOKENS[t])
       : (base[t] ?? DEFAULT_LIGHT_TOKENS[t]);
     if (val) vars[`--${t}`] = val;
   }
   if (mode === 'dark') classes.push('dark');
+
+  // Second brand-gradient stop: primary hue shifted ~22°, SAME saturation and
+  // lightness. Brand gradients use primary→primary-2 (not primary→accent, where
+  // accent is a pale surface tint that makes white gradient labels invisible).
+  const pv = vars['--primary'];
+  if (pv) {
+    const [ph, ps, pl] = pv.split(/\s+/);
+    const h2 = Math.round(((parseFloat(ph) || 0) + 22) % 360);
+    vars['--sf-primary-2'] = `${h2} ${ps ?? '50%'} ${pl ?? '45%'}`;
+  }
 
   // ── Typography ──────────────────────────────────────────────────────────
   const ty = config.typography;
@@ -93,20 +108,45 @@ export function buildTokens(config: StorefrontConfig, prefersDark = false): Toke
   vars['--sf-tracking'] = `${ty.letterSpacing}em`;
   vars['--sf-leading'] = String(ty.lineHeight);
   vars['--sf-heading-transform'] = ty.headingTransform;
-  // Modular type scale.
+  // Modular type scale. Larger steps are emitted as a fluid clamp() so headings
+  // shrink on small screens and reach the computed size around ~1240px — this is
+  // what makes the storefront's big type mobile-safe (the `.sf-root .text-*`
+  // overrides out-rank Tailwind's `md:` variants, so per-utility responsive
+  // bumps can't do it; fluid tokens fix it for every heading at once).
   const r = ty.scaleRatio;
   const sizes: Record<string, number> = {
     'text-xs': -2, 'text-sm': -1, 'text-base': 0, 'text-lg': 1,
     'text-xl': 2, 'text-2xl': 3, 'text-3xl': 4, 'text-4xl': 5, 'text-5xl': 6,
   };
+  const fluid = (minRem: number, maxRem: number) =>
+    `clamp(${minRem.toFixed(3)}rem, calc(${minRem.toFixed(3)}rem + ${(maxRem - minRem).toFixed(3)}rem * (100vw - 360px) / 880px), ${maxRem.toFixed(3)}rem)`;
   for (const [name, step] of Object.entries(sizes)) {
-    vars[`--sf-${name}`] = `${(ty.baseSize * Math.pow(r, step)) / 16}rem`;
+    const desktop = (ty.baseSize * Math.pow(r, step)) / 16; // rem
+    if (step >= 2) {
+      const minFactor = Math.max(0.68, 1 - step * 0.05);
+      const min = Math.max(desktop * minFactor, ty.baseSize / 16);
+      vars[`--sf-${name}`] = fluid(min, desktop);
+    } else {
+      vars[`--sf-${name}`] = `${desktop}rem`;
+    }
   }
+  // Dedicated hero display size — genuinely large on desktop, gracefully fluid
+  // on mobile. (Hero H1s use .sf-hero-title, bypassing the text-* cap so they
+  // reach true hero scale instead of being pinned to text-4xl.)
+  const heroMax = Math.min((ty.baseSize * Math.pow(r, 7)) / 16, 5.75); // ≤ 92px
+  const heroMin = Math.max(heroMax * 0.56, 2.5); // ≥ 40px floor
+  vars['--sf-text-hero'] = fluid(heroMin, heroMax);
   fonts.push(ty.headingFont, ty.bodyFont);
 
   // ── Shape ───────────────────────────────────────────────────────────────
   const sh = config.shape;
-  const baseRadius = sh.radiusStyle === 'pill' ? 9999 : sh.radiusStyle === 'sharp' ? 0 : sh.radius;
+  // Distinct radius styles: sharp=0, soft=the configured radius, round=notably
+  // rounder (≈1.9×), pill=fully rounded. (soft and round were previously aliases.)
+  const baseRadius =
+    sh.radiusStyle === 'pill' ? 9999
+    : sh.radiusStyle === 'sharp' ? 0
+    : sh.radiusStyle === 'round' ? Math.round(sh.radius * 1.9) + 4
+    : sh.radius; // soft
   // For very large ("pill"/full) radii, keep the derived sm/md/lg/xl large too —
   // shaving a few px off 9999 would visually do nothing, so special-case it.
   const isPill = baseRadius >= 9999;
@@ -116,6 +156,12 @@ export function buildTokens(config: StorefrontConfig, prefersDark = false): Toke
   vars['--radius-lg'] = px(baseRadius);
   vars['--radius-xl'] = isPill ? px(baseRadius) : px(baseRadius + 6);
   vars['--radius-full'] = '9999px';
+  // Large rectangular surfaces (product cards, panels, tiles, media) must NOT
+  // take the full pill/near-full radius — a 9999px corner on a tall card clips
+  // the image and text. Cap it at a generous-but-safe value so "pill" and very
+  // "round" styles stay rounded without eating content. Buttons/badges keep the
+  // full radius (they're short enough to be true pills).
+  vars['--sf-radius-card'] = px(Math.min(baseRadius, 28));
   vars['--sf-border-width'] = sh.borderStyle === 'none' ? '0px' : px(sh.borderWidth);
   attrs['data-radius'] = sh.radiusStyle;
 
@@ -139,14 +185,25 @@ export function buildTokens(config: StorefrontConfig, prefersDark = false): Toke
 
   // ── Layout ──────────────────────────────────────────────────────────────
   const ly = config.layout;
+  const density = DENSITY_SCALE[ly.density] ?? 1;
   vars['--sf-container-max'] = CONTAINER_MAX[ly.containerWidth] ?? CONTAINER_MAX.standard;
-  vars['--sf-density'] = String(DENSITY_SCALE[ly.density] ?? 1);
-  vars['--sf-section-space'] = SECTION_SPACE[ly.sectionSpacing] ?? SECTION_SPACE.normal;
-  vars['--sf-grid-gap'] = GAP_SCALE[ly.productGrid.gap] ?? GAP_SCALE.md;
+  vars['--sf-density'] = String(density);
+  // Density scales spacing everywhere: section rhythm, grid gaps, and the
+  // shared card/element padding tokens components read.
+  vars['--sf-section-space'] = `calc(${SECTION_SPACE[ly.sectionSpacing] ?? SECTION_SPACE.normal} * ${density})`;
+  vars['--sf-grid-gap'] = `calc(${GAP_SCALE[ly.productGrid.gap] ?? GAP_SCALE.md} * ${density})`;
+  vars['--sf-card-pad'] = `calc(1rem * ${density})`;
+  vars['--sf-gap'] = `calc(1rem * ${density})`;
   vars['--sf-grid-cols'] = String(ly.productGrid.columns);
   attrs['data-density'] = ly.density;
   attrs['data-header'] = ly.header.variant;
   attrs['data-nav'] = ly.nav.desktop;
+
+  // ── Component element switches (drive the .sf-btn / .sf-badge CSS system) ──
+  const cp = config.components;
+  attrs['data-btn'] = cp.button;
+  attrs['data-btn-shape'] = cp.buttonShape;
+  attrs['data-badge'] = cp.badge;
 
   return { vars, attrs, classes, fonts };
 }

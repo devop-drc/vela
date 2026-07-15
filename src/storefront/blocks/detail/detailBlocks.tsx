@@ -17,6 +17,13 @@ import { useStorefrontConfig } from '../../theme/StorefrontThemeProvider';
 import { ProductCard, ProductLike } from '../../components/ProductCard';
 import { SfButton } from '../../components/SfButton';
 import { promotionBadgeLabel, type PromotionLike } from '../../lib/pricing';
+import { useRailDrag } from '../../lib/useRailDrag';
+
+/** Attaches mouse drag-to-scroll to the filmstrip rail (renders nothing). */
+const FilmstripDrag = ({ stripRef, count }: { stripRef: React.RefObject<HTMLDivElement>; count: number }) => {
+  useRailDrag(stripRef, [count]);
+  return null;
+};
 
 export interface ProductDetailState {
   product: any;
@@ -61,13 +68,14 @@ export const GalleryBlock = ({ props }: { props: { variant?: 'carousel' | 'grid'
     };
     return (
       <div className="relative">
+        <FilmstripDrag stripRef={stripRef} count={media.length} />
         <div
           ref={stripRef}
           onScroll={onStripScroll}
           className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {media.map((url, i) => (
-            <div key={i} className="sf-zoomable w-full shrink-0 snap-center overflow-hidden border bg-muted sf-card" style={{ borderRadius: 'var(--radius)' } as any}>
+            <div key={i} className="sf-zoomable w-full shrink-0 snap-center overflow-hidden border bg-muted sf-card" style={{ borderRadius: 'var(--sf-radius-card)' } as any}>
               <div className="aspect-square w-full">
                 <MediaItem src={url} alt={`${product.name} ${i + 1}`} type={product.media_type} className={cn('h-full w-full object-cover', isOutOfStock && 'grayscale')} />
               </div>
@@ -85,7 +93,7 @@ export const GalleryBlock = ({ props }: { props: { variant?: 'carousel' | 'grid'
     const current = media[Math.min(active, media.length - 1)];
     return (
       <div className="space-y-3">
-        <div className="sf-zoomable relative aspect-square w-full overflow-hidden border bg-muted sf-card" style={{ borderRadius: 'var(--radius)' } as any}>
+        <div className="sf-zoomable relative aspect-square w-full overflow-hidden border bg-muted sf-card" style={{ borderRadius: 'var(--sf-radius-card)' } as any}>
           <MediaItem
             key={current}
             src={current}
@@ -119,7 +127,7 @@ export const GalleryBlock = ({ props }: { props: { variant?: 'carousel' | 'grid'
     return (
       <div className="grid grid-cols-2 gap-3">
         {media.map((url, i) => (
-          <div key={i} className={cn('relative w-full overflow-hidden border bg-muted sf-card', i === 0 && 'col-span-2', i === 0 ? 'aspect-[4/3]' : 'aspect-square')} style={{ borderRadius: 'var(--radius)' } as any}>
+          <div key={i} className={cn('relative w-full overflow-hidden border bg-muted sf-card', i === 0 && 'col-span-2', i === 0 ? 'aspect-[4/3]' : 'aspect-square')} style={{ borderRadius: 'var(--sf-radius-card)' } as any}>
             <MediaItem src={url} alt={`${product.name} ${i + 1}`} type={product.media_type} className={cn('h-full w-full object-cover', isOutOfStock && 'grayscale')} />
           </div>
         ))}
@@ -128,7 +136,7 @@ export const GalleryBlock = ({ props }: { props: { variant?: 'carousel' | 'grid'
   }
 
   return (
-    <Carousel className="w-full overflow-hidden border sf-card" style={{ borderRadius: 'var(--radius)' } as any}>
+    <Carousel className="w-full overflow-hidden border sf-card" style={{ borderRadius: 'var(--sf-radius-card)' } as any}>
       <CarouselContent>
         {media.map((url, i) => (
           <CarouselItem key={i}>
@@ -149,7 +157,7 @@ export const ProductInfoBlock = () => {
   const { product, original, discounted, hasDiscount, promos } = useProductDetail();
   return (
     <div className="space-y-4">
-      {product.category && <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">{product.category}</Badge>}
+      {product.category && <span className="sf-badge">{product.category}</span>}
       <h1 className="sf-heading text-3xl md:text-4xl font-bold leading-tight">{product.name}</h1>
       <div className="flex items-center gap-3">
         {hasDiscount && original != null ? (
@@ -160,7 +168,7 @@ export const ProductInfoBlock = () => {
         ) : (
           <span className="text-3xl font-bold text-primary">{original != null ? formatCurrency(original, shopDetails!.currency) : 'N/A'}</span>
         )}
-        {promos.map((p) => { const l = promotionBadgeLabel(p); return l ? <Badge key={p.id} className="bg-emerald-500 text-white border-0">{l}</Badge> : null; })}
+        {promos.map((p) => { const l = promotionBadgeLabel(p); return l ? <Badge key={p.id} className="bg-success text-success-foreground border-0">{l}</Badge> : null; })}
       </div>
     </div>
   );
@@ -184,7 +192,7 @@ export const VariantSelectorBlock = () => {
           <p className="text-sm font-medium capitalize" id={`opt-${key}`}>{key}</p>
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-labelledby={`opt-${key}`}>
             {values.map((val) => (
-              <button key={val} role="radio" aria-checked={selected[key] === val} onClick={() => setSelected((s) => ({ ...s, [key]: val }))} className={cn('px-3 py-1.5 rounded-md border text-sm capitalize transition-colors', selected[key] === val ? 'border-primary bg-primary/10 text-primary' : 'hover:border-primary/50')}>{val}</button>
+              <button key={val} role="radio" aria-checked={selected[key] === val} onClick={() => setSelected((s) => ({ ...s, [key]: val }))} className={cn('inline-flex min-h-11 items-center rounded-md border px-4 py-2 text-sm capitalize transition-colors', selected[key] === val ? 'border-primary bg-primary/10 text-primary' : 'hover:border-primary/50')}>{val}</button>
             ))}
           </div>
         </div>

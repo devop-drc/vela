@@ -109,16 +109,19 @@ export const useProductFilters = ({
   }, [maxPrice]);
 
   const hasActiveFilters = useMemo(() => {
-    // Check if any filter is active
+    // Only real *filter facets* count here (what the filter panel controls):
+    // status, category, tag, price, and dynamic attributes. Search and sort are
+    // NOT filters — surfacing them as "(active)" on the Filters button was
+    // misleading, so they're tracked separately by the caller.
     const isPriceFiltered = filters.priceRange[0] !== 0 || filters.priceRange[1] !== maxPrice;
-    const isAttributeFiltered = Object.entries(filters).some(([key, value]) => 
+    const isAttributeFiltered = Object.entries(filters).some(([key, value]) =>
       key !== 'categories' && key !== 'tags' && key !== 'priceRange' && key !== 'status' && Array.isArray(value) && value.length > 0
     );
 
-    return searchTerm || statusFilter.length > 0 || sortOption !== 'newest' ||
+    return statusFilter.length > 0 ||
            filters.categories.length > 0 || filters.tags.length > 0 ||
            isPriceFiltered || isAttributeFiltered;
-  }, [searchTerm, statusFilter, sortOption, filters, maxPrice]);
+  }, [statusFilter, filters, maxPrice]);
 
   const handleResetAllFilters = useCallback(() => {
     setSearchTerm("");

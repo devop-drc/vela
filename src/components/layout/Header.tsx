@@ -11,8 +11,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
+import {
   Search, Link as LinkIcon,
   Sparkles, Package, LayoutDashboard, ShoppingCart,
+  Settings as SettingsIcon, CreditCard, LogOut, Languages, ChevronDown,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -29,6 +36,7 @@ const PAGES = [
   { labelKey: "nav.categories", subtitleKey: "header.page_categories_sub", path: "/categories" },
   { labelKey: "nav.keywords", subtitleKey: "header.page_keywords_sub", path: "/keywords" },
   { labelKey: "nav.promotions", subtitleKey: "header.page_promotions_sub", path: "/promotions" },
+  { labelKey: "nav.storefront", subtitleKey: "header.page_storefront_sub", path: "/storefront-studio" },
   { labelKey: "nav.settings", subtitleKey: "header.page_settings_sub", path: "/settings" },
 ];
 
@@ -44,14 +52,16 @@ export default function Header({ title }: { title: string }) {
   const navigate = useNavigate();
   const { settings } = useAppearance();
   const { shopDetails } = useShop();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const floating = settings.layoutStyle === "floating";
   const blur = settings.blurEnabled;
 
   // ── User ─────────────────────────────────────────────────────────────────
-  const [user, setUser] = useState<any>(null);
-  useEffect(() => { supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null)); }, []);
+  const { user } = useAuth();
+  const accountName = shopDetails?.shop_name || user?.email || "";
+  const initials = (accountName || "V").trim().slice(0, 2).toUpperCase();
+  const handleLogout = async () => { await supabase.auth.signOut(); navigate("/login"); };
 
   // ── Search ───────────────────────────────────────────────────────────────
   const [query, setQuery] = useState("");
@@ -60,6 +70,7 @@ export default function Header({ title }: { title: string }) {
   const [grouped, setGrouped] = useState<GroupedResults | null>(null);
   const [active, setActive] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const refs = useRef(new Map<number, HTMLDivElement>());
 
@@ -97,6 +108,15 @@ export default function Header({ title }: { title: string }) {
     window.addEventListener("resize", update);
     return () => { window.removeEventListener("scroll", update, true); window.removeEventListener("resize", update); };
   }, [open, grouped]);
+
+  // ⌘K / Ctrl-K focuses search from anywhere — a small command-palette touch.
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); inputRef.current?.focus(); }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
 
   const go = useCallback((item: SearchResult) => { navigate(item.path); setOpen(false); setQuery(""); }, [navigate]);
 
@@ -157,13 +177,18 @@ export default function Header({ title }: { title: string }) {
 
       {/* Search */}
       <div ref={containerRef} className="relative w-64 lg:w-80">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <Input
-          type="search" placeholder={t("header.search_placeholder")} className="h-8 pl-8 text-sm"
+          ref={inputRef}
+          type="search" placeholder={t("header.search_placeholder")}
+          className="h-9 rounded-lg border-transparent bg-muted/60 pl-9 pr-14 text-sm transition-colors focus-visible:bg-background focus-visible:border-input"
           value={query} onChange={e => setQuery(e.target.value)}
           onKeyDown={onKey} onFocus={() => { if (grouped) setOpen(true); }}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
         />
+        <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 select-none items-center gap-0.5 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground lg:flex">
+          ⌘K
+        </kbd>
       </div>
 
       {/* Search dropdown */}
@@ -189,10 +214,46 @@ export default function Header({ title }: { title: string }) {
       {/* Right actions */}
       <div className="flex items-center gap-2 shrink-0" data-tour="header-actions">
         {/* Storefront URL */}
-        <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={copyUrl} disabled={!shopDetails?.slug}>
-          <LinkIcon className="h-3.5 w-3.5 mr-1.5" />
+        <Button variant="outline" size="sm" className="h-9 gap-1.5 rounded-lg text-xs" onClick={copyUrl} disabled={!shopDetails?.slug}>
+          <LinkIcon className="h-3.5 w-3.5" />
           <span className="hidden lg:inline">{t("header.shop_url")}</span>
         </Button>
+
+        {/* Account menu — surfaces Settings / Billing / Language / Log out that
+            otherwise live only at the bottom of the sidebar. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              aria-label={accountName || t("nav.settings")}
+              className="flex items-center gap-1 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <Avatar className="h-9 w-9 border">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{initials}</AvatarFallback>
+              </Avatar>
+              <ChevronDown className="hidden h-3.5 w-3.5 text-muted-foreground sm:block" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-60">
+            <DropdownMenuLabel className="flex flex-col gap-0.5">
+              <span className="truncate text-sm font-semibold leading-tight">{shopDetails?.shop_name || t("nav.settings")}</span>
+              {user?.email && <span className="truncate text-xs font-normal text-muted-foreground">{user.email}</span>}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate("/settings")}>
+              <SettingsIcon className="mr-2 h-4 w-4" />{t("nav.settings")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/billing")}>
+              <CreditCard className="mr-2 h-4 w-4" />{t("nav.billing")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => i18n.changeLanguage(i18n.language?.startsWith("sq") ? "en" : "sq")}>
+              <Languages className="mr-2 h-4 w-4" />{i18n.language?.startsWith("sq") ? "English" : "Shqip"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+              <LogOut className="mr-2 h-4 w-4" />{t("header.log_out")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

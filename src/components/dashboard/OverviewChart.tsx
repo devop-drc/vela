@@ -1,12 +1,11 @@
 import { Bar, ComposedChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Area } from "recharts";
-import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency } from "@/lib/formatters";
 import { useState } from "react";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import { DateRangePicker } from "../ui/DateRangePicker";
 import { DateRange } from "react-day-picker";
-import { Button } from "../ui/button";
 import { subDays, subMonths } from "date-fns";
 import { useTranslation } from "react-i18next";
 
@@ -18,37 +17,30 @@ interface OverviewChartProps {
   setGranularity: (granularity: 'day' | 'month') => void;
 }
 
-const PERIOD_PRESETS = [
-  { label: '7D', days: 7 },
-  { label: '30D', days: 30 },
-  { label: '90D', days: 90 },
-] as const;
-
 export const OverviewChart = ({ data, dateRange, setDateRange, granularity, setGranularity }: OverviewChartProps) => {
   const { shopDetails } = useShop();
   const { t } = useTranslation();
   const [visibleData, setVisibleData] = useState(['revenue', 'clients', 'orders']);
-  const [activePeriod, setActivePeriod] = useState<number | null>(null);
+  // Single-select period preset. '' == a custom range picked via the date picker.
+  const [periodValue, setPeriodValue] = useState<string>('6m');
 
   const handleToggle = (value: string[]) => {
     if (value.length) setVisibleData(value);
   };
 
-  const handlePeriodPreset = (days: number) => {
-    setActivePeriod(days);
-    setGranularity('day');
-    setDateRange({ from: subDays(new Date(), days - 1), to: new Date() });
-  };
-
-  const handleLast6Months = () => {
-    setActivePeriod(null);
-    setGranularity('month');
-    setDateRange({ from: subMonths(new Date(), 5), to: new Date() });
-  };
-
-  const handleAllTime = () => {
-    setActivePeriod(null);
-    setDateRange(undefined);
+  const applyPeriod = (value: string) => {
+    if (!value) return; // ToggleGroup emits '' on deselect — ignore, keep one active.
+    setPeriodValue(value);
+    if (value === '6m') {
+      setGranularity('month');
+      setDateRange({ from: subMonths(new Date(), 5), to: new Date() });
+    } else if (value === 'all') {
+      setDateRange(undefined);
+    } else {
+      const days = Number(value);
+      setGranularity('day');
+      setDateRange({ from: subDays(new Date(), days - 1), to: new Date() });
+    }
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -79,47 +71,18 @@ export const OverviewChart = ({ data, dateRange, setDateRange, granularity, setG
     <Card className="shadow-sm border border-border/60 h-full flex flex-col">
       <CardHeader className="pb-3 flex-shrink-0">
         <div className="flex flex-col gap-2">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <CardDescription className="text-sm">{t("dashboard.chart_description")}</CardDescription>
-            {/* Period selector — segmented buttons */}
-            <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
-              {PERIOD_PRESETS.map(({ label, days }) => (
-                <button
-                  key={days}
-                  onClick={() => handlePeriodPreset(days)}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                    activePeriod === days
-                      ? 'bg-background shadow-sm text-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-              <button
-                onClick={handleLast6Months}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                  activePeriod === null && dateRange !== undefined
-                    ? 'bg-background shadow-sm text-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                6M
-              </button>
-              <button
-                onClick={handleAllTime}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                  activePeriod === null && dateRange === undefined
-                    ? 'bg-background shadow-sm text-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {t("common.all")}
-              </button>
-            </div>
+          {/* Period presets — single-select ToggleGroup matching the controls below */}
+          <div className="flex flex-wrap items-center gap-2">
+            <ToggleGroup type="single" variant="outline" size="sm" value={periodValue} onValueChange={applyPeriod}>
+              <ToggleGroupItem value="7" aria-label="Last 7 days">7D</ToggleGroupItem>
+              <ToggleGroupItem value="30" aria-label="Last 30 days">30D</ToggleGroupItem>
+              <ToggleGroupItem value="90" aria-label="Last 90 days">90D</ToggleGroupItem>
+              <ToggleGroupItem value="6m" aria-label="Last 6 months">6M</ToggleGroupItem>
+              <ToggleGroupItem value="all" aria-label="All time">{t("common.all")}</ToggleGroupItem>
+            </ToggleGroup>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <DateRangePicker date={dateRange} onDateChange={(r) => { setActivePeriod(null); setDateRange(r); }} />
+            <DateRangePicker date={dateRange} onDateChange={(r) => { setPeriodValue(''); setDateRange(r); }} />
             <ToggleGroup type="single" variant="outline" size="sm" value={granularity} onValueChange={(value: 'day' | 'month') => value && setGranularity(value)}>
               <ToggleGroupItem value="month" aria-label="By Month">{t("dashboard.month")}</ToggleGroupItem>
               <ToggleGroupItem value="day" aria-label="By Day">{t("dashboard.day")}</ToggleGroupItem>

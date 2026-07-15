@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, ReactNode, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface IntegrationContextType {
   runWithIntegrationCheck: (action: () => void) => Promise<void>;
@@ -11,11 +12,15 @@ const IntegrationContext = createContext<IntegrationContextType | undefined>(und
 
 export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
   const [isPromptOpen, setIsPromptOpen] = useState(false);
+  // Shared AuthProvider user id instead of a network getUser() on every check.
+  const { userId } = useAuth();
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
 
   const checkIntegration = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
-    const { data } = await supabase.from('integrations').select('id').eq('user_id', user.id).eq('provider', 'facebook').maybeSingle();
+    const uid = userIdRef.current;
+    if (!uid) return false;
+    const { data } = await supabase.from('integrations').select('id').eq('user_id', uid).eq('provider', 'facebook').maybeSingle();
     return !!data;
   }, []);
 

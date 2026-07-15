@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { useAuth } from "@/contexts/AuthContext";
 import { Keyword } from "@/pages/Keywords";
 
 const keywordSchema = z.object({
@@ -29,6 +30,7 @@ interface KeywordEditorModalProps {
 
 export const KeywordEditorModal = ({ isOpen, onClose, onSave, keyword }: KeywordEditorModalProps) => {
   const { t } = useTranslation();
+  const { userId } = useAuth();
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<KeywordFormData>({
     resolver: zodResolver(keywordSchema),
   });
@@ -42,13 +44,12 @@ export const KeywordEditorModal = ({ isOpen, onClose, onSave, keyword }: Keyword
   }, [keyword, reset]);
 
   const onSubmit = async (data: KeywordFormData) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    if (!userId) {
       showError(t("keywords.must_login"));
       return;
     }
 
-    const payload = { ...data, user_id: user.id };
+    const payload = { ...data, user_id: userId };
     let error;
 
     if (keyword) {
@@ -77,7 +78,7 @@ export const KeywordEditorModal = ({ isOpen, onClose, onSave, keyword }: Keyword
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="keyword">{t("keywords.keyword_label")}</Label>
-            <Input id="keyword" {...register("keyword")} placeholder={t("keywords.keyword_placeholder")} />
+            <Input id="keyword" autoFocus {...register("keyword")} placeholder={t("keywords.keyword_placeholder")} />
             {errors.keyword && <p className="text-sm text-destructive mt-1">{t(errors.keyword.message)}</p>}
           </div>
           <div className="space-y-2">
@@ -88,7 +89,7 @@ export const KeywordEditorModal = ({ isOpen, onClose, onSave, keyword }: Keyword
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
               {t("keywords.save_keyword")}
             </Button>
           </DialogFooter>

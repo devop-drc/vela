@@ -1,12 +1,25 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui-app/StatusBadge";
+import { EmptyState } from "@/components/ui-app/EmptyState";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Package, Zap, SkipForward, Loader2, CheckCircle, XCircle, ImageOff } from "lucide-react";
+import { Package, Zap, SkipForward, CheckCircle, XCircle, ImageOff } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { useCountUp } from "@/lib/anim";
 import { SyncJob, ProductPayload, SkippedItem } from "@/types/sync";
 import { AnimatePresence, motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
-const ProductRow = ({ item, type }: { item: ProductPayload; type: 'created' | 'updated' }) => (
+/** Small count-up number for the sync stat badges. */
+const CountUp = ({ value }: { value: number }) => {
+  const ref = useCountUp<HTMLSpanElement>(value, { duration: 0.4 });
+  return <span ref={ref} className="tabular-nums">{value}</span>;
+};
+
+const ProductRow = ({ item, type }: { item: ProductPayload; type: 'created' | 'updated' }) => {
+  const { t } = useTranslation();
+  return (
   <motion.div
     initial={{ opacity: 0, x: -10 }}
     animate={{ opacity: 1, x: 0 }}
@@ -22,12 +35,9 @@ const ProductRow = ({ item, type }: { item: ProductPayload; type: 'created' | 'u
     <div className="flex-1 min-w-0">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium truncate">{item.name || 'Untitled'}</p>
-        <Badge
-          variant="outline"
-          className={`shrink-0 text-[10px] h-5 ${type === 'created' ? 'border-emerald-300 text-emerald-600 bg-emerald-50' : 'border-blue-300 text-blue-600 bg-blue-50'}`}
-        >
-          {type === 'created' ? 'New' : 'Updated'}
-        </Badge>
+        <StatusBadge tone={type === 'created' ? 'success' : 'info'} size="sm" className="shrink-0">
+          {type === 'created' ? t('sync.label_new') : t('sync.label_updated')}
+        </StatusBadge>
       </div>
       <div className="flex items-center gap-2 mt-0.5">
         {item.category && (
@@ -70,7 +80,8 @@ const ProductRow = ({ item, type }: { item: ProductPayload; type: 'created' | 'u
       )}
     </div>
   </motion.div>
-);
+  );
+};
 
 const SkippedRow = ({ item }: { item: SkippedItem }) => (
   <motion.div
@@ -99,6 +110,7 @@ interface SyncLiveFeedModalProps {
 }
 
 export const SyncLiveFeedModal = ({ job, isOpen, onClose }: SyncLiveFeedModalProps) => {
+  const { t } = useTranslation();
   if (!job) return null;
 
   const summary = job.summary;
@@ -118,32 +130,32 @@ export const SyncLiveFeedModal = ({ job, isOpen, onClose }: SyncLiveFeedModalPro
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             {isRunning ? (
-              <Loader2 className="h-4 w-4 text-primary animate-spin" />
+              <Spinner className="h-4 w-4 text-primary" />
             ) : job.status === 'completed' ? (
-              <CheckCircle className="h-4 w-4 text-emerald-500" />
+              <CheckCircle className="h-4 w-4 text-success" />
             ) : (
               <XCircle className="h-4 w-4 text-destructive" />
             )}
-            Live Sync Feed
+            {t('sync.live_feed_title')}
             {isRunning && (
               <Badge variant="outline" className="ml-auto text-[10px] animate-pulse">
-                Live
+                {t('sync.live')}
               </Badge>
             )}
           </DialogTitle>
           {/* Stats bar */}
-          <div className="flex gap-2 pt-1">
-            <Badge variant="secondary" className="text-[10px] h-5 gap-1 bg-emerald-500/10 text-emerald-600 border-0">
-              <Package className="h-2.5 w-2.5" />{createdItems.length} created
-            </Badge>
-            <Badge variant="secondary" className="text-[10px] h-5 gap-1 bg-blue-500/10 text-blue-600 border-0">
-              <Zap className="h-2.5 w-2.5" />{updatedItems.length} updated
-            </Badge>
-            <Badge variant="secondary" className="text-[10px] h-5 gap-1 bg-muted text-muted-foreground border-0">
-              <SkipForward className="h-2.5 w-2.5" />{skippedItems.length} skipped
-            </Badge>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <StatusBadge tone="success" size="sm" icon={<Package />}>
+              <CountUp value={createdItems.length} /> {t('sync.created')}
+            </StatusBadge>
+            <StatusBadge tone="info" size="sm" icon={<Zap />}>
+              <CountUp value={updatedItems.length} /> {t('sync.updated')}
+            </StatusBadge>
+            <StatusBadge tone="neutral" size="sm" icon={<SkipForward />}>
+              <CountUp value={skippedItems.length} /> {t('sync.skipped')}
+            </StatusBadge>
             <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
-              {totalProcessed} / {job.total || '?'} processed
+              {totalProcessed} / {job.total || '?'} {t('sync.processed')}
             </span>
           </div>
         </DialogHeader>
@@ -151,13 +163,13 @@ export const SyncLiveFeedModal = ({ job, isOpen, onClose }: SyncLiveFeedModalPro
         <Tabs defaultValue="products" className="flex-1 min-h-0 flex flex-col">
           <TabsList className="shrink-0 w-full grid grid-cols-3">
             <TabsTrigger value="products" className="text-xs">
-              Products ({allProducts.length})
+              {t('sync.tab_products')} ({allProducts.length})
             </TabsTrigger>
             <TabsTrigger value="created" className="text-xs">
-              Created ({createdItems.length})
+              {t('sync.tab_created')} ({createdItems.length})
             </TabsTrigger>
             <TabsTrigger value="skipped" className="text-xs">
-              Skipped ({skippedItems.length})
+              {t('sync.tab_skipped')} ({skippedItems.length})
             </TabsTrigger>
           </TabsList>
 
@@ -171,16 +183,13 @@ export const SyncLiveFeedModal = ({ job, isOpen, onClose }: SyncLiveFeedModalPro
                       animate={{ opacity: 1 }}
                       className="flex flex-col items-center justify-center py-12 text-muted-foreground"
                     >
-                      <Loader2 className="h-8 w-8 animate-spin mb-3" />
-                      <p className="text-sm">Waiting for AI analysis results...</p>
-                      <p className="text-xs mt-1">Products will appear here as they're processed</p>
+                      <Spinner className="h-8 w-8 mb-3" />
+                      <p className="text-sm">{t('sync.waiting_ai')}</p>
+                      <p className="text-xs mt-1">{t('sync.waiting_ai_desc')}</p>
                     </motion.div>
                   )}
                   {allProducts.length === 0 && !isRunning && (
-                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                      <Package className="h-8 w-8 mb-3" />
-                      <p className="text-sm">No products were created or updated</p>
-                    </div>
+                    <EmptyState compact icon={Package} title={t('sync.no_products_processed')} />
                   )}
                   {allProducts.map((item, i) => (
                     <ProductRow key={item.instagram_post_id || i} item={item} type={item._type} />
@@ -194,10 +203,7 @@ export const SyncLiveFeedModal = ({ job, isOpen, onClose }: SyncLiveFeedModalPro
             <ScrollArea className="h-[50vh]">
               <div className="space-y-2 pr-3">
                 {createdItems.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                    <Package className="h-8 w-8 mb-3" />
-                    <p className="text-sm">{isRunning ? 'Products will appear as they\'re created...' : 'No new products created'}</p>
-                  </div>
+                  <EmptyState compact icon={Package} title={isRunning ? t('sync.created_appearing') : t('sync.no_created')} />
                 ) : (
                   createdItems.map((item, i) => (
                     <ProductRow key={item.instagram_post_id || i} item={item} type="created" />
@@ -211,10 +217,7 @@ export const SyncLiveFeedModal = ({ job, isOpen, onClose }: SyncLiveFeedModalPro
             <ScrollArea className="h-[50vh]">
               <div className="space-y-2 pr-3">
                 {skippedItems.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                    <SkipForward className="h-8 w-8 mb-3" />
-                    <p className="text-sm">{isRunning ? 'Skipped posts will appear here...' : 'No posts were skipped'}</p>
-                  </div>
+                  <EmptyState compact icon={SkipForward} title={isRunning ? t('sync.skipped_appearing') : t('sync.no_skipped')} />
                 ) : (
                   skippedItems.map((item, i) => (
                     <SkippedRow key={i} item={item} />

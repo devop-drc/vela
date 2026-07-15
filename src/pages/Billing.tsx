@@ -3,47 +3,54 @@
  * Payments run through RaiAccept (hosted payment page): the
  * create-subscription-payment edge function returns a redirect URL.
  */
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Check, CreditCard, Gift, Loader2, AlertTriangle, Receipt } from "lucide-react";
+import { Check, CreditCard, Gift, AlertTriangle, Receipt } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { StatusBadge, EmptyState } from "@/components/ui-app";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubscription, Plan } from "@/contexts/SubscriptionContext";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { showError, showSuccess } from "@/utils/toast";
+import { paymentStatusTone, type StatusTone } from "@/lib/status";
+import { useReveal, useCountUp } from "@/lib/anim";
 import { cn } from "@/lib/utils";
 
 const BRAND = "brand-gradient";
+/** Single definition of the signature brand-gradient CTA styling (used by 4 CTAs). */
+const BRAND_CTA = cn("text-white hover:opacity-90", BRAND);
 const fmt = (n: number) => n.toLocaleString("en-US");
 
-const FEATURE_LABELS: Record<string, { sq: string; en: string }> = {
-  instagram_storefront: { sq: "Vitrinë Instagram", en: "Instagram storefront" },
-  cod_orders: { sq: "Porosi me para në dorë", en: "Cash-on-delivery orders" },
-  basic_analytics: { sq: "Analitikë bazë", en: "Basic analytics" },
-  unlimited_products: { sq: "Produkte pa limit", en: "Unlimited products" },
-  storefront_studio: { sq: "Storefront Studio", en: "Storefront Studio" },
-  card_payments: { sq: "Pagesa online me kartë", en: "Online card payments" },
-  promotions: { sq: "Promocione & oferta", en: "Promotions & sales" },
-  reviews: { sq: "Vlerësime produktesh", en: "Product reviews" },
-  full_analytics: { sq: "Analitikë e plotë", en: "Full analytics" },
-  everything_pro: { sq: "Gjithçka e Pro-s", en: "Everything in Pro" },
-  priority_support: { sq: "Suport me përparësi", en: "Priority support" },
-  advanced_analytics: { sq: "Analitikë e avancuar", en: "Advanced analytics" },
-  higher_ai_limits: { sq: "Limite më të larta AI", en: "Higher AI limits" },
+/** Soft status wash for the hero card, derived from a semantic tone (dark-safe). */
+const TONE_WASH: Record<StatusTone, string> = {
+  success: "border-success/30 bg-success/5",
+  warning: "border-warning/30 bg-warning/5",
+  info: "border-info/30 bg-info/5",
+  danger: "border-destructive/30 bg-destructive/5",
+  neutral: "border-border bg-muted/30",
 };
 
 interface PaymentRow {
   id: string; amount_all: number; status: string; type: string; created_at: string;
+}
+
+/** Count-up number that re-tweens on value change (annual/monthly toggle, mount). */
+function AnimatedNumber({
+  value, format, className,
+}: { value: number; format: (n: number) => string; className?: string }) {
+  const ref = useCountUp<HTMLSpanElement>(value, { format });
+  return <span ref={ref} className={className}>{format(value)}</span>;
 }
 
 export default function Billing() {
@@ -54,8 +61,11 @@ export default function Billing() {
   const [annual, setAnnual] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [history, setHistory] = useState<PaymentRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState(false);
   const [switchTarget, setSwitchTarget] = useState<Plan | null>(null);
   const [params, setParams] = useSearchParams();
+  const gridRef = useReveal<HTMLDivElement>({}, [plans.length]);
 
   useEffect(() => { setTitle(t("nav.billing", "Billing")); }, [setTitle, t]);
 
@@ -63,22 +73,32 @@ export default function Billing() {
   useEffect(() => {
     const result = params.get("result");
     if (!result) return;
-    if (result === "success") { showSuccess(lang === "sq" ? "Pagesa u krye me sukses!" : "Payment successful!"); refresh(); }
-    else if (result === "cancel") showError(lang === "sq" ? "Pagesa u anulua." : "Payment canceled.");
-    else showError(lang === "sq" ? "Pagesa dështoi. Provo përsëri." : "Payment failed. Please try again.");
+    if (result === "success") { showSuccess(t("billing.payment_success", "Payment successful!")); refresh(); }
+    else if (result === "cancel") showError(t("billing.payment_canceled", "Payment canceled."));
+    else showError(t("billing.payment_failed", "Payment failed. Please try again."));
     params.delete("result");
     setParams(params, { replace: true });
-  }, [params, setParams, refresh, lang]);
+  }, [params, setParams, refresh, t]);
 
-  useEffect(() => {
-    supabase.from("payments").select("id, amount_all, status, type, created_at")
-      .order("created_at", { ascending: false }).limit(10)
-      .then(({ data }) => setHistory((data as PaymentRow[]) ?? []));
-  }, [subscription?.status]);
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    setHistoryError(false);
+    const { data, error } = await supabase
+      .from("payments")
+      .select("id, amount_all, status, type, created_at")
+      .order("created_at", { ascending: false })
+      .limit(10);
+    if (error) { setHistoryError(true); setHistoryLoading(false); return; }
+    setHistory((data as PaymentRow[]) ?? []);
+    setHistoryLoading(false);
+  }, []);
+
+  useEffect(() => { loadHistory(); }, [loadHistory, subscription?.status]);
 
   const priceFor = (p: Plan) =>
     annual ? Math.round((p.price_all * (12 - p.annual_free_months)) / 12) : p.price_all;
   const yearlyTotal = (p: Plan) => p.price_all * (12 - p.annual_free_months);
+  const maxFreeMonths = plans.reduce((m, p) => Math.max(m, p.annual_free_months || 0), 0);
 
   const subscribe = async (planId: string, trialSetup = false) => {
     setBusy(trialSetup ? "trial" : planId);
@@ -89,7 +109,7 @@ export default function Billing() {
       if (error || !data?.url) throw new Error(error?.message || data?.error || "No payment URL");
       window.location.href = data.url;
     } catch (e: any) {
-      showError((lang === "sq" ? "S'u nis dot pagesa: " : "Couldn't start payment: ") + e.message);
+      showError(t("billing.start_payment_error", { defaultValue: "Couldn't start payment: {{error}}", error: e.message }));
       setBusy(null);
     }
   };
@@ -103,24 +123,20 @@ export default function Billing() {
     const trialValid = s === "trialing" && trialDaysLeft != null;
     const heroPlan = currentPlan ?? plans.find((p) => p.id === subscription.plan_id) ?? null;
 
-    const meta =
-      s === "active"
-        ? { label: t("billing.status_active", "Active"), badge: "border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400", wash: "border-emerald-500/30 bg-emerald-500/5" }
-        : trialValid
-        ? { label: t("billing.status_trial", "Trial"), badge: "border-fuchsia-500/40 bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400", wash: "border-fuchsia-500/30 bg-fuchsia-500/5" }
-        : s === "incomplete"
-        ? { label: t("billing.status_incomplete", "Not started"), badge: "border-fuchsia-500/40 bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400", wash: "border-fuchsia-500/40 bg-fuchsia-500/5" }
-        : s === "canceled"
-        ? { label: t("billing.status_cancelled", "Cancelled"), badge: "border-border bg-muted text-muted-foreground", wash: "border-amber-500/40 bg-amber-500/5" }
-        : s === "past_due"
-        ? { label: t("billing.status_past_due", "Past due"), badge: "border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400", wash: "border-amber-500/40 bg-amber-500/5" }
-        : { label: t("billing.status_expired", "Expired"), badge: "border-red-500/40 bg-red-500/15 text-red-600 dark:text-red-400", wash: "border-amber-500/40 bg-amber-500/5" };
+    // Derive a single semantic tone + label; badge + wash both flow from it.
+    let tone: StatusTone;
+    let label: string;
+    if (s === "active") { tone = "success"; label = t("billing.status_active", "Active"); }
+    else if (trialValid) { tone = "info"; label = t("billing.status_trial", "Trial"); }
+    else if (s === "incomplete") { tone = "warning"; label = t("billing.status_incomplete", "Not started"); }
+    else if (s === "canceled") { tone = "neutral"; label = t("billing.status_cancelled", "Cancelled"); }
+    else if (s === "past_due") { tone = "warning"; label = t("billing.status_past_due", "Past due"); }
+    else { tone = "danger"; label = t("billing.status_expired", "Expired"); }
 
     // Price + cycle of the subscribed plan (annual shows the effective yearly total).
     const isAnnualSub = subscription.billing_cycle === "annual";
-    const priceLine = heroPlan
-      ? `${fmt(isAnnualSub ? yearlyTotal(heroPlan) : heroPlan.price_all)} ${isAnnualSub ? t("billing.per_year", "ALL / year") : t("billing.per_month", "ALL / month")}`
-      : null;
+    const heroPriceValue = heroPlan ? (isAnnualSub ? yearlyTotal(heroPlan) : heroPlan.price_all) : null;
+    const heroPriceUnit = isAnnualSub ? t("billing.per_year", "ALL / year") : t("billing.per_month", "ALL / month");
 
     // Current-period progress: paid period for active subs, the 7-day window for trials.
     let periodStart: number | null = null;
@@ -149,7 +165,7 @@ export default function Billing() {
         : null;
 
     return (
-      <Card className={cn("overflow-hidden", meta.wash)} data-tour="billing-plan">
+      <Card className={cn("overflow-hidden", TONE_WASH[tone])} data-tour="billing-plan">
         <CardContent className="space-y-4 p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
@@ -157,19 +173,19 @@ export default function Billing() {
                 {t("billing.current_plan", "Current plan")}
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-2.5">
-                <h2 className="text-3xl font-bold leading-tight">{heroPlan?.name ?? subscription.plan_id}</h2>
-                <Badge variant="outline" className={cn("text-xs", meta.badge)}>{meta.label}</Badge>
+                <h2 className="text-3xl font-bold leading-tight">{heroPlan?.name ?? t("billing.your_plan", "Your plan")}</h2>
+                <StatusBadge tone={tone} dot>{label}</StatusBadge>
               </div>
-              {priceLine && (
+              {heroPriceValue != null && (
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {priceLine} · {isAnnualSub ? t("billing.cycle_annual", "Billed annually") : t("billing.cycle_monthly", "Billed monthly")}
+                  <AnimatedNumber value={heroPriceValue} format={fmt} className="tabular-nums" /> {heroPriceUnit} · {isAnnualSub ? t("billing.cycle_annual", "Billed annually") : t("billing.cycle_monthly", "Billed monthly")}
                 </p>
               )}
             </div>
             {trialValid && trialDaysLeft != null && (
-              <div className="flex items-center gap-2 rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/10 px-3 py-2">
-                <Gift className="h-4 w-4 shrink-0 text-fuchsia-500" />
-                <span className="text-sm font-semibold text-fuchsia-600 dark:text-fuchsia-400">
+              <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2">
+                <Gift className="h-4 w-4 shrink-0 text-primary" />
+                <span className="text-sm font-semibold text-primary">
                   {t("billing.days_left", { defaultValue: "{{days}} days left", days: trialDaysLeft })}
                 </span>
               </div>
@@ -192,16 +208,15 @@ export default function Billing() {
               <p className="min-w-0 flex-1 text-sm">
                 {t("billing.trial_setup_hint", "Start your 7-day free trial — add your card (0 ALL verification, nothing charged today).")}
               </p>
-              <Button size="sm" disabled={busy != null} onClick={() => subscribe("pro", true)}
-                className={cn("text-white hover:opacity-90", BRAND)}>
-                {busy === "trial" ? <Loader2 className="h-4 w-4 animate-spin" /> : t("billing.start_trial", "Start free trial")}
+              <Button size="sm" disabled={busy != null} onClick={() => subscribe("pro", true)} className={BRAND_CTA}>
+                {busy === "trial" ? <Spinner className="h-4 w-4" /> : t("billing.start_trial", "Start free trial")}
               </Button>
             </div>
           )}
 
           {!isActive && s !== "incomplete" && (
             <p className="flex items-center gap-2 text-sm">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+              <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
               {t("billing.locked_hint", "Your account is limited — choose a plan below to reactivate your shop.")}
             </p>
           )}
@@ -210,40 +225,44 @@ export default function Billing() {
     );
   };
 
-  const statusBadgeVariant = (s: string) => s === "paid" ? "default" : s === "pending" ? "secondary" : "destructive";
-  const statusLabel = (s: string) => {
-    if (lang !== "sq") return s;
-    return s === "paid" ? "paguar" : s === "pending" ? "në pritje" : s === "failed" ? "dështoi" : s;
-  };
-  const typeLabel = (ty: string) => {
-    const map: Record<string, { sq: string; en: string }> = {
-      initial: { sq: "Abonim i ri", en: "New subscription" },
-      renewal: { sq: "Rinovim", en: "Renewal" },
-      switch: { sq: "Ndryshim plani", en: "Plan change" },
-      trial: { sq: "Provë falas", en: "Free trial" },
-    };
-    return map[ty]?.[lang] ?? ty;
-  };
+  const statusLabel = (s: string) => t(`billing.payment_status.${s}`, s);
+  const typeLabel = (ty: string) => t(`billing.payment_types.${ty}`, ty);
 
   const historyCard = () => (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Receipt className="h-4 w-4 text-muted-foreground" />
-          {lang === "sq" ? "Historiku i pagesave" : "Payment history"}
+          {t("billing.payment_history", "Payment history")}
         </CardTitle>
         <CardDescription>
-          {lang === "sq" ? "Të gjitha pagesat e abonimit tënd." : "All charges on your subscription."}
+          {t("billing.payment_history_desc", "All charges on your subscription.")}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {history.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-8 text-center">
-            <Receipt className="h-8 w-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">
-              {lang === "sq" ? "Ende s'ke asnjë pagesë." : "No payments yet."}
-            </p>
+        {historyLoading ? (
+          <div className="divide-y divide-border rounded-lg border border-border">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center justify-between gap-4 px-3.5 py-3">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="hidden h-4 w-24 sm:block" />
+                <Skeleton className="h-5 w-16" />
+              </div>
+            ))}
           </div>
+        ) : historyError ? (
+          <EmptyState
+            compact
+            icon={AlertTriangle}
+            title={t("billing.history_error", "Couldn't load payment history.")}
+            action={
+              <Button size="sm" variant="outline" onClick={loadHistory}>
+                {t("common.retry", "Try again")}
+              </Button>
+            }
+          />
+        ) : history.length === 0 ? (
+          <EmptyState compact icon={Receipt} title={t("billing.no_payments", "No payments yet.")} />
         ) : (
           <div className="divide-y divide-border rounded-lg border border-border">
             {history.map((h) => (
@@ -255,9 +274,9 @@ export default function Billing() {
                   {typeLabel(h.type)}
                 </span>
                 <span className="text-right text-sm font-semibold tabular-nums">{fmt(h.amount_all)} ALL</span>
-                <Badge variant={statusBadgeVariant(h.status)} className="justify-self-end text-[10px] capitalize">
+                <StatusBadge tone={paymentStatusTone(h.status)} size="sm" className="justify-self-end capitalize">
                   {statusLabel(h.status)}
-                </Badge>
+                </StatusBadge>
               </div>
             ))}
           </div>
@@ -266,7 +285,16 @@ export default function Billing() {
     </Card>
   );
 
-  if (loading) return <div className="space-y-4"><Skeleton className="h-16" /><div className="grid gap-4 lg:grid-cols-3"><Skeleton className="h-96" /><Skeleton className="h-96" /><Skeleton className="h-96" /></div></div>;
+  if (loading) return (
+    <div className="mx-auto max-w-5xl space-y-6">
+      <Skeleton className="h-40 w-full" />
+      <Skeleton className="h-48 w-full" />
+      <div className="flex justify-center"><Skeleton className="h-9 w-56" /></div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Skeleton className="h-96" /><Skeleton className="h-96" /><Skeleton className="h-96" />
+      </div>
+    </div>
+  );
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -274,13 +302,26 @@ export default function Billing() {
 
       {historyCard()}
 
-      <div className="flex items-center justify-center gap-3">
-        <span className={cn("text-sm", !annual && "font-semibold")}>{lang === "sq" ? "Mujore" : "Monthly"}</span>
-        <Switch checked={annual} onCheckedChange={setAnnual} />
-        <span className={cn("text-sm", annual && "font-semibold")}>{lang === "sq" ? "Vjetore" : "Annual"}</span>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <ToggleGroup
+          type="single"
+          value={annual ? "annual" : "monthly"}
+          onValueChange={(v) => { if (v) setAnnual(v === "annual"); }}
+          variant="outline"
+          size="sm"
+          aria-label={t("billing.billing_cycle", "Billing cycle")}
+        >
+          <ToggleGroupItem value="monthly" className="px-4">{t("billing.monthly", "Monthly")}</ToggleGroupItem>
+          <ToggleGroupItem value="annual" className="px-4">{t("billing.annual", "Annual")}</ToggleGroupItem>
+        </ToggleGroup>
+        {annual && maxFreeMonths > 0 && (
+          <Badge variant="outline" className="gap-1 border-primary/25 bg-primary/10 text-primary">
+            <Gift className="h-3 w-3" /> {t("billing.save_up_to", { defaultValue: "Save up to {{months}} months", months: maxFreeMonths })}
+          </Badge>
+        )}
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-3">
+      <div ref={gridRef} className="grid items-start gap-4 pt-3 lg:grid-cols-3">
         {plans.map((p) => {
           const featured = p.id === "pro";
           const current = isActive && subscription?.plan_id === p.id && subscription.status === "active";
@@ -293,52 +334,52 @@ export default function Billing() {
             : p.price_all < currentPlan.price_all ? t("billing.downgrade", "Downgrade")
             : t("billing.switch_plan", "Switch to this plan");
           return (
-            <Card key={p.id} className={cn("relative", featured && "border-fuchsia-500/40 shadow-lg")}>
+            <Card key={p.id} data-reveal className={cn("relative", featured && "border-primary/40 shadow-lg")}>
               {featured && (
                 <span className={cn("absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-xs font-medium text-white", BRAND)}>
-                  {lang === "sq" ? "Më i zgjedhuri" : "Most popular"}
+                  {t("billing.most_popular", "Most popular")}
                 </span>
               )}
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">{p.name}</CardTitle>
                 {annual && p.annual_free_months > 0 && (
-                  <Badge variant="secondary" className="w-fit gap-1 text-fuchsia-600">
-                    <Gift className="h-3 w-3" /> {p.annual_free_months} {lang === "sq" ? "muaj falas" : "months free"}
+                  <Badge variant="secondary" className="w-fit gap-1 text-primary">
+                    <Gift className="h-3 w-3" /> {t("billing.months_free", { defaultValue: "{{months}} months free", months: p.annual_free_months })}
                   </Badge>
                 )}
               </CardHeader>
               <CardContent>
                 <div className="flex items-end gap-1">
-                  <span className="text-3xl font-bold">{fmt(priceFor(p))}</span>
-                  <span className="mb-1 text-sm text-muted-foreground">ALL / {lang === "sq" ? "muaj" : "mo"}</span>
+                  <AnimatedNumber value={priceFor(p)} format={fmt} className="text-3xl font-bold" />
+                  <span className="mb-1 text-sm text-muted-foreground">{t("billing.per_month_short", "ALL / mo")}</span>
                 </div>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {annual
-                    ? (lang === "sq" ? `Faturohet ${fmt(yearlyTotal(p))} ALL në vit` : `Billed ${fmt(yearlyTotal(p))} ALL yearly`)
-                    : (lang === "sq" ? "Faturim mujor" : "Billed monthly")}
+                    ? t("billing.billed_yearly", { defaultValue: "Billed {{amount}} ALL yearly", amount: fmt(yearlyTotal(p)) })
+                    : t("billing.cycle_monthly", "Billed monthly")}
                 </p>
                 <Button
                   disabled={busy != null || current}
                   onClick={() => (isSwitch ? setSwitchTarget(p) : subscribe(p.id))}
-                  className={cn("mt-4 w-full", featured && cn("text-white hover:opacity-90", BRAND))}
+                  className={cn("mt-4 w-full", featured && BRAND_CTA)}
                   variant={featured ? "default" : "outline"}
                 >
-                  {busy === p.id ? <Loader2 className="h-4 w-4 animate-spin" />
+                  {busy === p.id ? <Spinner className="h-4 w-4" />
                     : current ? t("billing.current_plan", "Current plan")
                     : isSwitch ? switchLabel
-                    : (lang === "sq" ? "Zgjidh planin" : "Choose plan")}
+                    : t("billing.choose_plan", "Choose plan")}
                 </Button>
                 <ul className="mt-4 space-y-2">
                   {(p.features as string[]).map((f) => (
                     <li key={f} className="flex gap-2 text-sm">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                      {FEATURE_LABELS[f]?.[lang] ?? f}
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                      {t(`billing.features.${f}`, f)}
                     </li>
                   ))}
                   {p.product_limit && (
                     <li className="flex gap-2 text-sm">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                      {lang === "sq" ? `Deri në ${p.product_limit} produkte` : `Up to ${p.product_limit} products`}
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                      {t("billing.up_to_products", { defaultValue: "Up to {{limit}} products", limit: p.product_limit })}
                     </li>
                   )}
                 </ul>
@@ -349,7 +390,7 @@ export default function Billing() {
       </div>
 
       <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-        <CreditCard className="h-3.5 w-3.5" /> {lang === "sq" ? "Pagesa të sigurta përmes Raiffeisen (RaiAccept)" : "Secure payments via Raiffeisen (RaiAccept)"}
+        <CreditCard className="h-3.5 w-3.5" /> {t("billing.secure_payments", "Secure payments via Raiffeisen (RaiAccept)")}
       </p>
 
       <AlertDialog open={switchTarget != null} onOpenChange={(open) => { if (!open) setSwitchTarget(null); }}>
@@ -370,7 +411,7 @@ export default function Billing() {
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel", "Cancel")}</AlertDialogCancel>
             <AlertDialogAction
-              className={cn("text-white hover:opacity-90", BRAND)}
+              className={BRAND_CTA}
               onClick={() => {
                 if (!switchTarget) return;
                 const id = switchTarget.id;

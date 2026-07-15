@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface WelcomeHeaderProps {
   pendingOrders: number;
@@ -13,23 +12,14 @@ interface WelcomeHeaderProps {
 
 export const WelcomeHeader = ({ pendingOrders, activeProducts, totalOrders = 0, isLoading }: WelcomeHeaderProps) => {
   const { t } = useTranslation();
-  const [firstName, setFirstName] = useState<string | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setProfileLoading(false); return; }
-      const { data: profile } = await supabase.from("profiles").select("first_name").eq("id", user.id).single();
-      setFirstName(profile?.first_name || user.user_metadata?.first_name || null);
-      setProfileLoading(false);
-    };
-    fetchProfile();
-  }, []);
+  // Name resolves instantly from the cached session (no getUser round-trip, no
+  // extra profiles query) — AuthContext already has the user.
+  const { user } = useAuth();
+  const firstName = (user?.user_metadata?.first_name as string | undefined) || null;
 
   const todayLabel = format(new Date(), "EEEE, MMMM d, yyyy");
 
-  if (profileLoading || isLoading) {
+  if (isLoading) {
     return (
       <div className="space-y-2">
         <Skeleton className="h-10 w-72" />

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { useProductData } from "@/hooks/useProductData";
@@ -9,23 +9,35 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Search,
   Package,
   X,
   Plus,
-  RefreshCw,
   AlertTriangle,
   CheckCircle2,
   XCircle,
   ChevronRight,
   Layers,
   Hash,
+  type LucideIcon,
 } from "lucide-react";
-import { showError, showSuccess } from "@/utils/toast";
+import { toast } from "sonner";
+import { showError, toFriendlyError } from "@/utils/toast";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import {
+  StatCard,
+  StatusBadge,
+  StatusDot,
+  SearchInput,
+  EmptyState,
+  CommandBar,
+  ConfirmButton,
+} from "@/components/ui-app";
+import { stockLevel, STOCK_LEVEL_TONE, type StockLevel } from "@/lib/status";
+import { useReveal } from "@/lib/anim";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -45,43 +57,63 @@ export type VariantRow = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const getStockStatus = (inventory: number): "in-stock" | "low-stock" | "out-of-stock" => {
-  if (inventory <= 0) return "out-of-stock";
-  if (inventory < 10) return "low-stock";
-  return "in-stock";
+const VARIANT_SELECT =
+  "id, product_id, combination_key, option_values, inventory, price_difference, is_active, is_default, sku";
+
+/**
+ * Normalize a raw product_variants row: if `option_values` is empty, derive it
+ * from the `combination_key` ("Name:Value|Name:Value", see
+ * CombinedVariantManager.normalizeKey). Single source used by the prefetch and
+ * the per-product lazy fetch so the parsing never drifts.
+ */
+const parseVariantRow = (v: any): VariantRow => {
+  let optVals: Record<string, string> = v.option_values || {};
+  if (Object.keys(optVals).length === 0 && v.combination_key) {
+    optVals = {};
+    v.combination_key.split("|").forEach((part: string) => {
+      const idx = part.indexOf(":");
+      if (idx > 0) {
+        const key = part.slice(0, idx);
+        const val = part.slice(idx + 1);
+        if (key && val) optVals[key] = val;
+      }
+    });
+  }
+  return { ...v, option_values: optVals } as VariantRow;
 };
 
-const getLowestStockStatus = (variants: VariantRow[]): "in-stock" | "low-stock" | "out-of-stock" => {
+/** Worst (most severe) stock level across a product's variants. */
+const worstStockLevel = (variants: VariantRow[]): StockLevel => {
   if (variants.length === 0) return "out-of-stock";
-  const statuses = variants.map((v) => getStockStatus(v.inventory));
-  if (statuses.includes("out-of-stock")) return "out-of-stock";
-  if (statuses.includes("low-stock")) return "low-stock";
+  const levels = variants.map((v) => stockLevel(v.inventory));
+  if (levels.includes("out-of-stock")) return "out-of-stock";
+  if (levels.includes("low-stock")) return "low-stock";
   return "in-stock";
 };
 
 const getTotalStock = (variants: VariantRow[]): number =>
   variants.reduce((sum, v) => sum + (v.inventory ?? 0), 0);
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
+// ─── Status Badge (token-based via lib/status + ui-app StatusBadge) ────────────
 
-const StatusBadge = ({ status }: { status: "in-stock" | "low-stock" | "out-of-stock" }) => {
+const STOCK_ICON: Record<StockLevel, LucideIcon> = {
+  "in-stock": CheckCircle2,
+  "low-stock": AlertTriangle,
+  "out-of-stock": XCircle,
+};
+const STOCK_KEY: Record<StockLevel, string> = {
+  "in-stock": "common.in_stock",
+  "low-stock": "common.low_stock",
+  "out-of-stock": "common.out_of_stock",
+};
+
+const StockBadge = ({ level, className }: { level: StockLevel; className?: string }) => {
   const { t } = useTranslation();
-  if (status === "out-of-stock")
-    return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600">
-        <XCircle className="h-3.5 w-3.5" /> {t("common.out_of_stock")}
-      </span>
-    );
-  if (status === "low-stock")
-    return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
-        <AlertTriangle className="h-3.5 w-3.5" /> {t("common.low_stock")}
-      </span>
-    );
+  const Icon = STOCK_ICON[level];
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
-      <CheckCircle2 className="h-3.5 w-3.5" /> {t("common.in_stock")}
-    </span>
+    <StatusBadge tone={STOCK_LEVEL_TONE[level]} size="sm" icon={<Icon />} className={className}>
+      {t(STOCK_KEY[level])}
+    </StatusBadge>
   );
 };
 
@@ -98,7 +130,7 @@ const VariantSubRow = ({ variant, isSelected, onSelect, onStockChange }: Variant
   const { t } = useTranslation();
   const [editVal, setEditVal] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const status = getStockStatus(variant.inventory);
+  const level = stockLevel(variant.inventory);
 
   const currentDisplay = editVal !== null ? editVal : String(variant.inventory);
 
@@ -127,6 +159,10 @@ const VariantSubRow = ({ variant, isSelected, onSelect, onStockChange }: Variant
   };
 
   const optionEntries = Object.entries(variant.option_values ?? {});
+  const optionLabel =
+    optionEntries.map(([k, v]) => `${k}: ${v}`).join(", ") ||
+    variant.sku ||
+    t("stock.default_variant");
 
   return (
     <div
@@ -140,12 +176,12 @@ const VariantSubRow = ({ variant, isSelected, onSelect, onStockChange }: Variant
         <Checkbox
           checked={isSelected}
           onCheckedChange={() => onSelect(variant.id)}
-          aria-label="Select variant"
+          aria-label={`Select ${optionLabel}`}
         />
       </div>
 
       {/* Option value badges */}
-      <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
+      <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
         {optionEntries.length > 0 ? (
           optionEntries.map(([optName, optVal]) => (
             <Badge key={optName} variant="secondary" className="text-xs gap-1 font-normal">
@@ -166,11 +202,13 @@ const VariantSubRow = ({ variant, isSelected, onSelect, onStockChange }: Variant
             <Hash className="h-3 w-3" />{variant.sku}
           </span>
         )}
+        {/* Compact status indicator on mobile (full badge hidden < sm) */}
+        <StatusDot tone={STOCK_LEVEL_TONE[level]} className="sm:hidden ml-0.5" />
       </div>
 
       {/* Status */}
       <div className="hidden sm:block flex-shrink-0 w-28">
-        <StatusBadge status={status} />
+        <StockBadge level={level} />
       </div>
 
       {/* Stock input */}
@@ -187,8 +225,9 @@ const VariantSubRow = ({ variant, isSelected, onSelect, onStockChange }: Variant
             if (e.key === "Escape") setEditVal(null);
           }}
           disabled={saving}
+          aria-label={t("stock.stock_for", { name: optionLabel })}
         />
-        {saving && <RefreshCw className="h-3.5 w-3.5 animate-spin text-muted-foreground flex-shrink-0" />}
+        {saving && <Spinner className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />}
       </div>
     </div>
   );
@@ -202,7 +241,6 @@ interface ProductAccordionRowProps {
   onVariantSelect: (variantId: string) => void;
   onVariantsLoaded: (productId: string, variants: VariantRow[]) => void;
   variantCache: Record<string, VariantRow[]>;
-  stockFilterForProduct: (variants: VariantRow[]) => boolean;
 }
 
 const ProductAccordionRow = ({
@@ -211,7 +249,6 @@ const ProductAccordionRow = ({
   onVariantSelect,
   onVariantsLoaded,
   variantCache,
-  stockFilterForProduct,
 }: ProductAccordionRowProps) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
@@ -231,39 +268,31 @@ const ProductAccordionRow = ({
 
   const fetchVariants = useCallback(async () => {
     if (fetched) return;
+    // Serve from the prefetched cache when available — avoids a redundant
+    // per-expand round-trip (the page prefetches every product's variants).
+    const cached = variantCache[product.id];
+    if (cached !== undefined) {
+      setLocalVariants(cached);
+      setFetched(true);
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase
       .from("product_variants")
-      .select("id, product_id, combination_key, option_values, inventory, price_difference, is_active, is_default, sku")
+      .select(VARIANT_SELECT)
       .eq("product_id", product.id)
       .order("is_default", { ascending: false });
 
     if (error) {
       showError(`Failed to load variants: ${error.message}`);
     } else {
-      // Parse option_values from combination_key if empty.
-      // Keys are stored as "Name:Value|Name:Value" (see CombinedVariantManager.normalizeKey).
-      const rows = (data ?? []).map((v: any) => {
-        let optVals = v.option_values || {};
-        if (Object.keys(optVals).length === 0 && v.combination_key) {
-          v.combination_key.split("|").forEach((part: string) => {
-            const idx = part.indexOf(":");
-            if (idx > 0) {
-              const key = part.slice(0, idx);
-              const val = part.slice(idx + 1);
-              if (key && val) optVals[key] = val;
-            }
-          });
-        }
-        return { ...v, option_values: optVals } as VariantRow;
-      });
-
+      const rows = (data ?? []).map(parseVariantRow);
       setLocalVariants(rows);
       onVariantsLoaded(product.id, rows);
       setFetched(true);
     }
     setLoading(false);
-  }, [product.id, onVariantsLoaded, fetched]);
+  }, [product.id, onVariantsLoaded, fetched, variantCache]);
 
   const handleToggle = () => {
     if (!expanded) fetchVariants();
@@ -278,10 +307,31 @@ const ProductAccordionRow = ({
     });
   }, [product.id, onVariantsLoaded]);
 
+  const undoApplyToAll = useCallback(async (previous: Map<string, number>) => {
+    setLocalVariants((prev) => {
+      const restored = prev.map((v) =>
+        previous.has(v.id) ? { ...v, inventory: previous.get(v.id)! } : v
+      );
+      onVariantsLoaded(product.id, restored);
+      return restored;
+    });
+    try {
+      await Promise.all(
+        [...previous].map(([id, inv]) =>
+          supabase.from("product_variants").update({ inventory: inv }).eq("id", id)
+        )
+      );
+    } catch (e) {
+      showError(toFriendlyError(e, "Couldn't undo the change."));
+    }
+  }, [product.id, onVariantsLoaded]);
+
   const applyToAll = async (mode: "set" | "add", rawVal: string) => {
     const num = parseInt(rawVal, 10);
     if (isNaN(num) || num < 0) return;
 
+    const previous = new Map(localVariants.map((v) => [v.id, v.inventory]));
+    const snapshot = localVariants;
     const updated = localVariants.map((v) => ({
       ...v,
       inventory: mode === "set" ? num : v.inventory + num,
@@ -297,12 +347,14 @@ const ProductAccordionRow = ({
           supabase.from("product_variants").update({ inventory: v.inventory }).eq("id", v.id)
         )
       );
-      showSuccess(`Updated all variants for ${product.name}`);
-    } catch (e: any) {
-      showError(`Failed to update: ${e.message}`);
+      toast.success(t("stock.updated_all", { name: product.name }), {
+        action: { label: t("common.undo"), onClick: () => undoApplyToAll(previous) },
+      });
+    } catch (e) {
+      showError(toFriendlyError(e, "Couldn't update the variants."));
       // revert
-      setLocalVariants(localVariants);
-      onVariantsLoaded(product.id, localVariants);
+      setLocalVariants(snapshot);
+      onVariantsLoaded(product.id, snapshot);
     }
   };
 
@@ -310,19 +362,27 @@ const ProductAccordionRow = ({
   const hasLoadedVariants = variantCache[product.id] !== undefined;
   const hasVariants = hasLoadedVariants ? variantCache[product.id].length > 0 : (product.details?.options_v2?.length ?? 0) > 0;
   const totalStock = localVariants.length > 0 ? getTotalStock(localVariants) : (product.inventory ?? 0);
-  const worstStatus = localVariants.length > 0 ? getLowestStockStatus(localVariants) : getStockStatus(product.inventory ?? 0);
+  const worstLevel = localVariants.length > 0 ? worstStockLevel(localVariants) : stockLevel(product.inventory ?? 0);
 
   return (
-    <div className="border-b last:border-b-0">
+    <div data-reveal className="border-b last:border-b-0">
       {/* Accordion Header */}
       <div
         className={cn(
-          "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-muted/30 select-none",
+          "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-muted/30 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
           expanded && "bg-muted/20"
         )}
         onClick={handleToggle}
         role="button"
+        tabIndex={0}
         aria-expanded={expanded}
+        aria-label={`${expanded ? "Collapse" : "Expand"} ${product.name}`}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleToggle();
+          }
+        }}
       >
         {/* Expand chevron */}
         <ChevronRight
@@ -361,14 +421,17 @@ const ProductAccordionRow = ({
           </span>
         )}
 
-        {/* Total stock */}
-        <div className="text-sm font-semibold flex-shrink-0 w-16 text-right tabular-nums">
-          {totalStock.toLocaleString()}
+        {/* Total stock (+ compact mobile status dot) */}
+        <div className="flex items-center gap-2 flex-shrink-0 w-auto sm:w-16 justify-end">
+          <StatusDot tone={STOCK_LEVEL_TONE[worstLevel]} className="sm:hidden" />
+          <span className="text-sm font-semibold text-right tabular-nums">
+            {totalStock.toLocaleString()}
+          </span>
         </div>
 
         {/* Status indicator */}
         <div className="flex-shrink-0 w-28 hidden sm:block">
-          <StatusBadge status={worstStatus} />
+          <StockBadge level={worstLevel} />
         </div>
       </div>
 
@@ -409,6 +472,7 @@ const ProductAccordionRow = ({
                   placeholder={quickMode === "set" ? "Qty" : "+Qty"}
                   className="h-7 w-20 text-sm"
                   value={quickMode === "set" ? setAllValue : addAllValue}
+                  aria-label={quickMode === "set" ? t("stock.set_all") : t("stock.add_to_all")}
                   onChange={(e) =>
                     quickMode === "set"
                       ? setSetAllValue(e.target.value)
@@ -447,7 +511,7 @@ const ProductAccordionRow = ({
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-medium tabular-nums w-12 text-right">{product.inventory ?? 0}</span>
                 </div>
-                <StatusBadge status={getStockStatus(product.inventory ?? 0)} />
+                <StockBadge level={stockLevel(product.inventory ?? 0)} />
               </div>
             ) : (
               localVariants.map((variant) => (
@@ -480,6 +544,7 @@ const OutOfStock = () => {
 
   // variantCache: productId -> VariantRow[]
   const [variantCache, setVariantCache] = useState<Record<string, VariantRow[]>>({});
+  const [prefetchFailed, setPrefetchFailed] = useState(false);
 
   // Selected variant IDs (across all products)
   const [selectedVariantIds, setSelectedVariantIds] = useState<Set<string>>(new Set());
@@ -489,46 +554,46 @@ const OutOfStock = () => {
   const [bulkMode, setBulkMode] = useState<"set" | "add" | "zero">("set");
   const [bulkSaving, setBulkSaving] = useState(false);
 
+  // Subtle entrance motion (reduced-motion aware) — runs once when data loads.
+  const statsReveal = useReveal<HTMLDivElement>({}, [isLoading]);
+  const listReveal = useReveal<HTMLDivElement>({}, [isLoading]);
+
   useEffect(() => {
     setTitle(t("stock.title"));
   }, [setTitle, t]);
 
-  // Pre-fetch variant stock summaries for ALL products on load
-  useEffect(() => {
+  // Pre-fetch variant stock summaries for ALL physical products on load.
+  const prefetchVariants = useCallback(async () => {
     if (!allProducts || allProducts.length === 0) return;
     const productIds = allProducts.filter((p: any) => p.pricing_type === "one_time").map((p: any) => p.id);
     if (productIds.length === 0) return;
 
-    (async () => {
-      const { data, error } = await supabase
-        .from("product_variants")
-        .select("id, product_id, combination_key, option_values, inventory, price_difference, is_active, is_default, sku")
-        .in("product_id", productIds);
+    const { data, error } = await supabase
+      .from("product_variants")
+      .select(VARIANT_SELECT)
+      .in("product_id", productIds);
 
-      if (error || !data) return;
+    if (error || !data) {
+      setPrefetchFailed(true);
+      showError(toFriendlyError(error, t("stock.prefetch_failed")));
+      return;
+    }
+    setPrefetchFailed(false);
 
-      // Group by product_id
-      const grouped: Record<string, VariantRow[]> = {};
-      data.forEach((v: any) => {
-        let optVals = v.option_values || {};
-        if (Object.keys(optVals).length === 0 && v.combination_key) {
-          v.combination_key.split("|").forEach((part: string) => {
-            const idx = part.indexOf(":");
-            if (idx > 0) {
-              const key = part.slice(0, idx);
-              const val = part.slice(idx + 1);
-              if (key && val) optVals[key] = val;
-            }
-          });
-        }
-        const row: VariantRow = { ...v, option_values: optVals };
-        if (!grouped[v.product_id]) grouped[v.product_id] = [];
-        grouped[v.product_id].push(row);
-      });
+    // Group by product_id
+    const grouped: Record<string, VariantRow[]> = {};
+    data.forEach((v: any) => {
+      const row = parseVariantRow(v);
+      if (!grouped[v.product_id]) grouped[v.product_id] = [];
+      grouped[v.product_id].push(row);
+    });
 
-      setVariantCache(prev => ({ ...prev, ...grouped }));
-    })();
-  }, [allProducts]);
+    setVariantCache((prev) => ({ ...prev, ...grouped }));
+  }, [allProducts, t]);
+
+  useEffect(() => {
+    prefetchVariants();
+  }, [prefetchVariants]);
 
   const physicalProducts = useMemo(
     () => allProducts.filter((p: any) => p.pricing_type === "one_time"),
@@ -541,16 +606,16 @@ const OutOfStock = () => {
     physicalProducts.forEach((p: any) => {
       const variants = variantCache[p.id];
       if (variants && variants.length > 0) {
-        const status = getLowestStockStatus(variants);
-        if (status === "in-stock") inStock++;
-        else if (status === "low-stock") lowStock++;
+        const level = worstStockLevel(variants);
+        if (level === "in-stock") inStock++;
+        else if (level === "low-stock") lowStock++;
         else outOfStock++;
         totalUnits += getTotalStock(variants);
       } else {
         const inv = p.inventory ?? 0;
-        const status = getStockStatus(inv);
-        if (status === "in-stock") inStock++;
-        else if (status === "low-stock") lowStock++;
+        const level = stockLevel(inv);
+        if (level === "in-stock") inStock++;
+        else if (level === "low-stock") lowStock++;
         else outOfStock++;
         totalUnits += inv;
       }
@@ -563,16 +628,10 @@ const OutOfStock = () => {
     (productId: string, fallbackInventory: number): boolean => {
       if (stockFilter === "all") return true;
       const variants = variantCache[productId];
-      let status: "in-stock" | "low-stock" | "out-of-stock";
-      if (variants && variants.length > 0) {
-        status = getLowestStockStatus(variants);
-      } else {
-        status = getStockStatus(fallbackInventory);
-      }
-      if (stockFilter === "in-stock") return status === "in-stock";
-      if (stockFilter === "low-stock") return status === "low-stock";
-      if (stockFilter === "out-of-stock") return status === "out-of-stock";
-      return true;
+      const level = variants && variants.length > 0
+        ? worstStockLevel(variants)
+        : stockLevel(fallbackInventory);
+      return level === stockFilter;
     },
     [stockFilter, variantCache]
   );
@@ -610,6 +669,28 @@ const OutOfStock = () => {
     return result;
   }, [variantCache, selectedVariantIds]);
 
+  /** Optimistically restore a previous inventory map (used by the undo action). */
+  const restoreInventory = useCallback(async (prev: Map<string, number>) => {
+    setVariantCache((cache) => {
+      const next = { ...cache };
+      Object.keys(next).forEach((pid) => {
+        next[pid] = next[pid].map((v) =>
+          prev.has(v.id) ? { ...v, inventory: prev.get(v.id)! } : v
+        );
+      });
+      return next;
+    });
+    try {
+      await Promise.all(
+        [...prev].map(([id, inv]) =>
+          supabase.from("product_variants").update({ inventory: inv }).eq("id", id)
+        )
+      );
+    } catch (e) {
+      showError(toFriendlyError(e, "Couldn't undo the change."));
+    }
+  }, []);
+
   const handleBulkApply = async () => {
     if (selectedVariants.length === 0) return;
     setBulkSaving(true);
@@ -622,10 +703,15 @@ const OutOfStock = () => {
       return v.inventory + num;
     };
 
-    // Optimistic update cache
+    // Capture previous inventory for undo, compute new values.
+    const previous = new Map<string, number>();
     const updates = new Map<string, number>();
-    selectedVariants.forEach((v) => updates.set(v.id, getNewStock(v)));
+    selectedVariants.forEach((v) => {
+      previous.set(v.id, v.inventory);
+      updates.set(v.id, getNewStock(v));
+    });
 
+    // Optimistic update cache
     setVariantCache((prev) => {
       const next = { ...prev };
       Object.keys(next).forEach((pid) => {
@@ -645,13 +731,24 @@ const OutOfStock = () => {
             .eq("id", v.id)
         )
       );
-      showSuccess(`Updated ${selectedVariants.length} variant${selectedVariants.length !== 1 ? "s" : ""}`);
+      const count = selectedVariants.length;
+      toast.success(t("stock.updated_variants", { count }), {
+        action: { label: t("common.undo"), onClick: () => restoreInventory(previous) },
+      });
       setSelectedVariantIds(new Set());
       setBulkValue("");
-    } catch (e: any) {
-      showError(`Bulk update failed: ${e.message}`);
+    } catch (e) {
+      showError(toFriendlyError(e, "Bulk update failed."));
+      // revert optimistic update
+      restoreInventory(previous);
     }
     setBulkSaving(false);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStockFilter("all");
+    setCategoryFilter("all");
   };
 
   const stockFilterLabels: Record<StockFilter, string> = {
@@ -661,62 +758,76 @@ const OutOfStock = () => {
     "out-of-stock": t("common.out_of_stock"),
   };
 
+  const statCards = [
+    { key: "total", title: t("stock.total_products"), value: stats.total, icon: Package, tone: "brand" as const },
+    { key: "in", title: t("common.in_stock"), value: stats.inStock, icon: CheckCircle2, tone: "success" as const },
+    { key: "low", title: t("common.low_stock"), value: stats.lowStock, icon: AlertTriangle, tone: "warning" as const },
+    { key: "out", title: t("common.out_of_stock"), value: stats.outOfStock, icon: XCircle, tone: "danger" as const },
+    { key: "units", title: t("stock.total_units"), value: stats.totalUnits, icon: Hash, tone: "info" as const },
+  ];
+
   return (
     <>
       <div className="space-y-4">
         {/* Stats Bar */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {[
-            { label: t("stock.total_products"), value: stats.total, color: "text-foreground" },
-            { label: t("common.in_stock"), value: stats.inStock, color: "text-green-600" },
-            { label: t("common.low_stock"), value: stats.lowStock, color: "text-amber-600" },
-            { label: t("common.out_of_stock"), value: stats.outOfStock, color: "text-red-600" },
-            { label: t("stock.total_units"), value: stats.totalUnits.toLocaleString(), color: "text-foreground" },
-          ].map((stat) => (
-            <Card key={stat.label} className="py-3 px-4 shadow-sm">
-              <div className={cn("text-2xl font-bold", stat.color)}>{stat.value}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{stat.label}</div>
-            </Card>
+        <div ref={statsReveal} className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {statCards.map((s) => (
+            <div key={s.key} data-reveal>
+              <StatCard title={s.title} value={s.value} icon={s.icon} tone={s.tone} />
+            </div>
           ))}
         </div>
 
-        {/* Filters & Search */}
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t("stock.search_products")}
-              className="pl-10 shadow-sm"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        {/* Prefetch failure notice + retry */}
+        {prefetchFailed && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
+            <span className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              {t("stock.prefetch_failed")}
+            </span>
+            <Button size="sm" variant="outline" onClick={prefetchVariants}>
+              {t("common.retry")}
+            </Button>
           </div>
+        )}
 
-          <div className="flex flex-wrap gap-2">
-            {(["all", "in-stock", "low-stock", "out-of-stock"] as StockFilter[]).map((f) => (
-              <Button
-                key={f}
-                variant={stockFilter === f ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStockFilter(f)}
-              >
-                {stockFilterLabels[f]}
-              </Button>
-            ))}
-          </div>
-
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[160px] shadow-sm">
-              <SelectValue placeholder={t("stock.category")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("stock.all_categories")}</SelectItem>
-              {allCategories.map((cat: string) => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+        {/* Filters & Search — two-tier command bar */}
+        <CommandBar
+          secondary={
+            <div className="flex flex-wrap items-center gap-2">
+              {(["all", "in-stock", "low-stock", "out-of-stock"] as StockFilter[]).map((f) => (
+                <Button
+                  key={f}
+                  variant={stockFilter === f ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStockFilter(f)}
+                >
+                  {stockFilterLabels[f]}
+                </Button>
               ))}
-            </SelectContent>
-          </Select>
-        </div>
+            </div>
+          }
+        >
+          <SearchInput
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+            placeholder={t("stock.search_products")}
+            containerClassName="w-full sm:w-72 md:w-80"
+          />
+          <div className="ml-auto">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[160px] shadow-sm">
+                <SelectValue placeholder={t("stock.category")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("stock.all_categories")}</SelectItem>
+                {allCategories.map((cat: string) => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CommandBar>
 
         {/* Product Accordion List */}
         <Card className="shadow-sm overflow-hidden">
@@ -724,7 +835,7 @@ const OutOfStock = () => {
           <div className="flex items-center gap-3 px-4 py-2.5 border-b bg-muted/40 text-xs font-medium text-muted-foreground">
             <div className="w-4 flex-shrink-0" /> {/* chevron space */}
             <div className="flex-1">{t("stock.product")}</div>
-            <div className="hidden sm:block flex-shrink-0 w-20 text-right">{t("stock.total_stock")}</div>
+            <div className="hidden sm:block flex-shrink-0 w-16 text-right">{t("stock.total_stock")}</div>
             <div className="hidden sm:block flex-shrink-0 w-28">{t("products.status")}</div>
           </div>
 
@@ -736,22 +847,38 @@ const OutOfStock = () => {
                 ))}
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
-                <Package className="h-10 w-10 opacity-30" />
-                <p className="text-sm">{t("products.no_match")}</p>
-              </div>
-            ) : (
-              filteredProducts.map((product: any) => (
-                <ProductAccordionRow
-                  key={product.id}
-                  product={product}
-                  selectedVariantIds={selectedVariantIds}
-                  onVariantSelect={handleVariantSelect}
-                  onVariantsLoaded={handleVariantsLoaded}
-                  variantCache={variantCache}
-                  stockFilterForProduct={() => true}
+              physicalProducts.length === 0 ? (
+                <EmptyState
+                  icon={Package}
+                  title={t("stock.no_products")}
+                  description={t("stock.no_products_desc")}
                 />
-              ))
+              ) : (
+                <EmptyState
+                  icon={Package}
+                  title={t("products.no_match")}
+                  description={t("stock.no_match_desc")}
+                  action={
+                    <Button variant="outline" size="sm" onClick={clearFilters}>
+                      <X className="mr-1.5 h-3.5 w-3.5" />
+                      {t("common.clear_filters")}
+                    </Button>
+                  }
+                />
+              )
+            ) : (
+              <div ref={listReveal}>
+                {filteredProducts.map((product: any) => (
+                  <ProductAccordionRow
+                    key={product.id}
+                    product={product}
+                    selectedVariantIds={selectedVariantIds}
+                    onVariantSelect={handleVariantSelect}
+                    onVariantsLoaded={handleVariantsLoaded}
+                    variantCache={variantCache}
+                  />
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -765,7 +892,7 @@ const OutOfStock = () => {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-background/80 backdrop-blur-[20px] border rounded-lg shadow-2xl p-2 flex items-center gap-2 flex-wrap"
+            className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-background/80 backdrop-blur-xl border rounded-xl shadow-lg p-2 flex items-center gap-2 flex-wrap"
           >
             <span className="text-sm font-medium px-2 whitespace-nowrap">
               {selectedVariantIds.size} {t("stock.variants")} {t("stock.selected_lc")}
@@ -793,6 +920,7 @@ const OutOfStock = () => {
                 placeholder="Qty"
                 className="h-8 w-20 text-sm"
                 value={bulkValue}
+                aria-label={bulkMode === "set" ? t("stock.set_to") : t("common.add")}
                 onChange={(e) => setBulkValue(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleBulkApply();
@@ -800,19 +928,40 @@ const OutOfStock = () => {
               />
             )}
 
-            <Button
-              size="sm"
-              className="h-8 text-xs"
-              onClick={handleBulkApply}
-              disabled={bulkSaving || (bulkMode !== "zero" && bulkValue === "")}
-            >
-              {bulkSaving ? (
-                <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-              )}
-              {t("common.apply")}
-            </Button>
+            {bulkMode === "zero" ? (
+              <ConfirmButton
+                size="sm"
+                variant="destructive"
+                className="h-8 text-xs"
+                disabled={bulkSaving}
+                confirmTitle={t("stock.zero_out_confirm_title")}
+                confirmDescription={t("stock.zero_out_confirm_desc")}
+                confirmLabel={t("stock.zero_out")}
+                cancelLabel={t("common.cancel")}
+                onConfirm={handleBulkApply}
+              >
+                {bulkSaving ? (
+                  <Spinner className="mr-1.5 h-3.5 w-3.5" />
+                ) : (
+                  <XCircle className="mr-1.5 h-3.5 w-3.5" />
+                )}
+                {t("common.apply")}
+              </ConfirmButton>
+            ) : (
+              <Button
+                size="sm"
+                className="h-8 text-xs"
+                onClick={handleBulkApply}
+                disabled={bulkSaving || bulkValue === ""}
+              >
+                {bulkSaving ? (
+                  <Spinner className="mr-1.5 h-3.5 w-3.5" />
+                ) : (
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                )}
+                {t("common.apply")}
+              </Button>
+            )}
 
             <Button
               size="icon"

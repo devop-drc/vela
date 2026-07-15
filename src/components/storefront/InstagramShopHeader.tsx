@@ -54,7 +54,7 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, isProducts
       {isProfilePage ? (
         <div className="container flex h-full items-center justify-between px-4 py-1">
           <div className="flex items-center flex-shrink-0">
-            <p className="text-md font-bold">InstaShop</p>
+            <p className="text-md font-bold">Vela</p>
           </div>
           <div className="flex items-center flex-shrink-0">
             <Button variant="ghost" size="sm" asChild className="text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] px-0">

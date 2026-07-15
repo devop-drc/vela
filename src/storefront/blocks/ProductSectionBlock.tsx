@@ -6,7 +6,6 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Crown, Sparkles, Gift } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { buttonVariants } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { MediaItem } from '@/components/MediaItem';
 import { formatCurrency } from '@/lib/formatters';
@@ -87,7 +86,7 @@ export const ProductSectionBlock = ({ props }: Props) => {
                 <Link
                   to={`/shop/${shopDetails.slug}/product/${p.id}`}
                   className={cn('sf-hoverable group block overflow-hidden bg-muted', i % 2 === 1 && 'md:order-2')}
-                  style={{ borderRadius: 'var(--radius)' }}
+                  style={{ borderRadius: 'var(--sf-radius-card)' }}
                 >
                   <div className="aspect-[4/3] md:aspect-[5/4] w-full overflow-hidden">
                     <MediaItem src={img} alt={p.name} type={p.media_type} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -132,9 +131,11 @@ export const ProductSectionBlock = ({ props }: Props) => {
           {items.map((p) => <ProductCard key={p.id} product={p} className="w-[240px] md:w-[270px] shrink-0" />)}
           {items.length >= limit && (
             <div className="shrink-0 w-[240px] flex items-center justify-center">
-              <Link to={`/shop/${shopDetails.slug}/products?sort=${source}`} className={cn(buttonVariants({ variant: 'outline', size: 'lg' }))}>
-                View All <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
+              <SfButton asChild variant="outline" size="lg">
+                <Link to={`/shop/${shopDetails.slug}/products?sort=${source}`}>
+                  View All <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </SfButton>
             </div>
           )}
         </div>

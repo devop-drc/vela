@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Instagram, Package, Share2, ArrowRight, Sparkles } from "lucide-react";
+import { BrandButton } from "@/components/BrandButton";
+import { CheckCircle2, Instagram, Package, Share2, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface GetStartedCardProps {
@@ -43,7 +44,7 @@ export const GetStartedCard = ({ hasIntegration, hasProducts, onConnect, onAddPr
     <Card className="border-primary/20 bg-gradient-to-br from-primary/[0.06] to-transparent">
       <CardContent className="p-5">
         <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="h-5 w-5 text-primary" />
+          <img src="/vela-icon.svg" alt="Vela" className="h-6 w-6 rounded-md ring-1 ring-border" />
           <h2 className="text-lg font-semibold">Let's set up your shop</h2>
         </div>
         <p className="text-sm text-muted-foreground mb-4">A few quick steps and you'll be ready to sell.</p>
@@ -67,10 +68,17 @@ export const GetStartedCard = ({ hasIntegration, hasProducts, onConnect, onAddPr
                   {!step.done && <p className="text-xs text-muted-foreground">{step.desc}</p>}
                 </div>
                 {step.action && (
-                  <Button size="sm" variant={isNext ? "default" : "outline"} className="flex-shrink-0" onClick={step.action.onClick}>
-                    {step.action.label}
-                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                  </Button>
+                  isNext ? (
+                    <BrandButton size="sm" className="flex-shrink-0 rounded-full" onClick={step.action.onClick}>
+                      {step.action.label}
+                      <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                    </BrandButton>
+                  ) : (
+                    <Button size="sm" variant="outline" className="flex-shrink-0" onClick={step.action.onClick}>
+                      {step.action.label}
+                      <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                    </Button>
+                  )
                 )}
               </div>
             );

@@ -1,4 +1,5 @@
 import { useShop } from "@/contexts/ShopContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -13,12 +14,13 @@ interface StatPillProps {
   icon: React.ReactNode;
   label: string;
   value: string | number;
-  colorClass?: string;
+  tintClass?: string;
+  iconColor?: string;
 }
 
-const StatPill = ({ icon, label, value, colorClass = 'bg-muted' }: StatPillProps) => (
-  <div className={cn('flex flex-col items-center gap-0.5 rounded-lg px-2 py-1.5 min-w-[60px]', colorClass)}>
-    <div className="text-muted-foreground">{icon}</div>
+const StatPill = ({ icon, label, value, tintClass = 'bg-muted', iconColor = 'text-muted-foreground' }: StatPillProps) => (
+  <div className={cn('flex flex-col items-center gap-0.5 rounded-lg px-2 py-1.5 min-w-[60px]', tintClass)}>
+    <div className={iconColor}>{icon}</div>
     <span className="text-sm font-bold tabular-nums leading-none">{value}</span>
     <span className="text-[10px] text-muted-foreground leading-none mt-0.5">{label}</span>
   </div>
@@ -27,22 +29,23 @@ const StatPill = ({ icon, label, value, colorClass = 'bg-muted' }: StatPillProps
 export const ProfileStats = () => {
   const { t } = useTranslation();
   const { shopDetails, isLoading, fetchShopDetails } = useShop();
+  // Name comes instantly from the cached session — no separate profiles read.
+  const { user } = useAuth();
   const [productCount, setProductCount] = useState<number | null>(null);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const userMeta = user?.user_metadata as { first_name?: string; last_name?: string } | undefined;
+  const fallbackName = [userMeta?.first_name, userMeta?.last_name].filter(Boolean).join(' ').trim();
 
   useEffect(() => {
     if (!shopDetails?.userId) return;
     const userId = shopDetails.userId;
-    const fetchProductCountAndProfile = async () => {
-      const [countRes, profileRes] = await Promise.all([
-        supabase.from('products').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-        supabase.from('profiles').select('first_name, last_name').eq('id', userId).single(),
-      ]);
-
+    const fetchProductCount = async () => {
+      const countRes = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId);
       setProductCount(countRes.count ?? null);
-      if (!profileRes.error) setUserProfile(profileRes.data);
     };
-    fetchProductCountAndProfile();
+    fetchProductCount();
   }, [shopDetails?.userId]);
 
   if (isLoading) {
@@ -88,9 +91,9 @@ export const ProfileStats = () => {
               >
                 @{shopDetails.username}
               </a>
-            ) : userProfile && (
+            ) : fallbackName && (
               <p className="text-xs text-muted-foreground truncate">
-                {userProfile.first_name} {userProfile.last_name}
+                {fallbackName}
               </p>
             )}
           </div>
@@ -107,19 +110,22 @@ export const ProfileStats = () => {
             icon={<Users className="h-3 w-3" />}
             label={t("dashboard.followers")}
             value={followers}
-            colorClass="bg-blue-500/8 flex-1"
+            tintClass="bg-info/10 flex-1"
+            iconColor="text-info"
           />
           <StatPill
             icon={<ImageIcon className="h-3 w-3" />}
             label={t("dashboard.posts")}
             value={posts}
-            colorClass="bg-violet-500/8 flex-1"
+            tintClass="bg-primary/10 flex-1"
+            iconColor="text-primary"
           />
           <StatPill
             icon={<Package className="h-3 w-3" />}
             label={t("nav.products")}
             value={products}
-            colorClass="bg-emerald-500/8 flex-1"
+            tintClass="bg-success/10 flex-1"
+            iconColor="text-success"
           />
         </div>
       </CardContent>

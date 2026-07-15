@@ -1,15 +1,15 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, AlertTriangle, Loader2 } from "lucide-react";
+import { Edit, Trash2, AlertTriangle } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { Checkbox } from "./ui/checkbox";
 import { formatCurrency } from "@/lib/formatters";
-import { ProductStatusDropdown } from "./ProductStatusDropdown"; // Import ProductStatusDropdown
 import { useShop } from "@/contexts/ShopContext"; // Import useShop
-import { Badge } from "./ui/badge"; // Import Badge
+import { StatusBadge } from "@/components/ui-app/StatusBadge"; // Canonical status chip
+import { productStatusTone } from "@/lib/status"; // Canonical status → tone mapping
 import { cn } from "@/lib/utils"; // Import cn
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect, useCallback } from "react";
-import { getStockStatus } from "@/lib/stock";
 
 interface Product {
   id: string;
@@ -56,86 +56,88 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
   // Displayed summaries keyed by productId (the current cache key for that product).
   const [stockSummaries, setStockSummaries] = useState(new Map<string, StockSummary>());
 
-  const fetchVariantStockSummary = useCallback(async (productId: string, cacheKey: string) => {
-    const cached = variantStockCache.get(cacheKey);
-    if (cached && !cached.isLoading) {
-      setStockSummaries(prev => new Map(prev).set(productId, cached));
-      return cached;
-    }
+  // Batch-fetch the variant stock for the given products in ONE query (avoids
+  // the old N+1: a query per row). Groups the rows client-side into per-product
+  // summaries and populates both the module cache (keyed by product+updated_at)
+  // and the displayed state.
+  const fetchVariantStocks = useCallback(async (missing: { id: string; cacheKey: string }[]) => {
+    if (missing.length === 0) return;
 
-    // Set loading state
+    // Mark all pending products as loading (shared reference is fine).
     const loading: StockSummary = { total: 0, inStock: 0, outOfStock: 0, isLoading: true };
-    variantStockCache.set(cacheKey, loading);
-    setStockSummaries(prev => new Map(prev).set(productId, loading));
+    missing.forEach(m => variantStockCache.set(m.cacheKey, loading));
+    setStockSummaries(prev => {
+      const next = new Map(prev);
+      missing.forEach(m => next.set(m.id, loading));
+      return next;
+    });
 
-    let summary: StockSummary;
+    const byProduct = new Map<string, { total: number; outOfStock: number }>();
     try {
       const { data, error } = await supabase
         .from('product_variants')
-        .select('inventory')
-        .eq('product_id', productId);
+        .select('inventory, product_id')
+        .in('product_id', missing.map(m => m.id));
 
       if (error) throw error;
 
-      let totalVariants = 0;
-      let outOfStockCount = 0;
-
       (data || []).forEach((variant: any) => {
-        totalVariants++;
-        if ((variant.inventory ?? 0) <= 0) {
-          outOfStockCount++;
-        }
+        const agg = byProduct.get(variant.product_id) || { total: 0, outOfStock: 0 };
+        agg.total++;
+        if ((variant.inventory ?? 0) <= 0) agg.outOfStock++;
+        byProduct.set(variant.product_id, agg);
       });
-
-      summary = {
-        total: totalVariants,
-        inStock: totalVariants - outOfStockCount,
-        outOfStock: outOfStockCount,
-        isLoading: false,
-      };
     } catch (e) {
-      console.error(`Failed to fetch variant stock for ${productId}:`, e);
-      summary = { total: 0, inStock: 0, outOfStock: 0, isLoading: false };
+      console.error('Failed to batch-fetch variant stock:', e);
     }
 
-    variantStockCache.set(cacheKey, summary);
-    setStockSummaries(prev => new Map(prev).set(productId, summary));
-    return summary;
+    setStockSummaries(prev => {
+      const next = new Map(prev);
+      missing.forEach(m => {
+        const agg = byProduct.get(m.id) || { total: 0, outOfStock: 0 };
+        const summary: StockSummary = {
+          total: agg.total,
+          inStock: agg.total - agg.outOfStock,
+          outOfStock: agg.outOfStock,
+          isLoading: false,
+        };
+        variantStockCache.set(m.cacheKey, summary);
+        next.set(m.id, summary);
+      });
+      return next;
+    });
   }, []);
 
   useEffect(() => {
-    // Fetch (or refresh) the variant stock for each non-subscription product.
-    // The cache key includes updated_at, so an edited product re-fetches while
+    // Serve cached entries and collect the ones that still need fetching. The
+    // cache key includes updated_at, so an edited product re-fetches while
     // unchanged products are served from cache.
+    const missing: { id: string; cacheKey: string }[] = [];
+    const restore = new Map<string, StockSummary>();
     products.forEach(p => {
       if (p.pricing_type !== 'one_time') return;
       const key = cacheKeyFor(p);
       const cached = variantStockCache.get(key);
       if (cached && !cached.isLoading) {
-        // Ensure the displayed summary reflects the current cache entry.
-        setStockSummaries(prev => prev.get(p.id) === cached ? prev : new Map(prev).set(p.id, cached));
+        restore.set(p.id, cached);
       } else if (!cached) {
-        fetchVariantStockSummary(p.id, key);
+        missing.push({ id: p.id, cacheKey: key });
       }
     });
-  }, [products, fetchVariantStockSummary]);
 
-  const getStockBadge = (inventory: number | null, pricingType: 'one_time' | 'subscription') => {
-    if (pricingType === 'subscription') {
-      return <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-300">Subscription</Badge>;
+    if (restore.size > 0) {
+      setStockSummaries(prev => {
+        let changed = false;
+        const next = new Map(prev);
+        restore.forEach((summary, id) => {
+          if (prev.get(id) !== summary) { next.set(id, summary); changed = true; }
+        });
+        return changed ? next : prev;
+      });
     }
-    if (inventory === null) {
-      return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">N/A</Badge>;
-    }
-    const status = getStockStatus(inventory);
-    if (status === "in") {
-      return <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-300">In Stock</Badge>;
-    }
-    if (status === "low" || status === "critical") {
-      return <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">Low Stock</Badge>;
-    }
-    return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">Out of Stock</Badge>;
-  };
+
+    fetchVariantStocks(missing);
+  }, [products, fetchVariantStocks]);
 
   const renderVariantStockSummary = (productId: string, pricingType: 'one_time' | 'subscription') => {
     if (pricingType === 'subscription') return 'N/A';
@@ -143,14 +145,14 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
     const summary = stockSummaries.get(productId);
 
     if (summary?.isLoading) {
-      return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
+      return <Spinner className="h-4 w-4 text-muted-foreground" />;
     }
 
     if (summary && summary.total > 0) {
       return (
         <div className="text-xs text-muted-foreground">
           <p className="font-medium">{summary.total} variants</p>
-          <p className={cn(summary.inStock > 0 ? 'text-emerald-600' : 'text-destructive')}>
+          <p className={cn(summary.inStock > 0 ? 'text-success' : 'text-destructive')}>
             {summary.inStock} in stock / {summary.outOfStock} out of stock
           </p>
         </div>
@@ -168,6 +170,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
   const isRowSelect = selectableRowsMode === 'row';
 
   return (
+    <div className="overflow-x-auto">
     <Table className="rounded-md border overflow-hidden">
       <TableHeader>
         <TableRow>
@@ -213,20 +216,13 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
               <img src={product.media_url} alt={product.name} className="h-12 w-12 object-cover rounded-md bg-muted" referrerPolicy="no-referrer" loading="lazy" onError={(e) => { e.currentTarget.style.opacity = '0.3'; }} />
             </TableCell>
             <TableCell className="cursor-pointer py-3">
-              <div className="font-medium flex items-center gap-2">
-                {product.name}
-                {getStockBadge(product.inventory, product.pricing_type)}
-              </div>
+              <div className="font-medium">{product.name}</div>
             </TableCell>
             {showStatusColumn && (
               <TableCell className="cursor-pointer py-3">
-                <Badge variant="outline" className={cn("font-normal", {
-                  'bg-emerald-100 text-emerald-800 border-emerald-300': product.status === 'Active',
-                  'bg-amber-100 text-amber-800 border-amber-300': product.status === 'Draft',
-                  'bg-slate-100 text-slate-800 border-slate-300': product.status === 'Out of Stock',
-                })}>
+                <StatusBadge tone={productStatusTone(product.status)} size="sm">
                   {product.status}
-                </Badge>
+                </StatusBadge>
               </TableCell>
             )}
             <TableCell className="cursor-pointer py-3">
@@ -277,5 +273,6 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
         )}
       </TableBody>
     </Table>
+    </div>
   );
 };

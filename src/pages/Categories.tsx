@@ -1,14 +1,19 @@
 import { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { readCache, writeCache } from "@/lib/pageCache";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { PlusCircle, Search, Layers, Wrench, Palette, Lock } from "lucide-react";
+import { SearchInput, CommandBar, EmptyState } from "@/components/ui-app";
+import { useReveal, useCountUp } from "@/lib/anim";
+import {
+  PlusCircle, Search, Layers, Boxes, Wrench, Palette, Lock,
+  ChevronsUpDown, ChevronsDownUp,
+} from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
 import { CategoryCard } from "@/components/categories/CategoryCard";
 import { CategoryEditorModal } from "@/components/categories/CategoryEditorModal";
@@ -29,13 +34,22 @@ interface CategoryTemplate {
   created_at: string;
 }
 
+/** Small animated (count-up) number for the stat pills. Reduced-motion safe. */
+const StatCount = ({ value }: { value: number }) => {
+  const ref = useCountUp<HTMLSpanElement>(value);
+  return <span ref={ref}>{value.toLocaleString()}</span>;
+};
+
 const Categories = () => {
   const { setTitle } = usePageTitle();
   const { t } = useTranslation();
+  const { userId } = useAuth();
   const [activeTab, setActiveTab] = useState<"all" | "custom" | "system">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [templates, setTemplates] = useState<CategoryTemplate[]>(() => readCache<CategoryTemplate[]>("categories") ?? []);
   const [loading, setLoading] = useState(() => !readCache<CategoryTemplate[]>("categories"));
+  // null = per-card control; true/false = expand/collapse all.
+  const [expandAll, setExpandAll] = useState<boolean | null>(null);
 
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [typeModalOpen, setTypeModalOpen] = useState(false);
@@ -97,7 +111,26 @@ const Categories = () => {
   }, [templates, activeTab, searchQuery]);
 
   const handleAddCategory = () => { setEditingCategory(null); setCategoryModalOpen(true); };
+  const handleRenameCategory = (name: string) => { setEditingCategory(name); setCategoryModalOpen(true); };
   const handleCategorySave = async (name: string) => {
+    // Rename flow: update every (custom) template in the old category. Only
+    // offered for all-custom categories, so no system rows are touched.
+    if (editingCategory) {
+      if (name !== editingCategory) {
+        const { error } = await supabase
+          .from("category_templates")
+          .update({ category_name: name })
+          .eq("category_name", editingCategory)
+          .eq("is_system", false);
+        if (error) { showError(t("categories.rename_category_failed", { message: error.message })); return; }
+        showSuccess(t("categories.category_renamed", { name }));
+        fetchTemplates();
+      }
+      setCategoryModalOpen(false);
+      setEditingCategory(null);
+      return;
+    }
+    // New category → straight into the add-type flow.
     setCategoryModalOpen(false);
     setTypeModalCategory(name);
     setEditingTemplate(null);
@@ -113,15 +146,14 @@ const Categories = () => {
     setDeleteConfirm(null);
   };
   const handleDuplicate = async (template: any) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { showError("Not logged in."); return; }
+    if (!userId) { showError(t("categories.must_login")); return; }
     const { error } = await supabase.from("category_templates").insert({
       category_name: template.category_name,
       type_name: `${template.type_name} (Custom)`,
       default_specifications: template.default_specifications,
       default_options: template.default_options,
       is_system: false,
-      user_id: user.id,
+      user_id: userId,
     });
     if (error) showError(`Failed to duplicate: ${error.message}`);
     else { showSuccess(`Duplicated "${template.type_name}".`); fetchTemplates(); }
@@ -129,35 +161,61 @@ const Categories = () => {
 
   const categoryNames = Object.keys(grouped).sort();
 
+  // Subtle staggered entrance; re-runs on tab switch (not on every keystroke).
+  const listRef = useReveal<HTMLDivElement>({}, [activeTab, loading]);
+
+  const searching = searchQuery.trim().length > 0;
+  const isAllExpanded = expandAll === true;
+  // Auto-expand while searching so matches buried in a collapsed group show.
+  const cardOpen = searching ? true : (expandAll === null ? undefined : expandAll);
+
   const renderList = () => {
     if (loading) return (
-      <div className="space-y-3">
-        {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
+      <div className="space-y-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
+            <Skeleton className="h-4 w-4 rounded" />
+            <Skeleton className="h-4 w-4 rounded" />
+            <Skeleton className="h-4 w-40 rounded" />
+            <Skeleton className="ml-auto h-5 w-16 rounded-full" />
+          </div>
+        ))}
       </div>
     );
     if (categoryNames.length === 0) return (
-      <div className="text-center py-16 border-2 border-dashed rounded-lg">
-        <Layers className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-        <h3 className="text-sm font-semibold text-muted-foreground">
-          {searchQuery ? t("categories.no_results") : activeTab === "custom" ? t("categories.no_custom") : t("categories.no_categories")}
-        </h3>
-        <p className="text-xs text-muted-foreground/60 mt-1 max-w-sm mx-auto">
-          {searchQuery ? t("categories.try_different") : activeTab === "custom" ? t("categories.duplicate_hint") : t("categories.add_hint")}
-        </p>
-      </div>
+      <EmptyState
+        icon={searching ? Search : Layers}
+        title={searching ? t("categories.no_results") : activeTab === "custom" ? t("categories.no_custom") : t("categories.no_categories")}
+        description={searching ? t("categories.try_different") : activeTab === "custom" ? t("categories.duplicate_hint") : t("categories.add_hint")}
+        action={
+          searching ? (
+            <Button variant="outline" size="sm" onClick={() => setSearchQuery("")}>{t("common.clear")}</Button>
+          ) : activeTab === "custom" ? (
+            <Button variant="outline" size="sm" onClick={() => setActiveTab("system")}>{t("categories.browse_system")}</Button>
+          ) : (
+            <Button size="sm" onClick={handleAddCategory}>
+              <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
+              {t("categories.add_category")}
+            </Button>
+          )
+        }
+      />
     );
     return (
-      <div className="space-y-2" data-tour="categories-grid">
+      <div ref={listRef} className="space-y-2" data-tour="categories-grid">
         {categoryNames.map(name => (
-          <CategoryCard
-            key={name}
-            categoryName={name}
-            templates={grouped[name]}
-            onEditType={handleEditType}
-            onDeleteType={(t) => { if (t.is_system) { showError("System templates can't be deleted. Duplicate first."); return; } setDeleteConfirm(t); }}
-            onAddType={handleAddType}
-            onDuplicate={handleDuplicate}
-          />
+          <div key={name} data-reveal>
+            <CategoryCard
+              categoryName={name}
+              templates={grouped[name]}
+              onEditType={handleEditType}
+              onDeleteType={(t) => { if (t.is_system) { showError("System templates can't be deleted. Duplicate first."); return; } setDeleteConfirm(t); }}
+              onAddType={handleAddType}
+              onDuplicate={handleDuplicate}
+              onRenameCategory={handleRenameCategory}
+              open={cardOpen}
+            />
+          </div>
         ))}
       </div>
     );
@@ -165,7 +223,7 @@ const Categories = () => {
 
   return (
     <>
-      <CategoryEditorModal open={categoryModalOpen} onClose={() => setCategoryModalOpen(false)} categoryName={editingCategory} onSave={handleCategorySave} />
+      <CategoryEditorModal open={categoryModalOpen} onClose={() => { setCategoryModalOpen(false); setEditingCategory(null); }} categoryName={editingCategory} onSave={handleCategorySave} />
       <TypeEditorModal open={typeModalOpen} onClose={() => setTypeModalOpen(false)} categoryName={typeModalCategory} template={editingTemplate} onSave={() => { fetchTemplates(); setTypeModalOpen(false); }} />
       <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
         <AlertDialogContent>
@@ -182,57 +240,67 @@ const Categories = () => {
 
       <div className="space-y-4">
         {/* Stats bar */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 border text-sm">
-            <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="font-medium">{stats.categories}</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm shadow-sm">
+            <Layers className="h-3.5 w-3.5 text-primary" />
+            <span className="font-medium tabular-nums"><StatCount value={stats.categories} /></span>
             <span className="text-muted-foreground">{t("categories.categories_label")}</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 border text-sm">
-            <span className="font-medium">{stats.types}</span>
+          <div className="flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm shadow-sm">
+            <Boxes className="h-3.5 w-3.5 text-info" />
+            <span className="font-medium tabular-nums"><StatCount value={stats.types} /></span>
             <span className="text-muted-foreground">{t("categories.types_label")}</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 border text-sm">
-            <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="font-medium">{stats.totalSpecs}</span>
+          <div className="flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm shadow-sm">
+            <Wrench className="h-3.5 w-3.5 text-warning" />
+            <span className="font-medium tabular-nums"><StatCount value={stats.totalSpecs} /></span>
             <span className="text-muted-foreground">{t("categories.specs")}</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 border text-sm">
-            <Palette className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="font-medium">{stats.totalOptions}</span>
+          <div className="flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm shadow-sm">
+            <Palette className="h-3.5 w-3.5 text-success" />
+            <span className="font-medium tabular-nums"><StatCount value={stats.totalOptions} /></span>
             <span className="text-muted-foreground">{t("categories.options_label")}</span>
-          </div>
-          <div className="ml-auto">
-            <Button onClick={handleAddCategory} size="sm" data-tour="categories-add">
-              <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
-              {t("categories.add_category")}
-            </Button>
           </div>
         </div>
 
-        {/* Tabs + search */}
+        {/* Command bar: search + actions (main), tabs (secondary) */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-          <div className="flex items-center gap-3">
-            <TabsList>
-              <TabsTrigger value="all" className="text-sm">
-                {t("common.all")} <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-xs">{templates.length}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="system" className="text-sm">
-                <Lock className="h-3 w-3 mr-1" />{t("categories.system")} <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-xs">{stats.systemCount}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="custom" className="text-sm">
-                {t("categories.custom")} <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-xs">{stats.customCount}</Badge>
-              </TabsTrigger>
-            </TabsList>
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t("categories.search_placeholder")} className="pl-9" />
+          <CommandBar
+            secondary={
+              <TabsList>
+                <TabsTrigger value="all" className="text-sm">
+                  {t("common.all")} <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-xs">{templates.length}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="system" className="text-sm">
+                  <Lock className="h-3 w-3 mr-1" />{t("categories.system")} <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-xs">{stats.systemCount}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="custom" className="text-sm">
+                  {t("categories.custom")} <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-xs">{stats.customCount}</Badge>
+                </TabsTrigger>
+              </TabsList>
+            }
+          >
+            <SearchInput
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+              placeholder={t("categories.search_placeholder")}
+              containerClassName="w-full sm:w-auto sm:min-w-[220px] flex-1 sm:max-w-sm"
+            />
+            <div className="ml-auto flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setExpandAll(v => (v === true ? false : true))}>
+                {isAllExpanded ? <ChevronsDownUp className="mr-1.5 h-3.5 w-3.5" /> : <ChevronsUpDown className="mr-1.5 h-3.5 w-3.5" />}
+                <span className="hidden sm:inline">{isAllExpanded ? t("categories.collapse_all") : t("categories.expand_all")}</span>
+              </Button>
+              <Button onClick={handleAddCategory} size="sm" data-tour="categories-add">
+                <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
+                {t("categories.add_category")}
+              </Button>
             </div>
-          </div>
+          </CommandBar>
 
-          <TabsContent value="all" className="mt-3">{renderList()}</TabsContent>
-          <TabsContent value="system" className="mt-3">{renderList()}</TabsContent>
-          <TabsContent value="custom" className="mt-3">{renderList()}</TabsContent>
+          <TabsContent value="all" className="mt-4">{renderList()}</TabsContent>
+          <TabsContent value="system" className="mt-4">{renderList()}</TabsContent>
+          <TabsContent value="custom" className="mt-4">{renderList()}</TabsContent>
         </Tabs>
       </div>
     </>

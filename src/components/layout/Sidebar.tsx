@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home, Package, Archive, Layers, MessageSquareQuote, Megaphone,
-  ShoppingBag, Settings, ChevronsLeft, ChevronsRight, Globe, LogOut, CreditCard, ShieldCheck, HelpCircle,
+  ShoppingBag, Settings, ChevronsLeft, ChevronsRight, Globe, LogOut, CreditCard, ShieldCheck, HelpCircle, Store,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useTutorial } from "@/components/tutorial/TutorialProvider";
 import { cn } from "@/lib/utils";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { useShop } from "@/contexts/ShopContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,6 +31,8 @@ const nav: NavEntry[] = [
   { to: "/promotions", icon: Megaphone, labelKey: "nav.promotions" },
   { divider: true, labelKey: "nav_groups.sales" },
   { to: "/orders", icon: ShoppingBag, labelKey: "nav.orders" },
+  { divider: true, labelKey: "nav_groups.storefront" },
+  { to: "/storefront-studio", icon: Store, labelKey: "nav.storefront" },
   { divider: true, labelKey: "nav_groups.app" },
   { to: "/billing", icon: CreditCard, labelKey: "nav.billing" },
   { to: "/settings", icon: Settings, labelKey: "nav.settings" },
@@ -48,23 +51,21 @@ export default function Sidebar({ collapsed, onToggleCollapsed }: Props) {
   const location = useLocation();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const [user, setUser] = useState<any>(null);
+  // Profile identity from the shared AuthProvider — renders instantly, no
+  // per-component getSession() waterfall.
+  const { user } = useAuth();
   const { isAdmin } = useIsAdmin();
   const { startTutorial, hasTour } = useTutorial();
   const navEntries: NavEntry[] = isAdmin
     ? [...nav, { to: "/admin", icon: ShieldCheck, labelKey: "nav.admin" }]
     : nav;
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
-  }, []);
-
   const floating = settings.layoutStyle === "floating";
   const primary = settings.sidebarStyle === "primary";
   const blur = settings.blurEnabled;
   const width = settings.sidebarWidth || "default";
 
-  const shopName = shopDetails?.shop_name || "InstantShop";
+  const shopName = shopDetails?.shop_name || "Vela";
   const initials = shopName.slice(0, 2).toUpperCase();
 
   // ── Palette ─────────────────────────────────────────────────────────────
@@ -73,8 +74,8 @@ export default function Sidebar({ collapsed, onToggleCollapsed }: Props) {
     ? {
       bg: blur ? "bg-primary/90 backdrop-blur-xl" : "bg-primary",
       text: "text-primary-foreground",
-      muted: "text-primary-foreground/45",
-      normal: "text-primary-foreground/70",
+      muted: "text-primary-foreground/65",
+      normal: "text-primary-foreground/80",
       active: "text-primary-foreground",
       hover: "hover:bg-primary-foreground/10 hover:text-primary-foreground",
       activeBg: "bg-primary-foreground/15",
@@ -309,18 +310,16 @@ export default function Sidebar({ collapsed, onToggleCollapsed }: Props) {
                 <TooltipTrigger asChild>
                   <button
                     onClick={async () => { await supabase.auth.signOut(); navigate("/login"); }}
-                    className={cn(
-                      "flex items-center justify-center h-8 w-8 rounded-lg border transition-all duration-150",
-                      primary
-                        ? "border-red-400/20 bg-red-500/10 text-red-300 hover:bg-red-500/25 hover:text-red-200"
-                        : "border-red-200 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
-                    )}
+                    className="flex items-center justify-center h-8 w-8 rounded-lg border border-destructive/20 bg-destructive/10 text-destructive transition-all duration-150 hover:bg-destructive/15"
                   >
                     <LogOut className="h-3.5 w-3.5" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={12} className="text-xs">{t("header.log_out")}</TooltipContent>
               </Tooltip>
+
+              {/* Vela attribution */}
+              <img src="/vela-icon.svg" alt="Vela" className="mt-1 h-5 w-5 rounded-md ring-1 ring-border" />
             </div>
           ) : (
             /* ── Expanded: language pill + logout button ─────── */
@@ -382,16 +381,17 @@ export default function Sidebar({ collapsed, onToggleCollapsed }: Props) {
               {/* Logout — bordered button with red tint */}
               <button
                 onClick={async () => { await supabase.auth.signOut(); navigate("/login"); }}
-                className={cn(
-                  "w-full flex items-center justify-center gap-2 rounded-lg border py-2 text-xs font-medium transition-all duration-150",
-                  primary
-                    ? "border-red-400/20 bg-red-500/10 text-red-300 hover:bg-red-500/25 hover:text-red-200"
-                    : "border-red-200 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
-                )}
+                className="w-full flex items-center justify-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 py-2 text-xs font-medium text-destructive transition-all duration-150 hover:bg-destructive/15"
               >
                 <LogOut className="h-3.5 w-3.5" />
                 <span>{t("header.log_out")}</span>
               </button>
+
+              {/* Vela attribution */}
+              <div className="flex items-center justify-center gap-1.5 pt-0.5">
+                <img src="/vela-icon.svg" alt="Vela" className="h-3.5 w-3.5 rounded-[4px] ring-1 ring-border" />
+                <span className={cn("text-[10px] font-medium tracking-wide", palette.muted)}>Powered by Vela</span>
+              </div>
             </div>
           )}
         </div>

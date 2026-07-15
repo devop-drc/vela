@@ -3,13 +3,13 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import BottomNav from "./BottomNav";
 import { usePageTitle } from "@/contexts/PageTitleContext";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useShop } from "@/contexts/ShopContext";
 import { Suspense, useEffect, useState } from "react";
 import { SyncStatusWidget } from "./SyncStatusWidget";
 import NotificationSidebar from "./NotificationSidebar";
+import { VelaChat } from "@/components/VelaChat";
 import { useAppearance } from "@/contexts/AppearanceContext";
-import { useStorefrontMatchTheme } from "@/hooks/useStorefrontMatchTheme";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { TutorialProvider } from "@/components/tutorial/TutorialProvider";
@@ -22,8 +22,6 @@ const DashboardLayout = () => {
   const location = useLocation();
   const { shopDetails } = useShop();
   const { settings } = useAppearance();
-  // Opt-in: dashboard adopts the storefront's colors/radius (live from Studio).
-  const matchTheme = useStorefrontMatchTheme();
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
@@ -114,20 +112,19 @@ const DashboardLayout = () => {
     </div>
   );
 
+  // Fast opacity fade on route change (no exit-then-enter serialization) so
+  // navigation feels instant in this productivity app.
   const content = (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location.pathname}
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -15 }}
-        transition={{ duration: 0.25 }}
-      >
-        <Suspense fallback={pageFallback}>
-          <Outlet />
-        </Suspense>
-      </motion.div>
-    </AnimatePresence>
+    <motion.div
+      key={location.pathname}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.16 }}
+    >
+      <Suspense fallback={pageFallback}>
+        <Outlet />
+      </Suspense>
+    </motion.div>
   );
 
   // Must match Sidebar.tsx: w-14 (56px), w-52 (208px), w-60 (240px), w-72 (288px)
@@ -143,43 +140,27 @@ const DashboardLayout = () => {
   // sidebar at left-3 (0.75rem), gap = 0.75rem
   // So: pl = 0.75rem + sidebar-width + 0.75rem = sidebar-width + 1.5rem
 
-  if (settings.layoutStyle === 'docked') {
-    return (
-      <div
-        className={cn("relative flex h-screen bg-transparent", matchTheme?.className)}
-        style={{ ...matchTheme?.style, '--sidebar-width': sidebarWidthValue } as React.CSSProperties}
-      >
-        <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
-        <Sidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
-        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto transition-all duration-300">
-          <Header title={title} />
-          <main className="flex-1 p-6">{content}</main>
-        </div>
-        <SyncStatusWidget />
-        <NotificationSidebar />
-      </div>
-    );
-  }
-
+  // Single standard Vela layout: fixed sidebar (md+) + sticky header + scrolling
+  // main, with BottomNav for mobile (where the sidebar is hidden). The old
+  // floating/primary/blur variants were removed with app theme customisation.
   return (
     <div
-      className={cn("relative h-screen bg-transparent", matchTheme?.className)}
-      style={{ ...matchTheme?.style, '--sidebar-width': sidebarWidthValue } as React.CSSProperties}
+      className="relative flex h-screen bg-transparent"
+      style={{ '--sidebar-width': sidebarWidthValue } as React.CSSProperties}
     >
       <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
       <Sidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
-      <Header title={title} />
-      {/* Sidebar offset only applies at md+ — on mobile the sidebar is hidden
-          (bottom nav instead), so an unconditional inline padding-left crushed
-          all content into a right-edge sliver. */}
-      <main
-        className="absolute inset-0 overflow-y-auto px-3 pb-24 md:px-6 md:pb-4 transition-all duration-300 pt-24 md:!pl-[calc(var(--sidebar-width)+1.8rem)]"
-      >
-        {content}
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto transition-all duration-300">
+        <Header title={title} />
+        {/* pb-24 clears the mobile BottomNav + floating dock; md resets it. */}
+        <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6">{content}</main>
+      </div>
       <BottomNav />
       <SyncStatusWidget />
-      <NotificationSidebar />
+      <div className="fixed bottom-24 right-4 z-50 flex items-center gap-2 md:bottom-4">
+        <VelaChat />
+        <NotificationSidebar />
+      </div>
     </div>
   );
 };

@@ -4,12 +4,15 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Package, Settings, Loader2, Wrench, Layers, Tag, ChevronRight, Save, Search, Filter, Star } from "lucide-react";
+import { Edit, Trash2, Package, Settings, Wrench, Layers, Tag, ChevronRight, Save, Filter, Star } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ProductReviewsManager } from "./ProductReviewsManager";
 import { useProductRating } from "@/hooks/useProductRating";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui-app";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { MediaItem } from "../MediaItem";
@@ -17,9 +20,18 @@ import { useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
-import { getStockStatus, syncDerivedStockFromVariants } from "@/lib/stock";
+import { getStockStatus, syncDerivedStockFromVariants, parseVariantOptionValues } from "@/lib/stock";
+import { StatusBadge } from "@/components/ui-app/StatusBadge";
+import { productStatusTone, toneTint, toneText, type StatusTone } from "@/lib/status";
+import { useReveal } from "@/lib/anim";
 
 const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+
+// Map the 4-state stock status onto a semantic tone (critical + out → danger).
+const toStockTone = (n: number): StatusTone => {
+  const s = getStockStatus(n);
+  return s === "out" || s === "critical" ? "danger" : s === "low" ? "warning" : "success";
+};
 
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting, specs }: { product: any; mediaItems: any[]; onEdit: () => void; onDelete: () => void; isSubmitting: boolean; specs?: any[] }) => {
   const { shopDetails, convertCurrency } = useShop();
@@ -64,6 +76,59 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
     return convertCurrency(product.price, product.currency, shopDetails.currency);
   }, [product?.price, product?.currency, convertCurrency, shopDetails]);
 
+  // Precompute variants once (parse option values, effective stock, display
+  // total) so search/filter keystrokes don't re-parse & re-convert everything.
+  const processedVariants = useMemo(() => {
+    if (!product) return [] as any[];
+    return variants.map((v: any) => {
+      const optVals = parseVariantOptionValues(v);
+      // product_variants.inventory is the single source of truth.
+      const effectiveStock = v.inventory || 0;
+      const totalPriceALL = (product.price || 0) + (v.price_difference || 0);
+      const displayTotal = convertCurrency(totalPriceALL, 'ALL', currencyCode);
+      return { ...v, optVals, effectiveStock, displayTotal, stockTone: toStockTone(effectiveStock) };
+    });
+  }, [variants, product?.price, product?.currency, currencyCode, convertCurrency]);
+
+  // Per-option-value derived stock + formatted price diff, memoized so option
+  // chips don't run an O(values × variants) reduce on every render.
+  const optionData = useMemo(() => {
+    if (!product) return [] as any[];
+    return options.map((option: any) => {
+      const values = (option.option_values || []).map((val: any) => {
+        const priceDiff = convertCurrency(val.price_difference, product.currency, currencyCode);
+        const priceDiffFormatted = formatCurrency(priceDiff, currencyCode, 'en-US', true);
+        const derivedStock = processedVariants.reduce(
+          (sum: number, v: any) => (v.optVals[option.name] === val.value ? sum + (v.effectiveStock || 0) : sum),
+          0,
+        );
+        return { ...val, priceDiff, priceDiffFormatted, derivedStock, stockTone: toStockTone(derivedStock) };
+      });
+      return { ...option, values };
+    });
+  }, [options, processedVariants, product?.currency, currencyCode, convertCurrency]);
+
+  // Derive the filtered/sorted variant list separately (only recomputes on
+  // search/filter/sort changes, not on every parent render).
+  const filteredVariants = useMemo(() => {
+    let list = processedVariants;
+    if (varSearch) {
+      const s = varSearch.toLowerCase();
+      list = list.filter((v: any) => Object.values(v.optVals).join(' ').toLowerCase().includes(s) || (v.sku || '').toLowerCase().includes(s));
+    }
+    if (varFilter === 'oos') list = list.filter((v: any) => v.effectiveStock <= 0);
+    else if (varFilter === 'low') list = list.filter((v: any) => v.effectiveStock > 0 && v.effectiveStock < 10);
+    else if (varFilter === 'in_stock') list = list.filter((v: any) => v.effectiveStock > 0);
+    list = [...list];
+    if (varSort === 'stock_asc') list.sort((a: any, b: any) => a.effectiveStock - b.effectiveStock);
+    else if (varSort === 'stock_desc') list.sort((a: any, b: any) => b.effectiveStock - a.effectiveStock);
+    else if (varSort === 'price_asc') list.sort((a: any, b: any) => a.displayTotal - b.displayTotal);
+    else if (varSort === 'price_desc') list.sort((a: any, b: any) => b.displayTotal - a.displayTotal);
+    return list;
+  }, [processedVariants, varSearch, varFilter, varSort]);
+
+  const contentRef = useReveal<HTMLDivElement>({}, [isLoadingOptions]);
+
   if (!product) return null;
 
   const hasSpecs = specs && specs.length > 0;
@@ -73,9 +138,9 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
   return (
     <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
       <ScrollArea className="flex-1 overflow-y-auto">
-        <div className="p-4 space-y-5">
+        <div ref={contentRef} className="p-4 space-y-5">
           {/* Hero: Media + Core Info */}
-          <div className="grid grid-cols-1 md:grid-cols-10 gap-5">
+          <div data-reveal className="grid grid-cols-1 md:grid-cols-10 gap-5">
             <div className="md:col-span-4">
               <Carousel className="w-full rounded-lg overflow-hidden">
                 <CarouselContent>
@@ -100,7 +165,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               {/* Name + Status */}
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">{product.name}</h1>
-                <Badge variant={product.status === 'Active' ? 'default' : 'secondary'} className="mt-1">{product.status}</Badge>
+                <StatusBadge tone={productStatusTone(product.status)} className="mt-1">{product.status}</StatusBadge>
               </div>
 
               {/* Price + Inventory */}
@@ -133,56 +198,41 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 </div>
               )}
 
+              {/* Options loading skeleton — keeps the panel's shape while data loads */}
+              {isLoadingOptions && (
+                <div className="space-y-2.5 pt-2 border-t">
+                  <Skeleton className="h-3 w-16" />
+                  <div className="flex flex-wrap gap-1.5">
+                    {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-7 w-16 rounded-md" />)}
+                  </div>
+                </div>
+              )}
+
               {/* Options — stock derived from variants */}
               {!isLoadingOptions && hasOptions && (
                 <div className="space-y-2.5 pt-2 border-t">
-                  {options.map((option: any) => {
-                    const values = (option.option_values || []);
-                    if (values.length === 0) return null;
+                  {optionData.map((option: any) => {
+                    if (!option.values || option.values.length === 0) return null;
                     return (
                       <div key={option.id} className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground uppercase tracking-wider">{option.name}</Label>
                         <div className="flex flex-wrap gap-1.5">
-                          {values.map((val: any) => {
-                            const priceDiff = convertCurrency(val.price_difference, product.currency, currencyCode);
-                            const priceDiffFormatted = formatCurrency(priceDiff, currencyCode, 'en-US', true);
-                            const isActive = val.is_active;
-                            // Derive stock from variants: sum inventory of all variants containing this option value
-                            const derivedStock = variants.reduce((sum: number, v: any) => {
-                              const vOpts = v.option_values || {};
-                              if (Object.keys(vOpts).length === 0 && v.combination_key) {
-                                v.combination_key.split('|').forEach((p: string) => { const [k, vl] = p.split('='); if (k && vl) vOpts[k] = vl; });
-                              }
-                              return vOpts[option.name] === val.value ? sum + (v.inventory || 0) : sum;
-                            }, 0);
-                            const stock = derivedStock;
-                            const status = getStockStatus(stock);
-                            const isOOS = status === 'out';
-                            const isCritical = status === 'critical';
-                            const isLow = status === 'low';
-                            return (
-                              <div
-                                key={val.id}
-                                className={cn(
-                                  "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border transition-colors",
-                                  !isActive
-                                    ? "bg-muted/50 text-muted-foreground border-border/50 opacity-50"
-                                    : isOOS
-                                      ? "bg-red-50 text-red-700 border-red-200"
-                                      : isCritical
-                                        ? "bg-red-50 text-red-600 border-red-200"
-                                        : isLow
-                                          ? "bg-amber-50 text-amber-700 border-amber-200"
-                                          : "bg-emerald-50 text-emerald-700 border-emerald-200",
-                                  val.is_default && "ring-1 ring-primary ring-offset-1"
-                                )}
-                              >
-                                <span className="font-medium">{val.value}</span>
-                                {priceDiff !== 0 && <span className="opacity-60">({priceDiffFormatted})</span>}
-                                <span className="opacity-60 tabular-nums">{stock}</span>
-                              </div>
-                            );
-                          })}
+                          {option.values.map((val: any) => (
+                            <div
+                              key={val.id}
+                              className={cn(
+                                "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border transition-colors",
+                                !val.is_active
+                                  ? "bg-muted/50 text-muted-foreground border-border/50 opacity-50"
+                                  : toneTint[val.stockTone as StatusTone],
+                                val.is_default && "ring-1 ring-primary ring-offset-1"
+                              )}
+                            >
+                              <span className="font-medium">{val.value}</span>
+                              {val.priceDiff !== 0 && <span className="opacity-60">({val.priceDiffFormatted})</span>}
+                              <span className="opacity-60 tabular-nums">{val.derivedStock}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     );
@@ -194,7 +244,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
 
           {/* Specifications */}
           {hasSpecs && (
-            <div>
+            <div data-reveal>
               <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
                 <Wrench className="h-4 w-4" />
                 Specifications
@@ -214,40 +264,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
           )}
 
           {/* Variants */}
-          {hasVariants && (() => {
-            // Preprocess variants with parsed optVals and effectiveStock
-            const processedVariants = variants.map((v: any) => {
-              let optVals = { ...(v.option_values || {}) };
-              if (Object.keys(optVals).length === 0 && v.combination_key) {
-                v.combination_key.split('|').forEach((part: string) => { const [key, val] = part.split('='); if (key && val) optVals[key] = val; });
-              }
-              // product_variants.inventory is the single source of truth — do not
-              // fall back to option_value inventory, which would resurrect phantom
-              // stock for a genuinely zero variant.
-              const effectiveStock = v.inventory || 0;
-              const totalPriceALL = (product.price || 0) + (v.price_difference || 0);
-              const displayTotal = convertCurrency(totalPriceALL, 'ALL', currencyCode);
-              return { ...v, optVals, effectiveStock, displayTotal };
-            });
-
-            // Filter
-            let filtered = processedVariants;
-            if (varSearch) {
-              const s = varSearch.toLowerCase();
-              filtered = filtered.filter(v => Object.values(v.optVals).join(' ').toLowerCase().includes(s) || (v.sku || '').toLowerCase().includes(s));
-            }
-            if (varFilter === 'oos') filtered = filtered.filter(v => v.effectiveStock <= 0);
-            else if (varFilter === 'low') filtered = filtered.filter(v => v.effectiveStock > 0 && v.effectiveStock < 10);
-            else if (varFilter === 'in_stock') filtered = filtered.filter(v => v.effectiveStock > 0);
-
-            // Sort
-            if (varSort === 'stock_asc') filtered.sort((a, b) => a.effectiveStock - b.effectiveStock);
-            else if (varSort === 'stock_desc') filtered.sort((a, b) => b.effectiveStock - a.effectiveStock);
-            else if (varSort === 'price_asc') filtered.sort((a, b) => a.displayTotal - b.displayTotal);
-            else if (varSort === 'price_desc') filtered.sort((a, b) => b.displayTotal - a.displayTotal);
-
-            return (
-            <div>
+          {hasVariants && (
+            <div data-reveal>
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   <Layers className="h-4 w-4" />
@@ -261,10 +279,13 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
 
               {/* Search + Filter + Sort toolbar */}
               <div className="flex gap-1.5 mb-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                  <Input placeholder="Search..." value={varSearch} onChange={(e) => setVarSearch(e.target.value)} className="h-7 pl-7 text-xs" />
-                </div>
+                <SearchInput
+                  value={varSearch}
+                  onValueChange={setVarSearch}
+                  placeholder="Search variants…"
+                  containerClassName="h-7 flex-1"
+                  className="text-xs"
+                />
                 <Select value={varFilter} onValueChange={(v) => setVarFilter(v as any)}>
                   <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -293,13 +314,14 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   <span className="w-28 text-right">Stock</span>
                 </div>
                 <div className="max-h-[400px] overflow-y-auto">
-                {filtered.length === 0 ? (
+                {filteredVariants.length === 0 ? (
                   <div className="py-6 text-center text-xs text-muted-foreground">No variants match your search</div>
-                ) : filtered.map((v: any, i: number) => {
+                ) : filteredVariants.map((v: any, i: number) => {
                   const status = getStockStatus(v.effectiveStock);
                   const isOOS = status === 'out';
                   const isCritical = status === 'critical';
                   const isLow = status === 'low';
+                  const stockTone: StatusTone = v.stockTone;
                   return (
                     <div key={v.id || i} className={cn(
                       "grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2 items-center",
@@ -320,10 +342,9 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                       </span>
                       <button onClick={() => setStockModalOpen(true)} className={cn(
                         "w-28 text-right text-xs font-medium flex items-center justify-end gap-1 rounded px-2 py-1 transition-colors cursor-pointer",
-                        isOOS ? "text-red-700 bg-red-50 hover:bg-red-100" :
-                        isCritical ? "text-red-600 bg-red-50 hover:bg-red-100" :
-                        isLow ? "text-amber-600 bg-amber-50 hover:bg-amber-100" :
-                        "text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
+                        stockTone === "danger" ? "text-destructive bg-destructive/10 hover:bg-destructive/20" :
+                        stockTone === "warning" ? "text-warning bg-warning/10 hover:bg-warning/20" :
+                        "text-success bg-success/10 hover:bg-success/20"
                       )}>
                         <Package className="h-3 w-3" />
                         {isOOS ? 'OOS' : isCritical ? `${v.effectiveStock} critical` : isLow ? `${v.effectiveStock} low` : `${v.effectiveStock}`}
@@ -334,13 +355,21 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 </div>
               </div>
             </div>
-            );
-          })()}
+          )}
 
-          {/* Loading state */}
+          {/* Variants loading skeleton — reserves the section's shape so content
+              fades in without a layout jump. */}
           {isLoadingOptions && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-28" />
+              <div className="rounded-lg border overflow-hidden divide-y">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex items-center justify-between px-3 py-2.5">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -369,10 +398,13 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
 
           {/* Search + Filter */}
           <div className="flex gap-2 shrink-0">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input placeholder="Search variants..." value={stockSearch} onChange={(e) => setStockSearch(e.target.value)} className="h-8 pl-8 text-xs" />
-            </div>
+            <SearchInput
+              value={stockSearch}
+              onValueChange={setStockSearch}
+              placeholder="Search variants…"
+              containerClassName="h-8 flex-1"
+              className="text-xs"
+            />
             <Select value={stockFilter} onValueChange={(v) => setStockFilter(v as any)}>
               <SelectTrigger className="h-8 w-32 text-xs">
                 <Filter className="h-3 w-3 mr-1" /><SelectValue />
@@ -412,6 +444,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 const isOOS = status === 'out';
                 const isCritical = status === 'critical';
                 const isLow = status === 'low';
+                const stockTone: StatusTone = (isOOS || isCritical) ? "danger" : isLow ? "warning" : "success";
                 return (
                   <div key={v.id || i} className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-lg",
@@ -439,7 +472,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                     </div>
                     <span className={cn(
                       "text-xs w-12 text-right font-medium",
-                      isOOS ? "text-red-600" : isCritical ? "text-red-500" : isLow ? "text-amber-600" : "text-emerald-600"
+                      toneText[stockTone]
                     )}>
                       {isOOS ? 'OOS' : currentStock}
                     </span>
@@ -479,7 +512,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 setIsSavingStock(false);
               }}
             >
-              {isSavingStock ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+              {isSavingStock ? <Spinner className="mr-1.5 h-3.5 w-3.5" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
               Save
             </Button>
           </DialogFooter>

@@ -9,6 +9,8 @@
  *  user { userId }              → full detail + payments + counts
  *  extend_trial { userId, days }→ (re)start/extend a trial
  *  set_status { userId, status }→ 'canceled' | 'expired' | 'active'
+ *  set_plan { userId, planId, endDate, billingCycle? }
+ *                               → manually assign a plan, active until endDate
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -234,6 +236,33 @@ serve(async (req) => {
         patch.current_period_end = new Date(now.getTime() + 30 * 86400000).toISOString();
       }
       const { error } = await db.from("subscriptions").update(patch).eq("user_id", userId);
+      if (error) throw error;
+      return json({ ok: true });
+    }
+
+    // Manually assign a plan to a client and activate it until a chosen end date.
+    if (action === "set_plan") {
+      const userId = String(body?.userId ?? "");
+      const planId = String(body?.planId ?? "");
+      const billingCycle = ["monthly", "annual"].includes(String(body?.billingCycle)) ? String(body?.billingCycle) : "monthly";
+      const end = body?.endDate ? new Date(String(body?.endDate)) : null;
+      if (!userId || !planId) return json({ error: "userId and planId are required" }, 400);
+      if (!end || isNaN(end.getTime())) return json({ error: "A valid endDate is required" }, 400);
+      // Guard: the plan must exist.
+      const { data: plan } = await db.from("plans").select("id").eq("id", planId).maybeSingle();
+      if (!plan) return json({ error: "Unknown plan" }, 400);
+      const now = new Date();
+      const { error } = await db.from("subscriptions").upsert({
+        user_id: userId,
+        plan_id: planId,
+        status: "active",
+        billing_cycle: billingCycle,
+        current_period_start: now.toISOString(),
+        current_period_end: end.toISOString(),
+        trial_ends_at: null,
+        cancel_at_period_end: false,
+        updated_at: now.toISOString(),
+      }, { onConflict: "user_id" });
       if (error) throw error;
       return json({ ok: true });
     }

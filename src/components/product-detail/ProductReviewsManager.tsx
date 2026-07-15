@@ -4,12 +4,14 @@
 // or comment).
 
 import { useEffect, useState } from 'react';
-import { Star, Loader2, Send, MessageSquare } from 'lucide-react';
+import { Star, Send, MessageSquare } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { EmptyState } from '@/components/ui-app';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
@@ -36,7 +38,7 @@ interface Props {
 const Stars = ({ value }: { value: number }) => (
   <span className="inline-flex items-center gap-0.5">
     {[1, 2, 3, 4, 5].map((s) => (
-      <Star key={s} className={cn('h-4 w-4', s <= value ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/30')} />
+      <Star key={s} className={cn('h-4 w-4', s <= value ? 'fill-warning text-warning' : 'text-muted-foreground/30')} />
     ))}
   </span>
 );
@@ -96,9 +98,14 @@ export const ProductReviewsManager = ({ open, onOpenChange, productId, productNa
         </DialogHeader>
 
         {reviews === null ? (
-          <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <div className="flex justify-center py-10"><Spinner className="h-6 w-6 text-muted-foreground" /></div>
         ) : reviews.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">No reviews yet — customers can review from “My Orders” once their order is fulfilled.</p>
+          <EmptyState
+            compact
+            icon={MessageSquare}
+            title="No reviews yet"
+            description="Customers can review from “My Orders” once their order is fulfilled."
+          />
         ) : (
           <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
             {reviews.map((r) => (
@@ -131,7 +138,7 @@ export const ProductReviewsManager = ({ open, onOpenChange, productId, productNa
                       onClick={() => saveReply(r.id)}
                     >
                       {savingId === r.id
-                        ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Saving…</>
+                        ? <><Spinner className="mr-1.5 h-3.5 w-3.5" /> Saving…</>
                         : <><Send className="mr-1.5 h-3.5 w-3.5" /> {r.reply_text ? 'Update reply' : 'Reply'}</>}
                     </Button>
                   </div>

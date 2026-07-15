@@ -8,7 +8,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
 import { Loader2, ArrowLeft, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { SfButton } from '../components/SfButton';
 import { toast } from 'sonner';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { useCart } from '@/contexts/CartContext';
@@ -86,7 +86,7 @@ export const ProductDetailPage = () => {
     return (
       <div className="sf-container py-16 text-center text-muted-foreground">
         <h1 className="sf-heading text-2xl font-bold">Product Not Found</h1>
-        <Button asChild className="mt-4"><Link to={`/shop/${shopSlug}/products`}><Home className="mr-2 h-4 w-4" /> Back to Shop</Link></Button>
+        <SfButton asChild className="mt-4"><Link to={`/shop/${shopSlug}/products`}><Home className="mr-2 h-4 w-4" /> Back to Shop</Link></SfButton>
       </div>
     );
   }
@@ -131,16 +131,23 @@ export const ProductDetailPage = () => {
   const belowSections = enabled.filter((s) => s.type !== 'gallery' && !DETAIL_INFO_COLUMN_TYPES.has(s.type));
 
   const galleryLayout = config.components.productGalleryLayout;
+  // With no images (common right after an Instagram import) the gallery column
+  // is empty — collapse to a single column so there's no blank half. 'top' and
+  // 'full-bleed' also stack; 'top' constrains the info block for a focused read.
+  const hasGallery = media.length > 0 && gallerySections.length > 0;
+  const stacked = galleryLayout === 'full-bleed' || galleryLayout === 'top' || !hasGallery;
 
   return (
     <ProductDetailContext.Provider value={state}>
       <div className="sf-container py-6 md:py-8">
         <Link to={`/shop/${shopSlug}/products`} className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6"><ArrowLeft className="mr-1.5 h-4 w-4" /> Back to Products</Link>
-        <div className={cn('grid gap-8 lg:gap-12', galleryLayout === 'full-bleed' ? 'grid-cols-1' : 'lg:grid-cols-2')}>
-          <div className={cn(galleryLayout === 'sticky-split' && 'lg:sticky lg:top-20 lg:self-start')}>
-            {gallerySections.map(renderBlock)}
-          </div>
-          <div className="space-y-5">{infoSections.map(renderBlock)}</div>
+        <div className={cn('grid gap-8 lg:gap-12', stacked ? 'grid-cols-1' : 'lg:grid-cols-2')}>
+          {hasGallery && (
+            <div className={cn(galleryLayout === 'sticky-split' && 'lg:sticky lg:top-20 lg:self-start')}>
+              {gallerySections.map(renderBlock)}
+            </div>
+          )}
+          <div className={cn('space-y-5', galleryLayout === 'top' && hasGallery && 'mx-auto w-full max-w-2xl')}>{infoSections.map(renderBlock)}</div>
         </div>
         {belowSections.map(renderBlock)}
       </div>

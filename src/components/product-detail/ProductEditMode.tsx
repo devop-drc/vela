@@ -12,7 +12,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Card, CardContent, CardHeader, CardTitle as CardTitleComponent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TagInput } from "../TagInput";
-import { Loader2, XCircle, PlusCircle, CheckCircle, Sparkles, Settings, Cloud, Package, Eye, Trash2 } from "lucide-react";
+import { XCircle, PlusCircle, CheckCircle, Sparkles, Settings, Cloud, Package, Eye, Trash2, Layers } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import useAutosizeTextArea from "@/hooks/use-autosize-textarea";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,18 +27,30 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { showError, showSuccess } from "@/utils/toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import VariantsManager from "./VariantsManager";
+import { useAuth } from "@/contexts/AuthContext";
+import { EmptyState } from "@/components/ui-app";
+import { useReveal } from "@/lib/anim";
+import { productStatusTone, toneText } from "@/lib/status";
 
+// Status → icon + token-based tone colour (dark-safe, matches ProductViewMode's
+// StatusBadge tones via productStatusTone()).
 const statusConfig = {
-  'Active': { icon: CheckCircle, color: "text-emerald-600", label: "Active" },
-  'Draft': { icon: Eye, color: "text-amber-600", label: "Draft" }, // Changed icon to Eye
-  'Out of Stock': { icon: Package, color: "text-slate-600", label: "Out of Stock" }, // Changed icon to Package
+  'Active': { icon: CheckCircle, color: toneText[productStatusTone('Active')], label: "Active" },
+  'Draft': { icon: Eye, color: toneText[productStatusTone('Draft')], label: "Draft" }, // Changed icon to Eye
+  'Out of Stock': { icon: Package, color: toneText[productStatusTone('Out of Stock')], label: "Out of Stock" }, // Changed icon to Package
 };
+
+// Shared underline field treatment (was copy-pasted across name/status/caption/
+// price/currency/inventory/interval inputs).
+const underlineBase = "border-0 border-b-2 rounded-none bg-transparent";
 
 
 
 export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, onClose, onUpdate, isSubmitting, setIsSubmitting, specs, setSpecs }: any) => {
     const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
     const { shopDetails, convertCurrency } = useShop();
+    const { user } = useAuth();
+    const revealRef = useReveal<HTMLDivElement>({}, []);
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
     const [typeOptions, setTypeOptions] = useState<string[]>([]);
     const [isReanalyzing, setIsReanalyzing] = useState(false);
@@ -162,7 +175,6 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         const toastId = toast.loading("Finding specs with AI...");
         try {
             if (!product?.id) throw new Error("Please save the product before analyzing so variants can be created.");
-            const { data: { user } = {} } = await supabase.auth.getUser();
             if (!user) throw new Error("User not authenticated.");
 
             const { data, error } = await supabase.functions.invoke('find-product-specs', {
@@ -297,9 +309,9 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
               </TabsList>
             </div>
             <ScrollArea className="flex-1 overflow-y-auto">
-            <div className="p-4 space-y-6">
+            <div ref={revealRef} className="p-4 space-y-6">
               <TabsContent value="details" className="mt-0 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-10 gap-6">
+              <div data-reveal className="grid grid-cols-1 md:grid-cols-10 gap-6">
                 <div className="md:col-span-4">
                   {mediaItems.length > 0 && (
                       <Carousel className="w-full rounded-lg overflow-hidden group">
@@ -338,7 +350,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                   </div>
                   <Button asChild size="sm" variant="outline" className="mt-2">
                     <label htmlFor="image-upload" className="cursor-pointer">
-                      {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+                      {isUploading ? <Spinner className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />}
                       Add Media
                     </label>
                   </Button>
@@ -351,12 +363,12 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                       <div className="w-fit min-w-[165px]"><Controller name="details.type" control={control} render={({ field }) => (<CreatableCombobox options={typeOptions} placeholder="Type..." {...field} />)} /></div>
                     </div>
                     <div className="flex items-center gap-2 mt-4">
-                      <Input id="name" {...register("name")} placeholder="Product Name" className="w-auto border-0 border-b-2 rounded-none bg-transparent p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors" />
-                      <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn("w-[140px] border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50", currentStatusConfig?.color)}>{StatusIcon ? (<div className="flex items-center gap-2"><StatusIcon className="h-4 w-4" /><span>{currentStatusConfig.label}</span></div>) : <SelectValue placeholder="Set status..." />}</SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
+                      <Input id="name" {...register("name")} placeholder="Product Name" className={cn(underlineBase, "w-auto p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors")} />
+                      <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn(underlineBase, "w-[140px] hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50", currentStatusConfig?.color)}>{StatusIcon ? (<div className="flex items-center gap-2"><StatusIcon className="h-4 w-4" /><span>{currentStatusConfig.label}</span></div>) : <SelectValue placeholder="Set status..." />}</SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
                     </div>
                     {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
                   </div>
-                  <Textarea id="caption" {...captionProps} ref={(e) => { rhfRef(e); textAreaRef.current = e as HTMLTextAreaElement; }} placeholder="No description provided." className="border-0 border-b-2 rounded-none bg-transparent p-0 text-base text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors resize-none" />
+                  <Textarea id="caption" {...captionProps} ref={(e) => { rhfRef(e); textAreaRef.current = e as HTMLTextAreaElement; }} placeholder="No description provided." className={cn(underlineBase, "p-0 text-base text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors resize-none")} />
                   <div><Label>Tags</Label><Controller control={control} name="tags" render={({ field }) => <TagInput {...field} value={Array.isArray(field.value) ? field.value : (field.value ? [field.value] : [])} />} /></div>
                   <div className="space-y-2 pt-2">
                     <Label>Pricing Model</Label>
@@ -376,15 +388,15 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                       )} />
                     </div>
                     <div className="grid grid-cols-3 gap-4 pt-2">
-                        <div className="space-y-1 col-span-2"><Label htmlFor="price" className="text-xs">Price</Label><div className="flex items-center gap-2"><div className="relative flex-1"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{currencySymbol}</span><Input id="price" type="number" step="0.01" {...register("price")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pl-8" /></div><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className="w-28 border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
-                        <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">Quantity in stock</Label><Input id="inventory" type="number" {...register("inventory")} className="w-full border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className="w-full border-0 border-b-2 rounded-none bg-transparent hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50"><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
+                        <div className="space-y-1 col-span-2"><Label htmlFor="price" className="text-xs">Price</Label><div className="flex items-center gap-2"><div className="relative flex-1"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{currencySymbol}</span><Input id="price" type="number" step="0.01" {...register("price")} className={cn(underlineBase, "w-full focus-visible:ring-0 focus-visible:ring-offset-0 pl-8")} /></div><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn(underlineBase, "w-28 hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50")}><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
+                        <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">Quantity in stock</Label><Input id="inventory" type="number" {...register("inventory")} className={cn(underlineBase, "w-full focus-visible:ring-0 focus-visible:ring-offset-0")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className={cn(underlineBase, "w-full hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50")}><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
                     </div>
                   </div>
                 </div>
               </div>
               
               {/* Specifications */}
-              <div className="space-y-3">
+              <div data-reveal className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
                     <Settings className="h-4 w-4" />
@@ -392,7 +404,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     {specs && specs.length > 0 && <Badge variant="secondary" className="text-xs h-5">{specs.length}</Badge>}
                   </h3>
                   <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleFindSpecs} disabled={isReanalyzing}>
-                    {isReanalyzing ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1.5 h-3 w-3 text-amber-400" />}Find with AI
+                    {isReanalyzing ? <Spinner className="mr-1.5 h-3 w-3" /> : <Sparkles className="mr-1.5 h-3 w-3 text-primary" />}Find with AI
                   </Button>
                 </div>
                 {specs && specs.length > 0 ? (
@@ -411,10 +423,12 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-lg border border-dashed p-6 text-center">
-                    <p className="text-sm text-muted-foreground">No specifications yet</p>
-                    <p className="text-xs text-muted-foreground/60 mt-1">Click "Find with AI" or add manually below</p>
-                  </div>
+                  <EmptyState
+                    compact
+                    icon={Settings}
+                    title="No specifications yet"
+                    description={'Click "Find with AI" or add manually below.'}
+                  />
                 )}
                 <Button type="button" variant="outline" size="sm" className="h-8 text-xs w-full border-dashed" onClick={() => setSpecs([...(specs || []), { key: '', value: '', unit: '' }])}>
                   <PlusCircle className="mr-1.5 h-3.5 w-3.5" />Add specification
@@ -434,15 +448,17 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     convertCurrency={convertCurrency}
                   />
                 ) : (
-                  <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-                    Save the product first to manage options &amp; variants.
-                  </div>
+                  <EmptyState
+                    icon={Layers}
+                    title="Save the product first"
+                    description="Save this product to start adding options and variants."
+                  />
                 )}
               </TabsContent>
             </div>
           </ScrollArea>
           </Tabs>
-          <DialogFooter className="p-4 border-t"><Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Update Product</Button></DialogFooter>
+          <DialogFooter className="p-4 border-t"><Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Spinner className="mr-2 h-4 w-4" />}Update Product</Button></DialogFooter>
         </form>
       </motion.div>
     )
