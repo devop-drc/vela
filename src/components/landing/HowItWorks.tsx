@@ -35,6 +35,8 @@ export default function HowItWorks({ lang }: { lang: Lang }) {
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduce) { gsap.set("[data-reveal]", { opacity: 1, y: 0 }); return; }
       gsap.from("[data-reveal]", { y: 26, opacity: 0, duration: 0.8, stagger: 0.1, ease: "power3.out", scrollTrigger: { trigger: root.current, start: "top 76%" } });
 
       const setActive = (n: number) => {

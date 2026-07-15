@@ -33,6 +33,7 @@ export default function FeatureShowcase({ lang }: { lang: Lang }) {
   useLayoutEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
+      if (reduce) { gsap.set("[data-reveal], .fs-anim", { opacity: 1, y: 0 }); return; }
       gsap.from("[data-reveal]", { y: 26, opacity: 0, duration: 0.8, stagger: 0.1, ease: "power3.out", scrollTrigger: { trigger: root.current, start: "top 74%" } });
       gsap.utils.toArray<HTMLElement>(".fs-row").forEach((row) => {
         gsap.from(row.querySelectorAll(".fs-anim"), { y: 30, opacity: 0, duration: 0.75, stagger: 0.1, ease: "power3.out", scrollTrigger: { trigger: row, start: "top 78%" } });

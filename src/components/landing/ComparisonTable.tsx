@@ -53,20 +53,21 @@ export default function ComparisonTable({ lang }: { lang: Lang }) {
         sub={t(lang, "Krahaso vetë — dhe shiko pse Vela është bërë për shitësit shqiptarë.", "See for yourself why Vela is built for Albanian sellers.")}
       />
 
-      <div className="ct-table relative mx-auto mt-12 max-w-4xl overflow-x-auto">
-        <div className="min-w-0 sm:min-w-[640px]">
+      <div className="ct-table relative mx-auto mt-12 max-w-4xl overflow-x-auto overflow-y-hidden">
+        <div className="relative min-w-0 sm:min-w-[640px]">
           <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr] items-end gap-1.5 px-1.5 pb-3 sm:grid-cols-[1.6fr_1fr_1fr_1fr] sm:gap-2 sm:px-2">
             <div />
             <div className="ct-row text-center text-[11px] font-semibold leading-tight text-muted-foreground sm:text-[13px]">{t(lang, "Vetëm Instagram", "Instagram only")}</div>
             <div className="ct-row text-center text-[11px] font-semibold leading-tight text-muted-foreground sm:text-[13px]">Shopify & co.</div>
-            <div className="ct-row relative pt-2 text-center">
-              <div className="ct-vela pointer-events-none absolute -inset-x-1 -top-1 bottom-[-2000px] -z-10 rounded-t-[24px] bg-gradient-to-b from-fuchsia-500/10 to-transparent ring-1 ring-fuchsia-400/30" />
+            <div className="ct-row pt-2 text-center">
               <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-bold text-white sm:px-3 sm:text-[13px] ${BRAND}`}>Vela</span>
             </div>
           </div>
-          <div className="rounded-3xl border border-border bg-card/70 backdrop-blur">
+          <div className="relative overflow-hidden rounded-3xl border border-border bg-card/70 backdrop-blur">
+            {/* Vela column highlight — contained to the table body (no runaway height). */}
+            <div className="ct-vela pointer-events-none absolute inset-y-0 right-0 z-0 w-[calc(25%-0.375rem)] bg-gradient-to-b from-fuchsia-500/[0.14] to-fuchsia-500/[0.03] ring-1 ring-inset ring-fuchsia-400/25 sm:w-[calc(25%-0.5rem)]" aria-hidden />
             {rows.map((r, i) => (
-              <div key={i} className={`ct-row grid grid-cols-[1.4fr_1fr_1fr_1fr] items-center gap-1.5 px-2.5 py-3.5 sm:grid-cols-[1.6fr_1fr_1fr_1fr] sm:gap-2 sm:px-4 ${i < rows.length - 1 ? "border-b border-border" : ""}`}>
+              <div key={i} className={`ct-row relative z-10 grid grid-cols-[1.4fr_1fr_1fr_1fr] items-center gap-1.5 px-2.5 py-3.5 sm:grid-cols-[1.6fr_1fr_1fr_1fr] sm:gap-2 sm:px-4 ${i < rows.length - 1 ? "border-b border-border" : ""}`}>
                 <div className="text-[12.5px] font-medium leading-snug text-foreground sm:text-[15px]">{r.label}</div>
                 <div className="text-center">{cell(r.ig)}</div>
                 <div className="text-center">{cell(r.shop)}</div>
