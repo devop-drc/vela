@@ -14,11 +14,11 @@ export default function ProblemSection({ lang }: { lang: Lang }) {
   const root = useRef<HTMLDivElement>(null);
 
   const pains = [
-    { Icon: MessageCircle, title: t(lang, "Çdo shitje ngec në DM", "Every sale stuck in DMs"), body: t(lang, "Dhjetëra “sa kushton?” pa përgjigje. Ti je arka, magazina dhe suporti.", "Dozens of “how much?” unanswered. You're the checkout, warehouse and support."), metric: true },
-    { Icon: CreditCard, title: t(lang, "Pa arkë, pa pagesa", "No checkout, no payments"), body: t(lang, "Çmimi, adresa dhe pagesa — të gjitha me dorë, në mesazhe.", "Price, address and payment — all by hand, in messages.") },
-    { Icon: PackageX, title: t(lang, "Stoku me dorë", "Stock by hand"), body: t(lang, "E mban në kokë ose në fletore. Dhe e shet dy herë.", "Kept in your head or a notebook. And sold twice.") },
-    { Icon: TrendingDown, title: t(lang, "Zero të dhëna", "Zero data"), body: t(lang, "Asnjë numër, asnjë klient i ruajtur. S'di çfarë shet vërtet.", "No numbers, no saved customers. You don't know what actually sells.") },
-    { Icon: SearchX, wide: true, title: t(lang, "S'gjejnë dot çfarë kërkojnë", "They can't find what they want"), body: t(lang, "Pa kërkim, pa filtra, pa renditje — klientët lëvizin nëpër postime pa fund, nuk e gjejnë masën, ngjyrën apo çmimin, dhe dorëzohen. Vizitori që s'gjen shpejt çfarë do, ikën te dikush tjetër — dhe atë klient e humbe.", "No search, no filters, no sorting — customers scroll endless posts, can't find the size, color or price, and give up. A visitor who can't quickly find what they want leaves for someone else — and that customer is gone."), stat: t(lang, "76% duan të gjejnë shpejt çfarë kërkojnë — përndryshe ikin", "76% want to find what they want fast — or they leave") },
+    { Icon: MessageCircle, title: t(lang, "Çdo shitje ngec në DM", "Every sale stuck in DMs"), body: t(lang, "Ti je arka, magazina dhe suporti — njëkohësisht.", "You're the checkout, warehouse and support — all at once."), metric: true },
+    { Icon: CreditCard, title: t(lang, "Pa arkë, pa pagesa", "No checkout, no payments"), body: t(lang, "Çmim, adresë, pagesë — të gjitha me dorë.", "Price, address, payment — all by hand.") },
+    { Icon: PackageX, title: t(lang, "Stoku me dorë", "Stock by hand"), body: t(lang, "E mban në kokë — dhe e shet dy herë.", "Kept in your head — and sold twice.") },
+    { Icon: TrendingDown, title: t(lang, "Zero të dhëna", "Zero data"), body: t(lang, "S'ke asnjë numër — s'di çfarë shet vërtet.", "No numbers at all — you don't know what sells.") },
+    { Icon: SearchX, wide: true, title: t(lang, "S'gjejnë dot çfarë kërkojnë", "They can't find what they want"), body: t(lang, "Pa kërkim as filtra, klientët dorëzohen — dhe ikin te dikush tjetër.", "No search, no filters — customers give up and leave for someone else."), stat: t(lang, "76% ikin nëse s'gjejnë shpejt", "76% leave if they can't find it fast") },
   ];
 
   useLayoutEffect(() => {
@@ -40,16 +40,16 @@ export default function ProblemSection({ lang }: { lang: Lang }) {
   }, [lang]);
 
   return (
-    <section ref={root} className="relative px-5 py-24 sm:py-32">
+    <section ref={root} id="problem" className="relative px-5 py-14 sm:py-32">
       <SectionHead
         eyebrow={t(lang, "Problemi", "The problem")}
         title={<>{t(lang, "Instagrami sjell klientë. ", "Instagram brings customers. ")}<span className="text-muted-foreground/70">{t(lang, "Pastaj të lë vetëm.", "Then leaves you alone.")}</span></>}
-        sub={t(lang, "Feed-i mbush DM-të. Por shitja, pagesa dhe logjistika mbeten mbi ty.", "The feed fills your DMs. But selling, payments and logistics stay on you.")}
+        sub={t(lang, "Feed-i mbush DM-të. Shitja e pagesa mbeten mbi ty.", "The feed fills your DMs. Selling and payments stay on you.")}
       />
 
-      <div className="pain-grid mx-auto mt-14 grid max-w-4xl gap-4 sm:grid-cols-2">
+      <div className="pain-grid mx-auto mt-8 grid max-w-4xl gap-4 sm:mt-14 sm:grid-cols-2">
         {pains.map((p, i) => (
-          <div key={i} className={`pain-card group relative overflow-hidden rounded-3xl border bg-card p-7 transition-shadow hover:shadow-[0_30px_70px_-30px_rgba(30,10,50,0.25)] ${p.wide ? "border-destructive/25 sm:col-span-2" : "border-border"}`}>
+          <div key={i} className={`pain-card group relative overflow-hidden rounded-3xl border bg-card p-5 transition-shadow hover:shadow-[0_30px_70px_-30px_rgba(30,10,50,0.25)] sm:p-7 ${p.wide ? "border-destructive/25 sm:col-span-2" : "border-border"}`}>
             <div className="flex items-start gap-4">
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-destructive/10 text-destructive"><p.Icon className="h-6 w-6" /></span>
               <div className="min-w-0">
@@ -72,7 +72,7 @@ export default function ProblemSection({ lang }: { lang: Lang }) {
       </div>
 
       {/* bridge into the solution — clean narrative + visual transition */}
-      <div className="pain-bridge mx-auto mt-16 flex flex-col items-center text-center">
+      <div className="pain-bridge mx-auto mt-10 flex flex-col items-center text-center sm:mt-16">
         <p className="font-display-brand text-[clamp(1.4rem,2.6vw,2rem)] font-semibold tracking-tight text-foreground">
           {t(lang, "Ke nevojë për një dyqan të vërtetë.", "You need a real shop.")}
         </p>

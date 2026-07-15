@@ -728,9 +728,9 @@ export default function Landing() {
       </div>
 
       {/* ── Stats — quiet receipt strip ── */}
-      <section className="px-5 py-14">
-        <div className="reveal mx-auto max-w-4xl border-y border-dashed border-border py-8">
-          <div className="grid grid-cols-2 gap-y-8 text-center sm:grid-cols-4 sm:[&>*+*]:border-l sm:[&>*+*]:border-dashed sm:[&>*+*]:border-border">
+      <section className="px-5 py-8 sm:py-14">
+        <div className="reveal mx-auto max-w-4xl border-y border-dashed border-border py-6 sm:py-8">
+          <div className="grid grid-cols-2 gap-y-6 text-center sm:grid-cols-4 sm:gap-y-8 sm:[&>*+*]:border-l sm:[&>*+*]:border-dashed sm:[&>*+*]:border-border">
             {copy.stats.map((s, i) => (
               <div key={i} className="px-2">
                 <div className="font-display text-3xl sm:text-4xl">
@@ -764,7 +764,7 @@ export default function Landing() {
       </Suspense>
 
       {/* ── Social proof & trust ── */}
-      <section id="reviews" className="px-5 py-24">
+      <section id="reviews" className="px-5 py-14 sm:py-24 lg:py-32">
         <div className="mx-auto max-w-6xl">
           <div className="reveal mx-auto max-w-2xl text-center">
             <Eyebrow>{copy.testimonials.title}</Eyebrow>
@@ -772,7 +772,7 @@ export default function Landing() {
               {lang === "sq" ? "Shitësit që kaluan te Vela" : "Sellers who made the switch"}
             </h2>
           </div>
-          <div className="mt-14 grid gap-5 sm:grid-cols-3">
+          <div className="mt-10 grid gap-5 sm:mt-14 sm:grid-cols-3">
             {copy.testimonials.items.map((t, i) => {
               const active = i === activeTesti;
               const floatClass = ["ls-float", "ls-float2", "ls-float3"][i % 3];
@@ -805,7 +805,7 @@ export default function Landing() {
             })}
           </div>
           {/* trust badges */}
-          <div className="reveal mt-10 flex flex-wrap items-center justify-center gap-3">
+          <div className="reveal mt-8 flex flex-wrap items-center justify-center gap-3 sm:mt-10">
             <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-muted-foreground shadow-sm">
               <ShieldCheck className="h-4 w-4 text-emerald-500" />
               {lang === "sq" ? "Enkriptim i nivelit bankar" : "Bank-level encryption"}
@@ -819,7 +819,7 @@ export default function Landing() {
       </section>
 
       {/* ── Pricing ── */}
-      <section id="pricing" className="px-5 py-24">
+      <section id="pricing" className="px-5 py-14 sm:py-24 lg:py-32">
         <div className="mx-auto max-w-6xl">
           <div className="reveal mx-auto max-w-2xl text-center">
             <Eyebrow>{copy.pricing.badge}</Eyebrow>
@@ -832,7 +832,7 @@ export default function Landing() {
             </div>
           </div>
 
-          <div className="mt-12 grid items-start gap-6 lg:grid-cols-3">
+          <div className="mt-8 grid items-start gap-6 sm:mt-12 lg:grid-cols-3">
             {copy.pricing.plans.map((p) => {
               const featured = p.id === "pro";
               const isFree = (PLAN_PRICES[p.id] ?? 0) === 0;
@@ -909,8 +909,8 @@ export default function Landing() {
       <section className="px-5 py-24"> … </section> */}
 
       {/* ── I'm interested ── */}
-      <section id="interest" className="px-5 py-24">
-        <div className="reveal ls-card glare-hover mx-auto grid max-w-5xl gap-10 overflow-hidden rounded-[2rem] border border-border bg-card p-8 sm:p-12 lg:grid-cols-2">
+      <section id="interest" className="px-5 py-14 sm:py-24 lg:py-32">
+        <div className="reveal ls-card glare-hover mx-auto grid max-w-5xl gap-8 overflow-hidden rounded-[2rem] border border-border bg-card p-6 sm:gap-10 sm:p-12 lg:grid-cols-2">
           <div>
             <Eyebrow>{copy.interest.badge}</Eyebrow>
             <h2 className="text-3xl tracking-tight sm:text-[2.6rem] sm:leading-tight">{copy.interest.title}</h2>
@@ -970,13 +970,13 @@ export default function Landing() {
       </section>
 
       {/* ── FAQ ── */}
-      <section id="faq" className="px-5 py-24">
+      <section id="faq" className="px-5 py-14 sm:py-24 lg:py-32">
         <div className="mx-auto max-w-3xl">
           <div className="reveal text-center">
             <Eyebrow>{lang === "sq" ? "Ndihmë" : "Help"}</Eyebrow>
             <h2 className="text-3xl tracking-tight sm:text-[2.6rem] sm:leading-tight">{copy.faq.title}</h2>
           </div>
-          <div className="reveal ls-card mt-10 rounded-3xl border border-border bg-card px-6 sm:px-8">
+          <div className="reveal ls-card mt-8 rounded-3xl border border-border bg-card px-6 sm:mt-10 sm:px-8">
             <Accordion type="single" collapsible>
               {copy.faq.items.map((f, i) => (
                 <AccordionItem key={i} value={`item-${i}`} className={i === copy.faq.items.length - 1 ? "border-b-0" : undefined}>
@@ -990,8 +990,8 @@ export default function Landing() {
       </section>
 
       {/* ── Final CTA ── */}
-      <section className="px-5 py-24">
-        <div className={cn("cta-panel reveal relative mx-auto max-w-5xl overflow-hidden rounded-[2.5rem] px-8 py-20 text-center text-white sm:px-12", BRAND)}>
+      <section className="px-5 py-14 sm:py-24 lg:py-32">
+        <div className={cn("cta-panel reveal relative mx-auto max-w-5xl overflow-hidden rounded-[2.5rem] px-6 py-14 text-center text-white sm:px-12 sm:py-20", BRAND)}>
           <div className="cta-grid pointer-events-none absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)", backgroundSize: "42px 42px" }} />
           <div className="ls-aurora pointer-events-none absolute -left-10 -top-10 h-60 w-60 rounded-full bg-white/20 blur-3xl" />
           <div className="ls-aurora pointer-events-none absolute -bottom-10 -right-10 h-60 w-60 rounded-full bg-white/10 blur-3xl" style={{ animationDelay: "-6s" }} />
@@ -999,7 +999,7 @@ export default function Landing() {
           <h2 className="relative mt-4 text-3xl tracking-tight sm:text-[2.6rem] sm:leading-tight">{copy.cta.title}</h2>
           <p className="relative mx-auto mt-3 max-w-xl text-lg text-white/90">{copy.cta.sub}</p>
           <Magnetic>
-            <Button asChild size="lg" className="relative mt-9 gap-2 rounded-full bg-white px-9 py-6 text-base font-semibold text-zinc-900 hover:bg-white/90">
+            <Button asChild size="lg" className="relative mt-8 gap-2 rounded-full bg-white px-9 py-6 text-base font-semibold text-zinc-900 hover:bg-white/90 sm:mt-9">
               <Link to="/register">{copy.cta.button} <ArrowRight className="h-4 w-4" /></Link>
             </Button>
           </Magnetic>

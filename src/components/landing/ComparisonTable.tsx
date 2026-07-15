@@ -26,11 +26,11 @@ export default function ComparisonTable({ lang }: { lang: Lang }) {
     { label: t(lang, "Pa website, pa kod", "No website, no code"), ig: false, shop: false, vela: true },
     { label: t(lang, "Postime → produkte me AI", "Posts → products with AI"), ig: false, shop: false, vela: true },
     { label: t(lang, "Vitrinë e personalizueshme", "Custom storefront"), ig: false, shop: true, vela: true },
-    { label: t(lang, "Pagesa me kartë në Lekë (RaiAccept)", "Card payments in Lek (RaiAccept)"), ig: false, shop: "partial", vela: true },
+    { label: t(lang, "Kartë në Lekë (RaiAccept)", "Card in Lek (RaiAccept)"), ig: false, shop: "partial", vela: true },
     { label: t(lang, "Para në dorë", "Cash on delivery"), ig: "partial", shop: "partial", vela: true },
     { label: t(lang, "Inventar & variante automatike", "Auto inventory & variants"), ig: false, shop: true, vela: true },
-    { label: t(lang, "Menaxhim porosish në një panel", "Orders in one dashboard"), ig: false, shop: true, vela: true },
-    { label: t(lang, "Ndërtuar për tregun shqiptar", "Built for the Albanian market"), ig: false, shop: false, vela: true },
+    { label: t(lang, "Porositë në një panel", "Orders in one dashboard"), ig: false, shop: true, vela: true },
+    { label: t(lang, "Ndërtuar për tregun shqiptar", "Built for Albanian market"), ig: false, shop: false, vela: true },
     { label: t(lang, "Kohë deri live", "Time to go live"), ig: "—", shop: t(lang, "javë", "weeks"), vela: t(lang, "minuta", "minutes") },
   ];
 
@@ -46,14 +46,14 @@ export default function ComparisonTable({ lang }: { lang: Lang }) {
   }, [lang]);
 
   return (
-    <section ref={root} className="px-5 py-24 sm:py-32">
+    <section ref={root} id="compare" className="px-5 py-14 sm:py-24 lg:py-32">
       <SectionHead
         eyebrow={t(lang, "Pse Vela", "Why Vela")}
         title={t(lang, "Instagrami s'është dyqan. Shopify s'është për ty.", "Instagram isn't a shop. Shopify isn't for you.")}
-        sub={t(lang, "Krahaso vetë — dhe shiko pse Vela është bërë për shitësit shqiptarë.", "See for yourself why Vela is built for Albanian sellers.")}
+        sub={t(lang, "Krahaso vetë pse Vela është bërë për shitësit shqiptarë.", "See why Vela is built for Albanian sellers.")}
       />
 
-      <div className="ct-table relative mx-auto mt-12 max-w-4xl overflow-x-auto overflow-y-hidden">
+      <div className="ct-table relative mx-auto mt-8 max-w-4xl overflow-x-auto overflow-y-hidden sm:mt-12">
         <div className="relative min-w-0 sm:min-w-[640px]">
           <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr] items-end gap-1.5 px-1.5 pb-3 sm:grid-cols-[1.6fr_1fr_1fr_1fr] sm:gap-2 sm:px-2">
             <div />

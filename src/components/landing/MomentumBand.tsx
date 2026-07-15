@@ -21,12 +21,12 @@ export default function MomentumBand({ lang }: { lang: Lang }) {
     { time: "23:14", Icon: Bell, tone: "text-fuchsia-400", title: t(lang, "Porosi e re", "New order"), sub: t(lang, "Ana K. · Fustan liri", "Ana K. · Linen dress"), amt: "+3.500 L" },
     { time: "01:02", Icon: CreditCard, tone: "text-emerald-400", title: t(lang, "Pagesë me kartë", "Card payment"), sub: "RaiAccept · Sara D.", amt: "+2.800 L" },
     { time: "03:47", Icon: Sparkles, tone: "text-violet-400", title: t(lang, "AI sinkronizoi një postim", "AI synced a new post"), sub: t(lang, "Vathë ari → produkt", "Gold earrings → product"), amt: "" },
-    { time: "06:20", Icon: PackageCheck, tone: "text-amber-400", title: t(lang, "Stoku u rezervua vetë", "Stock auto‑reserved"), sub: t(lang, "S'u mbishit asnjë artikull", "Nothing oversold"), amt: "" },
+    { time: "06:20", Icon: PackageCheck, tone: "text-amber-400", title: t(lang, "Stoku u rezervua vetë", "Stock auto‑reserved"), sub: t(lang, "Pa mbishitje", "Nothing oversold"), amt: "" },
     { time: "08:05", Icon: Bell, tone: "text-fuchsia-400", title: t(lang, "Porosi e re", "New order"), sub: t(lang, "Bledi M. · Sandale", "Bledi M. · Sandals"), amt: "+4.200 L" },
   ];
 
   const stats = [
-    { value: 47800, prefix: "", suffix: " L", label: t(lang, "Të ardhura gjatë natës", "Revenue overnight") },
+    { value: 47800, prefix: "", suffix: " L", label: t(lang, "Të ardhura natën", "Overnight revenue") },
     { value: 14, prefix: "", suffix: "", label: t(lang, "Porosi ndërsa flije", "Orders while you slept") },
     { value: 9, prefix: "", suffix: "", label: t(lang, "Klientë të rinj", "New customers") },
   ];
@@ -72,7 +72,7 @@ export default function MomentumBand({ lang }: { lang: Lang }) {
   }, [lang]);
 
   return (
-    <section ref={root} className="relative overflow-hidden bg-[#0b0a0e] px-5 py-28 text-white sm:py-36">
+    <section id="momentum" ref={root} className="relative overflow-hidden bg-[#0b0a0e] px-5 py-14 text-white sm:py-36">
       {/* ambient gradient glow */}
       <div className={`pointer-events-none absolute -top-40 left-1/2 h-[560px] w-[820px] -translate-x-1/2 rounded-full opacity-25 blur-[130px] ${BRAND}`} />
       <div className="relative mx-auto max-w-6xl">
@@ -84,10 +84,10 @@ export default function MomentumBand({ lang }: { lang: Lang }) {
           <span className="bg-gradient-to-r from-fuchsia-400 via-pink-400 to-amber-300 bg-clip-text text-transparent">{t(lang, "Vela shet.", "Vela sells.")}</span>
         </h2>
         <p className="mb-reveal mt-5 max-w-xl text-lg text-white/60">
-          {t(lang, "Dyqani yt merr porosi, pagesa dhe sinkronizon produkte gjithë natën — pa ty.", "Your shop takes orders, payments and syncs products all night — without you.")}
+          {t(lang, "Porosi, pagesa dhe sinkronizim produktesh — gjithë natën, pa ty.", "Orders, payments and product sync — all night, without you.")}
         </p>
 
-        <div className="mt-14 grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+        <div className="mt-10 grid gap-8 sm:mt-14 sm:gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           {/* activity timeline */}
           <div className="mb-timeline relative pl-8">
             <span className="mb-line absolute left-[9px] top-2 h-[calc(100%-1rem)] w-[2px] bg-gradient-to-b from-fuchsia-500/70 via-white/20 to-transparent" />
@@ -110,7 +110,7 @@ export default function MomentumBand({ lang }: { lang: Lang }) {
           {/* count‑up stats */}
           <div className="mb-stats grid gap-4">
             {stats.map((s, i) => (
-              <div key={i} className="mb-stat rounded-3xl border border-white/10 bg-white/[0.04] p-7 backdrop-blur">
+              <div key={i} className="mb-stat rounded-3xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur sm:p-7">
                 <div className="flex items-baseline gap-1 font-display-brand text-[clamp(2.2rem,4vw,3.4rem)] font-bold leading-none tracking-tight">
                   <span className="mb-num tabular-nums" data-target={s.value} data-val={s.value.toLocaleString("en-US")}>0</span>
                   <span className="text-white/70">{s.suffix}</span>

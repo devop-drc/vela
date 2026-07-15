@@ -50,23 +50,23 @@ export default function Calculator({ lang }: { lang: Lang }) {
   const track = "h-2 w-full cursor-pointer appearance-none rounded-full bg-muted accent-fuchsia-600";
 
   return (
-    <section ref={root} className="px-5 py-24 sm:py-32">
+    <section id="calculator" ref={root} className="px-5 py-14 sm:py-24 lg:py-32">
       <SectionHead
         eyebrow={t(lang, "Llogaritës", "Calculator")}
         title={t(lang, "Sa po lë në tavolinë?", "How much are you leaving on the table?")}
-        sub={t(lang, "Vizitorët që s'gjejnë dot çfarë kërkojnë — pa kërkim, filtra apo renditje — ikin pa blerë. Ja sa të kushton.", "Visitors who can't find what they want — no search, filters or sorting — leave without buying. Here's what it costs you.")}
+        sub={t(lang, "Pa kërkim e filtra, vizitorët ikin pa blerë. Ja sa kushton.", "Without search or filters, visitors leave without buying. Here's the cost.")}
       />
 
-      <div className="calc-card mx-auto mt-12 grid max-w-4xl gap-8 rounded-[2rem] border border-border bg-card p-8 shadow-[0_40px_100px_-40px_rgba(30,10,50,0.28)] sm:p-10 lg:grid-cols-2 lg:items-center">
+      <div className="calc-card mx-auto mt-8 grid max-w-4xl gap-6 rounded-[2rem] border border-border bg-card p-6 shadow-[0_40px_100px_-40px_rgba(30,10,50,0.28)] sm:mt-12 sm:gap-8 sm:p-10 lg:grid-cols-2 lg:items-center">
         {/* controls */}
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           <div>
             <div className="mb-3 flex items-baseline justify-between">
               <label className="text-[15px] font-medium text-foreground">{t(lang, "Vizitorë në javë", "Visitors per week")}</label>
               <span className="font-display-brand text-2xl font-bold text-foreground">{visitors.toLocaleString("en-US")}</span>
             </div>
             <input type="range" min={50} max={2000} step={10} value={visitors} onChange={(e) => setVisitors(+e.target.value)} className={track} aria-label={t(lang, "Vizitorë në javë", "Visitors per week")} />
-            <p className="mt-2 text-[12px] text-muted-foreground">{t(lang, "Sa njerëz hapin profilin ose linkun e dyqanit tënd.", "How many people open your profile or shop link.")}</p>
+            <p className="mt-2 text-[12px] text-muted-foreground">{t(lang, "Sa njerëz hapin profilin ose linkun tënd.", "How many open your profile or shop link.")}</p>
           </div>
           <div>
             <div className="mb-3 flex items-baseline justify-between">
@@ -78,7 +78,7 @@ export default function Calculator({ lang }: { lang: Lang }) {
         </div>
 
         {/* outputs */}
-        <div className="rounded-3xl bg-gradient-to-br from-fuchsia-500/[0.07] to-transparent p-7 ring-1 ring-fuchsia-400/20">
+        <div className="rounded-3xl bg-gradient-to-br from-fuchsia-500/[0.07] to-transparent p-5 ring-1 ring-fuchsia-400/20 sm:p-7">
           {/* conversion now vs with Vela */}
           <div className="text-[13px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t(lang, "Vizitorë që blejnë", "Visitors who buy")}</div>
           <div className="mt-3 space-y-3">
@@ -104,25 +104,25 @@ export default function Calculator({ lang }: { lang: Lang }) {
 
           {/* what it costs */}
           <div className="mt-6 border-t border-border pt-5">
-            <div className="text-[13px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t(lang, "Po humbet, çdo muaj", "You're losing, every month")}</div>
+            <div className="text-[13px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t(lang, "Humbet çdo muaj", "Lost every month")}</div>
             <div className="mt-4 flex items-center gap-3">
               <span className="grid h-11 w-11 place-items-center rounded-2xl bg-fuchsia-500/10 text-fuchsia-600"><ShoppingBag className="h-5 w-5" /></span>
               <div>
                 <div className="font-display-brand text-[clamp(1.8rem,3.5vw,2.6rem)] font-bold leading-none tabular-nums text-foreground">{lostMonth}</div>
-                <div className="text-[14px] text-muted-foreground">{t(lang, "porosi që të ikin", "orders that slip away")}</div>
+                <div className="text-[14px] text-muted-foreground">{t(lang, "porosi të humbura", "orders lost")}</div>
               </div>
             </div>
             <div className="mt-5 flex items-center gap-3">
               <span className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-500/10 text-emerald-600"><Coins className="h-5 w-5" /></span>
               <div>
                 <div className="font-display-brand text-[clamp(1.8rem,3.5vw,2.6rem)] font-bold leading-none tabular-nums text-foreground">{moneyMonth.toLocaleString("en-US")} L</div>
-                <div className="text-[14px] text-muted-foreground">{t(lang, "të ardhura që humbasin", "revenue left behind")}</div>
+                <div className="text-[14px] text-muted-foreground">{t(lang, "të ardhura të humbura", "revenue lost")}</div>
               </div>
             </div>
           </div>
 
           <p className="mt-5 text-[12px] leading-relaxed text-muted-foreground">
-            {t(lang, "Bazuar në mesataret e industrisë: ~2.6% konvertim mesatar i dyqaneve online; vizitorët që përdorin kërkim/filtra konvertojnë ~2× më shumë (Forrester).", "Based on industry averages: ~2.6% average online-store conversion; visitors who use search/filters convert ~2× more (Forrester).")}
+            {t(lang, "Mesatare industrie: ~2.6% konvertim online; kërkimi e filtrat konvertojnë ~2× më shumë (Forrester).", "Industry averages: ~2.6% online conversion; search and filters convert ~2× more (Forrester).")}
           </p>
         </div>
       </div>

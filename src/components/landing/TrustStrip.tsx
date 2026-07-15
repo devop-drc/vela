@@ -23,15 +23,15 @@ export default function TrustStrip({ lang, cats }: { lang: Lang; cats: string[] 
   }, [lang]);
 
   return (
-    <section ref={root} className="border-y border-border/60 bg-card/30 px-5 py-9">
+    <section id="trust" ref={root} className="border-y border-border/60 bg-card/30 px-5 py-7 sm:py-9">
       <div className="mx-auto max-w-6xl">
-        <p className="ts-reveal mb-6 text-center text-[13px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="ts-reveal mb-5 sm:mb-6 text-center text-[13px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           {t(lang, "I ndërtuar për çdo dyqan në Instagram", "Built for every kind of Instagram shop")}
         </p>
         <div className="ts-reveal [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]">
           <Marquee gradient={false} speed={38} autoFill pauseOnHover>
             {cats.map((c) => (
-              <span key={c} className="mx-2 inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-[15px] font-medium text-foreground">
+              <span key={c} className="mx-1.5 sm:mx-2 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm sm:px-5 sm:py-2.5 sm:text-[15px] font-medium text-foreground">
                 <span className="h-1.5 w-1.5 rounded-full brand-gradient" />
                 {c}
               </span>

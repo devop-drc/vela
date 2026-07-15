@@ -28,9 +28,9 @@ export default function HowItWorks({ lang }: { lang: Lang }) {
   const root = useRef<HTMLDivElement>(null);
 
   const steps = [
-    { Icon: Instagram, url: "instagram.com/dyqani.yt", img: "/hero/storefront-ig.png", title: t(lang, "Lidh Instagram-in", "Connect Instagram"), body: t(lang, "Lidh llogarinë tënde Instagram Business me një prekje. Pa kod, pa dyqan për të ndërtuar.", "Link your Instagram Business account in one tap. No code, no store to build.") },
-    { Icon: Sparkles, url: "dyqani.yt/products", img: "/hero/products.png", title: t(lang, "AI ndërton produktet", "AI builds your products"), body: t(lang, "AI lexon postimet e tua dhe i kthen në produkte — emra, çmime, kategori e variante.", "AI reads your posts and turns them into products — names, prices, categories and variants.") },
-    { Icon: Store, url: "dyqani.yt", img: "/hero/storefront-custom.png", title: t(lang, "Ndaj linkun & shit", "Share the link & sell"), body: t(lang, "Publiko vitrinën tënde dhe merr porosi e pagesa me kartë që të njëjtën ditë.", "Publish your storefront and take orders and card payments the same day.") },
+    { Icon: Instagram, url: "instagram.com/dyqani.yt", img: "/hero/storefront-ig.png", title: t(lang, "Lidh Instagram-in", "Connect Instagram"), body: t(lang, "Një prekje për të lidhur Instagram Business — pa kod.", "One tap to connect Instagram Business — no code.") },
+    { Icon: Sparkles, url: "dyqani.yt/products", img: "/hero/products.png", title: t(lang, "AI ndërton produktet", "AI builds your products"), body: t(lang, "AI i kthen postimet në produkte — çmim, kategori, variante.", "AI turns your posts into products — price, category, variants.") },
+    { Icon: Store, url: "dyqani.yt", img: "/hero/storefront-custom.png", title: t(lang, "Ndaj linkun & shit", "Share the link & sell"), body: t(lang, "Publiko dyqanin dhe merr porosi e pagesa po atë ditë.", "Publish your store and take orders and payments the same day.") },
   ];
 
   useLayoutEffect(() => {
@@ -77,20 +77,20 @@ export default function HowItWorks({ lang }: { lang: Lang }) {
   }, [lang]);
 
   return (
-    <section ref={root} id="how" className="px-5 py-24 sm:py-28">
+    <section ref={root} id="how" className="px-5 py-14 sm:py-28">
       <SectionHead
         eyebrow={t(lang, "Si funksionon", "How it works")}
         title={t(lang, "Nga postimi te dyqani — në tre hapa.", "From post to shop — in three steps.")}
         sub={t(lang, "Asnjë dyqan për të ndërtuar, asnjë temë për të luftuar. Lidhu dhe vazhdo.", "No store to build, no theme to fight. Connect and go.")}
       />
 
-      <div className="hiw-pin mx-auto mt-14 max-w-6xl">
+      <div className="hiw-pin mx-auto mt-10 max-w-6xl sm:mt-14">
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
           {/* steps */}
           <div className="relative">
             <span className="absolute left-[23px] top-2 hidden h-[calc(100%-1rem)] w-[2px] bg-border lg:block" />
             <span className="hiw-progress-fill absolute left-[23px] top-2 hidden h-[calc(100%-1rem)] w-[2px] origin-top brand-gradient lg:block" style={{ transform: "scaleY(0)" }} />
-            <div className="space-y-10">
+            <div className="space-y-8 lg:space-y-10">
               {steps.map((s, i) => (
                 <div key={i} className="hiw-step relative pl-16">
                   <span className="hiw-badge absolute left-0 top-0 grid h-12 w-12 origin-center place-items-center rounded-2xl text-white shadow-md shadow-fuchsia-500/25 brand-gradient"><s.Icon className="h-5 w-5" /></span>
