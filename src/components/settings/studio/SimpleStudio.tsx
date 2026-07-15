@@ -13,6 +13,7 @@ import { useShop } from '@/contexts/ShopContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useStorefrontStudio } from '@/storefront/theme/useStorefrontStudio';
 import { DockedPreview } from './DockedPreview';
+import { DualPreview } from './DualPreview';
 import { Glyph } from './StudioGlyphs';
 import { SectionList } from './SectionList';
 import { FontCombobox } from './FontCombobox';
@@ -237,9 +238,9 @@ function OnboardingWizard({ ctx, onFinish }: { ctx: WizardCtx; onFinish: () => v
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onFinish(); }}>
-      <DialogContent className="grid max-w-5xl gap-0 overflow-hidden p-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <DialogContent className="grid h-[92vh] max-w-[min(1650px,96vw)] gap-0 overflow-hidden p-0 lg:grid-cols-[minmax(0,400px)_1fr]">
         {/* Step content */}
-        <div className="flex max-h-[85vh] flex-col">
+        <div className="flex h-full min-h-0 flex-col">
           <div className="space-y-1 px-6 pt-6">
             <div className="mb-2 flex items-center gap-1.5">
               {steps.map((_, i) => <span key={i} className={cn('h-1.5 rounded-full transition-all', i === step ? 'w-6 bg-primary' : i < step ? 'w-1.5 bg-primary/50' : 'w-1.5 bg-muted')} />)}
@@ -257,9 +258,9 @@ function OnboardingWizard({ ctx, onFinish }: { ctx: WizardCtx; onFinish: () => v
               : <Button size="sm" onClick={onFinish}>{t('studio.onboarding.finish')}</Button>}
           </div>
         </div>
-        {/* Live, interactive preview — updates in real time as options change */}
-        <div className="hidden border-l bg-muted/40 lg:block">
-          <DockedPreview config={ctx.config} previewPath={ctx.previewPath} previewUrl={null} className="h-full rounded-none border-0" />
+        {/* Live desktop + mobile preview, both synced as options change. */}
+        <div className="hidden border-l bg-muted/30 p-5 lg:block">
+          <DualPreview config={ctx.config} previewPath={ctx.previewPath} className="h-full" />
         </div>
       </DialogContent>
     </Dialog>

@@ -1,14 +1,14 @@
-// Docked live preview for the Studio workspace (tweakcn-style): the storefront
-// renders in an iframe at a REAL device viewport (1280×720 desktop / 390-wide
-// mobile) and is scaled to fill the dock. Live config streams in over
-// postMessage — no reloads; if the bridge never connects we reload once so the
-// preview is never stale.
+// Docked live preview for the Studio workspace. When the dock is wide enough it
+// shows desktop AND mobile side by side; on narrower docks it shows one device
+// with a desktop/mobile toggle. Config streams in over postMessage (no reloads),
+// heartbeat-backed so it never goes stale.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Monitor, Smartphone, ExternalLink, Lock, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { StorefrontConfig } from '@/storefront/config/types';
+import { DESKTOP, MOBILE, PreviewFrame, usePreviewBridge } from './DualPreview';
 
 interface Props {
   previewPath: string | null;
@@ -20,8 +20,9 @@ interface Props {
   className?: string;
 }
 
-const DESKTOP = { w: 1280, h: 800 };
-const MOBILE = { w: 390, h: 780 };
+// Below this dock width we drop to a single device + a toggle.
+const DUAL_MIN = 760;
+const GAP = 28;
 
 /** An iframe rendered at a real device size and scaled to fill its parent
     width (height follows the aspect). Used for static side-by-side previews. */
@@ -58,15 +59,12 @@ export const ScaledFrame = ({ src, virtualW, virtualH, title, className, interac
 
 export const DockedPreview = ({ previewPath, previewUrl, config, navTarget, className }: Props) => {
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const deskRef = useRef<HTMLIFrameElement>(null);
+  const mobRef = useRef<HTMLIFrameElement>(null);
   const holderRef = useRef<HTMLDivElement>(null);
-  const configRef = useRef(config);
-  const [ready, setReady] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [holder, setHolder] = useState({ w: 800, h: 600 });
-  configRef.current = config;
 
-  // Fit the virtual device into the dock.
   useEffect(() => {
     const el = holderRef.current;
     if (!el) return;
@@ -77,49 +75,18 @@ export const DockedPreview = ({ previewPath, previewUrl, config, navTarget, clas
     return () => ro.disconnect();
   }, []);
 
-  const post = useCallback(() => {
-    iframeRef.current?.contentWindow?.postMessage({ type: 'sf-preview-config', config: configRef.current }, '*');
-  }, []);
+  // Stream config to both refs; only the rendered iframe(s) receive it.
+  usePreviewBridge([deskRef, mobRef], config, navTarget);
 
-  useEffect(() => {
-    const onMsg = (e: MessageEvent) => { if (e.data?.type === 'sf-preview-ready') { setReady(true); post(); } };
-    window.addEventListener('message', onMsg);
-    return () => window.removeEventListener('message', onMsg);
-  }, [post]);
-
-  useEffect(() => { if (ready) post(); }, [ready, post, config]);
-  useEffect(() => { setReady(false); }, [reloadKey, device, previewPath]);
-
-  // Heartbeat: re-send the current config a few times a second. Fast edits (or a
-  // config message that lands mid-navigation) can otherwise be dropped and the
-  // preview appears "stuck"; the storefront ignores a re-send when nothing
-  // changed, so this is a cheap self-heal that removes the need to reload.
-  useEffect(() => {
-    if (!ready) return;
-    const iv = setInterval(post, 500);
-    return () => clearInterval(iv);
-  }, [ready, post]);
-
-  // Steer the preview to where the last edit is visible, then re-apply the
-  // config on the freshly-shown page.
-  useEffect(() => {
-    if (!ready || !navTarget) return;
-    iframeRef.current?.contentWindow?.postMessage({ type: 'sf-preview-navigate', target: navTarget.target }, '*');
-    const t = setTimeout(post, 80);
-    return () => clearTimeout(t);
-  }, [ready, navTarget, post]);
-
-  // Bridge fallback: reload once if it never connects.
-  useEffect(() => {
-    if (ready) return;
-    const t = setTimeout(() => { if (!ready) setReloadKey((k) => k + 1); }, 4000);
-    return () => clearTimeout(t);
-  }, [ready, reloadKey]);
-
-  const vp = device === 'desktop' ? DESKTOP : MOBILE;
-  const pad = 20;
-  const scale = Math.max(0.15, Math.min((holder.w - pad) / vp.w, (holder.h - pad) / vp.h, 1));
+  const dual = holder.w >= DUAL_MIN;
   const host = previewUrl ? previewUrl.replace(/^https?:\/\//, '').replace(/\/$/, '') : 'shop';
+
+  const dualScale = Math.max(0.12, Math.min(
+    (holder.w - GAP - 28) / (DESKTOP.w + MOBILE.w),
+    (holder.h - 44) / Math.max(DESKTOP.h, MOBILE.h),
+  ));
+  const single = device === 'desktop' ? DESKTOP : MOBILE;
+  const singleScale = Math.max(0.12, Math.min((holder.w - 28) / single.w, (holder.h - 24) / single.h, 1));
 
   return (
     <div className={cn('flex min-h-0 flex-col overflow-hidden rounded-xl border bg-muted/30', className)}>
@@ -130,14 +97,16 @@ export const DockedPreview = ({ previewPath, previewUrl, config, navTarget, clas
           <span className="truncate">{host}</span>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <div className="flex rounded-md border p-0.5">
-            <button type="button" onClick={() => setDevice('desktop')} className={cn('flex h-7 items-center gap-1 rounded px-2 text-xs', device === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')} aria-pressed={device === 'desktop'}>
-              <Monitor className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Desktop</span>
-            </button>
-            <button type="button" onClick={() => setDevice('mobile')} className={cn('flex h-7 items-center gap-1 rounded px-2 text-xs', device === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')} aria-pressed={device === 'mobile'}>
-              <Smartphone className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Mobile</span>
-            </button>
-          </div>
+          {!dual && (
+            <div className="flex rounded-md border p-0.5">
+              <button type="button" onClick={() => setDevice('desktop')} className={cn('flex h-7 items-center gap-1 rounded px-2 text-xs', device === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')} aria-pressed={device === 'desktop'}>
+                <Monitor className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Desktop</span>
+              </button>
+              <button type="button" onClick={() => setDevice('mobile')} className={cn('flex h-7 items-center gap-1 rounded px-2 text-xs', device === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')} aria-pressed={device === 'mobile'}>
+                <Smartphone className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Mobile</span>
+              </button>
+            </div>
+          )}
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setReloadKey((k) => k + 1)} aria-label="Reload preview">
             <RotateCcw className="h-3.5 w-3.5" />
           </Button>
@@ -149,28 +118,29 @@ export const DockedPreview = ({ previewPath, previewUrl, config, navTarget, clas
         </div>
       </div>
 
-      {/* Scaled device */}
-      <div ref={holderRef} className="relative min-h-0 flex-1">
-        {previewPath ? (
-          <div
-            className="absolute left-1/2 top-1/2 overflow-hidden rounded-lg border bg-muted shadow-lg"
-            style={{ width: vp.w, height: vp.h, transform: `translate(-50%, -50%) scale(${scale})` }}
-          >
-            <iframe
-              ref={iframeRef}
-              key={`${device}-${reloadKey}`}
-              src={previewPath}
-              title="Storefront preview"
-              className="block border-0 bg-background"
-              style={{ width: vp.w, height: vp.h }}
-            />
+      {/* Scaled device(s) */}
+      <div ref={holderRef} className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden p-3">
+        {!previewPath ? (
+          <p className="text-sm text-muted-foreground">Save your shop name to preview.</p>
+        ) : dual ? (
+          <div className="flex items-start" style={{ gap: GAP }}>
+            <div className="flex flex-col items-center gap-2">
+              <PreviewFrame key={`d-${reloadKey}`} innerRef={deskRef} src={previewPath} dev={DESKTOP} scale={dualScale} />
+              <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"><Monitor className="h-3 w-3" /> Desktop</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <PreviewFrame key={`m-${reloadKey}`} innerRef={mobRef} src={previewPath} dev={MOBILE} scale={dualScale} phone />
+              <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"><Smartphone className="h-3 w-3" /> Mobile</span>
+            </div>
           </div>
+        ) : device === 'desktop' ? (
+          <PreviewFrame key={`d-${reloadKey}`} innerRef={deskRef} src={previewPath} dev={DESKTOP} scale={singleScale} />
         ) : (
-          <p className="flex h-full items-center justify-center text-sm text-muted-foreground">Save your shop name to preview.</p>
+          <PreviewFrame key={`m-${reloadKey}`} innerRef={mobRef} src={previewPath} dev={MOBILE} scale={singleScale} phone />
         )}
       </div>
       <p className="shrink-0 border-t bg-background/80 py-1 text-center text-[11px] text-muted-foreground">
-        {device === 'desktop' ? 'Desktop · 1280px' : 'Mobile · 390px'} — edits apply instantly
+        {dual ? 'Desktop + mobile' : device === 'desktop' ? 'Desktop · 1280px' : 'Mobile · 390px'} — edits apply instantly
       </p>
     </div>
   );
