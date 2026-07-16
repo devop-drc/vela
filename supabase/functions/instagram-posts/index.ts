@@ -24,28 +24,36 @@ serve(async (req) => {
   let userId;
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    );
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('Instagram Posts Function Error: User not found or unauthorized from client request.');
-      return new Response(JSON.stringify({ error: 'User not found or unauthorized.' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    userId = user.id;
-
     const body = await req.json().catch(() => null);
+    const bearer = (req.headers.get('Authorization') || '').replace('Bearer ', '');
+    const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+    if (SERVICE_KEY && bearer === SERVICE_KEY && body?.user_id) {
+      // Internal server-to-server call (e.g. webhook-triggered sync).
+      userId = body.user_id;
+    } else {
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      );
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('Instagram Posts Function Error: User not found or unauthorized from client request.');
+        return new Response(JSON.stringify({ error: 'User not found or unauthorized.' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      userId = user.id;
+    }
 
     // Determine access token source: from body (server-to-server call) or DB (client-to-server call)
     if (body?.user_access_token) {
       userAccessToken = body.user_access_token;
     } else {
-      const { data: integration, error: integrationError } = await supabase
+      // Admin lookup works for both auth modes (RLS-free).
+      const { data: integration, error: integrationError } = await getSupabaseAdmin()
         .from('integrations')
         .select('access_token')
         .eq('user_id', userId)

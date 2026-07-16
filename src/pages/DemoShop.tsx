@@ -61,7 +61,7 @@ export const PRODUCTS = [
 
 export const SHOP = {
   id: "demo",
-  shop_name: "Butiku i Elirës",
+  shop_name: "Shop Name",
   headline: "Koleksioni i verës ☀️ — deri në -30%",
   about: "Veshje & aksesorë të përzgjedhur me dashuri, direkt nga Instagrami ynë.",
   slug: "demo-shop",

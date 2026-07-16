@@ -220,7 +220,7 @@ const S1_Posts = () => {
         ))}
       </div>
       <div className="px-4 pt-2.5">
-        <div className="text-xs font-bold">Butiku i Elirës</div>
+        <div className="text-xs font-bold">Shop Name</div>
         <div className="text-xs text-muted-foreground">Veshje & aksesorë · Tiranë 🇦🇱 · Porosit në DM 📩</div>
       </div>
       <div className="flex gap-2 px-4 pt-3">

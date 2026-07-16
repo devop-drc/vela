@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { useShop } from '@/contexts/ShopContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useStorefrontStudio } from '@/storefront/theme/useStorefrontStudio';
-import { DockedPreview } from './DockedPreview';
+import { DockedPreview, ScaledFrame } from './DockedPreview';
 import { DualPreview } from './DualPreview';
 import { Glyph } from './StudioGlyphs';
 import { SectionList } from './SectionList';
@@ -27,14 +27,17 @@ import type { StorefrontType } from '@/lib/storefront';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import {
   Undo2, Redo2, RotateCcw, Check, Wand2, Plus,
   Palette, Type as TypeIcon, Square, LayoutTemplate, Layers, Sparkles,
-  Store, Sparkle, Crown,
+  Store, Sparkle, Crown, SlidersHorizontal,
 } from 'lucide-react';
+import { FilterVisibilityModal } from '@/components/filters/FilterVisibilityModal';
+import { isFilterVisible, CORE_FILTER_KEYS, deriveAttributeKeys } from '@/components/filters/filterVisibility';
+import { useProductData } from '@/hooks/useProductData';
 
 // ── Curated data ─────────────────────────────────────────────────────────────
 
@@ -51,6 +54,23 @@ type Opt = { value: string | number; label?: string };
 const opts = (...v: (string | number)[]): Opt[] => v.map((x) => ({ value: x }));
 
 // ── Building blocks ──────────────────────────────────────────────────────────
+
+/**
+ * Live template preview: the REAL storefront UI (/demo-shop over mock data)
+ * rendered with the template applied, scaled into the card. Lazy-loaded
+ * iframes, so off-screen templates don't boot until scrolled into view.
+ */
+function TemplateRenderPreview({ id, name }: { id: string; name: string }) {
+  return (
+    <ScaledFrame
+      src={`/demo-shop?template=${id}`}
+      virtualW={1280}
+      virtualH={760}
+      title={`${name} template preview`}
+      className="pointer-events-none mb-1.5 select-none"
+    />
+  );
+}
 
 function Group({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
   return (
@@ -138,14 +158,11 @@ function OnboardingWizard({ ctx, onFinish }: { ctx: WizardCtx; onFinish: () => v
       body: (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {TEMPLATES.map((t) => {
-            const tk = t.config.theme.tokens;
             const active = config.templateId === t.id;
             return (
               <button key={t.id} type="button" onClick={() => applyTemplate(t.config, t.id)}
                 className={cn('rounded-lg border p-2 text-left transition-colors', active ? 'border-primary ring-1 ring-primary' : 'border-border hover:border-primary/40')}>
-                <div className="mb-1.5 flex h-9 overflow-hidden rounded-md border">
-                  <span className="flex-1" style={{ background: `hsl(${tk.background})` }} /><span className="w-1/3" style={{ background: `hsl(${tk.primary})` }} /><span className="w-1/4" style={{ background: `hsl(${tk.accent})` }} />
-                </div>
+                <TemplateRenderPreview id={t.id} name={t.name} />
                 <p className="truncate text-xs font-medium">{t.name}</p>
                 <p className="truncate text-[10px] text-muted-foreground">{t.businessType}</p>
               </button>
@@ -245,8 +262,8 @@ function OnboardingWizard({ ctx, onFinish }: { ctx: WizardCtx; onFinish: () => v
             <div className="mb-2 flex items-center gap-1.5">
               {steps.map((_, i) => <span key={i} className={cn('h-1.5 rounded-full transition-all', i === step ? 'w-6 bg-primary' : i < step ? 'w-1.5 bg-primary/50' : 'w-1.5 bg-muted')} />)}
             </div>
-            <h2 className="font-heading text-xl font-semibold tracking-tight">{s.title}</h2>
-            <p className="text-sm text-muted-foreground">{s.blurb}</p>
+            <DialogTitle className="font-heading text-xl font-semibold tracking-tight">{s.title}</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">{s.blurb}</DialogDescription>
           </div>
           <div className="flex-1 overflow-y-auto px-6 py-4">{s.body}</div>
           <div className="flex items-center gap-2 border-t px-6 py-3">
@@ -408,6 +425,23 @@ export function SimpleStudio() {
 
   const activeFontPair = FONT_PAIRS.find((p) => p.heading === config.typography.headingFont && p.body === config.typography.bodyFont)?.id;
 
+  // Storefront filter visibility — which filter groups the /shop products page
+  // offers customers. Saved with the design (pages.products.filterVisibility);
+  // the key list is derived from the merchant's real catalog.
+  const [filterVisOpen, setFilterVisOpen] = useState(false);
+  const { allProducts, allCategories, allTags, allDetailsAttributes } = useProductData();
+  const storefrontFilterVis = config.pages.products.filterVisibility ?? {};
+  const storefrontFilterKeys = useMemo(() => {
+    const { options, specs } = deriveAttributeKeys(allDetailsAttributes, allProducts);
+    const core = CORE_FILTER_KEYS.filter((k) => {
+      if (k === 'categories') return allCategories.length > 0;
+      if (k === 'tags') return allTags.length > 0;
+      return true;
+    });
+    return [...core, ...options, ...specs];
+  }, [allCategories, allTags, allDetailsAttributes, allProducts]);
+  const visibleFilterCount = storefrontFilterKeys.filter((k) => isFilterVisible(storefrontFilterVis, k)).length;
+
   const applyPalette = (t: (typeof TEMPLATES)[number]) =>
     mergePartial({ theme: { paletteId: t.id, tokens: t.config.theme.tokens, darkTokens: t.config.theme.darkTokens } as any });
   const applyFont = (p: (typeof FONT_PAIRS)[number]) =>
@@ -431,6 +465,22 @@ export function SimpleStudio() {
         onFinish={finishOnboard}
       />
     )}
+    <FilterVisibilityModal
+      open={filterVisOpen}
+      onOpenChange={setFilterVisOpen}
+      description={t('studio.filterVisibilityHint')}
+      allCategories={allCategories}
+      allTags={allTags}
+      allDetailsAttributes={allDetailsAttributes}
+      allProducts={allProducts}
+      visibilityMap={storefrontFilterVis}
+      onToggle={(key, visible) => updateSteer('pages.products.filterVisibility', { ...storefrontFilterVis, [key]: visible }, 'products')}
+      onSetMany={(keys, visible) => {
+        const next = { ...storefrontFilterVis } as Record<string, boolean>;
+        keys.forEach((k) => { next[k] = visible; });
+        updateSteer('pages.products.filterVisibility', next, 'products');
+      }}
+    />
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,360px)_1fr]">
       {/* ── Options rail ─────────────────────────────────────────────── */}
       <div className="flex max-h-[calc(100dvh-9rem)] flex-col overflow-hidden rounded-xl border bg-card">
@@ -487,17 +537,12 @@ export function SimpleStudio() {
           <Group title={t('studio.groups.template')} icon={LayoutTemplate}>
             <div className="grid grid-cols-2 gap-2">
               {TEMPLATES.map((t) => {
-                const tk = t.config.theme.tokens;
                 const active = config.templateId === t.id;
                 return (
                   <button key={t.id} type="button" onClick={() => applyTemplate(t.config, t.id)}
                     className={cn('rounded-lg border p-2 text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring',
                       active ? 'border-primary ring-1 ring-primary' : 'border-border hover:border-primary/40')}>
-                    <div className="mb-1.5 flex h-8 overflow-hidden rounded-md border">
-                      <span className="flex-1" style={{ background: `hsl(${tk.background})` }} />
-                      <span className="w-1/3" style={{ background: `hsl(${tk.primary})` }} />
-                      <span className="w-1/4" style={{ background: `hsl(${tk.accent})` }} />
-                    </div>
+                    <TemplateRenderPreview id={t.id} name={t.name} />
                     <p className="truncate text-xs font-medium">{t.name}</p>
                     <p className="truncate text-[10px] text-muted-foreground">{t.businessType || t.description}</p>
                   </button>
@@ -597,6 +642,18 @@ export function SimpleStudio() {
 
           <Group title={t('studio.groups.pages')} icon={Layers}>
             <Choices label={t('studio.shopPage')} kind="shop" cols={2} options={[{ value: 'grid', label: t('studio.grid') }, { value: 'list', label: t('studio.list') }]} value={config.pages.products.layout} onChange={(v) => updateSteer('pages.products.layout', v, 'products')} />
+            <Choices label={t('studio.shopFilters')} kind="filters" options={[{ value: 'sidebar', label: t('studio.filtersSidebar') }, { value: 'drawer', label: t('studio.filtersDrawer') }, { value: 'topbar', label: t('studio.filtersTopbar') }]} value={config.pages.products.filters} onChange={(v) => updateSteer('pages.products.filters', v, 'products')} />
+            <div className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
+              <div className="min-w-0">
+                <p className="text-xs font-medium">{t('studio.filterVisibility')}</p>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  {t('studio.filterVisibilityCount', { visible: visibleFilterCount, total: storefrontFilterKeys.length })}
+                </p>
+              </div>
+              <Button variant="outline" size="sm" className="h-8 shrink-0" onClick={() => setFilterVisOpen(true)}>
+                <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" /> {t('studio.manage')}
+              </Button>
+            </div>
             <Choices label={t('studio.perRow')} kind="grid" cols={4} options={opts(2, 3, 4, 5)} value={config.layout.productGrid.columns} onChange={(v) => updateSteer('layout.productGrid.columns', Number(v), 'products')} />
             <Choices label={t('studio.gallery')} kind="gallery" cols={4} options={[{ value: 'left', label: t('studio.side') }, { value: 'top', label: t('studio.top') }, { value: 'sticky-split', label: t('studio.sticky') }, { value: 'full-bleed', label: t('studio.full') }]} value={config.components.productGalleryLayout} onChange={(v) => updateSteer('components.productGalleryLayout', v, 'productDetail')} />
             <Choices label={t('studio.cart')} kind="cart" options={opts('drawer', 'modal', 'page')} value={config.components.cart} onChange={(v) => updateSteer('components.cart', v, 'cart')} />

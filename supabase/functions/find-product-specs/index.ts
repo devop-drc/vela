@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { ensureCategoryAndType, upsertVariantsFromOptions } from "../_shared/catalog.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -114,7 +115,10 @@ async function checkUserProductReuse(supabase: any, userId: string, productName:
 
 // Level 3: Category Template Defaults
 async function checkCategoryTemplateDefaults(supabase: any, category?: string, type?: string) {
-  if (!category && !type) return null;
+  // A category is REQUIRED: with only a type (or neither) the unfiltered
+  // LIMIT 1 used to return a random template from the whole table, leaking one
+  // product's spec keys (e.g. "feature: Text to speech…") into unrelated products.
+  if (!category) return null;
 
   let query = supabase.from('category_templates').select('*');
   if (category) query = query.eq('category_name', category);
@@ -147,105 +151,205 @@ async function checkCategoryTemplateDefaults(supabase: any, category?: string, t
   };
 }
 
-// Level 4: Gemini Flash with Dynamic Retrieval
-async function searchWithGemini(
+// Level 4: Gemini — a two-rung cost ladder.
+//   4a. gemini-2.5-flash-lite, NO search, JSON mode. Cheapest possible call
+//       (~8× cheaper output than flash) — model knowledge + the caption cover
+//       most branded products and everything the caption states.
+//   4b. gemini-2.5-flash WITH Google Search grounding — only when 4a came back
+//       thin. Grounding can't be combined with responseMimeType JSON, so this
+//       rung uses a strict "JSON only" instruction + tolerant parsing.
+// Every rung is capped (tokens, timeout), logged to ai_usage with per-model
+// pricing, and the best rung's result wins.
+const GEMINI_MODELS = {
+  'flash-lite': { id: 'gemini-2.5-flash-lite', inPerM: 0.10, outPerM: 0.40 },
+  'flash': { id: 'gemini-2.5-flash', inPerM: 0.30, outPerM: 2.50 },
+} as const;
+type GeminiModelKey = keyof typeof GEMINI_MODELS;
+
+/** "Good enough to stop paying": at least 3 real specifications. */
+const isRichResult = (r: any) => (r?.specifications?.length || 0) >= 3;
+
+// Tolerant JSON extraction (grounded answers arrive as plain text).
+const parseJsonLoose = (text: string): any => {
+  const stripped = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+  try { return JSON.parse(stripped); } catch { /* fall through */ }
+  const start = stripped.indexOf('{');
+  const end = stripped.lastIndexOf('}');
+  if (start >= 0 && end > start) return JSON.parse(stripped.slice(start, end + 1));
+  throw new Error('No JSON object in response');
+};
+
+async function geminiSpecAttempt(
   supabase: any,
-  context: { product_name: string; category?: string; type?: string; caption?: string; media_urls?: string[]; normalized: string },
-  templateResult?: any
-) {
+  context: { product_name: string; category?: string; type?: string; caption?: string; normalized: string; user_id?: string },
+  templateResult: any,
+  modelKey: GeminiModelKey,
+  useSearch: boolean
+): Promise<any | null> {
   const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-  if (!GEMINI_API_KEY) return templateResult || null;
+  if (!GEMINI_API_KEY) return null;
+  const model = GEMINI_MODELS[modelKey];
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent?key=${GEMINI_API_KEY}`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  // Token diet: only non-empty lines, caption capped, known specs only if any.
+  const lines = [
+    `Find the exact specifications for this product.`,
+    `Product name: ${context.product_name}`,
+    context.category ? `Category: ${context.category}` : '',
+    context.type ? `Type: ${context.type}` : '',
+    context.caption ? `Caption: ${String(context.caption).slice(0, 600)}` : '',
+    templateResult?.specifications?.length > 0
+      ? `Already known specs:\n${templateResult.specifications.slice(0, 12).map((s: any) => `${s.key}: ${s.value}`).join('\n')}`
+      : '',
+    `Only state values you are confident about — omit anything you cannot verify. Do not invent.`,
+    `Respond with ONLY a single JSON object (no markdown, no commentary):`,
+    `{"specifications": [{"key": "...", "value": "...", "unit": "..."}], "options": [{"name": "...", "common_values": ["..."]}], "description": "...", "tags": ["..."], "category_name": "...", "type_name": "..."}`,
+  ].filter(Boolean);
+  const prompt = lines.join('\n');
 
-  const knownSpecs = templateResult?.specifications?.length > 0
-    ? templateResult.specifications.map((s: any) => `${s.key}: ${s.value}`).join('\n')
-    : 'None';
+  const generationConfig: any = {
+    temperature: 0.2,
+    maxOutputTokens: 1500,
+    thinkingConfig: { thinkingBudget: 0 },
+  };
+  if (!useSearch) generationConfig.responseMimeType = 'application/json';
+  const body: any = { contents: [{ parts: [{ text: prompt }] }], generationConfig };
+  if (useSearch) body.tools = [{ google_search: {} }];
 
-  const prompt = `Find the exact specifications for this product.
-
-Product name: ${context.product_name}
-${context.category ? `Category: ${context.category}` : ''}
-${context.type ? `Type: ${context.type}` : ''}
-${context.caption ? `Caption/description: ${context.caption}` : ''}
-Already known specs: ${knownSpecs}
-
-Fill in accurate values for each specification. Use Google Search ONLY if the product is not well-known or if the caption lacks specific details.
-Return JSON: {"specifications": [{"key": "...", "value": "...", "unit": "..."}], "options": [{"name": "...", "common_values": ["..."]}], "description": "...", "tags": ["..."], "category_name": "...", "type_name": "..."}`;
-
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
+  let geminiData: any;
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        tools: [{ google_search: {} }],
-        tool_config: {
-          google_search_retrieval: {
-            dynamic_retrieval_config: { mode: "MODE_DYNAMIC", dynamic_threshold: 0.5 }
-          }
-        },
-        generationConfig: { responseMimeType: "application/json" }
-      })
+      body: JSON.stringify(body),
+      signal: controller.signal,
     });
-
-    const geminiData = await response.json();
-    const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return templateResult || null;
-
-    const analysis = JSON.parse(text);
-    const groundingUsed = !!geminiData.candidates?.[0]?.groundingMetadata?.searchEntryPoint;
-
-    // Populate global intelligence cache
-    await supabase.from('global_product_intelligence').upsert({
-      normalized_name: context.normalized,
-      category_name: analysis.category_name || context.category || 'Uncategorized',
-      type_name: analysis.type_name || context.type || 'General',
-      description: analysis.description || null,
-      tags: analysis.tags || [],
-      specifications: analysis.specifications || [],
-      options: analysis.options || [],
-      source: 'ai_classified',
-      confidence: groundingUsed ? 0.9 : 0.8,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'normalized_name,category_name,type_name', ignoreDuplicates: false });
-
-    return {
-      category_name: analysis.category_name || context.category,
-      type_name: analysis.type_name || context.type,
-      description: analysis.description,
-      tags: analysis.tags,
-      specifications: analysis.specifications || [],
-      options: analysis.options || [],
-      source: 'google_search' as const,
-      cost: {
-        grounding_used: groundingUsed,
-        tokens_used: geminiData.usageMetadata?.totalTokenCount || 0,
-        model_used: 'flash' as const
-      }
-    };
-  } catch (error) {
-    console.error('Gemini search failed:', error);
-    return templateResult || null;
+    if (!response.ok) throw new Error(`Gemini ${response.status}: ${await response.text()}`);
+    geminiData = await response.json();
+  } finally {
+    clearTimeout(timeout);
   }
+
+  // Best-effort cost ledger with the ACTUAL model's pricing.
+  if (geminiData.usageMetadata && context.user_id) {
+    try {
+      const inputTokens = geminiData.usageMetadata.promptTokenCount ?? 0;
+      const outputTokens = (geminiData.usageMetadata.candidatesTokenCount ?? 0) + (geminiData.usageMetadata.thoughtsTokenCount ?? 0);
+      await supabase.from('ai_usage').insert({
+        user_id: context.user_id,
+        function_name: 'find-product-specs',
+        model: model.id,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        cost_usd: Math.round(((inputTokens * model.inPerM + outputTokens * model.outPerM) / 1_000_000) * 1_000_000) / 1_000_000,
+      });
+    } catch (e) {
+      console.warn('ai_usage logging failed:', (e as Error).message);
+    }
+  }
+
+  const text = geminiData.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '';
+  if (!text) return null;
+  const analysis = parseJsonLoose(text);
+  const groundingUsed = !!geminiData.candidates?.[0]?.groundingMetadata?.searchEntryPoint;
+
+  return {
+    category_name: analysis.category_name || context.category,
+    type_name: analysis.type_name || context.type,
+    description: analysis.description,
+    tags: analysis.tags,
+    specifications: analysis.specifications || [],
+    options: analysis.options || [],
+    source: useSearch ? ('google_search' as const) : ('ai_knowledge' as const),
+    cost: {
+      grounding_used: groundingUsed,
+      tokens_used: geminiData.usageMetadata?.totalTokenCount || 0,
+      model_used: modelKey,
+    },
+  };
 }
 
-// Write specifications to product_specifications table
+async function searchWithGemini(
+  supabase: any,
+  context: { product_name: string; category?: string; type?: string; caption?: string; media_urls?: string[]; normalized: string; user_id?: string },
+  templateResult?: any
+) {
+  let best: any = null;
+  const consider = (r: any) => {
+    if (r && (!best || (r.specifications?.length || 0) > (best.specifications?.length || 0))) best = r;
+  };
+
+  // Rung 4a: cheapest — flash-lite, model knowledge only.
+  try {
+    consider(await geminiSpecAttempt(supabase, context, templateResult, 'flash-lite', false));
+  } catch (e) {
+    console.warn('flash-lite spec attempt failed:', (e as Error).message);
+  }
+
+  // Rung 4b: only if still thin — flash + Google Search (the expensive rung).
+  if (!isRichResult(best)) {
+    try {
+      consider(await geminiSpecAttempt(supabase, context, templateResult, 'flash', true));
+    } catch (e) {
+      console.warn('Grounded spec attempt failed:', (e as Error).message);
+      // Last-resort fallback: flash without search (different model may still
+      // beat flash-lite on obscure products).
+      if (!best) {
+        try {
+          consider(await geminiSpecAttempt(supabase, context, templateResult, 'flash', false));
+        } catch (e2) {
+          console.warn('Plain flash spec attempt failed:', (e2 as Error).message);
+        }
+      }
+    }
+  }
+
+  if (!best) return templateResult || null;
+
+  // Populate the global intelligence cache so the NEXT lookup for this product
+  // (any user) is free.
+  try {
+    await supabase.from('global_product_intelligence').upsert({
+      normalized_name: context.normalized,
+      category_name: best.category_name || context.category || 'Uncategorized',
+      type_name: best.type_name || context.type || 'General',
+      description: best.description || null,
+      tags: best.tags || [],
+      specifications: best.specifications || [],
+      options: best.options || [],
+      source: 'ai_classified',
+      confidence: best.cost?.grounding_used ? 0.9 : 0.8,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'normalized_name,category_name,type_name', ignoreDuplicates: false });
+  } catch (e) {
+    console.warn('global intelligence upsert failed:', (e as Error).message);
+  }
+
+  return best;
+}
+
+// Write specifications to product_specifications table — one delete + ONE bulk
+// upsert instead of a round trip per row.
 async function writeSpecifications(supabase: any, productId: string, userId: string, specs: any[]) {
   // Clear old specs first to prevent accumulation
   await supabase.from('product_specifications').delete().eq('product_id', productId);
 
-  for (let i = 0; i < specs.length; i++) {
-    const s = specs[i];
-    await supabase.from('product_specifications').upsert({
+  const seen = new Set<string>();
+  const rows = specs
+    .filter((s: any) => s?.key && !seen.has(s.key) && !!seen.add(s.key))
+    .map((s: any, i: number) => ({
       product_id: productId,
       user_id: userId,
       key: s.key,
       value: String(s.value || ''),
       unit: s.unit || null,
-      display_order: i
-    }, { onConflict: 'product_id,key', ignoreDuplicates: false });
-  }
+      display_order: i,
+    }));
+  if (rows.length === 0) return;
+  const { error } = await supabase.from('product_specifications').upsert(rows, { onConflict: 'product_id,key', ignoreDuplicates: false });
+  if (error) console.error('Bulk spec upsert failed:', error.message);
 }
 
 // Runs the full waterfall for one product and writes its specs.
@@ -255,27 +359,36 @@ async function processProduct(supabaseAdmin: any, params: any) {
   const normalized = normalizeProductName(product_name);
   let result: any = null;
 
-  // Waterfall: L1 → L2 → L3 → L4
-  if (!force_search) {
-    // Level 1: Global Intelligence
-    result = await checkGlobalIntelligence(supabaseAdmin, normalized);
+  // Cheapest-first waterfall: the FREE levels (L1 cache → L2 reuse → L3
+  // templates) always run — even with force_search, a rich cached answer beats
+  // any paid call. force_search only changes the acceptance bar: thin cached
+  // results (fewer than 3 specs) escalate to the Gemini ladder instead of
+  // being returned as-is.
+  // Level 1: Global Intelligence
+  result = await checkGlobalIntelligence(supabaseAdmin, normalized);
+  if (result && force_search && !isRichResult(result)) result = null;
 
-    // Level 2: User Product Reuse
-    if (!result && user_id) {
-      result = await checkUserProductReuse(supabaseAdmin, user_id, product_name, product_id);
-    }
+  // Level 2: User Product Reuse
+  if (!result && user_id) {
+    result = await checkUserProductReuse(supabaseAdmin, user_id, product_name, product_id);
+    if (result && force_search && !isRichResult(result)) result = null;
+  }
 
-    // Level 3: Category Template Defaults
-    if (!result) {
-      result = await checkCategoryTemplateDefaults(supabaseAdmin, category, type);
+  // Level 3: Category Template Defaults
+  if (!result) {
+    result = await checkCategoryTemplateDefaults(supabaseAdmin, category, type);
+    if (result && force_search && !isRichResult(result)) {
+      // Keep as context for the AI prompt ("already known specs"), but don't stop here.
+      result._sufficient = false;
     }
   }
 
-  // Level 4: Gemini (if no result, or template was insufficient)
+  // Level 4: Gemini ladder (flash-lite → flash+search) — only when the free
+  // levels produced nothing, or a template that isn't sufficient.
   if (!result || (result.source === 'template_default' && !result._sufficient)) {
     const geminiResult = await searchWithGemini(supabaseAdmin, {
       product_name, category: result?.category_name || category,
-      type: result?.type_name || type, caption, media_urls, normalized
+      type: result?.type_name || type, caption, media_urls, normalized, user_id
     }, result);
     if (geminiResult) result = geminiResult;
   }
@@ -283,6 +396,44 @@ async function processProduct(supabaseAdmin: any, params: any) {
   // Write specs to product_specifications table
   if (result?.specifications?.length > 0 && product_id && user_id) {
     await writeSpecifications(supabaseAdmin, product_id, user_id, result.specifications);
+  }
+
+  // Apply the full result to the catalog: auto-create the category + type
+  // (with attribute definitions) if they don't exist, upgrade the product's
+  // category/type when still generic, and create product options + variants
+  // from the discovered options.
+  if (result && user_id) {
+    try {
+      await ensureCategoryAndType(
+        supabaseAdmin, user_id,
+        result.category_name || category, result.type_name || type,
+        result.specifications, result.options, product_id
+      );
+    } catch (e: any) {
+      console.error('Category/type ensure failed:', e.message);
+    }
+    if (product_id && result.options) {
+      try {
+        // Accept both shapes: [{ name, common_values: [...] }] and { Name: [...] }.
+        const optionMap: Record<string, any[]> = {};
+        if (Array.isArray(result.options)) {
+          for (const o of result.options) {
+            const vals = (o?.common_values || o?.values || []).filter(Boolean);
+            if (o?.name && vals.length > 0) optionMap[o.name] = vals;
+          }
+        } else if (typeof result.options === 'object') {
+          for (const [name, vals] of Object.entries(result.options)) {
+            if (Array.isArray(vals) && vals.length > 0) optionMap[name] = vals as any[];
+          }
+        }
+        if (Object.keys(optionMap).length > 0) {
+          await upsertVariantsFromOptions(supabaseAdmin, product_id, optionMap);
+          result.options_created = true;
+        }
+      } catch (e: any) {
+        console.error('Options/variants creation failed:', e.message);
+      }
+    }
   }
 
   // Clean up internal fields

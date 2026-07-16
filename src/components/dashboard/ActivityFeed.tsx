@@ -166,6 +166,17 @@ export const ActivityFeed = () => {
 
       if (isMounted) { setActivities(combined); setIsLoading(false); }
 
+      // If cleanup ran while we were awaiting the fetches, subscribing now
+      // would leak a channel the next mount collides with ("cannot add
+      // postgres_changes callbacks after subscribe()").
+      if (!isMounted) return;
+
+      // Drop any orphaned channels from a previous interrupted run — reusing a
+      // subscribed channel with the same topic throws on .on().
+      supabase.getChannels()
+        .filter(c => ['realtime:dashboard-products-feed', 'realtime:dashboard-orders-feed', 'realtime:dashboard-disputes-feed'].includes(c.topic))
+        .forEach(c => supabase.removeChannel(c));
+
       // ── realtime subscriptions ──
       productsChannel = supabase.channel('dashboard-products-feed')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'products', filter: `business_id=eq.${businessId}` }, (payload) => {

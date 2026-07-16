@@ -161,56 +161,109 @@ serve(async (req) => {
     const businessId = shopDetails.businesses.id;
     const userId = shopDetails.businesses.user_id;
 
-    // Fall back to the live Instagram profile picture when no logo has been uploaded.
-    let resolvedLogoUrl = shopDetails.logo_url || null;
-    if (!resolvedLogoUrl) {
-      resolvedLogoUrl = await resolveInstagramLogo(supabaseAdmin, userId, shopDetails.ig_account_id || null);
-    }
-
-    // Fetch design settings for the business owner
-    const { data: designSettings, error: designSettingsError } = await supabaseAdmin
-      .from('design_settings')
-      .select('settings')
+    // Plan entitlements gate what the PUBLIC storefront serves (authoritative,
+    // can't be bypassed client-side): custom theme is Business-only, Starter is
+    // capped at 10 products with COD-only + no promotions/reviews, Pro at 100.
+    const { data: subRow } = await supabaseAdmin
+      .from('subscriptions')
+      .select('plan_id, status, plans(id, product_limit, features)')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
+    const planRow: any = (subRow as any)?.plans || null;
+    const planId: string = planRow?.id || (subRow as any)?.plan_id || 'pro';
+    const planFeatures: string[] = Array.isArray(planRow?.features) ? planRow.features : [];
+    const isBusinessPlan = planId === 'business';
+    const productCap: number | null = planRow?.product_limit ?? null;
+    const capabilities = {
+      card_payments: isBusinessPlan || planFeatures.includes('card_and_cod') || planFeatures.includes('card_payments'),
+      reviews: isBusinessPlan || planFeatures.includes('reviews'),
+      promotions: isBusinessPlan || planFeatures.includes('promotions'),
+      custom_storefront: isBusinessPlan,
+    };
 
+    const offset = (page - 1) * limit;
+    // Clamp pagination to the plan's product cap so a Starter shop can never
+    // publicly serve more than its 10 products (Pro: 100).
+    const rangeEnd = productCap != null ? Math.min(offset + limit - 1, productCap - 1) : offset + limit - 1;
+    const pageBeyondCap = productCap != null && offset >= productCap;
+
+    // Everything below depends only on businessId/userId, so it all runs in
+    // ONE parallel round instead of a serial waterfall (the old flow chained
+    // 7+ queries — plus external Facebook calls — back to back). Product
+    // selects embed product_variants so the client can render option pickers
+    // and variant facets with zero extra round trips.
+    const PRODUCT_SELECT = '*, product_variants(combination_key, option_values, inventory, price_difference, is_active, is_default)';
+
+    const [
+      resolvedLogoUrl,
+      designSettingsRes,
+      productsRes,
+      bestSellersRes,
+      recommendationPoolRes,
+      promotionsRes,
+      marqueeRes,
+    ] = await Promise.all([
+      // Fall back to the live Instagram profile picture when no logo has been uploaded.
+      shopDetails.logo_url
+        ? Promise.resolve(shopDetails.logo_url)
+        : resolveInstagramLogo(supabaseAdmin, userId, shopDetails.ig_account_id || null),
+      supabaseAdmin
+        .from('design_settings')
+        .select('settings')
+        .eq('user_id', userId)
+        .single(),
+      pageBeyondCap
+        ? Promise.resolve({ data: [], error: null, count: productCap })
+        : supabaseAdmin
+            .from('products')
+            .select(PRODUCT_SELECT, { count: 'exact' })
+            .eq('business_id', businessId)
+            .neq('status', 'Draft')
+            .order('created_at', { ascending: false })
+            .range(offset, rangeEnd),
+      supabaseAdmin.rpc('get_top_products', { p_business_id: businessId }),
+      // Recommendation pool: a bounded sample of 24 rows is plenty of variety —
+      // reading the ENTIRE catalog on every storefront load just to pick 4 was
+      // pure IO waste.
+      supabaseAdmin
+        .from('products')
+        .select(PRODUCT_SELECT)
+        .eq('business_id', businessId)
+        .eq('status', 'Active')
+        .order('updated_at', { ascending: false })
+        .limit(24),
+      supabaseAdmin
+        .from('promotions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true),
+      supabaseAdmin
+        .from('marquee_elements')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true }),
+    ]);
+
+    const { data: designSettings, error: designSettingsError } = designSettingsRes;
     if (designSettingsError && designSettingsError.code !== 'PGRST116') {
       console.error(`[get-public-shop-data] Error fetching design settings for userId: ${userId}`, designSettingsError);
       throw designSettingsError;
     }
 
-    const offset = (page - 1) * limit;
-
-    // Fetch active products for the business with pagination
-    const { data: products, error: productsError, count: totalProductsCount } = await supabaseAdmin
-      .from('products')
-      .select('*', { count: 'exact' }) // Get exact count
-      .eq('business_id', businessId)
-      .neq('status', 'Draft') // MODIFIED: Exclude 'Draft' products
-      .range(offset, offset + limit - 1); // Apply range for pagination
-
+    const { data: products, error: productsError, count: totalProductsCount } = productsRes;
     if (productsError) {
       console.error(`[get-public-shop-data] Error fetching products for businessId: ${businessId}`, productsError);
       throw productsError;
     }
 
-    // Fetch best sellers (top 5 products by total sales)
-    const { data: bestSellers, error: bestSellersError } = await supabaseAdmin.rpc('get_top_products', { p_business_id: businessId });
+    const { data: bestSellers, error: bestSellersError } = bestSellersRes;
     if (bestSellersError) {
       console.error("Error fetching best sellers:", bestSellersError);
     }
 
-    // Fetch recommended products: 4 random-ish active products, excluding best
-    // sellers. A bounded sample of 24 rows is plenty of variety — reading the
-    // ENTIRE catalog on every storefront load just to pick 4 was pure IO waste.
-    const { data: recommendationPool, error: allActiveProductsError } = await supabaseAdmin
-      .from('products')
-      .select('*')
-      .eq('business_id', businessId)
-      .eq('status', 'Active')
-      .order('updated_at', { ascending: false })
-      .limit(24);
-
+    // Recommended products: 4 random-ish active products, excluding best sellers.
+    const { data: recommendationPool, error: allActiveProductsError } = recommendationPoolRes;
     let recommendedProducts: any[] = [];
     if (allActiveProductsError) {
       console.error("Error fetching products for recommendations:", allActiveProductsError);
@@ -226,16 +279,10 @@ serve(async (req) => {
       recommendedProducts = availableForRecommendation.slice(0, 4);
     }
 
-    // Fetch active promotions and apply the SAME schedule logic as announcements
-    // (absolute window for one-off promos, recurrence pattern for repeating
-    // ones) so a recurring promotion actually recurs instead of dying at its
-    // first end_date.
-    const { data: rawPromotions, error: promotionsError } = await supabaseAdmin
-      .from('promotions')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_active', true);
-
+    // Active promotions use the SAME schedule logic as announcements (absolute
+    // window for one-off promos, recurrence pattern for repeating ones) so a
+    // recurring promotion actually recurs instead of dying at its first end_date.
+    const { data: rawPromotions, error: promotionsError } = promotionsRes;
     if (promotionsError) {
       console.error("Error fetching promotions:", promotionsError);
     }
@@ -247,14 +294,7 @@ serve(async (req) => {
       p.name || ''
     ));
 
-    // Fetch active marquee elements for the business, only filtering by is_active in SQL
-    const { data: rawMarqueeElements, error: marqueeElementsError } = await supabaseAdmin
-      .from('marquee_elements')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .order('display_order', { ascending: true });
-
+    const { data: rawMarqueeElements, error: marqueeElementsError } = marqueeRes;
     let activeMarqueeElements: any[] = [];
     if (marqueeElementsError) {
       console.error("Error fetching marquee elements:", marqueeElementsError);
@@ -315,24 +355,31 @@ serve(async (req) => {
     const byId = new Map<string, any>();
     const collect = (rows: any[] | null) => { for (const r of rows || []) byId.set(r.id, r); };
 
-    if (normalizedEmail) {
-      const { data, error } = await supabaseAdmin
-        .from('orders').select(ORDER_SELECT)
-        .eq('business_id', businessId)
-        .ilike('customer_email', normalizedEmail) // parameterized, case-insensitive exact match
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (error) console.error('[get-public-shop-data] Error fetching orders by email:', error);
-      else collect(data);
+    // Both lookups are independent — run them together.
+    const [ordersByEmail, ordersById] = await Promise.all([
+      normalizedEmail
+        ? supabaseAdmin
+            .from('orders').select(ORDER_SELECT)
+            .eq('business_id', businessId)
+            .ilike('customer_email', normalizedEmail) // parameterized, case-insensitive exact match
+            .order('created_at', { ascending: false })
+            .limit(50)
+        : Promise.resolve(null),
+      idList.length > 0
+        ? supabaseAdmin
+            .from('orders').select(ORDER_SELECT)
+            .eq('business_id', businessId)
+            .in('id', idList)
+            .order('created_at', { ascending: false })
+        : Promise.resolve(null),
+    ]);
+    if (ordersByEmail) {
+      if (ordersByEmail.error) console.error('[get-public-shop-data] Error fetching orders by email:', ordersByEmail.error);
+      else collect(ordersByEmail.data);
     }
-    if (idList.length > 0) {
-      const { data, error } = await supabaseAdmin
-        .from('orders').select(ORDER_SELECT)
-        .eq('business_id', businessId)
-        .in('id', idList)
-        .order('created_at', { ascending: false });
-      if (error) console.error('[get-public-shop-data] Error fetching orders by id:', error);
-      else collect(data);
+    if (ordersById) {
+      if (ordersById.error) console.error('[get-public-shop-data] Error fetching orders by id:', ordersById.error);
+      else collect(ordersById.data);
     }
 
     customerOrders = Array.from(byId.values())
@@ -356,15 +403,18 @@ serve(async (req) => {
         media_count: shopDetails.media_count,
         instagram_url: shopDetails.instagram_url || null, // Use instagram_url from shop_details
         username: shopDetails.username || null, // Use username from shop_details
-        storefront_type: shopDetails.storefront_type || 'instagram',
+        // Custom-designed storefront is a Business-plan feature; everyone else
+        // serves the Instagram-style storefront regardless of stored setting.
+        storefront_type: isBusinessPlan ? (shopDetails.storefront_type || 'instagram') : 'instagram',
       },
       appearanceSettings: designSettings?.settings || null,
+      capabilities, // plan entitlements for the public storefront (card payments, reviews, promotions)
       products: products || [],
-      totalProductsCount: totalProductsCount || 0, // Return total count
-      hasMore: (offset + (products?.length || 0)) < (totalProductsCount || 0), // Calculate hasMore
+      totalProductsCount: productCap != null ? Math.min(totalProductsCount || 0, productCap) : (totalProductsCount || 0),
+      hasMore: (offset + (products?.length || 0)) < (productCap != null ? Math.min(totalProductsCount || 0, productCap) : (totalProductsCount || 0)),
       bestSellers: bestSellers || [],
-      recommendedProducts: recommendedProducts || [],
-      promotions: promotions || [], // Include promotions
+      recommendedProducts: capabilities.promotions ? (recommendedProducts || []) : (recommendedProducts || []),
+      promotions: capabilities.promotions ? (promotions || []) : [],
       marqueeElements: activeMarqueeElements || [], // Include filtered marquee elements
       customerOrders: customerOrders || [], // Include customer orders
     }), {

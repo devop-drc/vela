@@ -35,7 +35,8 @@ import { useProductData } from "@/hooks/useProductData"; // Import useProductDat
 import { useProductFilters } from "@/hooks/useProductFilters"; // Import useProductFilters
 import { ProductFilterDrawer } from "@/components/dashboard/ProductFilterDrawer"; // Import new drawer
 import { ProductFilterPanel } from "@/components/products/ProductFilterPanel"; // Import inline filter panel
-import { FilterVisibilitySheet } from "@/components/dashboard/FilterVisibilitySheet";
+import { FilterVisibilityModal } from "@/components/filters/FilterVisibilityModal";
+import { CORE_FILTER_KEYS, deriveAttributeKeys, isFilterVisible } from "@/components/filters/filterVisibility";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTranslation } from "react-i18next";
@@ -162,25 +163,14 @@ const Products = () => {
   const [grouping, setGrouping] = useState<GroupingType>('none');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false); // New state for filter drawer (mobile)
   const [showFilters, setShowFilters] = useState(!isMobile); // Inline filter panel (desktop default true)
-  const [isVisibilitySheetOpen, setIsVisibilitySheetOpen] = useState(false);
-  const [visibilityMap, setVisibilityMap] = useState<Record<string, boolean>>({});
-  const [order, setOrder] = useState<string[]>([]);
-  const [dragKey, setDragKey] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [orderMode, setOrderMode] = useState<'alpha' | 'useful' | 'manual'>(() => {
-    const s = localStorage.getItem('instagram_filter_order_mode');
-    return (s === 'alpha' || s === 'useful' || s === 'manual') ? s : 'manual';
+  const [isVisibilityModalOpen, setIsVisibilityModalOpen] = useState(false);
+  // Which filter groups the Products page shows (panel + drawer). Sparse map:
+  // missing key = visible; persisted so it survives reloads.
+  const [visibilityMap, setVisibilityMap] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem('products_filter_visibility') || '{}'); } catch { return {}; }
   });
 
-  const [visQuery, setVisQuery] = useState("");
-
   const { shopDetails } = useShop();
-
-  const toTitle = (s: string) =>
-    s
-      .replace(/([a-z0-9])([A-Z])/g, '$1 $2') // split camelCase
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, c => c.toUpperCase());
 
   // Use Product Data Hook
   const {
@@ -203,6 +193,8 @@ const Products = () => {
     setSortOption,
     statusFilter,
     handleToggleStatusFilter,
+    ratingFilter,
+    handleSetRatingFilter,
     filters,
     handleToggleFilter,
     handleClearSection,
@@ -229,170 +221,42 @@ const Products = () => {
     }
   }, [searchParams, filteredAndSortedProducts]);
 
-  // Compute the exact filter group keys shown in Instagram drawer
-  const visibilityKeys = useMemo(() => {
-    const keys: string[] = [];
-    // Order should mirror InstagramFilterDrawer: Categories, Price Range, Tags, then attributes
-    if (allCategories.length > 0) keys.push('categories');
-    keys.push('priceRange');
-    if (allTags.length > 0) keys.push('tags');
-
-    const attrSet = new Set<string>();
-    // include attributes present in definitions with any values
-    allDetailsAttributes.forEach(a => { if ((a.values?.length || 0) > 0) attrSet.add(a.name); });
-    // Also include attributes derived from products' details
-    allProducts.forEach(p => {
-      Object.keys(p.details || {}).forEach(k => { if (k !== 'type') attrSet.add(k); });
+  // Canonical filter-group key order: core groups, then options, then specs.
+  // Drives both the visibility modal and the mobile drawer's section order.
+  const allFilterKeys = useMemo(() => {
+    const { options, specs } = deriveAttributeKeys(allDetailsAttributes, allProducts);
+    const core = CORE_FILTER_KEYS.filter((k) => {
+      if (k === 'categories') return allCategories.length > 0;
+      if (k === 'tags') return allTags.length > 0;
+      return true;
     });
-    // Remove reference code/ref code style attributes
-    const isRefCode = (name: string) => {
-      const n = name.toLowerCase();
-      return n.includes('reference code') || n.includes('ref code') || n === 'ref' || n.includes('refcode') || n.includes('reference');
-    };
-    const attrs = Array.from(attrSet).filter(a => !isRefCode(a)).sort((a,b)=>a.localeCompare(b));
-    return [...keys, ...attrs];
+    return [...core, ...options, ...specs];
   }, [allCategories, allTags, allDetailsAttributes, allProducts]);
 
-  // Read admin-persisted order/visibility to drive Instagram Shop drawer ordering
-  const drawerKeysFromAdmin = useMemo(() => {
-    let orderLs: string[] = [];
-    let visMap: Record<string, boolean> = {};
-    try {
-      const s = localStorage.getItem('instagram_filter_order');
-      if (s) orderLs = JSON.parse(s);
-    } catch {}
-    try {
-      const v = localStorage.getItem('instagram_filter_visibility');
-      if (v) visMap = JSON.parse(v);
-    } catch {}
-    const base = orderLs.length > 0 ? orderLs : visibilityKeys;
-    return base.filter(k => visibilityKeys.includes(k) && visMap[k] !== false);
-  }, [visibilityKeys, isVisibilitySheetOpen]);
-
-  // Load persisted visibility
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('instagram_filter_visibility');
-      if (raw) {
-        setVisibilityMap(JSON.parse(raw));
-      } else {
-        setVisibilityMap({});
-      }
-    } catch {
-      setVisibilityMap({});
-    }
-  }, []);
-
-  // Initialize and persist order
-  useEffect(() => {
-    // initialize from storage when keys first known
-    const stored = localStorage.getItem('instagram_filter_order');
-    const keysSet = new Set(visibilityKeys);
-    if (stored) {
-      try {
-        const parsed: string[] = JSON.parse(stored);
-        const filtered = parsed.filter(k => keysSet.has(k));
-        const missing = visibilityKeys.filter(k => !filtered.includes(k));
-        setOrder([...filtered, ...missing]);
-        return;
-      } catch { void 0; }
-    }
-    setOrder(visibilityKeys);
-  }, [visibilityKeys]);
-
-  useEffect(() => {
-    if (order.length > 0) {
-      localStorage.setItem('instagram_filter_order', JSON.stringify(order));
-    }
-  }, [order]);
-
-  useEffect(() => {
-    localStorage.setItem('instagram_filter_order_mode', orderMode);
-  }, [orderMode]);
+  // Visible keys in canonical order — the mobile filter drawer renders these.
+  const visibleFilterKeys = useMemo(
+    () => allFilterKeys.filter((k) => isFilterVisible(visibilityMap, k)),
+    [allFilterKeys, visibilityMap]
+  );
 
   const setVisibility = (key: string, val: boolean) => {
     setVisibilityMap(prev => {
       const next = { ...prev, [key]: val };
-      localStorage.setItem('instagram_filter_visibility', JSON.stringify(next));
+      localStorage.setItem('products_filter_visibility', JSON.stringify(next));
       return next;
     });
   };
 
-  const handleToggleKey = (key: string) => {
-    const isOn = visibilityMap[key] !== false;
-    setVisibility(key, !isOn);
-  };
-
-  const onDragStart = (key: string, e: React.DragEvent) => {
-    setDragKey(key);
-    setIsDragging(true);
-    e.dataTransfer.setData('text/plain', key);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const moveAfter = (movingKey: string, targetKey: string) => {
-    setOrder(prev => {
-      const next = prev.filter(k => k !== movingKey);
-      const idx = next.indexOf(targetKey);
-      if (idx === -1) return prev; // shouldn't happen
-      next.splice(idx + 1, 0, movingKey);
-      return [...next];
+  const setManyVisibility = (keys: string[], val: boolean) => {
+    setVisibilityMap(prev => {
+      const next = { ...prev };
+      keys.forEach(k => { next[k] = val; });
+      localStorage.setItem('products_filter_visibility', JSON.stringify(next));
+      return next;
     });
   };
 
-  const dropOnKey = (e: React.DragEvent, targetKey: string, targetEnabled: boolean) => {
-    if (!dragKey) return;
-    e.preventDefault();
-    e.stopPropagation();
-    // toggle if section differs
-    const dragEnabled = visibilityMap[dragKey] !== false;
-    if (dragEnabled !== targetEnabled) setVisibility(dragKey, targetEnabled);
-    // decide before/after based on cursor position within target
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const placeBefore = e.clientY < rect.top + rect.height / 2;
-    setOrder(prev => {
-      const list = prev.filter(k => k !== dragKey);
-      const idx = list.indexOf(targetKey);
-      if (idx === -1) return prev;
-      const insertIdx = placeBefore ? idx : idx + 1;
-      list.splice(insertIdx, 0, dragKey);
-      return [...list];
-    });
-    setDragKey(null);
-    setIsDragging(false);
-  };
 
-  const dropOnSectionEnd = (targetEnabled: boolean) => {
-    if (!dragKey) return;
-    const dragEnabled = visibilityMap[dragKey] !== false;
-    if (dragEnabled !== targetEnabled) setVisibility(dragKey, targetEnabled);
-    setOrder(prev => {
-      const list = prev.filter(k => k !== dragKey);
-      // compute effective enabled with dragKey moved
-      const isEnabledEff = (k: string) => (k === dragKey ? targetEnabled : visibilityMap[k] !== false);
-      let insertIdx = list.length;
-      if (targetEnabled) {
-        // insert after last enabled
-        insertIdx = -1;
-        list.forEach((k, i) => { if (isEnabledEff(k)) insertIdx = i; });
-        insertIdx = insertIdx + 1; // after last enabled
-      } else {
-        // insert at end (after all items)
-        insertIdx = list.length;
-      }
-      list.splice(Math.max(0, insertIdx), 0, dragKey);
-      return [...list];
-    });
-    setDragKey(null);
-    setIsDragging(false);
-  };
-
-  const resetVisibility = () => {
-    localStorage.removeItem('instagram_filter_visibility');
-    setVisibilityMap({});
-  };
-
-  
 
 
   useEffect(() => { setTitle(t("nav.products")); }, [setTitle, t]);
@@ -695,17 +559,23 @@ const Products = () => {
         handlePriceRangeChange={handlePriceRangeChange}
         statusFilter={statusFilter}
         handleToggleStatusFilter={handleToggleStatusFilter}
-        drawerKeys={drawerKeysFromAdmin}
+        ratingFilter={ratingFilter}
+        handleSetRatingFilter={handleSetRatingFilter}
+        drawerKeys={visibleFilterKeys}
       />
 
-      {/* Filter Visibility Sheet */}
-      <FilterVisibilitySheet
-        open={isVisibilitySheetOpen}
-        onOpenChange={setIsVisibilitySheetOpen}
+      {/* Filter visibility modal — controls which groups this page's filter panel shows */}
+      <FilterVisibilityModal
+        open={isVisibilityModalOpen}
+        onOpenChange={setIsVisibilityModalOpen}
+        description={t("products.filter_visibility_hint", "Choose which filters are available on this page.")}
         allCategories={allCategories}
         allTags={allTags}
         allDetailsAttributes={allDetailsAttributes}
         allProducts={allProducts}
+        visibilityMap={visibilityMap}
+        onToggle={setVisibility}
+        onSetMany={setManyVisibility}
       />
 
       {/* ── Command bar ── */}
@@ -818,8 +688,8 @@ const Products = () => {
                 </Button>
               )}
 
-              {/* Storefront filters config */}
-              <Button variant="outline" size="icon" className="h-9 w-9 shadow-sm" onClick={() => setIsVisibilitySheetOpen(true)} title={t("products.filter_management")}>
+              {/* Filter visibility config for this page */}
+              <Button variant="outline" size="icon" className="h-9 w-9 shadow-sm" onClick={() => setIsVisibilityModalOpen(true)} title={t("products.filter_management")}>
                 <Settings2 className="h-4 w-4" />
               </Button>
 
@@ -867,12 +737,17 @@ const Products = () => {
             <ProductFilterPanel
               allCategories={allCategories}
               allTags={allTags}
+              allDetailsAttributes={allDetailsAttributes}
+              allProducts={allProducts}
               maxPrice={maxPrice}
               filters={filters}
               statusFilter={statusFilter}
+              ratingFilter={ratingFilter}
               localPriceRange={localPriceRange}
+              visibilityMap={visibilityMap}
               handleToggleFilter={handleToggleFilter}
               handleToggleStatusFilter={handleToggleStatusFilter}
+              handleSetRatingFilter={handleSetRatingFilter}
               handleClearSection={handleClearSection}
               handleResetAllFilters={handleResetAllFilters}
               handlePriceRangeChange={handlePriceRangeChange}

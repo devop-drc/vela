@@ -166,15 +166,11 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
 
       const analysis = useAnalysis ? analysisMap.get(post.id) : null;
 
-      // Build details from analysis specs
+      // Details only carries type (+brand). Specifications and options go to
+      // their own tables via apply-analysis-to-product below — the same
+      // persistence the background sync uses, so nothing gets dropped.
       const details: Record<string, any> = {};
       if (analysis?.typeName) details.type = toTitleCase(analysis.typeName);
-      if (analysis?.specifications) {
-        const specs = Array.isArray(analysis.specifications) ? analysis.specifications : Object.entries(analysis.specifications).map(([k, v]) => ({ key: k, value: v }));
-        for (const s of specs) {
-          if (s && s.key) details[s.key] = s.value || '';
-        }
-      }
 
       const payload = {
         business_id: businessId,
@@ -200,6 +196,19 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
 
       const { data: newProduct, error: insertError } = await supabase.from('products').insert(payload).select('*').single();
       if (insertError) throw insertError;
+
+      // Persist specifications + options/variants + category/type exactly like
+      // the sync pipeline does (previously the specs never made it past the
+      // analysis preview).
+      if (analysis && (analysis.specifications || analysis.options || analysis.categoryName)) {
+        const { data: applied, error: applyErr } = await supabase.functions.invoke('apply-analysis-to-product', {
+          body: { product_id: newProduct.id, analysis },
+        });
+        if (applyErr || applied?.error) {
+          console.error('apply-analysis-to-product failed:', applyErr?.message || applied?.error);
+          toast.warning('Product created, but some details (specs/options) could not be saved — use "Find with AI" in the editor.');
+        }
+      }
 
       toast.success("Product created!", { id: toastId });
 

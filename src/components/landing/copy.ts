@@ -32,6 +32,7 @@ export interface LandingCopy {
   };
   pricing: {
     badge: string; title: string; sub: string; monthly: string; annual: string; save: string;
+    saveMonths: (n: number) => string;
     perMonth: string; billedMonthly: string; billedYearly: (n: string) => string; popular: string; cta: string;
     freeLabel: string; freeForever: string; freeCta: string; trialCta: string; trialNote: string; reassure: string;
     plans: { id: string; name: string; blurb: string; features: string[] }[];
@@ -46,10 +47,10 @@ export const sq: LandingCopy = {
   nav: { how: "Si funksionon", features: "Veçoritë", studio: "Studio", pricing: "Çmimet", faq: "Pyetje", login: "Hyr", cta: "Provo falas" },
   hero: {
     badge: "Për shitësit shqiptarë",
-    h1a: "Ktheje Instagramin tënd",
-    h1b: "në një dyqan të plotë",
+    h1a: "Kthe Instagramin",
+    h1b: "në dyqan online",
     h1c: "brenda pak minutash.",
-    sub: "AI i kthen postimet e tua në dyqan të vërtetë. Pa kod.",
+    sub: "AI i kthen postimet e tua në dyqan të vërtetë. Pa kod. Ti menaxhon gjithçka nga një panel.",
     ctaPrimary: "Fillo falas",
     ctaSecondary: "Shiko demo live",
     risk: "Pa kartë krediti · 2 minuta",
@@ -57,7 +58,7 @@ export const sq: LandingCopy = {
     dm: {
       ask: "Sa kushton fustani? 🙏",
       reply: "Porosite direkt këtu 👇",
-      linkTitle: "Butiku i Elirës",
+      linkTitle: "Shop Name",
       linkSub: "vela.al/butiku-i-eliras",
     },
   },
@@ -73,7 +74,7 @@ export const sq: LandingCopy = {
     or: "ose",
   },
   screen: {
-    shop: "Butiku i Elirës",
+    shop: "Shop Name",
     banner1: "Koleksioni i verës ☀️",
     banner2: "Deri në -30% te fustanet",
     addToCart: "Shto në shportë",
@@ -170,10 +171,11 @@ export const sq: LandingCopy = {
   pricing: {
     badge: "Çmimet",
     title: "Çmime të thjeshta, në Lekë",
-    sub: "Fillo falas. Kur je gati të shesësh, provo Pro për 7 ditë.",
+    sub: "Çdo plan nis me 7 ditë provë falas — pa kartë.",
     monthly: "Mujore",
     annual: "Vjetore",
-    save: "2 muaj falas",
+    save: "deri në 2 muaj falas",
+    saveMonths: (n: number) => (n === 1 ? "1 muaj dhuratë" : `${n} muaj dhuratë`),
     perMonth: "ALL / muaj",
     billedMonthly: "Faturim mujor",
     billedYearly: (n) => `Faturohet ${n} ALL në vit`,
@@ -186,9 +188,9 @@ export const sq: LandingCopy = {
     trialNote: "7 ditë falas · pa kartë · anulo kurdo",
     reassure: "Regjistrohu për 2 minuta. Pas provës, zgjidh një plan që dyqani të mbetet online — produktet ruhen gjithmonë.",
     plans: [
-      { id: "starter", name: "Starter", blurb: "Katalogu yt online — falas, përgjithmonë.", features: ["Vitrinë me linkun tënd", "Deri në 10 produkte", "Para në dorë (COD)", "Ndaje dyqanin kudo", "Analitikë bazë"] },
-      { id: "pro", name: "Pro", blurb: "Gjithçka për të shitur.", features: ["Produkte pa limit", "Pagesa me kartë (RaiAccept)", "Storefront Studio", "Promocione & oferta", "Vlerësime produktesh", "Analitikë e plotë"] },
-      { id: "business", name: "Business", blurb: "Për dyqane në rritje.", features: ["Gjithçka e Pro-s", "Mbështetje me përparësi", "Analitikë e avancuar", "Limite më të larta AI", "Shumë përdorues (së shpejti)"] },
+      { id: "starter", name: "Starter", blurb: "Katalogu yt online, super i lirë.", features: ["Deri në 10 produkte", "Vitrinë Instagram me linkun tënd", "Vetëm para në dorë (COD)", "Analitikë bazë", "7 ditë provë falas"] },
+      { id: "pro", name: "Pro", blurb: "Gjithçka për të shitur.", features: ["Deri në 100 produkte aktive", "Pagesa me kartë + para në dorë", "Analitikë e avancuar", "Promocione & oferta", "Vlerësime produktesh"] },
+      { id: "business", name: "Business", blurb: "Për dyqane në rritje.", features: ["Gjithçka e Pro-s", "Mbështetje me përparësi", "Analitikë e plotë", "Limite më të larta AI", "Storefront Studio i plotë"] },
     ],
   },
   testimonials: {
@@ -229,7 +231,7 @@ export const en: LandingCopy = {
   hero: {
     badge: "For Albanian sellers",
     h1a: "Turn your Instagram",
-    h1b: "into a full store",
+    h1b: "into an online store",
     h1c: "in minutes.",
     sub: "AI turns your posts into a real store. No code.",
     ctaPrimary: "Start free",
@@ -352,10 +354,11 @@ export const en: LandingCopy = {
   pricing: {
     badge: "Pricing",
     title: "Simple pricing, in Lek",
-    sub: "Start free. When you're ready to sell, try Pro for 7 days.",
+    sub: "Every plan starts with a 7-day free trial — no card required.",
     monthly: "Monthly",
     annual: "Annual",
-    save: "2 months free",
+    save: "up to 2 months free",
+    saveMonths: (n: number) => (n === 1 ? "1 month gifted" : `${n} months gifted`),
     perMonth: "ALL / mo",
     billedMonthly: "Billed monthly",
     billedYearly: (n) => `Billed ${n} ALL yearly`,
@@ -368,9 +371,9 @@ export const en: LandingCopy = {
     trialNote: "7 days free · no card · cancel anytime",
     reassure: "Sign up in 2 minutes. After the trial, pick a plan to keep your shop online — products are always saved.",
     plans: [
-      { id: "starter", name: "Starter", blurb: "Your catalogue online — free, forever.", features: ["Storefront with your link", "Up to 10 products", "Cash on delivery (COD)", "Share your shop anywhere", "Basic analytics"] },
-      { id: "pro", name: "Pro", blurb: "Everything to sell.", features: ["Unlimited products", "Card payments (RaiAccept)", "Storefront Studio", "Promotions & sales", "Product reviews", "Full analytics"] },
-      { id: "business", name: "Business", blurb: "For growing shops.", features: ["Everything in Pro", "Priority support", "Advanced analytics", "Higher AI sync limits", "Multi-user (coming soon)"] },
+      { id: "starter", name: "Starter", blurb: "Your catalogue online, super affordable.", features: ["Up to 10 products", "Instagram storefront with your link", "Cash on delivery only (COD)", "Basic analytics", "7-day free trial"] },
+      { id: "pro", name: "Pro", blurb: "Everything to sell.", features: ["Up to 100 active products", "Card payments + cash on delivery", "Advanced analytics", "Promotions & offers management", "Product reviews"] },
+      { id: "business", name: "Business", blurb: "For growing shops.", features: ["Everything in Pro", "Priority support", "Full analytics", "Higher AI usage limits", "Full Storefront Studio access"] },
     ],
   },
   testimonials: {

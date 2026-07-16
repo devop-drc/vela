@@ -43,9 +43,11 @@ serve(async (req) => {
       });
     }
 
+    // Embed the product's variant rows so the client can render option pickers
+    // without a second round trip.
     const { data: product, error: productError } = await supabaseAdmin
       .from('products')
-      .select('*')
+      .select('*, product_variants(combination_key, option_values, inventory, price_difference, is_active, is_default)')
       .eq('id', productId)
       .eq('business_id', (shop.businesses as any).id)
       .neq('status', 'Draft')

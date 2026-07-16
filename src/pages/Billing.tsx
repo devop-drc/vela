@@ -206,7 +206,7 @@ export default function Billing() {
           {s === "incomplete" && (
             <div className="flex flex-wrap items-center gap-3">
               <p className="min-w-0 flex-1 text-sm">
-                {t("billing.trial_setup_hint", "Start your 7-day free trial — add your card (0 ALL verification, nothing charged today).")}
+                {t("billing.trial_setup_hint", "Start your 7-day free trial — no card required.")}
               </p>
               <Button size="sm" disabled={busy != null} onClick={() => subscribe("pro", true)} className={BRAND_CTA}>
                 {busy === "trial" ? <Spinner className="h-4 w-4" /> : t("billing.start_trial", "Start free trial")}

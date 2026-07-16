@@ -3,11 +3,10 @@
 // params. Presentation (cards/table) from config.pages.orders.style.
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Loader2, Search, Package, ChevronDown, Star, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
 import { useStorefront } from '@/contexts/StorefrontContext';
@@ -15,16 +14,25 @@ import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
 import { SfButton } from '../components/SfButton';
 import LeaveReviewDialog from '@/components/storefront/ProductReviews';
 
-// Alpha backgrounds + dark-mode text shades so badges read on every scheme.
+// Semantic tokens where they exist (warning/success/destructive follow the
+// theme); the in-progress steps keep distinct hues so the pipeline stays
+// readable, with alpha backgrounds + dark-mode text shades for every scheme.
 const STATUS_COLORS: Record<string, string> = {
-  Pending: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+  Pending: 'bg-warning/15 text-warning',
   'Order Seen': 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
   'Order Packaged': 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400',
   'Given to Courier': 'bg-purple-500/15 text-purple-700 dark:text-purple-400',
-  Fulfilled: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
-  Problematic: 'bg-red-500/15 text-red-700 dark:text-red-400',
+  Fulfilled: 'bg-success/15 text-success',
+  Problematic: 'bg-destructive/15 text-destructive',
   Cancelled: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400',
 };
+
+/** Pill status chip, sized like the .sf-badge element but semantically colored. */
+const StatusChip = ({ status }: { status: string }) => (
+  <span className={cn('inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold leading-none', STATUS_COLORS[status] || 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400')}>
+    {status}
+  </span>
+);
 
 const localOrderIds = (): string[] => {
   try { return JSON.parse(localStorage.getItem('storefront_order_ids') || '[]'); } catch { return []; }
@@ -103,13 +111,18 @@ export const OrdersPage = () => {
           <SfButton onClick={() => lookup(email)}>Try again</SfButton>
         </div>
       ) : orders.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground"><Package className="h-12 w-12 mx-auto mb-4 opacity-40" /><p>No orders found yet.</p></div>
+        <div className="py-16 text-center">
+          <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-full bg-primary/10 text-primary"><Package className="h-7 w-7" /></div>
+          <h2 className="sf-heading mb-1 text-lg font-semibold">No orders yet</h2>
+          <p className="mb-6 text-sm text-muted-foreground">Orders you place in this shop will show up here.</p>
+          <SfButton asChild><Link to={`/shop/${shopSlug}/products`}>Browse products</Link></SfButton>
+        </div>
       ) : style === 'table' ? (
         /* Compact table presentation (config.pages.orders.style === 'table'). */
         <div className="sf-glass overflow-x-auto">
           <table className="w-full min-w-[560px] text-sm">
             <thead>
-              <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="px-4 py-3 font-semibold">Order</th>
                 <th className="px-4 py-3 font-semibold">Date</th>
                 <th className="px-4 py-3 font-semibold">Items</th>
@@ -128,7 +141,7 @@ export const OrdersPage = () => {
                   <td className="px-4 py-3 text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3 text-muted-foreground">{(o.order_items || []).reduce((s: number, it: any) => s + it.quantity, 0)}</td>
                   <td className="px-4 py-3 font-semibold">{formatCurrency(o.total_amount, o.currency)}</td>
-                  <td className="px-4 py-3"><Badge className={cn('border-0', STATUS_COLORS[o.status] || 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400')}>{o.status}</Badge></td>
+                  <td className="px-4 py-3"><StatusChip status={o.status} /></td>
                 </tr>
               ))}
             </tbody>
@@ -161,7 +174,7 @@ export const OrdersPage = () => {
                     <p className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleDateString()} · {formatCurrency(o.total_amount, o.currency)}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Badge className={cn('border-0', STATUS_COLORS[o.status] || 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400')}>{o.status}</Badge>
+                    <StatusChip status={o.status} />
                     <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} />
                   </div>
                 </button>

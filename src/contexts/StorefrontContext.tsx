@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/lib/edgeInvoke';
 import { readCache, writeCache } from '@/lib/pageCache';
+import { primeVariantOptions } from '@/hooks/useVariantOptions';
 import { showError } from '@/utils/toast';
 import { DesignSettings } from './AppearanceContext'; // Re-use DesignSettings type
 import { StorefrontAnnouncement } from '@/types/storefront';
@@ -68,6 +69,16 @@ interface ExchangeRates {
   [key: string]: number;
 }
 
+/** Plan entitlements served by get-public-shop-data. Defaults are permissive
+    so shops keep working against an older deployed function. */
+export interface ShopCapabilities {
+  card_payments: boolean;
+  reviews: boolean;
+  promotions: boolean;
+  custom_storefront: boolean;
+}
+const DEFAULT_CAPABILITIES: ShopCapabilities = { card_payments: true, reviews: true, promotions: true, custom_storefront: true };
+
 interface OrderDetails {
   id: string;
   customer_name: string;
@@ -108,6 +119,8 @@ interface StorefrontContextType {
   promotions: Promotion[]; // New: Active promotions
   marqueeElements: StorefrontAnnouncement[]; // New: Marquee elements
   customerOrders: OrderDetails[]; // New: Customer orders
+  /** Plan entitlements of this shop (card payments, reviews, promotions). */
+  capabilities: ShopCapabilities;
 }
 
 // Exported so demo surfaces (e.g. the landing page's live storefront preview)
@@ -125,6 +138,22 @@ const generateSlug = (name: string): string => {
 
 const PRODUCTS_PER_PAGE = 12; // Define a constant for limit
 
+// Same key ShopContext uses — rates are global, so either surface warming the
+// cache benefits the other (per pageCache user-scoping, admin and anon visits
+// each keep their own slot).
+const RATES_CACHE_KEY = 'vela:exchangeRates:v1';
+
+// Newer edge responses embed each product's variant rows. Split them out and
+// seed the variant-options cache so option pickers / "choose options" buttons
+// render with zero extra round trips. Older responses (field absent) are a
+// no-op — the client-side batched fetch still covers them.
+const absorbVariants = <T extends { id: string }>(list: T[] | null | undefined): T[] =>
+  (list || []).map((p: any) => {
+    const { product_variants, ...rest } = p;
+    if (product_variants !== undefined) primeVariantOptions(rest.id, product_variants);
+    return rest as T;
+  });
+
 // Shop-level snapshot cached per slug for instant paint on reload.
 interface StorefrontSnapshot {
   shopDetails: ShopDetails;
@@ -135,6 +164,7 @@ interface StorefrontSnapshot {
   promotions: Promotion[];
   marqueeElements: StorefrontAnnouncement[];
   hasMore: boolean;
+  capabilities?: ShopCapabilities;
 }
 
 export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
@@ -149,10 +179,15 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [bestSellers, setBestSellers] = useState<TopProduct[]>([]); // New state
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]); // New state
-  const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(null); // New state for exchange rates
+  // Hydrate synchronously from the last successful fetch so prices render in
+  // the correct currency on the very first frame — no convert-later flash.
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(
+    () => readCache<ExchangeRates>(RATES_CACHE_KEY) ?? null
+  );
   const [promotions, setPromotions] = useState<Promotion[]>([]); // New state for promotions
   const [marqueeElements, setMarqueeElements] = useState<StorefrontAnnouncement[]>([]); // New state for marquee elements
   const [customerOrders, setCustomerOrders] = useState<OrderDetails[]>([]); // New state for customer orders
+  const [capabilities, setCapabilities] = useState<ShopCapabilities>(DEFAULT_CAPABILITIES);
 
   // Fetch exchange rates once on mount — cache table first (one cheap read),
   // edge function only on a stale/missing cache. Same pattern as ShopContext.
@@ -167,6 +202,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         && Date.now() - new Date(cached.last_fetched_at).getTime() < 24 * 60 * 60 * 1000;
       if (cached?.rates && isFresh) {
         setExchangeRates(cached.rates as ExchangeRates);
+        writeCache(RATES_CACHE_KEY, cached.rates);
         return;
       }
       const { data, error } = await supabase.functions.invoke('exchange-rates');
@@ -176,6 +212,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         if (cached?.rates) setExchangeRates(cached.rates as ExchangeRates); // stale beats nothing
       } else if (data) {
         setExchangeRates(data.rates);
+        writeCache(RATES_CACHE_KEY, data.rates);
       }
     };
     fetchRates();
@@ -204,6 +241,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         setRecommendedProducts(cached.recommendedProducts);
         setPromotions(cached.promotions);
         setMarqueeElements(cached.marqueeElements);
+        setCapabilities(cached.capabilities ?? DEFAULT_CAPABILITIES);
         setHasMoreProducts(cached.hasMore);
         setCurrentPage(1);
         setIsLoading(false);
@@ -250,17 +288,17 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         storefront_type: data.shopDetails.storefront_type || 'instagram',
       } as ShopDetails;
 
-      // Backfill branding if missing (incognito or older records) using public storage URLs
+      // Backfill branding if missing (incognito or older records) using public
+      // storage URLs. The probe outcome — including "nothing found" — is cached
+      // for a day so revalidations don't re-run a burst of 400ing requests and
+      // block the shop paint every load. Probes run in parallel.
       if (!incomingDetails.logo_url || !incomingDetails.favicon_url) {
-          const candidates = [
-            { key: `${shopSlug}/logo.png` },
-            { key: `${shopSlug}/logo.jpg` },
-            { key: `${shopSlug}/logo.jpeg` },
-          ];
-          const favCandidates = [
-            { key: `${shopSlug}/favicon.ico` },
-            { key: `${shopSlug}/favicon.png` },
-          ];
+        const brandingKey = `branding:${shopSlug}`;
+        const cachedBranding = readCache<{ logo: string | null; favicon: string | null }>(brandingKey);
+        if (cachedBranding !== undefined) {
+          incomingDetails.logo_url = incomingDetails.logo_url || cachedBranding.logo;
+          incomingDetails.favicon_url = incomingDetails.favicon_url || cachedBranding.favicon;
+        } else {
           const probe = async (key: string) => {
             const { data } = supabase.storage.from('shop-assets').getPublicUrl(key);
             try {
@@ -269,18 +307,19 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
             } catch (e) { /* ignore */ }
             return null;
           };
-          if (!incomingDetails.logo_url) {
-            for (const c of candidates) {
-              const url = await probe(c.key);
-              if (url) { incomingDetails.logo_url = url; break; }
-            }
-          }
-          if (!incomingDetails.favicon_url) {
-            for (const c of favCandidates) {
-              const url = await probe(c.key);
-              if (url) { incomingDetails.favicon_url = url; break; }
-            }
-          }
+          const firstHit = async (keys: string[]) =>
+            (await Promise.all(keys.map(probe))).find(Boolean) ?? null;
+
+          const [logoHit, favHit] = await Promise.all([
+            incomingDetails.logo_url
+              ? Promise.resolve(incomingDetails.logo_url)
+              : firstHit([`${shopSlug}/logo.png`, `${shopSlug}/logo.jpg`, `${shopSlug}/logo.jpeg`]),
+            incomingDetails.favicon_url
+              ? Promise.resolve(incomingDetails.favicon_url)
+              : firstHit([`${shopSlug}/favicon.ico`, `${shopSlug}/favicon.png`]),
+          ]);
+          incomingDetails.logo_url = logoHit;
+          incomingDetails.favicon_url = favHit;
 
           // If still missing, attempt to list files in userId directory (public bucket policies required)
           if ((!incomingDetails.logo_url || !incomingDetails.favicon_url) && incomingDetails.userId) {
@@ -306,36 +345,43 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
               console.warn('Branding directory list failed', e);
             }
           }
+          writeCache(brandingKey, { logo: incomingDetails.logo_url, favicon: incomingDetails.favicon_url });
+        }
       }
 
       setShopDetails(incomingDetails);
 
       setAppearanceSettings(data.appearanceSettings);
 
+      const incomingProducts = absorbVariants<Product>(data.products);
+      const incomingRecommended = absorbVariants<Product>(data.recommendedProducts);
+
       if (pageToFetch === 1) {
-        setProducts(data.products);
+        setProducts(incomingProducts);
         setBestSellers(data.bestSellers || []); // Set best sellers
-        setRecommendedProducts(data.recommendedProducts || []); // Set recommended products
+        setRecommendedProducts(incomingRecommended); // Set recommended products
         setPromotions(data.promotions || []); // Set promotions
         setMarqueeElements(data.marqueeElements || []); // Set marquee elements
         setCustomerOrders(data.customerOrders || []); // Set customer orders
+        setCapabilities({ ...DEFAULT_CAPABILITIES, ...(data.capabilities || {}) });
         // Snapshot the shop-level data for instant paint on the next reload
         // (customer orders excluded — they're per-visitor, not shop-wide).
         writeCache<StorefrontSnapshot>(cacheKey, {
           shopDetails: incomingDetails,
           appearanceSettings: data.appearanceSettings,
-          products: data.products || [],
+          products: incomingProducts,
           bestSellers: data.bestSellers || [],
-          recommendedProducts: data.recommendedProducts || [],
+          recommendedProducts: incomingRecommended,
           promotions: data.promotions || [],
           marqueeElements: data.marqueeElements || [],
           hasMore: data.hasMore,
+          capabilities: { ...DEFAULT_CAPABILITIES, ...(data.capabilities || {}) },
         });
       } else {
         // De-dupe by id so a double-trigger can't append the same page twice.
         setProducts(prevProducts => {
           const seen = new Set(prevProducts.map(p => p.id));
-          return [...prevProducts, ...(data.products || []).filter((p: Product) => !seen.has(p.id))];
+          return [...prevProducts, ...incomingProducts.filter((p: Product) => !seen.has(p.id))];
         });
       }
       setHasMoreProducts(data.hasMore);
@@ -392,7 +438,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
           body: { shopSlug, productId },
         });
         if (error || data?.error) return null;
-        const product: Product | null = data?.product ?? null;
+        const product: Product | null = data?.product ? absorbVariants<Product>([data.product])[0] : null;
         if (product) {
           setProducts((prev) => (prev.some((p) => p.id === product.id) ? prev : [...prev, product]));
         }
@@ -460,6 +506,7 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
     promotions, // Provide promotions
     marqueeElements, // Provide marquee elements
     customerOrders, // Provide customer orders
+    capabilities,
   };
 
   return (

@@ -156,9 +156,9 @@ const DashboardLayout = () => {
         <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6">{content}</main>
       </div>
       <BottomNav />
-      <SyncStatusWidget />
       <div className="fixed bottom-24 right-4 z-50 flex items-center gap-2 md:bottom-4">
         <VelaChat />
+        <SyncStatusWidget />
         <NotificationSidebar />
       </div>
     </div>

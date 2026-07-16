@@ -99,32 +99,44 @@ export const ProductSliderBlock = ({ props }: Props) => {
       }
     };
 
-    // Grab-and-drag from anywhere on the rail (mouse). preventDefault stops text
-    // selection / image drag; pointer capture keeps the gesture on the rail; the
-    // target is taken modulo one copy so a drag loops instead of hitting an edge.
+    // Grab-and-drag from anywhere on the rail (mouse). CRITICAL: no pointer
+    // capture / preventDefault on pointerdown — capturing immediately retargets
+    // the subsequent `click` to the rail, which makes every product on the rail
+    // unclickable. Instead the gesture is only "armed" on pointerdown; capture
+    // begins once movement crosses a small threshold, so a plain press-release
+    // stays a normal click on the card underneath. The scroll target is taken
+    // modulo one copy so a drag loops instead of hitting an edge.
+    let armed = false, pointerId = -1;
     const onDown = (e: PointerEvent) => {
       pauseNow();
-      if (e.pointerType !== 'mouse') return; // touch/pen flick natively
-      dragging = true; moved = false; startX = e.clientX; startScroll = rail.scrollLeft;
-      try { rail.setPointerCapture(e.pointerId); } catch { /* older browsers */ }
-      rail.style.cursor = 'grabbing';
-      e.preventDefault();
+      if (e.pointerType !== 'mouse' || e.button !== 0) return; // touch/pen flick natively
+      armed = true; dragging = false; moved = false;
+      startX = e.clientX; startScroll = rail.scrollLeft; pointerId = e.pointerId;
     };
     const onMove = (e: PointerEvent) => {
-      if (!dragging) return;
+      if (!armed) return;
       const dx = e.clientX - startX;
-      if (Math.abs(dx) > 3) moved = true;
+      if (!dragging) {
+        if (Math.abs(dx) <= 5) return; // still a click, not a drag
+        dragging = true; moved = true;
+        try { rail.setPointerCapture(pointerId); } catch { /* older browsers */ }
+        rail.style.cursor = 'grabbing';
+      }
       const s = seg();
       rail.scrollLeft = s > 0 ? mod(startScroll - dx, s) : startScroll - dx;
     };
     const onUp = (e: PointerEvent) => {
-      if (dragging) {
-        dragging = false; rail.style.cursor = 'grab';
-        try { rail.releasePointerCapture(e.pointerId); } catch { /* noop */ }
-        if (moved) {
-          const supp = (ev: Event) => { ev.stopPropagation(); ev.preventDefault(); };
-          rail.addEventListener('click', supp, { capture: true, once: true });
-          setTimeout(() => rail.removeEventListener('click', supp, true), 40);
+      if (armed) {
+        armed = false;
+        if (dragging) {
+          dragging = false; rail.style.cursor = 'grab';
+          try { rail.releasePointerCapture(e.pointerId); } catch { /* noop */ }
+          if (moved) {
+            // A real drag happened — swallow the click it would otherwise fire.
+            const supp = (ev: Event) => { ev.stopPropagation(); ev.preventDefault(); };
+            rail.addEventListener('click', supp, { capture: true, once: true });
+            setTimeout(() => rail.removeEventListener('click', supp, true), 40);
+          }
         }
       }
       resumeSoon();

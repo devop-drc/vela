@@ -168,7 +168,8 @@ export const ProductInfoBlock = () => {
         ) : (
           <span className="text-3xl font-bold text-primary">{original != null ? formatCurrency(original, shopDetails!.currency) : 'N/A'}</span>
         )}
-        {promos.map((p) => { const l = promotionBadgeLabel(p); return l ? <Badge key={p.id} className="bg-success text-success-foreground border-0">{l}</Badge> : null; })}
+        {/* Discount badge is always bright green + white, independent of theme. */}
+        {promos.map((p) => { const l = promotionBadgeLabel(p); return l ? <Badge key={p.id} className="border-0 bg-[hsl(142_71%_45%)] text-white">{l}</Badge> : null; })}
       </div>
     </div>
   );
@@ -225,15 +226,29 @@ export const AddToCartBlock = () => {
 /* ── Specifications ────────────────────────────────────────────────────── */
 export const SpecificationsBlock = () => {
   const { specs } = useProductDetail();
+  // Long spec lists collapse to the first few rows with a read-more expander.
+  const [expanded, setExpanded] = useState(false);
+  const LIMIT = 4;
   if (specs.length === 0) return null;
+  const shown = expanded ? specs : specs.slice(0, LIMIT);
   return (
     <div className="pt-4 border-t space-y-2">
       <h3 className="sf-heading font-semibold">Details</h3>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        {specs.map(([k, v]) => (
+        {shown.map(([k, v]) => (
           <div key={k}><dt className="text-muted-foreground capitalize">{k}</dt><dd className="font-medium">{Array.isArray(v) ? v.join(', ') : String(v)}</dd></div>
         ))}
       </dl>
+      {specs.length > LIMIT && (
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          aria-expanded={expanded}
+          className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+        >
+          {expanded ? 'Show less' : `Read more (${specs.length - LIMIT} more)`}
+        </button>
+      )}
     </div>
   );
 };
@@ -263,9 +278,11 @@ const Stars = ({ value, className }: { value: number; className?: string }) => (
 
 export const ReviewsBlock = ({ props }: { props: { title?: string } }) => {
   const { product } = useProductDetail();
+  const { capabilities } = useStorefront();
   const [reviews, setReviews] = useState<Review[] | null>(null);
 
   useEffect(() => {
+    if (!capabilities.reviews) return; // plan-gated: Starter shops don't show reviews
     let cancelled = false;
     supabase
       .from('product_reviews')
@@ -279,6 +296,7 @@ export const ReviewsBlock = ({ props }: { props: { title?: string } }) => {
     return () => { cancelled = true; };
   }, [product.id]);
 
+  if (!capabilities.reviews) return null; // reviews are a Pro/Business entitlement
   if (reviews === null) return null; // loading — keep the page quiet
   const avg = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
 

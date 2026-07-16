@@ -196,8 +196,7 @@ Order top→bottom. Each: **purpose · layout · content · motion**.
 ### S2 · Hero  *(text left · morphing story film right)*
 - *Purpose:* the promise + the product in motion, instantly.
 - *Content:* announcement pill ("Ndërtuar për shitësit e Instagramit në
-  Shqipëri"); H1 **"Ktheje Instagramin tënd në një dyqan të plotë — brenda pak
-  minutash."** (gradient on the last line); one‑line subhead; `Fillo falas` +
+  Shqipëri"); H1 **"Kthe Instagramin në dyqan online brenda pak minutash."** (gradient on the last line); one‑line subhead; `Fillo falas` +
   `Shiko një demo live`; risk‑reversal line (7‑day trial). Right: the **Remotion
   morphing film** (already built) floating on the page.
 - *Motion:* on load — headline split‑text mask reveal (word stagger), subhead

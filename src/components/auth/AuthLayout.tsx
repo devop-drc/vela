@@ -63,7 +63,7 @@ export default function AuthLayout({ title, subtitle, children, points, lang }: 
               story hugging the left of a huge gradient field. */}
           <div className="mx-auto w-full max-w-xl 2xl:max-w-2xl">
           <h2 className="font-display-brand max-w-lg text-3xl font-semibold leading-tight xl:text-[2.6rem] xl:leading-[1.15] 2xl:max-w-2xl 2xl:text-5xl">
-            {lang === "sq" ? "Ktheje Instagramin tënd në një dyqan të vërtetë." : "Turn your Instagram into a real store."}
+            {lang === "sq" ? "Kthe Instagramin në dyqan online." : "Turn your Instagram into an online store."}
           </h2>
           <ul ref={pointsRef} className="mt-7 space-y-3">
             {points.map((p) => (
@@ -79,7 +79,7 @@ export default function AuthLayout({ title, subtitle, children, points, lang }: 
             <div className="ls-float -rotate-2 rounded-2xl bg-white p-3.5 text-zinc-900 shadow-2xl">
               <div className="flex items-center gap-2 border-b border-zinc-200 pb-2">
                 <span className={cn("h-5 w-5 rounded-full", BRAND)} />
-                <span className="text-xs font-semibold">Butiku i Elirës</span>
+                <span className="text-xs font-semibold">Shop Name</span>
                 <Instagram className="ml-auto h-3.5 w-3.5 text-zinc-400" />
               </div>
               <div className="mt-2.5 w-fit rounded-2xl rounded-bl-sm bg-zinc-100 px-3 py-1.5 text-xs text-zinc-700">

@@ -13,7 +13,7 @@ import {
   Instagram, Palette, Store, Check, RotateCcw,
   LayoutGrid, Type as TypeIcon, Sparkles, Component, ListOrdered, LayoutTemplate, PanelTop,
   Plus, Loader2, CloudOff, Undo2, Redo2, Dices, BookmarkPlus, Trash2, Search as SearchIcon,
-  ChevronDown, PanelBottom, Image as ImageIcon, Sun, Moon, SwatchBook,
+  ChevronDown, PanelBottom, Image as ImageIcon, Sun, Moon, SwatchBook, SlidersHorizontal,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -32,6 +32,9 @@ import { hslToHex } from '@/utils/colors';
 import { idealForeground, idealMutedForeground, SURFACE_PAIRS, wcagGrade, contrastRatio } from '@/storefront/lib/contrast';
 import { DEFAULT_DARK_TOKENS } from '@/storefront/config/defaults';
 import { Row, SelectRow, SwitchRow, SliderRow, SegmentRow, ColorRow } from './controls';
+import { FilterVisibilityModal } from '@/components/filters/FilterVisibilityModal';
+import { isFilterVisible, CORE_FILTER_KEYS, deriveAttributeKeys } from '@/components/filters/filterVisibility';
+import { useProductData } from '@/hooks/useProductData';
 import { OptionGrid } from './OptionGrid';
 import { SectionList } from './SectionList';
 import { DockedPreview, ScaledFrame } from './DockedPreview';
@@ -170,6 +173,7 @@ const SETTINGS_INDEX: { label: string; group: GroupId; keywords?: string }[] = [
   { label: 'Homepage sections (reorder / variants)', group: 'homepage', keywords: 'sections blocks reorder drag add hero slider' },
   { label: 'Product page sections', group: 'productPage', keywords: 'product detail reviews related specifications gallery' },
   { label: 'Products page filters & layout', group: 'shopPage', keywords: 'filters sidebar drawer topbar list grid' },
+  { label: 'Filter visibility (price, availability, reviews…)', group: 'shopPage', keywords: 'filter visibility price availability rating reviews tags options specifications hide show' },
   { label: 'My templates (saved designs)', group: 'themes', keywords: 'save template custom design reuse' },
 ];
 
@@ -208,6 +212,21 @@ export const StorefrontStudio = () => {
   const [pendingTemplate, setPendingTemplate] = useState<{ config: any; id: string | null } | null>(null);
   const [templateName, setTemplateName] = useState('');
   const [saveOpen, setSaveOpen] = useState(false);
+  // Storefront filter visibility — which filter groups the /shop products page
+  // offers customers. Stored in the config (pages.products.filterVisibility);
+  // the key list is derived from the merchant's real catalog.
+  const [filterVisOpen, setFilterVisOpen] = useState(false);
+  const { allProducts, allCategories, allTags, allDetailsAttributes } = useProductData();
+  const storefrontFilterVis = config?.pages.products.filterVisibility ?? {};
+  const storefrontFilterKeys = useMemo(() => {
+    const { options, specs } = deriveAttributeKeys(allDetailsAttributes, allProducts);
+    const core = CORE_FILTER_KEYS.filter((k) => {
+      if (k === 'categories') return allCategories.length > 0;
+      if (k === 'tags') return allTags.length > 0;
+      return true;
+    });
+    return [...core, ...options, ...specs];
+  }, [allCategories, allTags, allDetailsAttributes, allProducts]);
   // Controlled accordion + settings search (suggestions open the right group).
   const [openGroups, setOpenGroups] = useState<string[]>(['general']);
   const [settingQuery, setSettingQuery] = useState('');
@@ -399,14 +418,28 @@ export const StorefrontStudio = () => {
         );
       }
 
-      case 'shopPage':
+      case 'shopPage': {
+        const visibleCount = storefrontFilterKeys.filter((k) => isFilterVisible(storefrontFilterVis, k)).length;
         return (
           <div>
             {grid('Filters', 'filters', config.pages.products.filters, ['sidebar', 'drawer', 'topbar'], (v) => update('pages.products.filters', v))}
+            <Sub>Filter visibility</Sub>
+            <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Available filters</p>
+                <p className="text-xs text-muted-foreground">
+                  {visibleCount} of {storefrontFilterKeys.length} filter groups shown to customers — price, availability, reviews, options, specifications…
+                </p>
+              </div>
+              <Button variant="outline" size="sm" className="shrink-0" onClick={() => setFilterVisOpen(true)}>
+                <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" /> Manage
+              </Button>
+            </div>
             {grid('Layout', 'productsLayout', config.pages.products.layout, ['grid', 'list'], (v) => update('pages.products.layout', v), 2)}
             {grid('Grid columns', 'gridColumns', String(config.layout.productGrid.columns), [{ value: '2', label: '2' }, { value: '3', label: '3' }, { value: '4', label: '4' }, { value: '5', label: '5' }], (v) => update('layout.productGrid.columns', Number(v)), 4)}
           </div>
         );
+      }
 
       case 'productPage': {
         const addableDetailBlocks = Object.entries(BLOCK_REGISTRY).filter(([, def]) => def.scope === 'productDetail' || def.scope === 'both');
@@ -911,6 +944,23 @@ export const StorefrontStudio = () => {
       </div>
 
       {/* Save-as-template dialog (toolbar bookmark button). */}
+      <FilterVisibilityModal
+        open={filterVisOpen}
+        onOpenChange={setFilterVisOpen}
+        description="Choose which filters customers can use on your storefront's products page. Changes save with your design."
+        allCategories={allCategories}
+        allTags={allTags}
+        allDetailsAttributes={allDetailsAttributes}
+        allProducts={allProducts}
+        visibilityMap={storefrontFilterVis}
+        onToggle={(key, visible) => update('pages.products.filterVisibility', { ...storefrontFilterVis, [key]: visible })}
+        onSetMany={(keys, visible) => {
+          const next = { ...storefrontFilterVis };
+          keys.forEach((k) => { next[k] = visible; });
+          update('pages.products.filterVisibility', next);
+        }}
+      />
+
       <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>

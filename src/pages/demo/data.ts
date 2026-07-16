@@ -253,8 +253,8 @@ export const demoChartData = [
 ];
 
 export const demoProfile = {
-  shop_name: "Butiku i Elirës",
-  username: "butikuielires",
+  shop_name: "Shop Name",
+  username: "shopname",
   logo_url: "/demo/p4.jpg",
   followers: 12400,
   posts: 450,

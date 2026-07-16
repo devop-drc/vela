@@ -102,6 +102,25 @@ serve(async (req) => {
     const ownerUserId = (shopData as any).businesses?.user_id;
     const shopCurrency = shopData.currency || 'ALL';
 
+    // Plan gate: card payments are a Pro/Business entitlement — a Starter
+    // merchant only accepts cash on delivery. Enforced server-side so a
+    // hand-crafted request can't route a card payment either.
+    if (paymentMethod !== 'cash_on_delivery' && ownerUserId) {
+      const { data: subRow } = await supabaseAdmin
+        .from('subscriptions')
+        .select('plan_id, plans(id, features)')
+        .eq('user_id', ownerUserId)
+        .maybeSingle();
+      const feats: string[] = Array.isArray((subRow as any)?.plans?.features) ? (subRow as any).plans.features : [];
+      const planId = (subRow as any)?.plans?.id || (subRow as any)?.plan_id || 'pro';
+      const cardAllowed = planId === 'business' || feats.includes('card_and_cod') || feats.includes('card_payments');
+      if (!cardAllowed) {
+        return new Response(JSON.stringify({ error: 'This shop accepts cash on delivery only.' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // 2. Exchange rates (ALL-based) — fetched once, used for shipping + flat discounts.
     let rates: Record<string, number> = {};
     try {

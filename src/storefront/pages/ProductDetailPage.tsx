@@ -20,6 +20,8 @@ import { DEFAULT_PRODUCT_DETAIL_SECTIONS } from '../config/defaults';
 import { flyToCart } from '../lib/flyToCart';
 import { SectionInstance } from '../config/types';
 import { activePromotionsFor, computePrice } from '../lib/pricing';
+import { optionEntries, detailEntries, filterKeyTitle } from '@/components/filters/filterVisibility';
+import { useVariantOptionsFor, mergeOptionEntries } from '@/hooks/useVariantOptions';
 
 const renderBlock = (section: SectionInstance) => {
   const def = getBlockDef(section.type);
@@ -37,6 +39,8 @@ export const ProductDetailPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [deepLinkResolved, setDeepLinkResolved] = useState(false);
+  // Real purchase options live in product_variants (batched, session-cached).
+  const variantInfo = useVariantOptionsFor(productId);
 
   useEffect(() => { window.scrollTo(0, 0); setQuantity(1); setSelected({}); setDeepLinkResolved(false); }, [productId]);
 
@@ -97,10 +101,14 @@ export const ProductDetailPage = () => {
   const { original, discounted, hasDiscount } = computePrice(base, promos);
   const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && (product.inventory ?? 0) <= 0);
 
-  const details = Object.entries(product.details || {}).filter(([k, v]) => k !== 'type' && v && (!Array.isArray(v) || v.length > 0));
-  const optionKeys = ['color', 'size', 'material'];
-  const options = details.filter(([k]) => optionKeys.includes(k)) as [string, string[]][];
-  const specs = details.filter(([k]) => !optionKeys.includes(k));
+  // Shape-aware details parsing (scalar, array, variant-object and spec-list
+  // shapes all normalize to [name, string[]]), merged with the product's real
+  // variant combinations from product_variants.
+  const options = mergeOptionEntries(optionEntries(product.details), variantInfo.options);
+  const optionNames = new Set(options.map(([k]) => k));
+  const specs = detailEntries(product.details)
+    .filter(([k, vals]) => vals.length > 0 && !optionNames.has(k))
+    .map(([k, vals]) => [filterKeyTitle(k), vals] as [string, string[]]);
 
   const addToCartHandler = (sourceEl?: HTMLElement) => {
     if (isOutOfStock) { toast.error('This product is currently out of stock.'); return; }

@@ -32,6 +32,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import Marquee from "react-fast-marquee";
 import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "react-i18next";
+import { PlanFeatureGate } from "@/components/billing/PlanFeatureGate";
 
 interface Promotion {
   id: string;
@@ -726,4 +727,20 @@ const Promotions = () => {
   );
 };
 
-export default Promotions;
+// Promotions & offers are a Pro/Business entitlement — Starter sees an upsell.
+const GatedPromotions = () => {
+  const { t } = useTranslation();
+  return (
+    <PlanFeatureGate
+      minTier="pro"
+      planName="Pro"
+      title={t('planGate.promotions.title')}
+      body={t('planGate.promotions.body')}
+      bullets={[t('planGate.promotions.f1'), t('planGate.promotions.f2'), t('planGate.promotions.f3'), t('planGate.promotions.f4')]}
+    >
+      <Promotions />
+    </PlanFeatureGate>
+  );
+};
+
+export default GatedPromotions;

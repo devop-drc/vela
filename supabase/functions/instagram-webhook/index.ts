@@ -54,6 +54,34 @@ serve(async (req) => {
 
         if (!integration) continue;
 
+        // New post published → kick off a quick sync automatically so the
+        // product appears without the merchant doing anything. Debounced: skip
+        // when a sync is already running for this user.
+        const changes: any[] = entry.changes || [];
+        const hasNewMedia = changes.some((c: any) =>
+          c?.field === 'media' || c?.field === 'feed' || c?.value?.media_id || c?.value?.id
+        );
+        if (hasNewMedia) {
+          try {
+            const { data: running } = await supabase
+              .from('sync_jobs')
+              .select('id')
+              .eq('user_id', integration.user_id)
+              .in('status', ['starting', 'in_progress'])
+              .limit(1);
+            if (!running?.length) {
+              // Service-role invoke → background-sync's internal auth path.
+              const { error: syncErr } = await supabase.functions.invoke('background-sync', {
+                body: { syncType: 'quick', user_id: integration.user_id },
+              });
+              if (syncErr) console.error('Webhook auto-sync failed to start:', syncErr.message);
+              else console.log(`Webhook auto-sync started for user ${integration.user_id}`);
+            }
+          } catch (e) {
+            console.error('Webhook auto-sync error:', (e as Error).message);
+          }
+        }
+
         const accessToken = integration.access_token as string;
 
         // Fetch latest profile details from Graph API

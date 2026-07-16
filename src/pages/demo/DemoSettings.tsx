@@ -55,10 +55,10 @@ const DemoSettings = () => {
               <Avatar className="h-20 w-20 ring-2 ring-border"><AvatarImage src={demoProfile.logo_url} /><AvatarFallback className="text-2xl font-semibold">EK</AvatarFallback></Avatar>
               <div className="text-center sm:text-left">
                 <h3 className="text-xl font-semibold">Elira Kola</h3>
-                <p className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground sm:justify-start"><Mail className="h-3.5 w-3.5" /> elira@butikuielires.al</p>
+                <p className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground sm:justify-start"><Mail className="h-3.5 w-3.5" /> elira@shopname.al</p>
                 <p className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground sm:justify-start"><Phone className="h-3.5 w-3.5" /> +355 69 000 0000</p>
                 <div className="pt-2">
-                  <Badge variant="secondary" className="gap-1.5 border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-800 dark:bg-emerald-950"><CheckCircle2 className="h-3.5 w-3.5" /> Connected · @butikuielires</Badge>
+                  <Badge variant="secondary" className="gap-1.5 border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-800 dark:bg-emerald-950"><CheckCircle2 className="h-3.5 w-3.5" /> Connected · @shopname</Badge>
                 </div>
               </div>
             </div>
@@ -119,12 +119,12 @@ const DemoSettings = () => {
               <CardHeader><CardTitle className="text-base">Shop details</CardTitle><CardDescription>How your storefront presents your brand.</CardDescription></CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
-                  <div><label className="mb-1.5 block text-sm font-medium">Shop name</label><Input defaultValue="Butiku i Elirës" /></div>
+                  <div><label className="mb-1.5 block text-sm font-medium">Shop name</label><Input defaultValue="Shop Name" /></div>
                   <div><label className="mb-1.5 block text-sm font-medium">Headline</label><Input defaultValue="Koleksioni i verës ☀️ — deri në -30%" /></div>
                 </div>
                 <div><label className="mb-1.5 block text-sm font-medium">About</label><Textarea rows={4} defaultValue="Veshje & aksesorë të përzgjedhur me dashuri, direkt nga Instagrami ynë." /></div>
                 <div className="grid gap-6 md:grid-cols-2">
-                  <div><label className="mb-1.5 block text-sm font-medium">Contact email</label><Input type="email" defaultValue="demo@butikuielires.al" /></div>
+                  <div><label className="mb-1.5 block text-sm font-medium">Contact email</label><Input type="email" defaultValue="demo@shopname.al" /></div>
                   <div><label className="mb-1.5 block text-sm font-medium">Currency</label>
                     <Select defaultValue="ALL"><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ALL">ALL — Albanian Lek</SelectItem><SelectItem value="EUR">EUR — Euro</SelectItem><SelectItem value="USD">USD — Dollar</SelectItem></SelectContent></Select>
                   </div>

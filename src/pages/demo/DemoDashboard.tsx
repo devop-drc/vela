@@ -39,7 +39,7 @@ const DemoDashboard = () => (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div>
         <h2 className="text-xl font-bold">Welcome back, Elira 👋</h2>
-        <p className="text-sm text-muted-foreground">Here's how Butiku i Elirës is doing today.</p>
+        <p className="text-sm text-muted-foreground">Here's how Shop Name is doing today.</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {QUICK.map((q) => (

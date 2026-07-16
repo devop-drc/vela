@@ -5,7 +5,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { X, Filter, Tag, DollarSign, Info, XCircle, ListFilter } from "lucide-react";
+import { X, Filter, Tag, DollarSign, Info, XCircle, ListFilter, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
@@ -33,8 +33,10 @@ interface ProductFilterDrawerProps {
   handlePriceRangeChange: (range: [number, number]) => void;
   statusFilter: string[];
   handleToggleStatusFilter: (status: string) => void;
+  ratingFilter: number;
+  handleSetRatingFilter: (min: number) => void;
   // Optional: render order and visibility for sections (from admin Filter Visibility)
-  drawerKeys?: string[]; // e.g., ['categories','priceRange','tags','Brand','Color']
+  drawerKeys?: string[]; // e.g., ['availability','categories','priceRange','rating','tags','Brand','Color']
 }
 
 export const ProductFilterDrawer = ({
@@ -52,6 +54,8 @@ export const ProductFilterDrawer = ({
   handlePriceRangeChange,
   statusFilter,
   handleToggleStatusFilter,
+  ratingFilter,
+  handleSetRatingFilter,
   drawerKeys,
 }: ProductFilterDrawerProps) => {
   const { shopDetails, convertCurrency } = useShop();
@@ -64,8 +68,11 @@ export const ProductFilterDrawer = ({
       if (filterKey === 'status') {
         return statusFilter.length > 0;
       }
+      if (filterKey === 'rating') {
+        return ratingFilter > 0;
+      }
       return Array.isArray(filters[filterKey as keyof FilterState]) && (filters[filterKey as keyof FilterState] as string[]).length > 0;
-    }, [filters, filterKey, maxPrice, statusFilter]);
+    }, [filters, filterKey, maxPrice, statusFilter, ratingFilter]);
 
     const handleClear = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -120,40 +127,65 @@ export const ProductFilterDrawer = ({
 
         <ScrollArea className="flex-1 px-4 py-6">
           <Accordion type="multiple" defaultValue={["Status", "Categories", "Price Range"]} className="w-full">
-            <FilterSection title="Status" icon={ListFilter} filterKey="status">
-              <div className="flex flex-wrap gap-2">
-                {['Active', 'Draft', 'Out of Stock'].map(status => (
-                  <Button
-                    key={status}
-                    variant={statusFilter.includes(status) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleToggleStatusFilter(status)}
-                    className={cn("text-sm", statusFilter.includes(status) && "ring-2 ring-primary ring-offset-2")}
-                  >
-                    {status}
-                  </Button>
-                ))}
-              </div>
-            </FilterSection>
-
             {(() => {
               const normalize = (s: string) => s.toLowerCase().replace(/\s|_/g, '');
               const attrByName = new Map(allDetailsAttributes.map(a => [a.name, a] as const));
               const defaultKeys: string[] = [
+                'availability',
                 ...(allCategories.length > 0 ? ['categories'] : []),
                 'priceRange',
+                'rating',
                 ...(allTags.length > 0 ? ['tags'] : []),
                 ...allDetailsAttributes.filter(a => a.values.length > 0).map(a => a.name),
               ];
               const keys = (drawerKeys && drawerKeys.length > 0 ? drawerKeys : defaultKeys).filter((k) => {
+                if (k === 'availability' || k === 'rating' || k === 'priceRange') return true;
                 if (k === 'categories') return allCategories.length > 0;
                 if (k === 'tags') return allTags.length > 0;
-                if (k === 'priceRange') return true;
                 const a = attrByName.get(k) || allDetailsAttributes.find(x => normalize(x.name) === normalize(k));
                 return !!a && a.values.length > 0;
               });
 
               return keys.map((k) => {
+                if (k === 'availability') {
+                  return (
+                    <FilterSection key="availability" title="Status" icon={ListFilter} filterKey="status">
+                      <div className="flex flex-wrap gap-2">
+                        {['Active', 'Draft', 'Out of Stock'].map(status => (
+                          <Button
+                            key={status}
+                            variant={statusFilter.includes(status) ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleToggleStatusFilter(status)}
+                            className={cn("text-sm", statusFilter.includes(status) && "ring-2 ring-primary ring-offset-2")}
+                          >
+                            {status}
+                          </Button>
+                        ))}
+                      </div>
+                    </FilterSection>
+                  );
+                }
+                if (k === 'rating') {
+                  return (
+                    <FilterSection key="rating" title="Reviews" icon={Star} filterKey="rating">
+                      <div className="flex flex-wrap gap-2">
+                        {[4, 3, 2, 1].map(min => (
+                          <Button
+                            key={min}
+                            variant={ratingFilter === min ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleSetRatingFilter(min)}
+                            className={cn("text-sm gap-1", ratingFilter === min && "ring-2 ring-primary ring-offset-2")}
+                          >
+                            <Star className={cn("h-3.5 w-3.5", ratingFilter === min ? "fill-current" : "fill-amber-400 text-amber-400")} />
+                            {min}+ stars
+                          </Button>
+                        ))}
+                      </div>
+                    </FilterSection>
+                  );
+                }
                 if (k === 'categories') {
                   return (
                     allCategories.length > 0 ? (

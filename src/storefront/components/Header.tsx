@@ -53,12 +53,15 @@ export const Header = ({ onOpenCart, onOpenSearch }: Props) => {
   // Transparent overlay only applies on the homepage, before any scroll.
   const transparent = h.transparentOnHero && pathname === base && !scrolled;
 
+  // On mobile only the profile avatar shows (logo, or the shop's initial) —
+  // the full shop name would crowd the bar; it appears from `sm` up.
   const Brand = ({ center }: { center?: boolean }) => (
-    <Link to={base} className={cn('flex min-w-0 items-center gap-2.5', center && 'flex-col')}>
-      {shopDetails.logo_url ? (
-        <Avatar className="h-9 w-9 shrink-0"><AvatarImage src={shopDetails.logo_url} /><AvatarFallback>{shopDetails.shop_name?.[0]}</AvatarFallback></Avatar>
-      ) : null}
-      <span className={cn('sf-heading font-bold text-lg leading-none', !center && 'truncate')}>{shopDetails.shop_name}</span>
+    <Link to={base} aria-label={shopDetails.shop_name} className={cn('flex min-w-0 items-center gap-2.5', center && 'flex-col')}>
+      <Avatar className="h-9 w-9 shrink-0">
+        {shopDetails.logo_url && <AvatarImage src={shopDetails.logo_url} />}
+        <AvatarFallback className="bg-primary/10 font-semibold text-primary">{shopDetails.shop_name?.[0]}</AvatarFallback>
+      </Avatar>
+      <span className={cn('sf-heading hidden font-bold text-lg leading-none sm:inline', !center && 'truncate')}>{shopDetails.shop_name}</span>
     </Link>
   );
 

@@ -72,7 +72,7 @@ const CAT_TINTS = [
 ];
 
 // Annual billing: 2 months free on Pro & Business only.
-const ANNUAL_FREE_MONTHS: Record<string, number> = { starter: 0, pro: 2, business: 2 };
+const ANNUAL_FREE_MONTHS: Record<string, number> = { starter: 0, pro: 1, business: 2 };
 
 const THEME_KEY = "landing-theme";
 const LANG_CHOSEN_KEY = "landing-lang-chosen";
@@ -452,7 +452,7 @@ const BentoArt = ({ index, screen }: { index: number; screen: Screen }) => {
 };
 
 /* ─────────────────────────────── Page ─────────────────────────────── */
-const PLAN_PRICES: Record<string, number> = { starter: 0, pro: 1990, business: 3990 };
+const PLAN_PRICES: Record<string, number> = { starter: 500, pro: 1990, business: 3990 };
 const fmt = (n: number) => n.toLocaleString("en-US");
 
 export default function Landing() {
@@ -546,8 +546,8 @@ export default function Landing() {
 
   useEffect(() => {
     document.title = lang === "sq"
-      ? "Vela — Ktheje Instagramin në dyqan"
-      : "Vela — Turn your Instagram into a store";
+      ? "Vela — Kthe Instagramin në dyqan online"
+      : "Vela — Turn your Instagram into an online store";
     let cancelled = false;
     supabase.auth.getSession().then(({ data }) => {
       if (!cancelled && data.session) navigate("/dashboard", { replace: true });
@@ -825,17 +825,43 @@ export default function Landing() {
             <Eyebrow>{copy.pricing.badge}</Eyebrow>
             <h2 className="text-3xl tracking-tight sm:text-[2.6rem] sm:leading-tight">{copy.pricing.title}</h2>
             <p className="mt-3 text-lg text-muted-foreground">{copy.pricing.sub}</p>
-            <div className="mt-6 inline-flex items-center gap-3 rounded-full border border-border bg-card px-4 py-2 shadow-sm">
-              <span className={cn("text-sm", !annual && "font-medium")}>{copy.pricing.monthly}</span>
-              <Switch checked={annual} onCheckedChange={setAnnual} />
-              <span className={cn("text-sm", annual && "font-medium")}>{copy.pricing.annual}</span>
+            {/* Segmented billing-cycle toggle: the active side is a filled pill,
+                so there's never ambiguity about which cycle is selected. */}
+            <div className="mt-6 inline-flex items-center rounded-full border border-border bg-card p-1 shadow-sm" role="group" aria-label={`${copy.pricing.monthly} / ${copy.pricing.annual}`}>
+              <button
+                type="button"
+                onClick={() => setAnnual(false)}
+                aria-pressed={!annual}
+                className={cn(
+                  "rounded-full px-4 py-1.5 text-sm font-medium transition-all",
+                  !annual ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {copy.pricing.monthly}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAnnual(true)}
+                aria-pressed={annual}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-all",
+                  annual ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {copy.pricing.annual}
+                <span className={cn(
+                  "rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none",
+                  annual ? "bg-primary-foreground/20 text-primary-foreground" : "bg-fuchsia-500/10 text-fuchsia-600"
+                )}>
+                  {copy.pricing.save}
+                </span>
+              </button>
             </div>
           </div>
 
           <div className="mt-8 grid items-start gap-6 sm:mt-12 lg:grid-cols-3">
             {copy.pricing.plans.map((p) => {
               const featured = p.id === "pro";
-              const isFree = (PLAN_PRICES[p.id] ?? 0) === 0;
               return (
                 <SpotlightCard
                   key={p.id}
@@ -851,7 +877,7 @@ export default function Landing() {
                   )}
                   <h3 className="text-lg font-semibold">{p.name}</h3>
                   <p className="mt-1 text-sm text-muted-foreground">{p.blurb}</p>
-                  {!isFree && (ANNUAL_FREE_MONTHS[p.id] ?? 0) > 0 && (
+                  {(ANNUAL_FREE_MONTHS[p.id] ?? 0) > 0 && (
                     <div className={cn(
                       "grid transition-all duration-500 ease-out",
                       annual ? "mt-3 grid-rows-[1fr] opacity-100" : "mt-0 grid-rows-[0fr] opacity-0"
@@ -861,35 +887,22 @@ export default function Landing() {
                           "plan-bonus inline-flex w-fit items-center gap-1.5 rounded-full bg-gradient-to-r from-fuchsia-500/10 to-amber-400/10 px-3 py-1 text-xs font-medium text-fuchsia-600 transition-transform duration-500",
                           annual ? "scale-100" : "scale-75"
                         )}>
-                          <Gift className="h-3.5 w-3.5" /> {copy.pricing.save}
+                          <Gift className="h-3.5 w-3.5" /> {copy.pricing.saveMonths(ANNUAL_FREE_MONTHS[p.id] ?? 0)}
                         </span>
                       </div>
                     </div>
                   )}
-                  {isFree ? (
-                    <>
-                      <div className="mt-5 flex items-end gap-1.5">
-                        <span className="text-4xl font-bold">{copy.pricing.freeLabel}</span>
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">{copy.pricing.freeForever}</p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="mt-5 flex items-end gap-1.5">
-                        <span className={cn("text-4xl font-bold", featured && "brand-text")}>{fmt(priceFor(p.id))}</span>
-                        <span className="mb-1 text-sm text-muted-foreground">{copy.pricing.perMonth}</span>
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {annual ? copy.pricing.billedYearly(fmt(yearlyTotal(p.id))) : copy.pricing.billedMonthly}
-                      </p>
-                    </>
-                  )}
+                  <div className="mt-5 flex items-end gap-1.5">
+                    <span className={cn("text-4xl font-bold", featured && "brand-text")}>{fmt(priceFor(p.id))}</span>
+                    <span className="mb-1 text-sm text-muted-foreground">{copy.pricing.perMonth}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {annual ? copy.pricing.billedYearly(fmt(yearlyTotal(p.id))) : copy.pricing.billedMonthly}
+                  </p>
                   <Button asChild className={cn("mt-6 w-full rounded-full", featured && cn("text-white hover:opacity-90", BRAND))} variant={featured ? "default" : "outline"}>
-                    <Link to="/register">{isFree ? copy.pricing.freeCta : copy.pricing.trialCta}</Link>
+                    <Link to="/register">{copy.pricing.trialCta}</Link>
                   </Button>
-                  {!isFree && (
-                    <p className="mt-2 text-center text-[11px] text-muted-foreground">{copy.pricing.trialNote}</p>
-                  )}
+                  <p className="mt-2 text-center text-[11px] text-muted-foreground">{copy.pricing.trialNote}</p>
                   <ul className="mt-6 space-y-3">
                     {p.features.map((f) => (
                       <li key={f} className="flex gap-2 text-sm"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" /> {f}</li>

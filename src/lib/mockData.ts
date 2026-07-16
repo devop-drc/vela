@@ -1,7 +1,7 @@
 import { Banknote, Package, Users, CreditCard, CheckCircle, Sparkles, ShoppingBag, Truck } from "lucide-react";
 
 // Demo data for the /demo dashboard preview. Albanian market · ALL currency ·
-// Vela brand — mirrors the real app (storefront demo is "Butiku i Elirës").
+// Vela brand — mirrors the real app (storefront demo is "Shop Name").
 const img = (id: string) => `https://images.unsplash.com/photo-${id}?w=400`;
 
 export const mockStatCards = [
@@ -21,7 +21,7 @@ export const mockChartData = [
 ];
 
 export const mockProfileData = {
-  shop_name: 'Butiku i Elirës',
+  shop_name: 'Shop Name',
   logo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
   followers_count: 12400,
   media_count: 450,

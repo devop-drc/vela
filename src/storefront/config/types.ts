@@ -154,7 +154,14 @@ export interface SectionInstance {
 
 export interface PagesConfig {
   home: SectionInstance[];
-  products: { layout: 'grid' | 'list'; filters: 'sidebar' | 'drawer' | 'topbar' };
+  products: {
+    layout: 'grid' | 'list';
+    filters: 'sidebar' | 'drawer' | 'topbar';
+    /** Which filter groups the storefront shop page offers. Sparse map keyed by
+        filter-group key ('categories', 'priceRange', 'availability', 'rating',
+        'tags', or an attribute name); a missing key means visible. */
+    filterVisibility?: Record<string, boolean>;
+  };
   productDetail: SectionInstance[];
   orders: { style: 'cards' | 'table' };
 }

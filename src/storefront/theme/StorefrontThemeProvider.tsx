@@ -95,7 +95,11 @@ export const StorefrontThemeProvider = ({ config, children, className }: Props) 
 
     let killed = false;
     let ctx: { revert: () => void } | null = null;
-    (async () => {
+    // Debounced: in the Studio this effect re-runs on every keystroke; without
+    // the delay we'd revert + rebuild every ScrollTrigger dozens of times a
+    // second, mid-scroll, which is exactly the churn that crashes GSAP's
+    // uninitialized-trigger walk (ScrollTrigger.js refresh recursion).
+    const timer = window.setTimeout(async () => {
       const [{ gsap }, { ScrollTrigger }] = await Promise.all([import('gsap'), import('gsap/ScrollTrigger')]);
       if (killed || !rootRef.current) return;
       gsap.registerPlugin(ScrollTrigger);
@@ -143,10 +147,18 @@ export const StorefrontThemeProvider = ({ config, children, className }: Props) 
           });
         }
       }, root);
-    })();
+
+      // Force-init every trigger now (full refresh iterates a copy of the
+      // trigger list, so `once` self-kills are safe). Timeline-based triggers
+      // otherwise stay uninitialized for a tick, and a scroll during that
+      // window makes GSAP walk the raw trigger array while `once` triggers
+      // remove themselves from it → "curTrigger is undefined" crash.
+      ScrollTrigger.refresh();
+    }, 120);
 
     return () => {
       killed = true;
+      window.clearTimeout(timer);
       ctx?.revert();
       root.classList.remove('sf-gsap');
     };

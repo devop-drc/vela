@@ -25,6 +25,7 @@ import { showError, showSuccess } from "@/utils/toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { motion} from "framer-motion";
 import { Switch } from "@/components/ui/switch"; // Import Switch
+import { useStorefront } from "@/contexts/StorefrontContext";
 
 const checkoutSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -112,6 +113,9 @@ export const InstagramCheckoutForm = ({
   selectedAddressId,
   setSelectedAddressId,
 }: InstagramCheckoutFormProps) => {
+  // Card payments are a Pro/Business plan entitlement — Starter shops only take
+  // cash on delivery, so the card option is hidden for them (server enforces too).
+  const { capabilities } = useStorefront();
   const { register, handleSubmit, control, reset, watch, setValue, formState: { errors, isValid, isDirty } } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
@@ -449,15 +453,17 @@ export const InstagramCheckoutForm = ({
                               Please have the exact amount of&nbsp;<strong>{formatCurrency(total, shopDetails?.currency)}</strong>&nbsp;ready for the courier.
                             </motion.div>
                         )}
-                        <Label htmlFor="card" className="flex items-center gap-3 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-[hsl(var(--primary))] flex-1">
-                          <RadioGroupItem value="card" id="card" />
-                          <div>
-                            <p className="font-medium flex items-center gap-2 text-[hsl(var(--foreground))]">
-                              <CreditCard className="h-5 w-5" /> Credit/Debit Card
-                            </p>
-                            <p className="text-sm text-[hsl(var(--muted-foreground))]">Secure payment via RaiAccept.</p>
-                          </div>
-                        </Label>
+                        {capabilities.card_payments && (
+                          <Label htmlFor="card" className="flex items-center gap-3 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-[hsl(var(--primary))] flex-1">
+                            <RadioGroupItem value="card" id="card" />
+                            <div>
+                              <p className="font-medium flex items-center gap-2 text-[hsl(var(--foreground))]">
+                                <CreditCard className="h-5 w-5" /> Credit/Debit Card
+                              </p>
+                              <p className="text-sm text-[hsl(var(--muted-foreground))]">Secure payment via RaiAccept.</p>
+                            </div>
+                          </Label>
+                        )}
                       </RadioGroup>
                     )}
                   />

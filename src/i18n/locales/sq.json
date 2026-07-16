@@ -213,7 +213,8 @@
     "delete_warning": "Ky veprim nuk mund të zhbëhet.",
     "yes_delete": "Po, fshi",
     "total": "Totali",
-    "filter_management": "Filtrat e Dyqanit",
+    "filter_management": "Menaxho filtrat",
+    "filter_visibility_hint": "Zgjidh cilët filtra janë të disponueshëm në këtë faqe.",
     "search_placeholder": "Kërko produkte…",
     "card_size": "Madhësia e kartës",
     "no_grouping": "Pa grupim",
@@ -246,7 +247,9 @@
     "tags": "Etiketat",
     "price_range": "Gama e Çmimit",
     "reset_filters": "Rivendos Filtrat",
-    "status": "Statusi"
+    "status": "Statusi",
+    "reviews": "Vlerësimet",
+    "specifications": "Specifikimet"
   },
   "orders": {
     "orders": "porosi",
@@ -663,7 +666,7 @@
     "days_left": "Edhe {{days}} ditë",
     "trial_hint": "Zgjidh një plan më poshtë që dyqani të mos ndalet.",
     "locked_hint": "Llogaria është e kufizuar — zgjidh një plan më poshtë për ta riaktivizuar dyqanin.",
-    "trial_setup_hint": "Fillo provën falas 7-ditore — shto kartën (verifikim 0 ALL, nuk tarifohesh sot).",
+    "trial_setup_hint": "Fillo provën falas 7-ditore — pa kartë.",
     "start_trial": "Fillo provën falas",
     "upgrade": "Përmirëso",
     "downgrade": "Ul planin",
@@ -693,19 +696,24 @@
     "payment_failed": "Pagesa dështoi. Provo përsëri.",
     "start_payment_error": "S'u nis dot pagesa: {{error}}",
     "features": {
-      "instagram_storefront": "Vitrinë Instagram",
+      "instagram_storefront": "Vitrinë Instagram me linkun tënd",
       "cod_orders": "Porosi me para në dorë",
       "basic_analytics": "Analitikë bazë",
       "unlimited_products": "Produkte pa limit",
-      "storefront_studio": "Storefront Studio",
+      "storefront_studio": "Akses i plotë në Storefront Studio",
       "card_payments": "Pagesa online me kartë",
-      "promotions": "Promocione & oferta",
+      "promotions": "Menaxhim promocionesh & ofertash",
       "reviews": "Vlerësime produktesh",
       "full_analytics": "Analitikë e plotë",
       "everything_pro": "Gjithçka e Pro-s",
-      "priority_support": "Suport me përparësi",
+      "priority_support": "Mbështetje me përparësi",
       "advanced_analytics": "Analitikë e avancuar",
-      "higher_ai_limits": "Limite më të larta AI"
+      "higher_ai_limits": "Limite më të larta AI",
+      "products_10": "Deri në 10 produkte",
+      "products_100": "Deri në 100 produkte aktive",
+      "cod_only": "Vetëm para në dorë (COD)",
+      "card_and_cod": "Pagesa me kartë + para në dorë",
+      "trial_7_days": "7 ditë provë falas"
     },
     "payment_types": {
       "initial": "Abonim i ri",
@@ -735,7 +743,7 @@
     "searchFonts": "Kërko fonte…",
     "groups": {
       "storefront": "Dyqani",
-      "template": "Fillo nga një shabllon",
+      "template": "Fillo nga një template",
       "colour": "Tema e ngjyrave",
       "corners": "Qoshet",
       "fonts": "Fontet",
@@ -767,6 +775,14 @@
     "stickyHeader": "Mbaje navbar-in lart gjatë lëvizjes",
     "footer": "Fundi",
     "shopPage": "Faqja e dyqanit",
+    "shopFilters": "Filtrat e dyqanit",
+    "filtersSidebar": "Anash",
+    "filtersDrawer": "Sirtar",
+    "filtersTopbar": "Sipër",
+    "filterVisibility": "Dukshmëria e filtrave",
+    "filterVisibilityCount": "{{visible}} nga {{total}} grupe filtrash u shfaqen klientëve",
+    "filterVisibilityHint": "Zgjidh cilët filtra mund të përdorin klientët në faqen e dyqanit — çmimi, disponueshmëria, vlerësimet, opsionet, specifikimet… Ndryshimet ruhen me dizajnin.",
+    "manage": "Menaxho",
     "grid": "Rrjetë",
     "list": "Listë",
     "perRow": "Produkte për rresht",
@@ -827,8 +843,8 @@
       "finish": "Përfundo",
       "s1Title": "Dizajno dyqanin tënd",
       "s1Blurb": "Le ta konfigurojmë pamjen e dyqanit brenda një minute. Zgjidh çfarë të pëlqen në çdo hap — mund të ndryshosh gjithçka më vonë. Gjithçka përditësohet drejtpërdrejt kur të përfundosh.",
-      "s2Title": "Fillo nga një shabllon",
-      "s2Blurb": "Çdo shabllon është një pamje e gatshme. Zgjidh më të afërtin — vendos ngjyrat, fontet dhe strukturën së bashku. Mund t'i rregullosh të gjitha më pas.",
+      "s2Title": "Fillo nga një template",
+      "s2Blurb": "Çdo template është një pamje e gatshme. Zgjidh më të afërtin — vendos ngjyrat, fontet dhe strukturën së bashku. Mund t'i rregullosh të gjitha më pas.",
       "s3Title": "Ngjyrat & modaliteti",
       "s3Blurb": "Paleta e ngjyrave të markës, dhe nëse dyqani shfaqet i çelët, i errët, ose ndjek pajisjen e vizitorit (Auto).",
       "s4Title": "Qoshet",
@@ -843,6 +859,17 @@
       "s8Blurb": "Sa lëvizje ka dyqani ndërsa vizitorët lëvizin dhe kalojnë mbi elemente — nga aspak te shprehës.",
       "s9Title": "Gati! 🎉",
       "s9Blurb": "Dizajni yt i parë është gati. Eksploro editorin e plotë në çdo kohë për të rregulluar çdo detaj — dhe përdor pamjen e drejtpërdrejtë për të klikuar nëpër dyqan."
+    }
+  },
+  "planGate": {
+    "cta": "Kalo në {{plan}}",
+    "promotions": {
+      "title": "Promocionet janë veçori e planit Pro",
+      "body": "Kalo në Pro për të krijuar zbritje, oferta dhe njoftime në dyqan që rrisin shitjet.",
+      "f1": "Zbritje & oferta speciale",
+      "f2": "Shirita njoftimesh në dyqan",
+      "f3": "Fushata të planifikuara & të përsëritura",
+      "f4": "Vlerësime produktesh & analitikë e avancuar"
     }
   }
 }

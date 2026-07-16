@@ -177,22 +177,36 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             if (!product?.id) throw new Error("Please save the product before analyzing so variants can be created.");
             if (!user) throw new Error("User not authenticated.");
 
+            // force_search: the button explicitly promises AI — always run the
+            // live search instead of settling for cached/template data.
             const { data, error } = await supabase.functions.invoke('find-product-specs', {
               body: {
                 product_id: product.id,
-                product_name: product.name || getValues('name'),
-                category: product.category || getValues('category'),
-                type: product.details?.type || getValues('details.type'),
+                product_name: getValues('name') || product.name,
+                category: getValues('category') || product.category,
+                type: getValues('details.type') || product.details?.type,
                 user_id: user.id,
-                caption: product.caption || getValues('caption'),
-                force_search: false
+                caption: getValues('caption') || product.caption,
+                force_search: true
               }
             });
 
             if (error) throw error;
             if (data?.error) throw new Error(data.error);
 
-            if (data?.specifications?.length > 0) {
+            // Fill category/type from the result when the form is still generic —
+            // the backend also auto-creates the category + type definitions.
+            const curCat = (getValues('category') || '').trim().toLowerCase();
+            if (data?.category_name && (!curCat || curCat === 'uncategorized')) {
+              setValue('category', data.category_name, { shouldDirty: true });
+            }
+            const curType = String(getValues('details.type') || '').trim().toLowerCase();
+            if (data?.type_name && (!curType || curType === 'general' || curType === 'generic')) {
+              setValue('details.type', data.type_name, { shouldDirty: true });
+            }
+
+            const foundSpecs = data?.specifications?.length || 0;
+            if (foundSpecs > 0) {
               // Refresh specs from DB
               const { data: refreshed } = await supabase
                 .from('product_specifications')
@@ -200,9 +214,17 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 .eq('product_id', product.id)
                 .order('display_order');
               if (refreshed) setSpecs(refreshed);
-              toast.success(`Found ${data.specifications.length} specs (source: ${data.source})`, { id: toastId });
+            }
+            // Reload the variants manager — the AI may have created options/variants.
+            if (data?.options_created) setRefreshKey((k: number) => k + 1);
+
+            const bits: string[] = [];
+            if (foundSpecs > 0) bits.push(`${foundSpecs} spec${foundSpecs === 1 ? '' : 's'}`);
+            if (data?.options_created) bits.push('options & variants');
+            if (bits.length > 0) {
+              toast.success(`AI found ${bits.join(' + ')} — check the Variants tab.`, { id: toastId });
             } else {
-              toast.success('No additional specifications found', { id: toastId });
+              toast.success('No additional details found for this product.', { id: toastId });
             }
         } catch (err: any) {
             toast.error(err.message || 'Failed to find specs', { id: toastId });

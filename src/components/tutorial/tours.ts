@@ -204,11 +204,11 @@ const TOURS: { match: (path: string) => boolean; tour: PageTour }[] = [
       steps: [
         intro(
           { en: 'Storefront Studio', sq: 'Studio e Dyqanit' },
-          { en: 'This is where you design your public shop — pick a template, then fine-tune colors, fonts, layout and sections. Everything updates in the live preview.', sq: 'Këtu dizajnon dyqanin tënd publik — zgjidh një shabllon, pastaj rregullo ngjyrat, shkronjat, faqosjen dhe seksionet. Gjithçka përditësohet në pamjen paraprake të drejtpërdrejtë.' }
+          { en: 'This is where you design your public shop — pick a template, then fine-tune colors, fonts, layout and sections. Everything updates in the live preview.', sq: 'Këtu dizajnon dyqanin tënd publik — zgjidh një template, pastaj rregullo ngjyrat, shkronjat, faqosjen dhe seksionet. Gjithçka përditësohet në pamjen paraprake të drejtpërdrejtë.' }
         ),
         at('studio-templates',
-          { en: 'Templates', sq: 'Shabllonet' },
-          { en: 'Start from a professionally designed template — each one restyles your whole storefront: colors, fonts, layout, animations. The rail scrolls on its own; drag it to browse, click one to apply. You can then customize every detail.', sq: 'Nis nga një shabllon i dizajnuar profesionalisht — secili ristilon gjithë dyqanin: ngjyrat, shkronjat, faqosjen, animacionet. Shiriti lëviz vetë; tërhiqe për të shfletuar, kliko një për ta zbatuar. Pastaj personalizon çdo detaj.' },
+          { en: 'Templates', sq: 'Template-t' },
+          { en: 'Start from a professionally designed template — each one restyles your whole storefront: colors, fonts, layout, animations. The rail scrolls on its own; drag it to browse, click one to apply. You can then customize every detail.', sq: 'Nis nga një template i dizajnuar profesionalisht — secili ristilon gjithë dyqanin: ngjyrat, shkronjat, faqosjen, animacionet. Shiriti lëviz vetë; tërhiqe për të shfletuar, kliko një për ta zbatuar. Pastaj personalizon çdo detaj.' },
           'left'),
         at('studio-options',
           { en: 'Design tools', sq: 'Veglat e dizajnit' },
@@ -220,7 +220,7 @@ const TOURS: { match: (path: string) => boolean; tour: PageTour }[] = [
           'left'),
         intro(
           { en: 'Make it yours', sq: 'Bëje tëndin' },
-          { en: 'Try a template, then adjust colors and fonts to match your brand. Use "Save design" in the toolbar to keep versions you like, and undo/redo if you change your mind.', sq: 'Provo një shabllon, pastaj përshtat ngjyrat dhe shkronjat me markën tënde. Përdor "Ruaj dizajnin" për versionet që të pëlqejnë, dhe zhbëj/ribëj nëse ndërron mendje.' }
+          { en: 'Try a template, then adjust colors and fonts to match your brand. Use "Save design" in the toolbar to keep versions you like, and undo/redo if you change your mind.', sq: 'Provo një template, pastaj përshtat ngjyrat dhe shkronjat me markën tënde. Përdor "Ruaj dizajnin" për versionet që të pëlqejnë, dhe zhbëj/ribëj nëse ndërron mendje.' }
         ),
       ],
     },

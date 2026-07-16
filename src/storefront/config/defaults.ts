@@ -153,7 +153,7 @@ export const DEFAULT_CONFIG: StorefrontConfig = {
   },
   pages: {
     home: DEFAULT_HOME_SECTIONS.map((s) => ({ ...s })),
-    products: { layout: 'grid', filters: 'sidebar' },
+    products: { layout: 'grid', filters: 'sidebar', filterVisibility: {} },
     productDetail: DEFAULT_PRODUCT_DETAIL_SECTIONS.map((s) => ({ ...s })),
     orders: { style: 'cards' },
   },

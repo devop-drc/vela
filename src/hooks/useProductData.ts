@@ -31,6 +31,8 @@ export interface Product {
   pricing_type: 'one_time' | 'subscription';
   billing_interval: 'month' | 'year' | null;
   product_type: 'physical' | 'digital';
+  /** Reference code (auto-generated "P-XXXXXXXX" by DB trigger). */
+  sku?: string | null;
 }
 
 export interface DetailsAttribute {
@@ -95,7 +97,10 @@ export const useProductData = (opts?: UseProductDataOptions): UseProductDataResu
     const [productsRes, categoriesRes, typesRes] = await Promise.all([
       // Include gallery and media metadata so editors can show all images.
       // `updated_at` (migration 20260703160000) busts the variant-stock cache.
-      supabase.from("products").select("id, name, status, price, currency, inventory, media_url, media_gallery, media_type, thumbnail_url, created_at, updated_at, category, caption, tags, details, pricing_type, billing_interval, product_type").eq('user_id', uid).order('created_at', { ascending: false }),
+      // `*` keeps this tolerant of column additions (e.g. `sku` lands via the
+      // add_reference_codes.sql migration) — an explicit list 500s until the
+      // migration has run.
+      supabase.from("products").select("*").eq('user_id', uid).order('created_at', { ascending: false }),
       supabase.from("categories").select("name").eq('user_id', uid),
       supabase.from("types").select("name, attributes").eq('user_id', uid),
     ]);

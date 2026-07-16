@@ -79,7 +79,7 @@ const Storefront = ({ tpl = 0, children }: { tpl?: number; children: React.React
 const StoreHead = ({ lang }: { lang: Lang }) => (
   <div className="flex items-center gap-2 border-b border-zinc-200 px-3.5 py-2.5">
     <img src="/vela-icon.svg" alt="" className="h-5 w-5 rounded-md" />
-    <span className="sf-heading font-display-brand text-[12px] font-bold text-zinc-900">Butiku i Elirës</span>
+    <span className="sf-heading font-display-brand text-[12px] font-bold text-zinc-900">Shop Name</span>
     <div className="ml-auto flex items-center gap-3 text-zinc-400"><Search className="h-3.5 w-3.5" /><span className="relative"><ShoppingBag className="h-3.5 w-3.5" /></span></div>
   </div>
 );

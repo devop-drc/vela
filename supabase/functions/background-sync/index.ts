@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { crypto } from "https://deno.land/std@0.190.0/crypto/mod.ts";
 import { isCaptionInsufficient, extractProductName, normalizeProductName, heuristicParse } from "../_shared/heuristics.ts";
+import { toTitleCase, upsertCategory, upsertTypeAndMergeAttributes, upsertVariantsFromOptions, ensureCategoryAndType } from "../_shared/catalog.ts";
 
 // Types
 interface InstagramPost {
@@ -73,8 +74,6 @@ const getSupabaseAdmin = () => createClient(
   { auth: { persistSession: false } }
 );
 
-const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
-
 const fileExt = (url: string): string => {
   const clean = url.split('?')[0];
   const parts = clean.split('.');
@@ -92,7 +91,18 @@ const persistPostMedia = async (
   const uploadOne = async (sourceUrl: string, kind: 'media' | 'thumbnail'): Promise<string | null> => {
     if (!sourceUrl) return null;
     try {
-      const resp = await fetch(sourceUrl);
+      // Hard timeout: a stalled Instagram CDN download (especially large video
+      // files) used to hang the whole sync for minutes with zero progress.
+      // On timeout we keep the CDN URL — refresh-product-media can re-persist later.
+      const isVideoFile = post.media_type === 'VIDEO' && kind === 'media';
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), isVideoFile ? 20000 : 12000);
+      let resp: Response;
+      try {
+        resp = await fetch(sourceUrl, { signal: controller.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
       if (!resp.ok) {
         console.warn(`[persistPostMedia] fetch ${kind} failed ${resp.status} for post ${post.id}`);
         return null;
@@ -164,185 +174,6 @@ const convertCurrency = (amount: number, fromCurrency: string, toCurrency: strin
 };
 
 
-// Database Functions
-// Variant helpers: create product_options, option_values, and product_variants from AI options
-const combinations = <T,>(arrays: T[][]): T[][] => {
-  if (arrays.length === 0) return [];
-  return arrays.reduce<T[][]>((acc, curr) => {
-    if (acc.length === 0) return curr.map(v => [v]);
-    const next: T[][] = [];
-    for (const prev of acc) {
-      for (const v of curr) next.push([...prev, v]);
-    }
-    return next;
-  }, []);
-};
-
-const buildVariantKey = (orderedOptionNames: string[], valueLabels: string[]) => {
-  const parts = orderedOptionNames.map((name, idx) => `${name}=${valueLabels[idx]}`);
-  return parts.join('|');
-};
-
-// Bulk version: 3 SELECTs + up to 3 bulk INSERTs per product, instead of a
-// SELECT-then-INSERT round trip per option and per value. Uniqueness rules and
-// the generated variant combinations are unchanged.
-const upsertVariantsFromOptions = async (supabase: SupabaseClient, productId: string, aiOptions: Record<string, string[]>) => {
-  const optionEntries = Object.entries(aiOptions || {}).filter(([_, vals]) => Array.isArray(vals) && vals.length > 0);
-  if (optionEntries.length === 0) return;
-
-  const orderedNames = optionEntries.map(([name]) => toTitleCase(name));
-
-  // 1) Read existing options + variants for this product (2 queries, in parallel)
-  const [optionsRes, variantsRes] = await Promise.all([
-    supabase.from('product_options').select('id, name').eq('product_id', productId),
-    supabase.from('product_variants').select('id, combination_key').eq('product_id', productId),
-  ]);
-  if (optionsRes.error) throw optionsRes.error;
-  if (variantsRes.error) throw variantsRes.error;
-  const optionIdByName = new Map<string, string>((optionsRes.data || []).map((o: any) => [o.name, o.id]));
-
-  // 2) Read existing values of the options we're touching (1 query, .in())
-  const relevantOptionIds = Array.from(new Set(orderedNames.map(n => optionIdByName.get(n)).filter(Boolean))) as string[];
-  const existingValueKeys = new Set<string>();
-  if (relevantOptionIds.length > 0) {
-    const { data: existingValues, error: valSelErr } = await supabase
-      .from('option_values')
-      .select('option_id, value')
-      .in('option_id', relevantOptionIds);
-    if (valSelErr) throw valSelErr;
-    for (const v of existingValues || []) existingValueKeys.add(`${v.option_id} ${v.value}`);
-  }
-
-  // 3) ONE bulk insert for missing options (uniqueness: title-cased name per product)
-  const optionsToInsert: any[] = [];
-  orderedNames.forEach((name, i) => {
-    if (!optionIdByName.has(name) && !optionsToInsert.some(o => o.name === name)) {
-      optionsToInsert.push({ product_id: productId, name, position: i, is_active: true });
-    }
-  });
-  if (optionsToInsert.length > 0) {
-    const { data: insertedOptions, error: optInsErr } = await supabase
-      .from('product_options')
-      .insert(optionsToInsert)
-      .select('id, name');
-    if (optInsErr) throw optInsErr;
-    for (const o of insertedOptions || []) optionIdByName.set(o.name, o.id);
-  }
-
-  // 4) ONE bulk insert for missing values (uniqueness: trimmed value per option)
-  const valueLabelMatrix: string[][] = [];
-  const valuesToInsert: any[] = [];
-  for (let i = 0; i < optionEntries.length; i++) {
-    const [, values] = optionEntries[i];
-    const optionId = optionIdByName.get(orderedNames[i]);
-    const labels: string[] = [];
-    for (const raw of values) {
-      let val: string;
-      let priceDiff = 0;
-      let optInventory = 10;
-
-      if (typeof raw === 'object' && raw !== null) {
-        val = String(raw.value || raw).trim();
-        priceDiff = raw.price_difference || 0;
-        optInventory = raw.inventory || 10;
-      } else {
-        val = String(raw).trim();
-      }
-
-      labels.push(val);
-      const valueKey = `${optionId} ${val}`;
-      if (optionId && !existingValueKeys.has(valueKey)) {
-        existingValueKeys.add(valueKey); // also dedupes repeats within this batch
-        valuesToInsert.push({ option_id: optionId, value: val, is_active: true, price_difference: priceDiff, inventory: optInventory });
-      }
-    }
-    valueLabelMatrix.push(labels);
-  }
-  if (valuesToInsert.length > 0) {
-    const { error: valInsErr } = await supabase.from('option_values').insert(valuesToInsert);
-    if (valInsErr) throw valInsErr;
-  }
-
-  const combosLabels = combinations(valueLabelMatrix);
-  const existingKeys = new Set((variantsRes.data || []).map(v => v.combination_key));
-
-  // Build a lookup for option value inventory: { "Color": { "Red": 10, "Blue": 5 } }
-  const valueInventoryMap: Record<string, Record<string, number>> = {};
-  for (let i = 0; i < optionEntries.length; i++) {
-    const [optName, values] = optionEntries[i];
-    const name = orderedNames[i];
-    valueInventoryMap[name] = {};
-    for (const raw of values) {
-      if (typeof raw === 'object' && raw !== null) {
-        valueInventoryMap[name][String(raw.value || raw).trim()] = raw.inventory || 10;
-      } else {
-        valueInventoryMap[name][String(raw).trim()] = 10;
-      }
-    }
-  }
-
-  const toInsert: any[] = [];
-  for (let i = 0; i < combosLabels.length; i++) {
-    const variantKey = buildVariantKey(orderedNames, combosLabels[i]);
-    if (existingKeys.has(variantKey)) continue;
-    existingKeys.add(variantKey); // dedupe combos that repeat within this batch
-    const optionValuesObj: Record<string, string> = {};
-    // Calculate variant inventory as minimum of its option values' inventories
-    let variantInventory = Infinity;
-    orderedNames.forEach((name, idx) => {
-      optionValuesObj[name] = combosLabels[i][idx];
-      const valInv = valueInventoryMap[name]?.[combosLabels[i][idx]] ?? 10;
-      if (valInv < variantInventory) variantInventory = valInv;
-    });
-    if (!isFinite(variantInventory)) variantInventory = 10;
-    toInsert.push({ product_id: productId, combination_key: variantKey, option_values: optionValuesObj, inventory: variantInventory, is_active: true });
-  }
-  if (toInsert.length > 0) {
-    const { error } = await supabase.from('product_variants').insert(toInsert);
-    if (error) throw error;
-  }
-};
-const upsertCategory = async (supabase: SupabaseClient, name: string, userId: string): Promise<string> => {
-  const normalizedName = toTitleCase(name);
-  let { data, error } = await supabase.from('categories').select('id').eq('name', normalizedName).eq('user_id', userId).single();
-  if (error && error.code !== 'PGRST116') throw error;
-  if (data) return data.id;
-  
-  ({ data, error } = await supabase.from('categories').insert({ name: normalizedName, user_id: userId }).select('id').single());
-  if (error) throw error;
-  return data!.id;
-};
-
-// Updated upsertTypeAndMergeAttributes to handle the new attribute structure
-const upsertTypeAndMergeAttributes = async (supabase: SupabaseClient, categoryId: string, typeName: string, newAttributes: any[], userId: string): Promise<void> => {
-  const normalizedTypeName = toTitleCase(typeName);
-  const { data: existingType, error } = await supabase.from('types').select('id, attributes').eq('category_id', categoryId).eq('name', normalizedTypeName).single();
-  if (error && error.code !== 'PGRST116') throw error;
-
-  const newAttributesMap = new Map((newAttributes || []).map(attr => [attr.name, attr]));
-
-  if (existingType) {
-    const existingAttributesMap = new Map((existingType.attributes || []).map((attr: any) => [attr.name, attr]));
-    for (const [name, newAttr] of newAttributesMap.entries()) {
-      if (!existingAttributesMap.has(name)) {
-        existingAttributesMap.set(name, newAttr);
-      }
-    }
-    const mergedAttributes = Array.from(existingAttributesMap.values());
-    const { error: updateError } = await supabase.from('types').update({ attributes: mergedAttributes }).eq('id', existingType.id);
-    if (updateError) throw updateError;
-  } else {
-    const attributesToInsert = Array.from(newAttributesMap.values());
-    const { error: insertError } = await supabase.from('types').insert({ 
-      category_id: categoryId, 
-      name: normalizedTypeName, 
-      attributes: attributesToInsert, 
-      user_id: userId 
-    });
-    if (insertError) throw insertError;
-  }
-};
-
 const updateJobProgress = async (supabase: SupabaseClient, jobId: string, update: Partial<any>): Promise<void> => {
   const payload = { ...update, updated_at: new Date().toISOString() };
   // Interim progress writes carry only the summary COUNTERS — the item arrays
@@ -357,7 +188,7 @@ const updateJobProgress = async (supabase: SupabaseClient, jobId: string, update
 };
 
 // Main Sync Logic
-const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; token: string }, jobId: string, syncType: 'quick' | 'full') => {
+const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; token?: string }, jobId: string, syncType: 'quick' | 'full') => {
   const summary = {
     created: 0, updated: 0, skipped: 0, cache_hits: 0,
     combo_created: 0,
@@ -385,7 +216,12 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
     await updateJobProgress(supabaseAdmin, jobId, { message: "Fetching Instagram posts...", summary });
 
-    const { data: postsData, error: postsError } = await supabaseAdmin.functions.invoke('instagram-posts', { headers: { Authorization: `Bearer ${user.token}` }, body: { skip_upload: true } });
+    // User-initiated syncs carry the user's JWT; internal (webhook) syncs fall
+    // back to the admin client's service-role auth + explicit user_id.
+    const { data: postsData, error: postsError } = await supabaseAdmin.functions.invoke('instagram-posts', {
+      ...(user.token ? { headers: { Authorization: `Bearer ${user.token}` } } : {}),
+      body: { skip_upload: true, user_id: user.id },
+    });
     if (postsError) throw postsError;
     if (postsData.error) throw new Error(postsData.error);
 
@@ -397,9 +233,9 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
     await updateJobProgress(supabaseAdmin, jobId, { message: `Found ${allPosts.length} posts. Checking for new content...`, summary });
 
-    const { data: existingProducts, error: productsError } = await supabaseAdmin.from('products').select('id, instagram_post_id').eq('business_id', business.id);
+    const { data: existingProducts, error: productsError } = await supabaseAdmin.from('products').select('id, instagram_post_id, media_url, thumbnail_url').eq('business_id', business.id);
     if (productsError) throw productsError;
-    const existingProductMap = new Map((existingProducts || []).map(p => [p.instagram_post_id, p.id]));
+    const existingProductMap = new Map((existingProducts || []).map(p => [p.instagram_post_id, p]));
 
     // Also fetch existing combos to decide if a post needs processing for multi-products
     const { data: existingCombos } = await supabaseAdmin
@@ -500,12 +336,20 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     };
 
     // --- Process posts in batches (analyze → create products → update live feed) ---
-    const BATCH_SIZE = 5;
+    const BATCH_SIZE = 8;
     const allProductsCreated: string[] = []; // track for spec waterfall at end
     const promotionsToInsert: Array<{ title: string; summary: string; discount_type?: 'percent'|'amount'|null; discount_value?: number|null; currency?: string|null; valid_until?: string|null; post_id: string }>
       = [];
 
     for (let batchStart = 0; batchStart < postsToProcess.length; batchStart += BATCH_SIZE) {
+      // Honor a user abort: the widget's Abort button flips the job to
+      // 'failed' — previously the server kept running to the end regardless.
+      const { data: jobRow } = await supabaseAdmin.from('sync_jobs').select('status').eq('id', jobId).single();
+      if (jobRow?.status === 'failed') {
+        console.log(`Sync ${jobId} aborted by user — stopping.`);
+        return;
+      }
+
       const batch = postsToProcess.slice(batchStart, batchStart + BATCH_SIZE);
       const batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
       const totalBatches = Math.ceil(postsToProcess.length / BATCH_SIZE);
@@ -515,12 +359,17 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       const batchCached: Array<{post: InstagramPost, analysis: AnalysisResult}> = [];
       const batchNeedsAnalysis: Array<InstagramPost & {captionHash: string, captionInsufficient: boolean}> = [];
 
+      // A FULL sync is documented (and priced, in the UI hint) as "re-analyze
+      // everything with AI" — so it must bypass the analysis cache and the
+      // global-intelligence shortcut. Quick syncs keep both fast paths.
+      const useAnalysisShortcuts = syncType !== 'full';
+
       for (const post of batch) {
         const captionInsufficient = isCaptionInsufficient(post.caption ?? null);
         const captionHash = await sha256(post.caption || post.id);
         const cached = cacheMap.get(post.id);
 
-        if (cached && cached.caption_hash === captionHash) {
+        if (useAnalysisShortcuts && cached && cached.caption_hash === captionHash) {
           batchCached.push({post, analysis: cached.analysis_result});
           summary.cache_hits++;
         } else {
@@ -528,7 +377,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
           const heuristicResult = heuristicParse(post.caption || '');
           const extractedName = extractProductName(post.caption || null);
           let usedGlobal = false;
-          if (heuristicResult && extractedName && heuristicResult.productName && typeof heuristicResult.price === 'number' && heuristicResult.currency) {
+          if (useAnalysisShortcuts && heuristicResult && extractedName && heuristicResult.productName && typeof heuristicResult.price === 'number' && heuristicResult.currency) {
             const normalized = normalizeProductName(extractedName);
             const { data: globalMatch } = await supabaseAdmin.from('global_product_intelligence').select('*')
               .eq('normalized_name', normalized).gte('confidence', 0.7).order('confidence', { ascending: false }).limit(1);
@@ -553,9 +402,27 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
         summary
       });
 
-      // AI analysis with 30s timeout per post to prevent hanging
+      // AI analysis with a hard timeout per post to prevent hanging. 45s covers
+      // the classifier's own 25s budget plus one internal transient retry.
       const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
         Promise.race([promise, new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`AI analysis timed out after ${ms/1000}s`)), ms))]);
+
+      // Per-post progress ticks (throttled to ~1/s) so the widget's progress
+      // bar and ETA move DURING a batch instead of jumping once per batch.
+      let analyzedCount = batchCached.length;
+      let lastTick = 0;
+      const tickProgress = async () => {
+        analyzedCount++;
+        const now = Date.now();
+        if (now - lastTick < 900) return;
+        lastTick = now;
+        const done = Math.min(batchStart + analyzedCount, postsToProcess.length);
+        await updateJobProgress(supabaseAdmin, jobId, {
+          progress: done, total: postsToProcess.length,
+          message: `Analyzing posts… (${done}/${postsToProcess.length})`,
+          summary,
+        });
+      };
 
       const aiResults = await Promise.all(
         batchNeedsAnalysis.map(post =>
@@ -563,10 +430,11 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             supabaseAdmin.functions.invoke('ai-product-classifier', {
               body: { caption: post.caption || '', user_id: user.id, include_images: post.captionInsufficient, post_media: { media_url: post.media_url, thumbnail_url: post.thumbnail_url, media_type: post.media_type, post_id: post.id }, access_token: accessToken }
             }),
-            30000
+            45000
           )
             .then(({data, error}: any) => ({post, analysis: data as AnalysisResult, error}))
             .catch(error => ({post, analysis: null as any, error}))
+            .then(res => { tickProgress().catch(() => { /* progress is best-effort */ }); return res; })
         )
       );
 
@@ -598,6 +466,39 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       if (newCacheEntries.length > 0) {
         await supabaseAdmin.from('ai_analysis_cache').upsert(newCacheEntries);
       }
+
+      // Persist this batch's media in parallel, BEFORE the (serial) payload
+      // build. Products that already carry a storage URL keep it — a full sync
+      // used to re-upload every image with a fresh timestamped path, bloating
+      // storage and slowing the run for nothing.
+      const isPersistedUrl = (u?: string | null) => !!u && u.includes('/product-media/');
+      const mediaByPost = new Map<string, { media_url: string; thumbnail_url?: string }>();
+      await Promise.all(batchAnalyzed.map(async ({ post, analysis }) => {
+        const a: any = analysis || {};
+        const looksProductish = a.isProductPost || (Array.isArray(a.products) && a.products.length > 0);
+        if (!looksProductish) return; // skipped posts shouldn't cost an upload
+        const existing = existingProductMap.get(post.id);
+        if (existing && isPersistedUrl(existing.media_url)) {
+          mediaByPost.set(post.id, {
+            media_url: existing.media_url,
+            thumbnail_url: isPersistedUrl(existing.thumbnail_url) ? existing.thumbnail_url : existing.media_url,
+          });
+          return;
+        }
+        mediaByPost.set(post.id, await persistPostMedia(supabaseAdmin, user.id, {
+          id: post.id, media_url: post.media_url, thumbnail_url: post.thumbnail_url, media_type: post.media_type,
+        }));
+      }));
+      // Fallback for posts that become products later (e.g. via the caption parser).
+      const mediaFor = async (post: InstagramPost): Promise<{ media_url: string; thumbnail_url?: string }> => {
+        const hit = mediaByPost.get(post.id);
+        if (hit) return hit;
+        const persisted = await persistPostMedia(supabaseAdmin, user.id, {
+          id: post.id, media_url: post.media_url, thumbnail_url: post.thumbnail_url, media_type: post.media_type,
+        });
+        mediaByPost.set(post.id, persisted);
+        return persisted;
+      };
 
       // --- b) Build product payloads from this batch ---
       const batchProducts: ProductPayload[] = [];
@@ -668,6 +569,12 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
         // If multiple items were detected (AI or parser), call the dedicated Edge Function to upsert the combo fully
         if ((analysis as any).isMultiProductPost === true || itemsToCreate.filter(Boolean).length > 1) {
+          // Combo posts bail out of this loop before the per-product
+          // category/type block below — ensure their category + type (and
+          // attribute definitions) exist too.
+          try {
+            await ensureCategoryAndType(supabaseAdmin, user.id, categoryName, typeName, specifications, options);
+          } catch (e: any) { console.error('Combo category/type upsert failed:', e.message); }
           try {
             // Give each split product its own image: carousel child i → item i
             // (multi-product posts are usually carousels with one photo per
@@ -683,9 +590,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
                   .filter(Boolean);
               } catch { /* fall back to the main post media */ }
             }
-            const mainMedia = await persistPostMedia(supabaseAdmin, user.id, {
-              id: post.id, media_url: post.media_url, thumbnail_url: post.thumbnail_url, media_type: post.media_type,
-            });
+            const mainMedia = await mediaFor(post);
             const itemsWithMedia = await Promise.all(itemsToCreate.filter(Boolean).map(async (it: any, i: number) => {
               if (it.media_url) return it;
               const childSrc = childUrls[i];
@@ -749,13 +654,8 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             priceInALL = convertCurrency(itemPrice, itemCurrency, 'ALL');
           }
 
-          // Persist Instagram media to Supabase storage so URLs don't expire
-          const persisted = await persistPostMedia(supabaseAdmin, user.id, {
-            id: post.id,
-            media_url: post.media_url,
-            thumbnail_url: post.thumbnail_url,
-            media_type: post.media_type,
-          });
+          // Permanent storage URLs (persisted in parallel above, reused on update)
+          const persisted = await mediaFor(post);
 
           const productPayload: ProductPayload = {
             name: itemName || post.caption?.split('\n')[0]?.slice(0, 60) || 'Product',
@@ -777,7 +677,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             billing_interval: finalBillingInterval,
           };
 
-          const existingId = existingProductMap.get(post.id);
+          const existingId = existingProductMap.get(post.id)?.id;
           if (existingId && itemsToCreate.length === 1) {
             productPayload.id = existingId;
             summary.updated++;
@@ -997,9 +897,11 @@ serve(async (req) => {
     
     // Guard JSON parsing
     let syncType = 'quick';
+    let bodyUserId: string | null = null;
     try {
       const body = await req.json();
       syncType = body?.syncType || 'quick';
+      bodyUserId = typeof body?.user_id === 'string' ? body.user_id : null;
     } catch (e) {
       console.warn('Could not parse JSON body, defaulting to quick sync');
     }
@@ -1014,14 +916,24 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
-    if (authError || !user) {
-      console.error('Auth failed:', authError?.message, 'Token prefix:', token.substring(0, 20) + '...');
-      return new Response(JSON.stringify({ error: `Authentication failed: ${authError?.message || 'Invalid token'}. Please log out and log back in.` }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    // Internal (server-to-server) calls — e.g. the Instagram webhook reacting
+    // to a new post — authenticate with the service-role key + an explicit
+    // user_id. Regular calls carry the user's own JWT.
+    let user: { id: string; token?: string };
+    const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    if (SERVICE_KEY && token === SERVICE_KEY && bodyUserId) {
+      user = { id: bodyUserId };
+    } else {
+      const { data: { user: authedUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
+      if (authError || !authedUser) {
+        console.error('Auth failed:', authError?.message, 'Token prefix:', token.substring(0, 20) + '...');
+        return new Response(JSON.stringify({ error: `Authentication failed: ${authError?.message || 'Invalid token'}. Please log out and log back in.` }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      user = { id: authedUser.id, token };
     }
 
     // Ensure the sync_jobs table exists and is accessible
@@ -1043,15 +955,21 @@ serve(async (req) => {
       });
     }
 
-    // Run the sync process asynchronously
-    // Use setTimeout to ensure the response is returned immediately while the process continues
-    (async () => {
+    // Run the sync asynchronously, but register it with the runtime: without
+    // EdgeRuntime.waitUntil the isolate may be torn down right after the
+    // response is sent, killing the sync mid-run.
+    const syncPromise = (async () => {
       try {
-        await syncProcess(supabaseAdmin, { ...user, token }, job.id, syncType as 'quick' | 'full');
+        await syncProcess(supabaseAdmin, user, job.id, syncType as 'quick' | 'full');
       } catch (e) {
         console.error('Background sync process failed:', e);
       }
     })();
+    // @ts-ignore — EdgeRuntime is injected by the Supabase Edge runtime.
+    if (typeof EdgeRuntime !== 'undefined' && typeof EdgeRuntime.waitUntil === 'function') {
+      // @ts-ignore
+      EdgeRuntime.waitUntil(syncPromise);
+    }
 
     return new Response(JSON.stringify({ jobId: job.id }), { 
       status: 200,

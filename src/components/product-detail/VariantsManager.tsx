@@ -91,7 +91,9 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
   // Kept in a ref so handleSave's useCallback identity doesn't churn on auth changes.
   const userIdRef = React.useRef<string | null>(user?.id ?? null);
   React.useEffect(() => { userIdRef.current = user?.id ?? null; }, [user?.id]);
-  const [loading, setLoading] = useState(false);
+  // Starts true: the dirty-check snapshot must not be captured before the
+  // first load finishes (an "empty" baseline would flag everything as unsaved).
+  const [loading, setLoading] = useState(true);
   const [options, setOptions] = useState<ProductOption[]>([]);
   const [variants, setVariants] = useState<VariantRow[]>([]);
   const initialOptionIdsRef = React.useRef<Set<string>>(new Set());
@@ -138,6 +140,24 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
   const addOption = () => setOptions(prev => [...prev, { name: ``, values: [] }]);
   const removeOption = (idx: number) => setOptions(prev => prev.filter((_, i) => i !== idx));
   const addValue = (idx: number) => setOptions(prev => { const next = [...prev]; next[idx] = { ...next[idx], values: [...next[idx].values, { value: '', price_difference: 0, is_active: true, is_default: next[idx].values.length === 0, inventory: 0 }] }; return next; });
+  // Rapid entry: "S, M, L" + Enter adds three values at once, skipping duplicates.
+  const addValuesBulk = (idx: number, raw: string) => {
+    const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+    if (!parts.length) return;
+    setOptions(prev => {
+      const next = [...prev];
+      const existing = new Set(next[idx].values.map(v => v.value.trim().toLowerCase()));
+      const additions: OptionValue[] = [];
+      for (const p of parts) {
+        if (existing.has(p.toLowerCase())) continue;
+        existing.add(p.toLowerCase());
+        additions.push({ value: p, price_difference: 0, is_active: true, is_default: next[idx].values.length === 0 && additions.length === 0, inventory: 0 });
+      }
+      if (!additions.length) return prev;
+      next[idx] = { ...next[idx], values: [...next[idx].values, ...additions] };
+      return next;
+    });
+  };
   const removeValue = (iOpt: number, iVal: number) => setOptions(prev => { const next = [...prev]; next[iOpt] = { ...next[iOpt], values: next[iOpt].values.filter((_, j) => j !== iVal) }; return next; });
   const patchOption = (idx: number, patch: Partial<ProductOption>) => setOptions(prev => { const next = [...prev]; next[idx] = { ...next[idx], ...patch }; return next; });
   const patchValue = (iOpt: number, iVal: number, patch: Partial<OptionValue>) => setOptions(prev => {
@@ -376,7 +396,12 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
       {/* ── OPTIONS ──────────────────────────────────────────────────────────── */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold flex items-center gap-2"><Settings2 className="h-4 w-4" /> Options</h3>
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Settings2 className="h-4 w-4" /> Options
+            {snapshotCapturedRef.current && isDirty() && (
+              <Badge variant="outline" className="h-5 text-[11px] font-medium border-warning/60 text-warning">Unsaved changes</Badge>
+            )}
+          </h3>
           <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={addOption}><Plus className="h-3.5 w-3.5 mr-1" /> Add option</Button>
         </div>
 
@@ -420,8 +445,19 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
                     </div>
                   ))}
                 </div>
-                <div className="px-3 py-2 border-t bg-muted/10">
-                  <Button type="button" size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={() => addValue(idx)}><Plus className="h-3.5 w-3.5 mr-1" /> Add value</Button>
+                <div className="px-3 py-2 border-t bg-muted/10 flex items-center gap-2">
+                  <Input
+                    placeholder="Type values and press Enter — e.g. S, M, L"
+                    className="h-8 text-sm flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key !== 'Enter') return;
+                      e.preventDefault();
+                      const el = e.currentTarget;
+                      addValuesBulk(idx, el.value);
+                      el.value = '';
+                    }}
+                  />
+                  <Button type="button" size="sm" variant="ghost" className="h-8 text-xs px-2 shrink-0" onClick={() => addValue(idx)}><Plus className="h-3.5 w-3.5 mr-1" /> Add row</Button>
                 </div>
               </div>
             ))}

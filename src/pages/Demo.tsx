@@ -123,7 +123,7 @@ const Brand = () => (
     <img src="/vela-icon.svg" alt="Vela" className="h-8 w-8 rounded-lg ring-1 ring-border" />
     <div className="min-w-0">
       <h1 className="font-display-brand text-lg font-bold leading-none">Vela</h1>
-      <p className="text-[10px] text-muted-foreground truncate">Butiku i Elirës</p>
+      <p className="text-[10px] text-muted-foreground truncate">Shop Name</p>
     </div>
   </div>
 );

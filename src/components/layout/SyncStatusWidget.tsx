@@ -33,6 +33,12 @@ export const SyncStatusWidget = () => {
   const { t } = useTranslation();
   const { activeJob, dismissJob } = useSync();
   const [elapsedTime, setElapsedTime] = useState(0);
+  // Collapsed by default: the floating button carries count/progress/ETA;
+  // clicking it expands this panel. Failures auto-expand so errors are seen.
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (activeJob?.status === 'failed') setOpen(true);
+  }, [activeJob?.status]);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isLiveFeedOpen, setIsLiveFeedOpen] = useState(false);
   const [isAborting, setIsAborting] = useState(false);
@@ -132,18 +138,57 @@ export const SyncStatusWidget = () => {
     </>
   );
 
+  const converted = (liveStats?.created ?? 0) + (liveStats?.updated ?? 0);
+  const totalForButton = activeJob?.total || 0;
+
   return (
-    <>
+    <div className="relative">
       <SyncSummaryModal job={activeJob} isOpen={isSummaryOpen} onClose={() => setIsSummaryOpen(false)} />
       <SyncLiveFeedModal job={activeJob} isOpen={isLiveFeedOpen} onClose={() => setIsLiveFeedOpen(false)} />
+
+      {/* Floating button — sits in the dock between chat and notifications. */}
+      <motion.button
+        type="button"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-label={t('sync.syncing')}
+        className="flex h-12 items-center gap-2 rounded-full border bg-card px-3.5 text-foreground shadow-lg transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        {isRunning ? (
+          <Spinner className="h-4 w-4 text-primary" />
+        ) : isSuccess ? (
+          <CheckCircle className="h-4 w-4 text-success" />
+        ) : (
+          <XCircle className="h-4 w-4 text-destructive" />
+        )}
+        <span className="text-xs font-semibold tabular-nums">
+          {isRunning
+            ? `${converted}/${totalForButton || '…'}`
+            : isSuccess ? t('sync.complete') : t('sync.failed')}
+        </span>
+        {isRunning && (
+          <span className="h-1.5 w-16 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={percentage} aria-valuemin={0} aria-valuemax={100}>
+            <span className="block h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${percentage}%` }} />
+          </span>
+        )}
+        {isRunning && eta && (
+          <span className="flex items-center gap-0.5 text-[10px] tabular-nums text-muted-foreground">
+            <Clock className="h-2.5 w-2.5" />{eta}
+          </span>
+        )}
+      </motion.button>
+
+      {/* Expanded panel, anchored above the dock. */}
       <AnimatePresence>
+        {open && (
         <motion.div
-          layout
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          initial={{ opacity: 0, y: 12, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.95 }}
+          exit={{ opacity: 0, y: 12, scale: 0.97 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="fixed bottom-24 left-4 z-40 w-[calc(100vw-2rem)] sm:w-80 md:bottom-4"
+          className="absolute bottom-14 right-0 z-50 w-[min(20rem,calc(100vw-2rem))]"
         >
           <Card className="shadow-xl border-border/50 backdrop-blur-sm">
             <CardContent className="p-3 space-y-2.5">
@@ -345,7 +390,8 @@ export const SyncStatusWidget = () => {
             </CardContent>
           </Card>
         </motion.div>
+        )}
       </AnimatePresence>
-    </>
+    </div>
   );
 };

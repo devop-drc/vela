@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { MediaItem } from '@/components/MediaItem';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { formatCurrency } from '@/lib/formatters';
 import { useCart } from '@/contexts/CartContext';
 import { useStorefront } from '@/contexts/StorefrontContext';
@@ -47,9 +47,11 @@ export const CartContents = ({ onClose, variant = 'drawer' }: { onClose?: () => 
   if (cartItems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 p-10 text-center min-h-[40vh]">
-        <ShoppingBag className="h-20 w-20 text-muted-foreground mb-6" />
-        <h3 className="sf-heading text-2xl font-bold mb-3">Your cart is empty</h3>
-        <p className="text-muted-foreground mb-6">Looks like you haven't added anything yet.</p>
+        <div className="mb-6 grid h-20 w-20 place-items-center rounded-full bg-primary/10 text-primary">
+          <ShoppingBag className="h-9 w-9" />
+        </div>
+        <h3 className="sf-heading text-2xl font-bold mb-2">Your cart is empty</h3>
+        <p className="text-muted-foreground mb-6">Browse the shop and add something you love.</p>
         <SfButton onClick={onClose}>Start Shopping</SfButton>
       </div>
     );
@@ -58,18 +60,24 @@ export const CartContents = ({ onClose, variant = 'drawer' }: { onClose?: () => 
   // ── Reusable pieces (shared by the drawer and the two-column page) ──────────
   const price = (n: number, cur?: string) => formatCurrency(convertCurrency(n, cur, shopDetails?.currency), shopDetails?.currency);
 
+  // Free-shipping nudge with a progress meter toward the threshold.
   const freeShipHint = step === 'cart' && shipping > 0 && freeShippingThreshold > subtotal ? (
-    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
-      <Info className="h-3.5 w-3.5 shrink-0" />
-      <span>Add {formatCurrency(freeShippingThreshold - subtotal, shopDetails?.currency)} more for free shipping.</span>
+    <div className="space-y-1.5 rounded-md bg-muted/50 px-3 py-2.5">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Info className="h-3.5 w-3.5 shrink-0" />
+        <span>Add <span className="font-semibold text-foreground">{formatCurrency(freeShippingThreshold - subtotal, shopDetails?.currency)}</span> more for free shipping.</span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-border/60" role="progressbar" aria-label="Progress toward free shipping" aria-valuenow={Math.round((subtotal / freeShippingThreshold) * 100)} aria-valuemin={0} aria-valuemax={100}>
+        <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${Math.min(100, (subtotal / freeShippingThreshold) * 100)}%` }} />
+      </div>
     </div>
   ) : null;
 
   const totals = (
     <div className="space-y-3">
       <div className="flex justify-between text-sm"><span>Subtotal ({totalItems})</span><span className="font-semibold">{formatCurrency(subtotal, shopDetails?.currency)}</span></div>
-      <div className="flex justify-between text-sm"><span>Shipping</span><span className={cn('font-semibold', shipping === 0 && 'text-emerald-600 dark:text-emerald-400')}>{shipping === 0 ? 'FREE' : formatCurrency(shipping, shopDetails?.currency)}</span></div>
-      {totalSaved > 0 && <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400"><span>You saved</span><span className="font-semibold">{formatCurrency(totalSaved, shopDetails?.currency)}</span></div>}
+      <div className="flex justify-between text-sm"><span>Shipping</span><span className={cn('font-semibold', shipping === 0 && 'text-success')}>{shipping === 0 ? 'FREE' : formatCurrency(shipping, shopDetails?.currency)}</span></div>
+      {totalSaved > 0 && <div className="flex justify-between text-sm text-success"><span>You saved</span><span className="font-semibold">{formatCurrency(totalSaved, shopDetails?.currency)}</span></div>}
       <Separator />
       <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{formatCurrency(total, shopDetails?.currency)}</span></div>
     </div>
@@ -112,7 +120,7 @@ export const CartContents = ({ onClose, variant = 'drawer' }: { onClose?: () => 
             <span className="w-8 text-center text-sm tabular-nums">{item.quantity}</span>
             <button aria-label="Increase quantity" onClick={() => updateQuantity(item.uid, item.quantity + 1)} disabled={item.quantity >= 99} className="flex h-full w-10 items-center justify-center disabled:opacity-40 md:w-8"><Plus className="h-3.5 w-3.5" /></button>
           </div>
-          <span className={cn('font-semibold', item.isDiscounted && 'text-emerald-600 dark:text-emerald-400')}>{price(item.price * item.quantity, item.currency)}</span>
+          <span className={cn('font-semibold', item.isDiscounted && 'text-success')}>{price(item.price * item.quantity, item.currency)}</span>
           <button aria-label={`Remove ${item.name} from cart`} onClick={() => removeFromCart(item.uid)} className="-m-2 p-2 text-muted-foreground hover:text-destructive"><XCircle className="h-5 w-5" /></button>
         </div>
       </div>
@@ -204,7 +212,8 @@ export const Cart = () => {
   if (variant === 'modal') {
     return (
       <Dialog open={isOpen} onOpenChange={(o) => !o && close()}>
-        <DialogContent className={cn('sm:max-w-2xl h-[88vh] p-0 flex flex-col bg-background text-foreground', token.className)} style={token.style} {...token.attrs}>
+        <DialogContent aria-describedby={undefined} className={cn('sm:max-w-2xl h-[88vh] p-0 flex flex-col bg-background text-foreground', token.className)} style={token.style} {...token.attrs}>
+          <DialogTitle className="sr-only">Shopping cart</DialogTitle>
           <CartContents onClose={close} />
         </DialogContent>
       </Dialog>
@@ -214,7 +223,10 @@ export const Cart = () => {
   // drawer (default)
   return (
     <Sheet open={isOpen} onOpenChange={(o) => !o && close()}>
-      <SheetContent side="right" className={cn('w-full sm:max-w-md p-0 flex flex-col bg-background text-foreground', token.className)} style={token.style} {...token.attrs}>
+      <SheetContent side="right" aria-describedby={undefined} className={cn('w-full sm:max-w-md p-0 flex flex-col bg-background text-foreground', token.className)} style={token.style} {...token.attrs}>
+        {/* Sheet is built on the same Radix dialog primitive, so DialogTitle
+            satisfies its accessible-title requirement. */}
+        <DialogTitle className="sr-only">Shopping cart</DialogTitle>
         <CartContents onClose={close} />
       </SheetContent>
     </Sheet>
