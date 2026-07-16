@@ -513,6 +513,19 @@
 
 /* ─── Landing page (scoped under .landing) ──────────────────────────────── */
 @layer utilities {
+  /* Mobile-safe viewport heights: 100vh overflows behind the collapsing
+     browser chrome on iOS/Android; dvh tracks the visible viewport. The vh
+     line is the fallback for browsers without dvh support. */
+  .h-screen-dvh { height: 100vh; height: 100dvh; }
+  .min-h-screen-dvh { min-height: 100vh; min-height: 100dvh; }
+
+  /* iOS Safari zooms the page when a focused form control's font-size is under
+     16px. Keeping controls at 16px on small screens lets us leave pinch-zoom
+     enabled in the viewport meta without focus-zoom jank. */
+  @media (max-width: 767px) {
+    input, select, textarea { font-size: 16px; }
+  }
+
   /* Slow-drifting aurora blobs behind the hero / CTA. */
   @keyframes ls-aurora {
     0%, 100% { transform: translate3d(0, 0, 0) scale(1); }

@@ -49,8 +49,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [savedItems, setSavedItems] = useState<CartItem[]>([]);
   const { shopDetails, convertCurrency } = useStorefront();
 
-  // Load cart from localStorage on mount and migrate legacy items to uid/variantKey
+  // Carts are scoped per shop — the old global 'cartItems' key merged products
+  // from different shops into one cart (and one order). The legacy global keys
+  // are dropped rather than migrated: items don't record which shop they came
+  // from, so adopting them would re-introduce the leak.
+  const shopSlug = shopDetails?.slug;
+  const cartKey = shopSlug ? `cartItems:${shopSlug}` : null;
+  const savedKey = shopSlug ? `savedItems:${shopSlug}` : null;
+  const hydratedFor = React.useRef<string | null>(null);
+
+  // Load cart from localStorage once the shop is known; migrate legacy item shapes.
   useEffect(() => {
+    if (!cartKey || !savedKey) return;
     const migrate = (it: Partial<CartItem> & Record<string, unknown>): CartItem => {
       const variantKey = it.selectedOptions && typeof it.selectedOptions === 'object'
         ? JSON.stringify(Object.entries(it.selectedOptions).sort(([a],[b]) => a.localeCompare(b)))
@@ -59,29 +69,30 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { ...(it as CartItem), uid, variantKey } as CartItem;
     };
     try {
-      const storedCart = localStorage.getItem('cartItems');
-      if (storedCart) {
-        const parsed = JSON.parse(storedCart);
-        if (Array.isArray(parsed)) setCartItems(parsed.map(migrate));
-      }
+      const storedCart = localStorage.getItem(cartKey);
+      const parsed = storedCart ? JSON.parse(storedCart) : [];
+      setCartItems(Array.isArray(parsed) ? parsed.map(migrate) : []);
     } catch (e) { console.warn('CartContext: failed to load cartItems from storage', e); }
     try {
-      const storedSaved = localStorage.getItem('savedItems');
-      if (storedSaved) {
-        const parsed = JSON.parse(storedSaved);
-        if (Array.isArray(parsed)) setSavedItems(parsed.map(migrate));
-      }
+      const storedSaved = localStorage.getItem(savedKey);
+      const parsed = storedSaved ? JSON.parse(storedSaved) : [];
+      setSavedItems(Array.isArray(parsed) ? parsed.map(migrate) : []);
     } catch (e) { console.warn('CartContext: failed to load savedItems from storage', e); }
-  }, []);
+    // Retire the legacy cross-shop keys.
+    localStorage.removeItem('cartItems');
+    localStorage.removeItem('savedItems');
+    hydratedFor.current = cartKey;
+  }, [cartKey, savedKey]);
 
-  // Save cart to localStorage whenever it changes
+  // Save cart to localStorage whenever it changes (only after this shop's
+  // cart has hydrated — otherwise the initial [] would wipe the stored cart).
   useEffect(() => {
-    localStorage.setItem('cartItems', JSON.stringify(cartItems));
-  }, [cartItems]);
+    if (cartKey && hydratedFor.current === cartKey) localStorage.setItem(cartKey, JSON.stringify(cartItems));
+  }, [cartItems, cartKey]);
 
   useEffect(() => {
-    localStorage.setItem('savedItems', JSON.stringify(savedItems));
-  }, [savedItems]);
+    if (savedKey && hydratedFor.current === cartKey) localStorage.setItem(savedKey, JSON.stringify(savedItems));
+  }, [savedItems, savedKey, cartKey]);
 
   const addToCart = useCallback(async (item: Omit<CartItem, 'quantity' | 'uid' | 'variantKey'>, quantity: number = 1) => {
     // Optimistic: the item lands in the cart instantly with the data the card/

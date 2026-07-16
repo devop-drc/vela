@@ -219,6 +219,8 @@ serve(async (req) => {
             .select(PRODUCT_SELECT, { count: 'exact' })
             .eq('business_id', businessId)
             .neq('status', 'Draft')
+            // A product without a price can't be bought — never show it to customers.
+            .not('price', 'is', null)
             .order('created_at', { ascending: false })
             .range(offset, rangeEnd),
       supabaseAdmin.rpc('get_top_products', { p_business_id: businessId }),
@@ -230,6 +232,7 @@ serve(async (req) => {
         .select(PRODUCT_SELECT)
         .eq('business_id', businessId)
         .eq('status', 'Active')
+        .not('price', 'is', null)
         .order('updated_at', { ascending: false })
         .limit(24),
       supabaseAdmin
@@ -257,10 +260,12 @@ serve(async (req) => {
       throw productsError;
     }
 
-    const { data: bestSellers, error: bestSellersError } = bestSellersRes;
+    const { data: rawBestSellers, error: bestSellersError } = bestSellersRes;
     if (bestSellersError) {
       console.error("Error fetching best sellers:", bestSellersError);
     }
+    // Same customer-facing rule as the listings: hide unpriced/draft rows the RPC may return.
+    const bestSellers = (rawBestSellers || []).filter((p: any) => p.price != null && p.status !== 'Draft');
 
     // Recommended products: 4 random-ish active products, excluding best sellers.
     const { data: recommendationPool, error: allActiveProductsError } = recommendationPoolRes;

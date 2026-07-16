@@ -26,7 +26,11 @@ const DESKTOP_OUTER = { w: DESKTOP.content.w, h: DESKTOP.content.h + DESKTOP.bro
 const MOBILE_OUTER = { w: MOBILE.content.w + MOBILE.bezel * 2, h: MOBILE.content.h + MOBILE.status + MOBILE.address + MOBILE.bottom + MOBILE.gesture + MOBILE.bezel * 2 };
 
 export const StorefrontPreviewPanel = ({ previewPath, previewUrl, config, typeKey, open, onOpenChange }: Props) => {
-  const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
+  // Default the preview to the device the merchant is actually on — a phone
+  // user editing their shop wants the mobile view, not a scaled-down desktop.
+  const [device, setDevice] = useState<'desktop' | 'mobile'>(() =>
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'mobile' : 'desktop'
+  );
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const configRef = useRef(config);
   const [ready, setReady] = useState(false);

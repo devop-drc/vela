@@ -153,7 +153,7 @@ const InstagramProductsFeedPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4">
+      <div className="min-h-screen w-full min-w-0 bg-background text-foreground flex flex-col items-center p-4">
         <div className="w-full md:max-w-[630px] flex flex-col gap-6">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex flex-col gap-3">
@@ -180,7 +180,7 @@ const InstagramProductsFeedPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-screen w-full min-w-0 bg-background text-foreground flex flex-col">
       {/* InstagramFilterDrawer is now rendered in InstagramShopLayout */}
 
       <main className="flex-1 pt-0 flex justify-center">

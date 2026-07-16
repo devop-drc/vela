@@ -374,7 +374,9 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
           )}
         </div>
       </ScrollArea>
-      <DialogFooter className="p-4 border-t">
+      {/* flex-col (not the DialogFooter default col-reverse) so the stacked
+          mobile order is Reviews → Edit → Delete — destructive action last. */}
+      <DialogFooter className="p-4 border-t flex-col gap-2 sm:gap-0">
         <Button variant="outline" onClick={() => setReviewsOpen(true)} disabled={isSubmitting} className="mr-auto">
           <Star className="mr-2 h-4 w-4" />
           Reviews{ratingSummary && ratingSummary.count > 0 ? ` (${ratingSummary.count} · ★ ${ratingSummary.avg.toFixed(1)})` : ''}

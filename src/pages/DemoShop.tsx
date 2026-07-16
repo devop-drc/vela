@@ -74,6 +74,7 @@ export const SHOP = {
 
 export const MOCK_CONTEXT = {
   shopDetails: SHOP as any,
+  capabilities: { card_payments: true, reviews: true, promotions: true, custom_storefront: true },
   appearanceSettings: null,
   products: PRODUCTS as any[],
   isLoading: false,

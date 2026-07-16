@@ -174,15 +174,17 @@ const LandingNav = ({ active, copy, dark, onToggleTheme, lang, onSetLang }: NavP
             </Magnetic>
           </div>
 
-          <div className="flex items-center gap-2 lg:hidden">
+          <div className="flex items-center gap-1 lg:hidden">
             <button
               onClick={onToggleTheme}
               aria-label={dark ? "Light mode" : "Dark mode"}
-              className="grid h-8 w-8 place-items-center rounded-full border border-border bg-card text-muted-foreground"
+              className="grid h-10 w-10 place-items-center rounded-full text-muted-foreground"
             >
-              {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              <span className="grid h-8 w-8 place-items-center rounded-full border border-border bg-card">
+                {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </span>
             </button>
-            <button onClick={() => setOpen((v) => !v)} aria-label="Menu">
+            <button onClick={() => setOpen((v) => !v)} aria-label="Menu" className="grid h-10 w-10 place-items-center">
               {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
@@ -598,11 +600,15 @@ export default function Landing() {
       tl.from(".hero-fade", { opacity: 0, y: 22, duration: 0.8, stagger: 0.09 })
         .from(".hero-grad", { opacity: 0, y: 26, filter: "blur(8px)", duration: 0.9 }, 0.55);
 
-      // Hero visual scroll parallax + gentle scale-away
-      gsap.to(".hero-visual", {
-        yPercent: 12, scale: 0.97, opacity: 0.6, ease: "none",
-        scrollTrigger: { trigger: ".hero-visual", start: "top 35%", end: "bottom top", scrub: true },
-      });
+      // Hero visual scroll parallax + gentle scale-away. The hero film mounts
+      // lazily (after the splash), so only wire this once the node exists —
+      // otherwise GSAP warns "target .hero-visual not found" on every load.
+      if (document.querySelector(".hero-visual")) {
+        gsap.to(".hero-visual", {
+          yPercent: 12, scale: 0.97, opacity: 0.6, ease: "none",
+          scrollTrigger: { trigger: ".hero-visual", start: "top 35%", end: "bottom top", scrub: true },
+        });
+      }
 
       // CTA lightning bolt: periodic wiggle
       gsap.timeline({ repeat: -1, repeatDelay: 2.6, scrollTrigger: { trigger: ".cta-panel", start: "top 85%" } })

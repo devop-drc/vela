@@ -185,7 +185,7 @@ const InstagramProfilePage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4">
+      <div className="min-h-screen w-full min-w-0 bg-background text-foreground flex flex-col items-center p-4">
         <div className="flex flex-col items-center mb-8">
           <Skeleton className="h-24 w-24 rounded-full mb-4" />
           <Skeleton className="h-6 w-48 mb-2" />
@@ -218,11 +218,11 @@ const InstagramProfilePage = () => {
   const totalFollowers = shopDetails.followers_count || 0;
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-screen w-full min-w-0 bg-background text-foreground flex flex-col">
       {/* InstagramFilterDrawer is now rendered in InstagramShopLayout */}
 
-      <main className="flex-1 flex justify-center">
-        <div className="w-full md:max-w-[1080px] mx-auto">
+      <main className="flex-1 flex justify-center min-w-0 max-w-full">
+        <div className="w-full min-w-0 md:max-w-[1080px] mx-auto">
         {/* Profile Section */}
         <section className="flex flex-col md:flex-row md:items-start md:gap-10 mb-6 md:mb-8 px-3 pt-6 md:pt-10 md:w-[70%] mx-auto justify-center">
           <div className="flex-1 gap-4 md:gap-8 w-full">
@@ -275,7 +275,7 @@ const InstagramProfilePage = () => {
         </section>
 
         {marqueeElements.length > 0 && (
-          <section className="my-2">
+          <section className="my-2 max-w-full overflow-hidden">
             <div className="border-y border-border bg-card">
               <Marquee pauseOnHover className="py-1">
                 {marqueeElements.map(element => (

@@ -394,7 +394,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                   <div><Label>Tags</Label><Controller control={control} name="tags" render={({ field }) => <TagInput {...field} value={Array.isArray(field.value) ? field.value : (field.value ? [field.value] : [])} />} /></div>
                   <div className="space-y-2 pt-2">
                     <Label>Pricing Model</Label>
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                       <Controller control={control} name="pricing_type" render={({ field }) => (<ToggleGroup type="single" onValueChange={field.onChange} value={field.value} variant="outline" size="sm"><ToggleGroupItem value="one_time">One-time</ToggleGroupItem><ToggleGroupItem value="subscription">Subscription</ToggleGroupItem></ToggleGroup>)} />
                       <Controller control={control} name="product_type" render={({ field }) => (
                         <RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-4">

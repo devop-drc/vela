@@ -31,7 +31,7 @@ export const QuickViewModal = ({ product, open, onOpenChange }: Props) => {
   const { shopDetails, convertCurrency, promotions, capabilities } = useStorefront();
   const { addToCart } = useCart();
   const token = useStorefrontTokenStyle();
-  const rating = useProductRating(open && capabilities.reviews ? product.id : undefined);
+  const rating = useProductRating(open && capabilities?.reviews ? product.id : undefined);
 
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);

@@ -145,7 +145,7 @@ const DashboardLayout = () => {
   // floating/primary/blur variants were removed with app theme customisation.
   return (
     <div
-      className="relative flex h-screen bg-transparent"
+      className="relative flex h-screen-dvh bg-transparent"
       style={{ '--sidebar-width': sidebarWidthValue } as React.CSSProperties}
     >
       <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
@@ -153,7 +153,10 @@ const DashboardLayout = () => {
       <div className="flex min-w-0 flex-1 flex-col overflow-y-auto transition-all duration-300">
         <Header title={title} />
         {/* pb-24 clears the mobile BottomNav + floating dock; md resets it. */}
-        <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6">{content}</main>
+        {/* Mobile pb clears the bottom tab bar (5rem) AND the floating chat/
+            sync/bell dock above it (~9rem) so the last row of content can
+            always scroll out from under them. */}
+        <main className="flex-1 p-4 pb-36 md:p-6 md:pb-6">{content}</main>
       </div>
       <BottomNav />
       <div className="fixed bottom-24 right-4 z-50 flex items-center gap-2 md:bottom-4">

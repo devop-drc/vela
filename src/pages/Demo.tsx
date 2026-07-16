@@ -154,7 +154,7 @@ const Demo = () => {
   const select = (k: ScreenKey) => { setActive(k); setMobileOpen(false); };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+    <div className="flex h-screen-dvh overflow-hidden bg-background text-foreground">
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:w-60 shrink-0 flex-col border-r bg-card">
         <Brand />

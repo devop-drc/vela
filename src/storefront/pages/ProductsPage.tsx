@@ -182,7 +182,7 @@ export const ProductsPage = () => {
   // Review summaries (single batched query, session-cached) — powers the
   // rating facet and the "Top Rated" sort.
   const productIds = useMemo(() => products.map((p) => p.id), [products]);
-  const ratings = useProductRatings(capabilities.reviews ? productIds : []);
+  const ratings = useProductRatings(capabilities?.reviews ? productIds : []);
 
   // Real purchase options live in product_variants — fold each product's
   // variant options into its details so facets and matching see them too.
@@ -338,7 +338,7 @@ export const ProductsPage = () => {
     categories: show('categories') && allCategories.length > 0,
     priceRange: show('priceRange') && maxPrice > 1,
     availability: show('availability'),
-    rating: show('rating') && capabilities.reviews,
+    rating: show('rating') && capabilities?.reviews,
     tags: show('tags') && allTags.length > 0,
     options: optionKeys.filter((k) => show(k) && valuesFor(k).length > 0),
     specs: specKeys.filter((k) => show(k) && valuesFor(k).length > 0),

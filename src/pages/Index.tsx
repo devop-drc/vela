@@ -360,7 +360,7 @@ const Index = () => {
 
   if (isLoading) {
     return (
-      <div className="lg:h-[calc(100vh-7rem)] flex flex-col gap-3">
+      <div className="lg:h-[calc(100dvh-7rem)] flex flex-col gap-3">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1.5">
             <Skeleton className="h-7 w-64" />
@@ -405,7 +405,7 @@ const Index = () => {
   }
 
   return (
-    <div ref={revealRef} className="h-[calc(100vh-7rem)] flex flex-col gap-3">
+    <div ref={revealRef} className="lg:h-[calc(100dvh-7rem)] flex flex-col gap-3">
       {/* Welcome Header + Quick Actions on same row */}
       <div data-reveal className="flex items-start justify-between gap-4 flex-wrap flex-shrink-0">
         <WelcomeHeader
@@ -470,7 +470,7 @@ const Index = () => {
           <h2 className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5 flex-shrink-0">
             <BarChart2 className="h-3.5 w-3.5" />{t("dashboard.business_overview")}
           </h2>
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-[320px] lg:min-h-0">
             <Suspense fallback={<Skeleton className="h-full w-full min-h-[280px]" />}>
               <OverviewChart
                 data={data.chartData}
@@ -492,21 +492,21 @@ const Index = () => {
             <ProfileStats />
           </div>
 
-          <div className="flex flex-col min-h-0 flex-1 basis-0">
+          <div className="flex flex-col lg:min-h-0 lg:flex-1 lg:basis-0">
             <h2 className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5 flex-shrink-0">
               <Zap className="h-3.5 w-3.5" />{t("dashboard.top_sellers")}
             </h2>
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-[240px] lg:min-h-0">
               <TopProducts />
             </div>
           </div>
 
-          <div className="flex flex-col min-h-0 flex-1 basis-0" data-tour="activity">
+          <div className="flex flex-col lg:min-h-0 lg:flex-1 lg:basis-0" data-tour="activity">
             <h2 className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5 flex-shrink-0">
               <Activity className="h-3.5 w-3.5" />{t("dashboard.live_activity")}
               <StatusDot tone="success" pulse className="ml-0.5" />
             </h2>
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-[240px] lg:min-h-0">
               <ActivityFeed />
             </div>
           </div>

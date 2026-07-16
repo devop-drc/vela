@@ -50,7 +50,7 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
   const config = useStorefrontConfig();
   const { shopDetails, convertCurrency, promotions, capabilities } = useStorefront();
   const { addToCart } = useCart();
-  const rating = useProductRating(capabilities.reviews ? product.id : undefined);
+  const rating = useProductRating(capabilities?.reviews ? product.id : undefined);
   // Real purchase options live in product_variants (batched, session-cached).
   const variantInfo = useVariantOptionsFor(product.id);
   const v = variant ?? config.components.productCard;

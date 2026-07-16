@@ -447,13 +447,17 @@ export const InstagramCheckoutForm = ({
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: 'auto' }}
                               exit={{ opacity: 0, height: 0 }}
-                              className="text-md text-[hsl(var(--primary))] bg-[hsl(var(--card))] items-center justify-center flex rounded-md"
+                              className="text-md text-[hsl(var(--primary))] bg-[hsl(var(--card))] rounded-md"
                             >
-                              <Info className="h-4 w-4 inline-block mr-2" />
-                              Please have the exact amount of&nbsp;<strong>{formatCurrency(total, shopDetails?.currency)}</strong>&nbsp;ready for the courier.
+                              {/* single inline paragraph — a flex container here split each
+                                  text run into its own column on narrow screens */}
+                              <p className="text-center">
+                                <Info className="mr-2 inline-block h-4 w-4 align-[-2px]" />
+                                Please have the exact amount of <strong>{formatCurrency(total, shopDetails?.currency)}</strong> ready for the courier.
+                              </p>
                             </motion.div>
                         )}
-                        {capabilities.card_payments && (
+                        {capabilities?.card_payments && (
                           <Label htmlFor="card" className="flex items-center gap-3 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-[hsl(var(--primary))] flex-1">
                             <RadioGroupItem value="card" id="card" />
                             <div>

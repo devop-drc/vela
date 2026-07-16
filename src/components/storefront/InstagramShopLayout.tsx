@@ -415,7 +415,10 @@ const InstagramShopLayoutContent = () => {
         }
       `}</style>
       <InstagramDesktopSidebar onToggleTheme={toggleTheme} isDark={isDark} />
-      <div className="flex flex-col flex-1 md:pl-[335px] pt-[calc(var(--instagram-header-height)+var(--sat))] md:pt-0">
+      {/* min-w-0 + capped main: without it, a wide child (e.g. the announcement
+          marquee, whose autoFill sizes itself to its container) can grow this
+          flex column, which grows the child again — a runaway feedback loop. */}
+      <div className="flex min-w-0 flex-col flex-1 md:pl-[335px] pt-[calc(var(--instagram-header-height)+var(--sat))] md:pt-0">
         <div className="md:hidden">
           <InstagramShopHeader
             onOpenCart={() => setIsCartModalOpen(true)}
@@ -424,7 +427,7 @@ const InstagramShopLayoutContent = () => {
             onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)}
           />
         </div>
-        <main className="flex-1 flex mx-auto">
+        <main className="flex-1 flex mx-auto w-full min-w-0 max-w-full">
         <Suspense fallback={<div className="p-6 w-full"><Skeleton className="h-96 w-full" /></div>}>
           <Outlet context={{
             isFilterDrawerOpen,

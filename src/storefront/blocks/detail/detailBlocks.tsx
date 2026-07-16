@@ -282,7 +282,7 @@ export const ReviewsBlock = ({ props }: { props: { title?: string } }) => {
   const [reviews, setReviews] = useState<Review[] | null>(null);
 
   useEffect(() => {
-    if (!capabilities.reviews) return; // plan-gated: Starter shops don't show reviews
+    if (!capabilities?.reviews) return; // plan-gated: Starter shops don't show reviews
     let cancelled = false;
     supabase
       .from('product_reviews')
@@ -296,7 +296,7 @@ export const ReviewsBlock = ({ props }: { props: { title?: string } }) => {
     return () => { cancelled = true; };
   }, [product.id]);
 
-  if (!capabilities.reviews) return null; // reviews are a Pro/Business entitlement
+  if (!capabilities?.reviews) return null; // reviews are a Pro/Business entitlement
   if (reviews === null) return null; // loading — keep the page quiet
   const avg = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
 

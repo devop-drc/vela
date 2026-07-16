@@ -4,7 +4,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import { CartProvider } from '@/contexts/CartContext';
 import { RecentlyViewedProvider } from '@/contexts/RecentlyViewedContext';
@@ -88,6 +87,13 @@ const Chrome = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPreview, shopDetails?.slug, products, navigate, open, config.components.cart]);
 
+  // Scroll restoration: SPA route changes keep the previous scroll position,
+  // so tapping "Shop" from a scrolled homepage landed mid-page. Reset to top
+  // on every pathname change (hash links and in-page anchors are unaffected).
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  }, [location.pathname]);
+
   // Document title + favicon.
   useEffect(() => {
     if (!shopDetails) return;
@@ -109,8 +115,10 @@ const Chrome = () => {
 
   const sidebarNav = config.layout.nav.desktop === 'sidebar';
   // Only reserve space for the mobile bottom bar when it's actually shown
-  // (otherwise every page has ~80px of dead space in hamburger mode).
-  const mainPad = config.layout.nav.mobileBottomBar ? 'pb-[calc(5rem+var(--sab,0px))] md:pb-0' : '';
+  // (otherwise every page has ~80px of dead space in hamburger mode). The
+  // reserve lives BELOW the footer — on main it left the footer itself
+  // hidden under the fixed bar.
+  const navReserve = config.layout.nav.mobileBottomBar ? 'pb-[calc(5rem+var(--sab,0px))] md:pb-0' : '';
 
   return (
     <StorefrontThemeProvider config={config} className="min-h-screen flex flex-col">
@@ -121,20 +129,20 @@ const Chrome = () => {
           <div className="flex flex-1">
             <SidebarNav onOpenCart={openCart} />
             <div className="flex min-w-0 flex-1 flex-col">
-              <main className={cn('flex-1', mainPad)}>
+              <main className="flex-1">
                 <Outlet />
               </main>
-              <Footer />
+              <div className={navReserve}><Footer /></div>
             </div>
           </div>
         </>
       ) : (
         <>
           <Header onOpenCart={openCart} />
-          <main className={cn('flex-1', mainPad)}>
+          <main className="flex-1">
             <Outlet />
           </main>
-          <Footer />
+          <div className={navReserve}><Footer /></div>
         </>
       )}
       <BottomNav onOpenCart={openCart} />
