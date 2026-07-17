@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { Outlet, useSearchParams, useLocation } from 'react-router-dom'; // Import useSearchParams
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
-import { InstagramShopHeader } from './InstagramShopHeader'; // Custom header
 import { defaultSettings, useAppearance } from '@/contexts/AppearanceContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -133,8 +132,10 @@ const InstagramShopLayoutContent = () => {
   // Products feed has an extra row (filter/sort), so increase height on that page
   // Compute directly from current path via regex (avoids needing shopSlug)
   const isProductsPath = /\/instagramShop\/[^/]+\/products(\b|\/|\?)/.test(location.pathname);
-  const HEADER_HEIGHT = isProductsPath ? '100px' : '56px';
-  const BOTTOM_NAV_HEIGHT = '56px'; // h-14
+  // The mobile header was removed (nav lives in the bottom bar) — no reserved height.
+  const HEADER_HEIGHT = '0px';
+  // Bar height + its safe-area padding (min 10px for curved-edge phones).
+  const BOTTOM_NAV_HEIGHT = 'calc(56px + max(var(--sab, 0px), 10px))';
 
   useEffect(() => {
     // Polyfill safe-area and dvh CSS variables for browsers that don't fully support env()
@@ -368,8 +369,7 @@ const InstagramShopLayoutContent = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))]" style={{ height: '100dvh' }}>
-        <InstagramShopHeader onOpenCart={() => setIsCartModalOpen(true)} onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)} isProductsFeedPage={isProductsFeedPage} onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)} />
-        <main className="flex-1 container py-4 mt-14">
+        <main className="flex-1 container py-4 mt-4">
           <div className="flex flex-col items-center mb-8">
             <Skeleton className="h-24 w-24 rounded-full mb-4" />
             <Skeleton className="h-6 w-48 mb-2" />
@@ -418,15 +418,9 @@ const InstagramShopLayoutContent = () => {
       {/* min-w-0 + capped main: without it, a wide child (e.g. the announcement
           marquee, whose autoFill sizes itself to its container) can grow this
           flex column, which grows the child again — a runaway feedback loop. */}
-      <div className="flex min-w-0 flex-col flex-1 md:pl-[335px] pt-[calc(var(--instagram-header-height)+var(--sat))] md:pt-0">
-        <div className="md:hidden">
-          <InstagramShopHeader
-            onOpenCart={() => setIsCartModalOpen(true)}
-            onOpenMyOrders={() => setIsMyOrdersDrawerOpen(true)}
-            isProductsFeedPage={isProductsFeedPage}
-            onOpenFilterDrawer={() => setIsFilterDrawerOpen(true)}
-          />
-        </div>
+      {/* Mobile has no header — navigation lives in the bottom bar; only the
+          notch inset is padded. */}
+      <div className="flex min-w-0 flex-col flex-1 md:pl-[335px] pt-[var(--sat)] md:pt-0">
         <main className="flex-1 flex mx-auto w-full min-w-0 max-w-full">
         <Suspense fallback={<div className="p-6 w-full"><Skeleton className="h-96 w-full" /></div>}>
           <Outlet context={{
@@ -441,6 +435,11 @@ const InstagramShopLayoutContent = () => {
           }} />
         </Suspense>
         </main>
+        {/* Attribution — Vela link opens the landing page in a new tab. */}
+        <p className="pb-3 pt-1 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
+          Powered by{' '}
+          <a href="/" target="_blank" rel="noopener" className="font-semibold text-[hsl(var(--primary))] hover:underline">Vela</a>
+        </p>
       </div>
       <Sonner />
       <InstagramCartDrawer isOpen={isCartModalOpen} onClose={() => setIsCartModalOpen(false)} />

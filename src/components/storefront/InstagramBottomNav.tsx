@@ -1,17 +1,40 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
-import { ShoppingBag, Sun, Moon, Truck, Box } from 'lucide-react';
+import { useParams, useLocation, Link } from 'react-router-dom';
+import { ShoppingBag, Sun, Moon, Package, House, LayoutGrid } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import { useCart } from '@/contexts/CartContext';
-//
 
 interface InstagramBottomNavProps {
   onOpenCart: () => void;
   onOpenMyOrders: () => void;
   myOrdersCount: number;
 }
+
+/** Compact vertical icon+label item — five of these fit a 360px viewport. */
+const NavItem = ({ active, onClick, ariaLabel, children }: {
+  active?: boolean;
+  onClick?: () => void;
+  ariaLabel: string;
+  children: React.ReactNode;
+}) => (
+  <button
+    onClick={onClick}
+    aria-label={ariaLabel}
+    className={cn(
+      'relative flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-0.5 transition-colors',
+      active ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]'
+    )}
+  >
+    {children}
+  </button>
+);
+
+const ItemLabel = ({ children }: { children: React.ReactNode }) => (
+  <span className="max-w-full truncate text-[10px] font-semibold leading-none">{children}</span>
+);
 
 export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }: InstagramBottomNavProps) => {
   const { totalItems } = useCart();
@@ -43,6 +66,10 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
     return null;
   }
 
+  const base = `/instagramShop/${shopSlug}`;
+  const onProducts = location.pathname.startsWith(`${base}/products`);
+  const onHome = !onProducts;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 50 }}
@@ -50,14 +77,10 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
       exit={{ opacity: 0, y: 50 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className="fixed left-0 right-0 bottom-0 z-50 flex w-[100vw]"
-      style={{
-        bottom: 0,
-        // Keep the bar visually flush with the bottom while allowing safe-area padding inside
-        WebkitTransform: 'translateZ(0)',
-      }}
+      style={{ bottom: 0, WebkitTransform: 'translateZ(0)' }}
     >
       <nav
-        className="w-full max-w-md bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-t border-[hsl(var(--border))] shadow-lg"
+        className="w-full bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-t border-[hsl(var(--border))] shadow-lg"
         style={{
           height: '56px',
           // Curved-edge phones need clearance even when the safe-area env
@@ -66,36 +89,34 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
           boxSizing: 'content-box',
         }}
       >
-        <div className="flex justify-around items-center h-full">
-          <button
-            onClick={onOpenMyOrders}
-            aria-label="My Orders"
-            className="flex flex-row gap-1 items-center justify-center w-full h-full transition-colors text-xs relative hover:bg-[hsl(var(--muted))]"
-          >
-            <ShoppingBag className="h-[18px] w-[18px]" />
-            <p className="font-semibold text-xs mt-0.5">My Orders</p>
-            {myOrdersCount > 0 && (
-              <span className="absolute top-1 right-1/2 translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white font-bold">
-                {myOrdersCount}
-              </span>
-            )}
-          </button>
+        <div className="flex h-full items-stretch justify-around">
+          <Link to={base} aria-label="Shop home"
+            className={cn('relative flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-0.5 transition-colors',
+              onHome ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]')}>
+            <House className="h-[18px] w-[18px]" />
+            <ItemLabel>Shop</ItemLabel>
+          </Link>
 
-          {/* Theme toggle (icon only) */}
-          <button
-            onClick={toggleTheme}
-            className="flex items-center justify-center w-full h-full hover:bg-[hsl(var(--muted))]"
-            aria-label="Toggle theme"
-          >
-            {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-          </button>
+          <Link to={`${base}/products`} aria-label="Products"
+            className={cn('relative flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-0.5 transition-colors',
+              onProducts ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]')}>
+            <LayoutGrid className="h-[18px] w-[18px]" />
+            <ItemLabel>Products</ItemLabel>
+          </Link>
 
-          {/* Cart Button */}
-          <button
-            onClick={onOpenCart}
-            aria-label="Cart"
-            className="flex flex-row-reverse gap-1 items-center justify-center w-full h-full transition-colors text-xs relative hover:bg-[hsl(var(--muted))]"
-          >
+          <NavItem onClick={onOpenMyOrders} ariaLabel="My Orders">
+            <span className="relative">
+              <Package className="h-[18px] w-[18px]" />
+              {myOrdersCount > 0 && (
+                <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[10px] font-bold text-white">
+                  {myOrdersCount}
+                </span>
+              )}
+            </span>
+            <ItemLabel>Orders</ItemLabel>
+          </NavItem>
+
+          <NavItem onClick={onOpenCart} ariaLabel="Cart">
             <motion.span
               key={totalItems}
               initial={{ scale: 1 }}
@@ -105,13 +126,18 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
             >
               <ShoppingBag className="h-[18px] w-[18px]" />
               {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white font-bold">
+                <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[10px] font-bold text-white">
                   {totalItems}
                 </span>
               )}
             </motion.span>
-            <span className="font-semibold text-xs mt-0.5">Cart</span>
-          </button>
+            <ItemLabel>Cart</ItemLabel>
+          </NavItem>
+
+          <NavItem onClick={toggleTheme} ariaLabel="Toggle theme">
+            {isDark ? <Moon className="h-[18px] w-[18px]" /> : <Sun className="h-[18px] w-[18px]" />}
+            <ItemLabel>Theme</ItemLabel>
+          </NavItem>
         </div>
       </nav>
     </motion.div>

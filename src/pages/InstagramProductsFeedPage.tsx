@@ -2,12 +2,13 @@
 
 import { useMemo, useCallback, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams, useOutletContext } from "react-router-dom";
-import { Package, XCircle } from "lucide-react";
+import { Package, XCircle, Filter, ArrowUpNarrowWide } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Button } from "@/components/ui/button";
 import { InstagramProductCardFull } from "@/components/storefront/InstagramProductCardFull";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui-app";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useReveal } from "@/lib/anim";
 
 interface Product {
@@ -185,6 +186,35 @@ const InstagramProductsFeedPage = () => {
 
       <main className="flex-1 pt-0 flex justify-center">
         <div className="w-full md:max-w-[630px]">
+        {/* Filter/Sort bar — the mobile header that used to host these is gone. */}
+        <div className="flex items-center gap-2 px-3 pb-2 pt-3 md:hidden">
+          <Button
+            variant="outline" size="sm"
+            onClick={() => setIsFilterDrawerOpen(true)}
+            className="h-10 flex-1 rounded-xl bg-[hsl(var(--card))] font-semibold text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]"
+          >
+            <Filter className="mr-2 h-4 w-4" /> Filter
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline" size="sm"
+                className="h-10 flex-1 rounded-xl bg-[hsl(var(--card))] font-semibold text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]"
+              >
+                Sort <ArrowUpNarrowWide className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {[['newest', 'Newest'], ['oldest', 'Oldest'], ['price-asc', 'Price: Low to High'], ['price-desc', 'Price: High to Low'], ['name-asc', 'Name: A-Z'], ['name-desc', 'Name: Z-A']].map(([v, label]) => (
+                <DropdownMenuItem key={v} className="text-sm" onClick={() => {
+                  const next = new URLSearchParams(searchParams);
+                  if (v === 'newest') next.delete('sort'); else next.set('sort', v);
+                  setSearchParams(next, { replace: true });
+                }}>{label}</DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         {/* Product Grid */}
         <section className="mt-0">
           {filteredAndSortedProducts.length === 0 ? (
