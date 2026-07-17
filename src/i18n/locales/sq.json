@@ -22,7 +22,7 @@
   },
   "header": {
     "search_placeholder": "Kërko…",
-    "shop_url": "URL e Dyqanit",
+    "shop_url": "Linku i Dyqanit",
     "ai_usage": "Përdorimi i AI",
     "ai_description": "Çmimi Gemini Flash: $0.15/1M hyrje, $0.60/1M dalje",
     "input_tokens": "Tokena hyrëse",
@@ -93,7 +93,9 @@
     "status_updated": "Statusi u Përditësua",
     "sale_fulfilled": "Shitje e Përfunduar",
     "order_status_updated": "Statusi i Porosisë u Përditësua",
-    "reason": "Arsyeja"
+    "reason": "Arsyeja",
+    "chart_empty": "Ende pa shitje në këtë periudhë",
+    "chart_empty_hint": "Porositë do të shfaqen këtu sapo të vijnë."
   },
   "common": {
     "save": "Ruaj",

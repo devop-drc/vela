@@ -39,6 +39,8 @@ const DemoShop = lazy(() => import("./pages/DemoShop"));
 const Keywords = lazy(() => import("./pages/Keywords"));
 const Categories = lazy(() => import("./pages/Categories"));
 const Promotions = lazy(() => import("./pages/Promotions"));
+const ChatPage = lazy(() => import("./pages/ChatPage"));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const FilterVisibility = lazy(() => import("./pages/FilterVisibility"));
 const Billing = lazy(() => import("./pages/Billing"));
 const Admin = lazy(() => import("./pages/Admin"));
@@ -221,6 +223,8 @@ const AppContent = () => {
               <Route path="/categories" element={<Categories />} />
               <Route path="/out-of-stock" element={<OutOfStock />} />
               <Route path="/promotions" element={<Promotions />} />
+              <Route path="/chat" element={<ChatPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/storefront-studio" element={<StorefrontStudioPage />} />
               <Route path="/filters" element={<FilterVisibility />} />
             </Route>

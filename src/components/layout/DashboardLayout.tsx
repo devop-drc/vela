@@ -1,4 +1,5 @@
-import { Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
+import { MessageCircle } from "lucide-react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import BottomNav from "./BottomNav";
@@ -159,11 +160,26 @@ const DashboardLayout = () => {
         <main className="flex-1 p-4 pb-36 md:p-6 md:pb-6">{content}</main>
       </div>
       <BottomNav />
-      {/* Slightly smaller on phones so the dock covers less content. */}
+      {/* Floating dock. Desktop: chat + bell open popovers. Mobile: they are
+          full pages (/chat, /notifications) — the buttons navigate, and each
+          hides on its own page. Slightly smaller on phones so the dock covers
+          less content. */}
       <div className="fixed bottom-24 right-4 z-50 flex items-center gap-2 md:bottom-4 max-md:origin-bottom-right max-md:scale-[0.85]">
-        <VelaChat />
+        <div className="hidden md:block"><VelaChat /></div>
+        {location.pathname !== '/chat' && (
+          <Link
+            to="/chat"
+            aria-label="Vela Assistant"
+            className="grid h-12 w-12 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg ring-1 ring-inset ring-primary-foreground/25 transition-transform hover:scale-105 md:hidden"
+          >
+            <MessageCircle className="h-5 w-5" aria-hidden="true" />
+          </Link>
+        )}
         <SyncStatusWidget />
-        <NotificationSidebar />
+        <div className="hidden md:block"><NotificationSidebar /></div>
+        {location.pathname !== '/notifications' && (
+          <div className="md:hidden"><NotificationSidebar linkTo="/notifications" /></div>
+        )}
       </div>
     </div>
   );

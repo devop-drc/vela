@@ -22,7 +22,7 @@
   },
   "header": {
     "search_placeholder": "Search…",
-    "shop_url": "Shop URL",
+    "shop_url": "Storefront Link",
     "ai_usage": "AI Usage",
     "ai_description": "Gemini Flash pricing: $0.15/1M input, $0.60/1M output",
     "input_tokens": "Input tokens",
@@ -93,7 +93,9 @@
     "status_updated": "Status Updated",
     "sale_fulfilled": "Sale Fulfilled",
     "order_status_updated": "Order Status Updated",
-    "reason": "Reason"
+    "reason": "Reason",
+    "chart_empty": "No sales in this period yet",
+    "chart_empty_hint": "Orders will appear here as they come in."
   },
   "common": {
     "save": "Save",
@@ -558,9 +560,9 @@
     "connected_toast": "Instagram connected!",
     "shop_updated": "Shop details updated!",
     "shop_save_failed": "Couldn't save your shop details. Please try again.",
-    "url_copied": "Shop URL copied to clipboard!",
+    "url_copied": "Storefront link copied to clipboard!",
     "url_copy_failed": "Failed to copy URL. Please try again manually.",
-    "url_unavailable": "Shop URL not available yet.",
+    "url_unavailable": "Storefront link not available yet.",
     "headline_placeholder": "e.g., Handcrafted Leather Goods",
     "open_storefront": "Open storefront"
   },

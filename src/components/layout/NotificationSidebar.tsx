@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Popover,
@@ -392,7 +393,8 @@ function DisputeCard({
 
 // ── Main Component ───────────────────────────────────────────────────
 
-export default function NotificationSidebar() {
+export default function NotificationSidebar({ asPage = false, linkTo }: { asPage?: boolean; linkTo?: string } = {}) {
+  const navigate = useNavigate();
   const { t } = useTranslation();
   // businessId is resolved & cached once by AuthProvider (hydrates instantly
   // from localStorage) — no local getSession→businesses waterfall needed here.
@@ -435,16 +437,16 @@ export default function NotificationSidebar() {
     return { orders: orders_, disputes: disputes_, activity: activity_ };
   }, [orders, disputes, activity, lastSeen]);
 
-  // Mark as seen when sheet opens
+  // Mark as seen when the sheet opens (or immediately in page mode)
   useEffect(() => {
-    if (open) {
+    if (open || asPage) {
       const now = Date.now();
       setLastSeen(now);
       try {
         localStorage.setItem(LAST_SEEN_KEY, String(now));
       } catch {}
     }
-  }, [open]);
+  }, [open, asPage]);
 
   // ── Fetch orders ────────────────────────────────────────────────────
   const fetchOrders = useCallback(async () => {
@@ -548,8 +550,14 @@ export default function NotificationSidebar() {
   useEffect(() => {
     if (!businessId) return;
 
+    // Channel names must be unique per mounted instance: supabase-js returns
+    // the SAME channel object for a repeated name, and adding callbacks after
+    // subscribe() throws. The dock trigger and the /notifications page can be
+    // mounted at the same time.
+    const chanId = Math.random().toString(36).slice(2, 8);
+
     const ordersChannel = supabase
-      .channel("notifications-orders")
+      .channel(`notifications-orders-${chanId}`)
       .on(
         "postgres_changes",
         {
@@ -582,7 +590,7 @@ export default function NotificationSidebar() {
       .subscribe();
 
     const disputesChannel = supabase
-      .channel("notifications-disputes")
+      .channel(`notifications-disputes-${chanId}`)
       .on(
         "postgres_changes",
         {
@@ -688,11 +696,10 @@ export default function NotificationSidebar() {
   // empty list mean "genuinely nothing here".
   const loading = !!businessId && !firstLoadDone;
 
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+  const triggerButton = (
         <button
           aria-label={t("notifications.title")}
+          onClick={linkTo ? () => navigate(linkTo) : undefined}
           className="flex h-12 items-center gap-1.5 rounded-full bg-primary px-3.5 text-primary-foreground shadow-lg transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <Bell className="h-5 w-5" aria-hidden="true" />
@@ -717,21 +724,9 @@ export default function NotificationSidebar() {
             </span>
           )}
         </button>
-      </PopoverTrigger>
+  );
 
-      <PopoverContent
-        side="top"
-        align="end"
-        sideOffset={14}
-        className="flex h-[min(600px,calc(100dvh-7rem))] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border p-0 shadow-2xl sm:w-[400px]"
-      >
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <h2 className="text-lg font-semibold">{t("notifications.title")}</h2>
-          <button onClick={() => setOpen(false)} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
+  const tabsPanel = (
         <Tabs defaultValue="orders" className="flex min-h-0 flex-1 flex-col pt-2">
           <TabsList className="mx-4 mb-2 grid grid-cols-3">
             <TabsTrigger value="orders" className="text-xs">
@@ -852,6 +847,34 @@ export default function NotificationSidebar() {
             </MessageScrollerViewport></MessageScroller></MessageScrollerProvider>
           </TabsContent>
         </Tabs>
+  );
+
+  // Page mode (mobile /notifications route): the panel fills its container —
+  // no popover, no floating trigger, the page chrome provides title/back.
+  if (asPage) {
+    return <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border bg-card">{tabsPanel}</div>;
+  }
+
+  // Mobile: the floating bell keeps its live unread badges but navigates to
+  // the dedicated /notifications page instead of opening a cramped popover.
+  if (linkTo) return triggerButton;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+      <PopoverContent
+        side="top"
+        align="end"
+        sideOffset={14}
+        className="flex h-[min(600px,calc(100dvh-7rem))] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border p-0 shadow-2xl sm:w-[400px]"
+      >
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <h2 className="text-lg font-semibold">{t("notifications.title")}</h2>
+          <button onClick={() => setOpen(false)} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        {tabsPanel}
       </PopoverContent>
     </Popover>
   );
