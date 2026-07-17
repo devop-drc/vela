@@ -279,15 +279,14 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                       if (value === 'discount') setValue('value', { discountType: "percentage", discountValue: 0 });
                       else if (value === 'offer') setValue('value', { offerType: "free_shipping", minOrderValue: 0 });
                     }} value={field.value}>
+                      {/* SelectValue already renders the item's icon+label; a second
+                          icon wrapper made the content wrap onto two lines on mobile */}
                       <SelectTrigger id="type" className="h-10 px-3 py-2">
-                        <div className="flex items-center gap-2"> {/* Wrapper for icon and text */}
-                          {field.value === 'discount' ? <Percent className="h-4 w-4" /> : <Gift className="h-4 w-4" />}
-                          <SelectValue placeholder="Select type" />
-                        </div>
+                        <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="discount"><Percent className="mr-2 h-4 w-4" /> Discount</SelectItem>
-                        <SelectItem value="offer"><Gift className="mr-2 h-4 w-4" /> Offer</SelectItem>
+                        <SelectItem value="discount"><span className="inline-flex items-center whitespace-nowrap"><Percent className="mr-2 h-4 w-4" /> Discount</span></SelectItem>
+                        <SelectItem value="offer"><span className="inline-flex items-center whitespace-nowrap"><Gift className="mr-2 h-4 w-4" /> Offer</span></SelectItem>
                       </SelectContent>
                     </Select>
                   )}
@@ -305,14 +304,11 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value}>
                           <SelectTrigger id="discountType" className="h-10 px-3 py-2">
-                            <div className="flex items-center gap-2"> {/* Wrapper for icon and text */}
-                              {field.value === 'percentage' ? <Percent className="h-4 w-4" /> : <DollarSign className="h-4 w-4" />}
-                              <SelectValue placeholder="Select discount type" />
-                            </div>
+                            <SelectValue placeholder="Select discount type" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="percentage"><Percent className="mr-2 h-4 w-4" /> Percentage Off</SelectItem>
-                            <SelectItem value="flat"><DollarSign className="mr-2 h-4 w-4" /> Flat Amount Off</SelectItem>
+                            <SelectItem value="percentage"><span className="inline-flex items-center whitespace-nowrap"><Percent className="mr-2 h-4 w-4" /> Percentage Off</span></SelectItem>
+                            <SelectItem value="flat"><span className="inline-flex items-center whitespace-nowrap"><DollarSign className="mr-2 h-4 w-4" /> Flat Amount Off</span></SelectItem>
                           </SelectContent>
                         </Select>
                       )}
@@ -350,13 +346,10 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                     render={({ field }) => (
                       <Select onValueChange={field.onChange} value={field.value}>
                         <SelectTrigger id="offerType" className="h-10 px-3 py-2">
-                          <div className="flex items-center gap-2"> {/* Wrapper for icon and text */}
-                            <Gift className="h-4 w-4" />
-                            <SelectValue placeholder="Select offer type" />
-                          </div>
+                          <SelectValue placeholder="Select offer type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="free_shipping"><Truck className="mr-2 h-4 w-4" /> Free Shipping</SelectItem>
+                          <SelectItem value="free_shipping"><span className="inline-flex items-center whitespace-nowrap"><Truck className="mr-2 h-4 w-4" /> Free Shipping</span></SelectItem>
                           {/* Add more offer types here */}
                         </SelectContent>
                       </Select>
@@ -483,10 +476,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                   render={({ field }) => (
                     <Select onValueChange={(value) => field.onChange(value === '' ? 'none' : value)} value={field.value || 'none'}>
                       <SelectTrigger id="repeat_interval" className="h-10 px-3 py-2">
-                        <div className="flex items-center gap-2"> {/* Wrapper for icon and text */}
-                          <Repeat className="h-4 w-4" />
-                          <SelectValue placeholder="No repeat" />
-                        </div>
+                        <SelectValue placeholder="No repeat" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">No repeat</SelectItem>

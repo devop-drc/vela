@@ -58,7 +58,11 @@ export const ScaledFrame = ({ src, virtualW, virtualH, title, className, interac
 };
 
 export const DockedPreview = ({ previewPath, previewUrl, config, navTarget, className }: Props) => {
-  const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
+  // A merchant editing on a phone wants the mobile view first — it also scales
+  // ~3x larger than the desktop frame in a narrow dock (readable vs. a strip).
+  const [device, setDevice] = useState<'desktop' | 'mobile'>(() =>
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'mobile' : 'desktop'
+  );
   const deskRef = useRef<HTMLIFrameElement>(null);
   const mobRef = useRef<HTMLIFrameElement>(null);
   const holderRef = useRef<HTMLDivElement>(null);

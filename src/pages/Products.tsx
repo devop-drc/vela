@@ -309,12 +309,15 @@ const Products = () => {
     }
   }, [allProducts, selectedProduct]);
 
-  // Fix for crash after deletion: Clear selectedProduct if it no longer exists in allProducts
+  // Fix for crash after deletion: Clear selectedProduct if it no longer exists
+  // in allProducts. A freshly-created product is exempt — its row isn't in
+  // allProducts until the refetch lands, and this used to slam the editor shut
+  // the instant "Add Product" opened it.
   useEffect(() => {
-    if (selectedProduct && !allProducts.some(p => p.id === selectedProduct.id)) {
+    if (selectedProduct && !isNewProduct && !allProducts.some(p => p.id === selectedProduct.id)) {
       setSelectedProduct(null);
     }
-  }, [allProducts, selectedProduct]);
+  }, [allProducts, selectedProduct, isNewProduct]);
 
 
   const handleSync = async (syncType: 'quick' | 'full') => {
@@ -704,6 +707,47 @@ const Products = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Mobile control strip — the desktop cluster above doesn't fit, but the
+          controls themselves must stay available: horizontal scroll row. */}
+      {!isProductDataLoading && isMobile && (
+        <div className="-mx-4 mb-3 flex items-center gap-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <Select value={sortOption} onValueChange={setSortOption}>
+            <SelectTrigger className="h-9 w-auto shrink-0 gap-1.5 shadow-sm"><SelectValue placeholder={t("common.sort")} /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">{t("products.newest")}</SelectItem>
+              <SelectItem value="oldest">{t("products.oldest")}</SelectItem>
+              <SelectItem value="price-asc">{t("products.price_low_high")}</SelectItem>
+              <SelectItem value="price-desc">{t("products.price_high_low")}</SelectItem>
+              <SelectItem value="name-asc">{t("products.name_az")}</SelectItem>
+              <SelectItem value="name-desc">{t("products.name_za")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={grouping} onValueChange={(v) => setGrouping(v as GroupingType)}>
+            <SelectTrigger className="h-9 w-auto shrink-0 gap-1.5 shadow-sm">
+              <Group className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">{t("products.no_grouping", "No grouping")}</SelectItem>
+              <SelectItem value="category">{t("products.by_category")}</SelectItem>
+              <SelectItem value="type">{t("products.by_type")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" className="h-9 shrink-0 shadow-sm" onClick={cycleGridSize}>
+            <LayoutGrid className="mr-1.5 h-4 w-4" />{sizeLabels[gridSize]}
+          </Button>
+          <Button variant={hasActiveFilters ? "secondary" : "outline"} size="sm" className="h-9 shrink-0 shadow-sm" onClick={() => setIsFilterDrawerOpen(true)}>
+            <FilterIcon className="mr-1.5 h-4 w-4" />{t("common.filters")}
+          </Button>
+          <Button variant={isSelectionModeActive ? "secondary" : "outline"} size="sm" className="h-9 shrink-0 shadow-sm" onClick={toggleSelectionMode}>
+            <CheckSquare className="mr-1.5 h-4 w-4" />{isSelectionModeActive ? t('common.cancel') : t('products.select')}
+          </Button>
+          <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 shadow-sm" onClick={() => setIsVisibilityModalOpen(true)} title={t("products.filter_management")}>
+            <Settings2 className="h-4 w-4" />
+          </Button>
         </div>
       )}
 

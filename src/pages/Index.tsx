@@ -413,7 +413,8 @@ const Index = () => {
           activeProducts={data.activeProducts}
           totalOrders={data.salesCount}
         />
-        <div className="shrink-0" data-tour="quick-actions">
+        {/* min-w-0 lets the chip row wrap on phones instead of panning the page */}
+        <div className="min-w-0 max-w-full lg:shrink-0" data-tour="quick-actions">
           <QuickActions />
         </div>
       </div>

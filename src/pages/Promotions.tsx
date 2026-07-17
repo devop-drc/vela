@@ -635,8 +635,8 @@ const Promotions = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[64px]">{t("promotions.order_col")}</TableHead>
-                      <TableHead className="w-[50px]">{t("promotions.icon")}</TableHead>
+                      <TableHead className="hidden w-[64px] sm:table-cell">{t("promotions.order_col")}</TableHead>
+                      <TableHead className="hidden w-[50px] sm:table-cell">{t("promotions.icon")}</TableHead>
                       <TableHead>{t("promotions.message")}</TableHead>
                       <TableHead className="w-[80px] text-center">{t("common.active")}</TableHead>
                       <TableHead className="text-right w-[120px]">{t("promotions.actions")}</TableHead>
@@ -646,7 +646,7 @@ const Promotions = () => {
                     {sortedAnnouncements.length > 0 ? (
                       sortedAnnouncements.map((element, idx) => (
                         <TableRow key={element.id}>
-                          <TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             <div className="flex items-center gap-1">
                               <div className="flex flex-col">
                                 <Button
@@ -671,7 +671,7 @@ const Promotions = () => {
                               <span className="text-xs text-muted-foreground tabular-nums">{element.display_order}</span>
                             </div>
                           </TableCell>
-                          <TableCell>{getAnnouncementIconComponent(element.icon_name)}</TableCell>
+                          <TableCell className="hidden sm:table-cell">{getAnnouncementIconComponent(element.icon_name)}</TableCell>
                           <TableCell className="font-medium max-w-[300px]">
                             <div className="flex items-center gap-2">
                               <span className="truncate">{element.message}</span>

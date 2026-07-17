@@ -247,7 +247,7 @@ export const ShopSettings = () => {
                 </Avatar>
                 <div>
                   <p className="font-semibold leading-tight">{syncedData?.shop_name}</p>
-                  <p className="text-sm text-muted-foreground">@{syncedData?.username}</p>
+                  <p className="text-sm text-muted-foreground">{syncedData?.username ? `@${syncedData.username}` : t('settings.not_connected', 'Not connected')}</p>
                 </div>
               </div>
               <div className="space-y-3">
@@ -256,7 +256,7 @@ export const ShopSettings = () => {
                 <InfoRow
                   icon={Instagram}
                   label={t("settings.ig_profile")}
-                  value={`@${syncedData?.username}`}
+                  value={syncedData?.username ? `@${syncedData.username}` : t('settings.not_connected', 'Not connected')}
                   link={syncedData?.instagram_url}
                 />
               </div>

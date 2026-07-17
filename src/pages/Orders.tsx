@@ -302,7 +302,7 @@ const OrderTable = ({
           <TableHead>{t("orders.order")}</TableHead>
           <TableHead>{t("orders.customer")}</TableHead>
           <TableHead className="hidden sm:table-cell">{t("orders.items")}</TableHead>
-          <TableHead>{t("orders.created")}</TableHead>
+          <TableHead className="hidden md:table-cell">{t("orders.created")}</TableHead>
           <TableHead>{t("orders.status")}</TableHead>
           <TableHead className="text-right">{t("orders.total")}</TableHead>
           <TableHead className="w-[44px]" />
@@ -337,7 +337,7 @@ const OrderTable = ({
               <TableCell className="hidden text-muted-foreground text-sm sm:table-cell">
                 {order.item_count != null ? order.item_count : "—"}
               </TableCell>
-              <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+              <TableCell className="hidden text-sm text-muted-foreground whitespace-nowrap md:table-cell">
                 <span title={new Date(order.created_at).toLocaleString()}>
                   {relativeTime(order.created_at, t)}
                 </span>

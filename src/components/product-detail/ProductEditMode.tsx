@@ -384,8 +384,10 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                       <div className="w-fit min-w-[165px]"><Controller name="category" control={control} render={({ field }) => (<CreatableCombobox options={categoryOptions} placeholder="Category..." {...field} />)} /></div>
                       <div className="w-fit min-w-[165px]"><Controller name="details.type" control={control} render={({ field }) => (<CreatableCombobox options={typeOptions} placeholder="Type..." {...field} />)} /></div>
                     </div>
-                    <div className="flex items-center gap-2 mt-4">
-                      <Input id="name" {...register("name")} placeholder="Product Name" className={cn(underlineBase, "w-auto p-0 text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors")} />
+                    {/* flex-wrap + min-w-0: the 3xl name input has a wide intrinsic
+                        size and used to shove the status select off-screen on phones */}
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <Input id="name" {...register("name")} placeholder="Product Name" className={cn(underlineBase, "min-w-0 flex-1 basis-52 p-0 text-2xl md:text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors")} />
                       <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn(underlineBase, "w-[140px] hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50", currentStatusConfig?.color)}>{StatusIcon ? (<div className="flex items-center gap-2"><StatusIcon className="h-4 w-4" /><span>{currentStatusConfig.label}</span></div>) : <SelectValue placeholder="Set status..." />}</SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
                     </div>
                     {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}

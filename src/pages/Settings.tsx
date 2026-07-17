@@ -47,7 +47,8 @@ export default function Settings() {
                 className="flex items-center gap-2 data-[state=active]:shadow-sm h-10"
               >
                 <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
-                <span className="sr-only sm:not-sr-only">{t(tab.labelKey)}</span>
+                {/* Two tabs always have room for their labels — icon-only was ambiguous */}
+                <span>{t(tab.labelKey)}</span>
               </TabsTrigger>
             );
           })}

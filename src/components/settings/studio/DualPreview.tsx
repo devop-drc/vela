@@ -100,10 +100,16 @@ export const DualPreview = ({ previewPath, config, navTarget, className }: Props
 
   usePreviewBridge([deskRef, mobRef], config, navTarget);
 
-  const scale = Math.max(0.14, Math.min(
-    (box.w - GAP - 28) / (DESKTOP.w + MOBILE.w),
-    (box.h - 40) / Math.max(DESKTOP.h, MOBILE.h),
-  ));
+  // A phone-sized container can't fit desktop+mobile side by side at any
+  // readable scale — show ONLY the mobile frame there, as large as fits.
+  const mobileOnly = box.w < 560;
+
+  const scale = mobileOnly
+    ? Math.max(0.14, Math.min((box.w - 24) / MOBILE.w, (box.h - 44) / MOBILE.h))
+    : Math.max(0.14, Math.min(
+        (box.w - GAP - 28) / (DESKTOP.w + MOBILE.w),
+        (box.h - 40) / Math.max(DESKTOP.h, MOBILE.h),
+      ));
 
   if (!previewPath) {
     return <div className={cn('flex items-center justify-center text-sm text-muted-foreground', className)}>Save your shop name to preview.</div>;
@@ -112,10 +118,12 @@ export const DualPreview = ({ previewPath, config, navTarget, className }: Props
   return (
     <div ref={holderRef} className={cn('flex min-h-0 items-center justify-center overflow-hidden', className)}>
       <div className="flex items-start" style={{ gap: GAP }}>
-        <div className="flex flex-col items-center gap-2">
-          <PreviewFrame innerRef={deskRef} src={previewPath} dev={DESKTOP} scale={scale} />
-          <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Monitor className="h-3.5 w-3.5" /> Desktop</span>
-        </div>
+        {!mobileOnly && (
+          <div className="flex flex-col items-center gap-2">
+            <PreviewFrame innerRef={deskRef} src={previewPath} dev={DESKTOP} scale={scale} />
+            <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Monitor className="h-3.5 w-3.5" /> Desktop</span>
+          </div>
+        )}
         <div className="flex flex-col items-center gap-2">
           <PreviewFrame innerRef={mobRef} src={previewPath} dev={MOBILE} scale={scale} phone />
           <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Smartphone className="h-3.5 w-3.5" /> Mobile</span>

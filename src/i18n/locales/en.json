@@ -807,7 +807,7 @@
     "frostedGlass": "Frosted-glass surfaces",
     "homePage": "Home page",
     "productPage": "Product page",
-    "layoutHelp": "Drag to reorder. Toggle to show or hide a section. Expand any section to change its layout and content — every change previews live on the right.",
+    "layoutHelp": "Drag to reorder. Toggle to show or hide a section. Expand any section to change its layout and content — every change previews live instantly.",
     "addSection": "Add a section",
     "galleryTip": "Tip: the product gallery position (side, top, sticky, full-bleed) is set under Style → Pages.",
     "density": "Density",

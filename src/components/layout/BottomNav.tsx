@@ -5,9 +5,14 @@ import {
   Layers, MessageSquareQuote, Megaphone, Globe, LogOut, Store, CreditCard,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+// Sheets are Radix Dialogs under the hood — DialogTitle satisfies the a11y
+// requirement inside SheetContent (ui/sheet.tsx doesn't export a SheetTitle).
+import { DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -32,6 +37,9 @@ const BottomNav = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
+  const { isAdmin } = useIsAdmin();
+  // Platform admins get the Admin panel in the More sheet (desktop has it in the sidebar).
+  const allMoreLinks = isAdmin ? [...moreLinks, { to: "/admin", icon: ShieldCheck, labelKey: "nav.admin" }] : moreLinks;
 
   if (!isMobile) return null;
 
@@ -59,10 +67,10 @@ const BottomNav = () => {
                 <span className="text-[11px] mt-1">{t("nav.more", "More")}</span>
               </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-2xl" style={{ paddingBottom: 'calc(1.5rem + var(--sab))' }}>
-              <h2 className="text-lg font-semibold">{t("nav.more", "More")}</h2>
+            <SheetContent side="bottom" className="rounded-t-2xl" style={{ paddingBottom: 'calc(1.5rem + var(--sab))' }} aria-describedby={undefined}>
+              <DialogTitle className="text-lg font-semibold">{t("nav.more", "More")}</DialogTitle>
               <div className="grid grid-cols-2 gap-2 mt-4">
-                {moreLinks.map((l) => (
+                {allMoreLinks.map((l) => (
                   <button key={l.to} type="button" onClick={() => go(l.to)} className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted text-left transition-colors">
                     <l.icon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                     <span className="text-sm font-medium">{t(l.labelKey)}</span>

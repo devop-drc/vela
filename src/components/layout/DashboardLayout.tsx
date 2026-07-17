@@ -150,7 +150,7 @@ const DashboardLayout = () => {
     >
       <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
       <Sidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
-      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto transition-all duration-300">
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden transition-all duration-300">
         <Header title={title} />
         {/* pb-24 clears the mobile BottomNav + floating dock; md resets it. */}
         {/* Mobile pb clears the bottom tab bar (5rem) AND the floating chat/
@@ -159,7 +159,8 @@ const DashboardLayout = () => {
         <main className="flex-1 p-4 pb-36 md:p-6 md:pb-6">{content}</main>
       </div>
       <BottomNav />
-      <div className="fixed bottom-24 right-4 z-50 flex items-center gap-2 md:bottom-4">
+      {/* Slightly smaller on phones so the dock covers less content. */}
+      <div className="fixed bottom-24 right-4 z-50 flex items-center gap-2 md:bottom-4 max-md:origin-bottom-right max-md:scale-[0.85]">
         <VelaChat />
         <SyncStatusWidget />
         <NotificationSidebar />
