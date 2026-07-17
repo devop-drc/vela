@@ -69,7 +69,7 @@ interface InstagramShopLayoutContext {
 
 const getIconComponent = (iconName: string) => {
   const Comp = getIcon(iconName);
-  return <Comp className="h-5 w-5 text-primary" />;
+  return <Comp className="h-4 w-4 text-primary" />;
 };
 
 /** Shared profile bio block (headline / about / location / link) — used in both
@@ -228,7 +228,7 @@ const InstagramProfilePage = () => {
           <div className="flex-1 gap-4 md:gap-8 w-full">
             <div className="flex justify-center flex-col md:flex-row">
               <div className="flex flex-row gap-4">
-                  <Avatar className="h-24 w-24 md:h-36 md:w-36 border-2 border-border flex-shrink-0 mx-0">
+                  <Avatar className="h-20 w-20 md:h-36 md:w-36 border-2 border-border flex-shrink-0 mx-0">
                     <AvatarImage src={shopDetails.logo_url || undefined} alt={shopDetails.shop_name} />
                     <AvatarFallback className="text-3xl md:text-4xl font-bold bg-muted text-foreground">
                       {shopDetails.shop_name?.[0]}
@@ -279,7 +279,7 @@ const InstagramProfilePage = () => {
             <div className="border-y border-border bg-card">
               <Marquee pauseOnHover className="py-1">
                 {marqueeElements.map(element => (
-                  <div key={element.id} className="flex items-center gap-4 text-lg font-semibold px-4 text-foreground">
+                  <div key={element.id} className="flex items-center gap-2.5 text-sm md:text-base font-medium px-4 text-foreground">
                     {getIconComponent(element.icon_name)}
                     <span>{element.message}</span>
                   </div>

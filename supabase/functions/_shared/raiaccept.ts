@@ -66,6 +66,8 @@ export interface OrderInput {
   notificationUrl: string;
   /** Charge a previously stored card token (renewals). */
   cardToken?: string | null;
+  /** One-off purchase (storefront orders): no tokenization / recurring block. */
+  oneOff?: boolean;
 }
 
 /** Payload shared verbatim by Create-order-entry and Create-payment-session
@@ -89,13 +91,17 @@ export function buildOrderPayload(i: OrderInput) {
     },
     // Live-verified 2026-07-02: zero-amount card verification is accepted
     // ONLY in pure token flow — customerReference must be omitted then.
-    recurring: i.amountAll === 0
-      ? { recurringModel: "ONE_CLICK_CHECKOUT" }
-      : {
-          customerReference: i.customerReference,
-          recurringModel: "ONE_CLICK_CHECKOUT",
-          ...(i.cardToken ? { cardToken: i.cardToken } : {}),
-        },
+    // One-off storefront purchases skip the recurring block entirely — we have
+    // no business tokenizing a shop customer's card.
+    ...(i.oneOff ? {} : {
+      recurring: i.amountAll === 0
+        ? { recurringModel: "ONE_CLICK_CHECKOUT" }
+        : {
+            customerReference: i.customerReference,
+            recurringModel: "ONE_CLICK_CHECKOUT",
+            ...(i.cardToken ? { cardToken: i.cardToken } : {}),
+          },
+    }),
   };
 }
 

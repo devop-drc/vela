@@ -113,10 +113,16 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
       return;
     }
 
-    // We can look up orders by email OR by the order IDs saved on this device.
+    // Orders saved on this device load freely; a guest lookup needs BOTH the
+    // email and the order number from the confirmation (email alone would
+    // expose anyone's orders to anyone who knows their address).
     const storedOrderIds = getStoredOrderIds();
     if (!customerEmailInput && storedOrderIds.length === 0) {
-      showError("Please enter your email address.");
+      showError("Please enter your email address and order number.");
+      return;
+    }
+    if (customerEmailInput && !orderIdInput.trim() && storedOrderIds.length === 0) {
+      showError("Please also enter the order number from your confirmation.");
       return;
     }
 
@@ -128,7 +134,13 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
       // Pass both the email and the locally-saved order IDs so freshly placed
       // orders always show up even if the email casing differs.
       const { data, error } = await supabase.functions.invoke('get-public-shop-data', {
-        body: { shopSlug: shopDetails.slug, customerEmail: customerEmailInput || undefined, orderIds: storedOrderIds }
+        body: {
+          shopSlug: shopDetails.slug,
+          customerEmail: customerEmailInput || undefined,
+          // Short order number pairs with the email server-side as proof of purchase.
+          orderId: orderIdInput.trim() ? orderIdInput.trim().toLowerCase() : undefined,
+          orderIds: storedOrderIds,
+        }
       });
       if (error) throw error;
       let fetched = (data?.customerOrders || []) as OrderDetails[];
@@ -151,10 +163,13 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
   }, [customerEmailInput, orderIdInput, shopDetails?.slug]);
 
   useEffect(() => {
-    if (isOpen && shopDetails?.slug && (customerEmailInput || getStoredOrderIds().length > 0)) {
+    // Auto-load only the orders placed on this device — an email alone no
+    // longer authorizes a lookup, so auto-searching with it would just toast
+    // a validation error at the user on open.
+    if (isOpen && shopDetails?.slug && getStoredOrderIds().length > 0) {
       fetchOrders();
     }
-  }, [isOpen, customerEmailInput, shopDetails?.slug, fetchOrders]);
+  }, [isOpen, shopDetails?.slug, fetchOrders]);
 
   const handleOrderUpdate = useCallback(() => {
     fetchOrders();
@@ -176,7 +191,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
           My Orders
         </div>
       </div>
-      <span id="instagram-my-orders-description" className="sr-only">Enter your email and optionally an order ID to view your orders.</span>
+      <span id="instagram-my-orders-description" className="sr-only">Enter your email and the order number from your confirmation to view an order.</span>
 
       <ScrollArea className="flex-1 p-4 pr-6" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
         <div className="space-y-4">
@@ -189,7 +204,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="orderId" className="text-sm text-[hsl(var(--foreground))] opacity-80">Order number (optional)</Label>
+              <Label htmlFor="orderId" className="text-sm text-[hsl(var(--foreground))] opacity-80">Order number</Label>
               <div className="relative">
                 <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-70" />
                 <Input id="orderId" placeholder="e.g., 2b7f9933" value={orderIdInput} onChange={(e) => setOrderIdInput(e.target.value)} className="pl-10 text-sm bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))]" />

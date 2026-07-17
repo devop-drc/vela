@@ -73,6 +73,25 @@ export const useCheckout = (onDone?: () => void) => {
           localStorage.setItem(key, JSON.stringify(Array.from(new Set([...prev, responseData.order.id]))));
         } catch { /* ignore */ }
 
+        if (data.paymentMethod === 'card') {
+          // Card orders continue on RaiAccept's hosted form. The order is
+          // already placed (stock reserved, payment 'processing'); the gateway
+          // redirect brings the customer back to their orders page, where the
+          // webhook-settled payment status shows up.
+          toast.loading('Redirecting to secure payment…', { id: toastId });
+          const returnUrl = `${window.location.origin}/shop/${shopDetails.slug}/orders`;
+          const { data: payRes, error: payErr } = await supabase.functions.invoke('create-order-payment', {
+            body: { orderId: responseData.order.id, shopSlug: shopDetails.slug, returnUrl },
+          });
+          if (payErr || payRes?.error || !payRes?.url) {
+            throw new Error(payRes?.error || payErr?.message || 'Could not start the card payment.');
+          }
+          clearCart();
+          onDone?.();
+          window.location.assign(payRes.url);
+          return;
+        }
+
         toast.success('Order placed! Redirecting to your orders.', { id: toastId });
         clearCart();
         onDone?.();

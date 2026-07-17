@@ -233,7 +233,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
     await updateJobProgress(supabaseAdmin, jobId, { message: `Found ${allPosts.length} posts. Checking for new content...`, summary });
 
-    const { data: existingProducts, error: productsError } = await supabaseAdmin.from('products').select('id, instagram_post_id, media_url, thumbnail_url').eq('business_id', business.id);
+    const { data: existingProducts, error: productsError } = await supabaseAdmin.from('products').select('id, instagram_post_id, media_url, thumbnail_url, category').eq('business_id', business.id);
     if (productsError) throw productsError;
     const existingProductMap = new Map((existingProducts || []).map(p => [p.instagram_post_id, p]));
 
@@ -637,8 +637,8 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             itemSpecifications = normalized;
           }
           const itemOptions = item && item.options ? item.options : options;
-          const itemCategoryName = categoryName || 'Generic Product';
-          const itemTypeName = typeName || 'Generic';
+          const itemCategoryName = (item && ((item as any).categoryName || (item as any).category_name)) || categoryName;
+          const itemTypeName = (item && ((item as any).typeName || (item as any).type_name)) || typeName || 'Generic';
 
           // Details only stores type + brand (specs → product_specifications table, options → product_options table)
           const itemDetails: { [key: string]: any } = { type: toTitleCase(itemTypeName || '') };
@@ -677,7 +677,15 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             billing_interval: finalBillingInterval,
           };
 
-          const existingId = existingProductMap.get(post.id)?.id;
+          const existingRow = existingProductMap.get(post.id);
+          const existingId = existingRow?.id;
+          // Re-syncs must never downgrade a categorized product back to
+          // Uncategorized (e.g. when the AI call failed and the heuristic
+          // caption fallback built this payload without a category).
+          const existingCat = ((existingRow as any)?.category || '').trim();
+          if (existingId && existingCat && existingCat.toLowerCase() !== 'uncategorized' && productPayload.category.toLowerCase() === 'uncategorized') {
+            productPayload.category = existingCat;
+          }
           if (existingId && itemsToCreate.length === 1) {
             productPayload.id = existingId;
             summary.updated++;

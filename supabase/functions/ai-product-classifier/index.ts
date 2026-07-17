@@ -70,6 +70,8 @@ const RESPONSE_SCHEMA = {
         type: 'OBJECT',
         properties: {
           productName: { type: 'STRING' },
+          categoryName: { type: 'STRING', nullable: true },
+          typeName: { type: 'STRING', nullable: true },
           price: { type: 'NUMBER', nullable: true },
           currency: { type: 'STRING', nullable: true },
           inventory: { type: 'INTEGER', nullable: true },
@@ -133,7 +135,7 @@ ${similarProducts.map(p => `- ${p.name} (Category: ${p.category}${p.details?.typ
 
   2. **productName:** Extract a clear, concise product name (max 10 words). Remove emojis, hashtags, and promotional text. If in Albanian, translate to English for the name.
 
-  3. **categoryName:** ALWAYS assign a specific category. Choose from: "Clothing & Apparel", "Electronics & Tech", "Home & Living", "Beauty & Personal Care", "Art & Handmade", "Food & Beverages", "Sports & Fitness", "Books & Media", "Services", "Automotive & Parts", "Toys & Games", "Pet Supplies", "Bags & Luggage". Or create a fitting category if none match. NEVER return "Uncategorized".
+  3. **categoryName:** ALWAYS assign a specific category — top-level AND on every item inside "products" for multi-product posts. Choose from: "Clothing & Apparel", "Electronics & Tech", "Home & Living", "Beauty & Personal Care", "Art & Handmade", "Food & Beverages", "Sports & Fitness", "Books & Media", "Services", "Automotive & Parts", "Toys & Games", "Pet Supplies", "Bags & Luggage". Or create a fitting category if none match. NEVER return "Uncategorized".
 
   4. **typeName:** ALWAYS assign a specific product type within the category (e.g., "T-Shirts", "Smartphones", "Skincare"). NEVER return "General".
 

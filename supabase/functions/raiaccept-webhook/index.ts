@@ -85,7 +85,15 @@ serve(async (req) => {
         payload: { ...(payment.payload ?? {}), webhook: body },
       }).eq("id", payment.id);
 
-      if (payment.type === "trial_setup") {
+      if (payment.type === "order") {
+        // Storefront order card payment — mark the shop order as paid.
+        const shopOrderId = (payment.payload as any)?.orderId;
+        if (shopOrderId) {
+          await supabase.from("orders")
+            .update({ payment_status: "paid" })
+            .eq("id", shopOrderId);
+        }
+      } else if (payment.type === "trial_setup") {
         // Card verified (zero-amount) → start the 7-day trial.
         await supabase.from("subscriptions").update({
           plan_id: planId ?? "pro",
@@ -112,7 +120,14 @@ serve(async (req) => {
         status: "failed",
         payload: { ...(payment.payload ?? {}), webhook: body },
       }).eq("id", payment.id);
-      if (payment.type === "renewal") {
+      if (payment.type === "order") {
+        const shopOrderId = (payment.payload as any)?.orderId;
+        if (shopOrderId) {
+          await supabase.from("orders")
+            .update({ payment_status: "failed" })
+            .eq("id", shopOrderId).neq("payment_status", "paid");
+        }
+      } else if (payment.type === "renewal") {
         await supabase.from("subscriptions").update({ status: "past_due" })
           .eq("user_id", payment.user_id);
       }

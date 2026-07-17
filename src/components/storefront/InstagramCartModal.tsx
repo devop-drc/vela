@@ -113,6 +113,22 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
       if (invokeError) throw invokeError;
       if (responseData.error) throw new Error(responseData.error);
 
+      if (data.paymentMethod === 'card' && responseData?.order?.id) {
+        // Card orders finish on RaiAccept's hosted form (webhook settles status).
+        if (toastId) toast.loading('Redirecting to secure payment…', { id: toastId });
+        const returnUrl = `${window.location.origin}/shop/${shopDetails.slug}/orders`;
+        const { data: payRes, error: payErr } = await supabase.functions.invoke('create-order-payment', {
+          body: { orderId: responseData.order.id, shopSlug: shopDetails.slug, returnUrl },
+        });
+        if (payErr || payRes?.error || !payRes?.url) {
+          throw new Error(payRes?.error || payErr?.message || 'Could not start the card payment.');
+        }
+        clearCart();
+        onClose();
+        window.location.assign(payRes.url);
+        return;
+      }
+
       if (toastId) toast.success("Order placed successfully! Redirecting to your orders.", { id: toastId });
       else showSuccess("Order placed successfully! Redirecting to your orders.");
       clearCart();

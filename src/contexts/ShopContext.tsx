@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { isDemoFrame } from '@/lib/isDemoFrame';
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
+import { clearCache as clearPageCache } from '@/lib/pageCache';
 import type { StorefrontType } from '@/lib/storefront';
 
 interface ShopDetails {
@@ -220,11 +221,17 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchShopDetails]);
 
   const updateShopDetails = async (details: Partial<ShopDetails>) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { showError("You must be logged in."); return false; }
-
-    const { data: business } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
-    if (!business) { showError("Could not find your business."); return false; }
+    // shopDetails.id IS the business id (set in fetchShopDetails) — reuse it
+    // instead of re-resolving user → business on every save (2 round trips).
+    let businessId = shopDetails?.id;
+    if (!businessId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { showError("You must be logged in."); return false; }
+      const { data: business } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
+      if (!business) { showError("Could not find your business."); return false; }
+      businessId = business.id;
+    }
+    const business = { id: businessId };
 
     let newSlug = details.shop_name ? generateSlug(details.shop_name) : shopDetails?.slug;
 
@@ -255,10 +262,18 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
       showError(`Failed to update settings: ${error.message}`);
       console.error("ShopContext: Error updating shop details:", error);
       return false;
-    } else {
-      await fetchShopDetails();
-      return true;
     }
+
+    // Apply optimistically so toggles (e.g. storefront type) feel instant,
+    // then revalidate in the background instead of blocking on a refetch.
+    setShopDetails((prev) => (prev ? { ...prev, ...details, slug: newSlug || prev.slug } : prev));
+    // The public storefront hydrates from a per-slug snapshot cache — drop it
+    // so the merchant's next storefront visit reflects the change (type
+    // switches, name, logo…) instead of painting the stale snapshot.
+    const slugsToClear = new Set([shopDetails?.slug, newSlug].filter(Boolean) as string[]);
+    slugsToClear.forEach((slug) => clearPageCache(`storefront:${slug}`));
+    void fetchShopDetails();
+    return true;
   };
 
   const convertCurrency = useCallback((amount: number | null | undefined, fromCurrency: string | null = 'ALL', toCurrency?: string) => {

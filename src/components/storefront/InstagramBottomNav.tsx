@@ -59,8 +59,10 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
       <nav
         className="w-full max-w-md bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-t border-[hsl(var(--border))] shadow-lg"
         style={{
-          height: '50px',
-          paddingBottom: 'var(--sab, env(safe-area-inset-bottom, 0px))',
+          height: '56px',
+          // Curved-edge phones need clearance even when the safe-area env
+          // resolves to 0 — keep at least 10px under the buttons.
+          paddingBottom: 'max(var(--sab, env(safe-area-inset-bottom, 0px)), 10px)',
           boxSizing: 'content-box',
         }}
       >
@@ -70,8 +72,8 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
             aria-label="My Orders"
             className="flex flex-row gap-1 items-center justify-center w-full h-full transition-colors text-xs relative hover:bg-[hsl(var(--muted))]"
           >
-            <ShoppingBag className="h-5 w-5" />
-            <p className="font-semibold text-sm mt-1">My Orders</p>
+            <ShoppingBag className="h-[18px] w-[18px]" />
+            <p className="font-semibold text-xs mt-0.5">My Orders</p>
             {myOrdersCount > 0 && (
               <span className="absolute top-1 right-1/2 translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white font-bold">
                 {myOrdersCount}
@@ -101,14 +103,14 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
               transition={{ duration: 0.3 }}
               className="relative"
             >
-              <ShoppingBag className="h-5 w-5" />
+              <ShoppingBag className="h-[18px] w-[18px]" />
               {totalItems > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white font-bold">
                   {totalItems}
                 </span>
               )}
             </motion.span>
-            <span className="font-semibold text-sm mt-1">Cart</span>
+            <span className="font-semibold text-xs mt-0.5">Cart</span>
           </button>
         </div>
       </nav>

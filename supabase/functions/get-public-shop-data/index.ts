@@ -356,13 +356,19 @@ serve(async (req) => {
     const idList = Array.from(new Set(rawIds.filter((id: any) => typeof id === 'string' && uuidRe.test(id))));
 
     const normalizedEmail = typeof customerEmail === 'string' ? customerEmail.trim() : '';
+    // Guest lookup needs email AND the order number from the confirmation
+    // (first 8 hex chars of the order UUID). Email alone would let anyone
+    // read a stranger's order history just by typing their address.
+    const shortCode = typeof orderId === 'string' && /^[0-9a-f]{8}$/i.test(orderId.trim())
+      ? orderId.trim().toLowerCase()
+      : '';
 
     const byId = new Map<string, any>();
     const collect = (rows: any[] | null) => { for (const r of rows || []) byId.set(r.id, r); };
 
     // Both lookups are independent — run them together.
     const [ordersByEmail, ordersById] = await Promise.all([
-      normalizedEmail
+      normalizedEmail && shortCode
         ? supabaseAdmin
             .from('orders').select(ORDER_SELECT)
             .eq('business_id', businessId)
@@ -380,7 +386,8 @@ serve(async (req) => {
     ]);
     if (ordersByEmail) {
       if (ordersByEmail.error) console.error('[get-public-shop-data] Error fetching orders by email:', ordersByEmail.error);
-      else collect(ordersByEmail.data);
+      // Only release the order whose number was actually presented.
+      else collect((ordersByEmail.data || []).filter((o: any) => o.id.toLowerCase().startsWith(shortCode)));
     }
     if (ordersById) {
       if (ordersById.error) console.error('[get-public-shop-data] Error fetching orders by id:', ordersById.error);

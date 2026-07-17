@@ -111,7 +111,7 @@ serve(async (req) => {
       // every AI-split product "Out of Stock"); category comes from the post's
       // shared analysis so split products don't land uncategorized.
       const itemInventory = it.inventory ?? 10;
-      const itemCategory = (analysis.categoryName || analysis.category_name || null) as string | null;
+      const itemCategory = (it?.categoryName || it?.category_name || analysis.categoryName || analysis.category_name || null) as string | null;
 
       let productId: string;
       if (existingProduct?.id) {
