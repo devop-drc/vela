@@ -46,6 +46,36 @@ const OPTION_SCHEMA = {
   },
   required: ['name', 'values'],
 };
+/** Deterministic type→category fallback for when the model fills typeName but
+    not categoryName (a failure mode observed in production). Keyword-based so
+    "Gaming Laptops" or "Smart TV 55&quot;" still land in the right bucket. */
+const CATEGORY_KEYWORDS: Array<[RegExp, string]> = [
+  [/phone|tablet|laptop|computer|pc\b|monitor|tv\b|television|headphone|earbud|speaker|camera|drone|console|watch|smart|electronic|charger|router|printer|keyboard|mouse|gpu|cpu|appliance/i, 'Electronics & Tech'],
+  [/app\b|application|software|saas|subscription|digital|license/i, 'Software & Apps'],
+  [/shirt|dress|jean|pant|jacket|coat|hoodie|sweater|skirt|suit|sock|underwear|lingerie|clothing|apparel|fashion|shoe|sneaker|boot|sandal|heel/i, 'Clothing & Apparel'],
+  [/bag\b|handbag|backpack|luggage|suitcase|wallet|purse/i, 'Bags & Luggage'],
+  [/ring\b|necklace|bracelet|earring|jewel|jewelry/i, 'Jewelry & Accessories'],
+  [/cream|serum|makeup|lipstick|perfume|fragrance|shampoo|cosmetic|skincare|beauty|nail/i, 'Beauty & Personal Care'],
+  [/sofa|chair|table|desk|lamp|rug|curtain|furniture|decor|pillow|bedding|kitchen|cookware|vase/i, 'Home & Living'],
+  [/toy\b|game\b|lego|puzzle|doll|tricycle|scooter(?!.*electric)|playset|board game/i, 'Toys & Games'],
+  [/bike|bicycle|treadmill|dumbbell|yoga|fitness|sport|gym|ball\b|racket|ski|snowboard/i, 'Sports & Fitness'],
+  [/coffee|tea\b|chocolate|snack|wine|beer|juice|food|beverage|honey|cake|pastry/i, 'Food & Beverages'],
+  [/book|novel|magazine|vinyl|album|media/i, 'Books & Media'],
+  [/car\b|auto|tire|engine|motorcycle|vehicle|part\b/i, 'Automotive & Parts'],
+  [/dog\b|cat\b|pet\b|aquarium|leash|litter/i, 'Pet Supplies'],
+  [/service|consult|repair|cleaning|design\b|course|class\b|training/i, 'Services'],
+  [/art\b|painting|sculpture|handmade|craft|ceramic|print\b/i, 'Art & Handmade'],
+];
+
+const inferCategoryFromType = (typeName?: string | null, productName?: string | null): string | null => {
+  const hay = `${typeName || ''} ${productName || ''}`.trim();
+  if (!hay) return null;
+  for (const [re, cat] of CATEGORY_KEYWORDS) {
+    if (re.test(hay)) return cat;
+  }
+  return null;
+};
+
 const RESPONSE_SCHEMA = {
   type: 'OBJECT',
   properties: {
@@ -487,7 +517,14 @@ serve(async (req) => {
     if (Array.isArray(analysis.options)) analysis.options = optionsArrayToMap(analysis.options);
     if (Array.isArray(analysis.products)) {
       for (const p of analysis.products) {
-        if (p && Array.isArray(p.options)) p.options = optionsArrayToMap(p.options);
+        if (!p) continue;
+        if (Array.isArray(p.options)) p.options = optionsArrayToMap(p.options);
+        // Per-item category, inferred from the item's own type/name when the
+        // model didn't set it (the post-level category may not fit every item).
+        if (typeof p.typeName === 'string') p.typeName = p.typeName.replace(/[\s,.;:]+$/, '').trim();
+        if (!p.categoryName || /^uncategorized$/i.test(p.categoryName)) {
+          p.categoryName = inferCategoryFromType(p.typeName, p.productName || p.name) || analysis.categoryName || null;
+        }
       }
     }
 
@@ -556,7 +593,13 @@ serve(async (req) => {
     // Validate and default required fields
     if (analysis.isProductPost) {
       if (!analysis.productName) analysis.productName = caption?.split('\n')[0]?.slice(0, 60) || 'Unknown Product';
-      if (!analysis.categoryName) analysis.categoryName = 'Uncategorized';
+      // The model reliably fills typeName but often leaves categoryName empty
+      // (observed in production: good types, null categories). Clean the type
+      // and derive the category from it instead of stamping 'Uncategorized'.
+      if (typeof analysis.typeName === 'string') analysis.typeName = analysis.typeName.replace(/[\s,.;:]+$/, '').trim();
+      if (!analysis.categoryName || /^uncategorized$/i.test(analysis.categoryName)) {
+        analysis.categoryName = inferCategoryFromType(analysis.typeName, analysis.productName) || 'Uncategorized';
+      }
       if (!analysis.typeName) analysis.typeName = 'General';
       // Description must be AI-generated, NOT the raw caption
       if (!analysis.description || analysis.description === caption) {
