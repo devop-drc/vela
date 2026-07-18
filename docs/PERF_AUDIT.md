@@ -165,9 +165,10 @@ duties to the write paths they trigger. No new webhook endpoints were needed.
 - **Shared realtime bus** — done (see 3.3).
 - **`edge_cache` hygiene** — pg_cron purge ships in the migration; applied when
   the migration lands on the hosted project.
-- **DEPLOY still pending**: edge functions + the two 20260718 migrations need
-  `supabase functions deploy` / `db push`. Blocked on machine credentials: the
-  global CLI login belongs to a different account (cannot see
-  `hbsetjwlawuxasjbvpyx`) and `supabase/.access-token.local` does not exist —
-  create it per CLAUDE.md to unblock. The client is deploy-order-proof
-  (GET→POST and SSE→buffered fallbacks) until then.
+- **DEPLOYED 2026-07-19**: all 12 changed edge functions deployed via CLI
+  (verify_jwt flags preserved; public GET readers flipped to no-verify-jwt),
+  both migrations applied by the owner via the SQL editor. Verified live:
+  GET endpoints return 200 + Cache-Control (warm ~500ms, was ~4s cold with
+  9-10 queries/request), chat streams `text/event-stream`, storefront loads
+  via GET with zero fallbacks/errors. Note: migrations were applied manually,
+  so `supabase db push` may re-run them later — both are idempotent.
