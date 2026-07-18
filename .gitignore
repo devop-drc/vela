@@ -34,3 +34,4 @@ supabase/.temp/
 out/
 .remotion/
 build/
+supabase/.access-token.local

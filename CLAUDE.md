@@ -61,6 +61,23 @@ Core flows:
 
 Edge functions require `GEMINI_API_KEY` env var. They use Deno syntax (imports from `esm.sh`, `deno.land`).
 
+### Supabase CLI auth (project-scoped)
+
+The Supabase CLI stores ONE login per Windows user (Credential Manager entry
+"Supabase CLI") — logging in for any other project on this machine silently
+replaces this project's login. To make this project immune, keep a Personal
+Access Token for the account that owns `hbsetjwlawuxasjbvpyx` in
+`supabase/.access-token.local` (gitignored, single line, no quotes). Then run
+every CLI command with the env override, which takes precedence over the
+global login:
+
+```bash
+SUPABASE_ACCESS_TOKEN=$(cat supabase/.access-token.local) npx supabase <cmd> ...
+```
+
+If the file is missing, CLI commands fall back to the shared global login and
+may 403 depending on which account logged in last.
+
 ## Conventions
 
 - **Never modify `src/components/ui/`** — these are shadcn/ui components. Create wrapper components instead.
