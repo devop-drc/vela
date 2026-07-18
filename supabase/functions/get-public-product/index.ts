@@ -3,12 +3,9 @@
 // products stay hidden (mirrors get-public-shop-data's visibility rule).
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
+import { getSupabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { cached } from "../_shared/cache.ts";
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -16,7 +13,17 @@ serve(async (req) => {
   }
 
   try {
-    const { shopSlug, productId } = await req.json();
+    // GET (query params) is the cacheable path; POST body remains supported.
+    let shopSlug: string | undefined;
+    let productId: unknown;
+    if (req.method === 'GET') {
+      const u = new URL(req.url);
+      shopSlug = u.searchParams.get('shopSlug') || undefined;
+      productId = u.searchParams.get('productId') || undefined;
+    } else {
+      ({ shopSlug, productId } = await req.json());
+    }
+
     const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!shopSlug || typeof productId !== 'string' || !uuidRe.test(productId)) {
       return new Response(JSON.stringify({ error: "Missing shopSlug or invalid productId" }), {
@@ -25,37 +32,50 @@ serve(async (req) => {
       });
     }
 
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { persistSession: false } }
+    const payload = await cached(
+      `pubprod:${shopSlug}:${productId.toLowerCase()}`,
+      300,
+      async () => {
+        const supabaseAdmin = getSupabaseAdmin();
+
+        const { data: shop, error: shopError } = await supabaseAdmin
+          .from('shop_details')
+          .select('businesses(id)')
+          .eq('slug', shopSlug)
+          .single();
+        if (shopError || !shop?.businesses) {
+          return { notFound: true };
+        }
+
+        // Embed the product's variant rows so the client can render option pickers
+        // without a second round trip.
+        const { data: product, error: productError } = await supabaseAdmin
+          .from('products')
+          .select('*, product_variants(combination_key, option_values, inventory, price_difference, is_active, is_default)')
+          .eq('id', productId as string)
+          .eq('business_id', (shop.businesses as any).id)
+          .neq('status', 'Draft')
+          .maybeSingle();
+        if (productError) throw productError;
+
+        return { product: product ?? null };
+      },
+      { memTtlSeconds: 60 },
     );
 
-    const { data: shop, error: shopError } = await supabaseAdmin
-      .from('shop_details')
-      .select('businesses(id)')
-      .eq('slug', shopSlug)
-      .single();
-    if (shopError || !shop?.businesses) {
+    if ((payload as any).notFound) {
       return new Response(JSON.stringify({ error: "Shop not found." }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Embed the product's variant rows so the client can render option pickers
-    // without a second round trip.
-    const { data: product, error: productError } = await supabaseAdmin
-      .from('products')
-      .select('*, product_variants(combination_key, option_values, inventory, price_difference, is_active, is_default)')
-      .eq('id', productId)
-      .eq('business_id', (shop.businesses as any).id)
-      .neq('status', 'Draft')
-      .maybeSingle();
-    if (productError) throw productError;
-
-    return new Response(JSON.stringify({ product: product ?? null }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return new Response(JSON.stringify(payload), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
+      },
       status: 200,
     });
   } catch (error) {

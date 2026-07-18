@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "../ui/card";
 import { Skeleton } from "../ui/skeleton";
@@ -113,16 +113,26 @@ export const ActivityFeed = () => {
   // Subtle staggered entrance once the feed first populates (GSAP, reduced-motion safe).
   const listRef = useReveal<HTMLDivElement>({ y: 8 }, [isLoading]);
 
+  // Latest-ref: the subscription effect keys on shopDetails?.id alone, so an
+  // unrelated shop-details save (same id, new object) no longer tears down and
+  // rebuilds the channels. Callbacks read these refs for current values.
+  const shopDetailsRef = useRef(shopDetails);
+  const convertCurrencyRef = useRef(convertCurrency);
+  useEffect(() => {
+    shopDetailsRef.current = shopDetails;
+    convertCurrencyRef.current = convertCurrency;
+  });
+
   useEffect(() => {
     let isMounted = true;
     let productsChannel: any;
     let ordersChannel: any;
     let disputesChannel: any;
 
+    const businessId = shopDetails?.id;
+
     const fetchAndSubscribe = async () => {
-      if (!shopDetails?.id) { setIsLoading(false); return; }
       setIsLoading(true);
-      const businessId = shopDetails.id;
 
       const [ordersRes, productsRes, disputesRes] = await Promise.all([
         supabase.from('orders')
@@ -143,11 +153,12 @@ export const ActivityFeed = () => {
       ]);
 
       const orderActivities: Activity[] = (ordersRes.data || []).map(order => {
-        const amount = convertCurrency(order.total_amount, order.currency, shopDetails?.currency);
+        const currency = shopDetailsRef.current?.currency;
+        const amount = convertCurrencyRef.current(order.total_amount, order.currency, currency);
         if (order.status === 'Fulfilled' && order.payment_status === 'paid') {
-          return { id: order.id, type: 'sale', title: t('dashboard.new_sale'), description: `to ${order.customer_name}`, value: formatCurrency(amount, shopDetails?.currency), date: order.created_at, orderId: order.id };
+          return { id: order.id, type: 'sale', title: t('dashboard.new_sale'), description: `to ${order.customer_name}`, value: formatCurrency(amount, currency), date: order.created_at, orderId: order.id };
         }
-        return { id: order.id, type: 'new_order', title: t('dashboard.new_order'), description: `from ${order.customer_name}`, value: formatCurrency(amount, shopDetails?.currency), date: order.created_at, orderId: order.id };
+        return { id: order.id, type: 'new_order', title: t('dashboard.new_order'), description: `from ${order.customer_name}`, value: formatCurrency(amount, currency), date: order.created_at, orderId: order.id };
       });
 
       const productActivities: Activity[] = (productsRes.data || []).map(product => ({
@@ -173,12 +184,17 @@ export const ActivityFeed = () => {
 
       // Drop any orphaned channels from a previous interrupted run — reusing a
       // subscribed channel with the same topic throws on .on().
+      const feedTopics = [
+        `realtime:dashboard-products-feed:${businessId}`,
+        `realtime:dashboard-orders-feed:${businessId}`,
+        `realtime:dashboard-disputes-feed:${businessId}`,
+      ];
       supabase.getChannels()
-        .filter(c => ['realtime:dashboard-products-feed', 'realtime:dashboard-orders-feed', 'realtime:dashboard-disputes-feed'].includes(c.topic))
+        .filter(c => feedTopics.includes(c.topic))
         .forEach(c => supabase.removeChannel(c));
 
       // ── realtime subscriptions ──
-      productsChannel = supabase.channel('dashboard-products-feed')
+      productsChannel = supabase.channel(`dashboard-products-feed:${businessId}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'products', filter: `business_id=eq.${businessId}` }, (payload) => {
           const p = payload.new;
           const a: Activity = { id: p.id, type: 'product', title: t('dashboard.new_product'), description: p.name, value: p.status, image: p.media_url, date: p.created_at };
@@ -193,22 +209,24 @@ export const ActivityFeed = () => {
         })
         .subscribe();
 
-      ordersChannel = supabase.channel('dashboard-orders-feed')
+      ordersChannel = supabase.channel(`dashboard-orders-feed:${businessId}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `business_id=eq.${businessId}` }, (payload) => {
           const o = payload.new as any;
-          const amount = convertCurrency(o.total_amount, o.currency, shopDetails?.currency);
-          const a: Activity = { id: o.id, type: 'new_order', title: t('dashboard.new_order'), description: `from ${o.customer_name}`, value: formatCurrency(amount, shopDetails?.currency), date: o.created_at, orderId: o.id };
+          const currency = shopDetailsRef.current?.currency;
+          const amount = convertCurrencyRef.current(o.total_amount, o.currency, currency);
+          const a: Activity = { id: o.id, type: 'new_order', title: t('dashboard.new_order'), description: `from ${o.customer_name}`, value: formatCurrency(amount, currency), date: o.created_at, orderId: o.id };
           if (isMounted) setActivities(prev => [a, ...prev].sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime()).slice(0, 20));
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `business_id=eq.${businessId}` }, (payload) => {
           const oldO = payload.old as any; const newO = payload.new as any;
-          const amount = convertCurrency(newO.total_amount, newO.currency, shopDetails?.currency);
+          const currency = shopDetailsRef.current?.currency;
+          const amount = convertCurrencyRef.current(newO.total_amount, newO.currency, currency);
           if (oldO.status !== newO.status) {
             const a: Activity = { id: `${newO.id}-${payload.commit_timestamp}-status-update`, type: 'order_status_update', title: t('dashboard.order_status_updated'), description: `#${newO.id.substring(0, 8)} → ${newO.status}`, value: newO.status, date: payload.commit_timestamp, orderId: newO.id };
             if (isMounted) setActivities(prev => [a, ...prev].sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime()).slice(0, 20));
           }
           if (newO.status === 'Fulfilled' && newO.payment_status === 'paid' && (oldO.status !== 'Fulfilled' || oldO.payment_status !== 'paid')) {
-            const a: Activity = { id: `${newO.id}-${payload.commit_timestamp}-sale`, type: 'sale', title: t('dashboard.sale_fulfilled'), description: `#${newO.id.substring(0, 8)} — ${newO.customer_name}`, value: formatCurrency(amount, shopDetails?.currency), date: payload.commit_timestamp, orderId: newO.id };
+            const a: Activity = { id: `${newO.id}-${payload.commit_timestamp}-sale`, type: 'sale', title: t('dashboard.sale_fulfilled'), description: `#${newO.id.substring(0, 8)} — ${newO.customer_name}`, value: formatCurrency(amount, currency), date: payload.commit_timestamp, orderId: newO.id };
             if (isMounted) setActivities(prev => [a, ...prev].sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime()).slice(0, 20));
           }
         })
@@ -217,7 +235,7 @@ export const ActivityFeed = () => {
       // Disputes carry business_id (stamped by a DB trigger), so the
       // subscription is scoped server-side — no cross-business events, no
       // follow-up lookup. The handler check covers pre-migration rows.
-      disputesChannel = supabase.channel('dashboard-disputes-feed')
+      disputesChannel = supabase.channel(`dashboard-disputes-feed:${businessId}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_disputes', filter: `business_id=eq.${businessId}` }, async (payload) => {
           const d = payload.new as any;
           if (d.business_id && d.business_id !== businessId) return;
@@ -227,7 +245,7 @@ export const ActivityFeed = () => {
         .subscribe();
     };
 
-    if (shopDetails) { fetchAndSubscribe(); } else { setIsLoading(false); }
+    if (businessId) { fetchAndSubscribe(); } else { setIsLoading(false); }
 
     // Synchronous cleanup so React actually runs it (the channels are assigned
     // to the outer-scope vars inside the async fetchAndSubscribe).
@@ -237,7 +255,8 @@ export const ActivityFeed = () => {
       if (ordersChannel) supabase.removeChannel(ordersChannel);
       if (disputesChannel) supabase.removeChannel(disputesChannel);
     };
-  }, [shopDetails, convertCurrency]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shopDetails?.id]);
 
   const handleActivityClick = async (activity: Activity) => {
     if (activity.type === 'product') {

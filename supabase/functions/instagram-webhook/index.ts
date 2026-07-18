@@ -1,10 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
-};
+import { corsHeaders } from '../_shared/cors.ts';
+import { invalidateShopCache, cacheDelete } from '../_shared/cache.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -136,6 +133,10 @@ serve(async (req) => {
 
         if (shop?.business_id) {
           await supabase.from('shop_details').update(updates).eq('business_id', shop.business_id);
+          // Shop identity changed — drop cached public payloads and the
+          // resolved IG profile-pic entry. Both helpers fail open.
+          await invalidateShopCache({ businessId: shop.business_id });
+          await cacheDelete(`iglogo:${integration.user_id}`);
         }
       }
 

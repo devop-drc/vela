@@ -73,6 +73,10 @@ export const useProductData = (opts?: UseProductDataOptions): UseProductDataResu
   // once) always calls the current version without re-subscribing.
   const onMutatedRef = useRef(opts?.onProductsMutated);
   onMutatedRef.current = opts?.onProductsMutated;
+  // Channel names must be unique per mounted hook instance: supabase-js returns
+  // the SAME channel object for a repeated name, and this hook can be mounted
+  // twice at once (Products page + ProductSelector inside a modal).
+  const [chanId] = useState(() => Math.random().toString(36).slice(2, 8));
   // Seed from the last cached snapshot so returning to the page renders
   // instantly; the effect below still revalidates in the background.
   const [cached] = useState(() => readCache<ProductsSnapshot>(PRODUCTS_CACHE_KEY));
@@ -170,7 +174,7 @@ export const useProductData = (opts?: UseProductDataOptions): UseProductDataResu
 
         // 2. Setup Realtime Listener
         channel = supabase
-            .channel(`products_channel_${userId}`)
+            .channel(`products_channel_${userId}_${chanId}`)
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'products', filter: `user_id=eq.${userId}` },

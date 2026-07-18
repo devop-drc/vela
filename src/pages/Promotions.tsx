@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { readCache, writeCache } from "@/lib/pageCache";
+import { readCache, writeCache, clearCache as clearPageCache } from "@/lib/pageCache";
 import { isAnnouncementLiveNow, announcementStatus } from "@/lib/announcementSchedule";
 type PromoSnapshot = { promotions: Promotion[]; announcements: StorefrontAnnouncement[] };
 import { usePageTitle } from "@/contexts/PageTitleContext";
@@ -255,6 +255,7 @@ const EmptyPromotions = ({ onCreateClick }: { onCreateClick: () => void }) => {
 const Promotions = () => {
   const { setTitle } = usePageTitle();
   const { t } = useTranslation();
+  const { shopDetails } = useShop();
   const [promotions, setPromotions] = useState<Promotion[]>(() => readCache<PromoSnapshot>("promotions")?.promotions ?? []);
   const [storefrontAnnouncements, setStorefrontAnnouncements] = useState<StorefrontAnnouncement[]>(() => readCache<PromoSnapshot>("promotions")?.announcements ?? []);
   const [isLoading, setIsLoading] = useState(() => !readCache("promotions"));
@@ -292,7 +293,17 @@ const Promotions = () => {
 
   // ── handlers ────────────────────────────────────────────────────────────────
 
+  // Promotion/announcement edits change what the public storefront shows —
+  // drop its per-slug snapshot (24h TTL) so the merchant's next storefront
+  // visit repaints fresh data instead of the stale cache. Same invalidation
+  // ShopContext performs on shop-details saves. Call from every mutation
+  // success path.
+  const invalidateStorefrontCache = () => {
+    if (shopDetails?.slug) clearPageCache(`storefront:${shopDetails.slug}`);
+  };
+
   const handlePromotionSave = () => {
+    invalidateStorefrontCache();
     fetchPromotionsAndAnnouncements();
     setIsPromotionEditorOpen(false);
     setSelectedPromotion(null);
@@ -329,12 +340,14 @@ const Promotions = () => {
     if (error) {
       showError(toFriendlyError(error, "Couldn't update the promotion. Please try again."));
     } else {
+      invalidateStorefrontCache();
       showSuccess(`Promotion ${!currentStatus ? 'activated' : 'deactivated'}.`);
       setPromotions(prev => prev.map(p => p.id === promotionId ? { ...p, is_active: !currentStatus } : p));
     }
   };
 
   const handleAnnouncementSave = () => {
+    invalidateStorefrontCache();
     fetchPromotionsAndAnnouncements();
     setIsAnnouncementEditorOpen(false);
     setSelectedAnnouncement(null);
@@ -359,6 +372,7 @@ const Promotions = () => {
     if (error) {
       showError(toFriendlyError(error, "Couldn't update the announcement. Please try again."));
     } else {
+      invalidateStorefrontCache();
       showSuccess(`Announcement ${!currentStatus ? 'activated' : 'deactivated'}.`);
       setStorefrontAnnouncements(prev => prev.map(e => e.id === elementId ? { ...e, is_active: !currentStatus } : e));
     }
@@ -388,6 +402,8 @@ const Promotions = () => {
     if (e1 || e2) {
       showError(toFriendlyError(e1 || e2, "Couldn't reorder the announcement. Please try again."));
       fetchPromotionsAndAnnouncements();
+    } else {
+      invalidateStorefrontCache();
     }
   };
 
@@ -402,11 +418,11 @@ const Promotions = () => {
     if (itemToDelete.type === 'promotion') {
       const { error } = await supabase.from("promotions").delete().eq("id", itemToDelete.id);
       if (error) showError(toFriendlyError(error, "Couldn't delete the promotion. Please try again."));
-      else { showSuccess("Promotion deleted."); fetchPromotionsAndAnnouncements(); }
+      else { invalidateStorefrontCache(); showSuccess("Promotion deleted."); fetchPromotionsAndAnnouncements(); }
     } else {
       const { error } = await supabase.from("marquee_elements").delete().eq("id", itemToDelete.id);
       if (error) showError(toFriendlyError(error, "Couldn't delete the announcement. Please try again."));
-      else { showSuccess("Storefront announcement deleted."); fetchPromotionsAndAnnouncements(); }
+      else { invalidateStorefrontCache(); showSuccess("Storefront announcement deleted."); fetchPromotionsAndAnnouncements(); }
     }
 
     setIsDeleteConfirmOpen(false);

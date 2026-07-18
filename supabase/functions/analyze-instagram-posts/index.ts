@@ -1,12 +1,21 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { crypto } from "https://deno.land/std@0.190.0/crypto/mod.ts";
+import { corsHeaders } from '../_shared/cors.ts';
+import { cached } from '../_shared/cache.ts';
+import { getSupabaseAdmin } from '../_shared/supabaseAdmin.ts';
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-const GEMINI_PRO_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`;
+// Preview classifier: flash (not pro) — this is a quick import preview, and
+// 2.5 Flash bills thinking as output tokens, so thinking is disabled below.
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+const sha256 = async (text: string): Promise<string> => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
 // Types
@@ -101,39 +110,77 @@ ${similarProducts.map(p => `- **${p.name}**: Category: ${p.category}, Type: ${p.
 
 const toTitleCase = (str: string) => str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
-const analyzeAndEnrichPost = async (post: any, supabase: SupabaseClient, userId: string) => {
+const analyzeAndEnrichPost = async (
+    post: any,
+    userId: string,
+    keywords: { keyword: string, description: string }[],
+    recentProducts: any[],
+) => {
     try {
         if (!GEMINI_API_KEY) return { skipped: true, reason: "AI configuration missing." };
         if (!post.caption) return { skipped: true, reason: "Post has no caption to analyze." };
 
-        // Fetch keywords and recent products (similar logic to background sync, but simplified for UI preview)
-        const { data: keywords } = await supabase.from('keywords').select('keyword, description').eq('user_id', userId);
-        const { data: recentProducts } = await supabase.from('products').select('name, category, details, caption').eq('user_id', userId).limit(5).order('created_at', { ascending: false });
+        const runGemini = async () => {
+            const prompt = getClassifierPrompt(post.caption, keywords, recentProducts);
+            const requestParts = [{ text: prompt }];
 
-        const prompt = getClassifierPrompt(post.caption, keywords || [], recentProducts || []);
-        const requestParts = [{ text: prompt }];
+            const geminiResponse = await fetch(GEMINI_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: requestParts }],
+                    // thinkingBudget: 0 — 2.5 Flash bills thinking as output tokens.
+                    generationConfig: { responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
+                }),
+            });
 
-        const geminiResponse = await fetch(GEMINI_PRO_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: requestParts }], generationConfig: { responseMimeType: "application/json" } }),
-        });
+            if (!geminiResponse.ok) throw new Error(`Gemini API error: ${await geminiResponse.text()}`);
+            const geminiData = await geminiResponse.json();
 
-        if (!geminiResponse.ok) throw new Error(`Gemini API error: ${await geminiResponse.text()}`);
-        const geminiData = await geminiResponse.json();
-        
-        if (!geminiData.candidates || geminiData.candidates.length === 0) {
-            throw new Error("AI failed to generate a response. The prompt might be too complex or the model timed out.");
-        }
+            if (!geminiData.candidates || geminiData.candidates.length === 0) {
+                throw new Error("AI failed to generate a response. The prompt might be too complex or the model timed out.");
+            }
 
-        const analysisText = geminiData.candidates[0].content.parts[0].text;
-        let analysis;
-        try {
-            analysis = JSON.parse(analysisText);
-        } catch (e) {
-            console.error("Failed to parse AI response JSON:", analysisText);
-            throw new Error("AI returned invalid JSON format.");
-        }
+            const analysisText = geminiData.candidates[0].content.parts[0].text;
+            let parsed;
+            try {
+                parsed = JSON.parse(analysisText);
+            } catch (e) {
+                console.error("Failed to parse AI response JSON:", analysisText);
+                throw new Error("AI returned invalid JSON format.");
+            }
+
+            // Record token usage + estimated cost (mirrors ai-product-classifier).
+            // Must be AWAITED: the edge runtime tears down pending promises once
+            // the response is returned. Errors are swallowed so a ledger problem
+            // can never block the preview. Pricing: Gemini 2.5 Flash ($/1M tokens).
+            if (geminiData.usageMetadata) {
+                try {
+                    const IN_PER_M = 0.30, OUT_PER_M = 2.50;
+                    const inputTokens = geminiData.usageMetadata.promptTokenCount ?? 0;
+                    const outputTokens = (geminiData.usageMetadata.candidatesTokenCount ?? 0) + (geminiData.usageMetadata.thoughtsTokenCount ?? 0);
+                    const costUsd = (inputTokens * IN_PER_M + outputTokens * OUT_PER_M) / 1_000_000;
+                    const { error: usageErr } = await getSupabaseAdmin().from('ai_usage').insert({
+                        user_id: userId,
+                        function_name: 'analyze-instagram-posts',
+                        model: 'gemini-2.5-flash',
+                        input_tokens: inputTokens,
+                        output_tokens: outputTokens,
+                        cost_usd: Math.round(costUsd * 1_000_000) / 1_000_000,
+                    });
+                    if (usageErr) console.warn('ai_usage insert failed:', usageErr.message);
+                } catch (e) {
+                    console.warn('ai_usage logging error:', (e as Error).message);
+                }
+            }
+
+            return parsed;
+        };
+
+        // Content-addressable preview cache: re-opening the picker (or another
+        // post with an identical caption) reuses the analysis for 24h instead
+        // of paying another Gemini call.
+        const analysis = await cached(`aiprev:${await sha256(post.caption)}`, 86400, runGemini);
 
         // Heuristic helpers
         const parseMultiProducts = (caption?: string): Array<{ productName: string; price?: number; currency?: string; inventory?: number; specifications?: Record<string, string> }> => {
@@ -263,15 +310,34 @@ serve(async (req) => {
     if (postsData.error) return new Response(JSON.stringify({ error: postsData.error }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     if (!postsData.posts) return new Response(JSON.stringify({ posts: [] }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
+    // Hoisted context: keywords + recent products + already-imported post ids
+    // are fetched ONCE per request (they used to be re-fetched per post).
     const { data: business } = await supabase.from('businesses').select('id').eq('user_id', user.id).single();
-    const { data: existingProducts } = await supabase.from('products').select('instagram_post_id').eq('business_id', business?.id);
+    const [{ data: existingProducts }, { data: keywords }, { data: recentProducts }] = await Promise.all([
+      supabase.from('products').select('instagram_post_id').eq('business_id', business?.id),
+      supabase.from('keywords').select('keyword, description').eq('user_id', user.id),
+      supabase.from('products').select('name, category, details, caption').eq('user_id', user.id).limit(5).order('created_at', { ascending: false }),
+    ]);
     const existingPostIds = new Set((existingProducts || []).map(p => p.instagram_post_id));
 
     const analysisPromises = postsData.posts.map(async (post: any) => {
-      const analysisResult = await analyzeAndEnrichPost(post, supabase, user.id);
+      // Already a product — no Gemini call needed for the preview.
+      if (existingPostIds.has(post.id)) {
+        return {
+          ...post,
+          isImported: true,
+          alreadyImported: true,
+          analysis: {
+              isProductPost: false,
+              product: undefined,
+              reasoning: 'Already imported as a product.'
+          },
+        };
+      }
+      const analysisResult = await analyzeAndEnrichPost(post, user.id, keywords || [], recentProducts || []);
       return {
         ...post,
-        isImported: existingPostIds.has(post.id),
+        isImported: false,
         analysis: {
             isProductPost: !analysisResult.skipped,
             product: analysisResult.product,

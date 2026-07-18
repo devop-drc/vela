@@ -75,7 +75,7 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
 
     // Set up real-time subscription
     const subscription = supabase
-      .channel('sync-jobs')
+      .channel(`sync-jobs:${user.id}`)
       .on(
         'postgres_changes',
         {

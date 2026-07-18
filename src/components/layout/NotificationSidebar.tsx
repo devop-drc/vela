@@ -538,11 +538,11 @@ export default function NotificationSidebar({ asPage = false, linkTo }: { asPage
     };
   }, [businessId, fetchOrders, fetchDisputes, fetchActivity]);
 
-  // Slow safety-net refresh only — realtime subscriptions below deliver the
-  // actual updates. Polling every 30s was redundant load on the database.
+  // Slow safety-net refresh only (5 min) — realtime subscriptions below
+  // deliver the actual updates. Frequent polling was redundant DB load.
   useEffect(() => {
     if (!businessId) return;
-    const interval = setInterval(fetchActivity, 180000);
+    const interval = setInterval(fetchActivity, 300000);
     return () => clearInterval(interval);
   }, [businessId, fetchActivity]);
 
@@ -597,23 +597,12 @@ export default function NotificationSidebar({ asPage = false, linkTo }: { asPage
           event: "*",
           schema: "public",
           table: "order_disputes",
+          filter: `business_id=eq.${businessId}`,
         },
         (payload) => {
           if (payload.eventType === "INSERT") {
             const newDispute = payload.new as Dispute;
-            // Verify it belongs to this business via a quick check
-            supabase
-              .from("orders")
-              .select("business_id")
-              .eq("id", newDispute.order_id)
-              .single()
-              .then(({ data }) => {
-                if (data?.business_id === businessId) {
-                  setDisputes((prev) =>
-                    [newDispute, ...prev].slice(0, 20)
-                  );
-                }
-              });
+            setDisputes((prev) => [newDispute, ...prev].slice(0, 20));
           } else if (payload.eventType === "UPDATE") {
             const updated = payload.new as Dispute;
             setDisputes((prev) =>

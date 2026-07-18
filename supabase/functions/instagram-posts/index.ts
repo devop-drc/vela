@@ -1,13 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { corsHeaders } from '../_shared/cors.ts';
 
 const FACEBOOK_APP_ID = Deno.env.get('FACEBOOK_APP_ID');
 const FACEBOOK_APP_SECRET = Deno.env.get('FACEBOOK_APP_SECRET');
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 const getSupabaseAdmin = () => createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -117,9 +113,26 @@ serve(async (req) => {
     }
     
     const igAccountId = igAccount.instagram_business_account.id;
+
+    // Optional incremental fetch: `since` (unix seconds or ISO datetime) limits
+    // the Graph API media query to posts published after that moment, so quick
+    // syncs stop re-paginating the merchant's entire history. Ignored when
+    // absent or unparsable. Graph API `paging.next` links carry `since` along.
+    let sinceUnix: number | null = null;
+    const rawSince = body?.since;
+    if (rawSince !== undefined && rawSince !== null && rawSince !== '') {
+      let n = typeof rawSince === 'number'
+        ? rawSince
+        : (/^\d+$/.test(String(rawSince).trim()) ? Number(rawSince) : new Date(String(rawSince)).getTime() / 1000);
+      if (Number.isFinite(n) && n > 0) {
+        if (n > 1e12) n = n / 1000; // milliseconds epoch → seconds
+        sinceUnix = Math.floor(n);
+      }
+    }
+
     const fields = 'id,media_type,media_url,permalink,thumbnail_url,timestamp,caption';
     let allMedia: any[] = [];
-    let mediaUrl: string | null = `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=${fields}&access_token=${userAccessToken}&limit=100`;
+    let mediaUrl: string | null = `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=${fields}&access_token=${userAccessToken}&limit=100${sinceUnix ? `&since=${sinceUnix}` : ''}`;
     let pageCount = 0;
     const MAX_PAGES = 10; // Safety break to prevent overwhelming API
 

@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { invokeWithRetry } from '@/lib/edgeInvoke';
+import { edgeGetWithRetry } from '@/lib/edgeInvoke';
+import { getExchangeRates, readCachedRates } from '@/lib/exchangeRates';
 import { readCache, writeCache } from '@/lib/pageCache';
 import { primeVariantOptions } from '@/hooks/useVariantOptions';
 import { showError } from '@/utils/toast';
@@ -138,11 +139,6 @@ const generateSlug = (name: string): string => {
 
 const PRODUCTS_PER_PAGE = 12; // Define a constant for limit
 
-// Same key ShopContext uses — rates are global, so either surface warming the
-// cache benefits the other (per pageCache user-scoping, admin and anon visits
-// each keep their own slot).
-const RATES_CACHE_KEY = 'vela:exchangeRates:v1';
-
 // Newer edge responses embed each product's variant rows. Split them out and
 // seed the variant-options cache so option pickers / "choose options" buttons
 // render with zero extra round trips. Older responses (field absent) are a
@@ -181,41 +177,23 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]); // New state
   // Hydrate synchronously from the last successful fetch so prices render in
   // the correct currency on the very first frame — no convert-later flash.
-  const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(
-    () => readCache<ExchangeRates>(RATES_CACHE_KEY) ?? null
-  );
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(() => readCachedRates());
   const [promotions, setPromotions] = useState<Promotion[]>([]); // New state for promotions
   const [marqueeElements, setMarqueeElements] = useState<StorefrontAnnouncement[]>([]); // New state for marquee elements
   const [customerOrders, setCustomerOrders] = useState<OrderDetails[]>([]); // New state for customer orders
   const [capabilities, setCapabilities] = useState<ShopCapabilities>(DEFAULT_CAPABILITIES);
 
-  // Fetch exchange rates once on mount — cache table first (one cheap read),
-  // edge function only on a stale/missing cache. Same pattern as ShopContext.
+  // Fetch exchange rates once on mount via the shared single-flight loader
+  // (cache table first, edge function only on a stale/missing cache, stale
+  // rows beat nothing) — deduped with CurrencyContext/ShopContext.
   useEffect(() => {
-    const fetchRates = async () => {
-      const { data: cached } = await supabase
-        .from('exchange_rates_cache')
-        .select('rates, last_fetched_at')
-        .eq('id', 1)
-        .maybeSingle();
-      const isFresh = cached?.last_fetched_at
-        && Date.now() - new Date(cached.last_fetched_at).getTime() < 24 * 60 * 60 * 1000;
-      if (cached?.rates && isFresh) {
-        setExchangeRates(cached.rates as ExchangeRates);
-        writeCache(RATES_CACHE_KEY, cached.rates);
-        return;
-      }
-      const { data, error } = await supabase.functions.invoke('exchange-rates');
-      if (error || (data && data.error)) {
-        const errorMessage = error?.message || (data && data.error) || "An unknown error occurred.";
-        console.error("Failed to fetch exchange rates for storefront:", errorMessage);
-        if (cached?.rates) setExchangeRates(cached.rates as ExchangeRates); // stale beats nothing
-      } else if (data) {
-        setExchangeRates(data.rates);
-        writeCache(RATES_CACHE_KEY, data.rates);
-      }
-    };
-    fetchRates();
+    let mounted = true;
+    getExchangeRates()
+      .then((rates) => { if (mounted) setExchangeRates(rates); })
+      .catch((err: any) => {
+        console.error("Failed to fetch exchange rates for storefront:", err?.message || err);
+      });
+    return () => { mounted = false; };
   }, []);
 
   const fetchStorefrontData = useCallback(async (pageToFetch: number = 1) => {
@@ -262,96 +240,102 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
 
     try {
-      // Retry transient connection drops — the slow backend intermittently
-      // resets fetches, and a blank storefront is far worse than a slower load.
-      const data = await invokeWithRetry<any>('get-public-shop-data', {
-        body: { shopSlug, page: pageToFetch, limit: PRODUCTS_PER_PAGE },
+      // GET (cacheable by browser/CDN) with the same transient-connection
+      // retry the POST path had — the slow backend intermittently resets
+      // fetches, and a blank storefront is far worse than a slower load.
+      const data = await edgeGetWithRetry<any>('get-public-shop-data', {
+        shopSlug, page: pageToFetch, limit: PRODUCTS_PER_PAGE,
       });
 
       if (data?.error) throw new Error(data.error);
 
-      const incomingDetails = {
-        id: data.shopDetails.id,
-        userId: data.shopDetails.user_id, // Set the user ID here
-        name: data.shopDetails.name,
-        shop_name: data.shopDetails.shop_name,
-        slug: data.shopDetails.slug,
-        logo_url: data.shopDetails.logo_url || null, // Ensure null if empty
-        favicon_url: data.shopDetails.favicon_url || null, // Ensure null if empty
-        currency: data.shopDetails.currency,
-        headline: data.shopDetails.headline,
-        about: data.shopDetails.about,
-        contact_email: data.shopDetails.contact_email,
-        followers_count: data.shopDetails.followers_count,
-        media_count: data.shopDetails.media_count,
-        instagram_url: data.shopDetails.instagram_url, // Set Instagram URL
-        storefront_type: data.shopDetails.storefront_type || 'instagram',
-      } as ShopDetails;
+      // page>1 responses may be a slim payload ({ products, hasMore,
+      // partial }) — only the full payload carries the shop-level fields.
+      let incomingDetails: ShopDetails | null = null;
+      if (data.shopDetails) {
+        incomingDetails = {
+          id: data.shopDetails.id,
+          userId: data.shopDetails.user_id, // Set the user ID here
+          name: data.shopDetails.name,
+          shop_name: data.shopDetails.shop_name,
+          slug: data.shopDetails.slug,
+          logo_url: data.shopDetails.logo_url || null, // Ensure null if empty
+          favicon_url: data.shopDetails.favicon_url || null, // Ensure null if empty
+          currency: data.shopDetails.currency,
+          headline: data.shopDetails.headline,
+          about: data.shopDetails.about,
+          contact_email: data.shopDetails.contact_email,
+          followers_count: data.shopDetails.followers_count,
+          media_count: data.shopDetails.media_count,
+          instagram_url: data.shopDetails.instagram_url, // Set Instagram URL
+          storefront_type: data.shopDetails.storefront_type || 'instagram',
+        } as ShopDetails;
 
-      // Backfill branding if missing (incognito or older records) using public
-      // storage URLs. The probe outcome — including "nothing found" — is cached
-      // for a day so revalidations don't re-run a burst of 400ing requests and
-      // block the shop paint every load. Probes run in parallel.
-      if (!incomingDetails.logo_url || !incomingDetails.favicon_url) {
-        const brandingKey = `branding:${shopSlug}`;
-        const cachedBranding = readCache<{ logo: string | null; favicon: string | null }>(brandingKey);
-        if (cachedBranding !== undefined) {
-          incomingDetails.logo_url = incomingDetails.logo_url || cachedBranding.logo;
-          incomingDetails.favicon_url = incomingDetails.favicon_url || cachedBranding.favicon;
-        } else {
-          const probe = async (key: string) => {
-            const { data } = supabase.storage.from('shop-assets').getPublicUrl(key);
-            try {
-              const res = await fetch(data.publicUrl, { method: 'GET', headers: { 'Range': 'bytes=0-0' } });
-              if (res.ok || res.status === 206) return data.publicUrl;
-            } catch (e) { /* ignore */ }
-            return null;
-          };
-          const firstHit = async (keys: string[]) =>
-            (await Promise.all(keys.map(probe))).find(Boolean) ?? null;
+        // Backfill branding if missing (incognito or older records) using public
+        // storage URLs. The probe outcome — including "nothing found" — is cached
+        // for a day so revalidations don't re-run a burst of 400ing requests and
+        // block the shop paint every load. Probes run in parallel.
+        if (!incomingDetails.logo_url || !incomingDetails.favicon_url) {
+          const brandingKey = `branding:${shopSlug}`;
+          const cachedBranding = readCache<{ logo: string | null; favicon: string | null }>(brandingKey);
+          if (cachedBranding !== undefined) {
+            incomingDetails.logo_url = incomingDetails.logo_url || cachedBranding.logo;
+            incomingDetails.favicon_url = incomingDetails.favicon_url || cachedBranding.favicon;
+          } else {
+            const probe = async (key: string) => {
+              const { data } = supabase.storage.from('shop-assets').getPublicUrl(key);
+              try {
+                const res = await fetch(data.publicUrl, { method: 'GET', headers: { 'Range': 'bytes=0-0' } });
+                if (res.ok || res.status === 206) return data.publicUrl;
+              } catch (e) { /* ignore */ }
+              return null;
+            };
+            const firstHit = async (keys: string[]) =>
+              (await Promise.all(keys.map(probe))).find(Boolean) ?? null;
 
-          const [logoHit, favHit] = await Promise.all([
-            incomingDetails.logo_url
-              ? Promise.resolve(incomingDetails.logo_url)
-              : firstHit([`${shopSlug}/logo.png`, `${shopSlug}/logo.jpg`, `${shopSlug}/logo.jpeg`]),
-            incomingDetails.favicon_url
-              ? Promise.resolve(incomingDetails.favicon_url)
-              : firstHit([`${shopSlug}/favicon.ico`, `${shopSlug}/favicon.png`]),
-          ]);
-          incomingDetails.logo_url = logoHit;
-          incomingDetails.favicon_url = favHit;
+            const [logoHit, favHit] = await Promise.all([
+              incomingDetails.logo_url
+                ? Promise.resolve(incomingDetails.logo_url)
+                : firstHit([`${shopSlug}/logo.png`, `${shopSlug}/logo.jpg`, `${shopSlug}/logo.jpeg`]),
+              incomingDetails.favicon_url
+                ? Promise.resolve(incomingDetails.favicon_url)
+                : firstHit([`${shopSlug}/favicon.ico`, `${shopSlug}/favicon.png`]),
+            ]);
+            incomingDetails.logo_url = logoHit;
+            incomingDetails.favicon_url = favHit;
 
-          // If still missing, attempt to list files in userId directory (public bucket policies required)
-          if ((!incomingDetails.logo_url || !incomingDetails.favicon_url) && incomingDetails.userId) {
-            try {
-              const dir = incomingDetails.userId as string;
-              const { data: files, error: listErr } = await supabase.storage.from('shop-assets').list(dir, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
-              if (!listErr && files && files.length > 0) {
-                const imageFiles = files.filter(f => /\.(png|jpg|jpeg|webp|ico)$/i.test(f.name));
-                const makeUrl = (name: string) => supabase.storage.from('shop-assets').getPublicUrl(`${dir}/${name}`).data.publicUrl;
+            // If still missing, attempt to list files in userId directory (public bucket policies required)
+            if ((!incomingDetails.logo_url || !incomingDetails.favicon_url) && incomingDetails.userId) {
+              try {
+                const dir = incomingDetails.userId as string;
+                const { data: files, error: listErr } = await supabase.storage.from('shop-assets').list(dir, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+                if (!listErr && files && files.length > 0) {
+                  const imageFiles = files.filter(f => /\.(png|jpg|jpeg|webp|ico)$/i.test(f.name));
+                  const makeUrl = (name: string) => supabase.storage.from('shop-assets').getPublicUrl(`${dir}/${name}`).data.publicUrl;
 
-                // Prefer favicon.* for favicon_url
-                if (!incomingDetails.favicon_url) {
-                  const fav = imageFiles.find(f => /favicon\.(ico|png)$/i.test(f.name));
-                  if (fav) incomingDetails.favicon_url = makeUrl(fav.name);
+                  // Prefer favicon.* for favicon_url
+                  if (!incomingDetails.favicon_url) {
+                    const fav = imageFiles.find(f => /favicon\.(ico|png)$/i.test(f.name));
+                    if (fav) incomingDetails.favicon_url = makeUrl(fav.name);
+                  }
+
+                  // Pick the most recent image for logo if still missing
+                  if (!incomingDetails.logo_url && imageFiles.length > 0) {
+                    incomingDetails.logo_url = makeUrl(imageFiles[0].name);
+                  }
                 }
-
-                // Pick the most recent image for logo if still missing
-                if (!incomingDetails.logo_url && imageFiles.length > 0) {
-                  incomingDetails.logo_url = makeUrl(imageFiles[0].name);
-                }
+              } catch (e) {
+                console.warn('Branding directory list failed', e);
               }
-            } catch (e) {
-              console.warn('Branding directory list failed', e);
             }
+            writeCache(brandingKey, { logo: incomingDetails.logo_url, favicon: incomingDetails.favicon_url });
           }
-          writeCache(brandingKey, { logo: incomingDetails.logo_url, favicon: incomingDetails.favicon_url });
         }
+
+        setShopDetails(incomingDetails);
+
+        setAppearanceSettings(data.appearanceSettings);
       }
-
-      setShopDetails(incomingDetails);
-
-      setAppearanceSettings(data.appearanceSettings);
 
       const incomingProducts = absorbVariants<Product>(data.products);
       const incomingRecommended = absorbVariants<Product>(data.recommendedProducts);
@@ -366,17 +350,21 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         setCapabilities({ ...DEFAULT_CAPABILITIES, ...(data.capabilities || {}) });
         // Snapshot the shop-level data for instant paint on the next reload
         // (customer orders excluded — they're per-visitor, not shop-wide).
-        writeCache<StorefrontSnapshot>(cacheKey, {
-          shopDetails: incomingDetails,
-          appearanceSettings: data.appearanceSettings,
-          products: incomingProducts,
-          bestSellers: data.bestSellers || [],
-          recommendedProducts: incomingRecommended,
-          promotions: data.promotions || [],
-          marqueeElements: data.marqueeElements || [],
-          hasMore: data.hasMore,
-          capabilities: { ...DEFAULT_CAPABILITIES, ...(data.capabilities || {}) },
-        });
+        // Only when the shop-level fields were present — never snapshot a
+        // partial payload.
+        if (incomingDetails) {
+          writeCache<StorefrontSnapshot>(cacheKey, {
+            shopDetails: incomingDetails,
+            appearanceSettings: data.appearanceSettings,
+            products: incomingProducts,
+            bestSellers: data.bestSellers || [],
+            recommendedProducts: incomingRecommended,
+            promotions: data.promotions || [],
+            marqueeElements: data.marqueeElements || [],
+            hasMore: data.hasMore,
+            capabilities: { ...DEFAULT_CAPABILITIES, ...(data.capabilities || {}) },
+          });
+        }
       } else {
         // De-dupe by id so a double-trigger can't append the same page twice.
         setProducts(prevProducts => {
@@ -394,7 +382,10 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
         console.warn("Storefront revalidation failed; keeping displayed data.");
       } else {
         const msg = String(err?.message || '');
-        const isNetwork = err?.name === 'FunctionsFetchError' || /failed to send a request|network|timeout|connection/i.test(msg);
+        // TypeError / "failed to fetch" is how a raw GET fetch surfaces a
+        // dropped connection (the invoke path wraps it as FunctionsFetchError).
+        const isNetwork = err?.name === 'FunctionsFetchError' || err instanceof TypeError
+          || /failed to send a request|failed to fetch|load failed|network|timeout|connection/i.test(msg);
         const friendly = isNetwork
           ? "The shop is taking too long to respond. Please check your connection and refresh."
           : `Failed to load shop: ${msg || "An unknown error occurred."}`;
@@ -434,10 +425,9 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
     if (pending) return pending;
     const task = (async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('get-public-product', {
-          body: { shopSlug, productId },
-        });
-        if (error || data?.error) return null;
+        // GET (cacheable) — retries: 0 mirrors the old single-attempt invoke.
+        const data = await edgeGetWithRetry<any>('get-public-product', { shopSlug, productId }, { retries: 0 });
+        if (data?.error) return null;
         const product: Product | null = data?.product ? absorbVariants<Product>([data.product])[0] : null;
         if (product) {
           setProducts((prev) => (prev.some((p) => p.id === product.id) ? prev : [...prev, product]));

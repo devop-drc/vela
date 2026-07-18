@@ -1,5 +1,5 @@
 import { getStorefrontUrl } from "@/lib/storefront";
-import { useEffect, useState, useCallback, lazy, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { readCache, writeCache } from "@/lib/pageCache";
 import { Banknote, Package, Users, CreditCard, BarChart2, Zap, Star, Activity, AlertTriangle, RefreshCw } from "lucide-react";
@@ -248,11 +248,21 @@ const useDashboardData = (
     setIsLoading(false);
   }, [shopDetails, convertCurrency, dateRange, granularity]);
 
+  // Latest-ref: fetchData changes identity with every dateRange/granularity/
+  // shop-details change; the channel below only needs whichever is current,
+  // so the subscription survives those changes instead of rebuilding.
+  const fetchDataRef = useRef(fetchData);
+  useEffect(() => { fetchDataRef.current = fetchData; });
+
+  // Fetch on mount and whenever the filters change (fetchData encodes them).
+  useEffect(() => {
+    if (!shopDetails?.id) return;
+    fetchData();
+  }, [fetchData, shopDetails?.id]);
+
   useEffect(() => {
     if (!shopDetails?.id) return;
     const businessId = shopDetails.id;
-
-    fetchData();
 
     // Debounced: a burst of order events (multi-item checkout, status sweep)
     // triggers ONE stats refresh instead of a full dashboard refetch per event.
@@ -264,7 +274,7 @@ const useDashboardData = (
         { event: '*', schema: 'public', table: 'orders', filter: `business_id=eq.${businessId}` },
         () => {
           if (refetchTimer) clearTimeout(refetchTimer);
-          refetchTimer = setTimeout(() => fetchData(), 1500);
+          refetchTimer = setTimeout(() => fetchDataRef.current(), 1500);
         }
       )
       .subscribe();
@@ -273,7 +283,7 @@ const useDashboardData = (
       supabase.removeChannel(channel);
       if (refetchTimer) clearTimeout(refetchTimer);
     };
-  }, [fetchData, shopDetails?.id]);
+  }, [shopDetails?.id]);
 
   return { data, isLoading, loadError, fetchData };
 };

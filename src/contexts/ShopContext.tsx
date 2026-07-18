@@ -3,6 +3,7 @@ import { isDemoFrame } from '@/lib/isDemoFrame';
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
 import { clearCache as clearPageCache } from '@/lib/pageCache';
+import { getExchangeRates, readCachedRates } from '@/lib/exchangeRates';
 import type { StorefrontType } from '@/lib/storefront';
 
 interface ShopDetails {
@@ -49,12 +50,12 @@ const generateSlug = (name: string): string => {
 };
 
 // ── Instant-hydration cache ──────────────────────────────────────────────
-// Shop details + rates are persisted to localStorage so a returning user sees
-// their real shop name/logo/currency IMMEDIATELY on load (no skeleton wait),
-// while the network fetch revalidates in the background (SWR). Cleared on
-// sign-out so a different user never sees stale data.
+// Shop details are persisted to localStorage so a returning user sees their
+// real shop name/logo/currency IMMEDIATELY on load (no skeleton wait), while
+// the network fetch revalidates in the background (SWR). Cleared on sign-out
+// so a different user never sees stale data. Exchange rates hydrate the same
+// way via the shared src/lib/exchangeRates.ts loader.
 const SHOP_CACHE_KEY = 'vela:shopDetails:v1';
-const RATES_CACHE_KEY = 'vela:exchangeRates:v1';
 const readCache = <T,>(key: string): T | null => {
   try { const s = localStorage.getItem(key); return s ? (JSON.parse(s) as T) : null; } catch { return null; }
 };
@@ -66,44 +67,20 @@ export const ShopProvider = ({ children }: { children: ReactNode }) => {
   // Hydrate synchronously from cache so returning users never wait on a skeleton.
   const [shopDetails, setShopDetails] = useState<ShopDetails | null>(() => isDemoFrame() ? null : readCache<ShopDetails>(SHOP_CACHE_KEY));
   const [isLoading, setIsLoading] = useState(() => isDemoFrame() ? false : readCache<ShopDetails>(SHOP_CACHE_KEY) === null);
-  const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(() => isDemoFrame() ? null : readCache<ExchangeRates>(RATES_CACHE_KEY));
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(() => isDemoFrame() ? null : readCachedRates());
 
   useEffect(() => {
     if (isDemoFrame()) { setIsLoading(false); return; } // demo/preview iframes run on mock data
     let mounted = true;
-    const fetchRates = async () => {
-      // Try cache table first — much faster than invoking the edge function.
-      const { data: cached } = await supabase
-        .from('exchange_rates_cache')
-        .select('rates, last_fetched_at')
-        .eq('id', 1)
-        .maybeSingle();
-
-      const fresh = (ts?: string | null) =>
-        ts ? Date.now() - new Date(ts).getTime() < 24 * 60 * 60 * 1000 : false;
-
-      if (cached?.rates && fresh(cached.last_fetched_at)) {
-        if (mounted) { setExchangeRates(cached.rates as ExchangeRates); writeCache(RATES_CACHE_KEY, cached.rates); }
-        return;
-      }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      const invokeOptions: any = {};
-      if (session?.access_token) {
-        invokeOptions.headers = { Authorization: `Bearer ${session.access_token}` };
-      }
-      const { data, error } = await supabase.functions.invoke('exchange-rates', invokeOptions);
-      if (!mounted) return;
-      if (error || (data && data.error)) {
-        const errorMessage = error?.message || (data && data.error) || "An unknown error occurred.";
+    // Shared single-flight loader — cache-table pre-check + edge-function
+    // fallback live in src/lib/exchangeRates.ts, deduped across providers.
+    getExchangeRates()
+      .then((rates) => { if (mounted) setExchangeRates(rates); })
+      .catch((err: any) => {
+        const errorMessage = err?.message || "An unknown error occurred.";
         console.error("ShopContext: Failed to fetch exchange rates:", errorMessage);
         showError(`Could not load currency rates: ${errorMessage}`);
-      } else if (data) {
-        setExchangeRates(data.rates);
-        writeCache(RATES_CACHE_KEY, data.rates);
-      }
-    };
-    fetchRates();
+      });
     return () => { mounted = false; };
   }, []);
 

@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { isDemoFrame } from '@/lib/isDemoFrame';
-import { supabase } from "@/integrations/supabase/client";
+import { getExchangeRates } from "@/lib/exchangeRates";
 
 export type ExchangeRate = { code: string; rate: number; as_of: string };
 
@@ -25,35 +25,18 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode; defaultDisp
   useEffect(() => {
     if (isDemoFrame()) return; // demo/preview iframes run on mock data
     let mounted = true;
-    (async () => {
-      // 1) Try cache table first
-      const { data: cached, error: cacheErr } = await supabase
-        .from('exchange_rates_cache')
-        .select('id, rates, last_fetched_at')
-        .eq('id', 1)
-        .maybeSingle();
-
-      const now = Date.now();
-      const freshEnough = (ts?: string | null) => ts ? (now - new Date(ts).getTime()) < 24 * 60 * 60 * 1000 : false;
-
-      if (cached?.rates && freshEnough(cached.last_fetched_at)) {
+    // Shared single-flight loader — cache-table pre-check + edge-function
+    // fallback live in src/lib/exchangeRates.ts, deduped across providers.
+    getExchangeRates()
+      .then((fetched) => {
+        if (!mounted) return;
         const map: Record<string, number> = { ALL: 1 };
-        Object.entries<number>(cached.rates as Record<string, number>).forEach(([code, rate]) => { map[code] = rate; });
-        if (mounted) setRates(map);
-        return;
-      }
-
-      // 2) Fallback to edge function (which will refresh cache)
-      const { data, error } = await supabase.functions.invoke('exchange-rates');
-      if (!mounted) return;
-      if (!error && data && data.rates) {
-        const map: Record<string, number> = { ALL: 1 };
-        Object.entries<number>(data.rates as Record<string, number>).forEach(([code, rate]) => { map[code] = rate; });
+        Object.entries(fetched).forEach(([code, rate]) => { map[code] = rate; });
         setRates(map);
-      } else {
-        console.warn('CurrencyProvider: failed to load rates', error || data || cacheErr);
-      }
-    })();
+      })
+      .catch((err) => {
+        console.warn('CurrencyProvider: failed to load rates', err);
+      });
     return () => { mounted = false; };
   }, []);
 

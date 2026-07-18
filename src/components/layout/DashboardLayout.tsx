@@ -4,6 +4,7 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import BottomNav from "./BottomNav";
 import { usePageTitle } from "@/contexts/PageTitleContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { motion } from "framer-motion";
 import { useShop } from "@/contexts/ShopContext";
 import { Suspense, useEffect, useState } from "react";
@@ -23,6 +24,7 @@ const DashboardLayout = () => {
   const location = useLocation();
   const { shopDetails } = useShop();
   const { settings } = useAppearance();
+  const isMobile = useIsMobile();
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
@@ -176,9 +178,14 @@ const DashboardLayout = () => {
           </Link>
         )}
         <SyncStatusWidget />
-        <div className="hidden md:block"><NotificationSidebar /></div>
-        {location.pathname !== '/notifications' && (
-          <div className="md:hidden"><NotificationSidebar linkTo="/notifications" /></div>
+        {/* JS conditional (not CSS hidden) so exactly one instance mounts —
+            each mounted NotificationSidebar opens its own realtime channels. */}
+        {isMobile ? (
+          location.pathname !== '/notifications' && (
+            <div><NotificationSidebar linkTo="/notifications" /></div>
+          )
+        ) : (
+          <div><NotificationSidebar /></div>
         )}
       </div>
     </div>

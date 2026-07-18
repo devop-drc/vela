@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, forwardRef } from "react";
+import React, { useState, useMemo, useEffect, useRef, forwardRef } from "react";
 
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { useCart, CartItem } from "@/contexts/CartContext"; // Import CartItem t
 import { getAttributeIcon } from "@/lib/attributeIcons";
 // Types pulled locally to avoid strict external type coupling
 import { supabase } from "@/integrations/supabase/client";
+import { useVariantOptionsFor } from "@/hooks/useVariantOptions";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
@@ -52,6 +53,80 @@ interface InstagramProductCardFullProps {
   promotions: any[];
 }
 
+// ── Combo lookup cache ──────────────────────────────────────────────────────
+// One raw combo payload per Instagram post, shared by every card in the feed
+// (and across remounts) with in-flight dedupe — the per-card lookups used to
+// cost 2 + 2×items queries each. Values are cached RAW (prices in ALL);
+// conversion to the display currency happens at use time so cached data stays
+// rate-independent.
+interface RawComboItem {
+  id: string;
+  item_name: string;
+  base_price: number | null;
+  required: boolean | null;
+  min_qty: number | null;
+  max_qty: number | null;
+  product_id?: string;
+  options: Array<{ id: string; name: string; values: Array<{ id: string; value: string; price_difference: number; inventory: number; is_active: boolean; is_default: boolean }> }>;
+  variants: Array<{ combination_key: string; option_values: Record<string, string>; inventory: number; is_active: boolean }>;
+}
+const comboCache = new Map<string, Promise<{ comboId: string; items: RawComboItem[] } | null>>();
+
+const fetchComboForPost = (postId: string): Promise<{ comboId: string; items: RawComboItem[] } | null> => {
+  const hit = comboCache.get(postId);
+  if (hit) return hit;
+  const task = (async () => {
+    const { data: combo } = await supabase.from('combo_products').select('id').eq('instagram_post_id', postId).maybeSingle();
+    if (!combo?.id) return null;
+    const { data: items } = await supabase
+      .from('combo_items')
+      .select('id, item_name, base_price, required, min_qty, max_qty, display_order, product_id')
+      .eq('combo_id', combo.id)
+      .order('display_order');
+    const itemIds = (items || []).map((it: any) => it.id);
+    if (itemIds.length === 0) return { comboId: combo.id, items: [] };
+    // Two batched reads for ALL items (this used to loop 2 queries per item).
+    const [{ data: allOpts }, { data: allVars }] = await Promise.all([
+      supabase
+        .from('combo_item_options')
+        .select(`id, combo_item_id, name, display_order, combo_option_values (id, value, price_difference, inventory, is_active, is_default)`)
+        .in('combo_item_id', itemIds)
+        .order('display_order'),
+      supabase
+        .from('combo_item_variants')
+        .select('combo_item_id, combination_key, option_values, inventory, is_active')
+        .in('combo_item_id', itemIds),
+    ]);
+    const optsByItem = new Map<string, any[]>();
+    for (const o of (allOpts || [])) {
+      const list = optsByItem.get(o.combo_item_id) ?? [];
+      list.push(o);
+      optsByItem.set(o.combo_item_id, list);
+    }
+    const varsByItem = new Map<string, any[]>();
+    for (const v of (allVars || [])) {
+      const list = varsByItem.get(v.combo_item_id) ?? [];
+      list.push(v);
+      varsByItem.set(v.combo_item_id, list);
+    }
+    return {
+      comboId: combo.id as string,
+      items: (items || []).map((it: any) => ({
+        ...it,
+        options: (optsByItem.get(it.id) ?? []).map((o: any) => ({
+          id: o.id,
+          name: o.name,
+          values: o.combo_option_values || [],
+        })),
+        variants: varsByItem.get(it.id) ?? [],
+      })) as RawComboItem[],
+    };
+  })();
+  comboCache.set(postId, task);
+  task.catch(() => comboCache.delete(postId)); // let a network hiccup retry later
+  return task;
+};
+
 // Helper to safely extract array values from product details
 const getDetailArray = (details: any, key: string): string[] => {
   const value = details?.[key];
@@ -65,9 +140,6 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     const { addToCart } = useCart();
     const { shopSlug } = useParams<{ shopSlug: string }>();
     const [quantity, setQuantity] = useState(1);
-    // New: options fetched from DB
-    const [options, setOptions] = useState<Array<{ id: string; name: string; values: Array<{ id: string; value: string; price_difference: number; inventory: number; is_active: boolean; is_default: boolean }> }>>([]);
-    const [isLoadingOptions, setIsLoadingOptions] = useState(false);
     const [selectedValues, setSelectedValues] = useState<Record<string, string>>({});
 
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -80,7 +152,6 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     const [buyNowProduct, setBuyNowProduct] = useState<CartItem | null>(null);
     const [buyNowItems, setBuyNowItems] = useState<CartItem[] | null>(null);
     const [isVariantDrawerOpen, setIsVariantDrawerOpen] = useState(false);
-    const [variants, setVariants] = useState<Array<{ combination_key: string; option_values: Record<string,string>; inventory: number; is_active: boolean }>>([]);
 
     // Combo state
     const [comboId, setComboId] = useState<string | null>(null);
@@ -106,141 +177,106 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
     const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
 
-    // Fetch options/values from DB for this product (single-product mode)
-    useEffect(() => {
-      const loadOptions = async () => {
-        if (!product?.id) return;
-        setIsLoadingOptions(true);
-        const { data, error } = await supabase
-          .from('product_options')
-          .select(`
-            id,
-            name,
-            display_order,
-            option_values (
-              id,
-              value,
-              price_difference,
-              inventory,
-              is_active,
-              is_default
-            )
-          `)
-          .eq('product_id', product.id)
-          .order('display_order')
-          .order('created_at', { foreignTable: 'option_values', ascending: true });
+    // Options/variants come from the shared batched variant-options layer —
+    // get-public-shop-data embeds each product's variant rows and
+    // StorefrontContext primes the cache, so this is usually ZERO extra round
+    // trips (older payloads fall back to useVariantOptions' single batched
+    // query for the whole feed instead of one per card).
+    const variantInfo = useVariantOptionsFor(product?.id);
 
-        if (error) {
-          console.error('Failed to load product options for storefront:', error);
-          setOptions([]);
-        } else {
-          const mapped = (data || []).map((opt: any) => ({
-            id: opt.id,
-            name: opt.name,
-            values: (opt.option_values || []).map((v: any) => ({
+    const variants = useMemo<Array<{ combination_key: string; option_values: Record<string,string>; inventory: number; is_active: boolean }>>(
+      () =>
+        variantInfo.variants.map((v) => ({
+          combination_key: Object.entries(v.option_values).map(([k, val]) => `${k}:${val}`).join('|'),
+          option_values: v.option_values,
+          inventory: v.inventory,
+          is_active: true, // the batched layer only keeps active variant rows
+        })),
+      [variantInfo]
+    );
+
+    // Per-value metadata (price delta / stock / default) derived from the
+    // variant rows. For single-option products the combination diff IS the
+    // value diff; with multiple options we surface the cheapest combination
+    // containing the value, and a value counts as in stock when ANY of its
+    // combinations has inventory (which is what "purchasable" really means).
+    const options = useMemo<Array<{ id: string; name: string; values: Array<{ id: string; value: string; price_difference: number; inventory: number; is_active: boolean; is_default: boolean }> }>>(
+      () =>
+        Object.keys(variantInfo.options).map((name) => ({
+          id: name,
+          name,
+          values: variantInfo.options[name].map((value) => {
+            const matching = variantInfo.variants.filter((v) => v.option_values?.[name] === value);
+            const rawDiff = matching.length ? Math.min(...matching.map((v) => v.price_difference || 0)) : 0;
+            return {
+              id: `${name}:${value}`,
+              value,
+              // price_difference stored in ALL; convert on the fly for display math
+              price_difference: convertCurrency(rawDiff, 'ALL'),
+              inventory: matching.reduce((max, v) => Math.max(max, v.inventory || 0), 0),
+              is_active: true,
+              is_default: matching.some((v) => v.is_default),
+            };
+          }),
+        })),
+      [variantInfo, convertCurrency]
+    );
+
+    // Initialize default selections once per product (mirrors the old
+    // fetch-time seeding; guarded so a background variant refresh can't
+    // clobber the user's in-drawer picks).
+    const defaultsSeededFor = useRef<string | null>(null);
+    useEffect(() => {
+      if (options.length === 0 || defaultsSeededFor.current === product?.id) return;
+      defaultsSeededFor.current = product?.id ?? null;
+      const defaults: Record<string, string> = {};
+      options.forEach(opt => {
+        const def = opt.values.find(v => v.is_default && v.is_active && v.inventory > 0) || opt.values.find(v => v.is_active && v.inventory > 0) || opt.values[0];
+        if (def) defaults[opt.name] = def.value;
+      });
+      setSelectedValues(defaults);
+    }, [options, product?.id]);
+
+    // Fetch combo for this instagram post (cached module-wide), then map to
+    // the display currency.
+    useEffect(() => {
+      const loadCombo = async () => {
+        // instagram_post_id already rides on the product object from the shop
+        // payload — only fall back to a lookup when the field is truly absent.
+        let postId = product.instagram_post_id as string | null | undefined;
+        if (postId === undefined) {
+          const { data: p } = await supabase.from('products').select('instagram_post_id').eq('id', product.id).maybeSingle();
+          postId = p?.instagram_post_id ?? null;
+        }
+        const combo = postId ? await fetchComboForPost(postId).catch(() => null) : null;
+        if (!combo) {
+          setComboId(null);
+          setComboItems([]);
+          return;
+        }
+        setComboId(combo.comboId);
+        setComboItems(combo.items.map((it) => ({
+          id: it.id,
+          name: it.item_name,
+          base_price: convertCurrency(it.base_price, product.currency || 'ALL'),
+          required: !!it.required,
+          min_qty: it.min_qty ?? 0,
+          max_qty: it.max_qty ?? 1,
+          options: it.options.map((o) => ({
+            id: o.id,
+            name: o.name,
+            values: o.values.map((v) => ({
               id: v.id,
               value: v.value,
-              // price_difference stored in ALL; convert on the fly for display math
               price_difference: convertCurrency(v.price_difference, 'ALL'),
               inventory: v.inventory,
               is_active: v.is_active,
               is_default: v.is_default,
             })),
-          }));
-          setOptions(mapped);
-          // Initialize defaults
-          const defaults: Record<string, string> = {};
-          mapped.forEach(opt => {
-            const def = opt.values.find(v => v.is_default && v.is_active && v.inventory > 0) || opt.values.find(v => v.is_active && v.inventory > 0) || opt.values[0];
-            if (def) defaults[opt.name] = def.value;
-          });
-          setSelectedValues(defaults);
-        }
-        setIsLoadingOptions(false);
-      };
-      loadOptions();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [product?.id]);
-
-    // Fetch variant rows for availability computation (single-product mode)
-    useEffect(() => {
-      const loadVariants = async () => {
-        if (!product?.id) return;
-        const { data, error } = await supabase
-          .from('product_variants')
-          .select('combination_key, option_values, inventory, is_active')
-          .eq('product_id', product.id);
-        if (!error && data) {
-          setVariants(data as any);
-        } else {
-          setVariants([]);
-        }
-      };
-      loadVariants();
-    }, [product?.id]);
-
-    // Fetch combo for this instagram post, then load combo items/options/variants
-    useEffect(() => {
-      const loadCombo = async () => {
-        // Determine instagram_post_id
-        let postId = product.instagram_post_id as string | null | undefined;
-        if (!postId) {
-          const { data: p } = await supabase.from('products').select('instagram_post_id').eq('id', product.id).maybeSingle();
-          postId = p?.instagram_post_id ?? null;
-        }
-        if (!postId) {
-          setComboId(null);
-          setComboItems([]);
-          return;
-        }
-        const { data: combo } = await supabase.from('combo_products').select('id').eq('instagram_post_id', postId).maybeSingle();
-        if (!combo?.id) {
-          setComboId(null);
-          setComboItems([]);
-          return;
-        }
-        setComboId(combo.id);
-        const { data: items } = await supabase
-          .from('combo_items')
-          .select('id, item_name, base_price, required, min_qty, max_qty, display_order, product_id')
-          .eq('combo_id', combo.id)
-          .order('display_order');
-        const result: any[] = [];
-        for (const it of (items || [])) {
-          const { data: opts } = await supabase
-            .from('combo_item_options')
-            .select(`id, name, display_order, combo_option_values (id, value, price_difference, inventory, is_active, is_default)`) 
-            .eq('combo_item_id', it.id)
-            .order('display_order');
-          const mappedOptions = (opts || []).map((o: any) => ({
-            id: o.id,
-            name: o.name,
-            values: (o.combo_option_values || []).map((v: any) => ({
-              id: v.id,
-              value: v.value,
-              price_difference: convertCurrency(v.price_difference, 'ALL'),
-              inventory: v.inventory,
-              is_active: v.is_active,
-              is_default: v.is_default,
-            }))
-          }));
-          const { data: vars } = await supabase
-            .from('combo_item_variants')
-            .select('combination_key, option_values, inventory, is_active')
-            .eq('combo_item_id', it.id);
-          result.push({
-            id: it.id,
-            name: it.item_name,
-            base_price: convertCurrency(it.base_price, product.currency || 'ALL'),
-            required: !!it.required,
-            min_qty: it.min_qty ?? 0,
-            max_qty: it.max_qty ?? 1,
-            options: mappedOptions,
-            variants: (vars || []) as any,
-            product_id: it.product_id,
-          });
-        }
-        setComboItems(result);
+          })),
+          variants: it.variants,
+          product_id: it.product_id,
+        })));
       };
       loadCombo();
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -325,7 +361,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     };
 
     const handleAddToCart = () => {
-      if ((comboId && comboItems.length > 0) || isLoadingOptions || options.length > 0) {
+      if ((comboId && comboItems.length > 0) || options.length > 0) {
         setIsVariantDrawerOpen(true);
         return;
       }
@@ -372,7 +408,7 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     };
 
     const handleBuyNow = () => {
-      if ((comboId && comboItems.length > 0) || isLoadingOptions || options.length > 0) {
+      if ((comboId && comboItems.length > 0) || options.length > 0) {
         setIsVariantDrawerOpen(true);
         return;
       }

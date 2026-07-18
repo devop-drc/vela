@@ -2,14 +2,14 @@
 // Vela (the brand) and the Instagram→e-commerce product it powers. Strict
 // guardrails keep it on-topic and prevent prompt-injection / system-prompt leaks.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_MODEL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash`;
+const GEMINI_URL = `${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_STREAM_URL = `${GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const FALLBACK_REPLY = "Sorry, I didn't catch that — could you rephrase your question about Vela?";
 
 const SYSTEM_PROMPT = `You are "Vela Assistant", the friendly, concise support chatbot for **Vela**.
 
@@ -68,7 +68,7 @@ serve(async (req) => {
   try {
     if (!GEMINI_API_KEY) throw new Error("Assistant is not configured.");
 
-    const { messages } = await req.json();
+    const { messages, stream } = await req.json();
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: "No messages provided." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -84,7 +84,10 @@ serve(async (req) => {
         parts: [{ text: String(m.content).slice(0, 2000) }],
       }));
 
-    const geminiRes = await fetch(GEMINI_URL, {
+    // `stream: false` is the compatibility path (buffered JSON); default is SSE.
+    const wantStream = stream !== false;
+
+    const geminiRes = await fetch(wantStream ? GEMINI_STREAM_URL : GEMINI_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -98,19 +101,65 @@ serve(async (req) => {
       }),
     });
 
+    // Non-2xx (either mode) stays a buffered JSON error so the client fallback works.
     if (!geminiRes.ok) {
       const errText = await geminiRes.text();
       console.error("Gemini error:", errText);
       throw new Error("The assistant is having trouble right now.");
     }
 
-    const data = await geminiRes.json();
-    const reply =
-      data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("").trim() ||
-      "Sorry, I didn't catch that — could you rephrase your question about Vela?";
+    if (!wantStream || !geminiRes.body) {
+      const data = await geminiRes.json();
+      const reply =
+        data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("").trim() ||
+        FALLBACK_REPLY;
 
-    return new Response(JSON.stringify({ reply }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ reply }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Re-emit Gemini's SSE chunks as `data: {"delta":"..."}` events, closing with
+    // `data: {"done":true,"reply":"<full text>"}` so the client can reconcile.
+    const encoder = new TextEncoder();
+    let buffer = "";
+    let fullText = "";
+    const readable = geminiRes.body
+      .pipeThrough(new TextDecoderStream())
+      .pipeThrough(
+        new TransformStream<string, Uint8Array>({
+          transform(chunk, controller) {
+            buffer += chunk;
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? ""; // keep any partial line for the next chunk
+            for (const line of lines) {
+              if (!line.startsWith("data:")) continue;
+              const payload = line.slice(5).trim();
+              if (!payload) continue;
+              try {
+                // Each data line is a full GenerateContentResponse chunk.
+                const json = JSON.parse(payload);
+                const delta = json?.candidates?.[0]?.content?.parts
+                  ?.map((p: any) => p.text ?? "")
+                  .join("");
+                if (delta) {
+                  fullText += delta;
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ delta })}\n\n`));
+                }
+              } catch {
+                // Ignore non-JSON keep-alive lines.
+              }
+            }
+          },
+          flush(controller) {
+            const reply = fullText.trim() || FALLBACK_REPLY;
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, reply })}\n\n`));
+          },
+        }),
+      );
+
+    return new Response(readable, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream", "Cache-Control": "no-store" },
     });
   } catch (error: any) {
     console.error("chat error:", error);

@@ -7,11 +7,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { ensureCategoryAndType, upsertVariantsFromOptions } from "../_shared/catalog.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
+import { invalidateShopCache } from "../_shared/cache.ts";
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -96,6 +93,10 @@ serve(async (req) => {
     } catch (e) {
       console.error('Category/type ensure failed:', (e as Error).message);
     }
+
+    // Product content changed — drop cached public storefront payloads.
+    // The helper fails open, so this can never fail the request.
+    await invalidateShopCache({ userId: user.id });
 
     return new Response(JSON.stringify({ ok: true, specs: specRows.length, options_created: optionsCreated }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

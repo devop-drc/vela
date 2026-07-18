@@ -3,6 +3,7 @@ import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-
 import { crypto } from "https://deno.land/std@0.190.0/crypto/mod.ts";
 import { isCaptionInsufficient, extractProductName, normalizeProductName, heuristicParse } from "../_shared/heuristics.ts";
 import { toTitleCase, upsertCategory, upsertTypeAndMergeAttributes, upsertVariantsFromOptions, ensureCategoryAndType } from "../_shared/catalog.ts";
+import { invalidateShopCache } from "../_shared/cache.ts";
 
 // Types
 interface InstagramPost {
@@ -216,11 +217,28 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
     await updateJobProgress(supabaseAdmin, jobId, { message: "Fetching Instagram posts...", summary });
 
+    // Existing products are loaded BEFORE the Graph API fetch so quick syncs
+    // can pass `since` and skip re-paginating the merchant's entire history.
+    const { data: existingProducts, error: productsError } = await supabaseAdmin.from('products').select('id, instagram_post_id, media_url, thumbnail_url, category, created_at').eq('business_id', business.id);
+    if (productsError) throw productsError;
+    const existingProductMap = new Map((existingProducts || []).map(p => [p.instagram_post_id, p]));
+
+    // Quick syncs only need the diff: `since` = newest synced product's
+    // created_at (always at/after its post's publish time, so no new post is
+    // ever excluded). Full syncs re-fetch everything.
+    let since: string | undefined;
+    if (syncType === 'quick') {
+      const newest = (existingProducts || [])
+        .filter((p: any) => p.instagram_post_id && p.created_at)
+        .reduce((max: number, p: any) => Math.max(max, new Date(p.created_at).getTime()), 0);
+      if (newest > 0) since = new Date(newest).toISOString();
+    }
+
     // User-initiated syncs carry the user's JWT; internal (webhook) syncs fall
     // back to the admin client's service-role auth + explicit user_id.
     const { data: postsData, error: postsError } = await supabaseAdmin.functions.invoke('instagram-posts', {
       ...(user.token ? { headers: { Authorization: `Bearer ${user.token}` } } : {}),
-      body: { skip_upload: true, user_id: user.id },
+      body: { skip_upload: true, user_id: user.id, ...(since ? { since } : {}) },
     });
     if (postsError) throw postsError;
     if (postsData.error) throw new Error(postsData.error);
@@ -232,10 +250,6 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     }
 
     await updateJobProgress(supabaseAdmin, jobId, { message: `Found ${allPosts.length} posts. Checking for new content...`, summary });
-
-    const { data: existingProducts, error: productsError } = await supabaseAdmin.from('products').select('id, instagram_post_id, media_url, thumbnail_url, category').eq('business_id', business.id);
-    if (productsError) throw productsError;
-    const existingProductMap = new Map((existingProducts || []).map(p => [p.instagram_post_id, p]));
 
     // Also fetch existing combos to decide if a post needs processing for multi-products
     const { data: existingCombos } = await supabaseAdmin
@@ -254,9 +268,19 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       return;
     }
 
+    // Content-addressable analysis cache: keyed by sha256(caption + keywords
+    // hash) instead of instagram_post_id. Identical captions (restocks, repeat
+    // promos) share one Gemini call, and a keyword edit changes the hash so
+    // stale analyses miss naturally. caption_hash stores the content hash;
+    // instagram_post_id stays populated for reference (it is the table's PK).
+    const { data: keywordRows } = await supabaseAdmin.from('keywords').select('keyword, description').eq('user_id', user.id);
+    const keywordsHash = await sha256(JSON.stringify(
+      (keywordRows || []).map((k: any) => `${k.keyword}|${k.description ?? ''}`).sort()
+    ));
+
     const { data: cacheEntries, error: cacheError } = await supabaseAdmin.from('ai_analysis_cache').select('*').eq('user_id', user.id);
     if (cacheError) throw cacheError;
-    const cacheMap = new Map<string, any>((cacheEntries || []).map((entry: any) => [entry.instagram_post_id, entry]));
+    const cacheMap = new Map<string, any>((cacheEntries || []).map((entry: any) => [entry.caption_hash, entry]));
 
     // Fetch the Instagram access token for image analysis
     const { data: integration } = await supabaseAdmin
@@ -357,19 +381,22 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       // --- a) AI Analyze this batch ---
       // Filter batch into cached vs needs-analysis
       const batchCached: Array<{post: InstagramPost, analysis: AnalysisResult}> = [];
-      const batchNeedsAnalysis: Array<InstagramPost & {captionHash: string, captionInsufficient: boolean}> = [];
+      const batchNeedsAnalysis: Array<InstagramPost & {contentHash: string, captionInsufficient: boolean}> = [];
 
       // A FULL sync is documented (and priced, in the UI hint) as "re-analyze
-      // everything with AI" — so it must bypass the analysis cache and the
-      // global-intelligence shortcut. Quick syncs keep both fast paths.
-      const useAnalysisShortcuts = syncType !== 'full';
+      // everything with AI" — it bypasses the global-intelligence shortcut.
+      // The analysis cache, however, is now content-addressable (caption +
+      // keywords hash): an unchanged caption with unchanged keywords is by
+      // definition the same analysis, so full syncs reuse it too — any caption
+      // or keyword change misses via the new hash and re-runs Gemini.
+      const useGlobalShortcuts = syncType !== 'full';
 
       for (const post of batch) {
         const captionInsufficient = isCaptionInsufficient(post.caption ?? null);
-        const captionHash = await sha256(post.caption || post.id);
-        const cached = cacheMap.get(post.id);
+        const contentHash = await sha256(`${post.caption || post.id}|${keywordsHash}`);
+        const cached = cacheMap.get(contentHash);
 
-        if (useAnalysisShortcuts && cached && cached.caption_hash === captionHash) {
+        if (cached) {
           batchCached.push({post, analysis: cached.analysis_result});
           summary.cache_hits++;
         } else {
@@ -377,7 +404,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
           const heuristicResult = heuristicParse(post.caption || '');
           const extractedName = extractProductName(post.caption || null);
           let usedGlobal = false;
-          if (useAnalysisShortcuts && heuristicResult && extractedName && heuristicResult.productName && typeof heuristicResult.price === 'number' && heuristicResult.currency) {
+          if (useGlobalShortcuts && heuristicResult && extractedName && heuristicResult.productName && typeof heuristicResult.price === 'number' && heuristicResult.currency) {
             const normalized = normalizeProductName(extractedName);
             const { data: globalMatch } = await supabaseAdmin.from('global_product_intelligence').select('*')
               .eq('normalized_name', normalized).gte('confidence', 0.7).order('confidence', { ascending: false }).limit(1);
@@ -389,7 +416,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             }
           }
           if (!usedGlobal) {
-            batchNeedsAnalysis.push({ ...post, captionHash, captionInsufficient });
+            batchNeedsAnalysis.push({ ...post, contentHash, captionInsufficient });
           }
         }
       }
@@ -459,7 +486,11 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
           summary.total_ai_tokens_used.candidates += analysis.tokenUsage.candidatesTokenCount || 0;
         }
         batchAnalyzed.push({post, analysis: effective});
-        newCacheEntries.push({ instagram_post_id: post.id, user_id: user.id, caption_hash: (post as any).captionHash, analysis_result: effective });
+        const entry = { instagram_post_id: post.id, user_id: user.id, caption_hash: (post as any).contentHash, analysis_result: effective };
+        newCacheEntries.push(entry);
+        // Also register in-memory so identical captions in later batches of
+        // THIS run hit the cache instead of paying another Gemini call.
+        cacheMap.set(entry.caption_hash, entry);
       }
 
       // Save cache entries
@@ -881,6 +912,10 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
       }
     }
 
+    // Products/promotions changed — drop the cached public storefront payloads
+    // so shoppers see the new catalog immediately. Fails open inside the helper.
+    await invalidateShopCache({ userId: user.id });
+
     const finalMessage = `Sync complete. Created ${summary.created}, updated ${summary.updated}, skipped ${summary.skipped}, combos ${summary.combo_created}.`;
     await updateJobProgress(supabaseAdmin, jobId, { status: 'completed', progress: total, total, message: finalMessage, summary });
 
@@ -942,6 +977,22 @@ serve(async (req) => {
         });
       }
       user = { id: authedUser.id, token };
+    }
+
+    // Server-side overlap guard: a second call (second tab, race, direct hit)
+    // must not double-run Gemini + product upserts. Mirrors the webhook's
+    // check, but enforced here so EVERY caller is covered.
+    const { data: runningJobs } = await supabaseAdmin
+      .from('sync_jobs')
+      .select('id')
+      .eq('user_id', user.id)
+      .in('status', ['starting', 'in_progress'])
+      .limit(1);
+    if (runningJobs && runningJobs.length > 0) {
+      return new Response(JSON.stringify({ jobId: runningJobs[0].id, alreadyRunning: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Ensure the sync_jobs table exists and is accessible

@@ -14,11 +14,8 @@
  */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders as cors } from "../_shared/cors.ts";
+import { invalidateShopCache } from "../_shared/cache.ts";
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
@@ -222,6 +219,9 @@ serve(async (req) => {
         trial_ends_at: new Date(from + days * 86400000).toISOString(),
       }).eq("user_id", userId);
       if (error) throw error;
+      // Subscription state can gate public storefront behavior — drop cached
+      // payloads. Fails open inside the helper.
+      await invalidateShopCache({ userId });
       return json({ ok: true });
     }
 
@@ -237,6 +237,7 @@ serve(async (req) => {
       }
       const { error } = await db.from("subscriptions").update(patch).eq("user_id", userId);
       if (error) throw error;
+      await invalidateShopCache({ userId });
       return json({ ok: true });
     }
 
@@ -264,6 +265,7 @@ serve(async (req) => {
         updated_at: now.toISOString(),
       }, { onConflict: "user_id" });
       if (error) throw error;
+      await invalidateShopCache({ userId });
       return json({ ok: true });
     }
 

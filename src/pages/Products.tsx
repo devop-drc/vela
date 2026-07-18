@@ -4,6 +4,7 @@ import { RefreshCw, Import, ChevronDown, LayoutGrid, List, CheckSquare, Group, F
 import { Spinner } from "@/components/ui/spinner";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { clearCache as clearPageCache } from "@/lib/pageCache";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchParams } from "react-router-dom";
 import { showError, showSuccess, toFriendlyError } from "@/utils/toast";
@@ -146,6 +147,7 @@ const Products = () => {
       showError(toFriendlyError(error, "Couldn't create the product. Please try again."));
       return;
     }
+    invalidateStorefrontCache();
     refetch();
     setIsNewProduct(true);
     setSelectedProduct(data as any);
@@ -171,6 +173,14 @@ const Products = () => {
   });
 
   const { shopDetails } = useShop();
+
+  // Product edits change what the public storefront shows — drop its per-slug
+  // snapshot (24h TTL) so the merchant's next storefront visit repaints fresh
+  // data instead of the stale cache. Same invalidation ShopContext performs on
+  // shop-details saves. Call from every mutation success path.
+  const invalidateStorefrontCache = () => {
+    if (shopDetails?.slug) clearPageCache(`storefront:${shopDetails.slug}`);
+  };
 
   // Use Product Data Hook
   const {
@@ -364,6 +374,8 @@ const Products = () => {
     if (error) {
       showError(`Failed to update status: ${error.message}`);
       refetch(); // revert on failure
+    } else {
+      invalidateStorefrontCache();
     }
   };
 
@@ -374,7 +386,7 @@ const Products = () => {
     setSelectedProducts([]);
     const { error } = await supabase.from('products').update({ status }).in('id', selectedProducts);
     if (error) { showError(`Failed to update products: ${error.message}`); refetch(); }
-    else showSuccess(`Updated ${count} products.`);
+    else { invalidateStorefrontCache(); showSuccess(`Updated ${count} products.`); }
   };
   // Shared deletion used by both the bulk action and the single-row trash button.
   // Removes the product, its related rows (options/variants/specs/reviews via
@@ -401,6 +413,7 @@ const Products = () => {
     } else {
       // Storage cleanup after the rows are gone (best-effort, never blocks).
       deleteProductMedia(productsToDelete || []);
+      invalidateStorefrontCache();
       showSuccess(`Deleted ${ids.length} product${ids.length > 1 ? 's' : ''}.`);
       refetch();
     }
@@ -423,7 +436,7 @@ const Products = () => {
     if (updates.length > 0) {
       const { error } = await supabase.from('products').upsert(updates);
       if (error) showError(`Failed to apply sale: ${error.message}`);
-      else showSuccess(`Sale applied to ${updates.length} products.`);
+      else { invalidateStorefrontCache(); showSuccess(`Sale applied to ${updates.length} products.`); }
     }
     setSelectedProducts([]);
     setIsSaleModalOpen(false);
@@ -527,7 +540,7 @@ const Products = () => {
           });
         }}
         product={selectedProduct}
-        onUpdate={() => { newProductSaved.current = true; }}
+        onUpdate={() => { newProductSaved.current = true; invalidateStorefrontCache(); }}
       />
       {isSaleModalOpen && <SaleModal isOpen={isSaleModalOpen} onClose={() => setIsSaleModalOpen(false)} onApply={handleApplySale} productCount={selectedProducts.length} />}
       <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{t("products.delete_confirm", { count: selectedProducts.length })}</AlertDialogTitle><AlertDialogDescription>{t("products.delete_warning")}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel><AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("products.yes_delete")}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
@@ -765,6 +778,7 @@ const Products = () => {
               const { error } = await supabase.from('products').update({ status: 'Active' }).in('id', ids);
               setIsBulkActivating(false);
               if (error) { showError("Couldn't publish the drafts — try again."); return; }
+              invalidateStorefrontCache();
               showSuccess(`${ids.length} product${ids.length === 1 ? '' : 's'} published to your storefront.`);
               refetch();
             }}>

@@ -24,6 +24,10 @@ type Msg = { role: "user" | "assistant"; content: string };
 
 const HISTORY_KEY = "vela:chat:history:v1";
 
+// Same env vars the generated supabase client uses (needed for a raw streaming fetch).
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+
 const GREETING_EN = "Hi! I'm the Vela assistant 👋 Ask me anything about Vela, or how to do something in the app — like adding a product, connecting Instagram, or designing your storefront.";
 const GREETING_SQ = "Përshëndetje! Jam asistenti i Vela 👋 Më pyet çdo gjë për Vela, ose si të bësh diçka në aplikacion — si të shtosh një produkt, të lidhësh Instagramin, ose të dizajnosh dyqanin.";
 
@@ -47,6 +51,9 @@ export const VelaChatPanel = ({ onClose, className, autoFocus = true }: {
   const [messages, setMessages] = useState<Msg[]>(() => loadHistory() ?? [greeting()]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  // `loading` drops at the first streamed delta (bounce → live bubble), so a
+  // separate flag must block concurrent sends for the rest of the stream.
+  const busyRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Persist history (cap at 40 turns).
@@ -56,22 +63,93 @@ export const VelaChatPanel = ({ onClose, className, autoFocus = true }: {
 
   useEffect(() => { if (autoFocus) setTimeout(() => inputRef.current?.focus(), 120); }, [autoFocus]);
 
+  /** Buffered compatibility path (pre-streaming behavior). */
+  const sendBuffered = async (history: Msg[]) => {
+    const { data, error } = await supabase.functions.invoke("chat", { body: { messages: history, stream: false } });
+    const reply = (!error && data?.reply)
+      ? data.reply
+      : (sq ? "Më vjen keq, diçka shkoi keq. Provo përsëri." : "Sorry, something went wrong. Please try again.");
+    setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+  };
+
+  /**
+   * Streams the reply over SSE, growing the assistant bubble as deltas arrive.
+   * Returns true once anything was shown (caller must NOT retry then, to avoid a
+   * duplicate reply); false/throw means nothing rendered → safe to fall back.
+   */
+  const streamReply = async (history: Msg[]): Promise<boolean> => {
+    // functions.invoke sends the session JWT (or anon key) + apikey — mirror that.
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token ?? SUPABASE_PUBLISHABLE_KEY;
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ messages: history }),
+    });
+    // Errors come back as buffered JSON — treat anything non-SSE as "use fallback".
+    if (!res.ok || !res.body || !res.headers.get("content-type")?.includes("text/event-stream")) return false;
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let acc = "";
+    let started = false;
+    const show = (content: string) => {
+      if (!started) {
+        started = true;
+        setLoading(false); // swap the bounce indicator for the live bubble
+        setMessages((prev) => [...prev, { role: "assistant", content }]);
+      } else {
+        setMessages((prev) => prev.map((m, i) => (i === prev.length - 1 ? { ...m, content } : m)));
+      }
+    };
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? ""; // keep any partial line for the next chunk
+        for (const line of lines) {
+          if (!line.startsWith("data:")) continue;
+          let evt: { delta?: string; done?: boolean; reply?: string };
+          try { evt = JSON.parse(line.slice(5).trim()); } catch { continue; }
+          if (typeof evt?.delta === "string" && evt.delta) { acc += evt.delta; show(acc); }
+          if (evt?.done && typeof evt.reply === "string") { show(evt.reply); return true; }
+        }
+      }
+    } catch {
+      // Mid-stream drop after content rendered: keep the partial text, don't retry.
+      if (started) return true;
+      throw new Error("stream failed");
+    }
+    return started;
+  };
+
   const send = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed || loading) return;
+    if (!trimmed || loading || busyRef.current) return;
+    busyRef.current = true;
     const next = [...messages, { role: "user" as const, content: trimmed }];
     setMessages(next);
     setInput("");
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("chat", { body: { messages: next } });
-      const reply = (!error && data?.reply)
-        ? data.reply
-        : (sq ? "Më vjen keq, diçka shkoi keq. Provo përsëri." : "Sorry, something went wrong. Please try again.");
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+      let handled = false;
+      try {
+        handled = await streamReply(next);
+      } catch {
+        handled = false;
+      }
+      if (!handled) await sendBuffered(next);
     } catch {
       setMessages((prev) => [...prev, { role: "assistant", content: sq ? "Nuk munda të lidhem. Provo përsëri." : "I couldn't connect. Please try again." }]);
     } finally {
+      busyRef.current = false;
       setLoading(false);
     }
   };

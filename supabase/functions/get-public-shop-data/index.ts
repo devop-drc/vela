@@ -1,16 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { corsHeaders } from "../_shared/cors.ts";
+import { getSupabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { cached } from "../_shared/cache.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-const getSupabaseAdmin = () => createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-  { auth: { persistSession: false } }
-);
+// Cacheable public payloads: browser/CDN may serve for 60s and revalidate in
+// the background for 5 min. Order lookups carry PII and are never cached.
+const PUBLIC_CACHE_HEADERS = { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' };
+const META_TTL_S = 300;   // shop_details + plan row (edge_cache tier)
+const PAGE_TTL_S = 300;   // full page payloads (edge_cache tier)
 
 // Helper function to check if a recurring event is active today
 const isRecurringActive = (startDate: Date | null, endDate: Date | null, repeatInterval: string | null, elementId: string, message: string): boolean => {
@@ -130,26 +127,14 @@ const resolveInstagramLogo = async (
   }
 };
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-
-  try {
-    const { shopSlug, page = 1, limit = 12, customerEmail, orderId, orderIds } = await req.json(); // Add customerEmail, orderId(s)
-    if (!shopSlug) {
-      return new Response(JSON.stringify({ error: "Missing shopSlug" }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
+// Shop row + plan row. Cached under the shop's invalidation prefix so admin
+// writes (background-sync, settings saves, webhooks) evict it with the pages.
+const getShopMeta = (shopSlug: string) =>
+  cached(`pubshop:${shopSlug}:meta`, META_TTL_S, async () => {
     const supabaseAdmin = getSupabaseAdmin();
-
-    // Fetch shop details first to get the business_id and user_id
     const { data: shopDetails, error: shopDetailsError } = await supabaseAdmin
       .from('shop_details')
-      .select('*, businesses(id, user_id, name)') // Also fetch related business info
+      .select('*, businesses(id, user_id, name)')
       .eq('slug', shopSlug)
       .single();
 
@@ -158,168 +143,208 @@ serve(async (req) => {
       throw new Error("Shop not found or inaccessible.");
     }
 
-    const businessId = shopDetails.businesses.id;
-    const userId = shopDetails.businesses.user_id;
-
     // Plan entitlements gate what the PUBLIC storefront serves (authoritative,
     // can't be bypassed client-side): custom theme is Business-only, Starter is
     // capped at 10 products with COD-only + no promotions/reviews, Pro at 100.
     const { data: subRow } = await supabaseAdmin
       .from('subscriptions')
       .select('plan_id, status, plans(id, product_limit, features)')
-      .eq('user_id', userId)
+      .eq('user_id', shopDetails.businesses.user_id)
       .maybeSingle();
-    const planRow: any = (subRow as any)?.plans || null;
-    const planId: string = planRow?.id || (subRow as any)?.plan_id || 'pro';
-    const planFeatures: string[] = Array.isArray(planRow?.features) ? planRow.features : [];
-    const isBusinessPlan = planId === 'business';
-    const productCap: number | null = planRow?.product_limit ?? null;
-    const capabilities = {
-      card_payments: isBusinessPlan || planFeatures.includes('card_and_cod') || planFeatures.includes('card_payments'),
-      reviews: isBusinessPlan || planFeatures.includes('reviews'),
-      promotions: isBusinessPlan || planFeatures.includes('promotions'),
-      custom_storefront: isBusinessPlan,
-    };
 
-    const offset = (page - 1) * limit;
-    // Clamp pagination to the plan's product cap so a Starter shop can never
-    // publicly serve more than its 10 products (Pro: 100).
-    const rangeEnd = productCap != null ? Math.min(offset + limit - 1, productCap - 1) : offset + limit - 1;
-    const pageBeyondCap = productCap != null && offset >= productCap;
+    return { shopDetails, subRow };
+  });
 
-    // Everything below depends only on businessId/userId, so it all runs in
-    // ONE parallel round instead of a serial waterfall (the old flow chained
-    // 7+ queries — plus external Facebook calls — back to back). Product
-    // selects embed product_variants so the client can render option pickers
-    // and variant facets with zero extra round trips.
-    const PRODUCT_SELECT = '*, product_variants(combination_key, option_values, inventory, price_difference, is_active, is_default)';
+interface OrderLookup {
+  customerEmail?: string;
+  orderId?: string;
+  orderIds?: string[];
+}
 
-    const [
-      resolvedLogoUrl,
-      designSettingsRes,
-      productsRes,
-      bestSellersRes,
-      recommendationPoolRes,
-      promotionsRes,
-      marqueeRes,
-    ] = await Promise.all([
-      // Fall back to the live Instagram profile picture when no logo has been uploaded.
-      shopDetails.logo_url
-        ? Promise.resolve(shopDetails.logo_url)
-        : resolveInstagramLogo(supabaseAdmin, userId, shopDetails.ig_account_id || null),
-      supabaseAdmin
-        .from('design_settings')
-        .select('settings')
-        .eq('user_id', userId)
-        .single(),
-      pageBeyondCap
-        ? Promise.resolve({ data: [], error: null, count: productCap })
-        : supabaseAdmin
-            .from('products')
-            .select(PRODUCT_SELECT, { count: 'exact' })
-            .eq('business_id', businessId)
-            .neq('status', 'Draft')
-            // A product without a real price can't be bought — never show it to customers.
-            .not('price', 'is', null)
-            .gt('price', 0)
-            .order('created_at', { ascending: false })
-            .range(offset, rangeEnd),
-      supabaseAdmin.rpc('get_top_products', { p_business_id: businessId }),
-      // Recommendation pool: a bounded sample of 24 rows is plenty of variety —
-      // reading the ENTIRE catalog on every storefront load just to pick 4 was
-      // pure IO waste.
-      supabaseAdmin
+// Builds the full public payload. Order lookups (PII) are only run when the
+// caller provided lookup params — that path is never cached.
+const buildPayload = async (shopSlug: string, page: number, limit: number, lookup?: OrderLookup) => {
+  const supabaseAdmin = getSupabaseAdmin();
+  const { shopDetails, subRow } = await getShopMeta(shopSlug);
+
+  const businessId = shopDetails.businesses.id;
+  const userId = shopDetails.businesses.user_id;
+
+  const planRow: any = (subRow as any)?.plans || null;
+  const planId: string = planRow?.id || (subRow as any)?.plan_id || 'pro';
+  const planFeatures: string[] = Array.isArray(planRow?.features) ? planRow.features : [];
+  const isBusinessPlan = planId === 'business';
+  const productCap: number | null = planRow?.product_limit ?? null;
+  const capabilities = {
+    card_payments: isBusinessPlan || planFeatures.includes('card_and_cod') || planFeatures.includes('card_payments'),
+    reviews: isBusinessPlan || planFeatures.includes('reviews'),
+    promotions: isBusinessPlan || planFeatures.includes('promotions'),
+    custom_storefront: isBusinessPlan,
+  };
+
+  const offset = (page - 1) * limit;
+  // Clamp pagination to the plan's product cap so a Starter shop can never
+  // publicly serve more than its 10 products (Pro: 100).
+  const rangeEnd = productCap != null ? Math.min(offset + limit - 1, productCap - 1) : offset + limit - 1;
+  const pageBeyondCap = productCap != null && offset >= productCap;
+
+  // Product selects embed product_variants so the client can render option
+  // pickers and variant facets with zero extra round trips.
+  const PRODUCT_SELECT = '*, product_variants(combination_key, option_values, inventory, price_difference, is_active, is_default)';
+
+  const productsPromise = pageBeyondCap
+    ? Promise.resolve({ data: [], error: null, count: productCap })
+    : supabaseAdmin
         .from('products')
-        .select(PRODUCT_SELECT)
+        .select(PRODUCT_SELECT, { count: 'exact' })
         .eq('business_id', businessId)
-        .eq('status', 'Active')
+        .neq('status', 'Draft')
+        // A product without a real price can't be bought — never show it to customers.
         .not('price', 'is', null)
         .gt('price', 0)
-        .order('updated_at', { ascending: false })
-        .limit(24),
-      supabaseAdmin
-        .from('promotions')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_active', true),
-      supabaseAdmin
-        .from('marquee_elements')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .order('display_order', { ascending: true }),
-    ]);
+        .order('created_at', { ascending: false })
+        .range(offset, rangeEnd);
 
-    const { data: designSettings, error: designSettingsError } = designSettingsRes;
-    if (designSettingsError && designSettingsError.code !== 'PGRST116') {
-      console.error(`[get-public-shop-data] Error fetching design settings for userId: ${userId}`, designSettingsError);
-      throw designSettingsError;
-    }
-
-    const { data: products, error: productsError, count: totalProductsCount } = productsRes;
+  // Pagination beyond page 1 only ever consumes products/hasMore on the client
+  // (the shop-level fields are discarded), so skip the other 6 queries and the
+  // Instagram logo resolution entirely for those requests.
+  if (page > 1 && !lookup) {
+    const { data: products, error: productsError, count: totalProductsCount } = await productsPromise;
     if (productsError) {
       console.error(`[get-public-shop-data] Error fetching products for businessId: ${businessId}`, productsError);
       throw productsError;
     }
+    const cappedCount = productCap != null ? Math.min(totalProductsCount || 0, productCap) : (totalProductsCount || 0);
+    return {
+      products: products || [],
+      totalProductsCount: cappedCount,
+      hasMore: (offset + (products?.length || 0)) < cappedCount,
+      partial: true,
+    };
+  }
 
-    const { data: rawBestSellers, error: bestSellersError } = bestSellersRes;
-    if (bestSellersError) {
-      console.error("Error fetching best sellers:", bestSellersError);
+  const [
+    resolvedLogoUrl,
+    designSettingsRes,
+    productsRes,
+    bestSellersRes,
+    recommendationPoolRes,
+    promotionsRes,
+    marqueeRes,
+  ] = await Promise.all([
+    // Fall back to the live Instagram profile picture when no logo has been
+    // uploaded. The Graph API round trip is cached for 6h — profile pictures
+    // change rarely and this used to run for EVERY visitor of logo-less shops.
+    shopDetails.logo_url
+      ? Promise.resolve(shopDetails.logo_url)
+      : cached(`iglogo:${userId}`, 6 * 3600, () =>
+          resolveInstagramLogo(supabaseAdmin, userId, shopDetails.ig_account_id || null)),
+    supabaseAdmin
+      .from('design_settings')
+      .select('settings')
+      .eq('user_id', userId)
+      .single(),
+    productsPromise,
+    supabaseAdmin.rpc('get_top_products', { p_business_id: businessId }),
+    // Recommendation pool: a bounded sample of 24 rows is plenty of variety —
+    // reading the ENTIRE catalog on every storefront load just to pick 4 was
+    // pure IO waste.
+    supabaseAdmin
+      .from('products')
+      .select(PRODUCT_SELECT)
+      .eq('business_id', businessId)
+      .eq('status', 'Active')
+      .not('price', 'is', null)
+      .gt('price', 0)
+      .order('updated_at', { ascending: false })
+      .limit(24),
+    supabaseAdmin
+      .from('promotions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true),
+    supabaseAdmin
+      .from('marquee_elements')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('display_order', { ascending: true }),
+  ]);
+
+  const { data: designSettings, error: designSettingsError } = designSettingsRes;
+  if (designSettingsError && designSettingsError.code !== 'PGRST116') {
+    console.error(`[get-public-shop-data] Error fetching design settings for userId: ${userId}`, designSettingsError);
+    throw designSettingsError;
+  }
+
+  const { data: products, error: productsError, count: totalProductsCount } = productsRes;
+  if (productsError) {
+    console.error(`[get-public-shop-data] Error fetching products for businessId: ${businessId}`, productsError);
+    throw productsError;
+  }
+
+  const { data: rawBestSellers, error: bestSellersError } = bestSellersRes;
+  if (bestSellersError) {
+    console.error("Error fetching best sellers:", bestSellersError);
+  }
+  // Same customer-facing rule as the listings: hide unpriced/draft rows the RPC may return.
+  const bestSellers = (rawBestSellers || []).filter((p: any) => p.price != null && Number(p.price) > 0 && p.status !== 'Draft');
+
+  // Recommended products: 4 random-ish active products, excluding best sellers.
+  const { data: recommendationPool, error: allActiveProductsError } = recommendationPoolRes;
+  let recommendedProducts: any[] = [];
+  if (allActiveProductsError) {
+    console.error("Error fetching products for recommendations:", allActiveProductsError);
+  } else if (recommendationPool) {
+    const bestSellerIds = new Set((bestSellers || []).map((p: any) => p.product_id));
+    const availableForRecommendation = recommendationPool.filter(p => !bestSellerIds.has(p.id));
+
+    // Shuffle and pick up to 4 random products. (With caching, a given pick is
+    // pinned for the payload TTL — acceptable for a "recommended" carousel.)
+    for (let i = availableForRecommendation.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [availableForRecommendation[i], availableForRecommendation[j]] = [availableForRecommendation[j], availableForRecommendation[i]];
     }
-    // Same customer-facing rule as the listings: hide unpriced/draft rows the RPC may return.
-    const bestSellers = (rawBestSellers || []).filter((p: any) => p.price != null && Number(p.price) > 0 && p.status !== 'Draft');
+    recommendedProducts = availableForRecommendation.slice(0, 4);
+  }
 
-    // Recommended products: 4 random-ish active products, excluding best sellers.
-    const { data: recommendationPool, error: allActiveProductsError } = recommendationPoolRes;
-    let recommendedProducts: any[] = [];
-    if (allActiveProductsError) {
-      console.error("Error fetching products for recommendations:", allActiveProductsError);
-    } else if (recommendationPool) {
-      const bestSellerIds = new Set((bestSellers || []).map((p: any) => p.product_id));
-      const availableForRecommendation = recommendationPool.filter(p => !bestSellerIds.has(p.id));
+  // Active promotions use the SAME schedule logic as announcements (absolute
+  // window for one-off promos, recurrence pattern for repeating ones) so a
+  // recurring promotion actually recurs instead of dying at its first end_date.
+  const { data: rawPromotions, error: promotionsError } = promotionsRes;
+  if (promotionsError) {
+    console.error("Error fetching promotions:", promotionsError);
+  }
+  const promotions = (rawPromotions || []).filter((p: any) => isRecurringActive(
+    p.start_date ? new Date(p.start_date) : null,
+    p.end_date ? new Date(p.end_date) : null,
+    p.repeat_interval || null,
+    p.id,
+    p.name || ''
+  ));
 
-      // Shuffle and pick up to 4 random products
-      for (let i = availableForRecommendation.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [availableForRecommendation[i], availableForRecommendation[j]] = [availableForRecommendation[j], availableForRecommendation[i]];
-      }
-      recommendedProducts = availableForRecommendation.slice(0, 4);
-    }
+  const { data: rawMarqueeElements, error: marqueeElementsError } = marqueeRes;
+  let activeMarqueeElements: any[] = [];
+  if (marqueeElementsError) {
+    console.error("Error fetching marquee elements:", marqueeElementsError);
+  } else if (rawMarqueeElements) {
+    activeMarqueeElements = rawMarqueeElements.filter(element => {
+      const startDateObj = element.start_date ? new Date(element.start_date) : null;
+      const endDateObj = element.end_date ? new Date(element.end_date) : null;
+      const isActive = isRecurringActive(startDateObj, endDateObj, element.repeat_interval, element.id, element.message);
+      return isActive;
+    });
+  }
 
-    // Active promotions use the SAME schedule logic as announcements (absolute
-    // window for one-off promos, recurrence pattern for repeating ones) so a
-    // recurring promotion actually recurs instead of dying at its first end_date.
-    const { data: rawPromotions, error: promotionsError } = promotionsRes;
-    if (promotionsError) {
-      console.error("Error fetching promotions:", promotionsError);
-    }
-    const promotions = (rawPromotions || []).filter((p: any) => isRecurringActive(
-      p.start_date ? new Date(p.start_date) : null,
-      p.end_date ? new Date(p.end_date) : null,
-      p.repeat_interval || null,
-      p.id,
-      p.name || ''
-    ));
+  // Fetch orders for a customer (for the public "My Orders" lookup).
+  // Match by email (case-insensitive) OR by any locally-saved order IDs, so a
+  // guest customer always sees the orders they just placed on this device.
+  // NOTE: inputs are validated/parameterized (no string-built filters) so a
+  // crafted email/id can't inject extra conditions and leak other orders.
+  let customerOrders: any[] = [];
 
-    const { data: rawMarqueeElements, error: marqueeElementsError } = marqueeRes;
-    let activeMarqueeElements: any[] = [];
-    if (marqueeElementsError) {
-      console.error("Error fetching marquee elements:", marqueeElementsError);
-    } else if (rawMarqueeElements) {
-      activeMarqueeElements = rawMarqueeElements.filter(element => {
-        const startDateObj = element.start_date ? new Date(element.start_date) : null;
-        const endDateObj = element.end_date ? new Date(element.end_date) : null;
-        const isActive = isRecurringActive(startDateObj, endDateObj, element.repeat_interval, element.id, element.message);
-        return isActive;
-      });
-    }
-
-    // Fetch orders for a customer (for the public "My Orders" lookup).
-    // Match by email (case-insensitive) OR by any locally-saved order IDs, so a
-    // guest customer always sees the orders they just placed on this device.
-    // NOTE: inputs are validated/parameterized (no string-built filters) so a
-    // crafted email/id can't inject extra conditions and leak other orders.
-    let customerOrders: any[] = [];
+  if (lookup) {
+    const { customerEmail, orderId, orderIds } = lookup;
 
     const ORDER_SELECT = `
       id,
@@ -398,41 +423,91 @@ serve(async (req) => {
 
     customerOrders = Array.from(byId.values())
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }
 
+  return {
+    shopDetails: {
+      id: businessId,
+      user_id: userId,
+      name: shopDetails.businesses.name, // Business name from the join
+      shop_name: shopDetails.shop_name,
+      slug: shopDetails.slug,
+      logo_url: resolvedLogoUrl,
+      favicon_url: shopDetails.favicon_url || resolvedLogoUrl,
+      currency: shopDetails.currency,
+      headline: shopDetails.headline,
+      about: shopDetails.about,
+      contact_email: shopDetails.contact_email,
+      followers_count: shopDetails.followers_count,
+      media_count: shopDetails.media_count,
+      instagram_url: shopDetails.instagram_url || null,
+      username: shopDetails.username || null,
+      // Custom-designed storefront is a Business-plan feature; everyone else
+      // serves the Instagram-style storefront regardless of stored setting.
+      storefront_type: isBusinessPlan ? (shopDetails.storefront_type || 'instagram') : 'instagram',
+    },
+    appearanceSettings: designSettings?.settings || null,
+    capabilities, // plan entitlements for the public storefront (card payments, reviews, promotions)
+    products: products || [],
+    totalProductsCount: productCap != null ? Math.min(totalProductsCount || 0, productCap) : (totalProductsCount || 0),
+    hasMore: (offset + (products?.length || 0)) < (productCap != null ? Math.min(totalProductsCount || 0, productCap) : (totalProductsCount || 0)),
+    bestSellers: bestSellers || [],
+    recommendedProducts: recommendedProducts || [],
+    promotions: capabilities.promotions ? (promotions || []) : [],
+    marqueeElements: activeMarqueeElements || [],
+    customerOrders: customerOrders || [],
+  };
+};
 
-    return new Response(JSON.stringify({
-      shopDetails: {
-        id: businessId,
-        user_id: userId, // Include user_id here
-        name: shopDetails.businesses.name, // Business name from the join
-        shop_name: shopDetails.shop_name,
-        slug: shopDetails.slug,
-        logo_url: resolvedLogoUrl,
-        favicon_url: shopDetails.favicon_url || resolvedLogoUrl,
-        currency: shopDetails.currency,
-        headline: shopDetails.headline,
-        about: shopDetails.about,
-        contact_email: shopDetails.contact_email,
-        followers_count: shopDetails.followers_count,
-        media_count: shopDetails.media_count,
-        instagram_url: shopDetails.instagram_url || null, // Use instagram_url from shop_details
-        username: shopDetails.username || null, // Use username from shop_details
-        // Custom-designed storefront is a Business-plan feature; everyone else
-        // serves the Instagram-style storefront regardless of stored setting.
-        storefront_type: isBusinessPlan ? (shopDetails.storefront_type || 'instagram') : 'instagram',
-      },
-      appearanceSettings: designSettings?.settings || null,
-      capabilities, // plan entitlements for the public storefront (card payments, reviews, promotions)
-      products: products || [],
-      totalProductsCount: productCap != null ? Math.min(totalProductsCount || 0, productCap) : (totalProductsCount || 0),
-      hasMore: (offset + (products?.length || 0)) < (productCap != null ? Math.min(totalProductsCount || 0, productCap) : (totalProductsCount || 0)),
-      bestSellers: bestSellers || [],
-      recommendedProducts: capabilities.promotions ? (recommendedProducts || []) : (recommendedProducts || []),
-      promotions: capabilities.promotions ? (promotions || []) : [],
-      marqueeElements: activeMarqueeElements || [], // Include filtered marquee elements
-      customerOrders: customerOrders || [], // Include customer orders
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  try {
+    // GET (query params) is the cacheable public read path; POST (JSON body)
+    // remains supported for backwards compatibility and for order lookups.
+    let params: any = {};
+    if (req.method === 'GET') {
+      const u = new URL(req.url);
+      params = {
+        shopSlug: u.searchParams.get('shopSlug') || undefined,
+        page: u.searchParams.get('page') || undefined,
+        limit: u.searchParams.get('limit') || undefined,
+      };
+    } else {
+      params = await req.json();
+    }
+
+    const { shopSlug, customerEmail, orderId, orderIds } = params;
+    if (!shopSlug) {
+      return new Response(JSON.stringify({ error: "Missing shopSlug" }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const page = Math.max(1, Number(params.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(params.limit) || 12));
+
+    const isOrderLookup = !!(customerEmail || orderId || (Array.isArray(orderIds) && orderIds.length > 0));
+
+    if (isOrderLookup) {
+      // PII path: never cached, at any layer.
+      const payload = await buildPayload(shopSlug, page, limit, { customerEmail, orderId, orderIds });
+      return new Response(JSON.stringify(payload), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        status: 200,
+      });
+    }
+
+    const payload = await cached(
+      `pubshop:${shopSlug}:p${page}:${limit}`,
+      PAGE_TTL_S,
+      () => buildPayload(shopSlug, page, limit),
+      { memTtlSeconds: 60 },
+    );
+    return new Response(JSON.stringify(payload), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', ...PUBLIC_CACHE_HEADERS },
       status: 200,
     });
 

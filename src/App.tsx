@@ -121,28 +121,24 @@ const AppContent = () => {
         .channel(`order_disputes:${business.id}`)
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'order_disputes' },
+          { event: 'INSERT', schema: 'public', table: 'order_disputes', filter: `business_id=eq.${business.id}` },
           (payload) => {
             interface NewDispute { order_id: string; reason?: string }
             const newDispute = payload.new as NewDispute;
-            supabase.from('orders').select('business_id').eq('id', newDispute.order_id).single()
-              .then(({ data: orderData, error: orderError }) => {
-                if (orderError || orderData?.business_id !== business.id) return;
-                toast.info(
-                  <div className="flex items-center gap-2">
-                    <MessageSquareWarning className="h-5 w-5 text-amber-500" />
-                    <span>New Client Dispute for Order #{newDispute.order_id.substring(0, 8)}</span>
-                  </div>,
-                  {
-                    description: newDispute.reason,
-                    action: {
-                      label: "View complaint",
-                      onClick: () => navigate(`/orders?orderId=${newDispute.order_id}`),
-                    },
-                    duration: 10000,
-                  }
-                );
-              });
+            toast.info(
+              <div className="flex items-center gap-2">
+                <MessageSquareWarning className="h-5 w-5 text-amber-500" />
+                <span>New Client Dispute for Order #{newDispute.order_id.substring(0, 8)}</span>
+              </div>,
+              {
+                description: newDispute.reason,
+                action: {
+                  label: "View complaint",
+                  onClick: () => navigate(`/orders?orderId=${newDispute.order_id}`),
+                },
+                duration: 10000,
+              }
+            );
           }
         )
         .subscribe();
