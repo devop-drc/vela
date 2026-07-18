@@ -11,9 +11,10 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
 import { useStorefront } from '@/contexts/StorefrontContext';
-import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
+import { useStorefrontConfig, useStorefrontTokenStyle } from '../theme/StorefrontThemeProvider';
 import { SfButton } from '../components/SfButton';
 import LeaveReviewDialog from '@/components/storefront/ProductReviews';
+import { OrderSuccessOverlay } from '@/components/storefront/OrderSuccessOverlay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MediaItem } from '@/components/MediaItem';
 
@@ -67,14 +68,17 @@ export const OrdersPage = () => {
   const { shopSlug } = useParams<{ shopSlug: string }>();
   const { shopDetails } = useStorefront();
   const config = useStorefrontConfig();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  const token = useStorefrontTokenStyle();
+  // Full-screen celebration on return from a successful card payment.
+  const [celebrate, setCelebrate] = useState(() => params.get('payment') === 'success');
 
-  // Landing back from the RaiAccept hosted form (?payment=success|failed|cancelled).
+  // Landing back from the RaiAccept hosted form (?payment=cancelled|failed) —
+  // success gets the overlay above instead of a toast.
   useEffect(() => {
     const p = params.get('payment');
-    if (!p) return;
-    if (p === 'success') toast.success('Payment received — thank you! Your order is confirmed.');
-    else if (p === 'cancelled') toast.info('Payment was cancelled. Your order is saved — you can retry or contact the shop.');
+    if (!p || p === 'success') return;
+    if (p === 'cancelled') toast.info('Payment was cancelled. Your order is saved — you can retry or contact the shop.');
     else toast.error('Payment failed. Your order is saved — please try again or contact the shop.');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -140,6 +144,17 @@ export const OrdersPage = () => {
 
   return (
     <div className="sf-container py-8 max-w-3xl">
+      {celebrate && (
+        <OrderSuccessOverlay
+          orderNumber={params.get('orderId')?.substring(0, 8) || null}
+          onContinue={() => {
+            setCelebrate(false);
+            const next = new URLSearchParams(params);
+            next.delete('payment');
+            setParams(next, { replace: true });
+          }}
+        />
+      )}
       <h1 className="sf-heading text-3xl md:text-4xl font-bold mb-2">My Orders</h1>
       <p className="text-muted-foreground mb-6">Orders placed on this device appear automatically. To look up another order, enter your email and the order number from your confirmation.</p>
 
@@ -222,7 +237,11 @@ export const OrdersPage = () => {
         const shipping = Math.max(0, (o.total_amount ?? itemsTotal) - itemsTotal);
         return (
           <Dialog open onOpenChange={(v) => { if (!v) setExpanded(null); }}>
-            <DialogContent className="max-h-[85dvh] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-lg">
+            <DialogContent
+              className={cn('max-h-[85dvh] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-lg bg-background text-foreground', token.className)}
+              style={token.style}
+              {...token.attrs}
+            >
               <DialogHeader>
                 <DialogTitle className="sf-heading flex flex-wrap items-center gap-2 text-lg">
                   Order #{o.id.substring(0, 8)} <StatusChip status={o.status} />

@@ -330,7 +330,7 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
       </AlertDialog>
 
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl bg-background text-foreground rounded-lg h-[90vh] flex flex-col" aria-describedby="instagram-order-detail-description">
+        <DialogContent className="flex h-[90dvh] max-w-2xl flex-col rounded-2xl bg-background text-foreground" aria-describedby="instagram-order-detail-description">
           <DialogHeader className="p-4 border-b border-border pb-4 flex-shrink-0">
             <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
               {getStatusIcon(order.status)}
@@ -346,22 +346,22 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
           <ScrollArea className="flex-1 pr-4 md:pr-6">
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-muted-foreground"><User className="h-4 w-4 text-red-500" /> Customer</div><p className="text-foreground">{order.customer_name}</p></div>
-                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-muted-foreground"><Mail className="h-4 w-4 text-red-500" /> Email</div><p className="text-foreground">{order.customer_email}</p></div>
-                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4 text-red-500" /> Date</div><p className="text-foreground">{formatDateTime(order.created_at)}</p></div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-muted-foreground"><User className="h-4 w-4 text-[hsl(var(--primary))]" /> Customer</div><p className="text-foreground">{order.customer_name}</p></div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-muted-foreground"><Mail className="h-4 w-4 text-[hsl(var(--primary))]" /> Email</div><p className="text-foreground">{order.customer_email}</p></div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4 text-[hsl(var(--primary))]" /> Date</div><p className="text-foreground">{formatDateTime(order.created_at)}</p></div>
                 <div className="space-y-2 text-sm md:text-base">
-                  <div className="flex items-center gap-2 text-muted-foreground"><Banknote className="h-4 w-4 text-red-500" /> Total</div>
+                  <div className="flex items-center gap-2 text-muted-foreground"><Banknote className="h-4 w-4 text-[hsl(var(--primary))]" /> Total</div>
                   <p className="font-semibold text-foreground">
                     {formatCurrency(convertCurrency(order.total_amount, order.currency), shopDetails?.currency)}
                   </p>
                 </div>
-                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-muted-foreground"><CreditCard className="h-4 w-4 text-red-500" /> Payment Method</div><p className="capitalize text-foreground">{order.payment_method.replace(/_/g, ' ')}</p></div>
-                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-muted-foreground"><CheckCircle className="h-4 w-4 text-red-500" /> Payment Status</div><p className="capitalize text-foreground">{order.payment_status}</p></div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-muted-foreground"><CreditCard className="h-4 w-4 text-[hsl(var(--primary))]" /> Payment Method</div><p className="capitalize text-foreground">{order.payment_method.replace(/_/g, ' ')}</p></div>
+                <div className="space-y-2 text-sm md:text-base"><div className="flex items-center gap-2 text-muted-foreground"><CheckCircle className="h-4 w-4 text-[hsl(var(--primary))]" /> Payment Status</div><p className="capitalize text-foreground">{order.payment_status}</p></div>
               </div>
               <Separator className="bg-border" />
               <div>
-                <h3 className="font-semibold mb-4 flex items-center gap-2 text-foreground text-base md:text-lg"><MapPin className="h-5 w-5 text-red-500" /> Shipping Details</h3>
-                <div className="space-y-2 text-sm text-muted-foreground p-3 border rounded-md bg-muted">
+                <h3 className="font-semibold mb-4 flex items-center gap-2 text-foreground text-base md:text-lg"><MapPin className="h-5 w-5 text-[hsl(var(--primary))]" /> Shipping Details</h3>
+                <div className="space-y-2 rounded-xl border border-border bg-muted/60 p-3.5 text-sm text-muted-foreground">
                   <p><span className="font-medium">Address:</span> {order.shipping_address || 'N/A'}</p>
                   <p><span className="font-medium">City:</span> {order.shipping_city || 'N/A'}</p>
                   <p><span className="font-medium">State/Province:</span> {order.shipping_state || 'N/A'}</p>
@@ -376,12 +376,12 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
               </div>
               <Separator className="bg-border" />
               <div>
-                <h3 className="font-semibold mb-4 flex items-center gap-2 text-foreground text-base md:text-lg"><Package className="h-5 w-5 text-red-500" /> Items Ordered</h3>
+                <h3 className="font-semibold mb-4 flex items-center gap-2 text-foreground text-base md:text-lg"><Package className="h-5 w-5 text-[hsl(var(--primary))]" /> Items Ordered</h3>
                 {isLoadingItems ? <Loader2 className="animate-spin text-muted-foreground" /> : (
                   <div className="space-y-4">
                     {items.map((item, index) => (
-                      <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-2 border rounded-md bg-muted"> {/* Added responsive flex */}
-                        <MediaItem src={item.products.media_url} alt={item.products.name} className="h-16 w-16 rounded-md object-cover bg-muted flex-shrink-0" />
+                      <div key={index} className="flex items-center gap-3 rounded-xl border border-border bg-muted/60 p-3">
+                        <MediaItem src={item.products.media_url} alt={item.products.name} className="h-16 w-16 flex-shrink-0 rounded-lg bg-muted object-cover" />
                         <div className="flex-1 w-full"> {/* Ensure text wraps */}
                           <p className="font-medium text-foreground text-sm md:text-base">{item.products.name}</p>
                           <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
@@ -406,9 +406,9 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
               </div>
               <Separator className="bg-border" />
               <div>
-                <h3 className="font-semibold mb-4 flex items-center gap-2 text-foreground text-base md:text-lg"><MessageSquareWarning className="h-5 w-5 text-red-500" /> Issue Report</h3>
+                <h3 className="font-semibold mb-4 flex items-center gap-2 text-foreground text-base md:text-lg"><MessageSquareWarning className="h-5 w-5 text-[hsl(var(--primary))]" /> Issue Report</h3>
                 {isLoadingDispute ? <Loader2 className="animate-spin text-muted-foreground" /> : dispute ? (
-                  <div className="space-y-3 p-3 border rounded-md bg-muted">
+                  <div className="space-y-3 rounded-xl border border-border bg-muted/60 p-3.5">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"> {/* Responsive flex */}
                       <p className="font-medium flex items-center gap-2 text-foreground text-sm md:text-base"><Hash className="h-4 w-4" /> Dispute ID: {dispute.id.substring(0, 8)}</p>
                       <Badge className={cn("text-white text-xs md:text-sm", getStatusColor(dispute.status))}>{dispute.status}</Badge>
@@ -442,7 +442,7 @@ export const InstagramOrderDetailModal = ({ order, isOpen, onClose, onOrderUpdat
                 </Button>
               )}
               {order.payment_method === 'card' && order.status === 'Given to Courier' && (
-                <Button onClick={() => setIsConfirmReceiptAlertOpen(true)} disabled={isUpdatingOrder} className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto text-sm md:text-base">
+                <Button onClick={() => setIsConfirmReceiptAlertOpen(true)} disabled={isUpdatingOrder} className="w-full bg-green-600 text-white hover:bg-green-700 sm:w-auto text-sm md:text-base">
                   {isUpdatingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <Handshake className="mr-2 h-4 w-4" />
                   Confirm Receipt

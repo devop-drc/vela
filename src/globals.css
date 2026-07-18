@@ -4,9 +4,13 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+    font-family: 'InstaFont'; /*a name to be used later*/
+    src: url('../public/Fontspring-DEMO-blue_vinyl_bold_ps_ot.otf'); /*URL to font*/
+}
 
 .fancyFont{
-  font-family: 'Galada', cursive;
+  font-family: 'InstaFont', cursive;
 }
 
 @layer base {

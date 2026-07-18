@@ -15,6 +15,7 @@ import { loadGoogleFont } from '@/lib/fontUtils';
 import { InstagramMyOrdersDrawer } from './InstagramMyOrdersDrawer'; // Import InstagramMyOrdersDrawer
 import { Drawer } from '@/components/ui/drawer'; // Import Drawer.Root
 import { InstagramBottomNav } from './InstagramBottomNav'; // Import new bottom nav
+import { OrderSuccessOverlay } from './OrderSuccessOverlay';
 import { InstagramDesktopSidebar } from './InstagramDesktopSidebar';
 import { InstagramFilterDrawer } from './InstagramFilterDrawer'; // Import InstagramFilterDrawer
 import { FloatingCartPill } from './FloatingCartPill';
@@ -127,6 +128,8 @@ const InstagramShopLayoutContent = () => {
 
   // New state for initial order ID to pass to the drawer
   const [initialOrderIdForDrawer, setInitialOrderIdForDrawer] = useState<string | null>(null);
+  // Card-payment return celebration (confetti overlay before the orders drawer).
+  const [celebrateOrderId, setCelebrateOrderId] = useState<string | null>(null);
 
   // Define header and bottom nav heights as CSS variables
   // Products feed has an extra row (filter/sort), so increase height on that page
@@ -296,15 +299,22 @@ const InstagramShopLayoutContent = () => {
     }
   }, [shopDetails]);
 
-  // Effect to handle initialOrderId prop
+  // Returning from checkout: ?orderId opens My Orders; ?payment=success first
+  // shows the confetti celebration, whose CTA then opens My Orders.
   useEffect(() => {
     if (shopDetails) { // Ensure shopDetails are loaded before checking URL
       const orderIdFromUrl = searchParams.get('orderId');
+      const paymentResult = searchParams.get('payment');
       if (orderIdFromUrl) {
         setInitialOrderIdForDrawer(orderIdFromUrl);
-        setIsMyOrdersDrawerOpen(true);
-        // Clear the orderId from URL after processing
+        if (paymentResult === 'success') {
+          setCelebrateOrderId(orderIdFromUrl);
+        } else {
+          setIsMyOrdersDrawerOpen(true);
+        }
+        // Clear the params from URL after processing
         searchParams.delete('orderId');
+        searchParams.delete('payment');
         setSearchParams(searchParams, { replace: true });
       }
     }
@@ -442,6 +452,15 @@ const InstagramShopLayoutContent = () => {
         </p>
       </div>
       <Sonner />
+      {celebrateOrderId && (
+        <OrderSuccessOverlay
+          orderNumber={celebrateOrderId.substring(0, 8)}
+          onContinue={() => {
+            setCelebrateOrderId(null);
+            setIsMyOrdersDrawerOpen(true);
+          }}
+        />
+      )}
       <InstagramCartDrawer isOpen={isCartModalOpen} onClose={() => setIsCartModalOpen(false)} />
       <InstagramMyOrdersDrawer
         isOpen={isMyOrdersDrawerOpen}

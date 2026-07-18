@@ -300,10 +300,12 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                     transition={{ duration: 0.2 }}
                     className="flex flex-col items-center justify-center flex-1 p-8 text-center h-full"
                   >
-                    <ShoppingBag className="h-20 w-20 text-muted-foreground mb-6" />
-                    <h3 className="text-2xl font-bold mb-4">Your cart is empty</h3>
-                    <p className="text-base text-muted-foreground mb-8">Looks like you haven't added anything to your cart yet.</p>
-                    <Button onClick={onClose} className="text-base bg-[hsl(var(--primary))] text-white">Start Shopping</Button>
+                    <div className="mb-5 grid h-20 w-20 place-items-center rounded-full bg-[hsl(var(--primary))]/10">
+                      <ShoppingBag className="h-9 w-9 text-[hsl(var(--primary))]" />
+                    </div>
+                    <h3 className="mb-2 text-xl font-bold">Your cart is empty</h3>
+                    <p className="mb-6 max-w-[240px] text-sm text-[hsl(var(--muted-foreground))]">Looks like you haven't added anything to your cart yet.</p>
+                    <Button onClick={onClose} className="rounded-full bg-[hsl(var(--primary))] px-6 text-white">Start Shopping</Button>
                   </motion.div>
                 ) : (
                   <ScrollArea className="flex-1" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' as any }}>
@@ -311,7 +313,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                       {currentCartItems.length > 0 && (
                         <Accordion type="single" collapsible defaultValue="items-in-cart" className="w-full">
                           <AccordionItem value="items-in-cart" className="border-b px-5" style={{borderColor:'hsl(var(--border))'}}>
-                            <AccordionTrigger className="text-lg font-bold">Items in Cart ({currentCartItems.length})</AccordionTrigger>
+                            <AccordionTrigger className="text-base font-semibold">Items in cart <span className="ml-1 font-normal text-[hsl(var(--muted-foreground))]">({currentCartItems.length})</span></AccordionTrigger>
                             <AccordionContent>
                               {hasSubscriptionProducts && (
                                 <div className="flex items-center gap-2 p-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md mb-4">
@@ -346,100 +348,74 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                       transition={{ duration: 0.2 }}
                                       className="mb-3 last:mb-0"
                                     >
-                                      <Card className="flex flex-col p-2 gap-2 shadow-sm border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-                                        {/* Row 1 */}
-                                        <div className="grid grid-cols-[auto_1fr_auto] gap-2 items-center">
-                                          {/* Col 1: Thumbnail */}
-                                          <button onClick={() => handleOpenProductQuickView(item.productId)} className="flex-shrink-0">
-                                            <div className="h-16 w-16 rounded-md overflow-hidden bg-[hsl(var(--muted))] border border-[hsl(var(--border))]">
-                                              <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
-                                            </div>
-                                          </button>
+                                      <Card className="flex gap-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3 shadow-sm">
+                                        {/* Thumbnail */}
+                                        <button onClick={() => handleOpenProductQuickView(item.productId)} className="flex-shrink-0 self-start">
+                                          <div className="h-20 w-20 overflow-hidden rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
+                                            <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="h-full w-full object-cover" />
+                                          </div>
+                                        </button>
 
-                                          {/* Col 2: Name, Price, Offer */}
-                                          <div className="flex flex-col justify-center min-w-0">
-                                            <button onClick={() => handleOpenProductQuickView(item.productId)} className="text-left text-[hsl(var(--foreground))]">
-                                              <h3 className="font-semibold text-sm hover:underline leading-tight truncate">{item.name}</h3>
+                                        {/* Details */}
+                                        <div className="flex min-w-0 flex-1 flex-col">
+                                          <div className="flex items-start justify-between gap-2">
+                                            <button onClick={() => handleOpenProductQuickView(item.productId)} className="min-w-0 text-left text-[hsl(var(--foreground))]">
+                                              <h3 className="text-sm font-semibold leading-snug line-clamp-2">{item.name}</h3>
                                             </button>
-                                            <div className="flex items-baseline gap-1 mt-0.5 text-[hsl(var(--foreground))]">
-                                              {item.isDiscounted && (
-                                                <p className="text-xs opacity-70 line-through">
-                                                  {formatCurrency(convertCurrency(item.originalPrice, item.currency), shopDetails?.currency)}
-                                                </p>
+                                            <div className="-mr-1 -mt-1 flex shrink-0 items-center">
+                                              <button type="button" onClick={() => saveForLater(item)} aria-label="Save for later" title="Save for later"
+                                                className="grid h-8 w-8 place-items-center rounded-full text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]">
+                                                <Bookmark className="h-4 w-4" />
+                                              </button>
+                                              <button type="button" onClick={() => removeFromCart(item.uid)} aria-label="Remove" title="Remove"
+                                                className="grid h-8 w-8 place-items-center rounded-full text-[hsl(var(--muted-foreground))] transition-colors hover:bg-red-500/10 hover:text-red-500">
+                                                <XCircle className="h-4 w-4" />
+                                              </button>
+                                            </div>
+                                          </div>
+                                          {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                                            <p className="mt-0.5 truncate text-xs text-[hsl(var(--muted-foreground))]">
+                                              {Object.entries(item.selectedOptions).map(([k,v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join(" · ")}
+                                            </p>
+                                          )}
+                                          {(firstDiscount || hasOffer) && (
+                                            <div className="mt-1 flex gap-1">
+                                              {firstDiscount && (
+                                                <Badge className="bg-green-600 px-1.5 py-0.5 text-[10px] text-white">{getPromotionBadge(firstDiscount)}</Badge>
                                               )}
-                                              <p className={cn("font-semibold text-sm", item.isDiscounted && "text-green-600")}>
-                                                {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
-                                              </p>
+                                              {hasOffer && (
+                                                <Badge className="bg-blue-600 px-1.5 py-0.5 text-[10px] text-white">Offer</Badge>
+                                              )}
                                             </div>
-                                            {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                                              <div className="text-xs opacity-80 mt-0.5 truncate text-[hsl(var(--foreground))]">
-                                                {Object.entries(item.selectedOptions).map(([k,v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join(" · ")}
-                                              </div>
-                                            )}
-                                            {(firstDiscount || hasOffer) && (
-                                              <div className="flex gap-1 mt-0.5 text-[hsl(var(--foreground))]">
-                                                {firstDiscount && (
-                                                  <Badge className="bg-green-600 text-white text-xs px-1.5 py-0.5">
-                                                    {getPromotionBadge(firstDiscount)}
-                                                  </Badge>
-                                                )}
-                                                {hasOffer && (
-                                                  <Badge className="bg-blue-600 text-white text-xs px-1.5 py-0.5">
-                                                    Offer
-                                                  </Badge>
-                                                )}
-                                              </div>
-                                            )}
+                                          )}
+                                          <div className="mt-auto flex items-end justify-between gap-2 pt-1.5">
+                                            <div className="flex items-baseline gap-1.5 text-[hsl(var(--foreground))]">
+                                              {item.isDiscounted && (
+                                                <span className="text-xs opacity-60 line-through">
+                                                  {formatCurrency(convertCurrency(item.originalPrice, item.currency), shopDetails?.currency)}
+                                                </span>
+                                              )}
+                                              <span className={cn("text-sm font-bold", item.isDiscounted && "text-green-600")}>
+                                                {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
+                                              </span>
+                                            </div>
+                                            {/* Compact pill stepper */}
+                                            <div className="flex h-8 shrink-0 items-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 text-[hsl(var(--foreground))]">
+                                              <button type="button" onClick={() => updateQuantity(item.uid, item.quantity - 1)} disabled={item.quantity <= 1}
+                                                className="grid h-full w-8 place-items-center rounded-l-full transition-colors hover:bg-[hsl(var(--muted))] disabled:opacity-40">
+                                                <Minus className="h-3.5 w-3.5" />
+                                              </button>
+                                              <QuantityInput
+                                                value={item.quantity}
+                                                onChange={(v) => updateQuantity(item.uid, v)}
+                                                className="h-full w-9 justify-center rounded-none border-0 bg-transparent p-0 text-center text-sm font-semibold focus-visible:ring-0"
+                                              />
+                                              <button type="button" onClick={() => updateQuantity(item.uid, item.quantity + 1)} disabled={item.quantity >= 99}
+                                                className="grid h-full w-8 place-items-center rounded-r-full transition-colors hover:bg-[hsl(var(--muted))] disabled:opacity-40">
+                                                <Plus className="h-3.5 w-3.5" />
+                                              </button>
+                                            </div>
                                           </div>
-
-                                          {/* Col 3: Counter */}
-                                          <div className="flex items-center border border-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-md w-32 h-10 flex-shrink-0">
-                                            <button
-                                              type="button"
-                                              onClick={() => updateQuantity(item.uid, item.quantity - 1)}
-                                              disabled={item.quantity <= 1}
-                                              className="h-full w-10 rounded-r-none flex items-center justify-center hover:bg-[hsl(var(--muted))] cursor-pointer"
-                                            >
-                                              <Minus className="h-4 w-4" />
-                                            </button>
-                                            <QuantityInput
-                                              value={item.quantity}
-                                              onChange={(v) => updateQuantity(item.uid, v)}
-                                              className="w-12 text-center justify-center border-y-0 border-x border-[hsl(var(--border))] focus-visible:ring-0 text-sm h-full rounded-none bg-[hsl(var(--card))] p-0"
-                                            />
-                                            <button
-                                              type="button"
-                                              onClick={() => updateQuantity(item.uid, item.quantity + 1)}
-                                              disabled={item.quantity >= 99}
-                                              className="h-full w-10 rounded-l-none flex items-center justify-center hover:bg-[hsl(var(--muted))] cursor-pointer"
-                                            >
-                                              <Plus className="h-4 w-4" />
-                                            </button>
-                                          </div>
-                                        </div>
-
-                                        {/* Row 2: Save/Remove */}
-                                        <div className="flex justify-end gap-1 pt-2 border-t" style={{borderColor:'hsl(var(--border))'}}>
-                                          <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => saveForLater(item)}
-                                            className="text-sm w-[50%] h-9 px-2 bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] hover:border-[hsl(var(--foreground))]"
-                                          >
-                                              <Bookmark className="mr-1 h-4 w-4" />
-                                              Save
-                                          </Button>
-                                          <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => removeFromCart(item.uid)}
-                                            className="text-sm w-[50%] h-9 px-2 text-red-600 hover:text-red-700 bg-transparent hover:bg-[hsl(var(--destructive))] hover:text-[hsl(var(--foreground))]"
-                                          >
-                                              <XCircle className="h-4 w-4 mr-2" />
-                                              Remove
-                                          </Button>
                                         </div>
                                       </Card>
                                     </motion.div>
@@ -454,7 +430,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                       {savedItems.length > 0 && (
                         <Accordion type="single" collapsible className="w-full">
                           <AccordionItem value="saved-for-later" className="border-b px-5" style={{borderColor:'hsl(var(--border))'}}>
-                            <AccordionTrigger className="text-lg font-bold">Saved for Later ({savedItems.length})</AccordionTrigger>
+                            <AccordionTrigger className="text-base font-semibold">Saved for later <span className="ml-1 font-normal text-[hsl(var(--muted-foreground))]">({savedItems.length})</span></AccordionTrigger>
                             <AccordionContent>
                               <AnimatePresence>
                                 {savedItems.map(item => (
@@ -467,59 +443,31 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                     transition={{ duration: 0.2 }}
                                     className="mb-3 last:mb-0"
                                   >
-                                    <Card className="flex flex-col p-2 gap-2 shadow-sm border">
-                                      {/* Row 1 */}
-                                      <div className="grid grid-cols-[auto_1fr_auto] gap-2 items-center">
-                                        {/* Col 1: Thumbnail */}
-                                        <button onClick={() => handleOpenProductQuickView(item.productId)} className="flex-shrink-0">
-                                          <div className="h-16 w-16 rounded-md overflow-hidden">
-                                            <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="object-cover" />
-                                          </div>
-                                        </button>
-
-                                        {/* Col 2: Name, Price */}
-                                        <div className="flex-1 flex flex-col justify-center min-w-0">
-                                          <button onClick={() => handleOpenProductQuickView(item.productId)} className="text-left text-[hsl(var(--foreground))]">
-                                            <h3 className="font-semibold text-sm hover:underline leading-tight truncate">{item.name}</h3>
-                                          </button>
-                                          <div className="flex items-baseline gap-1 mt-0.5 text-[hsl(var(--foreground))]">
-                                            {item.isDiscounted && (
-                                              <p className="text-xs opacity-70 line-through">
-                                                {formatCurrency(convertCurrency(item.originalPrice, item.currency), shopDetails?.currency)}
-                                              </p>
-                                            )}
-                                            <p className={cn("font-semibold text-sm", item.isDiscounted && "text-green-600")}>
-                                              {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
-                                            </p>
-                                          </div>
+                                    <Card className="flex gap-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3 shadow-sm">
+                                      <button onClick={() => handleOpenProductQuickView(item.productId)} className="flex-shrink-0 self-start">
+                                        <div className="h-16 w-16 overflow-hidden rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
+                                          <MediaItem src={item.media_url} alt={item.name} type={item.media_type} className="h-full w-full object-cover" />
                                         </div>
-
-                                        {/* Col 3: Empty (no counter for saved items) */}
-                                        <div className="w-16 flex-shrink-0" />
-                                      </div>
-
-                                      {/* Row 2: Move to Cart, Remove */}
-                                      <div className="flex justify-end gap-1 pt-2 border-t" style={{borderColor:'hsl(var(--border))'}}>
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => moveToCart(item.uid)}
-                                          className="text-sm w-[50%] h-9 px-2 bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] hover:border-[hsl(var(--foreground))]"
-                                        >
-                                          <MoveRight className="mr-1 h-3 w-3 rotate-[-90deg]" />
-                                          Move to Cart
-                                        </Button>
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => removeSavedItem(item.uid)}
-                                          className="text-sm w-[50%] h-9 px-2 text-red-600 hover:text-red-700 bg-transparent hover:bg-[hsl(var(--destructive))] hover:text-[hsl(var(--foreground))]"
-                                        >
-                                          <XCircle className="h-3 w-3 mr-2" />
-                                          Remove
-                                        </Button>
+                                      </button>
+                                      <div className="flex min-w-0 flex-1 flex-col">
+                                        <div className="flex items-start justify-between gap-2">
+                                          <button onClick={() => handleOpenProductQuickView(item.productId)} className="min-w-0 text-left text-[hsl(var(--foreground))]">
+                                            <h3 className="text-sm font-semibold leading-snug line-clamp-2">{item.name}</h3>
+                                          </button>
+                                          <button type="button" onClick={() => removeSavedItem(item.uid)} aria-label="Remove" title="Remove"
+                                            className="-mr-1 -mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full text-[hsl(var(--muted-foreground))] transition-colors hover:bg-red-500/10 hover:text-red-500">
+                                            <XCircle className="h-4 w-4" />
+                                          </button>
+                                        </div>
+                                        <div className="mt-auto flex items-end justify-between gap-2 pt-1.5">
+                                          <span className={cn("text-sm font-bold text-[hsl(var(--foreground))]", item.isDiscounted && "text-green-600")}>
+                                            {formatCurrency(convertCurrency(item.price, item.currency), shopDetails?.currency)}
+                                          </span>
+                                          <button type="button" onClick={() => moveToCart(item.uid)}
+                                            className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-[hsl(var(--primary))] px-3 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90">
+                                            <MoveRight className="h-3.5 w-3.5" /> Move to cart
+                                          </button>
+                                        </div>
                                       </div>
                                     </Card>
                                   </motion.div>
@@ -570,10 +518,16 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
               {shipping > 0 && (() => {
                 const threshold = convertCurrency(FREE_SHIPPING_THRESHOLD, 'USD');
                 const away = threshold - subtotal;
+                const pct = Math.min(100, Math.round((subtotal / Math.max(1, threshold)) * 100));
                 return away > 0 ? (
-                  <p className="text-xs text-center text-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10 rounded-md py-1.5">
-                    Add {formatCurrency(away, shopDetails?.currency)} more for <strong>free shipping</strong> 🎉
-                  </p>
+                  <div className="rounded-xl bg-[hsl(var(--primary))]/10 px-3 py-2">
+                    <p className="text-center text-xs text-[hsl(var(--primary))]">
+                      Add {formatCurrency(away, shopDetails?.currency)} more for <strong>free shipping</strong> 🎉
+                    </p>
+                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[hsl(var(--primary))]/15">
+                      <div className="h-full rounded-full bg-[hsl(var(--primary))] transition-all duration-500" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
                 ) : null;
               })()}
               {totalSaved > 0 && (
@@ -587,21 +541,21 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                 <span>Total:</span>
                 <span>{formatCurrency(total, shopDetails?.currency)}</span>
               </div>
-              <div className="flex flex-row-reverse align-middle justify-center mt-1 gap-2">
+              <div className="mt-1 flex flex-row-reverse items-center gap-2">
               {checkoutStep === 'cart' && !initialCartItems && ( // Only show if it's the persistent cart
-                <Button className="w-full text-base bg-[hsl(var(--primary))] text-white" onClick={handleProceedToCheckout} disabled={currentCartItems.length === 0}>
+                <Button className="h-12 flex-1 rounded-full bg-[hsl(var(--primary))] text-base font-semibold text-white shadow-md" onClick={handleProceedToCheckout} disabled={currentCartItems.length === 0}>
                   Proceed to Checkout
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               )}
               {checkoutStep === 'contact-shipping' && (
-                <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-[hsl(var(--primary))] text-white" disabled={isSubmittingOrder}>
+                <Button type="submit" form="instagram-checkout-form" className="h-12 flex-1 rounded-full bg-[hsl(var(--primary))] text-base font-semibold text-white shadow-md" disabled={isSubmittingOrder}>
                   Continue to Payment
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               )}
               {checkoutStep === 'payment' && (
-                <Button type="submit" form="instagram-checkout-form" className="w-full text-base bg-[hsl(var(--primary))] text-white" disabled={isSubmittingOrder}>
+                <Button type="submit" form="instagram-checkout-form" className="h-12 flex-1 rounded-full bg-[hsl(var(--primary))] text-base font-semibold text-white shadow-md" disabled={isSubmittingOrder}>
                   {isSubmittingOrder ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -615,8 +569,8 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                   )}
                 </Button>
               )}
-              <Button variant="outline" className="w-half text-base bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] hover:border-[hsl(var(--foreground))]" onClick={handleBack}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
+              <Button variant="outline" className="h-12 shrink-0 rounded-full border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]" onClick={handleBack}>
+                <ArrowLeft className="mr-1.5 h-4 w-4" />
                 Back
               </Button>
               </div>

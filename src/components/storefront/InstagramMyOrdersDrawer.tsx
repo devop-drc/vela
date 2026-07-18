@@ -210,7 +210,7 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
                 <Input id="orderId" placeholder="e.g., 2b7f9933" value={orderIdInput} onChange={(e) => setOrderIdInput(e.target.value)} className="pl-10 text-sm bg-[hsl(var(--card))] text-[hsl(var(--foreground))] border-[hsl(var(--border))]" />
               </div>
             </div>
-            <Button type="submit" className="w-full text-base bg-[hsl(var(--primary))] text-white" disabled={isLoading}>
+            <Button type="submit" className="h-11 w-full rounded-full bg-[hsl(var(--primary))] text-base font-semibold text-white shadow-sm" disabled={isLoading}>
               {isLoading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading Orders...</>) : "View Orders"}
             </Button>
           </form>
@@ -220,42 +220,56 @@ export const InstagramMyOrdersDrawer = ({ isOpen, onClose, initialOrderId, onOrd
               <div className="mt-6 space-y-4">
                 <h2 className="text-lg font-bold">Your Orders ({orders.length})</h2>
                 <div className="space-y-3">
-                  {orders.map(order => (
-                    <Card key={order.id} onClick={() => { setSelectedOrder(order); setIsOrderDetailModalOpen(true); }} className="cursor-pointer hover:bg-[hsl(var(--muted))] shadow-sm border-2 border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))]">
-                      <CardContent className="p-4 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <p className="font-semibold flex items-center gap-2 text-base">
-                            <Hash className="h-4 w-4 text-[hsl(var(--primary))]" /> Order #{order.id.substring(0, 8)}
+                  {orders.map(order => {
+                    const items = order.order_items || [];
+                    const itemCount = items.reduce((n: number, it: any) => n + (it.quantity || 1), 0);
+                    return (
+                    <Card key={order.id} onClick={() => { setSelectedOrder(order); setIsOrderDetailModalOpen(true); }}
+                      className="cursor-pointer rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+                      <CardContent className="space-y-2.5 p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="flex items-center gap-1.5 font-mono text-sm font-bold">
+                            <Hash className="h-4 w-4 text-[hsl(var(--primary))]" /> {order.id.substring(0, 8)}
                           </p>
-                          <Badge className={cn("font-normal text-md", getStatusColorClass(order.status))}>
+                          <Badge className={cn("text-xs font-medium", getStatusColorClass(order.status))}>
                             {getStatusIcon(order.status)}
                             <span className="ml-1">{order.status}</span>
                           </Badge>
                         </div>
-                        <div className="flex items-center justify-between text-xs opacity-80">
-                          <p className="flex items-center gap-1 text-[hsl(var(--muted-foreground))]">
-                            <Calendar className="h-4 w-4 text-[hsl(var(--primary))]" /> {formatDate(order.created_at)}
+                        {items.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="flex items-center -space-x-2.5">
+                              {items.slice(0, 4).map((it: any, i: number) => (
+                                <span key={i} className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-[hsl(var(--card))] bg-[hsl(var(--muted))]">
+                                  {it.products?.media_url
+                                    ? <img src={it.products.media_url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                    : <Package className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />}
+                                </span>
+                              ))}
+                            </span>
+                            <span className="text-xs text-[hsl(var(--muted-foreground))]">{itemCount} {itemCount === 1 ? 'item' : 'items'}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between border-t border-[hsl(var(--border))] pt-2.5">
+                          <p className="flex items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
+                            <Calendar className="h-3.5 w-3.5" /> {formatDate(order.created_at)}
                           </p>
-                          <p className={cn("font-bold text-xl", {
-                            "text-green-500": order.status === "Fulfilled",
-                            "text-blue-500": order.status === "Given to Courier" || order.status === "Order Packaged",
-                            "text-amber-500": order.status === "Order Seen" || order.status === "Pending",
-                            "text-red-500": order.status === "Problematic" || order.status === "Cancelled",
-                            "text-gray-500": !["Fulfilled", "Given to Courier", "Order Packaged", "Order Seen", "Pending", "Problematic", "Cancelled"].includes(order.status),
-                          })}>
+                          <p className="text-base font-bold">
                             {formatCurrency(convertCurrency(order.total_amount, order.currency), shopDetails?.currency)}
                           </p>
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                  ); })}
                 </div>
               </div>
             ) : (
-              <div className="mt-6 p-4 border rounded-lg bg-[hsl(var(--card))] text-center space-y-3 opacity-80" style={{borderColor:'hsl(var(--border))'}}>
-                <Package className="h-12 w-12 opacity-60 mx-auto" />
-                <h3 className="text-lg font-semibold">No Orders Found</h3>
-                <p className="text-sm">We couldn't find any orders for this email address.</p>
+              <div className="mt-6 space-y-3 rounded-2xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 text-center">
+                <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[hsl(var(--primary))]/10">
+                  <Package className="h-6 w-6 text-[hsl(var(--primary))]" />
+                </div>
+                <h3 className="text-base font-semibold">No orders found</h3>
+                <p className="text-sm text-[hsl(var(--muted-foreground))]">We couldn't find any orders for this email and order number.</p>
               </div>
             )
           )}
