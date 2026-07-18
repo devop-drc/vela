@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { deleteProductMedia } from "@/lib/productCleanup";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -99,8 +99,34 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
   });
-  
+
+  // For a brand-new product (startInEdit) the form opens completely blank —
+  // the placeholder DB row exists only so specs/options/media have an id to
+  // attach to. Track which product id was blank-initialized so background
+  // list refetches can't clobber what the user is typing with placeholder
+  // values, and re-blank if another "new" product is opened later.
+  const blankInitFor = useRef<string | null>(null);
+
   useEffect(() => {
+    if (product && startInEdit) {
+      if (blankInitFor.current === product.id) return; // keep the user's typing
+      blankInitFor.current = product.id;
+      form.reset({
+        name: "",
+        status: "Draft",
+        caption: "",
+        category: "",
+        price: '' as unknown as number,
+        currency: shopDetails?.currency || 'ALL',
+        inventory: '' as unknown as number,
+        tags: [],
+        pricing_type: 'one_time',
+        billing_interval: null,
+        details: { type: '' },
+      });
+      setMediaItems([]);
+      return;
+    }
     if (product && shopDetails) {
       // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
       const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
@@ -140,7 +166,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
     } else {
       setMediaItems([]);
     }
-  }, [product, form.reset, shopDetails, convertCurrency]);
+  }, [product, form.reset, shopDetails, convertCurrency, startInEdit]);
   
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -247,6 +273,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
             {isEditing ? (
               <FormProvider {...form}>
                 <ProductEditMode
+                  isNew={startInEdit}
                   product={product}
                   mediaItems={mediaItems}
                   handleImageUpload={handleImageUpload}

@@ -46,7 +46,11 @@ const underlineBase = "border-0 border-b-2 rounded-none bg-transparent";
 
 
 
-export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, onClose, onUpdate, isSubmitting, setIsSubmitting, specs, setSpecs }: any) => {
+export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImageUpload, handleImageDelete, isUploading, form, onCancel, onClose, onUpdate, isSubmitting, setIsSubmitting, specs, setSpecs, isNew }: any) => {
+    // Brand-new products open with a completely blank form — the placeholder
+    // DB row's "Untitled product"/0 values must not leak in (nor overwrite the
+    // user's typing when the product object refreshes mid-edit).
+    const blankInitFor = useRef<string | null>(null);
     const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
     const { shopDetails, convertCurrency } = useShop();
     const { user } = useAuth();
@@ -73,6 +77,20 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
 
     // --- Initialization ---
     useEffect(() => {
+        if (product && isNew) {
+            if (blankInitFor.current === product.id) return;
+            blankInitFor.current = product.id;
+            form.reset({
+                name: "", status: "Draft", caption: "", category: "",
+                price: '' as unknown as number,
+                currency: shopDetails?.currency || 'ALL',
+                inventory: '' as unknown as number,
+                tags: [], pricing_type: 'one_time', billing_interval: null,
+                details: { type: '' }, product_type: 'physical',
+            });
+            setMediaItems([]);
+            return;
+        }
         if (product && shopDetails) {
             // Convert price from product.currency (stored in DB, now always ALL) to shopDetails.currency (display)
             const priceInDisplayCurrency = convertCurrency(product.price, product.currency, shopDetails.currency);
@@ -96,7 +114,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             const gallery = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
             setMediaItems(gallery);
         }
-    }, [product, form.reset, shopDetails, convertCurrency, setMediaItems]);
+    }, [product, form.reset, shopDetails, convertCurrency, setMediaItems, isNew]);
 
     // --- Metadata Fetching ---
     useEffect(() => {
