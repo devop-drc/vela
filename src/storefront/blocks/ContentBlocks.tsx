@@ -23,37 +23,62 @@ export const ValuePropsBlock = ({ props }: { props: { variant?: 'row' | 'cards';
   const items: ValueItem[] = props.items?.length ? props.items : DEFAULT_VALUE_ITEMS;
   const variant = props.variant ?? 'row';
 
+  // Trust signals are INFORMATION, not controls — no borders, shadows or
+  // hover affordances anywhere, so nothing here invites a tap.
   if (variant === 'cards') {
     return (
-      <div className="grid gap-[var(--sf-grid-gap)] sm:grid-cols-3">
-        {items.map((it, i) => {
-          const Icon = VALUE_ICONS[it.icon ?? ''] ?? Truck;
-          return (
-            <div key={i} className="sf-glass flex flex-col items-center p-6 text-center">
-              <span className="mb-3 grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary"><Icon className="h-6 w-6" /></span>
-              <h3 className="sf-heading font-semibold mb-1">{it.title}</h3>
-              {it.text && <p className="text-sm text-muted-foreground">{it.text}</p>}
-            </div>
-          );
-        })}
+      <div className="select-none cursor-default">
+        {/* Mobile: one flat divided list — full-width shadowed tiles read as buttons. */}
+        <div className="divide-y divide-border/50 overflow-hidden bg-muted/30 sm:hidden" style={{ borderRadius: 'var(--sf-radius-card)' }}>
+          {items.map((it, i) => {
+            const Icon = VALUE_ICONS[it.icon ?? ''] ?? Truck;
+            return (
+              <div key={i} className="flex items-center gap-3.5 px-4 py-3.5">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"><Icon className="h-5 w-5" /></span>
+                <div className="min-w-0 leading-tight">
+                  <h3 className="sf-heading text-sm font-semibold">{it.title}</h3>
+                  {it.text && <p className="mt-0.5 text-xs text-muted-foreground">{it.text}</p>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Desktop: soft tinted panels — no border/shadow, clearly decorative. */}
+        <div className="hidden gap-[var(--sf-grid-gap)] sm:grid sm:grid-cols-3">
+          {items.map((it, i) => {
+            const Icon = VALUE_ICONS[it.icon ?? ''] ?? Truck;
+            return (
+              <div key={i} className="flex flex-col items-center bg-muted/40 p-6 text-center" style={{ borderRadius: 'var(--sf-radius-card)' }}>
+                <span className="mb-3 grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary"><Icon className="h-6 w-6" /></span>
+                <h3 className="sf-heading mb-1 font-semibold">{it.title}</h3>
+                {it.text && <p className="text-sm text-muted-foreground">{it.text}</p>}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center gap-4 border-y py-5 sm:flex-row sm:gap-10 md:gap-14">
-      {items.map((it, i) => {
-        const Icon = VALUE_ICONS[it.icon ?? ''] ?? Truck;
-        return (
-          <div key={i} className="flex items-center gap-3">
-            <Icon className="h-5 w-5 shrink-0 text-primary" />
-            <div className="leading-tight">
-              <p className="text-sm font-semibold">{it.title}</p>
-              {it.text && <p className="text-xs text-muted-foreground">{it.text}</p>}
+    <div className="select-none cursor-default border-y border-border/60 py-4 sm:py-5">
+      {/* Mobile: compact left-aligned rows with hairlines; desktop: inline strip. */}
+      <div className="flex flex-col divide-y divide-border/40 sm:flex-row sm:items-center sm:justify-center sm:gap-10 sm:divide-y-0 md:gap-14">
+        {items.map((it, i) => {
+          const Icon = VALUE_ICONS[it.icon ?? ''] ?? Truck;
+          return (
+            <div key={i} className="flex items-center gap-3 py-2.5 sm:py-0">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary sm:h-auto sm:w-auto sm:rounded-none sm:bg-transparent">
+                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+              </span>
+              <div className="leading-tight">
+                <p className="text-sm font-semibold">{it.title}</p>
+                {it.text && <p className="text-xs text-muted-foreground">{it.text}</p>}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 };
