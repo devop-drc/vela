@@ -46,7 +46,9 @@ Each card on the Instagram-style feed ran its own `product_options`,
 `product_variants`, `products.instagram_post_id`, and `combo_products` queries
 (~40+ round trips for a 12-product feed), duplicating data the server already embeds
 (`product_variants`) and bypassing the existing batching layer (`useVariantOptions`).
-**Fix:** card now uses embedded variant data + the batched hooks.
+**Fix:** card now uses embedded variant data + the batched hooks. The quick-view
+modal (`InstagramProductQuickViewModal`) had the same per-open `product_options`
+query — also routed through the batched layer (second pass).
 
 ### 1.6 POST-only function invocation defeats HTTP caching — FIXED
 All public reads used `supabase.functions.invoke` (POST), which is uncacheable.
@@ -112,15 +114,23 @@ so desktop *and* mobile instances both mounted: 2× fetches, 2× orders channel,
 ### 3.2 Unfiltered `order_disputes` subscriptions — FIXED
 `App.tsx:120` and `NotificationSidebar.tsx:593` subscribed with **no filter**,
 receiving every tenant's dispute rows and discarding client-side.
-**Fix:** `business_id=eq.{id}` filters added. **Follow-up (DEFERRED):** verify RLS is
-enforced for `postgres_changes` on `order_disputes` — if not, this was a cross-tenant
-data exposure, not just waste.
+**Fix:** `business_id=eq.{id}` filters added. **RLS verified (second pass):**
+`order_disputes` has RLS enabled with an owner-scoped policy
+(`recreate_db.sql:856`) and a `business_id` column + stamping trigger
+(`20260704100000_perf_indexes.sql`), so Realtime already filtered cross-tenant
+events server-side — the unfiltered subscriptions were waste, not a leak.
+Publication membership for `orders`/`order_disputes` was dashboard-only config;
+now codified in `20260718110000_realtime_publication.sql` (+ replica identity
+FULL).
 
-### 3.3 3× duplicate subscriptions per table — PARTIAL
+### 3.3 3× duplicate subscriptions per table — FIXED
 `orders` was watched by up to 3 channels simultaneously (Index, ActivityFeed,
 NotificationSidebar), `order_disputes` likewise.
-**Fix:** duplicate mount removed (3.1) and filters tightened; full consolidation into
-a single shared subscription bus is deferred (see §5).
+**Fix:** duplicate mount removed (3.1), filters tightened, and (second pass) a
+shared `RealtimeHubContext` now holds ONE channel per business for
+orders/disputes/products; Index, ActivityFeed, and NotificationSidebar consume
+it via `subscribe()`. Only `App.tsx`'s global dispute toast keeps its own
+channel (it lives outside the dashboard layout).
 
 ### 3.4 Reachable channel-name collision in `useProductData` — FIXED
 `products_channel_${userId}` is not instance-unique; Products page → Promotion editor
@@ -143,19 +153,21 @@ Already present and sound: `instagram-webhook` (auto quick-sync on new posts, wi
 dedupe guard) and `raiaccept-webhook` (payments). This pass added cache invalidation
 duties to the write paths they trigger. No new webhook endpoints were needed.
 
-## 5. Deferred follow-ups
-- **TanStack React Query is dead code**: the provider is configured
-  (`App.tsx:59-71`) but there are **zero** `useQuery`/`useMutation` call sites; all 91
-  `supabase.from()` reads across 32 files are hand-rolled `useEffect` fetches with a
-  custom localStorage SWR cache (`src/lib/pageCache.ts`) that duplicates React
-  Query's job. Decide: migrate incrementally (start with `Products.tsx`,
-  `Promotions.tsx`, `ShopContext.tsx`) or remove the dependency. Not done in this
-  pass — a 91-call-site migration deserves its own reviewed effort.
-- **RLS audit for realtime** on `order_disputes` (see 3.2).
-- **Shared realtime bus**: one subscription per table per session, consumers via
-  context (see 3.3).
-- **`edge_cache` hygiene**: pg_cron job to purge expired rows is included in the
-  migration but must be enabled on the hosted project (`select cron.schedule(...)`).
-- Edge functions in `supabase/functions/` must be **deployed** for the server-side
-  fixes to take effect (see memory note: earlier sync-pipeline fixes were also
-  awaiting deploy).
+## 5. Follow-up status (second pass, 2026-07-18)
+- **TanStack React Query — REMOVED.** Zero `useQuery`/`useMutation` call sites
+  existed; all 91 `supabase.from()` reads are hand-rolled fetches with the
+  `pageCache.ts` SWR layer doing React Query's job. Decision: removed the unused
+  provider, dependency, and its dedicated 26 kB bundle chunk rather than carry
+  dead weight. If server-state management is ever wanted, re-adopt deliberately
+  with a migration plan.
+- **RLS audit for realtime** — done, no leak; publication membership codified
+  (see 3.2).
+- **Shared realtime bus** — done (see 3.3).
+- **`edge_cache` hygiene** — pg_cron purge ships in the migration; applied when
+  the migration lands on the hosted project.
+- **DEPLOY still pending**: edge functions + the two 20260718 migrations need
+  `supabase functions deploy` / `db push`. Blocked on machine credentials: the
+  global CLI login belongs to a different account (cannot see
+  `hbsetjwlawuxasjbvpyx`) and `supabase/.access-token.local` does not exist —
+  create it per CLAUDE.md to unblock. The client is deploy-order-proof
+  (GET→POST and SSE→buffered fallbacks) until then.

@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { useShop } from "@/contexts/ShopContext";
 import { useSync } from "@/contexts/syncContext";
+import { useRealtimeHub } from "@/contexts/RealtimeHubContext";
 import { formatCurrency } from "@/lib/formatters";
 import { ProfileStats } from "@/components/dashboard/ProfileStats";
 import { TopProducts } from "@/components/dashboard/TopProducts";
@@ -260,30 +261,23 @@ const useDashboardData = (
     fetchData();
   }, [fetchData, shopDetails?.id]);
 
+  const { subscribe } = useRealtimeHub();
   useEffect(() => {
     if (!shopDetails?.id) return;
-    const businessId = shopDetails.id;
 
     // Debounced: a burst of order events (multi-item checkout, status sweep)
     // triggers ONE stats refresh instead of a full dashboard refetch per event.
     let refetchTimer: ReturnType<typeof setTimeout> | undefined;
-    const channel = supabase
-      .channel(`dashboard-orders:${businessId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders', filter: `business_id=eq.${businessId}` },
-        () => {
-          if (refetchTimer) clearTimeout(refetchTimer);
-          refetchTimer = setTimeout(() => fetchDataRef.current(), 1500);
-        }
-      )
-      .subscribe();
+    const unsubscribe = subscribe('orders', () => {
+      if (refetchTimer) clearTimeout(refetchTimer);
+      refetchTimer = setTimeout(() => fetchDataRef.current(), 1500);
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      unsubscribe();
       if (refetchTimer) clearTimeout(refetchTimer);
     };
-  }, [shopDetails?.id]);
+  }, [shopDetails?.id, subscribe]);
 
   return { data, isLoading, loadError, fetchData };
 };

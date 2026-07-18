@@ -39,7 +39,6 @@ export default defineConfig(() => ({
           if (id.includes("date-fns")) return "date-fns";
           if (id.includes("react-day-picker")) return "day-picker";
           if (id.includes("@dnd-kit")) return "dnd-kit";
-          if (id.includes("@tanstack")) return "tanstack";
           if (id.includes("react-hook-form") || id.includes("@hookform")) return "forms";
           if (id.includes("embla-carousel") || id.includes("vaul") || id.includes("cmdk"))
             return "ui-extras";

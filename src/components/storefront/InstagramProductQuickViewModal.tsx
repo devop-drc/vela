@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { getAttributeIcon } from "@/lib/attributeIcons";
-import { supabase } from "@/integrations/supabase/client";
+import { useVariantOptionsFor } from "@/hooks/useVariantOptions";
 
 interface InstagramProductQuickViewModalProps {
   isOpen: boolean;
@@ -47,9 +47,6 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
   const [api, setApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // New: options fetched from DB
-  const [options, setOptions] = useState<Array<{ id: string; name: string; values: Array<{ id: string; value: string; price_difference: number; inventory: number; is_active: boolean; is_default: boolean }> }>>([]);
-  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [selectedValues, setSelectedValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -62,61 +59,54 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
 
   const product = products.find(p => p.id === productId);
 
-  // Fetch options/values from DB for this product
-  useEffect(() => {
-    const loadOptions = async () => {
-      if (!product?.id) return;
-      setIsLoadingOptions(true);
-      const { data, error } = await supabase
-        .from('product_options')
-        .select(`
-          id,
-          name,
-          display_order,
-          option_values (
-            id,
-            value,
-            price_difference,
-            inventory,
-            is_active,
-            is_default
-          )
-        `)
-        .eq('product_id', product.id)
-        .order('display_order')
-        .order('created_at', { foreignTable: 'option_values', ascending: true });
-
-      if (error) {
-        console.error('Failed to load product options for storefront:', error);
-        setOptions([]);
-      } else {
-        const mapped = (data || []).map((opt: any) => ({
-          id: opt.id,
-          name: opt.name,
-          values: (opt.option_values || []).map((v: any) => ({
-            id: v.id,
-            value: v.value,
-            // price_difference stored in ALL; convert on the fly for display math
-            price_difference: convertCurrency(v.price_difference, 'ALL'),
-            inventory: v.inventory,
-            is_active: v.is_active,
-            is_default: v.is_default,
-          })),
-        }));
-        setOptions(mapped);
-        // Initialize defaults
-        const defaults: Record<string, string> = {};
-        mapped.forEach(opt => {
-          const def = opt.values.find(v => v.is_default && v.is_active && v.inventory > 0) || opt.values.find(v => v.is_active && v.inventory > 0) || opt.values[0];
-          if (def) defaults[opt.name] = def.value;
-        });
-        setSelectedValues(defaults);
-      }
-      setIsLoadingOptions(false);
-    };
-    loadOptions();
+  // Options come from the batched variant layer (one shared query per feed,
+  // usually primed from the server payload) instead of a per-open
+  // product_options fetch. Same derivation policy as InstagramProductCardFull:
+  // single-option products map 1:1 to variants; for multi-option products a
+  // value shows the cheapest combination's price delta and the max purchasable
+  // inventory among combinations containing it.
+  const variantSummary = useVariantOptionsFor(product?.id);
+  const options = useMemo(() => {
+    const names = Object.keys(variantSummary.options);
+    if (names.length === 0) return [];
+    const defaultVariant = variantSummary.variants.find(v => v.is_default) || null;
+    return names.map((name) => ({
+      id: name,
+      name,
+      values: variantSummary.options[name].map((value) => {
+        const matching = variantSummary.variants.filter(v => v.option_values[name] === value);
+        const inventory = matching.reduce((m, v) => Math.max(m, v.inventory), 0);
+        const cheapestDiff = matching.length
+          ? Math.min(...matching.map(v => v.price_difference))
+          : 0;
+        return {
+          id: `${name}:${value}`,
+          value,
+          // price_difference stored in ALL; convert on the fly for display math
+          price_difference: convertCurrency(cheapestDiff, 'ALL'),
+          inventory,
+          is_active: matching.length > 0,
+          is_default: defaultVariant ? defaultVariant.option_values[name] === value : false,
+        };
+      }),
+    }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product?.id]);
+  }, [variantSummary, convertCurrency]);
+
+  // Initialize defaults when the product (or its freshly-arrived options) change.
+  useEffect(() => {
+    if (options.length === 0) {
+      setSelectedValues({});
+      return;
+    }
+    const defaults: Record<string, string> = {};
+    options.forEach(opt => {
+      const def = opt.values.find(v => v.is_default && v.is_active && v.inventory > 0) || opt.values.find(v => v.is_active && v.inventory > 0) || opt.values[0];
+      if (def) defaults[opt.name] = def.value;
+    });
+    setSelectedValues(defaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id, options.length]);
 
   useEffect(() => {
     if (product) {

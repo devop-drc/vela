@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { TutorialProvider } from "@/components/tutorial/TutorialProvider";
 import { LanguagePromptModal } from "@/components/layout/LanguagePromptModal";
+import { RealtimeHubProvider } from "@/contexts/RealtimeHubContext";
 
 const SIDEBAR_COLLAPSED_KEY = "sidebar-collapsed";
 
@@ -196,8 +197,11 @@ const DashboardLayout = () => {
 // "Page tutorial" button (see TutorialProvider).
 const DashboardLayoutWithTutorial = () => (
   <TutorialProvider>
-    <LanguagePromptModal />
-    <DashboardLayout />
+    {/* One shared realtime channel for all admin pages (orders/disputes/products). */}
+    <RealtimeHubProvider>
+      <LanguagePromptModal />
+      <DashboardLayout />
+    </RealtimeHubProvider>
   </TutorialProvider>
 );
 

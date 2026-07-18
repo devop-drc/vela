@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRealtimeHub } from "@/contexts/RealtimeHubContext";
 import { MessageScroller, MessageScrollerProvider, MessageScrollerViewport } from "@/components/ui/message-scroller";
 import {
   Select,
@@ -399,6 +400,7 @@ export default function NotificationSidebar({ asPage = false, linkTo }: { asPage
   // businessId is resolved & cached once by AuthProvider (hydrates instantly
   // from localStorage) — no local getSession→businesses waterfall needed here.
   const { businessId } = useAuth();
+  const { subscribe } = useRealtimeHub();
   const [open, setOpen] = useState(false);
   // Distinguishes "still loading the first fetch" from a genuinely empty list
   // so we don't flash a false "nothing here" state before data arrives.
@@ -546,82 +548,52 @@ export default function NotificationSidebar({ asPage = false, linkTo }: { asPage
     return () => clearInterval(interval);
   }, [businessId, fetchActivity]);
 
-  // ── Real-time subscriptions ─────────────────────────────────────────
+  // ── Real-time subscriptions (via the shared hub channel) ────────────
   useEffect(() => {
     if (!businessId) return;
 
-    // Channel names must be unique per mounted instance: supabase-js returns
-    // the SAME channel object for a repeated name, and adding callbacks after
-    // subscribe() throws. The dock trigger and the /notifications page can be
-    // mounted at the same time.
-    const chanId = Math.random().toString(36).slice(2, 8);
+    const unsubOrders = subscribe("orders", (payload) => {
+      if (payload.eventType === "INSERT") {
+        const newOrder = payload.new as Order;
+        setOrders((prev) => [newOrder, ...prev].slice(0, 20));
+        // Highlight new order
+        setNewOrderIds((prev) => new Set(prev).add(newOrder.id));
+        if (newOrderTimer.current) clearTimeout(newOrderTimer.current);
+        newOrderTimer.current = setTimeout(() => {
+          setNewOrderIds(new Set());
+        }, 3000);
+      } else if (payload.eventType === "UPDATE") {
+        const updated = payload.new as Order;
+        setOrders((prev) =>
+          prev.map((o) => (o.id === updated.id ? updated : o))
+        );
+      } else if (payload.eventType === "DELETE") {
+        const deleted = payload.old as { id: string };
+        setOrders((prev) => prev.filter((o) => o.id !== deleted.id));
+      }
+    });
 
-    const ordersChannel = supabase
-      .channel(`notifications-orders-${chanId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "orders",
-          filter: `business_id=eq.${businessId}`,
-        },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            const newOrder = payload.new as Order;
-            setOrders((prev) => [newOrder, ...prev].slice(0, 20));
-            // Highlight new order
-            setNewOrderIds((prev) => new Set(prev).add(newOrder.id));
-            if (newOrderTimer.current) clearTimeout(newOrderTimer.current);
-            newOrderTimer.current = setTimeout(() => {
-              setNewOrderIds(new Set());
-            }, 3000);
-          } else if (payload.eventType === "UPDATE") {
-            const updated = payload.new as Order;
-            setOrders((prev) =>
-              prev.map((o) => (o.id === updated.id ? updated : o))
-            );
-          } else if (payload.eventType === "DELETE") {
-            const deleted = payload.old as { id: string };
-            setOrders((prev) => prev.filter((o) => o.id !== deleted.id));
-          }
-        }
-      )
-      .subscribe();
-
-    const disputesChannel = supabase
-      .channel(`notifications-disputes-${chanId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "order_disputes",
-          filter: `business_id=eq.${businessId}`,
-        },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            const newDispute = payload.new as Dispute;
-            setDisputes((prev) => [newDispute, ...prev].slice(0, 20));
-          } else if (payload.eventType === "UPDATE") {
-            const updated = payload.new as Dispute;
-            setDisputes((prev) =>
-              prev.map((d) => (d.id === updated.id ? updated : d))
-            );
-          } else if (payload.eventType === "DELETE") {
-            const deleted = payload.old as { id: string };
-            setDisputes((prev) => prev.filter((d) => d.id !== deleted.id));
-          }
-        }
-      )
-      .subscribe();
+    const unsubDisputes = subscribe("order_disputes", (payload) => {
+      if (payload.eventType === "INSERT") {
+        const newDispute = payload.new as Dispute;
+        setDisputes((prev) => [newDispute, ...prev].slice(0, 20));
+      } else if (payload.eventType === "UPDATE") {
+        const updated = payload.new as Dispute;
+        setDisputes((prev) =>
+          prev.map((d) => (d.id === updated.id ? updated : d))
+        );
+      } else if (payload.eventType === "DELETE") {
+        const deleted = payload.old as { id: string };
+        setDisputes((prev) => prev.filter((d) => d.id !== deleted.id));
+      }
+    });
 
     return () => {
-      supabase.removeChannel(ordersChannel);
-      supabase.removeChannel(disputesChannel);
+      unsubOrders();
+      unsubDisputes();
       if (newOrderTimer.current) clearTimeout(newOrderTimer.current);
     };
-  }, [businessId]);
+  }, [businessId, subscribe]);
 
   // ── Handlers ────────────────────────────────────────────────────────
   const handleOrderStatusChange = useCallback(

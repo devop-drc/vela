@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Loader2, MessageSquareWarning } from "lucide-react";
@@ -55,20 +54,6 @@ const StorefrontCartPage = lazy(() => import("./storefront/pages/CartPage").then
 const InstagramProfilePage = lazy(() => import("./pages/InstagramProfilePage"));
 const InstagramProductsFeedPage = lazy(() => import("./pages/InstagramProductsFeedPage"));
 const InstagramShopLayout = lazy(() => import("./components/storefront/InstagramShopLayout"));
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60 * 1000,
-      gcTime: 10 * 60 * 1000,
-      refetchOnWindowFocus: false,
-      // One quick retry instead of the default 3 with exponential backoff —
-      // a failing backend should surface fast, not spin for 15 seconds.
-      retry: 1,
-      retryDelay: 600,
-    },
-  },
-});
 
 // App-level fallback only fires for the first load of a top-level lazy layout
 // (e.g., StorefrontLayout, InstagramShopLayout, or auth pages). Intra-layout
@@ -235,8 +220,7 @@ const AppContent = () => {
 
 const App = () => (
   <AppearanceProvider>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
+    <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -257,8 +241,7 @@ const App = () => (
             </PageTitleProvider>
           </AuthProvider>
         </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    </TooltipProvider>
   </AppearanceProvider>
 );
 
