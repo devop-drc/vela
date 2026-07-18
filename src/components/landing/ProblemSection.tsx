@@ -14,11 +14,11 @@ export default function ProblemSection({ lang }: { lang: Lang }) {
   const root = useRef<HTMLDivElement>(null);
 
   const pains = [
-    { Icon: MessageCircle, title: t(lang, "Çdo shitje ngec në DM", "Every sale stuck in DMs"), body: t(lang, "Ti je arka, magazina dhe suporti — njëkohësisht.", "You're the checkout, warehouse and support — all at once."), metric: true },
+    { Icon: MessageCircle, title: t(lang, "DM pa fund", "Endless DM's"), body: t(lang, "Ti je arka, magazina dhe suporti — njëkohësisht.", "You're the checkout, warehouse and support — all at once."), metric: true },
     { Icon: CreditCard, title: t(lang, "Pa arkë, pa pagesa", "No checkout, no payments"), body: t(lang, "Çmim, adresë, pagesë — të gjitha me dorë.", "Price, address, payment — all by hand.") },
-    { Icon: PackageX, title: t(lang, "Stoku me dorë", "Stock by hand"), body: t(lang, "E mban në kokë — dhe e shet dy herë.", "Kept in your head — and sold twice.") },
+    { Icon: PackageX, title: t(lang, "Menaxhim stoku me dorë", "Manually managing stock"), body: t(lang, "E mban në kokë — dhe e shet dy herë.", "Kept in your head — and sold twice.") },
     { Icon: TrendingDown, title: t(lang, "Zero të dhëna", "Zero data"), body: t(lang, "S'ke asnjë numër — s'di çfarë shet vërtet.", "No numbers at all — you don't know what sells.") },
-    { Icon: SearchX, wide: true, title: t(lang, "S'gjejnë dot çfarë kërkojnë", "They can't find what they want"), body: t(lang, "Pa kërkim as filtra, klientët dorëzohen — dhe ikin te dikush tjetër.", "No search, no filters — customers give up and leave for someone else."), stat: t(lang, "76% ikin nëse s'gjejnë shpejt", "76% leave if they can't find it fast") },
+    { Icon: SearchX, wide: true, title: t(lang, "Klientët e tu s'gjejnë dot çfarë kërkojnë", "Your clients can't find what they want"), body: t(lang, "Pa kërkim as filtra, klientët dorëzohen — dhe ikin te dikush tjetër.", "No search, no filters — customers give up and leave for someone else."), stat: t(lang, "76% ikin nëse s'gjejnë shpejt", "76% leave if they can't find it fast") },
   ];
 
   useLayoutEffect(() => {

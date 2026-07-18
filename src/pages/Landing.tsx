@@ -646,14 +646,17 @@ export default function Landing() {
       <LandingNav active={activeSection} copy={copy} dark={dark} onToggleTheme={toggleTheme} lang={lang} onSetLang={setLang} />
 
       {/* ── Hero (full screen) ── */}
-      <section className="relative flex min-h-[100svh] flex-col overflow-hidden px-5">
+      <section className="relative flex min-h-[100svh] flex-col overflow-hidden">
         <div className="ls-mesh" />
         <div className="ls-grid pointer-events-none absolute inset-0" />
         <Particles className="pointer-events-none absolute inset-0 h-full w-full" count={70} dark={dark} />
         <div className={cn("ls-aurora pointer-events-none absolute -top-44 left-1/4 h-[480px] w-[580px] rounded-full blur-[130px]", dark ? "bg-fuchsia-600/20" : "bg-fuchsia-400/25")} />
         <div className={cn("ls-aurora pointer-events-none absolute -top-24 right-1/4 h-[440px] w-[540px] rounded-full blur-[130px]", dark ? "bg-amber-500/10" : "bg-amber-300/25")} style={{ animationDelay: "-8s" }} />
 
-        <div className="relative mx-auto grid w-full max-w-[92rem] flex-1 grid-cols-1 items-center gap-8 pb-16 pt-28 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.55fr)] lg:gap-8 lg:pb-14 lg:pt-24">
+        {/* Same container as the navbar (max-w-6xl + px-4) so the copy's left edge
+            lines up with the nav pill; the film compensates with a larger
+            right-anchored scale below. */}
+        <div className="relative mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-center gap-8 px-4 pb-16 pt-28 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.55fr)] lg:gap-8 lg:pb-14 lg:pt-24">
           {/* LEFT — copy (kept above the film via z-20 so it stays readable where the film slides under it) */}
           <div className="relative z-20 mx-auto max-w-lg text-center lg:mx-0 lg:text-left">
             <div className="hero-fade mb-7 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-4 py-1.5 text-sm backdrop-blur">
@@ -692,7 +695,7 @@ export default function Landing() {
               transparent margins around the window, so this grows the window bigger while its
               left edge stays clear of the copy; overflow-visible lets its drop-shadow breathe. */}
           {filmInHero && (
-            <div className="relative z-0 w-full overflow-visible lg:origin-right lg:scale-[1.15]">
+            <div className="relative z-0 w-full overflow-visible lg:origin-right lg:scale-[1.3]">
               <Suspense fallback={<div className="aspect-[16/10] w-full rounded-[1.75rem] border border-border bg-card" />}>
                 <div className="hero-visual w-full">
                   <HeroSplit copy={copy} lang={lang} dark={dark} layout="landscape" />
