@@ -38,7 +38,7 @@ export const ProductSliderBlock = ({ props }: Props) => {
   const motion = config.effects.motion;
 
   const items: ProductLike[] = useMemo(() => {
-    if (source === 'bestSellers') return (bestSellers || []).map((p: any) => ({ ...p, id: p.product_id ?? p.id }));
+    if (source === 'bestSellers') return (bestSellers || []).filter((p: any) => Number(p.price) > 0).map((p: any) => ({ ...p, id: p.product_id ?? p.id }));
     if (source === 'recommended') return (recommendedProducts || []) as ProductLike[];
     return [...(products || [])]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())

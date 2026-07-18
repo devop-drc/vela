@@ -90,6 +90,8 @@ export const QuickViewModal = ({ product, open, onOpenChange }: Props) => {
         aria-describedby={undefined}
         className={cn(
           'grid max-h-[90dvh] w-[calc(100vw-2rem)] gap-0 overflow-y-auto p-0 sm:max-w-3xl md:grid-cols-2 md:overflow-hidden',
+          // Radius token can be 9999px (pill) — modals must use the capped card radius
+          'rounded-[var(--sf-radius-card,1rem)] sm:rounded-[var(--sf-radius-card,1rem)]',
           'bg-background text-foreground', token.className
         )}
         style={token.style}

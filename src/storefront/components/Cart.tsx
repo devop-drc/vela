@@ -212,7 +212,7 @@ export const Cart = () => {
   if (variant === 'modal') {
     return (
       <Dialog open={isOpen} onOpenChange={(o) => !o && close()}>
-        <DialogContent aria-describedby={undefined} className={cn('sm:max-w-2xl h-[88vh] p-0 flex flex-col bg-background text-foreground', token.className)} style={token.style} {...token.attrs}>
+        <DialogContent aria-describedby={undefined} className={cn('sm:max-w-2xl h-[88vh] p-0 flex flex-col bg-background text-foreground rounded-[var(--sf-radius-card,1rem)] sm:rounded-[var(--sf-radius-card,1rem)]', token.className)} style={token.style} {...token.attrs}>
           <DialogTitle className="sr-only">Shopping cart</DialogTitle>
           <CartContents onClose={close} />
         </DialogContent>

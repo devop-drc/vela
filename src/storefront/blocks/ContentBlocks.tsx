@@ -2,7 +2,7 @@
 // editable via section props with sensible commerce defaults.
 
 import { Link } from 'react-router-dom';
-import { ArrowRight, Truck, ShieldCheck, MessageCircle, RotateCcw } from 'lucide-react';
+import { ArrowRight, Truck, ShieldCheck, MessageCircle, RotateCcw, Sparkles, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
@@ -96,13 +96,24 @@ export const PromoBannerBlock = ({ props }: { props: { variant?: 'gradient' | 'o
 
   if (props.variant === 'outline') {
     return (
-      <div className="flex flex-col items-center gap-4 border-2 border-primary/30 px-6 py-8 text-center md:flex-row md:justify-between md:px-10 md:text-left" style={{ borderRadius: 'var(--sf-radius-card)' }}>
-        <div>
-          <h2 className="sf-heading text-xl md:text-2xl font-bold">{heading}</h2>
-          {props.text && <p className="mt-1 text-sm text-muted-foreground">{props.text}</p>}
+      <div
+        className="group flex flex-col items-center gap-5 overflow-hidden border border-primary/25 bg-primary/[0.04] px-6 py-8 text-center md:flex-row md:justify-between md:px-10 md:text-left"
+        style={{ borderRadius: 'var(--sf-radius-card)' }}
+      >
+        <div className="flex flex-col items-center gap-4 md:flex-row md:items-center">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <Tag className="h-5 w-5" />
+          </span>
+          <div>
+            <h2 className="sf-heading text-xl font-bold md:text-2xl">{heading}</h2>
+            {props.text && <p className="mt-1 max-w-md text-sm text-muted-foreground">{props.text}</p>}
+          </div>
         </div>
-        <SfButton asChild className="shrink-0">
-          <Link to={to}>{props.ctaLabel || 'Shop Now'} <ArrowRight className="ml-2 h-4 w-4" /></Link>
+        <SfButton asChild size="lg" className="shrink-0">
+          <Link to={to} className="group/cta">
+            {props.ctaLabel || 'Shop Now'}
+            <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover/cta:translate-x-1" />
+          </Link>
         </SfButton>
       </div>
     );
@@ -110,18 +121,40 @@ export const PromoBannerBlock = ({ props }: { props: { variant?: 'gradient' | 'o
 
   return (
     <div
-      className="relative overflow-hidden px-6 py-10 text-center md:py-14"
+      className="group relative overflow-hidden px-6 py-12 text-center md:py-16"
       style={{
         borderRadius: 'var(--sf-radius-card)',
         background: 'linear-gradient(120deg, hsl(var(--primary)), hsl(var(--sf-primary-2)))',
       }}
     >
-      <h2 className="sf-heading text-2xl md:text-4xl font-bold text-primary-foreground drop-shadow-sm">{heading}</h2>
-      {props.text && <p className="mx-auto mt-2 max-w-xl text-sm md:text-base text-primary-foreground/85">{props.text}</p>}
-      <div className="mt-6">
-        <SfButton asChild size="lg" className={cn('bg-background text-foreground hover:bg-background/90 shadow-xl')}>
-          <Link to={to}>{props.ctaLabel || 'Shop Now'} <ArrowRight className="ml-2 h-4 w-4" /></Link>
-        </SfButton>
+      {/* Depth: soft glow blobs + a faint dot grid over the flat gradient. */}
+      <div className="pointer-events-none absolute inset-0" aria-hidden>
+        <div className="absolute -left-16 -top-20 h-64 w-64 rounded-full bg-white/15 blur-3xl" />
+        <div className="absolute -bottom-24 -right-10 h-72 w-72 rounded-full bg-black/10 blur-3xl" />
+        <div
+          className="absolute inset-0 opacity-[0.12]"
+          style={{ backgroundImage: 'radial-gradient(currentColor 1px, transparent 1px)', backgroundSize: '18px 18px', color: 'hsl(var(--primary-foreground))' }}
+        />
+      </div>
+
+      <div className="relative">
+        <span className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-primary-foreground/15 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary-foreground backdrop-blur-sm">
+          <Sparkles className="h-3.5 w-3.5" /> {props.ctaLabel ? 'Special offer' : 'Don’t miss out'}
+        </span>
+        <h2 className="sf-heading mx-auto max-w-2xl text-2xl font-bold text-primary-foreground drop-shadow-sm md:text-4xl">{heading}</h2>
+        {props.text && <p className="mx-auto mt-3 max-w-xl text-sm text-primary-foreground/85 md:text-base">{props.text}</p>}
+        <div className="mt-7">
+          {/* Deliberately NOT the themed SfButton: on the brand-gradient surface
+              the theme's own button styles (esp. the gradient variant) vanish
+              into the background — this CTA must stay a high-contrast pill. */}
+          <Link
+            to={to}
+            className="group/cta inline-flex h-12 items-center rounded-full bg-white px-8 text-base font-semibold text-zinc-900 shadow-xl transition-all duration-200 hover:scale-[1.04] hover:shadow-2xl"
+          >
+            {props.ctaLabel || 'Shop Now'}
+            <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover/cta:translate-x-1" />
+          </Link>
+        </div>
       </div>
     </div>
   );

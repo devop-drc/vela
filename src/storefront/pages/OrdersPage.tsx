@@ -238,7 +238,7 @@ export const OrdersPage = () => {
         return (
           <Dialog open onOpenChange={(v) => { if (!v) setExpanded(null); }}>
             <DialogContent
-              className={cn('max-h-[85dvh] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-lg bg-background text-foreground', token.className)}
+              className={cn('max-h-[85dvh] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-lg bg-background text-foreground rounded-[var(--sf-radius-card,1rem)] sm:rounded-[var(--sf-radius-card,1rem)]', token.className)}
               style={token.style}
               {...token.attrs}
             >
