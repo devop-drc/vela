@@ -924,19 +924,14 @@ export default function Landing() {
 
           {/* trial reassurance — low friction to start, clear why to keep paying */}
           <p className="reveal mx-auto mt-8 max-w-2xl text-center text-sm text-muted-foreground">{copy.pricing.reassure}</p>
-        </div>
-      </section>
 
-      {/* ── Testimonials — hidden until we have real reviews ──
-      <section className="px-5 py-24"> … </section> */}
-
-      {/* ── I'm interested ── */}
-      <section id="interest" className="px-5 py-14 sm:py-24 lg:py-32">
-        <div className="reveal ls-card glare-hover mx-auto grid max-w-5xl gap-8 overflow-hidden rounded-[2rem] border border-border bg-card p-6 sm:gap-10 sm:p-12 lg:grid-cols-2">
-          <div>
-            <Eyebrow>{copy.interest.badge}</Eyebrow>
-            <h2 className="text-3xl tracking-tight sm:text-[2.6rem] sm:leading-tight">{copy.interest.title}</h2>
-            <p className="mt-4 text-lg leading-relaxed text-muted-foreground">{copy.interest.sub}</p>
+          {/* contact — lives inside the pricing section so "talk to us" sits right
+              where the plan decision happens; #interest kept for deep links */}
+          <div id="interest" className="reveal ls-card glare-hover mx-auto mt-12 grid max-w-5xl scroll-mt-24 gap-8 overflow-hidden rounded-[2rem] border border-border bg-card p-6 sm:mt-16 sm:gap-10 sm:p-12 lg:grid-cols-2">
+            <div>
+              <Eyebrow>{copy.interest.badge}</Eyebrow>
+              <h3 className="text-2xl tracking-tight sm:text-3xl sm:leading-tight">{copy.interest.title}</h3>
+              <p className="mt-3 text-lg leading-relaxed text-muted-foreground">{copy.interest.sub}</p>
             <Magnetic>
               <Button
                 size="lg"
@@ -987,6 +982,7 @@ export default function Landing() {
             >
               <Send className="h-4 w-4" /> {copy.interest.send}
             </Button>
+            </div>
           </div>
         </div>
       </section>
