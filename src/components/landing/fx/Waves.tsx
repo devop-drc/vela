@@ -358,17 +358,29 @@ const Waves: React.FC<WavesProps> = ({
       }
     }
 
+    // The bounding box is cached, so scrolling would desync cursor → wave
+    // mapping (clientY is viewport-relative). Refresh the cached rect on
+    // scroll — cheap, no line rebuild.
+    function onScroll() {
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      boundingRef.current.left = rect.left;
+      boundingRef.current.top = rect.top;
+    }
+
     setSize();
     setLines();
     frameIdRef.current = requestAnimationFrame(tick);
     window.addEventListener('resize', onResize);
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('scroll', onScroll, { passive: true });
 
     return () => {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('scroll', onScroll);
       if (frameIdRef.current !== null) {
         cancelAnimationFrame(frameIdRef.current);
       }

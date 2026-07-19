@@ -57,16 +57,22 @@ export default function MomentumBand({ lang }: { lang: Lang }) {
         });
       });
 
-      /* one card, swapping quietly through the night */
+      /* one card, swapping quietly through the night — cards settle with a
+         soft spring and hand off with a slight scale so the swap breathes */
       const HOLD = 2.6;
-      gsap.set(".mb-card", { autoAlpha: 0, y: 14 });
+      gsap.set(".mb-card", { autoAlpha: 0, y: 18, scale: 0.985 });
       const loop = gsap.timeline({ repeat: -1, paused: true });
       events.forEach((_, k) => {
         const at = k * HOLD;
         loop
-          .to(`.mb-card-${k}`, { autoAlpha: 1, y: 0, duration: 0.5, ease: "power3.out" }, at)
-          .to(`.mb-card-${k}`, { autoAlpha: 0, y: -12, duration: 0.4, ease: "power2.in" }, at + HOLD - 0.4);
+          .to(`.mb-card-${k}`, { autoAlpha: 1, y: 0, scale: 1, duration: 0.55, ease: "back.out(1.4)" }, at)
+          .to(`.mb-card-${k} .mb-dot`, { scale: 1.5, opacity: 0, duration: 0.9, ease: "power2.out" }, at + 0.15)
+          .set(`.mb-card-${k} .mb-dot`, { scale: 1, opacity: 0.7 }, at + HOLD - 0.42)
+          .to(`.mb-card-${k}`, { autoAlpha: 0, y: -14, scale: 0.985, duration: 0.4, ease: "power2.in" }, at + HOLD - 0.4);
       });
+      /* the big glow breathes with the night */
+      gsap.to(".mb-glow", { opacity: 0.24, scale: 1.06, duration: 5.5, ease: "sine.inOut", yoyo: true, repeat: -1 });
+      gsap.to(".mb-glow2", { opacity: 0.16, duration: 7, ease: "sine.inOut", yoyo: true, repeat: -1 });
       ScrollTrigger.create({
         trigger: root.current,
         start: "top 80%",
@@ -82,9 +88,9 @@ export default function MomentumBand({ lang }: { lang: Lang }) {
 
   return (
     <section id="momentum" ref={root} className="relative overflow-hidden bg-[#0E0710] px-5 py-24 text-white sm:py-36">
-      {/* quiet ambience: one warm glow + horizon line */}
-      <div className="brand-gradient pointer-events-none absolute -top-56 left-1/2 h-[560px] w-[900px] -translate-x-1/2 rounded-full opacity-[0.16] blur-[140px]" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #F59E0B 30%, #FF2E4D 55%, #A31234 80%, transparent)" }} />
+      {/* quiet ambience: two breathing glows (no horizon line) */}
+      <div className="mb-glow brand-gradient pointer-events-none absolute -top-56 left-1/2 h-[560px] w-[900px] -translate-x-1/2 rounded-full opacity-[0.16] blur-[140px]" />
+      <div className="mb-glow2 pointer-events-none absolute -bottom-48 -left-32 h-[420px] w-[520px] rounded-full opacity-[0.1] blur-[120px]" style={{ background: "#F59E0B" }} />
 
       <div className="relative mx-auto flex max-w-3xl flex-col items-center text-center">
         <div className="mb-reveal mb-5 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-4 py-1.5 text-[12px] font-semibold uppercase tracking-[0.18em] text-white/60">
@@ -105,7 +111,9 @@ export default function MomentumBand({ lang }: { lang: Lang }) {
               key={k}
               className={`mb-card mb-card-${k} absolute inset-0 flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.05] px-5 backdrop-blur`}
             >
-              <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${e.tone}`}>
+              <span className={`relative grid h-11 w-11 shrink-0 place-items-center rounded-xl ${e.tone}`}>
+                {/* ping ring released as each notification lands */}
+                <span className="mb-dot absolute inset-0 rounded-xl border border-current opacity-70" />
                 <e.Icon className="h-5 w-5" />
               </span>
               <div className="min-w-0 flex-1 text-left">

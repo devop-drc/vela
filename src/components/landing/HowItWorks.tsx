@@ -32,7 +32,7 @@ export default function HowItWorks({ lang }: { lang: Lang }) {
   const steps = [
     { Icon: Instagram, url: "instagram.com/mediadesk_albania", img: "/hero/storefront-ig.png", title: t(lang, "Lidh Instagram-in", "Connect Instagram"), body: t(lang, "Një prekje për të lidhur Instagram Business — pa kod.", "One tap to connect Instagram Business — no code.") },
     { Icon: Sparkles, url: "vela.al/products", img: "/hero/products.png", title: t(lang, "Sistemi ndërton produktet", "The system builds your products"), body: t(lang, "Sistemi i kthen postimet në produkte — çmim, kategori, variante.", "The system turns your posts into products — price, category, variants.") },
-    { Icon: Store, url: "vela.al/dyqani-yt", img: "/hero/storefront-custom.png", title: t(lang, "Ndaj linkun & shit", "Share the link & sell"), body: t(lang, "Publiko dyqanin dhe merr porosi e pagesa po atë ditë.", "Publish your store and take orders and payments the same day.") },
+    { Icon: Store, url: "vela.al/dyqani-yt", img: "/hero/storefront-product.png", title: t(lang, "Ndaj linkun & shit", "Share the link & sell"), body: t(lang, "Publiko dyqanin dhe merr porosi e pagesa po atë ditë.", "Publish your store and take orders and payments the same day.") },
   ];
 
   useLayoutEffect(() => {

@@ -732,7 +732,6 @@ export default function Landing() {
       {/* ── Hero (full screen) ── */}
       <section className="relative flex min-h-[100svh] flex-col overflow-hidden">
         <div className="ls-mesh" />
-        <div className="ls-grid pointer-events-none absolute inset-0" />
         {/* Magic rings + subtle waves replace the particle field (React Bits, brand
             palette). WhenNear unmounts both once the hero scrolls away. */}
         {!reduceFx && (
@@ -758,7 +757,7 @@ export default function Landing() {
             CTAs → film) sized against the DYNAMIC viewport height; from lg the
             copy and film sit side by side in balanced columns that never
             overlap. The film always ships (it's a cheap <video> now). */}
-        <div className="relative mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-center gap-8 px-5 pb-[max(3.5rem,env(safe-area-inset-bottom))] pt-24 sm:gap-10 lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-center lg:gap-12 lg:px-6 lg:pb-16 lg:pt-24">
+        <div className="relative mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-center gap-8 px-5 pb-[max(3.5rem,env(safe-area-inset-bottom))] pt-24 sm:gap-10 lg:grid lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:items-center lg:gap-10 lg:px-6 lg:pb-16 lg:pt-24">
           {/* copy */}
           <div className="relative z-10 w-full max-w-xl text-center lg:max-w-none lg:text-left">
             <div className="hero-fade mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-4 py-1.5 text-sm backdrop-blur sm:mb-7">
@@ -809,8 +808,10 @@ export default function Landing() {
             </p>
           </div>
 
-          {/* film — its own column; never slides under the copy */}
-          <div className="relative z-0 w-full max-w-2xl lg:max-w-none">
+          {/* film — its own column; the transparent video can scale up past
+              the column edges (scale lives on THIS wrapper, never on
+              .hero-visual whose transform GSAP owns) */}
+          <div className="relative z-0 w-full max-w-2xl lg:max-w-none lg:scale-[1.12] xl:scale-[1.16] lg:origin-center">
             {/* pre-rendered hero film (see src/compositions/HeroFilm.tsx) */}
             <div className="hero-visual w-full">
               <HeroFilmVideo />
@@ -919,6 +920,10 @@ export default function Landing() {
                   "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=400&q=70",
                   "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=400&q=70",
                   "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=400&q=70",
+                  "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=70",
+                  "https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=400&q=70",
+                  "https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=400&q=70",
+                  "https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?auto=format&fit=crop&w=400&q=70",
                 ]}
               />
             </div>
@@ -1065,17 +1070,19 @@ export default function Landing() {
               );
               // Featured plan keeps its animated grad-border identity; the
               // others get the React Bits BorderGlow (cursor-tracked rim).
+              // All three cards float gently (staggered periods so they drift
+              // out of phase); reduced motion disables the keyframes globally.
               return featured ? (
                 <SpotlightCard
                   key={p.id}
-                  className="reveal ls-card relative order-first flex flex-col rounded-3xl p-5 grad-border shadow-[0_0_70px_-18px_rgba(255,46,77,0.4)] sm:p-7 lg:order-none lg:-my-3 lg:py-10"
+                  className="reveal ls-float2 ls-card relative order-first flex flex-col rounded-3xl p-5 grad-border shadow-[0_0_70px_-18px_rgba(255,46,77,0.4)] sm:p-7 lg:order-none lg:-my-3 lg:py-10"
                 >
                   {inner}
                 </SpotlightCard>
               ) : (
                 <BorderGlow
                   key={p.id}
-                  className="reveal"
+                  className={cn("reveal", p.id === "starter" ? "ls-float" : "ls-float3")}
                   glowColor="351 92% 60%"
                   backgroundColor="hsl(var(--card))"
                   borderRadius={24}

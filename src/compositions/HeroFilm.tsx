@@ -32,7 +32,9 @@ const W = 1600;
 const H = 1000;
 export const HERO_FILM = { width: W, height: H, fps: FPS, durationInFrames: 1020 };
 
-const WIN = { top: 60, x: 137.5, chrome: 52 };
+// Margins must leave room for the window's soft shadow — at the old 60px the
+// baked shadow hit the frame edge and clipped hard over transparent pages.
+const WIN = { top: 80, x: 170, chrome: 52 };
 const CONTENT = { x: WIN.x, y: WIN.top + WIN.chrome, w: W - 2 * WIN.x, h: H - 2 * WIN.top - WIN.chrome };
 
 const BRAND = { wine: "#A31234", deep: "#7F1D3B", neon: "#FF2E4D", amber: "#F59E0B", gold: "#FACC15", ink: "#2A1D22", muted: "#796770" };
@@ -55,7 +57,7 @@ const Window: React.FC<{ url: string; children: React.ReactNode; frame: number; 
     style={{
       position: "absolute", top: WIN.top, bottom: WIN.top, left: WIN.x, right: WIN.x,
       borderRadius: 26, background: "#fff",
-      boxShadow: "0 60px 140px -40px rgba(42,29,34,0.45), 0 0 0 1px rgba(42,29,34,0.07)",
+      boxShadow: "0 30px 70px -28px rgba(42,29,34,0.5), 0 0 0 1px rgba(42,29,34,0.07)",
       overflow: "hidden",
       opacity: presence,
       transform: `translateY(${Math.sin(frame / 55) * 5}px) scale(${0.92 + presence * 0.08})`,

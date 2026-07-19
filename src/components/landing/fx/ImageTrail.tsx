@@ -79,7 +79,8 @@ class ImageTrailVariant1 {
     this.zIndexVal = 1;
     this.activeImagesCount = 0;
     this.isIdle = true;
-    this.threshold = 80;
+    // Vela: denser spawns → a much longer visible trail behind the cursor
+    this.threshold = 48;
     this.mousePos = { x: 0, y: 0 };
     this.lastMousePos = { x: 0, y: 0 };
     this.cacheMousePos = { x: 0, y: 0 };
@@ -149,12 +150,14 @@ class ImageTrailVariant1 {
       .to(
         img.DOM.el,
         {
-          duration: 0.4,
+          // Vela: images linger before fading, so the trail stretches far
+          // behind the cursor instead of vanishing right away
+          duration: 0.9,
           ease: 'power3',
           opacity: 0,
           scale: 0.2
         },
-        0.4
+        1.1
       );
   }
 

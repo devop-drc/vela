@@ -128,12 +128,12 @@ export default function Calculator({ lang }: { lang: Lang }) {
         </div>
 
         {/* one combined conversion bar: gray = Instagram-only, brand = e-shop */}
-        <div className="mt-8 sm:mt-9">
-          <div className="grid grid-cols-2 gap-2 text-[12px] text-muted-foreground sm:text-[12.5px]">
+        <div className="mt-8 sm:mt-10">
+          <div className="grid grid-cols-2 gap-2 text-[12px] text-muted-foreground sm:text-[13.5px]">
             <span className="flex items-center gap-1.5"><Instagram className="h-3.5 w-3.5 shrink-0" /> Instagram <b className="text-foreground">{igPct}%</b></span>
             <span className="flex items-center justify-end gap-1.5 text-right"><Store className="h-3.5 w-3.5 shrink-0" /> E-shop <b className="text-foreground">{shopPct}%</b></span>
           </div>
-          <div className="relative mt-2 h-2.5 overflow-hidden rounded-full bg-muted">
+          <div className="relative mt-2.5 h-3 overflow-hidden rounded-full bg-muted">
             <div className="brand-gradient absolute inset-y-0 left-0 w-full rounded-full" />
             <div className="absolute inset-y-0 left-0 w-1/2 rounded-l-full bg-muted-foreground/25 backdrop-saturate-0" />
             <span className="absolute inset-y-0 left-1/2 w-px bg-background/80" />
@@ -143,15 +143,18 @@ export default function Calculator({ lang }: { lang: Lang }) {
           </div>
         </div>
 
-        {/* the payoff */}
+        {/* the payoff — the amount is a BLOCK so the orders chip always sits
+            beneath it (inline siblings used to share a line on desktop) */}
         <div className="mt-9 border-t border-border pt-8 text-center">
           <div className="text-[12px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t(lang, "Shtesë çdo muaj", "Extra every month")}</div>
-          <Pop
-            trigger={gainMoney}
-            className="mt-3 bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-400 bg-clip-text font-display-brand text-[clamp(2.6rem,7vw,3.6rem)] font-bold leading-none tabular-nums text-transparent drop-shadow-[0_10px_30px_rgba(16,185,129,0.25)]"
-          >
-            +{shownMoney.toLocaleString("en-US")} L
-          </Pop>
+          <div className="mt-3">
+            <Pop
+              trigger={gainMoney}
+              className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-400 bg-clip-text font-display-brand text-[clamp(2.6rem,7vw,3.6rem)] font-bold leading-none tabular-nums text-transparent drop-shadow-[0_10px_30px_rgba(16,185,129,0.25)]"
+            >
+              +{shownMoney.toLocaleString("en-US")} L
+            </Pop>
+          </div>
           <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-[13px] font-semibold text-emerald-600">
             <ShoppingBag className="h-3.5 w-3.5" />
             <Pop trigger={gainOrders} className="tabular-nums">+{shownOrders}</Pop>

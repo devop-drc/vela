@@ -9,13 +9,23 @@ gsap.registerPlugin(ScrollTrigger);
 type Lang = "sq" | "en";
 const t = (l: Lang, sq: string, en: string) => (l === "sq" ? sq : en);
 
-const Frame = ({ src, url, className }: { src: string; url: string; className?: string }) => (
-  <div className={`overflow-hidden rounded-2xl border border-border bg-card shadow-[0_40px_90px_-30px_rgba(30,10,50,0.3)] ${className ?? ""}`}>
-    <div className="flex h-8 items-center gap-1.5 border-b border-border bg-muted/60 px-3">
-      <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" /><span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" /><span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-      <span className="mx-auto rounded-full bg-background px-4 py-0.5 text-[10px] text-muted-foreground">{url}</span>
+const Frame = ({ src, url, tilt }: { src: string; url: string; tilt?: "l" | "r" }) => (
+  // halo + slight editorial tilt that levels out on hover — depth without noise
+  <div className="group relative">
+    <div className="brand-gradient absolute -inset-6 -z-10 rounded-[2.5rem] opacity-[0.12] blur-2xl transition-opacity duration-500 group-hover:opacity-[0.2]" aria-hidden />
+    <div
+      className={`overflow-hidden rounded-2xl border border-border bg-card shadow-[0_44px_110px_-32px_rgba(163,18,52,0.32)] transition-transform duration-500 group-hover:rotate-0 group-hover:scale-[1.015] ${
+        tilt === "l" ? "lg:-rotate-1" : tilt === "r" ? "lg:rotate-1" : ""
+      }`}
+    >
+      <div className="flex h-8 items-center gap-1.5 border-b border-border bg-muted/60 px-3">
+        <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" /><span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" /><span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+        <span className="mx-auto flex items-center gap-1.5 rounded-full bg-background px-4 py-0.5 text-[10px] text-muted-foreground">
+          <span className="brand-gradient h-1.5 w-1.5 rounded-full" />{url}
+        </span>
+      </div>
+      <div className="overflow-hidden"><img src={src} alt="" className="fs-img block aspect-[1440/900] w-full object-cover object-top" /></div>
     </div>
-    <div className="overflow-hidden"><img src={src} alt="" className="fs-img block aspect-[1440/900] w-full object-cover object-top" /></div>
   </div>
 );
 
@@ -75,7 +85,7 @@ export default function FeatureShowcase({ lang }: { lang: Lang }) {
                 ))}
               </div>
             </div>
-            <div className="fs-anim"><Frame src={f.img} url={f.url} /></div>
+            <div className="fs-anim"><Frame src={f.img} url={f.url} tilt={f.reverse ? "l" : "r"} /></div>
           </div>
         ))}
       </div>
