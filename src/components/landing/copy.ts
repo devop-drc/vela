@@ -50,7 +50,7 @@ export const sq: LandingCopy = {
     h1a: "Kthe Instagramin",
     h1b: "në dyqan online",
     h1c: "brenda pak minutash.",
-    sub: "Sistemi i kthen postimet e tua në dyqan të vërtetë. Pa kod. Ti menaxhon gjithçka nga një panel.",
+    sub: "Postimet e tua bëhen dyqan i vërtetë. Pa kod. Gjithçka nga një panel.",
     ctaPrimary: "Fillo falas",
     ctaSecondary: "Shiko demo live",
     risk: "Pa kartë krediti · 2 minuta",
@@ -119,11 +119,11 @@ export const sq: LandingCopy = {
   how: {
     badge: "Si funksionon",
     title: "Aktiv në tre hapa",
-    sub: "Pa ndërtuar dyqan, pa u marrë me tema. Lidhu dhe nis.",
+    sub: "Lidhu dhe nis — pa tema, pa kod.",
     step: "HAPI",
     steps: [
-      { title: "Lidh Instagramin", body: "Lidh Instagram Business me një prekje — pa kod." },
-      { title: "Sistemi ndërton produktet", body: "Sistemi lexon postimet dhe krijon produktet — emra, çmime, variante." },
+      { title: "Lidh Instagramin", body: "Instagram Business, me një prekje." },
+      { title: "Sistemi ndërton produktet", body: "Postimet bëhen produkte — emra, çmime, variante." },
       { title: "Ndaj linkun e dyqanit", body: "Publiko vitrinën dhe merr porosi që sot." },
     ],
   },
@@ -186,7 +186,7 @@ export const sq: LandingCopy = {
     freeCta: "Fillo falas",
     trialCta: "Provo 7 ditë falas",
     trialNote: "7 ditë falas · pa kartë · anulo kurdo",
-    reassure: "Regjistrohu për 2 minuta. Pas provës, zgjidh një plan që dyqani të mbetet online — produktet ruhen gjithmonë.",
+    reassure: "Pas provës zgjidh një plan — produktet ruhen gjithmonë.",
     plans: [
       { id: "starter", name: "Starter", blurb: "Katalogu yt online, super i lirë.", features: ["Deri në 10 produkte", "Vitrinë Instagram me linkun tënd", "Vetëm para në dorë (COD)", "Analitikë bazë", "7 ditë provë falas"] },
       { id: "pro", name: "Pro", blurb: "Gjithçka për të shitur.", features: ["Deri në 100 produkte aktive", "Pagesa me kartë + para në dorë", "Analitikë e avancuar", "Promocione & oferta", "Vlerësime produktesh"] },
@@ -204,12 +204,12 @@ export const sq: LandingCopy = {
   faq: {
     title: "Pyetjet, të përgjigjura",
     items: [
-      { q: "Si funksionon prova falas 7-ditore?", a: "Regjistrohu pa kartë dhe merr akses të plotë Pro për 7 ditë. Pas provës, zgjidh një plan — produktet ruhen gjithmonë." },
-      { q: "Më duhet faqe interneti apo njohuri kodimi?", a: "Jo. Vela i kthen postimet në vitrinë automatikisht — ti vetëm lidh llogarinë dhe ndan linkun." },
-      { q: "Si paguajnë klientët?", a: "Me kartë përmes Raiffeisen (RaiAccept) ose para në dorë. Çmimet shfaqen në Lekë." },
-      { q: "A mund ta personalizoj pamjen e dyqanit?", a: "Po. Me Storefront Studio kontrollon ngjyrat, fontet dhe seksionet me pamje live, ose nis nga një shabllon." },
-      { q: "Çfarë ndodh me postimet e mia në Instagram?", a: "Asgjë nuk ndryshon. Ne lexojmë postimet publike për të ndërtuar produktet — ti vendos çfarë publikohet." },
-      { q: "A mund të anuloj kurdo?", a: "Absolutisht. Anulo ose ndrysho planin kurdo nga cilësimet e faturimit." },
+      { q: "Si funksionon prova falas 7-ditore?", a: "Akses i plotë Pro për 7 ditë, pa kartë. Pas provës zgjidh një plan — produktet ruhen." },
+      { q: "Më duhet faqe interneti apo njohuri kodimi?", a: "Jo. Postimet bëhen vitrinë vetë — ti vetëm ndan linkun." },
+      { q: "Si paguajnë klientët?", a: "Me kartë (RaiAccept) ose para në dorë. Çmimet në Lekë." },
+      { q: "A mund ta personalizoj pamjen e dyqanit?", a: "Po. Ngjyra, fonte, seksione — live në Storefront Studio, ose nis nga një template." },
+      { q: "Çfarë ndodh me postimet e mia në Instagram?", a: "Asgjë. Lexojmë postimet publike për produktet — ti vendos çfarë publikohet." },
+      { q: "A mund të anuloj kurdo?", a: "Po — kurdo, nga cilësimet e faturimit." },
     ],
   },
   cta: {
@@ -302,11 +302,11 @@ export const en: LandingCopy = {
   how: {
     badge: "How it works",
     title: "Live in three steps",
-    sub: "No store to build, no theme to fight. Connect and go.",
+    sub: "Connect and go — no themes, no code.",
     step: "STEP",
     steps: [
-      { title: "Connect Instagram", body: "Link Instagram Business in one tap — no code." },
-      { title: "The system builds your products", body: "The system reads your posts and creates products — names, prices, variants." },
+      { title: "Connect Instagram", body: "Instagram Business, in one tap." },
+      { title: "The system builds your products", body: "Posts become products — names, prices, variants." },
       { title: "Share your shop link", body: "Publish your storefront and take orders today." },
     ],
   },
@@ -332,7 +332,7 @@ export const en: LandingCopy = {
   features: {
     badge: "Features",
     title: "Everything for your shop",
-    sub: "One tool replaces the spreadsheet, the messages and the guesswork.",
+    sub: "One tool replaces spreadsheets, DMs and guesswork.",
     items: [
       { title: "System analysis", body: "Every post becomes a product — name, price, category." },
       { title: "Storefront Studio", body: "Design your storefront, with live preview." },
@@ -369,7 +369,7 @@ export const en: LandingCopy = {
     freeCta: "Start free",
     trialCta: "Try 7 days free",
     trialNote: "7 days free · no card · cancel anytime",
-    reassure: "Sign up in 2 minutes. After the trial, pick a plan to keep your shop online — products are always saved.",
+    reassure: "After the trial, pick a plan — your products are always saved.",
     plans: [
       { id: "starter", name: "Starter", blurb: "Your catalogue online, super affordable.", features: ["Up to 10 products", "Instagram storefront with your link", "Cash on delivery only (COD)", "Basic analytics", "7-day free trial"] },
       { id: "pro", name: "Pro", blurb: "Everything to sell.", features: ["Up to 100 active products", "Card payments + cash on delivery", "Advanced analytics", "Promotions & offers management", "Product reviews"] },
@@ -387,12 +387,12 @@ export const en: LandingCopy = {
   faq: {
     title: "Questions, answered",
     items: [
-      { q: "How does the 7-day free trial work?", a: "Sign up with no card and get full Pro access for 7 days. After the trial, pick a plan — your products are always saved." },
-      { q: "Do I need a website or coding skills?", a: "No. Vela turns your posts into a storefront automatically — you just connect and share your link." },
-      { q: "How do customers pay?", a: "By card via Raiffeisen (RaiAccept) or cash on delivery. Prices show in Lek." },
-      { q: "Can I customize how my shop looks?", a: "Yes. Storefront Studio controls colors, fonts and sections with a live preview, or start from a template." },
-      { q: "What happens to my Instagram posts?", a: "Nothing changes. We read your public posts to build products — you decide what goes live." },
-      { q: "Can I cancel anytime?", a: "Absolutely. Cancel or change your plan anytime from billing settings." },
+      { q: "How does the 7-day free trial work?", a: "Full Pro access for 7 days, no card. Then pick a plan — products are saved." },
+      { q: "Do I need a website or coding skills?", a: "No. Your posts become a storefront on their own — you just share your link." },
+      { q: "How do customers pay?", a: "By card (RaiAccept) or cash on delivery. Prices in Lek." },
+      { q: "Can I customize how my shop looks?", a: "Yes. Colors, fonts, sections — live in Storefront Studio, or start from a template." },
+      { q: "What happens to my Instagram posts?", a: "Nothing. We only read public posts — you decide what goes live." },
+      { q: "Can I cancel anytime?", a: "Yes — anytime, from billing settings." },
     ],
   },
   cta: {

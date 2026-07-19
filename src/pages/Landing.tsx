@@ -208,7 +208,8 @@ const LandingNav = ({ active, copy, dark, onToggleTheme, lang, onSetLang }: NavP
             </Magnetic>
           </div>
 
-          <div className="flex items-center gap-1 lg:hidden">
+          {/* pr-10 reserves the right edge for the StaggeredMenu hamburger chip */}
+          <div className="flex items-center gap-1 pr-10 lg:hidden">
             <button
               onClick={onToggleTheme}
               aria-label={dark ? "Light mode" : "Dark mode"}
@@ -218,7 +219,7 @@ const LandingNav = ({ active, copy, dark, onToggleTheme, lang, onSetLang }: NavP
                 {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </span>
             </button>
-            {/* React Bits StaggeredMenu supplies the burger + full-screen panel on mobile */}
+            {/* React Bits StaggeredMenu supplies the hamburger + fullscreen panel */}
           </div>
         </nav>
       </div>

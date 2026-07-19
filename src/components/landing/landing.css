@@ -271,9 +271,10 @@
 .landing .sm-scope { z-index: 60; height: 100dvh; }
 .landing .sm-scope .staggered-menu-panel { height: 100dvh; }
 .landing .sm-scope .sm-logo { display: none; }
-/* The toggle is a circular chip that sits INSIDE the navbar pill, just left
-   of the theme button (pill center y=45px, theme button outer left x≈318) */
-.landing .sm-scope .staggered-menu-header { padding: 29px 80px 0 16px; justify-content: flex-end; }
+/* The toggle is a circular hamburger chip that sits INSIDE the navbar pill
+   at its right edge (pill center y=45px); the theme button reserves the
+   space via pr-10 on the navbar's mobile cluster */
+.landing .sm-scope .staggered-menu-header { padding: 29px 32px 0 16px; justify-content: flex-end; }
 .landing .sm-scope .sm-toggle {
   width: 32px; height: 32px; justify-content: center; gap: 0;
   border-radius: 999px; border: 1px solid hsl(var(--border));

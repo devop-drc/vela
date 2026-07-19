@@ -192,7 +192,7 @@ const B3_Studio = ({ lang }: { lang: Lang }) => {
       {/* control rail */}
       <div className="w-36 shrink-0 border-r border-zinc-200 p-2.5">
         <div className="text-[11px] font-bold text-zinc-900">{t(lang, "Storefront Studio", "Studio")}</div>
-        <div className="mt-2 rounded-lg border border-zinc-200 p-2"><div className="text-[9px] text-zinc-400">{t(lang, "Template", "Shablloni")}</div><div className="mt-0.5 flex items-center justify-between text-[11px] font-semibold text-zinc-800">{TEMPLATES[tpl].name} <ChevronDown className="h-3 w-3 text-zinc-400" /></div></div>
+        <div className="mt-2 rounded-lg border border-zinc-200 p-2"><div className="text-[9px] text-zinc-400">{t(lang, "Template", "Template")}</div><div className="mt-0.5 flex items-center justify-between text-[11px] font-semibold text-zinc-800">{TEMPLATES[tpl].name} <ChevronDown className="h-3 w-3 text-zinc-400" /></div></div>
         <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-zinc-200 p-1 text-[10px]"><span className="flex-1 rounded bg-zinc-100 px-2 py-1 text-center"><Instagram className="mx-auto h-3 w-3" /></span><span className={`flex-1 rounded px-2 py-1 text-center text-white ${BRAND}`}><Palette className="mx-auto h-3 w-3" /></span></div>
         <div className="mt-3 space-y-1.5">{[t(lang, "Colors", "Ngjyrat"), t(lang, "Typography", "Fontet"), t(lang, "Layout", "Struktura"), t(lang, "Sections", "Seksionet")].map((s) => <div key={s} className="rounded-md bg-zinc-50 px-2 py-1.5 text-[10px] text-zinc-500">{s}</div>)}</div>
       </div>

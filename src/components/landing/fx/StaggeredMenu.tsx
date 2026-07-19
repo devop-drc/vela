@@ -66,8 +66,9 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
   const preLayersRef = useRef<HTMLDivElement | null>(null);
   const preLayerElsRef = useRef<HTMLElement[]>([]);
 
-  const plusHRef = useRef<HTMLSpanElement | null>(null);
-  const plusVRef = useRef<HTMLSpanElement | null>(null);
+  const plusHRef = useRef<HTMLSpanElement | null>(null); // hamburger top line
+  const midRef = useRef<HTMLSpanElement | null>(null); // hamburger middle line
+  const plusVRef = useRef<HTMLSpanElement | null>(null); // hamburger bottom line
   const iconRef = useRef<HTMLSpanElement | null>(null);
 
   const textInnerRef = useRef<HTMLSpanElement | null>(null);
@@ -109,8 +110,7 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
         gsap.set(preContainer, { xPercent: 0, opacity: 1 });
       }
 
-      gsap.set(plusH, { transformOrigin: '50% 50%', rotate: 0 });
-      gsap.set(plusV, { transformOrigin: '50% 50%', rotate: 90 });
+      gsap.set([plusH, midRef.current, plusV], { transformOrigin: '50% 50%', y: 0, rotate: 0, opacity: 1 });
       gsap.set(icon, { rotate: 0, transformOrigin: '50% 50%' });
 
       gsap.set(textInner, { yPercent: 0 });
@@ -278,27 +278,28 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
     });
   }, [position]);
 
+  // hamburger ⇄ X morph: outer lines collapse onto the middle and rotate,
+  // the middle line fades out
   const animateIcon = useCallback((opening: boolean) => {
-    const icon = iconRef.current;
     const h = plusHRef.current;
+    const m = midRef.current;
     const v = plusVRef.current;
-    if (!icon || !h || !v) return;
+    if (!h || !m || !v) return;
 
     spinTweenRef.current?.kill();
 
     if (opening) {
-      // ensure container never rotates
-      gsap.set(icon, { rotate: 0, transformOrigin: '50% 50%' });
       spinTweenRef.current = gsap
-        .timeline({ defaults: { ease: 'power4.out' } })
-        .to(h, { rotate: 45, duration: 0.5 }, 0)
-        .to(v, { rotate: -45, duration: 0.5 }, 0);
+        .timeline({ defaults: { ease: 'power4.out', duration: 0.45 } })
+        .to(h, { y: 6, rotate: 45 }, 0)
+        .to(m, { opacity: 0, scaleX: 0.4, duration: 0.25 }, 0)
+        .to(v, { y: -6, rotate: -45 }, 0);
     } else {
       spinTweenRef.current = gsap
-        .timeline({ defaults: { ease: 'power3.inOut' } })
-        .to(h, { rotate: 0, duration: 0.35 }, 0)
-        .to(v, { rotate: 90, duration: 0.35 }, 0)
-        .to(icon, { rotate: 0, duration: 0.001 }, 0);
+        .timeline({ defaults: { ease: 'power3.inOut', duration: 0.35 } })
+        .to(h, { y: 0, rotate: 0 }, 0)
+        .to(m, { opacity: 1, scaleX: 1, duration: 0.3 }, 0.05)
+        .to(v, { y: 0, rotate: 0 }, 0);
     }
   }, []);
 
@@ -412,7 +413,10 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
 
   return (
     <div
-      className={`sm-scope z-40 ${isFixed ? 'fixed top-0 left-0 w-screen h-screen overflow-hidden' : 'w-full h-full'}`}
+      // pointer-events-none is CRITICAL: this wrapper covers the whole page —
+      // without it every tap below (theme toggle, CTAs, links) is swallowed.
+      // Interactive children (toggle, panel) re-enable pointer events.
+      className={`sm-scope z-40 pointer-events-none ${isFixed ? 'fixed top-0 left-0 w-screen h-screen overflow-hidden' : 'w-full h-full'}`}
     >
       <div
         className={
@@ -486,17 +490,12 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
 
             <span
               ref={iconRef}
-              className="sm-icon relative w-[14px] h-[14px] shrink-0 inline-flex items-center justify-center [will-change:transform]"
+              className="sm-icon relative h-[14px] w-[16px] shrink-0 [will-change:transform]"
               aria-hidden="true"
             >
-              <span
-                ref={plusHRef}
-                className="sm-icon-line absolute left-1/2 top-1/2 w-full h-[2px] bg-current rounded-[2px] -translate-x-1/2 -translate-y-1/2 [will-change:transform]"
-              />
-              <span
-                ref={plusVRef}
-                className="sm-icon-line sm-icon-line-v absolute left-1/2 top-1/2 w-full h-[2px] bg-current rounded-[2px] -translate-x-1/2 -translate-y-1/2 [will-change:transform]"
-              />
+              <span ref={plusHRef} className="sm-icon-line absolute left-0 top-0 h-[2px] w-full rounded-[2px] bg-current [will-change:transform]" />
+              <span ref={midRef} className="sm-icon-line absolute left-0 top-[6px] h-[2px] w-full rounded-[2px] bg-current [will-change:transform]" />
+              <span ref={plusVRef} className="sm-icon-line absolute left-0 top-[12px] h-[2px] w-full rounded-[2px] bg-current [will-change:transform]" />
             </span>
           </button>
         </header>
@@ -584,9 +583,9 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
 .sm-scope .sm-toggle-textWrap { position: relative; margin-right: 0.5em; display: inline-block; height: 1em; overflow: hidden; white-space: nowrap; width: var(--sm-toggle-width, auto); min-width: var(--sm-toggle-width, auto); }
 .sm-scope .sm-toggle-textInner { display: flex; flex-direction: column; line-height: 1; }
 .sm-scope .sm-toggle-line { display: block; height: 1em; line-height: 1; }
-.sm-scope .sm-icon { position: relative; width: 14px; height: 14px; flex: 0 0 14px; display: inline-flex; align-items: center; justify-content: center; will-change: transform; }
+.sm-scope .sm-icon { position: relative; width: 16px; height: 14px; flex: 0 0 16px; will-change: transform; }
 .sm-scope .sm-panel-itemWrap { position: relative; overflow: hidden; line-height: 1; }
-.sm-scope .sm-icon-line { position: absolute; left: 50%; top: 50%; width: 100%; height: 2px; background: currentColor; border-radius: 2px; transform: translate(-50%, -50%); will-change: transform; }
+.sm-scope .sm-icon-line { position: absolute; left: 0; width: 100%; height: 2px; background: currentColor; border-radius: 2px; will-change: transform; }
 .sm-scope .sm-line { display: none !important; }
 .sm-scope .staggered-menu-panel { position: absolute; top: 0; right: 0; width: clamp(260px, 38vw, 420px); height: 100%; background: hsl(var(--background)); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); display: flex; flex-direction: column; padding: 1.15rem 1.35rem calc(1.35rem + env(safe-area-inset-bottom)); overflow-y: auto; z-index: 10; }
 .sm-scope .sm-panel-glow { position: absolute; inset: 0; pointer-events: none; background:
