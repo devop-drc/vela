@@ -510,10 +510,10 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
         >
           {/* soft brand wash behind the panel content */}
           <div className="sm-panel-glow" aria-hidden="true" />
-          <div className="sm-panel-inner relative flex-1 flex flex-col gap-5">
+          <div className="sm-panel-inner relative flex-1 flex flex-col justify-between gap-5">
             {panelBrand && <div className="sm-panel-brand will-change-transform">{panelBrand}</div>}
             <ul
-              className="sm-panel-list my-auto list-none m-0 p-0 flex flex-col gap-2"
+              className="sm-panel-list list-none m-0 p-0 flex flex-col gap-2"
               role="list"
               data-numbering={displayItemNumbering || undefined}
             >
@@ -567,7 +567,7 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
               </div>
             )}
 
-            {panelFooter && <div className="sm-panel-footer mt-auto will-change-transform">{panelFooter}</div>}
+            {panelFooter && <div className="sm-panel-footer will-change-transform">{panelFooter}</div>}
           </div>
         </aside>
       </div>
