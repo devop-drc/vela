@@ -31,7 +31,7 @@ const PRODUCTS = [
   { name: "Orë Smart Fit", cat: "Teknologji", price: 12500, inv: 14, img: U("1523275335684-37898b6baf30"), tags: ["smartwatch"] },
   { name: "Fustan liri veror", cat: "Moda & Veshje", price: 3500, inv: 18, img: U("1595777457583-95e059d581b8"), tags: ["fustan", "verë"] },
   { name: "Xhaketë lëkure", cat: "Moda & Veshje", price: 8900, inv: 7, img: U("1551028719-00167b16eac5"), tags: ["xhaketë"] },
-  { name: "Bluzë pambuku", cat: "Moda & Veshje", price: 1900, inv: 40, img: U("1521572163474-6864f9cf17ab"), tags: ["bluzë"] },
+  { name: "Bluzë pambuku", cat: "Moda & Veshje", price: 1900, inv: 40, img: U("1576566588028-4147f3842f27"), tags: ["bluzë"] },
   { name: "Atlete Vrapi Air", cat: "Këpucë", price: 11900, inv: 12, img: U("1542291026-7eec264c27ff"), tags: ["atlete", "sport"] },
   { name: "Sneakers Classic", cat: "Këpucë", price: 7500, inv: 16, img: U("1600185365926-3a2ce3cdb9eb"), tags: ["sneakers"] },
   { name: "Çantë shpine urbane", cat: "Aksesorë", price: 4900, inv: 20, img: U("1553062407-98eeb64c6a62"), tags: ["çantë"] },
@@ -39,7 +39,7 @@ const PRODUCTS = [
   { name: "Çantë dore lëkure", cat: "Aksesorë", price: 6900, inv: 9, img: U("1548036328-c9fa89d128fa"), tags: ["çantë"] },
   { name: "Unazë argjendi", cat: "Bizhuteri", price: 3900, inv: 15, img: U("1605100804763-247f67b3557e"), tags: ["unazë"] },
   { name: "Varëse ari 14K", cat: "Bizhuteri", price: 18500, inv: 4, img: U("1599643478518-a784e5dc4c8f"), tags: ["varëse", "ar"] },
-  { name: "Qiri aromatik soje", cat: "Shtëpi", price: 1500, inv: 30, img: U("1602874801006-e26c4c5b5e8a"), tags: ["qiri", "shtëpi"] },
+  { name: "Qiri aromatik soje", cat: "Shtëpi", price: 1500, inv: 30, img: U("1603006905003-be475563bc59"), tags: ["qiri", "shtëpi"] },
 ];
 const CUSTOMERS = [
   ["Ana Krasniqi", "ana.k@example.com"], ["Bledi Marku", "bledi.m@example.com"],

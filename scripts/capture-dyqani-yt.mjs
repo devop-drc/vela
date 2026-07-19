@@ -42,6 +42,11 @@ const bodyPeek = () => p.evaluate(() => document.body.innerText.slice(0, 130).re
 try {
   /* login */
   await p.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 60000 });
+  // NOTE: the demo account's trial may be expired (status "incomplete") — if
+  // admin pages redirect to /billing, temporarily add the dev-only bypass in
+  // SubscriptionGuard.tsx:  if (import.meta.env.DEV &&
+  // sessionStorage.getItem("vela-capture-bypass")) return <Outlet />;
+  await p.evaluate(() => sessionStorage.setItem("vela-capture-bypass", "1"));
   await sleep(2000);
   await p.type('input[type="email"]', local.email, { delay: 10 });
   await p.type('input[type="password"]', local.password, { delay: 10 });
