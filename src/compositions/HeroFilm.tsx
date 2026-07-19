@@ -1,11 +1,16 @@
 /**
- * HeroFilm v3 — the landing hero video.
+ * HeroFilm v4 — the landing hero video, styled after the landing's own
+ * design language (Clash Display, glass surfaces, eyebrow pills, specular
+ * shine, lava-blob washes).
  * • Content area matches the 1440×900 screenshots exactly (no zoom/crop).
- * • Transition variety: push / lift / scale-through / iris (circle reveal) /
- *   tilt (perspective swing) + a brand-gradient sweep band on every cut.
+ * • Every cut uses a distinct transition: scale-through / push / iris /
+ *   tilt / wipe (gradient-edge reveal) / flip (3D page turn) / lift —
+ *   plus a specular shine sweep (the CTA-hover motif) on each cut.
  * • Simulated cursor CLICKS the real UI (connect, add-to-cart, checkout).
- * • Kinetic-typography interstitials — text-only beats on a translucent glass
- *   panel (readable over any page background), no screenshots behind them.
+ * • Kinetic-typography interstitials — eyebrow pill + word-slam lines with
+ *   letter-spacing settle on a glass panel over drifting lava blobs.
+ * • Beat progress ticks along a thin brand-gradient line under the chrome
+ *   (the landing's scroll-progress motif).
  * • `transparent` prop: render with alpha for the WebM used on the site
  *   (backdrop shows the live page, like the navbar glass); the MP4 fallback
  *   keeps the warm baked background.
@@ -44,7 +49,7 @@ const IMGS = [
 const U = (id: string, w = 400) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=70`;
 
 /* ── persistent browser window (fades away under type interstitials) ── */
-const Window: React.FC<{ url: string; children: React.ReactNode; frame: number; presence: number }> = ({ url, children, frame, presence }) => (
+const Window: React.FC<{ url: string; children: React.ReactNode; frame: number; presence: number; progress: number }> = ({ url, children, frame, presence, progress }) => (
   <div
     style={{
       position: "absolute", top: WIN.top, bottom: WIN.top, left: WIN.x, right: WIN.x,
@@ -59,21 +64,34 @@ const Window: React.FC<{ url: string; children: React.ReactNode; frame: number; 
       <span style={{ width: 13, height: 13, borderRadius: 99, background: "#ff5f57" }} />
       <span style={{ width: 13, height: 13, borderRadius: 99, background: "#febc2e" }} />
       <span style={{ width: 13, height: 13, borderRadius: 99, background: "#28c840" }} />
-      <div style={{ margin: "0 auto", background: "#fff", border: "1px solid #EDE6E9", borderRadius: 99, padding: "6px 26px", fontSize: 17, color: BRAND.muted, fontFamily: "Inter, sans-serif" }}>
+      <div style={{ margin: "0 auto", display: "flex", alignItems: "center", gap: 9, background: "#fff", border: "1px solid #EDE6E9", borderRadius: 99, padding: "6px 26px", fontSize: 17, color: BRAND.muted, fontFamily: "Inter, sans-serif" }}>
+        <span style={{ width: 9, height: 9, borderRadius: 99, background: GRAD }} />
         {url}
       </div>
       <span style={{ width: 60 }} />
     </div>
+    {/* landing scroll-progress motif: beat progress under the chrome */}
+    <div style={{ position: "absolute", top: WIN.chrome - 2, left: 0, height: 2.5, width: `${clamp01(progress) * 100}%`, background: GRAD, zIndex: 5 }} />
     <div style={{ position: "absolute", inset: `${WIN.chrome}px 0 0 0`, overflow: "hidden" }}>{children}</div>
   </div>
 );
 
+/* specular shine — the landing CTA hover motif: bright white core with a
+   gold/neon fringe sweeping across the cut */
 const Sweep: React.FC<{ local: number }> = ({ local }) => {
-  if (local < 0 || local > 18) return null;
-  const x = interpolate(local, [0, 18], [-30, 105], { easing: Easing.inOut(Easing.cubic) });
+  if (local < 0 || local > 16) return null;
+  const x = interpolate(local, [0, 16], [-35, 115], { easing: Easing.inOut(Easing.cubic) });
+  const fade = interpolate(local, [0, 3, 13, 16], [0, 1, 1, 0]);
   return (
     <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 40, overflow: "hidden" }}>
-      <div style={{ position: "absolute", top: -40, bottom: -40, left: `${x}%`, width: "26%", transform: "skewX(-12deg)", background: GRAD, opacity: 0.85, filter: "blur(2px)", boxShadow: "0 0 80px 20px rgba(255,46,77,0.35)" }} />
+      <div
+        style={{
+          position: "absolute", top: -40, bottom: -40, left: `${x}%`, width: "20%",
+          transform: "skewX(-14deg)", opacity: 0.9 * fade, filter: "blur(1px)",
+          background: "linear-gradient(100deg, transparent 0%, rgba(255,46,77,0.35) 26%, rgba(255,255,255,0.92) 48%, rgba(250,204,21,0.55) 66%, transparent 100%)",
+          boxShadow: "0 0 90px 24px rgba(255,46,77,0.28)",
+        }}
+      />
     </div>
   );
 };
@@ -83,8 +101,8 @@ const Caption: React.FC<{ text: string; local: number; dur: number }> = ({ text,
   const out = clamp01((local - (dur - 12)) / 10);
   return (
     <div style={{ position: "absolute", left: 0, right: 0, bottom: 16, display: "flex", justifyContent: "center", opacity: s * (1 - out) }}>
-      <div style={{ transform: `translateY(${(1 - s) * 18}px)`, display: "flex", alignItems: "center", gap: 12, background: "rgba(42,29,34,0.92)", color: "#fff", borderRadius: 999, padding: "12px 28px", fontSize: 21, fontWeight: 600, fontFamily: "Inter, sans-serif", boxShadow: "0 18px 50px -18px rgba(0,0,0,0.5)" }}>
-        <span style={{ width: 9, height: 9, borderRadius: 99, background: GRAD }} />
+      <div style={{ transform: `translateY(${(1 - s) * 18}px)`, display: "flex", alignItems: "center", gap: 12, background: "rgba(26,14,18,0.66)", color: "#fff", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 999, padding: "12px 28px", fontSize: 22, fontWeight: 600, letterSpacing: "-0.01em", fontFamily: "'Clash Display', Inter, sans-serif", boxShadow: "0 18px 50px -18px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)" }}>
+        <span style={{ width: 9, height: 9, borderRadius: 99, background: GRAD, boxShadow: "0 0 12px rgba(255,46,77,0.8)" }} />
         {text}
       </div>
     </div>
@@ -121,27 +139,45 @@ const CursorSim: React.FC<{ local: number; points: Waypoint[]; clickAt?: number 
 
 const at = (fx: number, fy: number) => ({ x: CONTENT.x + fx * CONTENT.w, y: CONTENT.y + fy * CONTENT.h });
 
-/* ── kinetic-typography interstitial: words slam in on a glass panel ── */
-const TypeBeat: React.FC<{ local: number; dur: number; lines: { text: string; grad?: boolean }[][] }> = ({ local, dur, lines }) => {
+/* ── kinetic-typography interstitial: eyebrow pill + word-slam lines on a
+      glass panel, lava blobs drifting behind, specular shine at the end ── */
+const TypeBeat: React.FC<{ local: number; dur: number; lines: { text: string; grad?: boolean }[][]; eyebrow?: string }> = ({ local, dur, lines, eyebrow }) => {
   const out = clamp01((local - (dur - 12)) / 12);
   const panel = sp(local, 0, 13);
+  const wordCount = lines.reduce((n, ws) => n + ws.length, 0);
+  const settled = 6 + wordCount * 4 + 8; // frame when the last word has landed
+  const eb = sp(local, 3, 14);
+  const rule = sp(local, settled - 6, 13);
+  const shineX = interpolate(local, [settled, settled + 16], [-30, 130], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
   let wordIndex = 0;
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", opacity: 1 - out, fontFamily: "'Clash Display', Inter, sans-serif" }}>
-      {/* soft glow pulse behind the panel */}
-      <div style={{ position: "absolute", width: 900, height: 500, borderRadius: 999, background: GRAD, opacity: 0.16 * panel, filter: "blur(120px)" }} />
+      {/* lava-lamp wash behind the panel (the .brand-gradient motif) */}
+      <div style={{ position: "absolute", width: 620, height: 470, borderRadius: 999, background: BRAND.wine, opacity: 0.2 * panel, filter: "blur(110px)", transform: `translate(${-190 + Math.sin(local / 26) * 46}px, ${Math.cos(local / 31) * 34}px)` }} />
+      <div style={{ position: "absolute", width: 520, height: 420, borderRadius: 999, background: BRAND.amber, opacity: 0.16 * panel, filter: "blur(110px)", transform: `translate(${220 + Math.cos(local / 29) * 40}px, ${Math.sin(local / 24) * 38}px)` }} />
+      <div style={{ position: "absolute", width: 420, height: 380, borderRadius: 999, background: BRAND.neon, opacity: 0.12 * panel, filter: "blur(100px)", transform: `translate(${Math.sin(local / 21) * 60}px, ${140 + Math.cos(local / 27) * 30}px)` }} />
       <div
         style={{
+          position: "relative",
+          overflow: "hidden",
           opacity: panel,
           transform: `scale(${0.94 + panel * 0.06}) translateY(${(1 - panel) * 30}px)`,
           background: "rgba(26,14,18,0.62)",
           border: "1px solid rgba(255,255,255,0.14)",
           borderRadius: 44,
-          padding: "64px 96px",
+          padding: "52px 96px 58px",
           textAlign: "center",
           boxShadow: "0 60px 160px -50px rgba(20,10,14,0.7), inset 0 1px 0 rgba(255,255,255,0.1)",
         }}
       >
+        {/* specular shine across the panel once the words have landed */}
+        <div style={{ position: "absolute", top: -30, bottom: -30, left: `${shineX}%`, width: "22%", transform: "skewX(-14deg)", background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.14) 50%, transparent)", pointerEvents: "none" }} />
+        {eyebrow && (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 26, padding: "9px 22px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.06)", opacity: eb, transform: `translateY(${(1 - eb) * 14}px)` }}>
+            <span style={{ width: 8, height: 8, borderRadius: 99, background: GRAD, boxShadow: "0 0 10px rgba(255,46,77,0.9)" }} />
+            <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.72)", fontFamily: "Inter, sans-serif" }}>{eyebrow}</span>
+          </div>
+        )}
         {lines.map((words, li) => (
           <div key={li} style={{ display: "flex", justifyContent: "center", gap: "0.28em", flexWrap: "wrap", lineHeight: 1.06 }}>
             {words.map((w, wi) => {
@@ -151,7 +187,8 @@ const TypeBeat: React.FC<{ local: number; dur: number; lines: { text: string; gr
                   key={wi}
                   style={{
                     display: "inline-block",
-                    fontSize: 96, fontWeight: 700, letterSpacing: "-0.02em",
+                    fontSize: 96, fontWeight: 700,
+                    letterSpacing: `${-0.02 + (1 - s) * 0.1}em`,
                     color: w.grad ? "transparent" : "#fff",
                     background: w.grad ? "linear-gradient(100deg,#FACC15 5%,#F59E0B 30%,#FF2E4D 70%,#FF5A73 95%)" : undefined,
                     WebkitBackgroundClip: w.grad ? "text" : undefined,
@@ -166,6 +203,8 @@ const TypeBeat: React.FC<{ local: number; dur: number; lines: { text: string; gr
             })}
           </div>
         ))}
+        {/* gradient rule draws in under the lines (section-rail motif) */}
+        <div style={{ margin: "30px auto 0", height: 4, width: 150 * rule, borderRadius: 99, background: GRAD, boxShadow: "0 0 18px rgba(255,46,77,0.55)", opacity: rule }} />
       </div>
     </AbsoluteFill>
   );
@@ -254,12 +293,13 @@ const B1: React.FC<{ local: number; lang: "sq" | "en" }> = ({ local, lang }) => 
 };
 
 /* ── timeline ── */
-type Variant = "push" | "lift" | "scale" | "iris" | "tilt";
+type Variant = "push" | "lift" | "scale" | "iris" | "tilt" | "wipe" | "flip";
 type Beat = {
   from: number; dur: number; kind: "ui" | "type";
   url?: string; cap?: string; variant?: Variant;
   body?: (l: number) => React.ReactNode;
   lines?: { text: string; grad?: boolean }[][];
+  eyebrow?: string;
   cursor?: { points: Waypoint[]; clickAt: number };
 };
 
@@ -270,22 +310,22 @@ const BEATS = (lang: "sq" | "en"): Beat[] => [
     body: (l) => <B1 local={l} lang={lang} />,
     cursor: { points: [{ f: 14, x: 1120, y: 830 }, { f: 40, x: 800, y: 596 }, { f: 66, x: 800, y: 596 }], clickAt: 44 },
   },
-  { from: 190, dur: 55, kind: "type", lines: [[{ text: t(lang, "Pa", "No") }, { text: t(lang, "kod.", "code."), grad: true }], [{ text: t(lang, "Pa", "No") }, { text: t(lang, "stres.", "stress."), grad: true }]] },
+  { from: 190, dur: 55, kind: "type", eyebrow: t(lang, "Nga Instagrami në dyqan", "From Instagram to a shop"), lines: [[{ text: t(lang, "Pa", "No") }, { text: t(lang, "kod.", "code."), grad: true }], [{ text: t(lang, "Pa", "No") }, { text: t(lang, "stres.", "stress."), grad: true }]] },
   { from: 245, dur: 80, kind: "ui", url: "vela.al/products", variant: "iris", cap: t(lang, "14 produkte — emra, çmime, kategori, vetë", "14 products — names, prices, categories, automatically"), body: () => <Shot src="hero/products.png" /> },
   { from: 325, dur: 80, kind: "ui", url: "vela.al/dyqani-yt", variant: "tilt", cap: t(lang, "Vitrina jote, live", "Your storefront, live"), body: () => <Shot src="hero/storefront-custom.png" /> },
   {
-    from: 405, dur: 105, kind: "ui", url: "vela.al/dyqani-yt", variant: "push", cap: t(lang, "Klientët blejnë vetë — pa mesazhe", "Customers buy on their own — no messages"),
+    from: 405, dur: 105, kind: "ui", url: "vela.al/dyqani-yt", variant: "wipe", cap: t(lang, "Klientët blejnë vetë — pa mesazhe", "Customers buy on their own — no messages"),
     body: () => <Shot src="hero/storefront-product.png" />,
     cursor: { points: [{ f: 10, x: at(0.5, 0.8).x, y: at(0.5, 0.8).y }, { f: 40, x: at(0.735, 0.4).x, y: at(0.735, 0.4).y }, { f: 70, x: at(0.735, 0.4).x, y: at(0.735, 0.4).y }], clickAt: 46 },
   },
-  { from: 510, dur: 55, kind: "type", lines: [[{ text: t(lang, "Pagesa", "Payments") }, { text: t(lang, "në", "in") }, { text: t(lang, "Lekë.", "Lek."), grad: true }]] },
+  { from: 510, dur: 55, kind: "type", eyebrow: t(lang, "Arkë e vërtetë", "A real checkout"), lines: [[{ text: t(lang, "Pagesa", "Payments") }, { text: t(lang, "në", "in") }, { text: t(lang, "Lekë.", "Lek."), grad: true }]] },
   {
-    from: 565, dur: 85, kind: "ui", url: "vela.al/checkout", variant: "iris", cap: t(lang, "Arkë e vërtetë — kartë ose para në dorë", "A real checkout — card or cash"),
+    from: 565, dur: 85, kind: "ui", url: "vela.al/checkout", variant: "flip", cap: t(lang, "Arkë e vërtetë — kartë ose para në dorë", "A real checkout — card or cash"),
     body: () => <Shot src="hero/storefront-checkout.png" />,
     cursor: { points: [{ f: 14, x: at(0.5, 0.72).x, y: at(0.5, 0.72).y }, { f: 42, x: at(0.794, 0.431).x, y: at(0.794, 0.431).y }, { f: 68, x: at(0.794, 0.431).x, y: at(0.794, 0.431).y }], clickAt: 48 },
   },
   { from: 650, dur: 80, kind: "ui", url: "vela.al/orders", variant: "lift", cap: t(lang, "Porositë mbërrijnë në panel, live", "Orders land in your panel, live"), body: () => <Shot src="hero/orders.png" /> },
-  { from: 730, dur: 55, kind: "type", lines: [[{ text: t(lang, "Ti", "You") }, { text: t(lang, "fle.", "sleep.") }], [{ text: t(lang, "Dyqani", "The shop") }, { text: t(lang, "shet.", "sells."), grad: true }]] },
+  { from: 730, dur: 55, kind: "type", eyebrow: t(lang, "Pa ndalim", "Never off"), lines: [[{ text: t(lang, "Ti", "You") }, { text: t(lang, "fle.", "sleep.") }], [{ text: t(lang, "Dyqani", "The shop") }, { text: t(lang, "shet.", "sells."), grad: true }]] },
   { from: 785, dur: 75, kind: "ui", url: "vela.al/dashboard", variant: "scale", cap: t(lang, "Të ardhurat rriten — vetë", "Revenue grows — on its own"), body: () => <Shot src="hero/dashboard.png" /> },
 ];
 
@@ -310,12 +350,21 @@ const BeatShell: React.FC<{ local: number; dur: number; variant: Variant; childr
   } else if (variant === "tilt") {
     transform = `perspective(1400px) rotateX(${(1 - eIn) * 16}deg) rotateY(${-(1 - eIn) * 8 + eOut * 6}deg) scale(${0.96 + eIn * 0.04})`;
     blur = (1 - eIn) * 3 + eOut * 5;
+  } else if (variant === "wipe") {
+    // gradient-edge reveal, left → right; exits by wiping off the same way
+    clipPath = `inset(0 ${(1 - eIn) * 100}% 0 ${eOut * 100}%)`;
+    transform = `translateX(${(1 - eIn) * 3 - eOut * 3}%)`;
+    blur = eOut * 3;
+  } else if (variant === "flip") {
+    // 3D page turn
+    transform = `perspective(1600px) rotateY(${(1 - eIn) * 52 - eOut * 44}deg) scale(${0.94 + eIn * 0.06})`;
+    blur = (1 - eIn) * 3 + eOut * 4;
   } else {
     transform = `scale(${1.08 - eIn * 0.08 + eOut * 0.06})`;
     blur = (1 - eIn) * 6 + eOut * 5;
   }
   return (
-    <div style={{ position: "absolute", inset: 0, opacity: eIn * (1 - eOut), transform, transformOrigin: "50% 60%", clipPath, filter: blur > 0.4 ? `blur(${blur}px)` : undefined }}>
+    <div style={{ position: "absolute", inset: 0, opacity: eIn * (1 - eOut), transform, transformOrigin: variant === "flip" ? "12% 50%" : "50% 60%", clipPath, filter: blur > 0.4 ? `blur(${blur}px)` : undefined }}>
       {children}
     </div>
   );
@@ -353,7 +402,12 @@ export const HeroFilm: React.FC<z.infer<typeof heroFilmSchema>> = ({ lang, trans
 
       <div style={{ opacity: 1 - loopOut }}>
         {windowPresence > 0.01 && (
-          <Window url={activeUi?.url ?? "vela.al"} frame={frame} presence={windowPresence}>
+          <Window
+            url={activeUi?.url ?? "vela.al"}
+            frame={frame}
+            presence={windowPresence}
+            progress={activeUi ? (frame - activeUi.from) / activeUi.dur : 0}
+          >
             {beats.filter((b) => b.kind === "ui").map((b, i) => {
               const l = frame - b.from;
               if (l < -14 || l >= b.dur + 2) return null;
@@ -370,7 +424,7 @@ export const HeroFilm: React.FC<z.infer<typeof heroFilmSchema>> = ({ lang, trans
         {beats.filter((b) => b.kind === "type").map((b, i) => {
           const l = frame - b.from;
           if (l < 0 || l >= b.dur) return null;
-          return <TypeBeat key={`ty${i}`} local={l} dur={b.dur} lines={b.lines!} />;
+          return <TypeBeat key={`ty${i}`} local={l} dur={b.dur} lines={b.lines!} eyebrow={b.eyebrow} />;
         })}
 
         {beats.map((b, i) => {
@@ -385,27 +439,56 @@ export const HeroFilm: React.FC<z.infer<typeof heroFilmSchema>> = ({ lang, trans
           return <Caption key={`t${i}`} text={b.cap} local={l} dur={b.dur} />;
         })}
 
-        {/* end card — glass panel so it reads over any page background */}
+        {/* end card — glass panel; ring pulses behind the icon (magic-rings
+            motif) + a landing-style gradient CTA pill with specular shine */}
         {frame >= endFrom && (
           <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", fontFamily: "'Clash Display', Inter, sans-serif" }}>
             <div
               style={{
+                position: "relative",
+                overflow: "hidden",
                 opacity: endS,
                 transform: `translateY(${(1 - endS) * 40}px) scale(${0.92 + endS * 0.08})`,
                 textAlign: "center",
                 background: "rgba(26,14,18,0.62)",
                 border: "1px solid rgba(255,255,255,0.14)",
                 borderRadius: 44,
-                padding: "56px 110px",
+                padding: "50px 110px 54px",
                 boxShadow: "0 60px 160px -50px rgba(20,10,14,0.7), inset 0 1px 0 rgba(255,255,255,0.1)",
               }}
             >
-              <Img src={staticFile("vela-icon.svg")} style={{ width: 108, height: 108, margin: "0 auto", borderRadius: 28, boxShadow: "0 30px 80px -25px rgba(255,46,77,0.5)" }} />
-              <div style={{ marginTop: 26, fontSize: 72, fontWeight: 700, letterSpacing: "-0.02em", color: "#fff" }}>
+              <div style={{ position: "relative", width: 108, height: 108, margin: "0 auto" }}>
+                {[0, 1].map((r) => {
+                  const p = ((frame - endFrom) / 40 + r * 0.5) % 1;
+                  return (
+                    <span key={r} style={{ position: "absolute", inset: 0, borderRadius: 32, border: `2px solid ${r ? BRAND.gold : BRAND.neon}`, opacity: (1 - p) * 0.55, transform: `scale(${1 + p * 0.85})` }} />
+                  );
+                })}
+                <Img src={staticFile("vela-icon.svg")} style={{ width: 108, height: 108, borderRadius: 28, boxShadow: "0 30px 80px -25px rgba(255,46,77,0.5)" }} />
+              </div>
+              <div style={{ marginTop: 24, fontSize: 72, fontWeight: 700, letterSpacing: "-0.02em", color: "#fff" }}>
                 Dyqani yt. <span style={{ background: "linear-gradient(100deg,#FACC15 5%,#F59E0B 30%,#FF2E4D 70%,#FF5A73 95%)", WebkitBackgroundClip: "text", color: "transparent" }}>Online.</span>
               </div>
-              <div style={{ marginTop: 10, fontSize: 25, color: "rgba(255,255,255,0.72)", fontFamily: "Inter, sans-serif" }}>
-                {t(lang, "Provo falas 7 ditë · pa kartë", "Try free for 7 days · no card")}
+              {(() => {
+                const cta = sp(frame, endFrom + 16, 12);
+                const shine = interpolate(frame, [endFrom + 30, endFrom + 48], [-40, 140], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
+                return (
+                  <div
+                    style={{
+                      position: "relative", overflow: "hidden", display: "inline-flex", alignItems: "center", gap: 12,
+                      marginTop: 24, padding: "16px 44px", borderRadius: 999, background: GRAD, color: "#fff",
+                      fontSize: 26, fontWeight: 700, letterSpacing: "-0.01em",
+                      boxShadow: "0 24px 60px -18px rgba(255,46,77,0.55)",
+                      opacity: cta, transform: `translateY(${(1 - cta) * 22}px) scale(${0.94 + cta * 0.06})`,
+                    }}
+                  >
+                    <span style={{ position: "absolute", top: -10, bottom: -10, left: `${shine}%`, width: "26%", transform: "skewX(-14deg)", background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.55) 50%, transparent)" }} />
+                    {t(lang, "Fillo falas", "Start free")} <span style={{ fontFamily: "Inter, sans-serif" }}>→</span>
+                  </div>
+                );
+              })()}
+              <div style={{ marginTop: 14, fontSize: 22, color: "rgba(255,255,255,0.72)", fontFamily: "Inter, sans-serif" }}>
+                {t(lang, "7 ditë falas · pa kartë krediti", "7 days free · no credit card")}
               </div>
             </div>
           </AbsoluteFill>
