@@ -46,7 +46,6 @@ const Calculator = lazy(() => import("@/components/landing/Calculator"));
 // React Bits effects (brand-adapted at the call sites; sources in landing/fx/)
 import SpecularButton from "@/components/landing/fx/SpecularButton";
 import Waves from "@/components/landing/fx/Waves";
-import TextPressure from "@/components/landing/fx/TextPressure";
 import ScrollVelocity from "@/components/landing/fx/ScrollVelocity";
 import StaggeredMenu from "@/components/landing/fx/StaggeredMenu";
 import BorderGlow from "@/components/landing/fx/BorderGlow";
@@ -886,20 +885,6 @@ export default function Landing() {
         <MomentumBand lang={lang} />
       </Suspense>
 
-      {/* ── Text-pressure divider (React Bits) — the wordmark reacts to the cursor.
-            Inner padding gives the variable-width glyphs room to swell without
-            clipping at the container edges. ── */}
-      <section aria-hidden className="overflow-hidden px-5 pt-16 sm:pt-24">
-        <div className="reveal mx-auto h-[clamp(70px,14vw,170px)] max-w-6xl px-[5%]">
-          <TextPressure
-            text={lang === "sq" ? "DYQANI YT" : "YOUR SHOP"}
-            textColor={dark ? "#F5F3F6" : "#2A1D22"}
-            italic={false}
-            scale
-            minFontSize={24}
-          />
-        </div>
-      </section>
 
       {/* ── Comparison — Instagram / Shopify / Vela (GSAP) ── */}
       <Suspense fallback={<div className="h-[500px]" />}>
