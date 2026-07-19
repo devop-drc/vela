@@ -57,6 +57,16 @@ const ImageTrail = lazy(() => import("@/components/landing/fx/ImageTrail"));
 gsap.registerPlugin(ScrollTrigger);
 
 const BRAND = "brand-gradient";
+
+// Scroll lock for the mobile menu. The CSS class blocks native (touch)
+// scrolling, but Lenis scrolls the window PROGRAMMATICALLY on wheel — which
+// ignores overflow:hidden — so the instance must be stopped too.
+let activeLenis: Lenis | null = null;
+const lockMenuScroll = (lock: boolean) => {
+  document.documentElement.classList.toggle("ls-menu-lock", lock);
+  if (lock) activeLenis?.stop();
+  else activeLenis?.start();
+};
 // Gradient text uses the same fluid blob mesh as .brand-gradient —
 // the motion itself is the effect, so no extra shimmer layers.
 const GradientText = ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -227,6 +237,8 @@ const LandingNav = ({ active, copy, dark, onToggleTheme, lang, onSetLang }: NavP
           displayItemNumbering={false}
           menuLabel={lang === "sq" ? "Meny" : "Menu"}
           closeLabel={lang === "sq" ? "Mbyll" : "Close"}
+          onMenuOpen={() => lockMenuScroll(true)}
+          onMenuClose={() => lockMenuScroll(false)}
           items={links.map((l) => ({ label: l.label, ariaLabel: l.label, link: l.href }))}
           panelBrand={
             <div className="flex items-center gap-3">
@@ -240,12 +252,14 @@ const LandingNav = ({ active, copy, dark, onToggleTheme, lang, onSetLang }: NavP
               <div className="grid grid-cols-2 gap-2.5">
                 <Link
                   to="/login"
+                  onClick={() => lockMenuScroll(false)}
                   className="grid place-items-center rounded-full border border-border bg-card px-4 py-3 text-[15px] font-semibold text-foreground"
                 >
                   {copy.nav.login}
                 </Link>
                 <Link
                   to="/register"
+                  onClick={() => lockMenuScroll(false)}
                   className={cn("grid place-items-center rounded-full px-4 py-3 text-[15px] font-semibold text-white", BRAND)}
                 >
                   {copy.nav.cta}
@@ -560,6 +574,7 @@ export default function Landing() {
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const lenis = new Lenis({ duration: 1.15 });
+    activeLenis = lenis;
     lenis.on("scroll", ScrollTrigger.update);
     const tick = (time: number) => lenis.raf(time * 1000);
     gsap.ticker.add(tick);
@@ -578,6 +593,7 @@ export default function Landing() {
     return () => {
       document.removeEventListener("click", onClick);
       gsap.ticker.remove(tick);
+      activeLenis = null;
       lenis.destroy();
     };
   }, []);

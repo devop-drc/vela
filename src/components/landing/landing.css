@@ -284,6 +284,26 @@
    fit a small phone without scrolling */
 .landing .sm-scope .sm-panel-item { font-size: clamp(1.55rem, 6.4vw, 2.2rem); }
 .landing .sm-scope .sm-panel-list { gap: 0.8rem; }
+/* The page must not scroll behind the open menu (Landing toggles this class).
+   Scoped to mobile widths so a stray lock can never freeze the desktop page. */
+@media (max-width: 1023.98px) {
+  html.ls-menu-lock, html.ls-menu-lock body { overflow: hidden; }
+}
+/* Phones: the wine prelayer sweep must cover the full-width panel (the
+   component's own media query widens only the panel, not the prelayers) */
+@media (max-width: 639px) {
+  .landing .sm-scope .sm-prelayers { width: 100%; }
+}
+/* Short viewports (landscape phones): compact everything so nothing scrolls */
+@media (max-height: 500px) {
+  .landing .sm-scope .staggered-menu-panel { padding-top: 0.75rem; padding-bottom: 0.9rem; }
+  .landing .sm-scope .sm-panel-brand { min-height: 32px; }
+  .landing .sm-scope .sm-panel-item { font-size: 1.3rem; }
+  .landing .sm-scope .sm-panel-list { gap: 0.45rem; }
+  .landing .sm-scope .sm-panel-inner { gap: 0.6rem; }
+  .landing .sm-scope .sm-panel-footer .grid { padding: 0; }
+  .landing .sm-scope .sm-panel-footer a { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+}
 /* Panel brand row lines up with the navbar's logo position */
 .landing .sm-scope .sm-panel-brand { min-height: 44px; padding-left: 2px; }
 /* Tablets (640–1023px): a right-side drawer reads better than a full-width
