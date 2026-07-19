@@ -24,7 +24,7 @@ export default function ComparisonTable({ lang }: { lang: Lang }) {
 
   const rows: { label: string; ig: Cell; shop: Cell; vela: Cell }[] = [
     { label: t(lang, "Pa website, pa kod", "No website, no code"), ig: false, shop: false, vela: true },
-    { label: t(lang, "Postime → produkte me AI", "Posts → products with AI"), ig: false, shop: false, vela: true },
+    { label: t(lang, "Postime → produkte me sistemin", "Posts → products with the system"), ig: false, shop: false, vela: true },
     { label: t(lang, "Vitrinë e personalizueshme", "Custom storefront"), ig: false, shop: true, vela: true },
     { label: t(lang, "Kartë në Lekë (RaiAccept)", "Card in Lek (RaiAccept)"), ig: false, shop: "partial", vela: true },
     { label: t(lang, "Para në dorë", "Cash on delivery"), ig: "partial", shop: "partial", vela: true },
@@ -65,13 +65,13 @@ export default function ComparisonTable({ lang }: { lang: Lang }) {
           </div>
           <div className="relative overflow-hidden rounded-3xl border border-border bg-card/70 backdrop-blur">
             {/* Vela column highlight — contained to the table body (no runaway height). */}
-            <div className="ct-vela pointer-events-none absolute inset-y-0 right-0 z-0 w-[calc(25%-0.375rem)] bg-gradient-to-b from-fuchsia-500/[0.14] to-fuchsia-500/[0.03] ring-1 ring-inset ring-fuchsia-400/25 sm:w-[calc(25%-0.5rem)]" aria-hidden />
+            <div className="ct-vela pointer-events-none absolute inset-y-0 right-0 z-0 w-[calc(25%-0.375rem)] bg-gradient-to-b from-red-500/[0.14] to-red-500/[0.03] ring-1 ring-inset ring-red-400/25 sm:w-[calc(25%-0.5rem)]" aria-hidden />
             {rows.map((r, i) => (
               <div key={i} className={`ct-row relative z-10 grid grid-cols-[1.4fr_1fr_1fr_1fr] items-center gap-1.5 px-2.5 py-3.5 sm:grid-cols-[1.6fr_1fr_1fr_1fr] sm:gap-2 sm:px-4 ${i < rows.length - 1 ? "border-b border-border" : ""}`}>
                 <div className="text-[12.5px] font-medium leading-snug text-foreground sm:text-[15px]">{r.label}</div>
                 <div className="text-center">{cell(r.ig)}</div>
                 <div className="text-center">{cell(r.shop)}</div>
-                <div className="rounded-xl bg-fuchsia-500/[0.06] py-1 text-center">{cell(r.vela)}</div>
+                <div className="rounded-xl bg-red-500/[0.06] py-1 text-center">{cell(r.vela)}</div>
               </div>
             ))}
           </div>

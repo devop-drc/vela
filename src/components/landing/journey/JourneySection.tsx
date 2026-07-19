@@ -114,7 +114,7 @@ export default function JourneySection({ copy }: { copy: LandingCopy }) {
                 className={cn(
                   "w-full rounded-xl border px-3.5 py-2.5 text-left transition-all",
                   isActive
-                    ? "border-fuchsia-500/40 bg-fuchsia-500/5 shadow-sm"
+                    ? "border-red-500/40 bg-red-500/5 shadow-sm"
                     : "border-transparent hover:border-border hover:bg-card"
                 )}
               >

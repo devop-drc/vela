@@ -97,7 +97,7 @@ export function ShinyText({ children, className }: { children: ReactNode; classN
 export function SpotlightCard({
   children,
   className,
-  spotColor = "rgba(217, 70, 239, 0.14)",
+  spotColor = "rgba(255, 46, 77, 0.14)",
 }: {
   children: ReactNode;
   className?: string;
@@ -253,7 +253,7 @@ export function Particles({ className, count = 60, dark = true }: { className?: 
           p.hue === 0
             ? (dark ? `rgba(255,255,255,${alpha})` : `rgba(71,60,105,${alpha})`)
             : p.hue === 300
-              ? (dark ? `rgba(232,121,249,${alpha})` : `rgba(192,38,211,${alpha})`)
+              ? (dark ? `rgba(232,121,249,${alpha})` : `rgba(220,38,38,${alpha})`)
               : (dark ? `rgba(251,191,36,${alpha})` : `rgba(217,119,6,${alpha})`);
         ctx.fill();
       }

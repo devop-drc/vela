@@ -4,10 +4,9 @@ import { useTranslation } from "react-i18next";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
-import Marquee from "react-fast-marquee";
 import {
   Instagram, Sparkles, ShoppingBag, ArrowRight, Check, Wand2,
-  Package, BarChart3, CreditCard, Menu, X, Lock, Search,
+  Package, BarChart3, CreditCard, Lock, Search,
   TrendingUp, Bell, Sun, Moon, Mail, Send, Gift, Star, ShieldCheck,
 } from "lucide-react";
 import {
@@ -28,14 +27,14 @@ import { useReveal } from "@/components/landing/useReveal";
 import { VelaMark } from "@/components/landing/VelaMark";
 import { Counter, Magnetic, prefersReducedMotion } from "@/components/landing/anim";
 import {
-  SplitText, BlurText, ShinyText, SpotlightCard, Tilted, StarBorder, Particles, CircularText,
+  SplitText, BlurText, ShinyText, SpotlightCard, Tilted, StarBorder, CircularText,
 } from "@/components/landing/bits";
 import { en, sq, type LandingCopy } from "@/components/landing/copy";
 import "@/components/landing/landing.css";
 
 // Remotion film — heavy, so it loads only when its section is reached. One
 // combined motion graphic serves both the hero and the "how it works" section.
-const HeroSplit = lazy(() => import("@/components/landing/story/StoryHero"));
+import HeroFilmVideo from "@/components/landing/HeroFilmVideo";
 const SplashScreen = lazy(() => import("@/components/landing/SplashScreen"));
 const MomentumBand = lazy(() => import("@/components/landing/MomentumBand"));
 const ComparisonTable = lazy(() => import("@/components/landing/ComparisonTable"));
@@ -44,6 +43,16 @@ const TrustStrip = lazy(() => import("@/components/landing/TrustStrip"));
 const HowItWorks = lazy(() => import("@/components/landing/HowItWorks"));
 const FeatureShowcase = lazy(() => import("@/components/landing/FeatureShowcase"));
 const Calculator = lazy(() => import("@/components/landing/Calculator"));
+// React Bits effects (brand-adapted at the call sites; sources in landing/fx/)
+import SpecularButton from "@/components/landing/fx/SpecularButton";
+import Waves from "@/components/landing/fx/Waves";
+import TextPressure from "@/components/landing/fx/TextPressure";
+import ScrollVelocity from "@/components/landing/fx/ScrollVelocity";
+import StaggeredMenu from "@/components/landing/fx/StaggeredMenu";
+import BorderGlow from "@/components/landing/fx/BorderGlow";
+import ScrollReveal from "@/components/landing/fx/ScrollReveal";
+const MagicRings = lazy(() => import("@/components/landing/fx/MagicRings"));
+const ImageTrail = lazy(() => import("@/components/landing/fx/ImageTrail"));
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -63,7 +72,7 @@ const CAT_ICONS = [
   RiHandbagLine, RiCake3Line, RiPaletteLine, RiBearSmileLine, RiHeartPulseLine, RiCameraLensLine,
 ];
 const CAT_TINTS = [
-  "bg-fuchsia-500/12 text-fuchsia-500",
+  "bg-red-500/12 text-red-500",
   "bg-amber-500/12 text-amber-500",
   "bg-pink-500/12 text-pink-500",
   "bg-violet-500/12 text-violet-500",
@@ -99,9 +108,24 @@ interface NavProps {
   onSetLang: (l: "sq" | "en") => void;
 }
 
+/** Mounts children only while the wrapper is near the viewport — keeps WebGL
+    canvases (three.js rings, waves, ogl buttons' fx) from animating forever
+    after the user scrolls past them. */
+const WhenNear = ({ children, className, rootMargin = "240px" }: { children: React.ReactNode; className?: string; rootMargin?: string }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setNear(e.isIntersecting), { rootMargin });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [rootMargin]);
+  return <div ref={ref} className={className}>{near ? children : null}</div>;
+};
+
 const LandingNav = ({ active, copy, dark, onToggleTheme, lang, onSetLang }: NavProps) => {
   const [scrolled, setScrolled] = useState(false);
-  const [open, setOpen] = useState(false);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
     onScroll();
@@ -184,26 +208,29 @@ const LandingNav = ({ active, copy, dark, onToggleTheme, lang, onSetLang }: NavP
                 {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </span>
             </button>
-            <button onClick={() => setOpen((v) => !v)} aria-label="Menu" className="grid h-10 w-10 place-items-center">
-              {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
+            {/* React Bits StaggeredMenu supplies the burger + full-screen panel on mobile */}
           </div>
         </nav>
+      </div>
 
-        {open && (
-          <div className="mt-2 rounded-2xl border border-border bg-background/95 px-5 py-4 backdrop-blur-xl lg:hidden">
-            <div className="flex flex-col gap-3">
-              {links.map((l) => (
-                <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="text-sm text-muted-foreground">{l.label}</a>
-              ))}
-              <LangSwitch className="self-start" />
-              <div className="mt-1 flex gap-2">
-                <Button asChild variant="outline" size="sm" className="flex-1"><Link to="/login">{copy.nav.login}</Link></Button>
-                <Button asChild size="sm" className={cn("flex-1 text-white", BRAND)}><Link to="/register">{copy.nav.cta}</Link></Button>
-              </div>
-            </div>
-          </div>
-        )}
+      {/* Mobile nav — React Bits StaggeredMenu (fixed overlay; toggle sits in the navbar row) */}
+      <div className="lg:hidden">
+        <StaggeredMenu
+          isFixed
+          position="right"
+          colors={["#7F1D3B", "#A31234"]}
+          accentColor="#FF2E4D"
+          menuButtonColor={dark ? "#F5F3F6" : "#2A1D22"}
+          openMenuButtonColor="#2A1D22"
+          logoUrl="/vela-icon.svg"
+          displaySocials={false}
+          displayItemNumbering={false}
+          items={[
+            ...links.map((l) => ({ label: l.label, ariaLabel: l.label, link: l.href })),
+            { label: copy.nav.login, ariaLabel: copy.nav.login, link: "/login" },
+            { label: copy.nav.cta, ariaLabel: copy.nav.cta, link: "/register" },
+          ]}
+        />
       </div>
     </header>
   );
@@ -229,7 +256,7 @@ const ProductTile = ({ p, tiny }: { p: Screen["products"][number]; tiny?: boolea
 const BrowserMock = ({ screen, iframeOn }: { screen: Screen; iframeOn: boolean }) => {
   const [ready, setReady] = useState(false);
   return (
-    <div className="w-[620px] max-w-[94vw] overflow-hidden rounded-2xl border border-border bg-background shadow-2xl shadow-fuchsia-900/10">
+    <div className="w-[620px] max-w-[94vw] overflow-hidden rounded-2xl border border-border bg-background shadow-2xl shadow-red-900/10">
       <div className="flex items-center gap-2 border-b border-border bg-card px-4 py-2.5">
         <span className="h-2.5 w-2.5 rounded-full bg-red-400/80" />
         <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
@@ -409,7 +436,7 @@ const BentoArt = ({ index, screen }: { index: number; screen: Screen }) => {
       <div className="pointer-events-none absolute right-7 top-1/2 hidden -translate-y-1/2 items-center gap-2.5 lg:flex">
         <span className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm"><Instagram className="h-4 w-4" /></span>
         <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/50" />
-        <span className={cn("grid h-10 w-10 place-items-center rounded-xl text-white shadow-lg shadow-fuchsia-500/25", BRAND)}><Sparkles className="h-4 w-4" /></span>
+        <span className={cn("grid h-10 w-10 place-items-center rounded-xl text-white shadow-lg shadow-red-500/25", BRAND)}><Sparkles className="h-4 w-4" /></span>
         <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/50" />
         <div className="w-[120px] rounded-xl border border-border bg-card p-2 shadow-sm">
           <div className="text-[10px] font-semibold">{screen.products[0].name}</div>
@@ -423,7 +450,7 @@ const BentoArt = ({ index, screen }: { index: number; screen: Screen }) => {
     // Payment card
     return (
       <div className="pointer-events-none absolute right-7 top-1/2 hidden -translate-y-1/2 lg:block">
-        <div className={cn("ls-float h-[92px] w-[150px] rounded-xl p-3 text-white shadow-lg shadow-fuchsia-500/25", BRAND)}>
+        <div className={cn("ls-float h-[92px] w-[150px] rounded-xl p-3 text-white shadow-lg shadow-red-500/25", BRAND)}>
           <div className="flex items-center justify-between">
             <span className="h-5 w-7 rounded bg-white/30" />
             <CreditCard className="h-4 w-4 text-white/80" />
@@ -461,6 +488,23 @@ export default function Landing() {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const rootRef = useRef<HTMLDivElement>(null);
+  // Decorative React Bits effects are skipped entirely for reduced-motion users.
+  const reduceFx = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Scroll-perf: gradient background animations repaint every frame, so pause
+  // every animated-gradient element while it is offscreen (measured 3× fps).
+  useEffect(() => {
+    const rootEl = rootRef.current;
+    if (!rootEl) return;
+    const els = rootEl.querySelectorAll<HTMLElement>(".brand-gradient, .brand-text, .grad-border, .ls-outline-text .fill");
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((e) => { (e.target as HTMLElement).style.animationPlayState = e.isIntersecting ? "running" : "paused"; }),
+      { rootMargin: "160px" },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i18n.language]);
   const [annual, setAnnual] = useState(true);
   const [activeSection, setActiveSection] = useState("");
   const [splash, setSplash] = useState(() => {
@@ -478,13 +522,8 @@ export default function Landing() {
     w: typeof window !== "undefined" ? window.innerWidth : 1440,
     h: typeof window !== "undefined" ? window.innerHeight : 900,
   }));
-  // The hero motion graphic only lives in the hero on roomy desktops; on short,
-  // tall or mobile screens it drops to its own "how it works" section so the
-  // hero itself always fits perfectly.
-  const filmInHero = vp.w >= 1024 && vp.h >= 760;
-  // The walkthrough film is desktop-shaped; always render it landscape (it
-  // scales to fit its container width on smaller screens).
-  const filmLayout: "landscape" | "portrait" = "landscape";
+  // (The hero film is a plain <video> now — cheap enough to ship on every
+  //  viewport, so the old filmInHero gating is gone.)
 
   // Lenis inertia scrolling, driven by GSAP's ticker and feeding
   // ScrollTrigger so scrubbed animations stay in sync. Anchor links glide
@@ -619,7 +658,7 @@ export default function Landing() {
 
       // CTA panel: subtle breathing glow
       gsap.to(".cta-panel", {
-        boxShadow: "0 0 90px -20px rgba(217,70,239,0.55)", duration: 2.2, ease: "sine.inOut", yoyo: true, repeat: -1,
+        boxShadow: "0 0 90px -20px rgba(255,46,77,0.55)", duration: 2.2, ease: "sine.inOut", yoyo: true, repeat: -1,
         scrollTrigger: { trigger: ".cta-panel", start: "top 85%" },
       });
     }, rootRef);
@@ -649,60 +688,84 @@ export default function Landing() {
       <section className="relative flex min-h-[100svh] flex-col overflow-hidden">
         <div className="ls-mesh" />
         <div className="ls-grid pointer-events-none absolute inset-0" />
-        <Particles className="pointer-events-none absolute inset-0 h-full w-full" count={70} dark={dark} />
-        <div className={cn("ls-aurora pointer-events-none absolute -top-44 left-1/4 h-[480px] w-[580px] rounded-full blur-[130px]", dark ? "bg-fuchsia-600/20" : "bg-fuchsia-400/25")} />
-        <div className={cn("ls-aurora pointer-events-none absolute -top-24 right-1/4 h-[440px] w-[540px] rounded-full blur-[130px]", dark ? "bg-amber-500/10" : "bg-amber-300/25")} style={{ animationDelay: "-8s" }} />
+        {/* Magic rings + subtle waves replace the particle field (React Bits, brand
+            palette). WhenNear unmounts both once the hero scrolls away. */}
+        {!reduceFx && (
+          <WhenNear className="pointer-events-none absolute inset-0">
+            <Suspense fallback={null}>
+              <div className="pointer-events-none absolute inset-0 opacity-60 [&>div]:h-full [&>div]:w-full">
+                <MagicRings color="#FF2E4D" colorTwo="#F59E0B" ringCount={5} speed={0.5} opacity={dark ? 0.45 : 0.3} baseRadius={0.4} radiusStep={0.12} lineThickness={1.4} noiseAmount={0.14} fadeIn={1.2} />
+              </div>
+            </Suspense>
+            <Waves
+              lineColor={dark ? "rgba(255,46,77,0.08)" : "rgba(163,18,52,0.055)"}
+              className="pointer-events-none absolute inset-0"
+              xGap={18} yGap={46} waveAmpX={24} waveAmpY={11} waveSpeedX={0.0085} waveSpeedY={0.004}
+            />
+          </WhenNear>
+        )}
+        {/* aurora blobs v2 — three drifting, breathing pools (wine / neon / gold) */}
+        <div className={cn("ls-aurora pointer-events-none absolute -top-48 left-[16%] h-[520px] w-[620px] rounded-full blur-[140px]", dark ? "bg-red-600/25" : "bg-red-400/30")} />
+        <div className={cn("ls-aurora pointer-events-none absolute -top-20 right-[14%] h-[460px] w-[560px] rounded-full blur-[140px]", dark ? "bg-amber-500/[0.13]" : "bg-amber-300/30")} style={{ animationDelay: "-9s" }} />
+        <div className={cn("ls-aurora pointer-events-none absolute bottom-[-160px] left-[38%] h-[420px] w-[520px] rounded-full blur-[150px]", dark ? "bg-[#7F1D3B]/30" : "bg-[#FF2E4D]/15")} style={{ animationDelay: "-17s" }} />
 
-        {/* One step wider than the navbar's max-w-6xl (owner request) — still
-            close enough to read as the same column; the film's right-anchored
-            scale below is balanced against this width. */}
-        <div className="relative mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 items-center gap-8 px-4 pb-16 pt-28 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.55fr)] lg:gap-8 lg:pb-14 lg:pt-24">
-          {/* LEFT — copy (kept above the film via z-20 so it stays readable where the film slides under it) */}
-          <div className="relative z-20 mx-auto max-w-lg text-center lg:mx-0 lg:text-left">
-            <div className="hero-fade mb-7 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-4 py-1.5 text-sm backdrop-blur">
+        {/* Hero content — mobile-first: a clean column (badge → headline → sub →
+            CTAs → film) sized against the DYNAMIC viewport height; from lg the
+            copy and film sit side by side in balanced columns that never
+            overlap. The film always ships (it's a cheap <video> now). */}
+        <div className="relative mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-center gap-8 px-5 pb-[max(3.5rem,env(safe-area-inset-bottom))] pt-24 sm:gap-10 lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-center lg:gap-12 lg:px-6 lg:pb-16 lg:pt-24">
+          {/* copy */}
+          <div className="relative z-10 w-full max-w-xl text-center lg:max-w-none lg:text-left">
+            <div className="hero-fade mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-4 py-1.5 text-sm backdrop-blur sm:mb-7">
               <span className={cn("h-2 w-2 rounded-full", BRAND)} />
               <ShinyText>{copy.hero.badge}</ShinyText>
             </div>
 
-            <h1 className="text-[2.5rem] leading-[1.05] tracking-tight sm:text-[3.25rem] lg:text-[3rem] xl:text-[3.5rem]">
+            <h1 className="text-[clamp(2.1rem,8.5vw,2.6rem)] leading-[1.06] tracking-tight sm:text-[3.1rem] lg:text-[2.9rem] xl:text-[3.4rem]">
               <span className="block"><SplitText text={copy.hero.h1a} delay={0.15} /></span>
               <span className="block"><SplitText text={copy.hero.h1b} delay={0.35} /></span>
               <span className="hero-grad block"><GradientText>{copy.hero.h1c}</GradientText></span>
             </h1>
 
-            <p className="mt-6 text-lg text-muted-foreground sm:text-xl">
+            <p className="mx-auto mt-4 max-w-md text-base text-muted-foreground sm:mt-6 sm:text-xl lg:mx-0 lg:max-w-lg">
               <BlurText delay={0.7} text={copy.hero.sub} />
             </p>
 
-            <div className="hero-fade mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start">
+            <div className="hero-fade mt-6 flex flex-col items-center justify-center gap-3 sm:mt-8 sm:flex-row sm:gap-4 lg:justify-start">
               <Magnetic>
-                <StarBorder>
-                  <Button asChild size="lg" className={cn("h-12 gap-2 rounded-full px-8 text-base text-white hover:opacity-90", BRAND)}>
-                    <Link to="/register">{copy.hero.ctaPrimary} <ArrowRight className="h-4 w-4" /></Link>
-                  </Button>
-                </StarBorder>
+                {/* React Bits SpecularButton — glass CTA with a brand-gold rim light */}
+                <SpecularButton
+                  size="lg"
+                  radius={999}
+                  tint="#A31234"
+                  textColor="#ffffff"
+                  lineColor="#FFD84D"
+                  baseColor="#FF2E4D"
+                  intensity={1.1}
+                  followMouse={!reduceFx}
+                  backgroundClassName="brand-gradient"
+                  onClick={() => navigate("/register")}
+                  className="h-12 w-full font-semibold sm:w-auto"
+                >
+                  {copy.hero.ctaPrimary} <ArrowRight className="h-4 w-4" />
+                </SpecularButton>
               </Magnetic>
-              <Button asChild size="lg" variant="outline" className="h-12 rounded-full px-8 text-base">
+              <Button asChild size="lg" variant="outline" className="h-12 w-full rounded-full px-8 text-base sm:w-auto">
                 <Link to="/demo">{copy.hero.ctaSecondary}</Link>
               </Button>
             </div>
-            <p className="hero-fade mt-4 text-sm text-muted-foreground">
+            <p className="hero-fade mt-3.5 text-sm text-muted-foreground sm:mt-4">
               <Check className="mr-1 inline h-4 w-4 text-emerald-500" /> {copy.hero.risk}
             </p>
           </div>
 
-          {/* RIGHT — the story film, scaled up from its right edge. The composition has
-              transparent margins around the window, so this grows the window bigger while its
-              left edge stays clear of the copy; overflow-visible lets its drop-shadow breathe. */}
-          {filmInHero && (
-            <div className="relative z-0 w-full overflow-visible lg:origin-right lg:scale-[1.2]">
-              <Suspense fallback={<div className="aspect-[16/10] w-full rounded-[1.75rem] border border-border bg-card" />}>
-                <div className="hero-visual w-full">
-                  <HeroSplit copy={copy} lang={lang} dark={dark} layout="landscape" />
-                </div>
-              </Suspense>
+          {/* film — its own column; never slides under the copy */}
+          <div className="relative z-0 w-full max-w-2xl lg:max-w-none">
+            {/* pre-rendered hero film (see src/compositions/HeroFilm.tsx) */}
+            <div className="hero-visual w-full">
+              <HeroFilmVideo />
             </div>
-          )}
+          </div>
         </div>
 
         {/* fade into the next section */}
@@ -757,10 +820,40 @@ export default function Landing() {
         <FeatureShowcase lang={lang} />
       </Suspense>
 
+      {/* ── Scroll-velocity strip (React Bits) — momentum into the dark band ── */}
+      {!reduceFx && (
+        <section aria-hidden className="overflow-hidden border-y border-border/50 py-6 sm:py-8">
+          <ScrollVelocity
+            velocity={70}
+            numCopies={8}
+            className="font-display-brand font-semibold tracking-tight text-foreground/[0.08] text-[clamp(2.4rem,6vw,4.6rem)] leading-none"
+            texts={[
+              lang === "sq" ? "PA KOD · PAGESA NË LEKË · POROSITË LIVE · " : "NO CODE · PAYMENTS IN LEK · LIVE ORDERS · ",
+              lang === "sq" ? "PROVO FALAS 7 DITË · DYQANI YT ONLINE · " : "TRY FREE FOR 7 DAYS · YOUR SHOP ONLINE · ",
+            ]}
+          />
+        </section>
+      )}
+
       {/* ── Momentum band — "Ti fle. Vela shet." (dark, GSAP) ── */}
       <Suspense fallback={<div className="h-[400px] bg-[#0b0a0e]" />}>
         <MomentumBand lang={lang} />
       </Suspense>
+
+      {/* ── Text-pressure divider (React Bits) — the wordmark reacts to the cursor.
+            Inner padding gives the variable-width glyphs room to swell without
+            clipping at the container edges. ── */}
+      <section aria-hidden className="overflow-hidden px-5 pt-16 sm:pt-24">
+        <div className="reveal mx-auto h-[clamp(70px,14vw,170px)] max-w-6xl px-[5%]">
+          <TextPressure
+            text={lang === "sq" ? "DYQANI YT" : "YOUR SHOP"}
+            textColor={dark ? "#F5F3F6" : "#2A1D22"}
+            italic={false}
+            scale
+            minFontSize={24}
+          />
+        </div>
+      </section>
 
       {/* ── Comparison — Instagram / Shopify / Vela (GSAP) ── */}
       <Suspense fallback={<div className="h-[500px]" />}>
@@ -773,8 +866,29 @@ export default function Landing() {
       </Suspense>
 
       {/* ── Social proof & trust ── */}
-      <section id="reviews" className="px-5 py-14 sm:py-24 lg:py-32">
-        <div className="mx-auto max-w-6xl">
+      <section id="reviews" className="relative px-5 py-14 sm:py-24 lg:py-32">
+        {/* React Bits ImageTrail — product shots trail the cursor between the cards */}
+        {!reduceFx && (
+          <Suspense fallback={null}>
+            <div className="absolute inset-0 z-0 hidden overflow-hidden opacity-70 lg:block">
+              {/* multi-category product shots (tech / fashion / shoes / accessories / jewelry / home) */}
+              <ImageTrail
+                variant={1}
+                items={[
+                  "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=400&q=70",
+                  "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=400&q=70",
+                  "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=400&q=70",
+                  "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=400&q=70",
+                  "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=400&q=70",
+                  "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=400&q=70",
+                  "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=400&q=70",
+                  "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=400&q=70",
+                ]}
+              />
+            </div>
+          </Suspense>
+        )}
+        <div className="pointer-events-none relative z-10 mx-auto max-w-6xl [&_a]:pointer-events-auto [&_button]:pointer-events-auto [&_figure]:pointer-events-auto">
           <div className="reveal mx-auto max-w-2xl text-center">
             <Eyebrow>{copy.testimonials.title}</Eyebrow>
             <h2 className="text-3xl tracking-tight sm:text-[2.6rem] sm:leading-tight">
@@ -792,7 +906,7 @@ export default function Landing() {
                     "reveal ls-card relative rounded-3xl border bg-card p-7 transition-all duration-700",
                     floatClass,
                     active
-                      ? "-translate-y-1.5 border-fuchsia-500/40 shadow-[0_0_50px_-20px_rgba(217,70,239,0.5)]"
+                      ? "-translate-y-1.5 border-red-500/40 shadow-[0_0_50px_-20px_rgba(255,46,77,0.5)]"
                       : "border-border"
                   )}
                 >
@@ -860,7 +974,7 @@ export default function Landing() {
                 {copy.pricing.annual}
                 <span className={cn(
                   "rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none",
-                  annual ? "bg-primary-foreground/20 text-primary-foreground" : "bg-fuchsia-500/10 text-fuchsia-600"
+                  annual ? "bg-primary-foreground/20 text-primary-foreground" : "bg-red-500/10 text-red-600"
                 )}>
                   {copy.pricing.save}
                 </span>
@@ -871,16 +985,8 @@ export default function Landing() {
           <div className="mt-8 grid items-start gap-6 sm:mt-12 lg:grid-cols-3">
             {copy.pricing.plans.map((p) => {
               const featured = p.id === "pro";
-              return (
-                <SpotlightCard
-                  key={p.id}
-                  className={cn(
-                    "reveal ls-card relative flex flex-col rounded-3xl p-7",
-                    featured
-                      ? "grad-border shadow-[0_0_70px_-18px_rgba(217,70,239,0.4)] lg:-my-3 lg:py-10"
-                      : "border border-border bg-card"
-                  )}
-                >
+              const inner = (
+                <>
                   {featured && (
                     <span className={cn("absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3.5 py-1 text-xs font-medium text-white shadow-md", BRAND)}>{copy.pricing.popular}</span>
                   )}
@@ -893,7 +999,7 @@ export default function Landing() {
                     )}>
                       <div className="overflow-hidden">
                         <span className={cn(
-                          "plan-bonus inline-flex w-fit items-center gap-1.5 rounded-full bg-gradient-to-r from-fuchsia-500/10 to-amber-400/10 px-3 py-1 text-xs font-medium text-fuchsia-600 transition-transform duration-500",
+                          "plan-bonus inline-flex w-fit items-center gap-1.5 rounded-full bg-gradient-to-r from-red-500/10 to-amber-400/10 px-3 py-1 text-xs font-medium text-red-600 transition-transform duration-500",
                           annual ? "scale-100" : "scale-75"
                         )}>
                           <Gift className="h-3.5 w-3.5" /> {copy.pricing.saveMonths(ANNUAL_FREE_MONTHS[p.id] ?? 0)}
@@ -917,13 +1023,44 @@ export default function Landing() {
                       <li key={f} className="flex gap-2 text-sm"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" /> {f}</li>
                     ))}
                   </ul>
+                </>
+              );
+              // Featured plan keeps its animated grad-border identity; the
+              // others get the React Bits BorderGlow (cursor-tracked rim).
+              return featured ? (
+                <SpotlightCard
+                  key={p.id}
+                  className="reveal ls-card relative flex flex-col rounded-3xl p-7 grad-border shadow-[0_0_70px_-18px_rgba(255,46,77,0.4)] lg:-my-3 lg:py-10"
+                >
+                  {inner}
                 </SpotlightCard>
+              ) : (
+                <BorderGlow
+                  key={p.id}
+                  className="reveal"
+                  glowColor="351 92% 60%"
+                  backgroundColor="hsl(var(--card))"
+                  borderRadius={24}
+                  glowIntensity={0.85}
+                  animated
+                  colors={["#FF2E4D", "#F59E0B", "#A31234"]}
+                >
+                  <div className="relative flex flex-col p-7">{inner}</div>
+                </BorderGlow>
               );
             })}
           </div>
 
-          {/* trial reassurance — low friction to start, clear why to keep paying */}
-          <p className="reveal mx-auto mt-8 max-w-2xl text-center text-sm text-muted-foreground">{copy.pricing.reassure}</p>
+          {/* trial reassurance — React Bits ScrollReveal unblurs it word by word */}
+          <ScrollReveal
+            containerClassName="reveal mx-auto mt-8 max-w-2xl text-center"
+            textClassName="!text-sm !font-normal !leading-relaxed text-muted-foreground"
+            baseOpacity={0.15}
+            baseRotation={1.5}
+            blurStrength={3}
+          >
+            {copy.pricing.reassure}
+          </ScrollReveal>
 
           {/* contact — lives inside the pricing section so "talk to us" sits right
               where the plan decision happens; #interest kept for deep links */}
@@ -1010,16 +1147,38 @@ export default function Landing() {
       {/* ── Final CTA ── */}
       <section className="px-5 py-14 sm:py-24 lg:py-32">
         <div className={cn("cta-panel reveal relative mx-auto max-w-5xl overflow-hidden rounded-[2.5rem] px-6 py-14 text-center text-white sm:px-12 sm:py-20", BRAND)}>
-          <div className="cta-grid pointer-events-none absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)", backgroundSize: "42px 42px" }} />
-          <div className="ls-aurora pointer-events-none absolute -left-10 -top-10 h-60 w-60 rounded-full bg-white/20 blur-3xl" />
-          <div className="ls-aurora pointer-events-none absolute -bottom-10 -right-10 h-60 w-60 rounded-full bg-white/10 blur-3xl" style={{ animationDelay: "-6s" }} />
+          {/* React Bits MagicRings + Waves — the closing card breathes (unmounted offscreen) */}
+          {!reduceFx && (
+            <WhenNear className="pointer-events-none absolute inset-0">
+              <Suspense fallback={null}>
+                <div className="pointer-events-none absolute inset-0 opacity-50 [&>div]:h-full [&>div]:w-full">
+                  <MagicRings color="#FFD84D" colorTwo="#FF2E4D" ringCount={4} speed={0.6} opacity={0.5} baseRadius={0.5} radiusStep={0.14} lineThickness={1.2} noiseAmount={0.12} />
+                </div>
+              </Suspense>
+              <Waves lineColor="rgba(255,255,255,0.10)" className="pointer-events-none absolute inset-0" xGap={22} yGap={52} waveAmpX={20} waveAmpY={10} waveSpeedX={0.008} />
+            </WhenNear>
+          )}
           <img src="/ship-icon-white.svg" alt="" className="cta-zap relative mx-auto h-12 w-12" />
           <h2 className="relative mt-4 text-3xl tracking-tight sm:text-[2.6rem] sm:leading-tight">{copy.cta.title}</h2>
           <p className="relative mx-auto mt-3 max-w-xl text-lg text-white/90">{copy.cta.sub}</p>
           <Magnetic>
-            <Button asChild size="lg" className="relative mt-8 gap-2 rounded-full bg-white px-9 py-6 text-base font-semibold text-zinc-900 hover:bg-white/90 sm:mt-9">
-              <Link to="/register">{copy.cta.button} <ArrowRight className="h-4 w-4" /></Link>
-            </Button>
+            {/* React Bits SpecularButton — glass on the gradient, gold rim light */}
+            <SpecularButton
+              size="lg"
+              radius={999}
+              tint="#FFFFFF"
+              tintOpacity={0.16}
+              blur={10}
+              textColor="#ffffff"
+              lineColor="#FFD84D"
+              baseColor="#FFFFFF"
+              intensity={1.15}
+              followMouse={!reduceFx}
+              onClick={() => navigate("/register")}
+              className="relative mt-8 font-semibold sm:mt-9"
+            >
+              {copy.cta.button} <ArrowRight className="h-4 w-4" />
+            </SpecularButton>
           </Magnetic>
         </div>
       </section>

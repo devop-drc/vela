@@ -40,12 +40,17 @@ const Bare: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="absolute inset-0 flex flex-col items-center justify-center text-center">{children}</div>
 );
 
+/* Instagram-era gradients (commented for reference):
+   ring:    linear-gradient(45deg,#feda75,#fd1d1d,#d62976,#4f5bd5)
+   IG tile: linear-gradient(135deg,#feda75,#fd1d1d 30%,#d62976 52%,#962fbf 76%,#4f5bd5)
+   connect: linear-gradient(90deg,#d62976,#f0554d,#f59e6b)
+   spark:   #feda75 / #f0554d / #c77dff */
 /* spark mark (brand) for loading states */
 const Spark: React.FC<{ f: number; size?: number }> = ({ f, size = 30 }) => {
   const rot = interpolate(f, [0, 90], [0, 180]);
   return (
     <span style={{ display: "inline-block", transform: `rotate(${rot}deg)`, width: size, height: size }}>
-      <svg viewBox="0 0 24 24" width={size} height={size}><path d="M12 1v22M1 12h22M4.2 4.2l15.6 15.6M19.8 4.2L4.2 19.8" stroke="url(#g)" strokeWidth="2.4" strokeLinecap="round" /><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#feda75" /><stop offset="0.5" stopColor="#f76fae" /><stop offset="1" stopColor="#c77dff" /></linearGradient></defs></svg>
+      <svg viewBox="0 0 24 24" width={size} height={size}><path d="M12 1v22M1 12h22M4.2 4.2l15.6 15.6M19.8 4.2L4.2 19.8" stroke="url(#g)" strokeWidth="2.4" strokeLinecap="round" /><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#facc15" /><stop offset="0.5" stopColor="#ff2e4d" /><stop offset="1" stopColor="#a31234" /></linearGradient></defs></svg>
     </span>
   );
 };
@@ -58,7 +63,7 @@ const C_IgPost: React.FC<{ f: number; lang: Lang }> = ({ f, lang }) => {
   return (
     <Card pad="p-0">
       <div className="flex items-center gap-2.5 px-4 pb-3 pt-4">
-        <span className="grid h-9 w-9 place-items-center rounded-full p-[2px]" style={{ background: "linear-gradient(45deg,#feda75,#d62976,#4f5bd5)" }}><Img src={IG(DRESS)} className="h-full w-full rounded-full border-2 border-white object-cover" /></span>
+        <span className="grid h-9 w-9 place-items-center rounded-full p-[2px]" style={{ background: "linear-gradient(45deg,#facc15,#f59e0b,#ff2e4d,#7f1d3b)" }}><Img src={IG(DRESS)} className="h-full w-full rounded-full border-2 border-white object-cover" /></span>
         <div className="flex-1 leading-tight"><div className="text-[15px] font-semibold text-zinc-900">dyqani.yt</div><div className="text-[11px] text-zinc-400">Tiranë</div></div>
       </div>
       <Img src={IG(DRESS)} className="aspect-square w-full object-cover" />
@@ -83,7 +88,7 @@ const C_Dm: React.FC<{ f: number; lang: Lang }> = ({ f, lang }) => {
   ];
   return (
     <Card pad="p-5">
-      <div className="mb-3 flex items-center gap-2 border-b border-zinc-100 pb-3"><span className="grid h-8 w-8 place-items-center rounded-full p-[2px]" style={{ background: "linear-gradient(45deg,#feda75,#d62976,#4f5bd5)" }}><Img src={IG(DRESS)} className="h-full w-full rounded-full border-2 border-white object-cover" /></span><span className="text-[14px] font-semibold text-zinc-900">dyqani.yt</span></div>
+      <div className="mb-3 flex items-center gap-2 border-b border-zinc-100 pb-3"><span className="grid h-8 w-8 place-items-center rounded-full p-[2px]" style={{ background: "linear-gradient(45deg,#facc15,#f59e0b,#ff2e4d,#7f1d3b)" }}><Img src={IG(DRESS)} className="h-full w-full rounded-full border-2 border-white object-cover" /></span><span className="text-[14px] font-semibold text-zinc-900">dyqani.yt</span></div>
       <div className="flex flex-col gap-2.5">
         {msgs.map(([side, m], i) => { const s = pop(f, 10 + i * 18); return (
           <div key={i} className={`max-w-[78%] rounded-[20px] px-4 py-2.5 text-[15px] ${side === "out" ? "self-end rounded-br-md bg-zinc-900 text-white" : "self-start rounded-bl-md bg-zinc-100 text-zinc-800"}`} style={{ opacity: s, transform: `translateY(${(1 - s) * 10}px)` }}>{m}</div>
@@ -97,16 +102,16 @@ const C_Dm: React.FC<{ f: number; lang: Lang }> = ({ f, lang }) => {
 const C_Connect: React.FC<{ f: number; lang: Lang; done: boolean }> = ({ f, lang, done }) => (
   <Card pad="p-9">
     <div className="flex items-center gap-4">
-      <span className="grid h-16 w-16 place-items-center rounded-2xl text-white shadow-lg" style={{ background: "linear-gradient(135deg,#feda75,#d62976 45%,#962fbf 75%,#4f5bd5)" }}><Instagram className="h-8 w-8" /></span>
+      <span className="grid h-16 w-16 place-items-center rounded-2xl text-white shadow-lg" style={{ background: "linear-gradient(135deg,#facc15,#f59e0b 30%,#ff2e4d 52%,#a31234 76%,#7f1d3b)" }}><Instagram className="h-8 w-8" /></span>
       <div><div className="text-[24px] font-bold text-zinc-900">{t(lang, "Lidh Instagram-in", "Connect Instagram")}</div><div className="text-[15px] text-zinc-400">@dyqani.yt · 12 {t(lang, "postime", "posts")}</div></div>
     </div>
     <div className="mt-6 space-y-2.5">
-      {[t(lang, "Postimet → produkte me AI", "Posts → products with AI"), t(lang, "Çmime & variante vetë", "Prices & variants, auto"), t(lang, "Pagesa me kartë në Lekë", "Card payments in Lek")].map((s) => (
+      {[t(lang, "Postimet → produkte me sistemin", "Posts → products with the system"), t(lang, "Çmime & variante vetë", "Prices & variants, auto"), t(lang, "Pagesa me kartë në Lekë", "Card payments in Lek")].map((s) => (
         <div key={s} className="flex items-center gap-2.5 text-[16px] text-zinc-700"><span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500/15 text-emerald-600"><Check className="h-3.5 w-3.5" /></span>{s}</div>
       ))}
     </div>
     <div className="btn-connect relative mt-7 h-[54px]">
-      <div className="absolute inset-0 flex items-center justify-center gap-2 rounded-2xl text-[18px] font-bold text-white" style={{ background: "linear-gradient(90deg,#d62976,#f76fae,#f59e6b)", opacity: done ? 0 : 1 }}><Instagram className="h-5 w-5" /> {t(lang, "Lidhu", "Connect")}</div>
+      <div className="absolute inset-0 flex items-center justify-center gap-2 rounded-2xl text-[18px] font-bold text-white" style={{ background: "linear-gradient(90deg,#a31234,#ff2e4d,#f59e0b)", opacity: done ? 0 : 1 }}><Instagram className="h-5 w-5" /> {t(lang, "Lidhu", "Connect")}</div>
       <div className="absolute inset-0 flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 text-[18px] font-bold text-white" style={{ opacity: done ? 1 : 0, transform: `scale(${done ? 1 : 0.9})` }}><Check className="h-5 w-5" /> {t(lang, "U lidh", "Connected")}</div>
     </div>
   </Card>
@@ -153,14 +158,14 @@ const BARE = { w: 760, h: 200 };
 const CAP_TOP = WIN_CY + L.h / 2 + 34; // caption sits just below the (tallest) window, follows it
 
 const BEATS: Beat[] = [
-  { dur: 108, ...P, content: (f, l) => <C_IgPost f={f} lang={l} />, label: (l) => t(l, "Vetëm në Instagram: çdo shitje ngec në DM", "Instagram only: every sale stuck in DMs") },
+  { dur: 108, ...P, content: (f, l) => <C_IgPost f={f} lang={l} />, label: (l) => t(l, "Vetëm në Instagram: çdo shitje ngec në mesazhe", "Instagram only: every sale stuck in messages") },
   { dur: 108, ...P, content: (f, l) => <C_Dm f={f} lang={l} />, label: (l) => t(l, "Pa arkë. Pa pagesa online.", "No checkout. No online payments.") },
   { dur: 60, ...BARE, content: (f, l, d) => <C_Loading f={f} dark={d} text={t(l, "Ka një mënyrë më të mirë…", "There's a better way…")} /> },
   { dur: 114, w: 468, h: 470, content: (f, l) => <C_Connect f={f} lang={l} done={f > 52} />, label: (l) => t(l, "Lidh Instagram-in — një klik", "Connect Instagram — one click"), cursor: [{ t: 12, fx: 0.52, fy: 0.24 }, { t: 44, fx: 0.5, fy: 0.585 }, { t: 50, fx: 0.5, fy: 0.585, click: true }] },
-  { dur: 66, ...BARE, content: (f, l, d) => <C_Loading f={f} dark={d} text={t(l, "AI po ndërton dyqanin…", "AI is building your shop…")} /> },
+  { dur: 66, ...BARE, content: (f, l, d) => <C_Loading f={f} dark={d} text={t(l, "Sistemi po ndërton dyqanin…", "The system is building your shop…")} /> },
   { dur: 108, ...L, content: (f) => <Browser src={asset("hero/products.png")} f={f} />, label: (l) => t(l, "12 produkte — të gatshme vetë", "12 products — ready, automatically") },
   { dur: 108, ...L, content: (f) => <Browser src={asset("hero/storefront-custom.png")} f={f} zoom={[1.04, 1.12]} />, label: (l) => t(l, "Dyqani yt online", "Your shop, online") },
-  { dur: 114, ...L, content: (f) => <Browser src={asset("hero/storefront-product.png")} f={f} />, label: (l) => t(l, "Klientët blejnë vetë — pa DM", "Customers buy on their own"), cursor: [{ t: 14, fx: 0.72, fy: 0.28 }, { t: 46, fx: 0.77, fy: 0.4 }, { t: 52, fx: 0.77, fy: 0.4, click: true }] },
+  { dur: 114, ...L, content: (f) => <Browser src={asset("hero/storefront-product.png")} f={f} />, label: (l) => t(l, "Klientët blejnë vetë — pa mesazhe", "Customers buy on their own"), cursor: [{ t: 14, fx: 0.72, fy: 0.28 }, { t: 46, fx: 0.77, fy: 0.4 }, { t: 52, fx: 0.77, fy: 0.4, click: true }] },
   { dur: 102, ...L, content: (f) => <Browser src={asset("hero/storefront-checkout.png")} f={f} />, label: (l) => t(l, "Arkë e vërtetë — kartë ose cash", "Real checkout — card or cash") },
   { dur: 102, ...L, content: (f) => <Browser src={asset("hero/orders.png")} f={f} />, label: (l) => t(l, "Porositë në një panel — pa kaos", "Orders in one panel — no chaos") },
   { dur: 114, ...L, content: (f) => <Browser src={asset("hero/dashboard.png")} f={f} zoom={[1.08, 1.0]} />, label: (l) => t(l, "Të ardhurat rriten", "Revenue grows") },
@@ -175,7 +180,7 @@ const TRANS = 22;
 const Pointer: React.FC<{ x: number; y: number; press: number; ripple: number }> = ({ x, y, press, ripple }) => (
   <div style={{ position: "absolute", left: x, top: y, zIndex: 60, transform: `scale(${1 - press * 0.16})`, transformOrigin: "6px 4px" }}>
     {ripple > 0 && ripple < 1 && (
-      <span style={{ position: "absolute", left: -15, top: -13, width: 34, height: 34, borderRadius: 9999, border: "2.5px solid rgba(217,70,239,0.9)", opacity: 1 - ripple, transform: `scale(${0.3 + ripple * 1.6})` }} />
+      <span style={{ position: "absolute", left: -15, top: -13, width: 34, height: 34, borderRadius: 9999, border: "2.5px solid rgba(255,46,77,0.9)", opacity: 1 - ripple, transform: `scale(${0.3 + ripple * 1.6})` }} />
     )}
     <svg width="30" height="30" viewBox="0 0 24 24" style={{ filter: "drop-shadow(0 3px 7px rgba(0,0,0,.35))" }}><path d="M5 3l14 8-6 1.5L9.5 19 5 3z" fill="#fff" stroke="#111" strokeWidth="1.4" strokeLinejoin="round" /></svg>
   </div>

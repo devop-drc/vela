@@ -138,12 +138,12 @@ const B1_Sync = ({ lang }: { lang: Lang }) => {
       {/* sync widget bottom-left */}
       <div className="absolute bottom-3 left-3 w-[300px] rounded-xl border border-zinc-200 bg-white/95 p-3 shadow-2xl backdrop-blur" style={{ opacity: inAt(f, 2), transform: `translateY(${(1 - inAt(f, 2)) * 12}px)` }}>
         <div className="flex items-center gap-2">
-          {done ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <><Loader2 className="h-4 w-4 animate-spin text-fuchsia-600" /><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" /></>}
+          {done ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <><Loader2 className="h-4 w-4 animate-spin text-red-600" /><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" /></>}
           <span className="text-[12px] font-bold text-zinc-900">{done ? t(lang, "Sync Complete", "Sinkronizimi Përfundoi") : t(lang, "Syncing Products", "Duke Sinkronizuar")}</span>
           <span className="ml-auto font-mono text-[10px] tabular-nums text-zinc-400">{done ? "45s" : `${Math.floor(f / 30)}s`}</span>
         </div>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-100"><div className={`h-full rounded-full ${BRAND}`} style={{ width: `${pct}%` }} /></div>
-        <div className="mt-1.5 flex items-center justify-between text-[10px] text-zinc-500"><span className="truncate">{done ? t(lang, "All posts analyzed", "Të gjitha u analizuan") : t(lang, "AI analyzing your posts…", "AI po analizon…")}</span><span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" /> {prog}/{total}</span></div>
+        <div className="mt-1.5 flex items-center justify-between text-[10px] text-zinc-500"><span className="truncate">{done ? t(lang, "All posts analyzed", "Të gjitha u analizuan") : t(lang, "The system is analyzing your posts…", "Sistemi po analizon…")}</span><span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" /> {prog}/{total}</span></div>
         {!done ? (
           <>
             <div className="mt-2 flex gap-1.5">
@@ -209,7 +209,7 @@ const B3_Studio = ({ lang }: { lang: Lang }) => {
       </div>
       {/* template strip */}
       <div className="w-32 shrink-0 space-y-1.5 overflow-hidden border-l border-zinc-200 p-2">
-        {TEMPLATES.map((tp, i) => <div key={tp.id} data-tgt={i === tpl ? "tpl" : undefined} className={`rounded-lg border-2 px-2 py-1.5 text-[10px] font-medium transition-all ${i === tpl ? "border-fuchsia-500 bg-fuchsia-500/5 text-zinc-900" : "border-transparent text-zinc-500"}`}>{i === tpl && <Check className="mr-1 inline h-2.5 w-2.5 text-fuchsia-500" />}{tp.name}</div>)}
+        {TEMPLATES.map((tp, i) => <div key={tp.id} data-tgt={i === tpl ? "tpl" : undefined} className={`rounded-lg border-2 px-2 py-1.5 text-[10px] font-medium transition-all ${i === tpl ? "border-red-500 bg-red-500/5 text-zinc-900" : "border-transparent text-zinc-500"}`}>{i === tpl && <Check className="mr-1 inline h-2.5 w-2.5 text-red-500" />}{tp.name}</div>)}
       </div>
     </div>
   );
@@ -310,7 +310,7 @@ const B6_Checkout = ({ lang }: { lang: Lang }) => {
           <div className="text-[12px] font-bold text-zinc-900">{t(lang, "Payment", "Pagesa")}</div>
           <div className="mt-2.5 space-y-2">
             <div className={`flex items-center gap-2 rounded-lg border p-2 ${!card ? "border-zinc-900" : "border-zinc-200"}`}><span className="grid h-7 w-7 place-items-center rounded-md bg-zinc-100 text-zinc-600"><Banknote className="h-3.5 w-3.5" /></span><span className="text-[11px] font-medium text-zinc-700">{t(lang, "Cash on delivery", "Para në dorëzim")}</span>{!card && <Check className="ml-auto h-3.5 w-3.5 text-zinc-900" />}</div>
-            <div data-tgt="card" className={`flex items-center gap-2 rounded-lg border-2 p-2 transition-colors ${card ? "border-fuchsia-500 bg-fuchsia-500/5" : "border-zinc-200"}`}><span className={`grid h-7 w-7 place-items-center rounded-md text-white ${BRAND}`}><CreditCard className="h-3.5 w-3.5" /></span><div><div className="text-[11px] font-semibold text-zinc-800">{t(lang, "Card · RaiAccept", "Kartë · RaiAccept")}</div><div className="text-[8px] text-zinc-500">Raiffeisen</div></div>{card && <Check className="ml-auto h-3.5 w-3.5 text-fuchsia-500" />}</div>
+            <div data-tgt="card" className={`flex items-center gap-2 rounded-lg border-2 p-2 transition-colors ${card ? "border-red-500 bg-red-500/5" : "border-zinc-200"}`}><span className={`grid h-7 w-7 place-items-center rounded-md text-white ${BRAND}`}><CreditCard className="h-3.5 w-3.5" /></span><div><div className="text-[11px] font-semibold text-zinc-800">{t(lang, "Card · RaiAccept", "Kartë · RaiAccept")}</div><div className="text-[8px] text-zinc-500">Raiffeisen</div></div>{card && <Check className="ml-auto h-3.5 w-3.5 text-red-500" />}</div>
           </div>
           <div data-tgt="order" className={`mt-3 flex items-center justify-center gap-1.5 rounded-lg py-2 text-[12px] font-bold text-white transition-transform ${paid > 0 ? "scale-95" : ""} ${BRAND}`}><CheckCircle2 className="h-3.5 w-3.5" /> {t(lang, "Place Order", "Porosit")}</div>
           <div className="mt-2 flex items-center justify-center gap-1 text-[9px] text-zinc-400"><ShieldCheck className="h-3 w-3" /> {t(lang, "Securely processed", "E sigurt")}</div>
@@ -338,7 +338,7 @@ const B7_Orders = ({ lang }: { lang: Lang }) => {
       <div className="overflow-hidden rounded-lg border border-zinc-200">
         <div className="grid grid-cols-[1fr_1.4fr_0.7fr_0.9fr_0.9fr] gap-2 border-b border-zinc-100 bg-zinc-50 px-3 py-2 text-[9px] font-semibold uppercase tracking-wide text-zinc-400"><span>{t(lang, "Order", "Porosia")}</span><span>{t(lang, "Customer", "Klienti")}</span><span>{t(lang, "Items", "Artikuj")}</span><span>{t(lang, "Status", "Statusi")}</span><span className="text-right">{t(lang, "Total", "Totali")}</span></div>
         {/* the new order */}
-        <div className="grid grid-cols-[1fr_1.4fr_0.7fr_0.9fr_0.9fr] items-center gap-2 border-b border-zinc-100 px-3 py-2.5" style={{ background: f < 40 ? "rgba(217,70,239,0.05)" : undefined }}>
+        <div className="grid grid-cols-[1fr_1.4fr_0.7fr_0.9fr_0.9fr] items-center gap-2 border-b border-zinc-100 px-3 py-2.5" style={{ background: f < 40 ? "rgba(255,46,77,0.05)" : undefined }}>
           <span className="font-mono text-[10px] text-zinc-600">#a1b2c3d4</span>
           <span className="min-w-0"><span className="block truncate text-[11px] font-semibold text-zinc-800">Ana Kola</span><span className="block truncate text-[9px] text-zinc-400">ana@mail.al</span></span>
           <span className="text-[11px] text-zinc-600">1</span>
@@ -480,8 +480,8 @@ export const HeroSplitFilm = ({ copy, lang = "en" }: { copy: LandingCopy; lang?:
         <div style={{ position: "absolute", left: cursor.x, top: cursor.y, zIndex: 60 }}>
           {cursor.ripple > 0 && (
             <>
-              <span className="absolute rounded-full bg-fuchsia-500/25" style={{ left: -22, top: -22, height: 44, width: 44, opacity: 0.9 * (1 - cursor.ripple), transform: `scale(${0.2 + cursor.ripple * 1.1})` }} />
-              <span className="absolute rounded-full border-2 border-fuchsia-500" style={{ left: -22, top: -22, height: 44, width: 44, opacity: 1 - cursor.ripple, transform: `scale(${0.2 + cursor.ripple * 1.6})` }} />
+              <span className="absolute rounded-full bg-red-500/25" style={{ left: -22, top: -22, height: 44, width: 44, opacity: 0.9 * (1 - cursor.ripple), transform: `scale(${0.2 + cursor.ripple * 1.1})` }} />
+              <span className="absolute rounded-full border-2 border-red-500" style={{ left: -22, top: -22, height: 44, width: 44, opacity: 1 - cursor.ripple, transform: `scale(${0.2 + cursor.ripple * 1.6})` }} />
             </>
           )}
           <svg width="24" height="24" viewBox="0 0 24 24" style={{ position: "absolute", left: -5, top: -3, transform: `scale(${1 - cursor.press * 0.22})`, transformOrigin: "5px 3px", filter: "drop-shadow(0 2px 5px rgba(0,0,0,.35))" }}><path d="M5 3l14 8-6 1.5L9.5 19 5 3z" fill="white" stroke="#111" strokeWidth="1.5" strokeLinejoin="round" /></svg>

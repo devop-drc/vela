@@ -62,7 +62,7 @@ export default function HeroSplit({
   }, []);
 
   return (
-    <div ref={wrapRef} className="ls-card relative overflow-hidden rounded-[1.75rem] border border-border bg-card shadow-2xl shadow-fuchsia-900/10">
+    <div ref={wrapRef} className="ls-card relative overflow-hidden rounded-[1.75rem] border border-border bg-card shadow-2xl shadow-red-900/10">
       <Player
         ref={playerRef}
         component={HeroSplitFilm as any}

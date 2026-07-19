@@ -85,7 +85,7 @@ export const Caption: React.FC<{
       <div
         className={`cap-kicker mb-3 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-[16px] font-semibold ${
           tone === "brand"
-            ? "border-fuchsia-300/60 bg-fuchsia-500/10 text-fuchsia-700"
+            ? "border-red-300/60 bg-red-500/10 text-red-700"
             : "border-black/10 bg-white/70 text-zinc-600"
         } backdrop-blur`}
       >
@@ -128,8 +128,8 @@ export const BrowserFrame: React.FC<{
 /* ── pointer cursor (position/click driven by the scene's GSAP timeline) ── */
 export const Cursor: React.FC<{ className?: string }> = ({ className }) => (
   <div className={`cursor pointer-events-none absolute left-0 top-0 z-40 ${className ?? ""}`}>
-    <span className="click-ring absolute -left-6 -top-6 h-12 w-12 rounded-full border-2 border-fuchsia-500 opacity-0" />
-    <span className="click-fill absolute -left-6 -top-6 h-12 w-12 rounded-full bg-fuchsia-500/25 opacity-0" />
+    <span className="click-ring absolute -left-6 -top-6 h-12 w-12 rounded-full border-2 border-red-500 opacity-0" />
+    <span className="click-fill absolute -left-6 -top-6 h-12 w-12 rounded-full bg-red-500/25 opacity-0" />
     <svg width="34" height="34" viewBox="0 0 24 24" style={{ filter: "drop-shadow(0 3px 6px rgba(0,0,0,.4))" }}>
       <path d="M5 3l14 8-6 1.5L9.5 19 5 3z" fill="#fff" stroke="#111" strokeWidth="1.4" strokeLinejoin="round" />
     </svg>

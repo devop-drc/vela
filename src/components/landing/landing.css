@@ -25,7 +25,7 @@
   --destructive-foreground: 0 0% 98%;
   --border: 248 12% 89%;
   --input: 248 12% 89%;
-  --ring: 292 84% 55%;
+  --ring: 351 92% 52%; /* was 292 84% 55% */
   color-scheme: light;
   font-family: 'Satoshi', 'Inter', system-ui, sans-serif;
 }
@@ -49,7 +49,7 @@
   --destructive-foreground: 0 0% 98%;
   --border: 245 12% 16%;
   --input: 245 12% 16%;
-  --ring: 292 84% 61%;
+  --ring: 351 92% 60%; /* was 292 84% 61% */
   color-scheme: dark;
 }
 
@@ -73,13 +73,16 @@
 
 /* ─── Brand gradient text — the same fluid blob mesh as .brand-gradient,
        clipped to the glyphs so headlines shift color organically. ─── */
+/* Instagram-era palette (commented for reference):
+   background-color: #db2777;
+   blobs: #c026d3 / #f59e0b / #d946ef / #fb7185 */
 .landing .brand-text {
-  background-color: #ec4899;
+  background-color: #a31234;
   background-image:
-    radial-gradient(42% 56% at 20% 25%, #c026d3 0%, rgba(192, 38, 211, 0) 100%),
-    radial-gradient(48% 62% at 80% 18%, #f59e0b 0%, rgba(245, 158, 11, 0) 100%),
-    radial-gradient(52% 66% at 72% 82%, #d946ef 0%, rgba(217, 70, 239, 0) 100%),
-    radial-gradient(44% 54% at 22% 78%, #fb7185 0%, rgba(251, 113, 133, 0) 100%);
+    radial-gradient(42% 56% at 20% 25%, #7f1d3b 0%, rgba(127, 29, 59, 0) 100%),
+    radial-gradient(48% 62% at 80% 18%, #facc15 0%, rgba(250, 204, 21, 0) 100%),
+    radial-gradient(52% 66% at 72% 82%, #ff2e4d 0%, rgba(255, 46, 77, 0) 100%),
+    radial-gradient(44% 54% at 22% 78%, #f59e0b 0%, rgba(245, 158, 11, 0) 100%);
   background-size: 230% 230%, 210% 210%, 250% 250%, 220% 220%;
   background-position: 0% 0%, 100% 0%, 100% 100%, 0% 100%;
   animation: brand-blob 13s ease-in-out infinite alternate;
@@ -93,11 +96,12 @@
 .landing .shiny-text {
   display: inline-block;
   color: hsl(var(--muted-foreground));
+  /* was fuchsia rgba(217, 70, 239, …) */
   background: linear-gradient(
     120deg,
-    rgba(217, 70, 239, 0) 40%,
-    rgba(217, 70, 239, 0.95) 50%,
-    rgba(217, 70, 239, 0) 60%
+    rgba(255, 46, 77, 0) 40%,
+    rgba(255, 46, 77, 0.95) 50%,
+    rgba(255, 46, 77, 0) 60%
   );
   background-size: 220% 100%;
   background-position: 150% 0;
@@ -152,11 +156,12 @@
   content: '';
   position: absolute;
   inset: -150%;
+  /* was fuchsia rgba(217, 70, 239, .9) */
   background: conic-gradient(
     from 0deg,
     transparent 0deg 250deg,
-    rgba(217, 70, 239, 0.9) 300deg,
-    rgba(245, 158, 11, 0.9) 330deg,
+    rgba(255, 46, 77, 0.9) 300deg,
+    rgba(250, 204, 21, 0.9) 330deg,
     transparent 360deg
   );
   animation: ls-spin 3.2s linear infinite;
@@ -174,11 +179,99 @@
   border: 1.5px solid transparent;
   background:
     linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
-    linear-gradient(120deg, #d946ef, #ec4899, #f59e0b, #ec4899, #d946ef) border-box;
+    /* was: #d946ef, #ef4444, #f59e0b, #db2777, #d946ef */
+    linear-gradient(120deg, #ff2e4d, #facc15, #f59e0b, #a31234, #ff2e4d) border-box;
   background-size: 100% 100%, 300% 300%;
   animation: brand-pan 9s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) { .grad-border { animation: none; } }
+
+/* ─── Gradient CTA hover — theme-matched + shine sweep ───────────────────
+   shadcn's hover:bg-primary/90 used to bleed a near-black (light mode) /
+   near-white (dark mode) base through the translucent gradient mesh. Pin the
+   wine base, then: light mode lifts BRIGHTER, dark mode settles DEEPER, with
+   a glare sweep + glow so the CTA reads alive. */
+.landing button.brand-gradient,
+.landing a.brand-gradient {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: filter 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+}
+.landing button.brand-gradient::after,
+.landing a.brand-gradient::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.45) 50%, transparent 62%);
+  transform: translateX(-130%) skewX(-8deg);
+  transition: transform 0.55s ease;
+}
+.landing button.brand-gradient:hover,
+.landing a.brand-gradient:hover {
+  opacity: 1 !important;
+  background-color: #a31234 !important; /* keep the wine base under the mesh */
+  filter: brightness(1.14) saturate(1.06); /* light mode: turn lighter */
+  transform: translateY(-1px);
+  box-shadow: 0 14px 34px -10px rgba(255, 46, 77, 0.55);
+}
+.landing button.brand-gradient:hover::after,
+.landing a.brand-gradient:hover::after { transform: translateX(130%) skewX(-8deg); }
+.landing.landing-dark button.brand-gradient:hover,
+.landing.landing-dark a.brand-gradient:hover {
+  filter: brightness(0.84) saturate(1.1); /* dark mode: turn deeper */
+  box-shadow: 0 14px 38px -10px rgba(127, 29, 59, 0.7);
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing button.brand-gradient::after,
+  .landing a.brand-gradient::after { transition: none; display: none; }
+  .landing button.brand-gradient:hover,
+  .landing a.brand-gradient:hover { transform: none; }
+}
+
+/* ─── Calculator payoff pop — retriggers via key remount on each new target ─── */
+@keyframes calc-pop {
+  0% { transform: scale(0.94); opacity: 0.6; }
+  55% { transform: scale(1.045); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.calc-pop { animation: calc-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) { .calc-pop { animation: none; } }
+
+/* ─── Trust-strip pills — FlowingMenu-style hover: the gradient slides up
+       through the pill, label flips to white ─── */
+.ts-pill { position: relative; overflow: hidden; isolation: isolate; transition: color 0.25s ease, border-color 0.25s ease, transform 0.25s ease; }
+.ts-pill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background-color: #a31234;
+  background-image:
+    radial-gradient(52% 64% at 18% 22%, #7f1d3b 0%, rgba(127, 29, 59, 0) 100%),
+    radial-gradient(44% 56% at 84% 12%, #facc15 0%, rgba(250, 204, 21, 0) 100%),
+    radial-gradient(56% 68% at 76% 84%, #ff2e4d 0%, rgba(255, 46, 77, 0) 100%);
+  background-size: 220% 220%, 200% 200%, 230% 230%;
+  transform: translateY(101%);
+  transition: transform 0.32s cubic-bezier(0.33, 1, 0.68, 1);
+}
+.ts-pill:hover { color: #fff; border-color: transparent; transform: translateY(-1px); }
+.ts-pill:hover::before { transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) {
+  .ts-pill::before { transition: none; }
+  .ts-pill { transition: none; }
+}
+
+/* ─── React Bits StaggeredMenu (mobile nav) — sit above the sticky navbar,
+       hide the duplicate logo, align the toggle with the navbar row ─── */
+.landing .sm-scope { z-index: 60; }
+.landing .sm-scope .sm-logo { display: none; }
+.landing .sm-scope .staggered-menu-header { padding: 13px 60px 13px 16px; justify-content: flex-end; }
+.landing .sm-scope .sm-panel-item { font-size: clamp(2rem, 9vw, 3.4rem); }
 
 /* ─── Smooth anchor scrolling (applied to <html> while landing is mounted) ─── */
 html.ls-smooth {
@@ -187,7 +280,7 @@ html.ls-smooth {
 }
 
 /* ─── Brand selection color ─── */
-.landing ::selection { background: rgba(217, 70, 239, 0.22); }
+.landing ::selection { background: rgba(255, 46, 77, 0.2); } /* was fuchsia .22 */
 
 /* ─── Animated conic mesh behind the hero ─── */
 @keyframes ls-rotate { to { transform: rotate(1turn); } }
@@ -195,17 +288,34 @@ html.ls-smooth {
   position: absolute;
   inset: -25%;
   pointer-events: none;
+  /* v2: richer wine→neon→gold wheel, slower + counter-drifting second layer
+     via the ::after below for a deeper, less mechanical rotation */
   background: conic-gradient(
     from 0deg at 50% 42%,
-    rgba(217, 70, 239, 0.14),
-    rgba(236, 72, 153, 0.06),
+    rgba(255, 46, 77, 0.15),
+    rgba(250, 204, 21, 0.11),
     rgba(245, 158, 11, 0.13),
-    rgba(139, 92, 246, 0.08),
-    rgba(217, 70, 239, 0.14)
+    rgba(200, 30, 60, 0.1),
+    rgba(127, 29, 59, 0.14),
+    rgba(255, 46, 77, 0.15)
   );
-  filter: blur(90px);
-  animation: ls-rotate 45s linear infinite;
+  filter: blur(95px);
+  animation: ls-rotate 60s linear infinite;
   will-change: transform;
+}
+.ls-mesh::after {
+  content: '';
+  position: absolute;
+  inset: 10%;
+  border-radius: 999px;
+  background: conic-gradient(
+    from 180deg at 46% 55%,
+    rgba(250, 204, 21, 0.1),
+    rgba(255, 46, 77, 0.08),
+    rgba(163, 18, 52, 0.1),
+    rgba(250, 204, 21, 0.1)
+  );
+  animation: ls-rotate 80s linear infinite reverse;
 }
 .landing-dark .ls-mesh { opacity: 0.55; }
 
@@ -236,7 +346,7 @@ html.ls-smooth {
   border-radius: inherit;
   background:
     radial-gradient(120% 60% at 15% 0%, rgba(255, 255, 255, 0.35), transparent 55%),
-    radial-gradient(80% 45% at 85% 100%, rgba(217, 70, 239, 0.06), transparent 60%);
+    radial-gradient(80% 45% at 85% 100%, rgba(255, 46, 77, 0.06), transparent 60%);
   pointer-events: none;
   z-index: -1;
 }
@@ -250,7 +360,7 @@ html.ls-smooth {
 .landing-dark .glass-surface::before {
   background:
     radial-gradient(120% 60% at 15% 0%, rgba(255, 255, 255, 0.10), transparent 55%),
-    radial-gradient(80% 45% at 85% 100%, rgba(217, 70, 239, 0.08), transparent 60%);
+    radial-gradient(80% 45% at 85% 100%, rgba(255, 46, 77, 0.08), transparent 60%);
 }
 
 /* ─── Outline display text (AWWWards-style typographic divider) ─── */
@@ -264,12 +374,14 @@ html.ls-smooth {
 }
 .ls-outline-text .fill {
   color: transparent;
-  background-color: #ec4899;
+  /* Instagram-era: base #db2777 · blobs #c026d3 / #f59e0b / #d946ef / #ef4444 */
+  background-color: #a31234;
   background-image:
-    radial-gradient(42% 56% at 20% 25%, #c026d3 0%, rgba(192, 38, 211, 0) 100%),
-    radial-gradient(48% 62% at 80% 18%, #f59e0b 0%, rgba(245, 158, 11, 0) 100%),
-    radial-gradient(52% 66% at 72% 82%, #d946ef 0%, rgba(217, 70, 239, 0) 100%);
-  background-size: 230% 230%, 210% 210%, 250% 250%;
+    radial-gradient(42% 56% at 20% 25%, #7f1d3b 0%, rgba(127, 29, 59, 0) 100%),
+    radial-gradient(48% 62% at 80% 18%, #facc15 0%, rgba(250, 204, 21, 0) 100%),
+    radial-gradient(52% 66% at 72% 82%, #ff2e4d 0%, rgba(255, 46, 77, 0) 100%),
+    radial-gradient(44% 54% at 22% 78%, #f59e0b 0%, rgba(245, 158, 11, 0) 100%);
+  background-size: 230% 230%, 210% 210%, 250% 250%, 220% 220%;
   animation: brand-blob 13s ease-in-out infinite alternate;
   -webkit-background-clip: text;
   background-clip: text;
@@ -292,14 +404,14 @@ html.ls-smooth {
   right: 1.75rem;
   height: 1px;
   border-radius: 9999px;
-  background: linear-gradient(90deg, transparent, rgba(217, 70, 239, 0.35), rgba(245, 158, 11, 0.28), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 46, 77, 0.35), rgba(250, 204, 21, 0.3), transparent);
   opacity: 0.8;
   pointer-events: none;
 }
 .ls-card:hover {
   box-shadow:
     0 2px 4px rgba(20, 12, 35, 0.06),
-    0 18px 42px -16px rgba(150, 40, 180, 0.18);
+    0 18px 42px -16px rgba(180, 25, 60, 0.18);
 }
 .landing-dark .ls-card {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -14px rgba(0, 0, 0, 0.6);
@@ -316,7 +428,7 @@ html.ls-smooth {
   height: 100%;
   width: 55%;
   transform: skewX(-18deg);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), rgba(217, 70, 239, 0.08), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), rgba(255, 46, 77, 0.08), transparent);
   transition: left 0.7s ease;
   pointer-events: none;
   z-index: 2;

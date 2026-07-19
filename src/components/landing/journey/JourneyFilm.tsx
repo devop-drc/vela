@@ -48,7 +48,7 @@ const Cursor = ({ path, clickAt }: { path: [number, number][]; clickAt?: number 
   return (
     <div style={{ position: "absolute", left: x, top: y, zIndex: 50 }}>
       {clickAt != null && frame >= clickAt && (
-        <span className="absolute -left-3 -top-3 h-8 w-8 rounded-full border-2 border-fuchsia-500"
+        <span className="absolute -left-3 -top-3 h-8 w-8 rounded-full border-2 border-red-500"
           style={{ opacity: 1 - click, transform: `scale(${0.4 + click * 1.4})` }} />
       )}
       <svg width="22" height="22" viewBox="0 0 24 24" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,.35))" }}>
@@ -62,7 +62,8 @@ const Confetti = ({ at }: { at: number }) => {
   const frame = useCurrentFrame();
   const p = inAt(frame, at, 30);
   if (frame < at) return null;
-  const colors = ["#d946ef", "#ec4899", "#f59e0b", "#10b981", "#0ea5e9"];
+  // was (Instagram-era): ["#d946ef", "#ef4444", "#ec4899", "#f59e0b", "#10b981", "#0ea5e9"]
+  const colors = ["#ff2e4d", "#a31234", "#f59e0b", "#facc15", "#10b981", "#0ea5e9"];
   return (
     <div className="pointer-events-none absolute inset-0" style={{ zIndex: 40 }}>
       {Array.from({ length: 18 }).map((_, i) => {
@@ -71,7 +72,7 @@ const Confetti = ({ at }: { at: number }) => {
         return (
           <span key={i} className="absolute h-2 w-2 rounded-sm"
             style={{
-              left: "50%", top: "44%", backgroundColor: colors[i % 5],
+              left: "50%", top: "44%", backgroundColor: colors[i % colors.length],
               transform: `translate(${Math.cos(a) * r}px, ${Math.sin(a) * r + p * p * 60}px) rotate(${p * 260 + i * 40}deg)`,
               opacity: Math.max(0, 1 - p * 1.15),
             }} />
@@ -221,7 +222,7 @@ const S1_Posts = () => {
       </div>
       <div className="px-4 pt-2.5">
         <div className="text-xs font-bold">Shop Name</div>
-        <div className="text-xs text-muted-foreground">Veshje & aksesorë · Tiranë 🇦🇱 · Porosit në DM 📩</div>
+        <div className="text-xs text-muted-foreground">Veshje & aksesorë · Tiranë 🇦🇱 · Porosit në mesazhe 📩</div>
       </div>
       <div className="flex gap-2 px-4 pt-3">
         <span className={cn("flex-1 rounded-lg py-1.5 text-center text-xs font-semibold text-white", BRAND)}>Ndiq</span>
@@ -290,7 +291,7 @@ const S3_Sync = () => {
         </CardHeader>
         <CardContent>
           <Progress value={pct} className="h-2" />
-          <div className="mt-2 text-xs text-muted-foreground">{Math.round(pct)}% · AI po analizon: “{scanning?.name}…”</div>
+          <div className="mt-2 text-xs text-muted-foreground">{Math.round(pct)}% · Sistemi po analizon: “{scanning?.name}…”</div>
           <div className="mt-4 flex flex-col gap-2">
             {PRODUCTS.slice(0, 3).map((p, i) => {
               const s = inAt(frame, 22 + i * 16);
@@ -320,7 +321,7 @@ const S4_Products = () => {
       <div className="mb-3 flex items-center gap-2">
         <StatChip value="8" label="Aktive" tone="border-emerald-500/30 bg-emerald-500/10 text-emerald-600" />
         <StatChip value="0" label="Draft" tone="border-border bg-muted text-muted-foreground" />
-        <StatChip value="8" label="Nga Instagram" tone="border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-600" />
+        <StatChip value="8" label="Nga Instagram" tone="border-red-500/30 bg-red-500/10 text-red-600" />
       </div>
       <div className="grid grid-cols-4 gap-3">
         {PRODUCTS.map((p, i) => {
@@ -406,7 +407,7 @@ const S7_Cart = () => {
           <div className="mt-1 text-lg font-bold">3,500 ALL</div>
           <div className="mt-3 flex gap-2">
             {["S", "M", "L"].map((s, i) => (
-              <span key={s} className={cn("grid h-8 w-8 place-items-center rounded-lg border text-xs", i === 1 ? "border-fuchsia-500 bg-fuchsia-500/10 font-bold" : "border-border")}>{s}</span>
+              <span key={s} className={cn("grid h-8 w-8 place-items-center rounded-lg border text-xs", i === 1 ? "border-red-500 bg-red-500/10 font-bold" : "border-border")}>{s}</span>
             ))}
           </div>
           <Button className={cn("mt-5 h-11 w-56 text-white", BRAND)}>
@@ -433,13 +434,13 @@ const S8_Pay = () => {
       <Card className="w-[400px] shadow-xl">
         <CardHeader className="pb-3"><CardTitle className="text-base">Zgjidh mënyrën e pagesës</CardTitle></CardHeader>
         <CardContent className="flex flex-col gap-2.5">
-          <div className={cn("flex items-center gap-3 rounded-xl border-2 p-3 transition-colors", chosen ? "border-fuchsia-500 bg-fuchsia-500/5" : "border-border")}>
+          <div className={cn("flex items-center gap-3 rounded-xl border-2 p-3 transition-colors", chosen ? "border-red-500 bg-red-500/5" : "border-border")}>
             <span className={cn("grid h-9 w-9 place-items-center rounded-lg text-white", BRAND)}><CreditCard className="h-4 w-4" /></span>
             <div>
               <div className="text-sm font-semibold">Kartë online</div>
               <div className="text-[11px] text-muted-foreground">Raiffeisen · RaiAccept · i sigurt</div>
             </div>
-            {chosen && <Check className="ml-auto h-4 w-4 text-fuchsia-500" />}
+            {chosen && <Check className="ml-auto h-4 w-4 text-red-500" />}
           </div>
           <div className="flex items-center gap-3 rounded-xl border-2 border-border p-3">
             <span className="grid h-9 w-9 place-items-center rounded-lg bg-muted"><Banknote className="h-4 w-4" /></span>

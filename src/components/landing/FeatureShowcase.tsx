@@ -24,7 +24,7 @@ export default function FeatureShowcase({ lang }: { lang: Lang }) {
   const root = useRef<HTMLDivElement>(null);
 
   const feats = [
-    { Icon: Sparkles, label: t(lang, "AI Analizë", "AI analysis"), title: t(lang, "Çdo postim bëhet produkt", "Every post becomes a product"), body: t(lang, "AI nxjerr emrin, çmimin, kategorinë dhe variantet — vetë.", "AI extracts name, price, category and variants — automatically."), bullets: [t(lang, "Emra & çmime nga postimet", "Names & prices from posts"), t(lang, "Kategori & variante", "Categories & variants"), t(lang, "Sinkronizim automatik", "Automatic sync")], img: "/hero/products.png", url: "dyqani.yt/products" },
+    { Icon: Sparkles, label: t(lang, "Analizë nga sistemi", "System analysis"), title: t(lang, "Çdo postim bëhet produkt", "Every post becomes a product"), body: t(lang, "Sistemi nxjerr emrin, çmimin, kategorinë dhe variantet — vetë.", "The system extracts name, price, category and variants — automatically."), bullets: [t(lang, "Emra & çmime nga postimet", "Names & prices from posts"), t(lang, "Kategori & variante", "Categories & variants"), t(lang, "Sinkronizim automatik", "Automatic sync")], img: "/hero/products.png", url: "dyqani.yt/products" },
     { Icon: Palette, label: "Storefront Studio", title: t(lang, "Dizajno vitrinën tënde", "Design your storefront"), body: t(lang, "Zgjidh një shabllon dhe personalizo gjithçka, me pamje live.", "Pick a template, customize everything, preview it live."), bullets: [t(lang, "8+ shabllone", "8+ templates"), t(lang, "Ngjyra, fonte, struktura", "Colors, fonts, layout"), t(lang, "Pamje live", "Live preview")], img: "/hero/studio.png", url: "dyqani.yt/studio", reverse: true },
     { Icon: CreditCard, label: t(lang, "Pagesa & Porosi", "Payments & orders"), title: t(lang, "Merr pagesa. Menaxho porosi.", "Take payments. Manage orders."), body: t(lang, "Kartë me RaiAccept ose para në dorë — porositë në një panel.", "Card via RaiAccept or cash on delivery — orders in one dashboard."), bullets: [t(lang, "Kartë (RaiAccept) ose cash", "Card (RaiAccept) or cash"), t(lang, "Statuse & përmbushje", "Statuses & fulfillment"), t(lang, "Njoftime në kohë reale", "Real-time notifications")], img: "/hero/orders.png", url: "dyqani.yt/orders" },
     { Icon: BarChart3, label: t(lang, "Analitikë", "Analytics"), title: t(lang, "Shiko çfarë shet", "See what sells"), body: t(lang, "Të ardhura, top produkte dhe klientë — të gjitha live.", "Revenue, top products and customers — all live."), bullets: [t(lang, "Të ardhura & shitje", "Revenue & sales"), t(lang, "Top produktet", "Top products"), t(lang, "Aktivitet live", "Live activity")], img: "/hero/dashboard.png", url: "dyqani.yt/dashboard", reverse: true },
@@ -51,7 +51,7 @@ export default function FeatureShowcase({ lang }: { lang: Lang }) {
       <SectionHead
         eyebrow={t(lang, "Veçoritë", "Features")}
         title={t(lang, "Gjithçka për të drejtuar dyqanin", "Everything to run your shop")}
-        sub={t(lang, "Një mjet i vetëm zëvendëson Excel-in, DM-të dhe hamendjet.", "One tool replaces the spreadsheet, the DMs and the guesswork.")}
+        sub={t(lang, "Një mjet i vetëm zëvendëson Excel-in, mesazhet dhe hamendjet.", "One tool replaces the spreadsheet, the messages and the guesswork.")}
       />
 
       <div className="mx-auto mt-10 sm:mt-16 lg:mt-20 max-w-6xl space-y-12 sm:space-y-24 lg:space-y-32">

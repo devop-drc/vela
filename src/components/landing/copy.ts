@@ -50,7 +50,7 @@ export const sq: LandingCopy = {
     h1a: "Kthe Instagramin",
     h1b: "në dyqan online",
     h1c: "brenda pak minutash.",
-    sub: "AI i kthen postimet e tua në dyqan të vërtetë. Pa kod. Ti menaxhon gjithçka nga një panel.",
+    sub: "Sistemi i kthen postimet e tua në dyqan të vërtetë. Pa kod. Ti menaxhon gjithçka nga një panel.",
     ctaPrimary: "Fillo falas",
     ctaSecondary: "Shiko demo live",
     risk: "Pa kartë krediti · 2 minuta",
@@ -101,7 +101,7 @@ export const sq: LandingCopy = {
   problem: {
     title: "Sot",
     items: [
-      "DM pa fund: \"sa kushton?\"",
+      "Mesazhe pa fund: \"sa kushton?\"",
       "Porosi nëpër screenshot-e",
       "Pa pagesa me kartë",
       "Shitje të humbura natën",
@@ -123,7 +123,7 @@ export const sq: LandingCopy = {
     step: "HAPI",
     steps: [
       { title: "Lidh Instagramin", body: "Lidh Instagram Business me një prekje — pa kod." },
-      { title: "AI ndërton produktet", body: "AI lexon postimet dhe krijon produktet — emra, çmime, variante." },
+      { title: "Sistemi ndërton produktet", body: "Sistemi lexon postimet dhe krijon produktet — emra, çmime, variante." },
       { title: "Ndaj linkun e dyqanit", body: "Publiko vitrinën dhe merr porosi që sot." },
     ],
   },
@@ -136,11 +136,11 @@ export const sq: LandingCopy = {
     steps: [
       { t: "Postimet e Instagramit", d: "Gjithçka nis me postimet që ke tashmë.", phase: 0 },
       { t: "Hyr në Vela", d: "Krijo llogari dhe lidh Instagram me një klik.", phase: 0 },
-      { t: "Sinkronizo produktet", d: "AI nxjerr emrin, çmimin dhe kategorinë.", phase: 0 },
+      { t: "Sinkronizo produktet", d: "Sistemi nxjerr emrin, çmimin dhe kategorinë.", phase: 0 },
       { t: "Produktet gati në panel", d: "Katalogu yt shfaqet i plotë në panel.", phase: 1 },
       { t: "Vitrina live", d: "Dyqani publikohet në linkun tënd.", phase: 1 },
       { t: "Klienti gjen produktin", d: "Vizitorët shfletojnë direkt në vitrinë.", phase: 2 },
-      { t: "Shton në shportë", d: "Zgjedh variantin, pa asnjë DM.", phase: 2 },
+      { t: "Shton në shportë", d: "Zgjedh variantin, pa asnjë mesazh.", phase: 2 },
       { t: "Paguan online ose në dorë", d: "Me kartë (RaiAccept) ose para në dorë.", phase: 2 },
       { t: "Porosia mbërrin në panel", d: "Njoftim në çast, me të gjitha detajet.", phase: 3 },
       { t: "Përmbushe me një klik", d: "Ndrysho statusin, klienti njoftohet. Kaq.", phase: 3 },
@@ -149,9 +149,9 @@ export const sq: LandingCopy = {
   features: {
     badge: "Veçoritë",
     title: "Gjithçka për dyqanin tënd",
-    sub: "Një mjet zëvendëson Excel-in, DM-të dhe hamendjet.",
+    sub: "Një mjet zëvendëson Excel-in, mesazhet dhe hamendjet.",
     items: [
-      { title: "Analizë me AI", body: "Çdo postim bëhet produkt — emri, çmimi, kategoria." },
+      { title: "Analizë nga sistemi", body: "Çdo postim bëhet produkt — emri, çmimi, kategoria." },
       { title: "Storefront Studio", body: "Dizajno vitrinën tënde, me pamje live." },
       { title: "Inventar & variante", body: "Stoku rezervohet vetë. S'shet kurrë tepër." },
       { title: "Pagesa me kartë", body: "Raiffeisen (RaiAccept) ose para në dorë." },
@@ -190,14 +190,14 @@ export const sq: LandingCopy = {
     plans: [
       { id: "starter", name: "Starter", blurb: "Katalogu yt online, super i lirë.", features: ["Deri në 10 produkte", "Vitrinë Instagram me linkun tënd", "Vetëm para në dorë (COD)", "Analitikë bazë", "7 ditë provë falas"] },
       { id: "pro", name: "Pro", blurb: "Gjithçka për të shitur.", features: ["Deri në 100 produkte aktive", "Pagesa me kartë + para në dorë", "Analitikë e avancuar", "Promocione & oferta", "Vlerësime produktesh"] },
-      { id: "business", name: "Business", blurb: "Për dyqane në rritje.", features: ["Gjithçka e Pro-s", "Mbështetje me përparësi", "Analitikë e plotë", "Limite më të larta AI", "Storefront Studio i plotë"] },
+      { id: "business", name: "Business", blurb: "Për dyqane në rritje.", features: ["Gjithçka e Pro-s", "Mbështetje me përparësi", "Analitikë e plotë", "Limite më të larta të sistemit", "Storefront Studio i plotë"] },
     ],
   },
   testimonials: {
     title: "I besuar nga shitësit shqiptarë",
     items: [
-      { name: "Elira K.", role: "Pronare butiku, Tiranë", quote: "Më parë përgjigjesha DM-ve gjithë ditën. Tani klientët porosisin vetë nga linku. U shlye për një javë." },
-      { name: "Andi M.", role: "Rishitës atletesh, Durrës", quote: "AI ndërtoi gjithë katalogun nga postimet për pak minuta. S'e besoja sa shpejt dola live." },
+      { name: "Elira K.", role: "Pronare butiku, Tiranë", quote: "Më parë përgjigjesha mesazheve gjithë ditën. Tani klientët porosisin vetë nga linku. U shlye për një javë." },
+      { name: "Andi M.", role: "Rishitës atletesh, Durrës", quote: "Sistemi ndërtoi gjithë katalogun nga postimet për pak minuta. S'e besoja sa shpejt dola live." },
       { name: "Sara D.", role: "Bizhuteri artizanale", quote: "Dyqani më në fund duket profesional. Storefront Studio e bëri të ndihet si marka ime." },
     ],
   },
@@ -233,7 +233,7 @@ export const en: LandingCopy = {
     h1a: "Turn your Instagram",
     h1b: "into an online store",
     h1c: "in minutes.",
-    sub: "AI turns your posts into a real store. No code.",
+    sub: "The system turns your posts into a real store. No code.",
     ctaPrimary: "Start free",
     ctaSecondary: "See live demo",
     risk: "No credit card · 2 minutes",
@@ -284,7 +284,7 @@ export const en: LandingCopy = {
   problem: {
     title: "Today",
     items: [
-      "Endless \"how much?\" DMs",
+      "Endless \"how much?\" messages",
       "Orders in screenshots",
       "No card payments",
       "Lost sales overnight",
@@ -306,7 +306,7 @@ export const en: LandingCopy = {
     step: "STEP",
     steps: [
       { title: "Connect Instagram", body: "Link Instagram Business in one tap — no code." },
-      { title: "AI builds your products", body: "AI reads your posts and creates products — names, prices, variants." },
+      { title: "The system builds your products", body: "The system reads your posts and creates products — names, prices, variants." },
       { title: "Share your shop link", body: "Publish your storefront and take orders today." },
     ],
   },
@@ -319,11 +319,11 @@ export const en: LandingCopy = {
     steps: [
       { t: "Your Instagram posts", d: "It starts with the posts you already have.", phase: 0 },
       { t: "Log in to Vela", d: "Create an account and connect Instagram in one click.", phase: 0 },
-      { t: "Sync your products", d: "AI extracts the name, price and category.", phase: 0 },
+      { t: "Sync your products", d: "The system extracts the name, price and category.", phase: 0 },
       { t: "Products ready in the panel", d: "Your full catalog appears in the panel.", phase: 1 },
       { t: "Storefront goes live", d: "Your shop publishes on your link.", phase: 1 },
       { t: "Customer finds a product", d: "Visitors browse right on your storefront.", phase: 2 },
-      { t: "Adds it to cart", d: "Picks a variant — no DMs needed.", phase: 2 },
+      { t: "Adds it to cart", d: "Picks a variant — no messages needed.", phase: 2 },
       { t: "Pays online or on delivery", d: "By card (RaiAccept) or cash on delivery.", phase: 2 },
       { t: "Order lands in your panel", d: "Instant notification, with every detail.", phase: 3 },
       { t: "Fulfill it in one click", d: "Change the status, the customer is notified. Done.", phase: 3 },
@@ -332,9 +332,9 @@ export const en: LandingCopy = {
   features: {
     badge: "Features",
     title: "Everything for your shop",
-    sub: "One tool replaces the spreadsheet, DMs and guesswork.",
+    sub: "One tool replaces the spreadsheet, the messages and the guesswork.",
     items: [
-      { title: "AI analysis", body: "Every post becomes a product — name, price, category." },
+      { title: "System analysis", body: "Every post becomes a product — name, price, category." },
       { title: "Storefront Studio", body: "Design your storefront, with live preview." },
       { title: "Inventory & variants", body: "Stock reserves itself. Never oversell." },
       { title: "Card payments", body: "Raiffeisen (RaiAccept) or cash on delivery." },
@@ -373,14 +373,14 @@ export const en: LandingCopy = {
     plans: [
       { id: "starter", name: "Starter", blurb: "Your catalogue online, super affordable.", features: ["Up to 10 products", "Instagram storefront with your link", "Cash on delivery only (COD)", "Basic analytics", "7-day free trial"] },
       { id: "pro", name: "Pro", blurb: "Everything to sell.", features: ["Up to 100 active products", "Card payments + cash on delivery", "Advanced analytics", "Promotions & offers management", "Product reviews"] },
-      { id: "business", name: "Business", blurb: "For growing shops.", features: ["Everything in Pro", "Priority support", "Full analytics", "Higher AI usage limits", "Full Storefront Studio access"] },
+      { id: "business", name: "Business", blurb: "For growing shops.", features: ["Everything in Pro", "Priority support", "Full analytics", "Higher system usage limits", "Full Storefront Studio access"] },
     ],
   },
   testimonials: {
     title: "Trusted by Albanian sellers",
     items: [
-      { name: "Elira K.", role: "Boutique owner, Tiranë", quote: "I used to answer DMs all day. Now customers order from my link. Paid off in a week." },
-      { name: "Andi M.", role: "Sneaker reseller, Durrës", quote: "AI built my whole catalog from my posts in minutes. I couldn't believe how fast I went live." },
+      { name: "Elira K.", role: "Boutique owner, Tiranë", quote: "I used to answer messages all day. Now customers order from my link. Paid off in a week." },
+      { name: "Andi M.", role: "Sneaker reseller, Durrës", quote: "The system built my whole catalog from my posts in minutes. I couldn't believe how fast I went live." },
       { name: "Sara D.", role: "Handmade jewelry", quote: "My shop finally looks professional. Storefront Studio made it feel like my brand." },
     ],
   },

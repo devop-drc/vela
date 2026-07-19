@@ -14,7 +14,7 @@ export default function ProblemSection({ lang }: { lang: Lang }) {
   const root = useRef<HTMLDivElement>(null);
 
   const pains = [
-    { Icon: MessageCircle, title: t(lang, "DM pa fund", "Endless DM's"), body: t(lang, "Ti je arka, magazina dhe suporti — njëkohësisht.", "You're the checkout, warehouse and support — all at once."), metric: true },
+    { Icon: MessageCircle, title: t(lang, "Mesazhe pa fund", "Endless messages"), body: t(lang, "Ti je arka, magazina dhe suporti — njëkohësisht.", "You're the checkout, warehouse and support — all at once."), metric: true },
     { Icon: CreditCard, title: t(lang, "Pa arkë, pa pagesa", "No checkout, no payments"), body: t(lang, "Çmim, adresë, pagesë — të gjitha me dorë.", "Price, address, payment — all by hand.") },
     { Icon: PackageX, title: t(lang, "Menaxhim stoku me dorë", "Manually managing stock"), body: t(lang, "E mban në kokë — dhe e shet dy herë.", "Kept in your head — and sold twice.") },
     { Icon: TrendingDown, title: t(lang, "Zero të dhëna", "Zero data"), body: t(lang, "S'ke asnjë numër — s'di çfarë shet vërtet.", "No numbers at all — you don't know what sells.") },
@@ -44,7 +44,7 @@ export default function ProblemSection({ lang }: { lang: Lang }) {
       <SectionHead
         eyebrow={t(lang, "Problemi", "The problem")}
         title={<>{t(lang, "Instagrami sjell klientë. ", "Instagram brings customers. ")}<span className="text-muted-foreground/70">{t(lang, "Pastaj të lë vetëm.", "Then leaves you alone.")}</span></>}
-        sub={t(lang, "Feed-i mbush DM-të. Shitja e pagesa mbeten mbi ty.", "The feed fills your DMs. Selling and payments stay on you.")}
+        sub={t(lang, "Postimet i mbushin mesazhet. Shitja e pagesa mbeten mbi ty.", "Your posts fill your messages. Selling and payments stay on you.")}
       />
 
       <div className="pain-grid mx-auto mt-8 grid max-w-4xl gap-4 sm:mt-14 sm:grid-cols-2">
@@ -57,7 +57,7 @@ export default function ProblemSection({ lang }: { lang: Lang }) {
                 <p className="mt-1.5 text-[15px] leading-relaxed text-muted-foreground">{p.body}</p>
                 {p.metric && (
                   <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-destructive/5 px-3 py-1.5 text-[13px] font-semibold text-destructive">
-                    <span className="dm-count tabular-nums">0</span> {t(lang, "DM të palexuara", "unread DMs")}
+                    <span className="dm-count tabular-nums">0</span> {t(lang, "mesazhe të palexuara", "unread messages")}
                   </div>
                 )}
                 {p.stat && (

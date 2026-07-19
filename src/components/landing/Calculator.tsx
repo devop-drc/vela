@@ -31,11 +31,11 @@ const useCountUp = (target: number) => {
     const from = shownRef.current;
     if (from === target) return;
     const t0 = performance.now();
-    const dur = 380;
+    const dur = 650; // slower + springier so the payoff visibly rolls
     let raf: number;
     const tick = (now: number) => {
       const p = Math.min(1, (now - t0) / dur);
-      const eased = 1 - (1 - p) ** 3;
+      const eased = 1 - (1 - p) ** 4; // quart-out — fast start, silky landing
       const value = Math.round(from + (target - from) * eased);
       shownRef.current = value;
       setShown(value);
@@ -46,6 +46,11 @@ const useCountUp = (target: number) => {
   }, [target]);
   return shown;
 };
+
+/** Re-triggers a pop animation whenever the displayed value settles on a new target. */
+const Pop = ({ children, trigger, className }: { children: React.ReactNode; trigger: unknown; className?: string }) => (
+  <span key={String(trigger)} className={`calc-pop inline-block ${className ?? ""}`}>{children}</span>
+);
 
 /** S11 — "how much could an e-shop have made you?" grounded in real conversion stats. */
 export default function Calculator({ lang }: { lang: Lang }) {
@@ -83,17 +88,18 @@ export default function Calculator({ lang }: { lang: Lang }) {
   // via arbitrary variants so no extra CSS file is needed.
   const track =
     "h-2.5 w-full cursor-pointer appearance-none rounded-full bg-muted " +
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-500/50 focus-visible:ring-offset-2 " +
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 focus-visible:ring-offset-2 " +
     "[&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none " +
     "[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white " +
-    "[&::-webkit-slider-thumb]:bg-fuchsia-600 [&::-webkit-slider-thumb]:shadow-[0_2px_8px_rgba(192,38,211,0.45)] " +
+    "[&::-webkit-slider-thumb]:bg-red-600 [&::-webkit-slider-thumb]:shadow-[0_2px_8px_rgba(220,38,38,0.45)] " +
     "[&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110 " +
     "[&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full " +
-    "[&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-fuchsia-600";
+    "[&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-red-600";
   const fill = (value: number, min: number, max: number) => {
     const pct = ((value - min) / (max - min)) * 100;
+    // Vela ramp: wine → neon red → gold up to the thumb, muted after it.
     return {
-      background: `linear-gradient(to right, rgb(192 38 211) 0%, rgb(236 72 153) ${pct}%, hsl(var(--muted)) ${pct}%)`,
+      background: `linear-gradient(to right, #A31234 0%, #FF2E4D ${pct * 0.6}%, #F59E0B ${pct}%, hsl(var(--muted)) ${pct}%)`,
     };
   };
 
@@ -126,8 +132,8 @@ export default function Calculator({ lang }: { lang: Lang }) {
           </div>
         </div>
 
-        {/* outputs */}
-        <div className="rounded-3xl bg-gradient-to-br from-fuchsia-500/[0.07] to-transparent p-5 ring-1 ring-fuchsia-400/20 sm:p-7">
+        {/* outputs — the upside is GOOD news, so it reads green */}
+        <div className="rounded-3xl bg-gradient-to-br from-emerald-500/[0.08] to-transparent p-5 ring-1 ring-emerald-500/25 sm:p-7">
           {/* Instagram-only vs e-shop conversion, head to head */}
           <div className="text-[13px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t(lang, "Vizitorë që blejnë", "Visitors who buy")}</div>
           <div className="mt-3 space-y-3">
@@ -142,7 +148,7 @@ export default function Calculator({ lang }: { lang: Lang }) {
             </div>
 
             <div className="flex justify-end">
-              <span className="inline-flex items-center gap-1 rounded-full bg-fuchsia-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-fuchsia-600">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
                 <TrendingUp className="h-3 w-3" /> {t(lang, "2× më shumë blerës", "2× more buyers")}
               </span>
             </div>
@@ -162,16 +168,21 @@ export default function Calculator({ lang }: { lang: Lang }) {
           <div className="mt-6 border-t border-border pt-5">
             <div className="text-[13px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t(lang, "Shtesë çdo muaj", "Extra every month")}</div>
             <div className="mt-4 flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-fuchsia-500/10 text-fuchsia-600"><ShoppingBag className="h-5 w-5" /></span>
+              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-500/10 text-emerald-600"><ShoppingBag className="h-5 w-5" /></span>
               <div>
-                <div className="font-display-brand text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-none tabular-nums text-foreground">+{shownOrders}</div>
+                <Pop trigger={gainOrders} className="font-display-brand text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-none tabular-nums text-emerald-600">
+                  +{shownOrders}
+                </Pop>
                 <div className="text-[14px] text-muted-foreground">{t(lang, "porosi më shumë", "more orders")}</div>
               </div>
             </div>
             <div className="mt-5">
-              <div className="brand-gradient bg-clip-text font-display-brand text-[clamp(2.2rem,4.5vw,3.1rem)] font-bold leading-none tabular-nums text-transparent">
+              <Pop
+                trigger={gainMoney}
+                className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-400 bg-clip-text font-display-brand text-[clamp(2.2rem,4.5vw,3.1rem)] font-bold leading-none tabular-nums text-transparent drop-shadow-[0_10px_30px_rgba(16,185,129,0.25)]"
+              >
                 +{shownMoney.toLocaleString("en-US")} L
-              </div>
+              </Pop>
               <div className="mt-1 text-[14px] text-muted-foreground">{t(lang, "të ardhura më shumë, çdo muaj", "more revenue, every month")}</div>
             </div>
           </div>
