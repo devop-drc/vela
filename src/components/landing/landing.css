@@ -271,7 +271,23 @@
 .landing .sm-scope { z-index: 60; }
 .landing .sm-scope .sm-logo { display: none; }
 .landing .sm-scope .staggered-menu-header { padding: 13px 60px 13px 16px; justify-content: flex-end; }
-.landing .sm-scope .sm-panel-item { font-size: clamp(2rem, 9vw, 3.4rem); }
+/* Big nav links in the brand display face; roomy tap targets on small screens */
+.landing .sm-scope .sm-panel-item { font-size: clamp(2.1rem, 8.5vw, 3rem); }
+.landing .sm-scope .sm-panel-list { gap: 0.9rem; }
+/* Panel brand row lines up with the navbar's logo position */
+.landing .sm-scope .sm-panel-brand { min-height: 44px; padding-left: 2px; }
+/* Tablets (640–1023px): a right-side drawer reads better than a full-width
+   sheet — override the component's own max-width:1024px full-bleed rule */
+@media (min-width: 640px) {
+  .landing .sm-scope .staggered-menu-panel,
+  .landing .sm-scope .sm-prelayers {
+    width: clamp(340px, 48vw, 430px);
+    left: auto;
+    right: 0;
+  }
+  /* keep the longest label ("Si funksionon") on one line in the drawer */
+  .landing .sm-scope .sm-panel-item { font-size: 2.3rem; }
+}
 
 /* ─── Smooth anchor scrolling (applied to <html> while landing is mounted) ─── */
 html.ls-smooth {

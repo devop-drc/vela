@@ -221,15 +221,44 @@ const LandingNav = ({ active, copy, dark, onToggleTheme, lang, onSetLang }: NavP
           colors={["#7F1D3B", "#A31234"]}
           accentColor="#FF2E4D"
           menuButtonColor={dark ? "#F5F3F6" : "#2A1D22"}
-          openMenuButtonColor="#2A1D22"
+          openMenuButtonColor={dark ? "#F5F3F6" : "#2A1D22"}
           logoUrl="/vela-icon.svg"
           displaySocials={false}
           displayItemNumbering={false}
-          items={[
-            ...links.map((l) => ({ label: l.label, ariaLabel: l.label, link: l.href })),
-            { label: copy.nav.login, ariaLabel: copy.nav.login, link: "/login" },
-            { label: copy.nav.cta, ariaLabel: copy.nav.cta, link: "/register" },
-          ]}
+          menuLabel={lang === "sq" ? "Meny" : "Menu"}
+          closeLabel={lang === "sq" ? "Mbyll" : "Close"}
+          items={links.map((l) => ({ label: l.label, ariaLabel: l.label, link: l.href }))}
+          panelBrand={
+            <div className="flex items-center gap-3">
+              <BrandMark />
+              <span className="font-display-brand text-[19px] font-semibold tracking-tight text-foreground">Vela</span>
+            </div>
+          }
+          panelFooter={
+            <div className="flex flex-col gap-4">
+              <div className="h-px w-full bg-border" />
+              <div className="grid grid-cols-2 gap-2.5">
+                <Link
+                  to="/login"
+                  className="grid place-items-center rounded-full border border-border bg-card px-4 py-3 text-[15px] font-semibold text-foreground"
+                >
+                  {copy.nav.login}
+                </Link>
+                <Link
+                  to="/register"
+                  className={cn("grid place-items-center rounded-full px-4 py-3 text-[15px] font-semibold text-white", BRAND)}
+                >
+                  {copy.nav.cta}
+                </Link>
+              </div>
+              <div className="flex items-center justify-between">
+                <LangSwitch />
+                <span className="font-display-brand text-sm font-medium text-muted-foreground">
+                  {lang === "sq" ? "Ngri velën." : "Set sail."}
+                </span>
+              </div>
+            </div>
+          }
         />
       </div>
     </header>
