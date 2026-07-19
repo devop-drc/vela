@@ -108,30 +108,30 @@ export default function Calculator({ lang }: { lang: Lang }) {
         sub={t(lang, "Të njëjtët vizitorë, me kërkim, filtra dhe arkë.", "Same visitors — with search, filters and checkout.")}
       />
 
-      <div className="calc-card mx-auto mt-8 max-w-2xl rounded-[2rem] border border-border bg-card p-6 shadow-[0_40px_100px_-40px_rgba(30,10,50,0.28)] sm:mt-12 sm:p-10">
+      <div className="calc-card mx-auto mt-8 max-w-2xl rounded-[2rem] border border-border bg-card p-5 shadow-[0_40px_100px_-40px_rgba(30,10,50,0.28)] sm:mt-12 sm:p-10">
         {/* sliders */}
         <div className="grid gap-7 sm:grid-cols-2 sm:gap-8">
           <div>
-            <div className="mb-3 flex items-center justify-between">
-              <label className="text-[14px] font-medium text-foreground">{t(lang, "Vizitorë në javë", "Visitors per week")}</label>
-              <span className="font-display-brand text-lg font-bold tabular-nums text-foreground">{visitors.toLocaleString("en-US")}</span>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <label className="text-[13.5px] font-medium text-foreground sm:text-[14px]">{t(lang, "Vizitorë në javë", "Visitors per week")}</label>
+              <span className="rounded-full bg-muted px-3 py-0.5 font-display-brand text-[16px] font-bold tabular-nums text-foreground sm:text-lg">{visitors.toLocaleString("en-US")}</span>
             </div>
             <input type="range" min={50} max={2000} step={10} value={visitors} onChange={(e) => setVisitors(+e.target.value)} className={track} style={fill(visitors, 50, 2000)} aria-label={t(lang, "Vizitorë në javë", "Visitors per week")} />
           </div>
           <div>
-            <div className="mb-3 flex items-center justify-between">
-              <label className="text-[14px] font-medium text-foreground">{t(lang, "Çmim mesatar", "Average price")}</label>
-              <span className="font-display-brand text-lg font-bold tabular-nums text-foreground">{price.toLocaleString("en-US")} L</span>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <label className="text-[13.5px] font-medium text-foreground sm:text-[14px]">{t(lang, "Çmim mesatar", "Average price")}</label>
+              <span className="rounded-full bg-muted px-3 py-0.5 font-display-brand text-[16px] font-bold tabular-nums text-foreground sm:text-lg">{price.toLocaleString("en-US")} L</span>
             </div>
             <input type="range" min={500} max={10000} step={100} value={price} onChange={(e) => setPrice(+e.target.value)} className={track} style={fill(price, 500, 10000)} aria-label={t(lang, "Çmim mesatar", "Average price")} />
           </div>
         </div>
 
         {/* one combined conversion bar: gray = Instagram-only, brand = e-shop */}
-        <div className="mt-9">
-          <div className="flex items-center justify-between text-[12.5px] text-muted-foreground">
-            <span className="flex items-center gap-1.5"><Instagram className="h-3.5 w-3.5" /> {t(lang, "Vetëm Instagram", "Instagram only")} · <b className="text-foreground">{igPct}%</b></span>
-            <span className="flex items-center gap-1.5"><Store className="h-3.5 w-3.5" /> {t(lang, "Me e-shop", "With an e-shop")} · <b className="text-foreground">{shopPct}%</b></span>
+        <div className="mt-8 sm:mt-9">
+          <div className="grid grid-cols-2 gap-2 text-[12px] text-muted-foreground sm:text-[12.5px]">
+            <span className="flex items-center gap-1.5"><Instagram className="h-3.5 w-3.5 shrink-0" /> Instagram <b className="text-foreground">{igPct}%</b></span>
+            <span className="flex items-center justify-end gap-1.5 text-right"><Store className="h-3.5 w-3.5 shrink-0" /> E-shop <b className="text-foreground">{shopPct}%</b></span>
           </div>
           <div className="relative mt-2 h-2.5 overflow-hidden rounded-full bg-muted">
             <div className="brand-gradient absolute inset-y-0 left-0 w-full rounded-full" />

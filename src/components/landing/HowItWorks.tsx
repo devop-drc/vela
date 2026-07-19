@@ -91,30 +91,31 @@ export default function HowItWorks({ lang }: { lang: Lang }) {
 
       <div className="hiw-pin mx-auto mt-10 max-w-6xl sm:mt-14">
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-          {/* steps */}
+          {/* steps — the rail connects the badges on EVERY breakpoint so the
+              flow reads as one path, phone included */}
           <div className="relative">
-            <span className="absolute left-[23px] top-2 hidden h-[calc(100%-1rem)] w-[3px] rounded-full bg-border lg:block" />
+            <span className="absolute left-[21px] top-2 h-[calc(100%-1rem)] w-[3px] rounded-full bg-border sm:left-[23px]" />
             <span
-              className="hiw-progress-fill absolute left-[23px] top-2 hidden h-[calc(100%-1rem)] w-[3px] origin-top rounded-full brand-gradient shadow-[0_0_18px_rgba(255,46,77,0.55)] lg:block"
+              className="hiw-progress-fill absolute left-[21px] top-2 hidden h-[calc(100%-1rem)] w-[3px] origin-top rounded-full brand-gradient shadow-[0_0_18px_rgba(255,46,77,0.55)] sm:left-[23px] lg:block"
               style={{ transform: "scaleY(0)" }}
             />
-            <div className="space-y-8 lg:space-y-10">
+            <div className="space-y-10 lg:space-y-10">
               {steps.map((s, i) => (
-                <div key={i} className="hiw-step relative pl-16">
-                  <span className="hiw-badge absolute left-0 top-0 grid h-12 w-12 origin-center place-items-center rounded-2xl text-white shadow-lg shadow-red-500/30 ring-2 ring-background brand-gradient">
+                <div key={i} className="hiw-step relative pl-14 sm:pl-16">
+                  <span className="hiw-badge absolute left-0 top-0 grid h-11 w-11 origin-center place-items-center rounded-2xl text-white shadow-lg shadow-red-500/30 ring-2 ring-background brand-gradient sm:h-12 sm:w-12">
                     <s.Icon className="h-5 w-5" />
                   </span>
                   <div className="hiw-copy">
                     <div className="flex items-baseline gap-2.5">
-                      <span className="hiw-num font-display-brand text-[22px] font-bold leading-none brand-text">{String(i + 1).padStart(2, "0")}</span>
-                      <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{t(lang, "Hapi", "Step")} {i + 1} / {steps.length}</span>
+                      <span className="hiw-num font-display-brand text-[20px] font-bold leading-none brand-text sm:text-[22px]">{String(i + 1).padStart(2, "0")}</span>
+                      <span className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-muted-foreground sm:text-[11px]">{t(lang, "Hapi", "Step")} {i + 1} / {steps.length}</span>
                     </div>
-                    <h3 className="mt-1.5 font-display-brand text-[25px] font-bold tracking-tight text-foreground">{s.title}</h3>
-                    <p className="mt-2 max-w-md text-[15px] leading-relaxed text-muted-foreground">{s.body}</p>
-                    <span className="mt-3 hidden w-fit items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-[11px] font-medium text-muted-foreground lg:inline-flex">
+                    <h3 className="mt-1.5 font-display-brand text-[22px] font-bold tracking-tight text-foreground sm:text-[25px]">{s.title}</h3>
+                    <p className="mt-2 max-w-md text-[14.5px] leading-relaxed text-muted-foreground sm:text-[15px]">{s.body}</p>
+                    <span className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-[11px] font-medium text-muted-foreground">
                       <span className="h-1.5 w-1.5 rounded-full brand-gradient" /> {s.url}
                     </span>
-                    <div className="mt-5 lg:hidden"><Frame src={s.img} url={s.url} /></div>
+                    <div className="mt-4 lg:hidden"><Frame src={s.img} url={s.url} /></div>
                   </div>
                 </div>
               ))}

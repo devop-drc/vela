@@ -112,12 +112,13 @@ export default function ComparisonTable({ lang }: { lang: Lang }) {
               )}
             </div>
 
-            {/* features */}
-            <ul className="mt-5 space-y-2.5">
+            {/* features — competitor cards compact to two columns on phones so
+                the stack stays short; the Vela card keeps the full list */}
+            <ul className={cn("mt-5", c.hero ? "space-y-2.5" : "grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-1 lg:gap-0 lg:space-y-2.5")}>
               {features.map((f, i) => (
-                <li key={i} className="flex items-center gap-2.5">
+                <li key={i} className="flex items-center gap-2">
                   {state(c.states[i], c.hero)}
-                  <span className={cn("text-[13.5px] leading-snug sm:text-[14px]", c.states[i] === false ? "text-muted-foreground/55" : "text-foreground")}>{f}</span>
+                  <span className={cn("leading-snug", c.hero ? "text-[13.5px] sm:text-[14px]" : "text-[12px] sm:text-[13px] lg:text-[14px]", c.states[i] === false ? "text-muted-foreground/55" : "text-foreground")}>{f}</span>
                 </li>
               ))}
             </ul>

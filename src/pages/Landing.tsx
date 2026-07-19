@@ -6,7 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import {
   Instagram, Sparkles, ShoppingBag, ArrowRight, Check, Wand2,
-  Package, BarChart3, CreditCard, Lock, Search,
+  Package, BarChart3, CreditCard, Lock, Search, Play,
   TrendingUp, Bell, Sun, Moon, Mail, Send, Gift, Star, ShieldCheck,
 } from "lucide-react";
 import {
@@ -795,8 +795,13 @@ export default function Landing() {
                   {copy.hero.ctaPrimary} <ArrowRight className="h-4 w-4" />
                 </SpecularButton>
               </Magnetic>
-              <Button asChild size="lg" variant="outline" className="h-12 w-full rounded-full px-8 text-base sm:w-auto">
-                <Link to="/demo">{copy.hero.ctaSecondary}</Link>
+              <Button asChild size="lg" variant="outline" className="h-12 w-full gap-2 rounded-full border-border bg-card/80 px-8 text-base backdrop-blur sm:w-auto">
+                <Link to="/demo">
+                  <span className="grid h-5 w-5 place-items-center rounded-full brand-gradient">
+                    <Play className="h-2.5 w-2.5 fill-white text-white" />
+                  </span>
+                  {copy.hero.ctaSecondary}
+                </Link>
               </Button>
             </div>
             <p className="hero-fade mt-3.5 text-sm text-muted-foreground sm:mt-4">
@@ -1013,7 +1018,9 @@ export default function Landing() {
             </div>
           </div>
 
-          <div className="mt-8 grid items-start gap-6 sm:mt-12 lg:grid-cols-3">
+          {/* Mobile: Pro (featured) first — it's the flagship; pt-4 keeps its
+              floating badge from clipping at the grid edge. */}
+          <div className="mt-8 grid items-start gap-6 pt-4 sm:mt-12 lg:grid-cols-3 lg:pt-0">
             {copy.pricing.plans.map((p) => {
               const featured = p.id === "pro";
               const inner = (
@@ -1061,7 +1068,7 @@ export default function Landing() {
               return featured ? (
                 <SpotlightCard
                   key={p.id}
-                  className="reveal ls-card relative flex flex-col rounded-3xl p-7 grad-border shadow-[0_0_70px_-18px_rgba(255,46,77,0.4)] lg:-my-3 lg:py-10"
+                  className="reveal ls-card relative order-first flex flex-col rounded-3xl p-5 grad-border shadow-[0_0_70px_-18px_rgba(255,46,77,0.4)] sm:p-7 lg:order-none lg:-my-3 lg:py-10"
                 >
                   {inner}
                 </SpotlightCard>
@@ -1076,7 +1083,7 @@ export default function Landing() {
                   animated
                   colors={["#FF2E4D", "#F59E0B", "#A31234"]}
                 >
-                  <div className="relative flex flex-col p-7">{inner}</div>
+                  <div className="relative flex flex-col p-5 sm:p-7">{inner}</div>
                 </BorderGlow>
               );
             })}
@@ -1095,15 +1102,15 @@ export default function Landing() {
 
           {/* contact — lives inside the pricing section so "talk to us" sits right
               where the plan decision happens; #interest kept for deep links */}
-          <div id="interest" className="reveal ls-card glare-hover mx-auto mt-12 grid max-w-5xl scroll-mt-24 gap-8 overflow-hidden rounded-[2rem] border border-border bg-card p-6 sm:mt-16 sm:gap-10 sm:p-12 lg:grid-cols-2">
+          <div id="interest" className="reveal ls-card glare-hover mx-auto mt-12 grid max-w-5xl scroll-mt-24 gap-7 overflow-hidden rounded-[2rem] border border-border bg-card p-5 sm:mt-16 sm:gap-10 sm:p-12 lg:grid-cols-2">
             <div>
               <Eyebrow>{copy.interest.badge}</Eyebrow>
-              <h3 className="text-2xl tracking-tight sm:text-3xl sm:leading-tight">{copy.interest.title}</h3>
-              <p className="mt-3 text-lg leading-relaxed text-muted-foreground">{copy.interest.sub}</p>
+              <h3 className="mt-2 text-[1.55rem] leading-tight tracking-tight sm:mt-0 sm:text-3xl sm:leading-tight">{copy.interest.title}</h3>
+              <p className="mt-2.5 text-[15px] leading-relaxed text-muted-foreground sm:mt-3 sm:text-lg">{copy.interest.sub}</p>
             <Magnetic>
               <Button
                 size="lg"
-                className={cn("mt-8 gap-2 rounded-full px-7 text-white hover:opacity-90", BRAND)}
+                className={cn("mt-6 w-full gap-2 rounded-full px-7 text-white hover:opacity-90 sm:mt-8 sm:w-auto", BRAND)}
                 onClick={() => {
                   const subject = encodeURIComponent(lang === "sq" ? "Interes për Vela" : "Interested in Vela");
                   const body = encodeURIComponent(copy.interest.placeholder);
@@ -1113,12 +1120,18 @@ export default function Landing() {
                 <Sparkles className="h-4 w-4" /> {copy.interest.quick}
               </Button>
             </Magnetic>
-            <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <p className="mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground sm:justify-start">
               <Mail className="h-4 w-4" /> info@vela.al
             </p>
           </div>
 
+          {/* the written route — "or" divider separates it from the one-click CTA on phones */}
           <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3 lg:hidden" aria-hidden>
+              <span className="h-px flex-1 bg-border" />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{copy.interest.or}</span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
             <label htmlFor="interest-name" className="sr-only">{copy.interest.name}</label>
             <Input
               id="interest-name"
@@ -1136,7 +1149,7 @@ export default function Landing() {
               value={interestMsg}
               onChange={(e) => setInterestMsg(e.target.value)}
               placeholder={copy.interest.placeholder}
-              rows={6}
+              rows={5}
               className="rounded-xl"
             />
             <Button

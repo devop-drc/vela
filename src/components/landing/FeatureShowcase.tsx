@@ -54,18 +54,26 @@ export default function FeatureShowcase({ lang }: { lang: Lang }) {
         sub={t(lang, "Një mjet i vetëm zëvendëson Excel-in, mesazhet dhe hamendjet.", "One tool replaces the spreadsheet, the messages and the guesswork.")}
       />
 
-      <div className="mx-auto mt-10 sm:mt-16 lg:mt-20 max-w-6xl space-y-12 sm:space-y-24 lg:space-y-32">
+      {/* Mobile: each feature is ONE card (screenshot on top, copy under it,
+          bullets as chips) so the section reads as a cohesive rhythm.
+          Desktop (lg+): the cards dissolve into the open alternating rows. */}
+      <div className="mx-auto mt-8 max-w-6xl space-y-6 sm:mt-16 sm:space-y-8 lg:mt-20 lg:space-y-32">
         {feats.map((f, i) => (
-          <div key={i} className={`fs-row grid items-center gap-6 sm:gap-10 lg:grid-cols-2 lg:gap-16 ${f.reverse ? "[&>*:first-child]:lg:order-2" : ""}`}>
-            <div>
+          <div
+            key={i}
+            className={`fs-row grid items-center gap-5 rounded-3xl border border-border bg-card/60 p-4 sm:p-6 lg:grid-cols-2 lg:gap-16 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 ${f.reverse ? "[&>*:first-child]:lg:order-2" : ""}`}
+          >
+            <div className="order-last lg:order-none">
               <div className="fs-anim"><Eyebrow>{f.label}</Eyebrow></div>
-              <h3 className="fs-anim mt-4 font-display-brand text-[clamp(1.7rem,3vw,2.5rem)] font-bold leading-[1.08] tracking-tight text-foreground">{f.title}</h3>
-              <p className="fs-anim mt-4 max-w-md text-[17px] leading-relaxed text-muted-foreground">{f.body}</p>
-              <ul className="fs-anim mt-6 space-y-2.5">
+              <h3 className="fs-anim mt-3 font-display-brand text-[clamp(1.45rem,3vw,2.5rem)] font-bold leading-[1.08] tracking-tight text-foreground lg:mt-4">{f.title}</h3>
+              <p className="fs-anim mt-2.5 max-w-md text-[15px] leading-relaxed text-muted-foreground lg:mt-4 lg:text-[17px]">{f.body}</p>
+              <div className="fs-anim mt-4 flex flex-wrap gap-2 lg:mt-6">
                 {f.bullets.map((b) => (
-                  <li key={b} className="flex items-center gap-2.5 text-[15px] text-foreground"><span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500/15 text-emerald-600"><Check className="h-3.5 w-3.5" /></span>{b}</li>
+                  <span key={b} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[12.5px] font-medium text-foreground lg:text-[13.5px]">
+                    <Check className="h-3.5 w-3.5 text-emerald-500" />{b}
+                  </span>
                 ))}
-              </ul>
+              </div>
             </div>
             <div className="fs-anim"><Frame src={f.img} url={f.url} /></div>
           </div>
