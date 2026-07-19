@@ -2,14 +2,22 @@
  * Split-screen auth shell shared by Login/Register: form on the left,
  * brand story panel on the right — animated signature gradient, floating
  * story cards, and the landing's typography (Clash Display + Satoshi).
+ * Carries the landing's light/dark theme (same `.landing-dark` token
+ * overrides + `landing-theme` storage key) and its language/theme toggles.
  */
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Check, Instagram, Bell } from "lucide-react";
+import { ArrowLeft, Check, Instagram, Bell, Sun, Moon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useReveal } from "@/lib/anim";
+// The `.landing` / `.landing-dark` token overrides live here — without this
+// import, visiting /login directly (before the landing route loads) would
+// leave the dark theme without any CSS to apply.
+import "@/components/landing/landing.css";
 
 const BRAND = "brand-gradient";
+const THEME_KEY = "landing-theme"; // shared with Landing.tsx
 
 interface Props {
   title: string;
@@ -22,19 +30,55 @@ interface Props {
 
 export default function AuthLayout({ title, subtitle, children, points, lang }: Props) {
   const pointsRef = useReveal<HTMLUListElement>({ y: 8, delay: 0.1 }, [points.length]);
+  const { i18n } = useTranslation();
+  const [dark, setDark] = useState(() => {
+    try { return localStorage.getItem(THEME_KEY) === "dark"; } catch { return false; }
+  });
+  const toggleTheme = () =>
+    setDark((d) => {
+      try { localStorage.setItem(THEME_KEY, !d ? "dark" : "light"); } catch { /* private mode */ }
+      return !d;
+    });
+
   return (
-    <div className="font-sans-brand grid min-h-screen bg-background text-foreground lg:grid-cols-[1fr_1.05fr]">
+    // `.landing` + `.landing-dark` reuse the landing page's token overrides so
+    // both pages share one theme, toggled and persisted with the same key.
+    <div className={cn("landing font-sans-brand grid min-h-screen bg-background text-foreground lg:grid-cols-[1fr_1.05fr]", dark && "landing-dark")}>
       {/* ── Form column ── */}
       <div className="relative flex flex-col px-6 py-7 sm:px-12">
         <div className="mx-auto flex w-full max-w-xl flex-1 flex-col">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
+          <div className="flex items-center justify-between gap-2">
+            <Link to="/" className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
               <ArrowLeft className="h-4 w-4" /> {lang === "sq" ? "Kthehu" : "Back"}
             </Link>
-            <Link to="/" className="flex items-center gap-2">
-              <img src="/vela-icon.svg" alt="Vela" className="h-8 w-8 rounded-[10px] shadow-md shadow-red-500/25 ring-1 ring-inset ring-border" />
-              <span className="font-display-brand text-[17px] font-semibold">Vela</span>
-            </Link>
+            <div className="flex items-center gap-2">
+              {/* language switch — same pill as the landing nav */}
+              <div className="flex items-center rounded-full border border-border bg-card p-0.5 text-xs font-medium">
+                {(["sq", "en"] as const).map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => i18n.changeLanguage(l)}
+                    className={cn(
+                      "rounded-full px-2.5 py-1 uppercase transition-colors",
+                      lang === l ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={toggleTheme}
+                aria-label={dark ? "Light mode" : "Dark mode"}
+                className="grid h-8 w-8 place-items-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </button>
+              <Link to="/" className="flex items-center gap-2 pl-1">
+                <img src="/vela-icon.svg" alt="Vela" className="h-8 w-8 rounded-[10px] shadow-md shadow-red-500/25 ring-1 ring-inset ring-border" />
+                <span className="font-display-brand hidden text-[17px] font-semibold sm:inline">Vela</span>
+              </Link>
+            </div>
           </div>
 
           <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-10">
