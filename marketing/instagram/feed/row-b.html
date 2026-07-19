@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="sq">
+<head>
+<meta charset="utf-8">
+<title>Row B — Si funksionon</title>
+<link rel="stylesheet" href="assets/feed.css">
+<style>
+  body { background:var(--paper); color:var(--ink); }
+
+  .topbar { position:absolute; top:0; left:0; right:0; height:18px; }
+  .rowhead { position:absolute; top:96px; left:0; right:0; text-align:center; }
+  .rowhead .eyebrow { font-size:30px; color:var(--primary); }
+  .rowhead h2 { font-family:'Clash Display'; font-weight:600; font-size:76px; margin-top:18px; letter-spacing:-0.02em; }
+
+  /* continuous journey line across all three tiles */
+  .path { position:absolute; left:0; right:0; top:1210px; height:6px;
+          background:repeating-linear-gradient(90deg, #FF2E4D 0 26px, transparent 26px 52px); opacity:.55; } /* was #D946EF */
+
+  .step { position:absolute; top:330px; width:1080px; text-align:center; padding:0 110px; }
+  .s1 { left:0; } .s2 { left:1080px; } .s3 { left:2160px; }
+
+  .icon { width:170px; height:170px; margin:0 auto; border-radius:48px; display:flex; align-items:center; justify-content:center;
+          background:#fff; border:2px solid var(--border); box-shadow:0 26px 60px -30px rgba(46,33,64,.25); }
+  .icon svg { width:86px; height:86px; }
+
+  .num { font-family:'Clash Display'; font-weight:700; font-size:210px; line-height:1; margin-top:46px; }
+  .step h3 { font-family:'Clash Display'; font-weight:600; font-size:66px; margin-top:8px; letter-spacing:-0.02em; }
+  .step p { font-size:34px; color:var(--muted); margin-top:20px; line-height:1.45; }
+
+  .dot { position:absolute; top:1188px; left:50%; width:50px; height:50px; margin-left:-25px; border-radius:99px;
+         border:6px solid #fff; box-shadow:0 0 0 3px rgba(217,70,239,.35); }
+  .foot { position:absolute; bottom:84px; left:0; right:0; text-align:center; font-size:30px; color:var(--muted); }
+  .foot b { color:var(--ink); }
+</style>
+</head>
+<body>
+  <div class="topbar brand-gradient"></div>
+  <div class="rowhead">
+    <div class="eyebrow">Si funksionon</div>
+    <h2>Aktiv në tre hapa — pa kod.</h2>
+  </div>
+
+  <div class="path"></div>
+
+  <div class="step s1">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#A31234" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.4"/><circle cx="17.6" cy="6.4" r="1.15" fill="#A31234" stroke="none"/></svg></div>
+    <div class="num brand-text">01</div>
+    <h3>Lidh Instagramin</h3>
+    <p>Një prekje për të lidhur profilin<br>Instagram Business.</p>
+    <div class="dot brand-gradient"></div>
+  </div>
+
+  <div class="step s2">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#FF2E4D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6v18.8M2.6 12h18.8M5.4 5.4l13.2 13.2M18.6 5.4L5.4 18.6"/></svg></div>
+    <div class="num brand-text">02</div>
+    <h3>Sistemi ndërton produktet</h3>
+    <p>Postimet bëhen produkte — emri, çmimi,<br>kategoria dhe variantet, vetë.</p>
+    <div class="dot brand-gradient"></div>
+  </div>
+
+  <div class="step s3">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5 3.5 6v14a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2V6L18 2.5H6z"/><path d="M3.5 6h17"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>
+    <div class="num brand-text">03</div>
+    <h3>Ndaj linkun &amp; shit</h3>
+    <p>Publiko vitrinën dhe merr porosi<br>e pagesa që sot.</p>
+    <div class="dot brand-gradient"></div>
+  </div>
+
+  <div class="foot">vela.al · <b>Provo falas 7 ditë</b> · pa kartë</div>
+</body>
+</html>

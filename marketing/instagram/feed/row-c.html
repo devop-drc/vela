@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="sq">
+<head>
+<meta charset="utf-8">
+<title>Row C — Veçoritë</title>
+<link rel="stylesheet" href="assets/feed.css">
+<style>
+  body { background:var(--dark); color:#F5F3F6; }
+
+  /* continuous gradient ribbon flowing behind the cards across all tiles */
+  .ribbon { position:absolute; left:-160px; right:-160px; top:600px; height:260px;
+            transform:rotate(-3.4deg); border-radius:200px; opacity:.9; }
+  .ribbon-glow { position:absolute; left:-160px; right:-160px; top:560px; height:340px;
+                 transform:rotate(-3.4deg); filter:blur(130px); opacity:.5; }
+
+  .rowhead { position:absolute; top:100px; left:0; right:0; text-align:center; }
+  .rowhead .eyebrow { font-size:30px; color:#FF5A73; } /* was #ED5EED */
+  .rowhead h2 { font-family:'Clash Display'; font-weight:600; font-size:76px; margin-top:18px; color:#fff; letter-spacing:-0.02em; }
+
+  .card { position:absolute; top:436px; width:840px; height:700px; left:120px; border-radius:64px; padding:76px 70px;
+          background:rgba(22,18,28,.92); border:2px solid rgba(255,255,255,.16);
+          box-shadow:0 60px 140px -60px rgba(0,0,0,.8); }
+  .c2 { left:1200px; } .c3 { left:2280px; }
+
+  .card .icon { width:130px; height:130px; border-radius:38px; display:flex; align-items:center; justify-content:center; }
+  .card .icon svg { width:66px; height:66px; }
+  .card h3 { font-family:'Clash Display'; font-weight:600; font-size:64px; line-height:1.12; margin-top:52px; letter-spacing:-0.02em; }
+  .card p { font-size:33px; color:rgba(255,255,255,.62); margin-top:24px; line-height:1.5; }
+  .card .tag { position:absolute; bottom:64px; left:70px; font-size:26px; letter-spacing:.2em; text-transform:uppercase; font-weight:700; color:rgba(255,255,255,.45); }
+
+  .foot { position:absolute; bottom:78px; left:0; right:0; text-align:center; font-size:30px; color:rgba(255,255,255,.55); }
+  .foot b { color:#fff; }
+</style>
+</head>
+<body>
+  <div class="ribbon-glow brand-gradient"></div>
+  <div class="ribbon brand-gradient"></div>
+
+  <div class="rowhead">
+    <div class="eyebrow">Veçoritë</div>
+    <h2>Gjithçka për dyqanin tënd.</h2>
+  </div>
+
+  <div class="card c1" style="left:120px">
+    <div class="icon" style="background:rgba(255,46,77,.16)"><svg viewBox="0 0 24 24" fill="none" stroke="#FF5A73" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/><path d="M6 15h4"/></svg></div>
+    <h3>Pagesa me kartë,<br>në Lekë.</h3>
+    <p>Kartë me RaiAccept ose para në dorë — klienti zgjedh, ti paguhesh.</p>
+    <span class="tag">Checkout i vërtetë</span>
+  </div>
+
+  <div class="card c2">
+    <div class="icon" style="background:rgba(245,158,11,.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.6"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c1.2 0 2-.9 2-2 0-.6-.2-1-.6-1.4-.4-.4-.6-.9-.6-1.4 0-1.1.9-2 2-2h2.4c3 0 4.8-1.8 4.8-4.6C22 5.6 17.5 2 12 2z"/><circle cx="7.5" cy="9.5" r="1.4" fill="#F59E0B" stroke="none"/><circle cx="16.8" cy="11.4" r="1.4" fill="#F59E0B" stroke="none"/></svg></div>
+    <h3>Vitrina jote,<br>marka jote.</h3>
+    <p>Ngjyra, fonte, seksione — dizajno gjithçka me pamje live në Storefront Studio.</p>
+    <span class="tag">Storefront Studio</span>
+  </div>
+
+  <div class="card c3">
+    <div class="icon" style="background:rgba(250,204,21,.15)"><svg viewBox="0 0 24 24" fill="none" stroke="#FACC15" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg></div>
+    <h3>Porositë,<br>në një panel.</h3>
+    <p>Njoftim në çast për çdo porosi. Stoku rezervohet vetë — s'shet kurrë tepër.</p>
+    <span class="tag">Live · pa kaos</span>
+  </div>
+
+  <div class="foot">vela.al · <b>Provo falas 7 ditë</b> · pa kartë · anulo kurdo</div>
+</body>
+</html>

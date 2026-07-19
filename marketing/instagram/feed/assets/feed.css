@@ -1,0 +1,40 @@
+/* Shared canvas styles for Vela Instagram feed rows.
+   Canvas = 3240x1440 → sliced into three 1080x1440 tiles (IG 3:4 grid). */
+@font-face { font-family:'Clash Display'; src:url('fonts/ClashDisplay-Medium.otf') format('opentype'); font-weight:500; }
+@font-face { font-family:'Clash Display'; src:url('fonts/ClashDisplay-Semibold.otf') format('opentype'); font-weight:600; }
+@font-face { font-family:'Clash Display'; src:url('fonts/ClashDisplay-Bold.otf') format('opentype'); font-weight:700; }
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap');
+
+:root {
+  /* was (Instagram-era): primary #C520C5 · pink #DB2777 · fuchsia #D946EF · deep #C026D3 · red #EF4444 */
+  --ink:#2A1D22; --muted:#796770; --paper:#FDFCFD; --border:#E8DEE2;
+  --dark:#140A0E; --dark-card:#1E1014; --primary:#A31234;
+  --pink:#C81E3C; --fuchsia:#FF2E4D; --deep:#7F1D3B; --amber:#F59E0B; --red:#E11D48; --yellow:#FACC15;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:3240px; height:1440px; overflow:hidden; }
+body { font-family:'Satoshi', Inter, 'Segoe UI', sans-serif; position:relative; }
+.display { font-family:'Clash Display', sans-serif; letter-spacing:-0.02em; }
+
+.canvas { position:absolute; inset:0; }
+.tilemark { position:absolute; top:0; bottom:0; width:0; }
+
+/* Instagram-era palette (commented for reference):
+   base #DB2777 · blobs #C026D3 / #F59E0B / #D946EF / #EF4444
+   text: linear-gradient(100deg,#D946EF 5%,#DB2777 32%,#EF4444 55%,#F59E0B 90%) */
+.brand-gradient {
+  background-color:#A31234; /* wine */
+  background-image:
+    radial-gradient(42% 56% at 20% 25%, #7F1D3B 0%, rgba(127, 29, 59, 0) 100%),
+    radial-gradient(48% 62% at 80% 18%, #FACC15 0%, rgba(250, 204, 21, 0) 100%),
+    radial-gradient(52% 66% at 72% 82%, #FF2E4D 0%, rgba(255, 46, 77, 0) 100%),
+    radial-gradient(44% 54% at 22% 78%, #F59E0B 0%, rgba(245, 158, 11, 0) 100%);
+  background-size:230% 230%,210% 210%,250% 250%,220% 220%;
+  background-position:0% 0%,100% 0%,100% 100%,0% 100%;
+}
+.brand-text {
+  background:linear-gradient(100deg,#FACC15 5%,#F59E0B 30%,#FF2E4D 62%,#A31234 95%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.eyebrow { font-weight:700; letter-spacing:.24em; text-transform:uppercase; }
+.chip { display:inline-flex; align-items:center; gap:14px; border-radius:999px; font-weight:500; }
