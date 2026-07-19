@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 102.10736 99.943557" width="102.10736" height="99.943557">
   <defs>
     <linearGradient id="shipGrad" gradientUnits="userSpaceOnUse" x1="344.50818" y1="67.128716" x2="242.40085" y2="103.01679">
-      <stop offset="0" stop-color="#feda75" />
-      <stop offset="0.20795684" stop-color="#fa7e1e" />
-      <stop offset="0.46613425" stop-color="#d62976" />
-      <stop offset="0.75824177" stop-color="#962fbf" />
-      <stop offset="1" stop-color="#4f5bd5" />
+      <stop offset="0" stop-color="#FACC15" />
+      <stop offset="0.20795684" stop-color="#F59E0B" />
+      <stop offset="0.46613425" stop-color="#FF2E4D" />
+      <stop offset="0.75824177" stop-color="#A31234" />
+      <stop offset="1" stop-color="#7F1D3B" />
     </linearGradient>
   </defs>
   <g transform="translate(-489.98059,1145.8418)">

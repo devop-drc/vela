@@ -69,8 +69,9 @@ const createTheme = (name: string, p: string, s: string, a: string, bg: string, 
 };
 
 export const presetThemes: Theme[] = [
-  // Vela — the brand default: magenta-purple primary, fuchsia ring, violet-cast neutrals.
-  createTheme('Vela', '300 72% 45%', '300 25% 95%', '300 40% 95%', '300 20% 99%', '290 18% 14%'),
+  // Vela — the brand default: wine-red primary, neon-red ring, warm rose-cast neutrals.
+  // was (Instagram-era): createTheme('Vela', '300 72% 45%', '300 25% 95%', '300 40% 95%', '300 20% 99%', '290 18% 14%')
+  createTheme('Vela', '346 80% 38%', '348 25% 95%', '348 45% 95%', '350 20% 99%', '350 16% 14%'),
   createTheme('Midnight Blush', '255 50% 40%', '330 80% 95%', '330 80% 88%', '255 30% 98%', '255 50% 15%'),
   createTheme('Emerald Sands', '150 60% 30%', '45 50% 95%', '45 50% 88%', '45 30% 99%', '150 50% 10%'),
   createTheme('Solar Flare', '35 95% 55%', '20 20% 25%', '20 20% 35%', '20 15% 12%', '35 100% 95%'),
@@ -152,7 +153,7 @@ export const defaultSettings: DesignSettings = {
   isAdvanced: false,
   sidebarStyle: 'card',
   ...presetThemes[0].light,
-  '--ring': '292 84% 55%', // Vela fuchsia focus ring (brighter than the primary)
+  '--ring': '351 92% 52%', // Vela neon-red focus ring (brighter than the primary) · was 292 84% 55%
   '--radius': '1.5rem',
   fontSans: 'Inter',
   fontHeading: 'Clash Display',

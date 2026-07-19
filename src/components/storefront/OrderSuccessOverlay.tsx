@@ -26,7 +26,8 @@ export const OrderSuccessOverlay = ({ orderNumber, onContinue, title, subtitle, 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     // Two side cannons + a center burst, staggered — short and celebratory.
-    const defaults = { zIndex: 220, disableForReducedMotion: true, colors: ["#D62976", "#962FBF", "#4F5BD5", "#FEDA75", "#34d399"] };
+    // was (Instagram-era): ["#FD1D1D", "#D62976", "#962FBF", "#4F5BD5", "#FEDA75", "#34d399"]
+    const defaults = { zIndex: 220, disableForReducedMotion: true, colors: ["#FF2E4D", "#A31234", "#F59E0B", "#FACC15", "#7F1D3B", "#34d399"] };
     confetti({ ...defaults, particleCount: 90, spread: 75, origin: { x: 0.5, y: 0.45 } });
     const t1 = setTimeout(() => confetti({ ...defaults, particleCount: 45, angle: 60, spread: 55, origin: { x: 0, y: 0.7 } }), 250);
     const t2 = setTimeout(() => confetti({ ...defaults, particleCount: 45, angle: 120, spread: 55, origin: { x: 1, y: 0.7 } }), 400);

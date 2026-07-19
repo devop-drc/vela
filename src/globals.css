@@ -15,26 +15,27 @@
 
 @layer base {
   :root {
-    /* Color Palette — Vela brand (magenta→purple, violet-cast neutrals) */
-    --background: 300 20% 99%; /* violet-cast near-white */
-    --foreground: 290 18% 14%; /* violet-cast charcoal */
-    --muted: 300 18% 96%;
-    --muted-foreground: 290 8% 44%;
+    /* Color Palette — Vela brand (wine→neon red + gold, warm rose-cast neutrals).
+       Previous magenta→purple values kept inline as "was …" comments. */
+    --background: 350 20% 99%; /* warm near-white · was 300 20% 99% */
+    --foreground: 350 16% 14%; /* warm charcoal · was 290 18% 14% */
+    --muted: 350 18% 96%; /* was 300 18% 96% */
+    --muted-foreground: 348 8% 44%; /* was 290 8% 44% */
 
     --card: 0 0% 100%; /* white card background */
-    --card-foreground: 290 18% 14%;
+    --card-foreground: 350 16% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 290 18% 14%;
+    --popover-foreground: 350 16% 14%;
 
-    --primary: 300 72% 45%; /* Vela magenta-purple */
+    --primary: 346 80% 38%; /* Vela wine red · was 300 72% 45% */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 300 25% 95%;
-    --secondary-foreground: 300 40% 25%;
+    --secondary: 348 25% 95%; /* was 300 25% 95% */
+    --secondary-foreground: 348 45% 25%; /* was 300 40% 25% */
 
-    --accent: 300 40% 95%; /* soft brand tint for hover/selected */
-    --accent-foreground: 300 55% 30%;
+    --accent: 348 45% 95%; /* soft brand tint for hover/selected · was 300 40% 95% */
+    --accent-foreground: 348 60% 28%; /* was 300 55% 30% */
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
@@ -45,9 +46,9 @@
     --info: 214 84% 46%; /* blue — in-progress / neutral-info */
     --info-foreground: 0 0% 100%;
 
-    --border: 295 18% 89%; /* subtle violet-grey border */
-    --input: 295 18% 89%;
-    --ring: 292 84% 55%; /* Vela fuchsia focus ring */
+    --border: 348 16% 89%; /* subtle warm-grey border · was 295 18% 89% */
+    --input: 348 16% 89%;
+    --ring: 351 92% 52%; /* Vela neon-red focus ring · was 292 84% 55% */
 
     /* Safe area insets */
     --sat: env(safe-area-inset-top, 0px);
@@ -64,26 +65,27 @@
   }
 
   .dark {
-    /* Dark theme — Vela brand (violet-cast neutrals, fuchsia primary) */
-    --background: 265 22% 6%;
-    --foreground: 285 15% 96%;
-    --muted: 265 16% 15%;
-    --muted-foreground: 280 10% 68%;
+    /* Dark theme — Vela brand (warm rose-cast neutrals, neon-red primary).
+       Previous violet-cast values kept as "was …" comments. */
+    --background: 350 20% 6%; /* was 265 22% 6% */
+    --foreground: 350 12% 96%; /* was 285 15% 96% */
+    --muted: 348 14% 15%; /* was 265 16% 15% */
+    --muted-foreground: 345 8% 68%; /* was 280 10% 68% */
 
-    --card: 264 20% 9%;
-    --card-foreground: 285 15% 96%;
+    --card: 348 18% 9%; /* was 264 20% 9% */
+    --card-foreground: 350 12% 96%;
 
-    --popover: 264 20% 9%;
-    --popover-foreground: 285 15% 96%;
+    --popover: 348 18% 9%;
+    --popover-foreground: 350 12% 96%;
 
-    --primary: 300 80% 65%;
-    --primary-foreground: 300 40% 8%;
+    --primary: 351 100% 62%; /* neon red · was 300 80% 65% */
+    --primary-foreground: 350 45% 8%; /* was 300 40% 8% */
 
-    --secondary: 265 18% 16%;
-    --secondary-foreground: 285 15% 92%;
+    --secondary: 348 14% 16%; /* was 265 18% 16% */
+    --secondary-foreground: 350 12% 92%; /* was 285 15% 92% */
 
-    --accent: 280 25% 18%;
-    --accent-foreground: 285 15% 92%;
+    --accent: 348 22% 18%; /* was 280 25% 18% */
+    --accent-foreground: 350 12% 92%; /* was 285 15% 92% */
 
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 98%;
@@ -94,9 +96,9 @@
     --info: 213 90% 66%; /* lighter blue for dark surfaces */
     --info-foreground: 214 60% 10%;
 
-    --border: 265 16% 20%;
-    --input: 265 16% 20%;
-    --ring: 292 84% 62%;
+    --border: 348 14% 20%; /* was 265 16% 20% */
+    --input: 348 14% 20%;
+    --ring: 351 92% 60%; /* was 292 84% 62% */
   }
 }
 
@@ -128,7 +130,8 @@
   }
 
   /* Brand-tinted text selection. */
-  ::selection { background: hsl(292 84% 55% / 0.22); }
+  /* was: background: hsl(292 84% 55% / 0.22); */
+  ::selection { background: hsl(351 92% 52% / 0.2); }
 
   /* Custom Scrollbar — slim & elegant. */
   ::-webkit-scrollbar { width: 11px; height: 11px; }
@@ -207,25 +210,44 @@
 @layer utilities {
   /* ── Brand: animated signature gradient (landing, auth, billing…).
        Fluid "mesh" motion: four radial blobs drift on independent paths
-       over a pink base; odd keyframe stops + alternate direction make the
-       movement feel organic rather than looping. ── */
+       over a wine-red base; odd keyframe stops + alternate direction make
+       the movement feel organic rather than looping. ── */
+  /* Instagram-era palette (commented for reference):
   .brand-gradient {
-    background-color: #ec4899;
+    background-color: #db2777;
     background-image:
       radial-gradient(42% 56% at 20% 25%, #c026d3 0%, rgba(192, 38, 211, 0) 100%),
       radial-gradient(48% 62% at 80% 18%, #f59e0b 0%, rgba(245, 158, 11, 0) 100%),
       radial-gradient(52% 66% at 72% 82%, #d946ef 0%, rgba(217, 70, 239, 0) 100%),
-      radial-gradient(44% 54% at 22% 78%, #fb7185 0%, rgba(251, 113, 133, 0) 100%);
-    background-size: 230% 230%, 210% 210%, 250% 250%, 220% 220%;
-    background-position: 0% 0%, 100% 0%, 100% 100%, 0% 100%;
-    animation: brand-blob 13s ease-in-out infinite alternate;
+      radial-gradient(44% 54% at 22% 78%, #ef4444 0%, rgba(239, 68, 68, 0) 100%);
   }
+  */
+  .brand-gradient {
+    background-color: #a31234; /* wine */
+    /* Lava-lamp mesh v2: five oversized soft ellipses (the formula that reads
+       at EVERY element size — buttons to full-bleed panels). Position drift
+       AND size breathing make the blobs swell, merge and split like wax;
+       every layer stays ≥190% so the mesh never leaves flat gaps. */
+    background-image:
+      radial-gradient(52% 64% at 18% 22%, #7f1d3b 0%, rgba(127, 29, 59, 0) 100%),
+      radial-gradient(44% 56% at 84% 12%, #facc15 0%, rgba(250, 204, 21, 0) 100%),
+      radial-gradient(56% 68% at 76% 84%, #ff2e4d 0%, rgba(255, 46, 77, 0) 100%),
+      radial-gradient(46% 58% at 14% 82%, #f59e0b 0%, rgba(245, 158, 11, 0) 100%),
+      radial-gradient(62% 74% at 52% 48%, #c81e3c 0%, rgba(200, 30, 60, 0) 100%);
+    background-size: 240% 240%, 200% 200%, 250% 250%, 210% 210%, 270% 270%;
+    background-position: 0% 0%, 100% 0%, 100% 100%, 0% 100%, 50% 50%;
+    animation: brand-blob 22s ease-in-out infinite alternate;
+  }
+  /* Position-only drift: animating background-size forced a full re-raster of
+     every gradient element per frame and was THE landing scroll-jank source
+     (measured 8→26fps when disabled). The size "breathing" lives on only in
+     pre-rendered media (splash/video); live UI drifts positions only. */
   @keyframes brand-blob {
-    0%   { background-position: 0% 0%,     100% 0%,   100% 100%, 0% 100%; }
-    23%  { background-position: 55% 35%,   45% 15%,   65% 55%,   25% 70%; }
-    47%  { background-position: 100% 75%,  5% 65%,    15% 5%,    85% 25%; }
-    71%  { background-position: 35% 100%,  70% 95%,   0% 45%,    100% 5%; }
-    100% { background-position: 5% 25%,    90% 10%,   85% 95%,   15% 85%; }
+    0%   { background-position: 0% 0%,   100% 0%,  100% 100%, 0% 100%,  50% 50%; }
+    24%  { background-position: 55% 30%, 50% 20%,  60% 60%,   25% 65%,  90% 15%; }
+    47%  { background-position: 100% 70%, 5% 60%,  15% 10%,   80% 25%,  15% 85%; }
+    72%  { background-position: 35% 100%, 65% 95%, 0% 45%,    100% 5%,  60% 70%; }
+    100% { background-position: 5% 20%,  90% 10%,  85% 95%,   10% 90%,  40% 35%; }
   }
   /* Legacy pan (used by .grad-border's thin rim, where blobs can't read) */
   @keyframes brand-pan {
