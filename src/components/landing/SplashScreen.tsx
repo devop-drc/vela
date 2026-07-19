@@ -24,6 +24,7 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
     const ctx = gsap.context(() => {
       if (reduce) {
         gsap.set([".sv-mark", ".sv-letter", ".sv-glow", ".sv-loader", ".sv-lockup"], { opacity: 1, x: 0, y: 0, scale: 1 });
+        gsap.set(".sv-letters", { width: "auto", paddingLeft: "0.22em" });
         gsap.set(".sv-ring-path", { strokeDashoffset: 0 });
         gsap.to(root.current, { opacity: 0, duration: 0.3, delay: 0.5, onComplete: done });
         return;
@@ -39,10 +40,11 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
         .to(".sv-ring-path", { strokeDashoffset: 0, duration: 0.7, ease: "power2.inOut" }, 0.28)
         // ring releases outward as a pulse and fades
         .to(".sv-ring", { scale: 1.5, opacity: 0, duration: 0.55, ease: "power2.out" }, 1.0)
-        // the mark docks left while the wordmark letters rise beside it
-        .to(".sv-mark", { x: -86, duration: 0.6, ease: "power3.inOut" }, 1.08)
-        .to(".sv-letters", { width: "auto", duration: 0 }, 1.08)
-        .from(".sv-letter", { yPercent: 120, opacity: 0, stagger: 0.055, duration: 0.5, ease: "power4.out" }, 1.18)
+        // the lockup opens: the letters box grows from 0 → auto so flexbox
+        // recenters continuously (the mark docks left by itself — exact on
+        // every screen size, no magic pixel offsets)
+        .to(".sv-letters", { width: "auto", paddingLeft: "0.22em", duration: 0.6, ease: "power3.inOut" }, 1.08)
+        .from(".sv-letter", { yPercent: 120, opacity: 0, filter: "blur(6px)", stagger: 0.055, duration: 0.5, ease: "power4.out" }, 1.18)
         // loader line fills under the lockup
         .fromTo(".sv-loader-fill", { scaleX: 0 }, { scaleX: 1, duration: 0.8, ease: "power2.inOut" }, 1.3)
         .from(".sv-tag", { opacity: 0, y: 10, duration: 0.4, ease: "power2.out" }, 1.45)
@@ -80,6 +82,11 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
           filter: "blur(30px)",
         }}
       />
+      {/* faint amber counter-glow, top-right, for depth */}
+      <div
+        className="pointer-events-none absolute -right-[20vmax] -top-[24vmax] h-[70vmax] w-[70vmax] rounded-full"
+        style={{ background: "radial-gradient(closest-side, rgba(245,158,11,0.14), transparent 70%)", filter: "blur(40px)" }}
+      />
       <div
         className="pointer-events-none absolute inset-0"
         style={{ background: "radial-gradient(90% 70% at 50% 38%, transparent 30%, rgba(20,10,14,0.55) 100%)" }}
@@ -115,16 +122,17 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
             </svg>
           </div>
 
-          {/* wordmark — revealed as the mark docks left */}
+          {/* wordmark — starts at width 0 so the mark is exactly screen-
+              centered, then the box grows and flexbox re-centers the lockup */}
           <div
-            className="sv-letters flex overflow-hidden pl-5"
-            style={{ fontFamily: "'Clash Display','Satoshi',sans-serif" }}
+            className="sv-letters flex overflow-hidden"
+            style={{ fontFamily: "'Clash Display','Satoshi',sans-serif", width: 0, paddingLeft: 0, fontSize: "clamp(52px, 13vw, 84px)" }}
           >
             {"Vela".split("").map((c, i) => (
               <span
                 key={i}
                 className="sv-letter inline-block font-bold leading-none text-white"
-                style={{ fontSize: "clamp(52px, 13vw, 84px)", letterSpacing: "-0.02em" }}
+                style={{ letterSpacing: "-0.02em" }}
               >{c}</span>
             ))}
           </div>
@@ -134,14 +142,18 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
         <div className="sv-loader mt-[clamp(22px,5vw,34px)] h-[3px] w-[min(56vw,260px)] overflow-hidden rounded-full bg-white/10">
           <div
             className="sv-loader-fill h-full w-full origin-left rounded-full"
-            style={{ background: "linear-gradient(90deg,#FACC15,#F59E0B 30%,#FF2E4D 65%,#A31234)", transform: "scaleX(0)" }}
+            style={{ background: "linear-gradient(90deg,#FACC15,#F59E0B 30%,#FF2E4D 65%,#A31234)", transform: "scaleX(0)", boxShadow: "0 0 14px rgba(255,46,77,0.65)" }}
           />
         </div>
 
         <p
-          className="sv-tag mt-[clamp(14px,3vw,20px)] max-w-[88vw] text-center font-semibold uppercase text-white/70"
+          className="sv-tag mt-[clamp(14px,3vw,20px)] flex max-w-[88vw] items-center justify-center gap-2.5 text-center font-semibold uppercase text-white/70"
           style={{ fontSize: "clamp(11px, 2.8vw, 13px)", fontFamily: "'Satoshi','Inter',sans-serif", letterSpacing: "0.24em" }}
         >
+          <span
+            className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
+            style={{ background: "linear-gradient(120deg,#FACC15,#FF2E4D)", boxShadow: "0 0 8px rgba(255,46,77,0.9)" }}
+          />
           Kthe Instagramin në dyqan online
         </p>
       </div>
