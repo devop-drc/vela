@@ -22,7 +22,7 @@ export const transparentBadgeSchema = z.object({
 });
 export const transparentBadgeDefaults: z.infer<typeof transparentBadgeSchema> = {
   label: "VERIFIED",
-  accent: "#d946ef",
+  accent: "#ff2e4d", // was #d946ef (Instagram-era)
   accent2: "#f97316",
 };
 

@@ -17,7 +17,7 @@ export const kineticTextSchema = z.object({
 });
 export const kineticTextDefaults: z.infer<typeof kineticTextSchema> = {
   phrase: "Move with intention",
-  accent: "#d946ef",
+  accent: "#ff2e4d", // was #d946ef (Instagram-era)
 };
 
 export const KineticText = ({ phrase, accent }: z.infer<typeof kineticTextSchema>) => {

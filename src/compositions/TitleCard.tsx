@@ -19,7 +19,7 @@ export const titleCardSchema = z.object({
 export const titleCardDefaults: z.infer<typeof titleCardSchema> = {
   title: "Your Title Here",
   subtitle: "A clean, animated subtitle",
-  accent: "#d946ef",
+  accent: "#ff2e4d", // was #d946ef (Instagram-era)
 };
 
 export const TitleCard = ({ title, subtitle, accent }: z.infer<typeof titleCardSchema>) => {
