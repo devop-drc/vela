@@ -53,7 +53,7 @@ const TOURS: { match: (path: string) => boolean; tour: PageTour }[] = [
           { en: 'A live log of everything happening in your shop — new orders, stock changes, syncs. If something looks off, this is the first place to check.', sq: 'Regjistër i drejtpërdrejtë i gjithçkaje që ndodh në dyqan — porosi të reja, ndryshime stoku, sinkronizime. Nëse diçka duket e çuditshme, kontrollo së pari këtu.' }),
         at('header-actions',
           { en: 'Sync and notifications', sq: 'Sinkronizimi dhe njoftimet' },
-          { en: 'From here you can run an Instagram sync (pulls your latest posts and turns them into products with AI), open notifications, and manage your account. The sync status widget shows progress live.', sq: 'Nga këtu nis sinkronizimin me Instagram (merr postimet e fundit dhe i kthen në produkte me AI), hap njoftimet dhe menaxhon llogarinë. Statusi i sinkronizimit shfaqet drejtpërdrejt.' },
+          { en: 'From here you can run an Instagram sync (pulls your latest posts and turns them into products with the system), open notifications, and manage your account. The sync status widget shows progress live.', sq: 'Nga këtu nis sinkronizimin me Instagram (merr postimet e fundit dhe i kthen në produkte me sistemin), hap njoftimet dhe menaxhon llogarinë. Statusi i sinkronizimit shfaqet drejtpërdrejt.' },
           'bottom'),
         intro(
           { en: 'That\'s the dashboard!', sq: 'Ky ishte paneli!' },
@@ -69,11 +69,11 @@ const TOURS: { match: (path: string) => boolean; tour: PageTour }[] = [
       steps: [
         intro(
           { en: 'Products', sq: 'Produktet' },
-          { en: 'This is where all your products live — both the ones AI created from your Instagram posts and any you add by hand. From here you publish, edit, price, stock and organize everything you sell.', sq: 'Këtu jetojnë të gjitha produktet — si ato që AI i krijoi nga postimet e Instagramit, ashtu edhe ato që shton vetë. Nga këtu publikon, redakton, vendos çmime, stok dhe organizon gjithçka që shet.' }
+          { en: 'This is where all your products live — both the ones the system created from your Instagram posts and any you add by hand. From here you publish, edit, price, stock and organize everything you sell.', sq: 'Këtu jetojnë të gjitha produktet — si ato që sistemi i krijoi nga postimet e Instagramit, ashtu edhe ato që shton vetë. Nga këtu publikon, redakton, vendos çmime, stok dhe organizon gjithçka që shet.' }
         ),
         at('products-toolbar',
           { en: 'Search and filters', sq: 'Kërkimi dhe filtrat' },
-          { en: 'Find any product instantly: search by name, filter by status (Active, Draft, Out of Stock), category, or price. Drafts are products the AI created from Instagram that are waiting for your review — they are NOT visible to customers until you publish them.', sq: 'Gjej çdo produkt në çast: kërko me emër, filtro sipas statusit (Aktiv, Draft, Pa stok), kategorisë ose çmimit. Draftet janë produkte që AI i krijoi nga Instagrami dhe presin miratimin tënd — klientët NUK i shohin derisa t\'i publikosh.' }),
+          { en: 'Find any product instantly: search by name, filter by status (Active, Draft, Out of Stock), category, or price. Drafts are products the system created from Instagram that are waiting for your review — they are NOT visible to customers until you publish them.', sq: 'Gjej çdo produkt në çast: kërko me emër, filtro sipas statusit (Aktiv, Draft, Pa stok), kategorisë ose çmimit. Draftet janë produkte që sistemi i krijoi nga Instagrami dhe presin miratimin tënd — klientët NUK i shohin derisa t\'i publikosh.' }),
         at('add-product',
           { en: 'Add a product manually', sq: 'Shto produkt manualisht' },
           { en: 'Not everything has to come from Instagram. Click here to create a product from scratch: photos, price, variants, inventory — the full editor.', sq: 'Jo gjithçka duhet të vijë nga Instagrami. Kliko këtu për të krijuar produkt nga e para: foto, çmim, variante, inventar — redaktori i plotë.' },
@@ -83,7 +83,7 @@ const TOURS: { match: (path: string) => boolean; tour: PageTour }[] = [
           { en: 'Click any product to open its full editor: change photos, price, description, options like color and size, and stock. Use the checkboxes to select several products and act on all of them at once — publish, change category, or delete. Deleting a product removes its media and data, but your order history is always kept.', sq: 'Kliko çdo produkt për ta hapur në redaktorin e plotë: ndrysho fotot, çmimin, përshkrimin, opsionet si ngjyra e masa, dhe stokun. Me kutizat zgjedh disa produkte njëherësh — publiko, ndrysho kategori ose fshi. Fshirja e një produkti heq media dhe të dhënat e tij, por historia e porosive ruhet gjithmonë.' }),
         intro(
           { en: 'Tip: review your drafts', sq: 'Këshillë: shiko draftet' },
-          { en: 'After an Instagram sync, new products arrive as Drafts. Review the AI\'s name and price, fix anything, then set them Active — only then do customers see them in your storefront.', sq: 'Pas një sinkronizimi, produktet e reja vijnë si Drafte. Kontrollo emrin dhe çmimin që nxori AI, rregullo çfarë duhet, pastaj bëji Aktive — vetëm atëherë klientët i shohin në dyqan.' }
+          { en: 'After an Instagram sync, new products arrive as Drafts. Review the system\'s name and price, fix anything, then set them Active — only then do customers see them in your storefront.', sq: 'Pas një sinkronizimi, produktet e reja vijnë si Drafte. Kontrollo emrin dhe çmimin që nxori sistemi, rregullo çfarë duhet, pastaj bëji Aktive — vetëm atëherë klientët i shohin në dyqan.' }
         ),
       ],
     },
@@ -116,15 +116,15 @@ const TOURS: { match: (path: string) => boolean; tour: PageTour }[] = [
       key: 'keywords',
       steps: [
         intro(
-          { en: 'Keywords — teach the AI your language', sq: 'Fjalët kyçe — mësoji AI-së gjuhën tënde' },
-          { en: 'When the AI reads your Instagram captions, keywords tell it what to look for. If your captions say "çmimi" before the price or use specific product words, add them here and the AI will extract names, prices and categories much more accurately.', sq: 'Kur AI lexon përshkrimet e postimeve, fjalët kyçe i tregojnë çfarë të kërkojë. Nëse në përshkrime shkruan "çmimi" para vlerës ose përdor fjalë specifike produktesh, shtoji këtu dhe AI do të nxjerrë emrat, çmimet dhe kategoritë shumë më saktë.' }
+          { en: 'Keywords — teach the system your language', sq: 'Fjalët kyçe — mësoji sistemit gjuhën tënde' },
+          { en: 'When the system reads your Instagram captions, keywords tell it what to look for. If your captions say "çmimi" before the price or use specific product words, add them here and the system will extract names, prices and categories much more accurately.', sq: 'Kur sistemi lexon përshkrimet e postimeve, fjalët kyçe i tregojnë çfarë të kërkojë. Nëse në përshkrime shkruan "çmimi" para vlerës ose përdor fjalë specifike produktesh, shtoji këtu dhe sistemi do të nxjerrë emrat, çmimet dhe kategoritë shumë më saktë.' }
         ),
         at('keywords-add',
           { en: 'Add a keyword', sq: 'Shto fjalë kyçe' },
           { en: 'Type a word or phrase that appears in your captions and what it means (price marker, category hint, size…). The next sync uses it immediately.', sq: 'Shkruaj një fjalë a frazë që shfaqet në përshkrimet e tua dhe çfarë do të thotë (tregues çmimi, kategori, masë…). Sinkronizimi i radhës e përdor menjëherë.' }),
         at('keywords-table',
           { en: 'Your keyword list', sq: 'Lista e fjalëve kyçe' },
-          { en: 'Everything the AI currently knows. Edit or remove entries any time — bad keywords are worse than none, so keep this list clean.', sq: 'Gjithçka që AI di aktualisht. Redakto ose fshi kur të duash — fjalët kyçe të gabuara janë më keq se asnjë, prandaj mbaje listën të pastër.' }),
+          { en: 'Everything the system currently knows. Edit or remove entries any time — bad keywords are worse than none, so keep this list clean.', sq: 'Gjithçka që sistemi di aktualisht. Redakto ose fshi kur të duash — fjalët kyçe të gabuara janë më keq se asnjë, prandaj mbaje listën të pastër.' }),
       ],
     },
   },
@@ -135,7 +135,7 @@ const TOURS: { match: (path: string) => boolean; tour: PageTour }[] = [
       steps: [
         intro(
           { en: 'Categories', sq: 'Kategoritë' },
-          { en: 'Categories organize your storefront: customers browse and filter by them, and the AI assigns each new product to one automatically. Well-named categories make your shop much easier to shop in.', sq: 'Kategoritë organizojnë dyqanin: klientët shfletojnë dhe filtrojnë sipas tyre, dhe AI ia cakton secilit produkt të ri një kategori automatikisht. Kategoritë me emra të qartë e bëjnë dyqanin shumë më të lehtë për blerje.' }
+          { en: 'Categories organize your storefront: customers browse and filter by them, and the system assigns each new product to one automatically. Well-named categories make your shop much easier to shop in.', sq: 'Kategoritë organizojnë dyqanin: klientët shfletojnë dhe filtrojnë sipas tyre, dhe sistemi ia cakton secilit produkt të ri një kategori automatikisht. Kategoritë me emra të qartë e bëjnë dyqanin shumë më të lehtë për blerje.' }
         ),
         at('categories-add',
           { en: 'Create a category', sq: 'Krijo kategori' },

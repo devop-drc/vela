@@ -22,20 +22,20 @@ const DemoBilling = () => {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       {/* hero — trialing */}
-      <Card className="overflow-hidden border-fuchsia-500/30 bg-fuchsia-500/5">
+      <Card className="overflow-hidden border-red-500/30 bg-red-500/5">
         <CardContent className="space-y-4 p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Current plan</p>
               <div className="mt-1 flex items-center gap-2">
                 <h2 className="text-3xl font-bold">Pro</h2>
-                <Badge variant="outline" className="border-fuchsia-500/40 bg-fuchsia-500/15 text-fuchsia-600">Free trial</Badge>
+                <Badge variant="outline" className="border-red-500/40 bg-red-500/15 text-red-600">Free trial</Badge>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">3,900 ALL / mo · billed annually after trial</p>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/10 px-3 py-2">
-              <Gift className="h-4 w-4 text-fuchsia-600" />
-              <span className="font-semibold text-fuchsia-600">{trialDaysLeft} days left</span>
+            <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2">
+              <Gift className="h-4 w-4 text-red-600" />
+              <span className="font-semibold text-red-600">{trialDaysLeft} days left</span>
             </div>
           </div>
           <div>
@@ -53,7 +53,7 @@ const DemoBilling = () => {
         <span className={cn("text-sm", !annual && "font-bold")}>Monthly</span>
         <Switch checked={annual} onCheckedChange={setAnnual} />
         <span className={cn("text-sm", annual && "font-bold")}>Annual</span>
-        <Badge variant="secondary" className="text-fuchsia-600">2 months free</Badge>
+        <Badge variant="secondary" className="text-red-600">2 months free</Badge>
       </div>
 
       {/* plan cards */}
@@ -61,14 +61,14 @@ const DemoBilling = () => {
         {demoPlans.map((p) => {
           const isCurrent = p.id === current;
           return (
-            <Card key={p.id} className={cn("relative", p.featured && "border-fuchsia-500/40 shadow-lg")}>
+            <Card key={p.id} className={cn("relative", p.featured && "border-red-500/40 shadow-lg")}>
               {p.featured && (
                 <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full brand-gradient px-3 py-0.5 text-xs font-medium text-white">Most popular</span>
               )}
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   {p.name}
-                  {annual && p.annualFreeMonths > 0 && <Badge variant="secondary" className="gap-1 text-fuchsia-600"><Gift className="h-3 w-3" /> {p.annualFreeMonths}mo free</Badge>}
+                  {annual && p.annualFreeMonths > 0 && <Badge variant="secondary" className="gap-1 text-red-600"><Gift className="h-3 w-3" /> {p.annualFreeMonths}mo free</Badge>}
                 </CardTitle>
               </CardHeader>
               <CardContent>

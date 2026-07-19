@@ -226,7 +226,7 @@ export type DemoPlan = {
 export const demoPlans: DemoPlan[] = [
   { id: "free", name: "Falas", priceAll: 0, annualFreeMonths: 0, productLimit: 10, features: ["Instagram storefront", "Porosi me para në dorë (COD)", "Deri në 10 produkte", "Analitikë bazë"] },
   { id: "starter", name: "Starter", priceAll: 1900, annualFreeMonths: 2, productLimit: null, features: ["Gjithçka te Falas", "Produkte të palimituara", "Storefront Studio", "Pagesa me kartë", "Analitikë e plotë"] },
-  { id: "pro", name: "Pro", priceAll: 3900, annualFreeMonths: 2, productLimit: null, featured: true, features: ["Gjithçka te Starter", "Promocione & zbritje", "Vlerësime nga klientët", "Analitikë e avancuar", "Limite më të larta AI"] },
+  { id: "pro", name: "Pro", priceAll: 3900, annualFreeMonths: 2, productLimit: null, featured: true, features: ["Gjithçka te Starter", "Promocione & zbritje", "Vlerësime nga klientët", "Analitikë e avancuar", "Limite më të larta të sistemit"] },
   { id: "business", name: "Business", priceAll: 7900, annualFreeMonths: 3, productLimit: null, features: ["Gjithçka te Pro", "Mbështetje prioritare", "Domain i personalizuar", "Akses ekipi"] },
 ];
 

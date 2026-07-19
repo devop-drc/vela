@@ -15,7 +15,7 @@ import { demoChartData, demoProfile, demoTopProducts, demoActivities } from "./d
 const STATS = [
   { title: "Total Revenue", value: "2,845,000 ALL", desc: "All-time revenue", icon: Banknote, tint: "bg-emerald-500/10 text-emerald-600" },
   { title: "Sales", value: "+1,890", desc: "All-time sales", icon: CreditCard, tint: "bg-blue-500/10 text-blue-600" },
-  { title: "Active Products", value: "8", desc: "Available for sale", icon: Package, tint: "bg-violet-500/10 text-violet-600" },
+  { title: "Active Products", value: "8", desc: "Available for sale", icon: Package, tint: "bg-red-500/10 text-red-600" },
   { title: "Total Customers", value: "1,204", desc: "Unique customers", icon: Users, tint: "bg-amber-500/10 text-amber-600" },
 ];
 
@@ -24,7 +24,7 @@ const QUICK = [
   { icon: RefreshCw, label: "Quick Sync", tint: "text-blue-600" },
   { icon: Archive, label: "Restock", tint: "text-amber-600" },
   { icon: ShoppingBag, label: "Check Orders", tint: "text-emerald-600" },
-  { icon: Palette, label: "Customize", tint: "text-violet-600" },
+  { icon: Palette, label: "Customize", tint: "text-red-600" },
 ];
 
 const SectionTitle = ({ icon: Icon, children }: any) => (

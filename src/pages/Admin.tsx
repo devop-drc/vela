@@ -28,7 +28,7 @@ const fmt = (n: number) => n.toLocaleString("en-US");
 const dt = (s?: string | null) => (s ? new Date(s).toLocaleDateString() : "—");
 
 const STATUS_TONE: Record<string, string> = {
-  trialing: "bg-fuchsia-500/15 text-fuchsia-600 hover:bg-fuchsia-500/15",
+  trialing: "bg-red-500/15 text-red-600 hover:bg-red-500/15",
   active: "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15",
   past_due: "bg-amber-500/15 text-amber-600 hover:bg-amber-500/15",
   incomplete: "bg-muted text-muted-foreground",
@@ -284,7 +284,7 @@ export default function Admin() {
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
                 <span className="text-muted-foreground">Emri</span><span>{detail.name ?? "—"}</span>
                 <span className="text-muted-foreground">Dyqani</span>
-                <span>{detail.shop_name ?? "—"}{detail.slug ? <a className="ml-1 text-fuchsia-600 hover:underline" href={`/shop/${detail.slug}`} target="_blank" rel="noreferrer">/{detail.slug}</a> : null}</span>
+                <span>{detail.shop_name ?? "—"}{detail.slug ? <a className="ml-1 text-red-600 hover:underline" href={`/shop/${detail.slug}`} target="_blank" rel="noreferrer">/{detail.slug}</a> : null}</span>
                 <span className="text-muted-foreground">Regjistruar</span><span>{dt(detail.created_at)}</span>
                 <span className="text-muted-foreground">Hyrja e fundit</span><span>{dt(detail.last_sign_in_at)}</span>
                 <span className="text-muted-foreground">Produkte / Porosi</span><span>{detail.productCount} / {detail.orderCount}</span>
@@ -297,7 +297,7 @@ export default function Admin() {
                 </span>
                 {detail.aiUsage && (
                   <>
-                    <span className="text-muted-foreground">Përdorimi i AI</span>
+                    <span className="text-muted-foreground">Përdorimi i sistemit</span>
                     <span>
                       {fmt(detail.aiUsage.calls)} thirrje · {fmt(detail.aiUsage.input_tokens + detail.aiUsage.output_tokens)} tokens ·{" "}
                       <b>${detail.aiUsage.cost_usd.toFixed(4)}</b>

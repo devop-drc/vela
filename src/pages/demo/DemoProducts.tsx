@@ -354,7 +354,7 @@ const ProductEditor = ({ product, onClose, onSave }: { product: DemoProduct | nu
                   <label className="text-xs font-medium text-muted-foreground">Caption</label>
                   <Textarea value={draft.caption} onChange={(e) => setDraft({ ...draft, caption: e.target.value })} className="mt-1" rows={3} />
                 </div>
-                <Button variant="outline" size="sm" className="gap-1.5"><Sparkles className="h-4 w-4 text-amber-500" /> Find specs with AI</Button>
+                <Button variant="outline" size="sm" className="gap-1.5"><Sparkles className="h-4 w-4 text-amber-500" /> Find specs with the system</Button>
                 <div className="flex justify-end gap-2 pt-2">
                   <Button variant="ghost" onClick={() => setMode("view")}>Cancel</Button>
                   <Button onClick={() => onSave(draft)}>Update Product</Button>

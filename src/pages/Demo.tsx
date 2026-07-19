@@ -60,18 +60,18 @@ const NAV: NavGroup[] = [
 // theme the demo we set these inline on documentElement ourselves (this also
 // reaches dialog/sheet portals, which mount outside the demo subtree).
 const DARK_VARS: Record<string, string> = {
-  "--background": "265 22% 6%", "--foreground": "285 15% 96%",
-  "--muted": "265 16% 15%", "--muted-foreground": "280 10% 68%",
-  "--card": "264 20% 9%", "--card-foreground": "285 15% 96%",
-  "--popover": "264 20% 9%", "--popover-foreground": "285 15% 96%",
-  "--primary": "300 80% 65%", "--primary-foreground": "300 40% 8%",
-  "--secondary": "265 18% 16%", "--secondary-foreground": "285 15% 92%",
-  "--accent": "280 25% 18%", "--accent-foreground": "285 15% 92%",
+  "--background": "350 20% 6%", "--foreground": "350 12% 96%",
+  "--muted": "348 14% 15%", "--muted-foreground": "345 8% 68%",
+  "--card": "348 18% 9%", "--card-foreground": "350 12% 96%",
+  "--popover": "348 18% 9%", "--popover-foreground": "350 12% 96%",
+  "--primary": "351 100% 62%", "--primary-foreground": "350 45% 8%",
+  "--secondary": "348 14% 16%", "--secondary-foreground": "350 12% 92%",
+  "--accent": "348 22% 18%", "--accent-foreground": "350 12% 92%",
   "--destructive": "0 72% 55%", "--destructive-foreground": "0 0% 98%",
   "--success": "142 55% 55%", "--success-foreground": "150 40% 8%",
   "--warning": "42 92% 60%", "--warning-foreground": "40 96% 8%",
   "--info": "213 90% 66%", "--info-foreground": "214 60% 10%",
-  "--border": "265 16% 20%", "--input": "265 16% 20%", "--ring": "292 84% 62%",
+  "--border": "348 14% 20%", "--input": "348 14% 20%", "--ring": "351 92% 60%",
 };
 
 const TITLES: Record<ScreenKey, string> = {

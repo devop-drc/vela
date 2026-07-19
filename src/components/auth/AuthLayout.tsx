@@ -32,7 +32,7 @@ export default function AuthLayout({ title, subtitle, children, points, lang }: 
               <ArrowLeft className="h-4 w-4" /> {lang === "sq" ? "Kthehu" : "Back"}
             </Link>
             <Link to="/" className="flex items-center gap-2">
-              <img src="/vela-icon.svg" alt="Vela" className="h-8 w-8 rounded-[10px] shadow-md shadow-fuchsia-500/25 ring-1 ring-inset ring-border" />
+              <img src="/vela-icon.svg" alt="Vela" className="h-8 w-8 rounded-[10px] shadow-md shadow-red-500/25 ring-1 ring-inset ring-border" />
               <span className="font-display-brand text-[17px] font-semibold">Vela</span>
             </Link>
           </div>

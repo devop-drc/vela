@@ -232,7 +232,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
         .eq('instagram_post_id', product.instagram_post_id);
       if (cacheError) {
         console.error("Failed to delete AI analysis cache entry:", cacheError);
-        showError(`Failed to clear AI cache: ${cacheError.message}`);
+        showError(`Failed to clear the system's analysis cache: ${cacheError.message}`);
       }
     }
 

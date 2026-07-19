@@ -166,8 +166,8 @@ const Login = () => {
       title={lang === "sq" ? "Mirë se u ktheve" : "Welcome back"}
       subtitle={lang === "sq" ? "Hyr në llogarinë tënde të Vela." : "Sign in to your Vela account."}
       points={lang === "sq"
-        ? ["Produktet nga postimet, me AI", "Pagesa me kartë, në Lekë", "Porositë në një panel"]
-        : ["Products from posts, with AI", "Card payments, in Lek", "Orders in one panel"]}
+        ? ["Produktet nga postimet, me sistemin", "Pagesa me kartë, në Lekë", "Porositë në një panel"]
+        : ["Products from posts, with the system", "Card payments, in Lek", "Orders in one panel"]}
     >
       <InstagramSetupGuide open={showSetupGuide} onOpenChange={setShowSetupGuide} />
       <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-5">

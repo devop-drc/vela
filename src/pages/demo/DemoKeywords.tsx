@@ -27,7 +27,7 @@ const DemoKeywords = () => {
         <div>
           <h1 className="text-2xl font-bold">Keywords</h1>
           <p className="mt-0.5 max-w-2xl text-sm text-muted-foreground">
-            Keywords guide the AI when it reads your Instagram captions — the details it should extract from every post.
+            Keywords guide the system when it reads your Instagram captions — the details it should extract from every post.
           </p>
         </div>
         <Button className="shrink-0"><PlusCircle className="mr-1.5 h-4 w-4" /> Add Keyword</Button>

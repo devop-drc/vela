@@ -54,7 +54,7 @@ export const IGShowcase = () => {
                 {/* profile header */}
                 <div className="px-4 py-4">
                   <div className="flex items-center gap-5">
-                    <img src={demoProfile.logo_url} alt="" className="h-20 w-20 rounded-full object-cover ring-2 ring-offset-2 ring-fuchsia-500 ring-offset-transparent" />
+                    <img src={demoProfile.logo_url} alt="" className="h-20 w-20 rounded-full object-cover ring-2 ring-offset-2 ring-red-500 ring-offset-transparent" />
                     <div className="flex flex-1 justify-around text-center">
                       {[["Posts", demoProfile.posts], ["Followers", demoProfile.followers], ["Following", 312]].map(([l, v]) => (
                         <div key={l as string}>

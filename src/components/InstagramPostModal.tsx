@@ -206,7 +206,7 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
         });
         if (applyErr || applied?.error) {
           console.error('apply-analysis-to-product failed:', applyErr?.message || applied?.error);
-          toast.warning('Product created, but some details (specs/options) could not be saved — use "Find with AI" in the editor.');
+          toast.warning('Product created, but some details (specs/options) could not be saved — use "Find with the system" in the editor.');
         }
       }
 
@@ -362,7 +362,7 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                         className="flex-1 min-w-[140px]"
                       >
                         <Sparkles className="mr-2 h-3.5 w-3.5 text-warning" />
-                        {isAnalyzing ? 'Analyzing…' : analysis ? 'Re-analyze' : 'Analyze with AI'}
+                        {isAnalyzing ? 'Analyzing…' : analysis ? 'Re-analyze' : 'Analyze with the system'}
                       </Button>
                       {!selectedPost.isImported && (
                         <>
@@ -379,10 +379,10 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                               size="sm"
                               variant="ghost"
                               onClick={() => handleCreateProduct(selectedPost, false)}
-                              title="Create the product without applying AI analysis"
+                              title="Create the product without applying the system's analysis"
                             >
                               <Plus className="mr-2 h-3.5 w-3.5" />
-                              Without AI
+                              Without analysis
                             </Button>
                           )}
                         </>
@@ -396,7 +396,7 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                       <Card>
                         <CardContent className="py-8 flex flex-col items-center gap-3 text-muted-foreground">
                           <Spinner className="h-8 w-8 text-primary" />
-                          <p className="text-sm">Analyzing post with AI...</p>
+                          <p className="text-sm">The system is analyzing the post...</p>
                         </CardContent>
                       </Card>
                     )}
@@ -406,7 +406,7 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                         <CardHeader className="pb-2">
                           <CardTitle className="text-sm flex items-center gap-2">
                             <Sparkles className="h-4 w-4 text-warning" />
-                            AI Analysis
+                            System Analysis
                             {analysis.isProductPost ? (
                               <StatusBadge tone="success" size="sm" className="ml-auto">Product</StatusBadge>
                             ) : (
@@ -416,7 +416,7 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                         </CardHeader>
                         <CardContent className="space-y-3">
                           {!analysis.isProductPost ? (
-                            <p className="text-sm text-muted-foreground">AI determined this is not a product post.</p>
+                            <p className="text-sm text-muted-foreground">The system determined this is not a product post.</p>
                           ) : (
                             <>
                               {/* Main product info */}

@@ -78,8 +78,8 @@ const ResetPassword = () => {
       title={lang === "sq" ? "Rivendos fjalëkalimin" : "Reset password"}
       subtitle={lang === "sq" ? "Zgjidh një fjalëkalim të ri për llogarinë tënde të Vela." : "Choose a new password for your Vela account."}
       points={lang === "sq"
-        ? ["Produktet nga postimet, me AI", "Pagesa me kartë, në Lekë", "Porositë në një panel"]
-        : ["Products from posts, with AI", "Card payments, in Lek", "Orders in one panel"]}
+        ? ["Produktet nga postimet, me sistemin", "Pagesa me kartë, në Lekë", "Porositë në një panel"]
+        : ["Products from posts, with the system", "Card payments, in Lek", "Orders in one panel"]}
     >
       <div ref={contentRef}>
         {branch === 'done' ? (

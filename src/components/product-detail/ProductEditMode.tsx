@@ -190,7 +190,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     };
     const handleFindSpecs = async () => {
         setIsReanalyzing(true);
-        const toastId = toast.loading("Finding specs with AI...");
+        const toastId = toast.loading("Finding specs with the system...");
         try {
             if (!product?.id) throw new Error("Please save the product before analyzing so variants can be created.");
             if (!user) throw new Error("User not authenticated.");
@@ -240,7 +240,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             if (foundSpecs > 0) bits.push(`${foundSpecs} spec${foundSpecs === 1 ? '' : 's'}`);
             if (data?.options_created) bits.push('options & variants');
             if (bits.length > 0) {
-              toast.success(`AI found ${bits.join(' + ')} — check the Variants tab.`, { id: toastId });
+              toast.success(`The system found ${bits.join(' + ')} — check the Variants tab.`, { id: toastId });
             } else {
               toast.success('No additional details found for this product.', { id: toastId });
             }
@@ -446,7 +446,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     {specs && specs.length > 0 && <Badge variant="secondary" className="text-xs h-5">{specs.length}</Badge>}
                   </h3>
                   <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleFindSpecs} disabled={isReanalyzing}>
-                    {isReanalyzing ? <Spinner className="mr-1.5 h-3 w-3" /> : <Sparkles className="mr-1.5 h-3 w-3 text-primary" />}Find with AI
+                    {isReanalyzing ? <Spinner className="mr-1.5 h-3 w-3" /> : <Sparkles className="mr-1.5 h-3 w-3 text-primary" />}Find with the system
                   </Button>
                 </div>
                 {specs && specs.length > 0 ? (
@@ -469,7 +469,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     compact
                     icon={Settings}
                     title="No specifications yet"
-                    description={'Click "Find with AI" or add manually below.'}
+                    description={'Click "Find with the system" or add manually below.'}
                   />
                 )}
                 <Button type="button" variant="outline" size="sm" className="h-8 text-xs w-full border-dashed" onClick={() => setSpecs([...(specs || []), { key: '', value: '', unit: '' }])}>
