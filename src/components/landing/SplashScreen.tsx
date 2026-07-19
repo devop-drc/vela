@@ -2,11 +2,14 @@ import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 
 /**
- * Brand splash v4 — rebuilt from scratch around the real (recolored) Vela mark.
- * A dark wine canvas with a lava glow blooming from below; the mark drops in
- * with an elastic settle while a gradient ring draws itself around it; the
- * wordmark letters rise and the mark DOCKS beside them into the lockup; a thin
- * gradient loader fills; then a circular mask blows open to reveal the page.
+ * Brand splash v5 — rebuilt from scratch as a seamless extension of the
+ * landing page's own design language instead of a separate dark intro:
+ * the page's warm token background with aurora blobs and a soft lava disc,
+ * the Vela mark docking into a Clash Display lockup (flexbox-driven, exact
+ * on every screen), a hero-style eyebrow pill, and the scroll-progress
+ * gradient bar as the loader. Because the canvas matches the page, the
+ * exit is a clean lift — no seam when the hero appears. Theme-token
+ * colors, so it follows light/dark automatically.
  *
  * Honors reduced motion; tap fast-forwards; `?holdsplash` freezes for QA.
  */
@@ -23,34 +26,31 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
       if (reduce) {
-        gsap.set([".sv-mark", ".sv-letter", ".sv-glow", ".sv-loader", ".sv-lockup"], { opacity: 1, x: 0, y: 0, scale: 1 });
+        gsap.set([".sv-fx", ".sv-mark", ".sv-letter", ".sv-tag"], { opacity: 1, x: 0, y: 0, scale: 1 });
         gsap.set(".sv-letters", { width: "auto", paddingLeft: "0.22em" });
-        gsap.set(".sv-ring-path", { strokeDashoffset: 0 });
+        gsap.set(".sv-prog", { scaleX: 1 });
         gsap.to(root.current, { opacity: 0, duration: 0.3, delay: 0.5, onComplete: done });
         return;
       }
       const tl = gsap.timeline({ onComplete: done });
       tlRef.current = tl;
       tl
-        // lava glow blooms from the deep
-        .from(".sv-glow", { yPercent: 45, opacity: 0, scale: 0.7, duration: 0.9, ease: "power2.out" }, 0)
-        // the mark drops in and settles
-        .from(".sv-mark", { y: -160, opacity: 0, rotate: -14, duration: 0.85, ease: "elastic.out(1, 0.5)" }, 0.12)
-        // gradient ring draws itself around the mark
-        .to(".sv-ring-path", { strokeDashoffset: 0, duration: 0.7, ease: "power2.inOut" }, 0.28)
-        // ring releases outward as a pulse and fades
-        .to(".sv-ring", { scale: 1.5, opacity: 0, duration: 0.55, ease: "power2.out" }, 1.0)
-        // the lockup opens: the letters box grows from 0 → auto so flexbox
-        // recenters continuously (the mark docks left by itself — exact on
-        // every screen size, no magic pixel offsets)
-        .to(".sv-letters", { width: "auto", paddingLeft: "0.22em", duration: 0.6, ease: "power3.inOut" }, 1.08)
-        .from(".sv-letter", { yPercent: 120, opacity: 0, filter: "blur(6px)", stagger: 0.055, duration: 0.5, ease: "power4.out" }, 1.18)
-        // loader line fills under the lockup
-        .fromTo(".sv-loader-fill", { scaleX: 0 }, { scaleX: 1, duration: 0.8, ease: "power2.inOut" }, 1.3)
-        .from(".sv-tag", { opacity: 0, y: 10, duration: 0.4, ease: "power2.out" }, 1.45)
-        // exit: lockup sinks slightly, then a circular mask blows the screen open
-        .to(".sv-lockup, .sv-tag, .sv-loader", { scale: 0.96, opacity: 0, duration: 0.28, ease: "power2.in" }, 2.25)
-        .to(root.current, { clipPath: "circle(0% at 50% 50%)", duration: 0.55, ease: "power4.inOut" }, 2.4)
+        // the page's ambience fades up first — blobs breathe in
+        .from(".sv-fx", { opacity: 0, scale: 1.06, duration: 0.8, ease: "power2.out" }, 0)
+        // scroll-progress motif: the gradient bar loads across the top
+        .fromTo(".sv-prog", { scaleX: 0 }, { scaleX: 1, duration: 2.0, ease: "power2.inOut" }, 0.1)
+        // the mark drops in and settles, its lava halo blooming behind it
+        .from(".sv-halo", { opacity: 0, scale: 0.5, duration: 0.9, ease: "power2.out" }, 0.15)
+        .from(".sv-mark", { y: -120, opacity: 0, rotate: -12, duration: 0.85, ease: "elastic.out(1, 0.55)" }, 0.2)
+        // the lockup opens: letters box grows 0 → auto so flexbox recenters
+        // continuously (exact centering on every screen, no pixel offsets)
+        .to(".sv-letters", { width: "auto", paddingLeft: "0.22em", duration: 0.55, ease: "power3.inOut" }, 1.0)
+        .from(".sv-letter", { yPercent: 120, stagger: 0.05, duration: 0.5, ease: "power4.out" }, 1.1)
+        // hero-style eyebrow pill rises beneath the lockup
+        .from(".sv-tag", { y: 14, opacity: 0, duration: 0.45, ease: "power3.out" }, 1.35)
+        // exit: content lifts, the whole canvas fades into the identical page bg
+        .to(".sv-stage", { y: -18, opacity: 0, duration: 0.32, ease: "power2.in" }, 2.25)
+        .to(root.current, { opacity: 0, duration: 0.4, ease: "power1.inOut" }, 2.4)
         .set(root.current, { pointerEvents: "none" }, 2.4);
 
       if (new URLSearchParams(window.location.search).has("holdsplash")) tl.pause(1.9);
@@ -69,93 +69,66 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
     <div
       ref={root}
       onPointerDown={skip}
-      className="fixed inset-0 z-[120] overflow-hidden"
-      style={{ background: "#140A0E", clipPath: "circle(150% at 50% 50%)" }}
+      className="fixed inset-0 z-[120] overflow-hidden bg-background"
       aria-label="Vela"
     >
-      {/* lava glow rising from the bottom edge */}
-      <div
-        className="sv-glow pointer-events-none absolute left-1/2 top-[62%] h-[130vmax] w-[130vmax] -translate-x-1/2 rounded-full"
-        style={{
-          background:
-            "radial-gradient(closest-side, rgba(255,46,77,0.5), rgba(163,18,52,0.35) 34%, rgba(127,29,59,0.18) 55%, transparent 72%)",
-          filter: "blur(30px)",
-        }}
-      />
-      {/* faint amber counter-glow, top-right, for depth */}
-      <div
-        className="pointer-events-none absolute -right-[20vmax] -top-[24vmax] h-[70vmax] w-[70vmax] rounded-full"
-        style={{ background: "radial-gradient(closest-side, rgba(245,158,11,0.14), transparent 70%)", filter: "blur(40px)" }}
-      />
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{ background: "radial-gradient(90% 70% at 50% 38%, transparent 30%, rgba(20,10,14,0.55) 100%)" }}
-      />
+      {/* the landing's own ambience: lava disc + aurora blobs (token-friendly) */}
+      <div className="sv-fx pointer-events-none absolute inset-0">
+        <div className="brand-gradient absolute left-1/2 top-1/2 h-[70vmax] w-[70vmax] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.13] blur-[100px]" />
+        <div
+          className="absolute -left-[16vmax] -top-[18vmax] h-[52vmax] w-[52vmax] rounded-full blur-[70px]"
+          style={{ background: "radial-gradient(closest-side, rgba(245,158,11,0.16), transparent 70%)" }}
+        />
+        <div
+          className="absolute -bottom-[20vmax] -right-[14vmax] h-[56vmax] w-[56vmax] rounded-full blur-[70px]"
+          style={{ background: "radial-gradient(closest-side, rgba(163,18,52,0.15), transparent 70%)" }}
+        />
+      </div>
+
+      {/* scroll-progress motif as the loader */}
+      <div className="sv-prog brand-gradient absolute inset-x-0 top-0 h-[2.5px] origin-left" style={{ transform: "scaleX(0)" }} />
 
       {/* composition */}
-      <div className="relative flex h-full w-full flex-col items-center justify-center px-6" style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+      <div
+        className="sv-stage relative flex h-full w-full flex-col items-center justify-center px-6"
+        style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      >
         <div className="sv-lockup relative flex items-center justify-center">
-          {/* the real Vela mark */}
           <div className="sv-mark relative z-10">
+            {/* lava halo behind the mark */}
+            <div className="sv-halo brand-gradient absolute -inset-8 rounded-full opacity-30 blur-2xl" />
             <img
               src="/vela-icon.svg"
               alt=""
-              className="rounded-[24%] shadow-[0_30px_80px_-20px_rgba(255,46,77,0.45)]"
-              style={{ width: "clamp(76px, 18vw, 112px)", height: "clamp(76px, 18vw, 112px)" }}
+              className="relative rounded-[24%] shadow-[0_24px_70px_-18px_rgba(255,46,77,0.45)]"
+              style={{ width: "clamp(72px, 17vw, 104px)", height: "clamp(72px, 17vw, 104px)" }}
             />
-            {/* self-drawing gradient ring */}
-            <svg className="sv-ring pointer-events-none absolute -inset-5" viewBox="0 0 100 100" style={{ transformOrigin: "50% 50%" }}>
-              <defs>
-                <linearGradient id="svg-ring-grad" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stopColor="#FACC15" />
-                  <stop offset="0.5" stopColor="#FF2E4D" />
-                  <stop offset="1" stopColor="#7F1D3B" />
-                </linearGradient>
-              </defs>
-              <circle
-                className="sv-ring-path"
-                cx="50" cy="50" r="46"
-                fill="none" stroke="url(#svg-ring-grad)" strokeWidth="2.5" strokeLinecap="round"
-                strokeDasharray="289" strokeDashoffset="289"
-                transform="rotate(-90 50 50)"
-              />
-            </svg>
           </div>
 
           {/* wordmark — starts at width 0 so the mark is exactly screen-
               centered, then the box grows and flexbox re-centers the lockup */}
           <div
             className="sv-letters flex overflow-hidden"
-            style={{ fontFamily: "'Clash Display','Satoshi',sans-serif", width: 0, paddingLeft: 0, fontSize: "clamp(52px, 13vw, 84px)" }}
+            style={{ fontFamily: "'Clash Display','Satoshi',sans-serif", width: 0, paddingLeft: 0, fontSize: "clamp(50px, 12.5vw, 80px)" }}
           >
             {"Vela".split("").map((c, i) => (
-              <span
-                key={i}
-                className="sv-letter inline-block font-bold leading-none text-white"
-                style={{ letterSpacing: "-0.02em" }}
-              >{c}</span>
+              <span key={i} className="sv-letter inline-block font-semibold leading-none tracking-tight text-foreground">
+                {c}
+              </span>
             ))}
           </div>
         </div>
 
-        {/* gradient loader line */}
-        <div className="sv-loader mt-[clamp(22px,5vw,34px)] h-[3px] w-[min(56vw,260px)] overflow-hidden rounded-full bg-white/10">
-          <div
-            className="sv-loader-fill h-full w-full origin-left rounded-full"
-            style={{ background: "linear-gradient(90deg,#FACC15,#F59E0B 30%,#FF2E4D 65%,#A31234)", transform: "scaleX(0)", boxShadow: "0 0 14px rgba(255,46,77,0.65)" }}
-          />
-        </div>
-
-        <p
-          className="sv-tag mt-[clamp(14px,3vw,20px)] flex max-w-[88vw] items-center justify-center gap-2.5 text-center font-semibold uppercase text-white/70"
-          style={{ fontSize: "clamp(11px, 2.8vw, 13px)", fontFamily: "'Satoshi','Inter',sans-serif", letterSpacing: "0.24em" }}
-        >
+        {/* hero-style eyebrow pill */}
+        <div className="sv-tag mt-[clamp(20px,4.5vw,30px)] inline-flex max-w-[90vw] items-center gap-2.5 rounded-full border border-border bg-card/80 px-4 py-1.5 backdrop-blur">
+          <span className="brand-gradient h-2 w-2 shrink-0 rounded-full" />
           <span
-            className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
-            style={{ background: "linear-gradient(120deg,#FACC15,#FF2E4D)", boxShadow: "0 0 8px rgba(255,46,77,0.9)" }}
-          />
-          Kthe Instagramin në dyqan online
-        </p>
+            className="text-center font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+            style={{ fontSize: "clamp(10.5px, 2.6vw, 12px)" }}
+          >
+            Kthe Instagramin në dyqan online
+          </span>
+        </div>
       </div>
     </div>
   );

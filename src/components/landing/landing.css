@@ -319,6 +319,11 @@
   .landing .sm-scope .sm-panel-item { font-size: 2rem; }
 }
 
+/* Stray decorative bleed (e.g. SpecularButton's -inset-5 fx canvas on
+   full-width mobile CTAs) must never widen the page. `clip` doesn't create
+   a scroll container, so sticky/pinned sections keep working. */
+.landing { overflow-x: clip; }
+
 /* ─── Smooth anchor scrolling (applied to <html> while landing is mounted) ─── */
 html.ls-smooth {
   scroll-behavior: smooth;
