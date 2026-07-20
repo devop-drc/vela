@@ -20,6 +20,11 @@
  *   npx remotion render src/remotion.ts HeroFilm public/hero/hero-film.webm --codec=vp9 --image-format=png --pixel-format=yuva420p --scale=1.4 --props=scripts/.film-light-alpha.json
  *   npx remotion render src/remotion.ts HeroFilm public/hero/hero-film-dark.mp4 --codec=h264 --crf=22 --scale=1.4 --props=scripts/.film-dark-baked.json
  *   npx remotion render src/remotion.ts HeroFilm public/hero/hero-film-dark.webm --codec=vp9 --image-format=png --pixel-format=yuva420p --scale=1.4 --props=scripts/.film-dark-alpha.json
+ *
+ * Mobile encodes (~0.85 MB, used by HeroFilmVideo's tap-to-play on phones) —
+ * re-run after re-rendering the MP4s:
+ *   npx remotion ffmpeg -y -i public/hero/hero-film.mp4 -vf "scale=960:-2" -c:v libx264 -crf 30 -preset slow -an -movflags +faststart public/hero/hero-film-mobile.mp4
+ *   npx remotion ffmpeg -y -i public/hero/hero-film-dark.mp4 -vf "scale=960:-2" -c:v libx264 -crf 30 -preset slow -an -movflags +faststart public/hero/hero-film-mobile-dark.mp4
  */
 import React from "react";
 import { AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, Easing } from "remotion";

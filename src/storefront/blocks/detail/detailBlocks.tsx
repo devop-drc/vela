@@ -78,7 +78,7 @@ export const GalleryBlock = ({ props }: { props: { variant?: 'carousel' | 'grid'
           {media.map((url, i) => (
             <div key={i} className="sf-zoomable w-full shrink-0 snap-center overflow-hidden border bg-muted sf-card" style={{ borderRadius: 'var(--sf-radius-card)' } as any}>
               <div className="aspect-square w-full">
-                <MediaItem src={url} alt={`${product.name} ${i + 1}`} type={product.media_type} className={cn('h-full w-full object-cover', isOutOfStock && 'grayscale')} />
+                <MediaItem src={url} alt={`${product.name} ${i + 1}`} type={product.media_type} priority={i === 0} sizes="(max-width: 1024px) 100vw, 50vw" className={cn('h-full w-full object-cover', isOutOfStock && 'grayscale')} />
               </div>
             </div>
           ))}
@@ -100,6 +100,8 @@ export const GalleryBlock = ({ props }: { props: { variant?: 'carousel' | 'grid'
             src={current}
             alt={`${product.name} ${active + 1}`}
             type={product.media_type}
+            priority
+            sizes="(max-width: 1024px) 100vw, 50vw"
             className={cn('h-full w-full object-cover', isOutOfStock && 'grayscale')}
           />
         </div>
@@ -129,7 +131,7 @@ export const GalleryBlock = ({ props }: { props: { variant?: 'carousel' | 'grid'
       <div className="grid grid-cols-2 gap-3">
         {media.map((url, i) => (
           <div key={i} className={cn('relative w-full overflow-hidden border bg-muted sf-card', i === 0 && 'col-span-2', i === 0 ? 'aspect-[4/3]' : 'aspect-square')} style={{ borderRadius: 'var(--sf-radius-card)' } as any}>
-            <MediaItem src={url} alt={`${product.name} ${i + 1}`} type={product.media_type} className={cn('h-full w-full object-cover', isOutOfStock && 'grayscale')} />
+            <MediaItem src={url} alt={`${product.name} ${i + 1}`} type={product.media_type} priority={i === 0} sizes="(max-width: 1024px) 100vw, 50vw" className={cn('h-full w-full object-cover', isOutOfStock && 'grayscale')} />
           </div>
         ))}
       </div>
@@ -142,7 +144,7 @@ export const GalleryBlock = ({ props }: { props: { variant?: 'carousel' | 'grid'
         {media.map((url, i) => (
           <CarouselItem key={i}>
             <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
-              <MediaItem src={url} alt={`${product.name} ${i + 1}`} type={product.media_type} className={cn('h-full w-full object-cover', isOutOfStock && 'grayscale')} />
+              <MediaItem src={url} alt={`${product.name} ${i + 1}`} type={product.media_type} priority={i === 0} sizes="(max-width: 1024px) 100vw, 50vw" className={cn('h-full w-full object-cover', isOutOfStock && 'grayscale')} />
             </div>
           </CarouselItem>
         ))}

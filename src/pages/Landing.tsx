@@ -534,8 +534,17 @@ export default function Landing() {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const rootRef = useRef<HTMLDivElement>(null);
-  // Decorative React Bits effects are skipped entirely for reduced-motion users.
-  const reduceFx = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // Decorative React Bits effects (WebGL rings, waves, cursor trails) are
+  // skipped for reduced-motion users AND on phones / low-end hardware: they
+  // cost a ~500KB chunk plus continuous canvas work — mobile pays for that in
+  // TBT, LCP, battery and dropped frames while gaining almost nothing at
+  // small sizes. Desktop with a real GPU keeps the full show.
+  const reduceFx = typeof window !== "undefined" && (
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+    window.matchMedia("(max-width: 1023px)").matches ||
+    (navigator as any).connection?.saveData === true ||
+    (navigator.hardwareConcurrency || 8) <= 4
+  );
 
   // Scroll-perf: gradient background animations repaint every frame, so pause
   // every animated-gradient element while it is offscreen (measured 3× fps).
@@ -906,7 +915,7 @@ export default function Landing() {
       </Suspense>
 
       {/* ── Social proof & trust ── */}
-      <section id="reviews" className="relative px-5 py-14 sm:py-24 lg:py-32">
+      <section id="reviews" className="cv-auto relative px-5 py-14 sm:py-24 lg:py-32">
         {/* React Bits ImageTrail — product shots trail the cursor between the cards */}
         {!reduceFx && (
           <Suspense fallback={null}>
@@ -986,7 +995,7 @@ export default function Landing() {
       </section>
 
       {/* ── Pricing ── */}
-      <section id="pricing" className="px-5 py-14 sm:py-24 lg:py-32">
+      <section id="pricing" className="cv-auto px-5 py-14 sm:py-24 lg:py-32">
         <div className="mx-auto max-w-6xl">
           <div className="reveal mx-auto max-w-2xl text-center">
             <Eyebrow>{copy.pricing.badge}</Eyebrow>
@@ -1179,7 +1188,7 @@ export default function Landing() {
       </section>
 
       {/* ── FAQ ── */}
-      <section id="faq" className="px-5 py-14 sm:py-24 lg:py-32">
+      <section id="faq" className="cv-auto px-5 py-14 sm:py-24 lg:py-32">
         <div className="mx-auto max-w-3xl">
           <div className="reveal text-center">
             <Eyebrow>{lang === "sq" ? "Ndihmë" : "Help"}</Eyebrow>
@@ -1199,7 +1208,7 @@ export default function Landing() {
       </section>
 
       {/* ── Final CTA ── */}
-      <section className="px-5 py-14 sm:py-24 lg:py-32">
+      <section className="cv-auto px-5 py-14 sm:py-24 lg:py-32">
         <div className={cn("cta-panel reveal relative mx-auto max-w-5xl overflow-hidden rounded-[2.5rem] px-6 py-14 text-center text-white sm:px-12 sm:py-20", BRAND)}>
           {/* React Bits MagicRings + Waves — the closing card breathes (unmounted offscreen) */}
           {!reduceFx && (

@@ -84,6 +84,13 @@ const AppContent = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // The prerendered landing snapshot is hidden on non-"/" routes by an inline
+  // guard in dist/index.html (see scripts/prerender.mjs). Once React renders
+  // the real route into #root, release the guard.
+  useEffect(() => {
+    document.documentElement.classList.remove("pre-route-hide");
+  }, []);
+
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;

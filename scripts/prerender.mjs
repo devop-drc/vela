@@ -110,8 +110,23 @@ async function main() {
     let index = await readFile(indexPath, "utf8");
     const rootRe = /<div id="root">\s*<\/div>/;
     if (!rootRe.test(index)) throw new Error('could not find empty <div id="root"></div> to inject into');
+
+    // The SPA serves this same index.html on EVERY route — without a guard,
+    // visitors to /shop/* or /login briefly SEE the prerendered landing and
+    // the preload scanner downloads its images (~2 MB of screenshots).
+    // Neutralize every media source in the snapshot; an inline script right
+    // after the root restores them synchronously ONLY on "/", and hides the
+    // prerendered DOM entirely on any other route (React removes the class
+    // once it renders the real route).
+    const guarded = html
+      .replace(/<img([^>]*?)\ssrcset=/gi, "<img$1 data-pre-srcset=")
+      .replace(/<img([^>]*?)\ssrc=/gi, "<img$1 data-pre-src=")
+      .replace(/<video([^>]*?)\sposter=/gi, "<video$1 data-pre-poster=");
+    const restore = `<script>(function(){if(location.pathname!=="/"){document.documentElement.classList.add("pre-route-hide");return;}var r=document.getElementById("root");if(!r)return;r.querySelectorAll("[data-pre-src],[data-pre-srcset],[data-pre-poster]").forEach(function(el){if(el.dataset.preSrcset)el.setAttribute("srcset",el.dataset.preSrcset);if(el.dataset.preSrc)el.setAttribute("src",el.dataset.preSrc);if(el.dataset.prePoster)el.setAttribute("poster",el.dataset.prePoster);});})();</script>`;
+
     index = index
-      .replace(rootRe, `<div id="root">${html}</div>`)
+      .replace(rootRe, `<div id="root">${guarded}</div>${restore}`)
+      .replace("</head>", `  <style>html.pre-route-hide #root{display:none}</style>\n  </head>`)
       .replace(/<html lang="[^"]*"/, `<html lang="${LANG}"`);
     // Marker for debugging / verification.
     index = index.replace("</head>", `  <meta name="x-prerendered" content="${new Date().toISOString()}" />\n  </head>`);

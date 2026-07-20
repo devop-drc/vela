@@ -43,26 +43,37 @@
          never leave the page covered. -->
     <script>
       try {
-        if (location.pathname === "/" && !sessionStorage.getItem("vela-splash-seen")) {
-          document.documentElement.classList.add("pre-splash");
+        if (location.pathname === "/") {
           var dark = false;
           try { dark = localStorage.getItem("landing-theme") === "dark"; } catch (e) {}
-          if (dark) document.documentElement.classList.add("pre-splash-dark");
-          setTimeout(function () {
-            document.documentElement.classList.remove("pre-splash", "pre-splash-dark");
-          }, 4000);
+          // The hero poster is the landing's LCP image (the film streams in
+          // later) — preload the theme-matching one before the JS even parses.
+          var pl = document.createElement("link");
+          pl.rel = "preload"; pl.as = "image";
+          pl.href = dark ? "/hero/hero-film-poster-dark.jpg" : "/hero/hero-film-poster.jpg";
+          document.head.appendChild(pl);
+          if (!sessionStorage.getItem("vela-splash-seen")) {
+            document.documentElement.classList.add("pre-splash");
+            if (dark) document.documentElement.classList.add("pre-splash-dark");
+            setTimeout(function () {
+              document.documentElement.classList.remove("pre-splash", "pre-splash-dark");
+            }, 4000);
+          }
         }
       } catch (e) {}
     </script>
     <style>
+      /* The cover shows the mark (real content → FCP fires immediately) on the
+         splash's own canvas, so hiding the page never blanks the paint metrics
+         and the hand-off to the animated splash is seamless. */
       .pre-splash body::before {
         content: "";
         position: fixed;
         inset: 0;
-        background: #fbf6f4;
+        background: #fbf6f4 url("/vela-icon.svg") center / clamp(72px, 17vw, 104px) no-repeat;
         z-index: 119; /* just under the splash overlay (z-120) */
       }
-      .pre-splash.pre-splash-dark body::before { background: #140a0e; }
+      .pre-splash.pre-splash-dark body::before { background-color: #140a0e; }
     </style>
     <link rel="alternate" hreflang="sq" href="https://instantshop.al/" />
     <link rel="alternate" hreflang="en" href="https://instantshop.al/" />

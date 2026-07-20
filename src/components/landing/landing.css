@@ -514,3 +514,25 @@ html.ls-smooth {
   .shiny-text, .star-border::before, .ls-mesh, .ls-rotating, .cta-grid { animation: none !important; }
   html.ls-smooth { scroll-behavior: auto; }
 }
+
+/* ─── Below-fold render skipping ───
+   Sections tagged .cv-auto aren't laid out/painted until they approach the
+   viewport — the browser keeps a size estimate so scrollbar + ScrollTrigger
+   positions stay sane. Big first-paint and scroll-frame win on long pages. */
+.cv-auto { content-visibility: auto; contain-intrinsic-size: auto 720px; }
+
+/* ─── Mobile calm tier (60fps budget) ───
+   Phones get the same design at a fraction of the compositing cost:
+   • rotating blurred conic meshes freeze (a static wash reads identically
+     at phone sizes, but the rotation forces continuous GPU re-blur)
+   • aurora blobs: half the blur radius (blur cost ~ area × radius²)
+   • the fixed mix-blend noise overlay goes away — it forces a full-screen
+     blend pass on EVERY scrolled frame
+   • splash blobs are toned down the same way */
+@media (max-width: 1023px) {
+  .ls-mesh, .ls-mesh::after { animation: none !important; }
+  .ls-mesh { filter: blur(60px); }
+  .landing .ls-aurora { filter: blur(64px) !important; animation: none !important; }
+  .landing-noise { display: none; }
+  .landing .sv-fx > div { filter: blur(48px) !important; }
+}

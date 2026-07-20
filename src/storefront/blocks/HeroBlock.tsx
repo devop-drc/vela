@@ -8,6 +8,7 @@ import { useStorefront } from '@/contexts/StorefrontContext';
 import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
 import { SfButton } from '../components/SfButton';
 import { useSfT } from '../lib/visitorPrefs';
+import { optimizedImage } from '@/lib/optimizedImage';
 
 type HeroVariant = 'banner' | 'compact' | 'full' | 'split' | 'minimal' | 'gradient' | 'collage' | 'editorial' | 'slideshow' | 'split-slideshow' | 'marquee-type' | 'video';
 interface Props { props: { variant?: HeroVariant; showLogo?: boolean; ctaLabel?: string; slideshowImages?: string; slideInterval?: number } }
@@ -22,15 +23,20 @@ const Slideshow = ({ sources, intervalMs }: { sources: string[]; intervalMs: num
     const t = setInterval(() => setIdx((i) => (i + 1) % sources.length), Math.max(2500, intervalMs));
     return () => clearInterval(t);
   }, [sources.length, intervalMs]);
+  // Only the current and the upcoming slide are mounted — mounting all six
+  // used to fetch every image up front (6× the LCP-critical bytes).
+  const next = (idx + 1) % sources.length;
   return (
     <div className="absolute inset-0" aria-hidden>
-      {sources.map((src, i) => (
-        <div
-          key={src + i}
-          className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000"
-          style={{ backgroundImage: `url(${src})`, opacity: i === idx ? 1 : 0 }}
-        />
-      ))}
+      {sources.map((src, i) =>
+        i === idx || i === next ? (
+          <div
+            key={src + i}
+            className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000"
+            style={{ backgroundImage: `url(${src})`, opacity: i === idx ? 1 : 0 }}
+          />
+        ) : null
+      )}
     </div>
   );
 };
@@ -45,11 +51,15 @@ export const HeroBlock = ({ props }: Props) => {
   const slideshowSources = useMemo(() => {
     const custom = (props.slideshowImages || '')
       .split(/[\n,]+/).map((s) => s.trim()).filter((s) => /^https?:\/\/|^\//.test(s));
-    if (custom.length > 0) return custom.slice(0, 10);
-    return (products || [])
-      .map((p: any) => p.thumbnail_url || p.media_gallery?.[0] || p.media_url)
-      .filter(Boolean)
-      .slice(0, 6);
+    const raw = custom.length > 0
+      ? custom.slice(0, 10)
+      : (products || [])
+          .map((p: any) => p.thumbnail_url || p.media_gallery?.[0] || p.media_url)
+          .filter(Boolean)
+          .slice(0, 6);
+    // Hero backdrops render full-bleed but blurred/darkened — 1280px WebP via
+    // the image CDN is visually identical at a fraction of the bytes.
+    return raw.map((u: string) => optimizedImage(u, 1280));
   }, [props.slideshowImages, products]);
 
   if (!shopDetails) return null;
@@ -76,7 +86,7 @@ export const HeroBlock = ({ props }: Props) => {
       return <video data-sf-parallax autoPlay loop muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" src={hero.mediaUrl} />;
     }
     if (hero.mediaUrl) {
-      return <div className={cn('absolute inset-0 bg-cover bg-center', blur && 'scale-110 blur-xl')} style={{ backgroundImage: `url(${hero.mediaUrl})` }} aria-hidden />;
+      return <div className={cn('absolute inset-0 bg-cover bg-center', blur && 'scale-110 blur-xl')} style={{ backgroundImage: `url(${optimizedImage(hero.mediaUrl, 1280)})` }} aria-hidden />;
     }
     if (slideshowSources.length > 0) {
       return (

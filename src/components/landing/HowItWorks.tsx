@@ -15,7 +15,7 @@ const Frame = ({ src, url }: { src: string; url: string }) => (
       <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" /><span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" /><span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
       <span className="mx-auto rounded-full bg-background px-4 py-0.5 text-[10px] text-muted-foreground">{url}</span>
     </div>
-    <img src={src} alt="" className="block aspect-[1440/900] w-full object-cover object-top" />
+    <img src={src} alt="" loading="lazy" decoding="async" className="block aspect-[1440/900] w-full object-cover object-top" />
   </div>
 );
 
@@ -30,9 +30,9 @@ export default function HowItWorks({ lang }: { lang: Lang }) {
   const root = useRef<HTMLDivElement>(null);
 
   const steps = [
-    { Icon: Instagram, url: "instagram.com/mediadesk_albania", img: "/hero/storefront-ig.png", title: t(lang, "Lidh Instagram-in", "Connect Instagram"), body: t(lang, "Një prekje për të lidhur Instagram Business — pa kod.", "One tap to connect Instagram Business — no code.") },
-    { Icon: Sparkles, url: "vela.al/products", img: "/hero/products.png", title: t(lang, "Sistemi ndërton produktet", "The system builds your products"), body: t(lang, "Sistemi i kthen postimet në produkte — çmim, kategori, variante.", "The system turns your posts into products — price, category, variants.") },
-    { Icon: Store, url: "vela.al/dyqani-yt", img: "/hero/storefront-product.png", title: t(lang, "Ndaj linkun & shit", "Share the link & sell"), body: t(lang, "Publiko dyqanin dhe merr porosi e pagesa po atë ditë.", "Publish your store and take orders and payments the same day.") },
+    { Icon: Instagram, url: "instagram.com/mediadesk_albania", img: "/hero/web/storefront-ig.jpg", title: t(lang, "Lidh Instagram-in", "Connect Instagram"), body: t(lang, "Një prekje për të lidhur Instagram Business — pa kod.", "One tap to connect Instagram Business — no code.") },
+    { Icon: Sparkles, url: "vela.al/products", img: "/hero/web/products.jpg", title: t(lang, "Sistemi ndërton produktet", "The system builds your products"), body: t(lang, "Sistemi i kthen postimet në produkte — çmim, kategori, variante.", "The system turns your posts into products — price, category, variants.") },
+    { Icon: Store, url: "vela.al/dyqani-yt", img: "/hero/web/storefront-product.jpg", title: t(lang, "Ndaj linkun & shit", "Share the link & sell"), body: t(lang, "Publiko dyqanin dhe merr porosi e pagesa po atë ditë.", "Publish your store and take orders and payments the same day.") },
   ];
 
   useLayoutEffect(() => {
