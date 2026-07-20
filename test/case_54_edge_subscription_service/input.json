@@ -1,0 +1,17 @@
+{
+  "post": {
+    "id": "mock_edge_subscription_service",
+    "caption": "Abonim mujor stërvitje personale 💪\nÇmimi: 5000 lekë në muaj\nPlan individual + ndjekje javore\nVendet e limituara — shkruaj tani!",
+    "media_type": "VIDEO",
+    "media_url": "https://mock-cdn.test/vela/edge_subscription_service.mp4",
+    "thumbnail_url": "https://mock-cdn.test/vela/edge_subscription_service-thumb.jpg",
+    "permalink": "https://www.instagram.com/p/mock_54/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}

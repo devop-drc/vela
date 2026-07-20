@@ -1,0 +1,12 @@
+{
+  "isProductPost": false,
+  "isSaleOrPromotion": true,
+  "promotion": {
+    "title": "Weekend Sale -20%",
+    "summary": "20% off all items this weekend only",
+    "discount_type": "percent",
+    "discount_value": 20,
+    "currency": null,
+    "valid_until": null
+  }
+}

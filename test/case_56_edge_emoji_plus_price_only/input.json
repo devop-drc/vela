@@ -1,0 +1,35 @@
+{
+  "post": {
+    "id": "mock_edge_emoji_plus_price_only",
+    "caption": "🔥🔥 2500 L 🔥🔥",
+    "media_type": "CAROUSEL_ALBUM",
+    "media_url": "https://mock-cdn.test/vela/edge_emoji_plus_price_only-m0.jpg",
+    "thumbnail_url": null,
+    "children": [
+      {
+        "id": "edge_emoji_plus_price_only-mchild-0",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/edge_emoji_plus_price_only-m0.jpg"
+      },
+      {
+        "id": "edge_emoji_plus_price_only-mchild-1",
+        "media_type": "VIDEO",
+        "media_url": "https://mock-cdn.test/vela/edge_emoji_plus_price_only-m1.mp4",
+        "thumbnail_url": "https://mock-cdn.test/vela/edge_emoji_plus_price_only-m1-thumb.jpg"
+      },
+      {
+        "id": "edge_emoji_plus_price_only-mchild-2",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/edge_emoji_plus_price_only-m2.jpg"
+      }
+    ],
+    "permalink": "https://www.instagram.com/p/mock_56/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}

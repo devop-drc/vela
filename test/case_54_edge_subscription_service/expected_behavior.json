@@ -1,0 +1,39 @@
+{
+  "media_selection": [
+    {
+      "index": 0,
+      "source": "thumbnail_url"
+    }
+  ],
+  "annotation": "Monthly personal-training subscription — pricingType must be \"subscription\" with billingInterval \"month\", not a one-time 5000 ALL product.",
+  "routing": {
+    "caption_insufficient": false,
+    "image_analysis_expected": false
+  },
+  "classification": {
+    "skip": false,
+    "is_product_post": true,
+    "is_multi": false,
+    "product_count": 1,
+    "pricing_type": "subscription",
+    "is_sale_or_promotion": false
+  },
+  "products": [
+    {
+      "name_keywords_any": [
+        "stërvitje",
+        "stervitje",
+        "training",
+        "abonim",
+        "coaching"
+      ],
+      "price": 5000,
+      "currency": "ALL",
+      "media_indices": [
+        0
+      ]
+    }
+  ],
+  "must_be_empty_or_zero": [],
+  "llm_checks": true
+}

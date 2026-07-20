@@ -1,0 +1,35 @@
+{
+  "post": {
+    "id": "mock_mixed_carousel-single-detailed",
+    "caption": "Fustan liri 'Vera' 👗\nÇmimi: 4500 Lekë\nMasat: S, M, L\nNgjyra: e bardhë\nMaterial: 100% liri\nPorosit me DM ose në dyqan 📍Tiranë #fustane #verore",
+    "media_type": "CAROUSEL_ALBUM",
+    "media_url": "https://mock-cdn.test/vela/mixed_carousel-single-detailed-m0.jpg",
+    "thumbnail_url": null,
+    "children": [
+      {
+        "id": "mixed_carousel-single-detailed-mchild-0",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/mixed_carousel-single-detailed-m0.jpg"
+      },
+      {
+        "id": "mixed_carousel-single-detailed-mchild-1",
+        "media_type": "VIDEO",
+        "media_url": "https://mock-cdn.test/vela/mixed_carousel-single-detailed-m1.mp4",
+        "thumbnail_url": "https://mock-cdn.test/vela/mixed_carousel-single-detailed-m1-thumb.jpg"
+      },
+      {
+        "id": "mixed_carousel-single-detailed-mchild-2",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/mixed_carousel-single-detailed-m2.jpg"
+      }
+    ],
+    "permalink": "https://www.instagram.com/p/mock_40/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}

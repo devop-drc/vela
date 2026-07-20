@@ -1,0 +1,39 @@
+{
+  "post": {
+    "id": "mock_carousel_images-single-noisy",
+    "caption": "Dita e përsosur në Tiranë me shoqërinë! ☀️ Faleminderit të gjithëve për mbështetjen — ju duam shumë! #blessed #weekend #tirana",
+    "media_type": "CAROUSEL_ALBUM",
+    "media_url": "https://mock-cdn.test/vela/carousel_images-single-noisy-c0.jpg",
+    "thumbnail_url": null,
+    "children": [
+      {
+        "id": "carousel_images-single-noisy-child-0",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/carousel_images-single-noisy-c0.jpg"
+      },
+      {
+        "id": "carousel_images-single-noisy-child-1",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/carousel_images-single-noisy-c1.jpg"
+      },
+      {
+        "id": "carousel_images-single-noisy-child-2",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/carousel_images-single-noisy-c2.jpg"
+      },
+      {
+        "id": "carousel_images-single-noisy-child-3",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/carousel_images-single-noisy-c3.jpg"
+      }
+    ],
+    "permalink": "https://www.instagram.com/p/mock_15/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}

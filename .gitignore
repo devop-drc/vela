@@ -35,3 +35,7 @@ out/
 .remotion/
 build/
 supabase/.access-token.local
+
+# extraction test artifacts
+test/report.md
+test/report.json

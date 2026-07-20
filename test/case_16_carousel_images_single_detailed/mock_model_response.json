@@ -1,0 +1,47 @@
+{
+  "isProductPost": true,
+  "isSaleOrPromotion": false,
+  "productName": "Vera Linen Dress",
+  "productNameSq": "Fustan liri 'Vera'",
+  "categoryName": "Clothing & Apparel",
+  "typeName": "Dresses",
+  "description": "The Vera linen dress is a breezy summer staple cut from 100% natural linen. Its relaxed white silhouette keeps you cool while looking effortlessly polished. Available in three sizes for the perfect fit.",
+  "descriptionSq": "Fustani 'Vera' prej liri të pastër është zgjedhja ideale për verën. Silueta e bardhë e lirshme të mban freskët dhe elegante në çdo rast. Vjen në tre masa për një përshtatje të përsosur.",
+  "price": 4500,
+  "currency": "ALL",
+  "inventory": 10,
+  "pricingType": "one_time",
+  "tags": [
+    "linen dress",
+    "summer fashion",
+    "women clothing"
+  ],
+  "specifications": [
+    {
+      "key": "material",
+      "value": "100% linen",
+      "unit": null
+    },
+    {
+      "key": "color",
+      "value": "White",
+      "unit": null
+    }
+  ],
+  "options": [
+    {
+      "name": "Size",
+      "values": [
+        {
+          "value": "S"
+        },
+        {
+          "value": "M"
+        },
+        {
+          "value": "L"
+        }
+      ]
+    }
+  ]
+}

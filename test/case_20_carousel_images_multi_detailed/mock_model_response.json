@@ -1,0 +1,36 @@
+{
+  "isProductPost": true,
+  "isSaleOrPromotion": false,
+  "products": [
+    {
+      "productName": "Kufje Bluetooth X200",
+      "price": 2500,
+      "currency": "ALL",
+      "inventory": 15,
+      "specifications": [],
+      "options": []
+    },
+    {
+      "productName": "Kabllo USB-C 1m",
+      "price": 500,
+      "currency": "ALL",
+      "inventory": 40,
+      "specifications": [
+        {
+          "key": "length",
+          "value": "1",
+          "unit": "m"
+        }
+      ],
+      "options": []
+    },
+    {
+      "productName": "Mbajtëse telefoni për makinë",
+      "price": 900,
+      "currency": "ALL",
+      "inventory": 25,
+      "specifications": [],
+      "options": []
+    }
+  ]
+}

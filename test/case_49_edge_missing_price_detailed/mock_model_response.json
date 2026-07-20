@@ -1,0 +1,37 @@
+{
+  "isProductPost": true,
+  "productName": "Handmade Leather Bag",
+  "productNameSq": "Çantë lëkure punuar me dorë",
+  "categoryName": "Bags & Luggage",
+  "typeName": "Handbags",
+  "description": "A handcrafted Albanian leather bag made from 100% natural leather. Each piece is artisan-made with meticulous attention to detail. Available in brown and black.",
+  "price": 0,
+  "currency": "ALL",
+  "inventory": 10,
+  "pricingType": "one_time",
+  "tags": [
+    "leather bag",
+    "handmade",
+    "artisan"
+  ],
+  "specifications": [
+    {
+      "key": "material",
+      "value": "100% natural leather",
+      "unit": null
+    }
+  ],
+  "options": [
+    {
+      "name": "Color",
+      "values": [
+        {
+          "value": "kafe"
+        },
+        {
+          "value": "e zezë"
+        }
+      ]
+    }
+  ]
+}

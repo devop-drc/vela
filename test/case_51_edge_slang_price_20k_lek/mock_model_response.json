@@ -1,0 +1,43 @@
+{
+  "isProductPost": true,
+  "productName": "Sports Sneakers",
+  "productNameSq": "Atlete sportive",
+  "categoryName": "Clothing & Apparel",
+  "typeName": "Sneakers",
+  "description": "Fresh sports sneakers built for daily training and street wear. Durable construction with a comfortable fit across sizes 40 to 45. Free delivery on qualifying orders.",
+  "price": 20000,
+  "currency": "ALL",
+  "inventory": 10,
+  "pricingType": "one_time",
+  "tags": [
+    "sneakers",
+    "sports shoes",
+    "footwear"
+  ],
+  "specifications": [],
+  "options": [
+    {
+      "name": "Size",
+      "values": [
+        {
+          "value": "40"
+        },
+        {
+          "value": "41"
+        },
+        {
+          "value": "42"
+        },
+        {
+          "value": "43"
+        },
+        {
+          "value": "44"
+        },
+        {
+          "value": "45"
+        }
+      ]
+    }
+  ]
+}

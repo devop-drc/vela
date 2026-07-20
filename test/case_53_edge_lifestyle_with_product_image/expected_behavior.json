@@ -1,0 +1,21 @@
+{
+  "media_selection": [
+    {
+      "index": 0,
+      "source": "media_url"
+    }
+  ],
+  "annotation": "Pure lifestyle caption over what is actually a product photo — the caption alone must NOT produce a product; the pipeline routes to image analysis instead.",
+  "routing": {
+    "caption_insufficient": true,
+    "image_analysis_expected": true
+  },
+  "classification": {
+    "skip_or_image_retry": true
+  },
+  "products": [],
+  "must_be_empty_or_zero": [
+    "price"
+  ],
+  "llm_checks": true
+}

@@ -1,0 +1,35 @@
+{
+  "post": {
+    "id": "mock_mixed_carousel-multi-minimal",
+    "caption": "🔥🔥🛍️",
+    "media_type": "CAROUSEL_ALBUM",
+    "media_url": "https://mock-cdn.test/vela/mixed_carousel-multi-minimal-m0.jpg",
+    "thumbnail_url": null,
+    "children": [
+      {
+        "id": "mixed_carousel-multi-minimal-mchild-0",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/mixed_carousel-multi-minimal-m0.jpg"
+      },
+      {
+        "id": "mixed_carousel-multi-minimal-mchild-1",
+        "media_type": "VIDEO",
+        "media_url": "https://mock-cdn.test/vela/mixed_carousel-multi-minimal-m1.mp4",
+        "thumbnail_url": "https://mock-cdn.test/vela/mixed_carousel-multi-minimal-m1-thumb.jpg"
+      },
+      {
+        "id": "mixed_carousel-multi-minimal-mchild-2",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/mixed_carousel-multi-minimal-m2.jpg"
+      }
+    ],
+    "permalink": "https://www.instagram.com/p/mock_42/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}

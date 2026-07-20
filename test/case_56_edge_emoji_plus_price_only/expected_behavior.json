@@ -1,0 +1,27 @@
+{
+  "media_selection": [
+    {
+      "index": 0,
+      "source": "carousel_child"
+    },
+    {
+      "index": 1,
+      "source": "carousel_child"
+    },
+    {
+      "index": 2,
+      "source": "carousel_child"
+    }
+  ],
+  "annotation": "A price with zero product context — the number alone is not a product; pipeline must bring in the media (mixed carousel: image, video thumbnail, image).",
+  "routing": {
+    "caption_insufficient": true,
+    "image_analysis_expected": true
+  },
+  "classification": {
+    "skip_or_image_retry": true
+  },
+  "products": [],
+  "must_be_empty_or_zero": [],
+  "llm_checks": true
+}

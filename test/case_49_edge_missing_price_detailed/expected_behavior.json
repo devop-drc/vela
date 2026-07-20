@@ -1,0 +1,48 @@
+{
+  "media_selection": [
+    {
+      "index": 0,
+      "source": "media_url"
+    }
+  ],
+  "annotation": "Rich caption but NO price anywhere — price must land as 0/null, never a hallucinated estimate.",
+  "routing": {
+    "caption_insufficient": true,
+    "image_analysis_expected": true
+  },
+  "classification": {
+    "skip": false,
+    "is_product_post": true,
+    "is_multi": false,
+    "product_count": 1,
+    "pricing_type": "one_time",
+    "is_sale_or_promotion": false
+  },
+  "products": [
+    {
+      "name_keywords_any": [
+        "çantë",
+        "cante",
+        "lëkure",
+        "lekure",
+        "bag",
+        "leather"
+      ],
+      "price": 0,
+      "currency": "ALL",
+      "options_expect": {
+        "color": [
+          "kafe",
+          "e zezë"
+        ]
+      },
+      "media_indices": [
+        0
+      ]
+    }
+  ],
+  "must_be_empty_or_zero": [
+    "price"
+  ],
+  "llm_checks": true
+}

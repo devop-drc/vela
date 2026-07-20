@@ -1,0 +1,64 @@
+{
+  "annotation": "carousel_images × variant × detailed caption — full extraction from caption; media only confirms.",
+  "routing": {
+    "caption_insufficient": false,
+    "image_analysis_expected": false
+  },
+  "media_selection": [
+    {
+      "index": 0,
+      "source": "carousel_child"
+    },
+    {
+      "index": 1,
+      "source": "carousel_child"
+    },
+    {
+      "index": 2,
+      "source": "carousel_child"
+    }
+  ],
+  "classification": {
+    "skip": false,
+    "is_product_post": true,
+    "is_multi": false,
+    "product_count": 1,
+    "pricing_type": "one_time",
+    "is_sale_or_promotion": false
+  },
+  "products": [
+    {
+      "name_keywords_any": [
+        "bluzë",
+        "bluze",
+        "pambuku",
+        "shirt",
+        "cotton",
+        "top"
+      ],
+      "price": 1800,
+      "currency": "ALL",
+      "options_expect": {
+        "color": [
+          "e zezë",
+          "e bardhë",
+          "bezhë"
+        ],
+        "size": [
+          "S",
+          "M",
+          "L",
+          "XL"
+        ]
+      },
+      "media_indices": [
+        0,
+        1,
+        2
+      ]
+    }
+  ],
+  "variant_guard": "Same garment in three colors — MUST be one product with options, never a products[] array.",
+  "must_be_empty_or_zero": [],
+  "llm_checks": true
+}

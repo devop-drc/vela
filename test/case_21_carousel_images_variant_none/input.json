@@ -1,0 +1,39 @@
+{
+  "post": {
+    "id": "mock_carousel_images-variant-none",
+    "caption": null,
+    "media_type": "CAROUSEL_ALBUM",
+    "media_url": "https://mock-cdn.test/vela/carousel_images-variant-none-c0.jpg",
+    "thumbnail_url": null,
+    "children": [
+      {
+        "id": "carousel_images-variant-none-child-0",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/carousel_images-variant-none-c0.jpg"
+      },
+      {
+        "id": "carousel_images-variant-none-child-1",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/carousel_images-variant-none-c1.jpg"
+      },
+      {
+        "id": "carousel_images-variant-none-child-2",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/carousel_images-variant-none-c2.jpg"
+      },
+      {
+        "id": "carousel_images-variant-none-child-3",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/carousel_images-variant-none-c3.jpg"
+      }
+    ],
+    "permalink": "https://www.instagram.com/p/mock_21/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}

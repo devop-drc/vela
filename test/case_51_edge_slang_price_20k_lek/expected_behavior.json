@@ -1,0 +1,47 @@
+{
+  "media_selection": [
+    {
+      "index": 0,
+      "source": "media_url"
+    }
+  ],
+  "annotation": "Albanian slang price \"20k lek\" = 20,000 ALL. The \"5000L\" shipping threshold must NOT be mistaken for the product price.",
+  "routing": {
+    "caption_insufficient": false,
+    "image_analysis_expected": false
+  },
+  "classification": {
+    "skip": false,
+    "is_product_post": true,
+    "is_multi": false,
+    "product_count": 1,
+    "pricing_type": "one_time",
+    "is_sale_or_promotion": false
+  },
+  "products": [
+    {
+      "name_keywords_any": [
+        "atlete",
+        "sneaker",
+        "sport"
+      ],
+      "price": 20000,
+      "currency": "ALL",
+      "options_expect": {
+        "size": [
+          "40",
+          "41",
+          "42",
+          "43",
+          "44",
+          "45"
+        ]
+      },
+      "media_indices": [
+        0
+      ]
+    }
+  ],
+  "must_be_empty_or_zero": [],
+  "llm_checks": true
+}

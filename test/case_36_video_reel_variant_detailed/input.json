@@ -1,0 +1,17 @@
+{
+  "post": {
+    "id": "mock_video_reel-variant-detailed",
+    "caption": "Bluzë pambuku premium 🧵\nÇmimi: 1800 Lekë\nVjen në tre ngjyra: e zezë, e bardhë, bezhë\nMasat: S / M / L / XL\nCilësi e lartë, prodhim Turqi",
+    "media_type": "VIDEO",
+    "media_url": "https://mock-cdn.test/vela/video_reel-variant-detailed.mp4",
+    "thumbnail_url": "https://mock-cdn.test/vela/video_reel-variant-detailed-thumb.jpg",
+    "permalink": "https://www.instagram.com/p/mock_36/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}

@@ -1,0 +1,17 @@
+{
+  "post": {
+    "id": "mock_video_reel-multi-detailed",
+    "caption": "Produkte të reja në stok! 🛍️\n\nKufje Bluetooth X200\nÇmimi: 2500 ALL\nStock: 15\n\nKabllo USB-C 1m\nÇmimi: 500 ALL\nStock: 40\n\nMbajtëse telefoni për makinë\nÇmimi: 900 ALL\nStock: 25",
+    "media_type": "VIDEO",
+    "media_url": "https://mock-cdn.test/vela/video_reel-multi-detailed.mp4",
+    "thumbnail_url": "https://mock-cdn.test/vela/video_reel-multi-detailed-thumb.jpg",
+    "permalink": "https://www.instagram.com/p/mock_32/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}

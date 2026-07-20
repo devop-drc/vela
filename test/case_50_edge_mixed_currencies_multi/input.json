@@ -1,0 +1,39 @@
+{
+  "post": {
+    "id": "mock_edge_mixed_currencies_multi",
+    "caption": "Set dhuratash 🎁\n\nParfum francez 50ml\nÇmimi: 25 EUR\nStock: 8\n\nKrem duarsh me lavandë\nÇmimi: 700 ALL\nStock: 30",
+    "media_type": "CAROUSEL_ALBUM",
+    "media_url": "https://mock-cdn.test/vela/edge_mixed_currencies_multi-c0.jpg",
+    "thumbnail_url": null,
+    "children": [
+      {
+        "id": "edge_mixed_currencies_multi-child-0",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/edge_mixed_currencies_multi-c0.jpg"
+      },
+      {
+        "id": "edge_mixed_currencies_multi-child-1",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/edge_mixed_currencies_multi-c1.jpg"
+      },
+      {
+        "id": "edge_mixed_currencies_multi-child-2",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/edge_mixed_currencies_multi-c2.jpg"
+      },
+      {
+        "id": "edge_mixed_currencies_multi-child-3",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/edge_mixed_currencies_multi-c3.jpg"
+      }
+    ],
+    "permalink": "https://www.instagram.com/p/mock_50/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}

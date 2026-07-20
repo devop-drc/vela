@@ -1,0 +1,59 @@
+{
+  "media_selection": [
+    {
+      "index": 0,
+      "source": "carousel_child"
+    },
+    {
+      "index": 1,
+      "source": "carousel_child"
+    },
+    {
+      "index": 2,
+      "source": "carousel_child"
+    }
+  ],
+  "annotation": "Two products, two DIFFERENT currencies in one caption — each item must keep its own currency; nothing may be silently unified.",
+  "routing": {
+    "caption_insufficient": false,
+    "image_analysis_expected": false
+  },
+  "classification": {
+    "skip": false,
+    "is_product_post": true,
+    "is_multi": true,
+    "product_count": 2,
+    "pricing_type": "one_time",
+    "is_sale_or_promotion": false
+  },
+  "products": [
+    {
+      "name_keywords_any": [
+        "parfum",
+        "perfume"
+      ],
+      "price": 25,
+      "currency": "EUR",
+      "inventory": 8,
+      "media_indices": [
+        0
+      ]
+    },
+    {
+      "name_keywords_any": [
+        "krem",
+        "cream",
+        "lavandë",
+        "lavender"
+      ],
+      "price": 700,
+      "currency": "ALL",
+      "inventory": 30,
+      "media_indices": [
+        1
+      ]
+    }
+  ],
+  "must_be_empty_or_zero": [],
+  "llm_checks": true
+}

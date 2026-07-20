@@ -1,0 +1,64 @@
+{
+  "isProductPost": true,
+  "isSaleOrPromotion": false,
+  "productName": "Premium Cotton Blouse",
+  "productNameSq": "Bluzë pambuku premium",
+  "categoryName": "Clothing & Apparel",
+  "typeName": "Blouses",
+  "description": "A premium cotton blouse made in Turkey with exceptional attention to quality. The soft, breathable fabric drapes beautifully for both office and casual wear. Choose from three timeless colors and four sizes.",
+  "descriptionSq": "Bluzë pambuku premium, e prodhuar në Turqi me cilësi të lartë. Pëlhura e butë dhe e ajrosur i përshtatet si veshjes zyrtare ashtu edhe asaj të përditshme. Zgjidh mes tre ngjyrave klasike dhe katër masave.",
+  "price": 1800,
+  "currency": "ALL",
+  "inventory": 10,
+  "pricingType": "one_time",
+  "tags": [
+    "cotton blouse",
+    "women fashion",
+    "premium basics"
+  ],
+  "specifications": [
+    {
+      "key": "material",
+      "value": "100% cotton",
+      "unit": null
+    },
+    {
+      "key": "origin",
+      "value": "Turkey",
+      "unit": null
+    }
+  ],
+  "options": [
+    {
+      "name": "Color",
+      "values": [
+        {
+          "value": "e zezë"
+        },
+        {
+          "value": "e bardhë"
+        },
+        {
+          "value": "bezhë"
+        }
+      ]
+    },
+    {
+      "name": "Size",
+      "values": [
+        {
+          "value": "S"
+        },
+        {
+          "value": "M"
+        },
+        {
+          "value": "L"
+        },
+        {
+          "value": "XL"
+        }
+      ]
+    }
+  ]
+}

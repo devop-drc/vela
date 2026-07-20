@@ -13,7 +13,9 @@
     "studio": "remotion studio src/remotion.ts",
     "render": "remotion render src/remotion.ts",
     "render:title": "remotion render src/remotion.ts TitleCard out/TitleCard.mp4 --codec=h264 --crf=18",
-    "render:badge": "remotion render src/remotion.ts TransparentBadge out/TransparentBadge.mov --codec=prores --prores-profile=4444 --pixel-format=yuva444p10le --image-format=png"
+    "render:badge": "remotion render src/remotion.ts TransparentBadge out/TransparentBadge.mov --codec=prores --prores-profile=4444 --pixel-format=yuva444p10le --image-format=png",
+    "test:extraction": "node test/generate_cases.ts && node test/run_extraction_tests.ts",
+    "test:extraction:remote": "node test/generate_cases.ts && node test/run_extraction_tests.ts --remote"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

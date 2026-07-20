@@ -1,0 +1,17 @@
+{
+  "post": {
+    "id": "mock_single_image-single-noisy",
+    "caption": "Dita e përsosur në Tiranë me shoqërinë! ☀️ Faleminderit të gjithëve për mbështetjen — ju duam shumë! #blessed #weekend #tirana",
+    "media_type": "IMAGE",
+    "media_url": "https://mock-cdn.test/vela/single_image-single-noisy-main.jpg",
+    "thumbnail_url": null,
+    "permalink": "https://www.instagram.com/p/mock_3/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}

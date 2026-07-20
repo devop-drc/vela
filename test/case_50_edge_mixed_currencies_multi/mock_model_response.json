@@ -1,0 +1,27 @@
+{
+  "isProductPost": true,
+  "products": [
+    {
+      "productName": "Parfum francez 50ml",
+      "price": 25,
+      "currency": "EUR",
+      "inventory": 8,
+      "specifications": [
+        {
+          "key": "volume",
+          "value": "50",
+          "unit": "ml"
+        }
+      ],
+      "options": []
+    },
+    {
+      "productName": "Krem duarsh me lavandë",
+      "price": 700,
+      "currency": "ALL",
+      "inventory": 30,
+      "specifications": [],
+      "options": []
+    }
+  ]
+}

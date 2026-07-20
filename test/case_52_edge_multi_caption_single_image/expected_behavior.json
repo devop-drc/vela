@@ -1,0 +1,50 @@
+{
+  "media_selection": [
+    {
+      "index": 0,
+      "source": "media_url"
+    }
+  ],
+  "annotation": "Caption lists 2 products but there is only ONE image — extraction must still yield 2 products; media mapping degrades to the single available index.",
+  "routing": {
+    "caption_insufficient": false,
+    "image_analysis_expected": false
+  },
+  "classification": {
+    "skip": false,
+    "is_product_post": true,
+    "is_multi": true,
+    "product_count": 2,
+    "pricing_type": "one_time",
+    "is_sale_or_promotion": false
+  },
+  "products": [
+    {
+      "name_keywords_any": [
+        "tastierë",
+        "tastiere",
+        "keyboard"
+      ],
+      "price": 6500,
+      "currency": "ALL",
+      "inventory": 5,
+      "media_indices": [
+        0
+      ]
+    },
+    {
+      "name_keywords_any": [
+        "maus",
+        "mouse"
+      ],
+      "price": 3200,
+      "currency": "ALL",
+      "inventory": 12,
+      "media_indices": [
+        0
+      ]
+    }
+  ],
+  "must_be_empty_or_zero": [],
+  "llm_checks": true
+}

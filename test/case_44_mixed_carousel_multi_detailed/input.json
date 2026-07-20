@@ -1,0 +1,35 @@
+{
+  "post": {
+    "id": "mock_mixed_carousel-multi-detailed",
+    "caption": "Produkte të reja në stok! 🛍️\n\nKufje Bluetooth X200\nÇmimi: 2500 ALL\nStock: 15\n\nKabllo USB-C 1m\nÇmimi: 500 ALL\nStock: 40\n\nMbajtëse telefoni për makinë\nÇmimi: 900 ALL\nStock: 25",
+    "media_type": "CAROUSEL_ALBUM",
+    "media_url": "https://mock-cdn.test/vela/mixed_carousel-multi-detailed-m0.jpg",
+    "thumbnail_url": null,
+    "children": [
+      {
+        "id": "mixed_carousel-multi-detailed-mchild-0",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/mixed_carousel-multi-detailed-m0.jpg"
+      },
+      {
+        "id": "mixed_carousel-multi-detailed-mchild-1",
+        "media_type": "VIDEO",
+        "media_url": "https://mock-cdn.test/vela/mixed_carousel-multi-detailed-m1.mp4",
+        "thumbnail_url": "https://mock-cdn.test/vela/mixed_carousel-multi-detailed-m1-thumb.jpg"
+      },
+      {
+        "id": "mixed_carousel-multi-detailed-mchild-2",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/mixed_carousel-multi-detailed-m2.jpg"
+      }
+    ],
+    "permalink": "https://www.instagram.com/p/mock_44/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}

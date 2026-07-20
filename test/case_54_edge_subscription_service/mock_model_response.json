@@ -1,0 +1,20 @@
+{
+  "isProductPost": true,
+  "productName": "Monthly Personal Training Subscription",
+  "productNameSq": "Abonim mujor stërvitje personale",
+  "categoryName": "Services",
+  "typeName": "Personal Training",
+  "description": "A monthly personal training subscription with a fully individual plan and weekly follow-ups. Spots are limited to keep coaching quality high. Train with structure and real accountability.",
+  "price": 5000,
+  "currency": "ALL",
+  "inventory": 10,
+  "pricingType": "subscription",
+  "billingInterval": "month",
+  "tags": [
+    "personal training",
+    "fitness",
+    "subscription"
+  ],
+  "specifications": [],
+  "options": []
+}

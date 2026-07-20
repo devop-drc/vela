@@ -1,0 +1,29 @@
+{
+  "annotation": "mixed_carousel × multi × minimal caption — emoji-only caption: the caption alone cannot produce a product. The pipeline MUST route to image analysis (or flag _needsImageRetry) instead of inventing fields.",
+  "routing": {
+    "caption_insufficient": true,
+    "image_analysis_expected": true
+  },
+  "media_selection": [
+    {
+      "index": 0,
+      "source": "carousel_child"
+    },
+    {
+      "index": 1,
+      "source": "carousel_child"
+    },
+    {
+      "index": 2,
+      "source": "carousel_child"
+    }
+  ],
+  "classification": {
+    "skip_or_image_retry": true
+  },
+  "products": [],
+  "must_be_empty_or_zero": [
+    "price"
+  ],
+  "llm_checks": true
+}

@@ -1,0 +1,17 @@
+{
+  "post": {
+    "id": "mock_edge_lifestyle_with_product_image",
+    "caption": "Mëngjes i qetë me librin tim të preferuar dhe një filxhan kafe ☕📖 #morningvibes #slowliving",
+    "media_type": "IMAGE",
+    "media_url": "https://mock-cdn.test/vela/edge_lifestyle_with_product_image-main.jpg",
+    "thumbnail_url": null,
+    "permalink": "https://www.instagram.com/p/mock_53/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}

@@ -1,0 +1,39 @@
+{
+  "post": {
+    "id": "mock_carousel_images-variant-noisy",
+    "caption": "Frymëzim i sotëm nga rrugët e Milanos 🇮🇹 Stili nuk blihet — jetohet! #fashioninspo #ootd",
+    "media_type": "CAROUSEL_ALBUM",
+    "media_url": "https://mock-cdn.test/vela/carousel_images-variant-noisy-c0.jpg",
+    "thumbnail_url": null,
+    "children": [
+      {
+        "id": "carousel_images-variant-noisy-child-0",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/carousel_images-variant-noisy-c0.jpg"
+      },
+      {
+        "id": "carousel_images-variant-noisy-child-1",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/carousel_images-variant-noisy-c1.jpg"
+      },
+      {
+        "id": "carousel_images-variant-noisy-child-2",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/carousel_images-variant-noisy-c2.jpg"
+      },
+      {
+        "id": "carousel_images-variant-noisy-child-3",
+        "media_type": "IMAGE",
+        "media_url": "https://mock-cdn.test/vela/carousel_images-variant-noisy-c3.jpg"
+      }
+    ],
+    "permalink": "https://www.instagram.com/p/mock_23/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}

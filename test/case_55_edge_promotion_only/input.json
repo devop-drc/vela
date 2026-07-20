@@ -1,0 +1,17 @@
+{
+  "post": {
+    "id": "mock_edge_promotion_only",
+    "caption": "SUPER OFERTË! 🎉 -20% në të gjitha artikujt këtë fundjavë!! Vetëm të shtunën dhe të dielën. Mos e humbisni! #sale #ofertë",
+    "media_type": "IMAGE",
+    "media_url": "https://mock-cdn.test/vela/edge_promotion_only-main.jpg",
+    "thumbnail_url": null,
+    "permalink": "https://www.instagram.com/p/mock_55/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}

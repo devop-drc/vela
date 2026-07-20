@@ -1,0 +1,21 @@
+{
+  "isProductPost": true,
+  "products": [
+    {
+      "productName": "Tastierë mekanike RGB",
+      "price": 6500,
+      "currency": "ALL",
+      "inventory": 5,
+      "specifications": [],
+      "options": []
+    },
+    {
+      "productName": "Maus gaming",
+      "price": 3200,
+      "currency": "ALL",
+      "inventory": 12,
+      "specifications": [],
+      "options": []
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "post": {
+    "id": "mock_edge_multi_caption_single_image",
+    "caption": "Kompleti i zyres 🖥️\n\nTastierë mekanike RGB\nÇmimi: 6500 ALL\nStock: 5\n\nMaus gaming\nÇmimi: 3200 ALL\nStock: 12\n\nShumë produkte, një foto — shkruajna në DM për detaje!",
+    "media_type": "IMAGE",
+    "media_url": "https://mock-cdn.test/vela/edge_multi_caption_single_image-main.jpg",
+    "thumbnail_url": null,
+    "permalink": "https://www.instagram.com/p/mock_52/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}

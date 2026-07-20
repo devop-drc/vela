@@ -1,0 +1,17 @@
+{
+  "post": {
+    "id": "mock_single_image-multi-noisy",
+    "caption": "Çfarë fundjave! Ne panair me ekipin — energji fantastike dhe shumë buzëqeshje 😊 #teamwork #panair2026",
+    "media_type": "IMAGE",
+    "media_url": "https://mock-cdn.test/vela/single_image-multi-noisy-main.jpg",
+    "thumbnail_url": null,
+    "permalink": "https://www.instagram.com/p/mock_7/",
+    "timestamp": "2026-07-18T10:30:00+0000",
+    "username": "dyqani.yt"
+  },
+  "user_context": {
+    "keywords": [],
+    "similar_products": []
+  },
+  "include_images": null
+}
