@@ -1,26 +1,155 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Vela brand asset — app icon (tile + mark). Wordmark is outlined (no font dependency). -->
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="vm-front" gradientUnits="userSpaceOnUse" x1="312" y1="70" x2="244" y2="316">
-      <stop offset="0" stop-color="#FACC15"/><stop offset="0.42" stop-color="#F59E0B"/><stop offset="1" stop-color="#FF2E4D"/>
+
+<svg
+   width="512"
+   height="512"
+   viewBox="0 0 512 512"
+   version="1.1"
+   id="svg18"
+   sodipodi:docname="vela-app-icon.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   inkscape:export-filename="vela-app-icon.svg"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview18"
+     pagecolor="#505050"
+     bordercolor="#ffffff"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#505050"
+     inkscape:zoom="1.6117063"
+     inkscape:cx="156.66626"
+     inkscape:cy="260.28316"
+     inkscape:window-width="3440"
+     inkscape:window-height="1369"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg18">
+    <inkscape:page
+       x="0"
+       y="0"
+       width="512"
+       height="512"
+       id="page2"
+       margin="0"
+       bleed="0" />
+  </sodipodi:namedview>
+  <defs
+     id="defs14">
+    <linearGradient
+       id="vm-front"
+       gradientUnits="userSpaceOnUse"
+       x1="312"
+       y1="70"
+       x2="244"
+       y2="316"
+       gradientTransform="matrix(0.74,0,0,0.74,64,88)">
+      <stop
+         offset="0"
+         stop-color="#FACC15"
+         id="stop1" />
+      <stop
+         offset="0.42"
+         stop-color="#F59E0B"
+         id="stop2" />
+      <stop
+         offset="1"
+         stop-color="#FF2E4D"
+         id="stop3" />
     </linearGradient>
-    <linearGradient id="vm-back" gradientUnits="userSpaceOnUse" x1="184" y1="116" x2="124" y2="316">
-      <stop offset="0" stop-color="#FF2E4D"/><stop offset="0.55" stop-color="#A31234"/><stop offset="1" stop-color="#7F1D3B"/>
+    <linearGradient
+       id="vm-back"
+       gradientUnits="userSpaceOnUse"
+       x1="184"
+       y1="116"
+       x2="124"
+       y2="316"
+       gradientTransform="matrix(0.74,0,0,0.74,62.205656,85.264781)">
+      <stop
+         offset="0"
+         stop-color="#FF2E4D"
+         id="stop4" />
+      <stop
+         offset="0.55"
+         stop-color="#A31234"
+         id="stop5" />
+      <stop
+         offset="1"
+         stop-color="#7F1D3B"
+         id="stop6" />
     </linearGradient>
-    <linearGradient id="vm-hull" gradientUnits="userSpaceOnUse" x1="56" y1="390" x2="452" y2="360">
-      <stop offset="0" stop-color="#7F1D3B"/><stop offset="0.3" stop-color="#A31234"/><stop offset="0.62" stop-color="#FF2E4D"/><stop offset="0.86" stop-color="#F59E0B"/><stop offset="1" stop-color="#FACC15"/>
-    </linearGradient>
-    <linearGradient id="vm-wake" gradientUnits="userSpaceOnUse" x1="230" y1="430" x2="436" y2="396">
-      <stop offset="0" stop-color="#FF2E4D" stop-opacity="0.55"/><stop offset="0.7" stop-color="#F59E0B"/><stop offset="1" stop-color="#FACC15"/>
+    <linearGradient
+       id="vm-hull"
+       gradientUnits="userSpaceOnUse"
+       x1="56"
+       y1="390"
+       x2="452"
+       y2="360"
+       gradientTransform="matrix(0.74,0,0,0.74,66,66)">
+      <stop
+         offset="0"
+         stop-color="#7F1D3B"
+         id="stop7" />
+      <stop
+         offset="0.3"
+         stop-color="#A31234"
+         id="stop8" />
+      <stop
+         offset="0.62"
+         stop-color="#FF2E4D"
+         id="stop9" />
+      <stop
+         offset="0.86"
+         stop-color="#F59E0B"
+         id="stop10" />
+      <stop
+         offset="1"
+         stop-color="#FACC15"
+         id="stop11" />
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="115" fill="#FFFFFF"/>
-  <rect width="512" height="512" rx="115" fill="none" stroke="#2A1D22" stroke-opacity="0.06" stroke-width="4"/>
-  <g transform="translate(66,66) scale(0.74)">
-      <path fill="url(#vm-back)" fill-rule="evenodd" d="M 168 122 Q 174 100 189 98 L 204 104 Q 214 109 216 124 C 226 178 231 246 232 296 Q 233 318 214 318 L 140 318 Q 123 318 126 299 C 132 242 147 178 168 122 Z M 192 136 a 9 9 0 1 0 0.001 0 Z"/>
-      <path fill="url(#vm-front)" fill-rule="evenodd" d="M 280 86 Q 286 60 304 56 L 322 63 Q 334 69 337 88 C 356 164 367 248 369 295 Q 371 318 350 318 L 262 318 Q 243 318 246 297 C 252 236 264 154 280 86 Z M 309 102 a 12 12 0 1 0 0.001 0 Z"/>
-      <path fill="url(#vm-hull)" d="M 58 340 C 150 362 300 360 382 338 L 394 334 Q 400 332 398 326 L 392 312 Q 390 304 398 309 L 446 332 Q 453 336 446 341 C 420 360 388 380 352 396 C 292 422 202 420 148 400 C 108 384 76 362 58 340 Z"/>
-      <path fill="url(#vm-wake)" d="M 234 432 C 304 452 372 440 428 396 Q 436 389 426 390 C 368 424 306 432 242 416 Q 228 413 234 432 Z"/>
-  </g>
+  <rect
+     width="512"
+     height="512"
+     rx="115"
+     fill="#ffffff"
+     id="rect14"
+     x="0"
+     y="0" />
+  <rect
+     width="512"
+     height="512"
+     rx="115"
+     fill="none"
+     stroke="#2a1d22"
+     stroke-opacity="0.06"
+     stroke-width="4"
+     id="rect15"
+     x="0"
+     y="0" />
+  <path
+     id="path15"
+     style="fill:url(#vm-back);stroke-width:0.74"
+     d="m 201.40831,157.56579 c -7.4,-0.87795 -11.92292,7.1258 -14.88292,17.97913 -15.54,41.44 -26.64008,88.80047 -31.08008,130.98047 -0.15908,1.00753 -0.22849,6.12448 -0.23828,11.53711 29.80616,6.19728 55.71505,9.31061 78.0918,10.25977 0.56697,-7.87997 0.72171,-21.0305 0.58594,-24.01758 -0.74,-37 -4.43985,-87.3193 -11.83985,-127.2793 -0.99138,-12.3782 -6.39741,-18.26127 -20.63661,-19.4596 z m 2.87685,28.33851 h 0.002 c 3.67804,5.5e-4 6.65869,2.98217 6.6582,6.6582 -5e-4,3.67584 -2.98074,6.65234 -6.6582,6.65234 -3.67746,0 -6.65966,-2.9765 -6.66016,-6.65234 -4.9e-4,-3.67603 2.98017,-6.65765 6.65821,-6.6582 z"
+     sodipodi:nodetypes="cccccccccsssscc" />
+  <path
+     id="path16"
+     style="fill:url(#vm-front);stroke-width:0.74"
+     d="m 287.3157,130.75565 c -10.30588,-1.75588 -13.15648,8.05833 -16.11648,20.88497 -11.84,50.32 -20.72016,110.99868 -25.16016,156.13868 -0.2519,1.76334 -0.65466,13.36334 -0.77344,20.68945 43.29948,1.36886 72.94758,-5.4678 91.75391,-13.47266 0.12676,-4.02222 0.15527,-7.38142 0.041,-8.69531 -1.48,-34.78 -9.61969,-96.94164 -23.67969,-153.18164 -2.95465,-18.6289 -4.30555,-20.35917 -26.06514,-22.36349 z m 4.93039,27.18771 c 3.87674,10e-5 7.01943,3.14279 7.01953,7.01953 -9e-5,3.87674 -3.14279,7.01943 -7.01953,7.01953 -3.87674,-1e-4 -7.01943,-3.14279 -7.01953,-7.01953 10e-5,-3.87674 3.14279,-7.01943 7.01953,-7.01953 z"
+     sodipodi:nodetypes="ccccccccccccc" />
+  <path
+     fill="url(#vm-hull)"
+     d="m 108.92,317.6 c 144.85806,41.28771 215.49474,17.87112 240.19873,0.71366 L 357.56,313.16 c 2.66302,-1.62586 3.94667,-2.96 2.96,-5.92 l -4.44,-10.36 c -0.98667,-3.94667 0.49333,-4.68667 4.44,-2.22 l 35.52,17.02 c 3.45333,1.97333 3.45333,4.19333 0,6.66 -19.24,14.06 -42.92,28.86 -69.56,40.7 -44.4,19.24 -111,17.76 -150.96,2.96 -29.6,-11.84 -53.28,-28.12 -66.6,-44.4 z"
+     id="path17"
+     style="fill:url(#vm-hull);stroke-width:0.74"
+     sodipodi:nodetypes="ccscccccccc" />
 </svg>
