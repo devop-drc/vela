@@ -106,6 +106,7 @@
     "globals": "^15.15.0",
     "opentype.js": "^2.0.0",
     "postcss": "^8.5.3",
+    "pptxgenjs": "^4.0.1",
     "puppeteer": "^25.3.0",
     "shadcn": "^4.13.1",
     "tailwindcss": "^3.4.17",
