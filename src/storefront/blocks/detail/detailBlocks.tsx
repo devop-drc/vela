@@ -18,6 +18,7 @@ import { ProductCard, ProductLike } from '../../components/ProductCard';
 import { SfButton } from '../../components/SfButton';
 import { promotionBadgeLabel, type PromotionLike } from '../../lib/pricing';
 import { useRailDrag } from '../../lib/useRailDrag';
+import { useSfT } from '../../lib/visitorPrefs';
 
 /** Attaches mouse drag-to-scroll to the filmstrip rail (renders nothing). */
 const FilmstripDrag = ({ stripRef, count }: { stripRef: React.RefObject<HTMLDivElement>; count: number }) => {
@@ -206,6 +207,7 @@ export const VariantSelectorBlock = () => {
 export const AddToCartBlock = () => {
   const { shopDetails } = useStorefront();
   const { isOutOfStock, quantity, setQuantity, addToCartHandler } = useProductDetail();
+  const { t } = useSfT();
   return (
     <div>
       <div className="flex items-center gap-3">
@@ -215,10 +217,10 @@ export const AddToCartBlock = () => {
           <button aria-label="Increase quantity" onClick={() => setQuantity((q) => Math.min(99, q + 1))} className="h-full w-10 flex items-center justify-center"><Plus className="h-4 w-4" /></button>
         </div>
         <SfButton size="lg" className="flex-1" disabled={isOutOfStock} onClick={(e) => addToCartHandler(e.currentTarget)}>
-          <ShoppingCart className="mr-2 h-5 w-5" /> {isOutOfStock ? 'Sold Out' : 'Add to Cart'}
+          <ShoppingCart className="mr-2 h-5 w-5" /> {isOutOfStock ? t('soldOut') : t('addToCart')}
         </SfButton>
       </div>
-      <div className="flex items-center gap-2 text-sm text-muted-foreground pt-3"><Truck className="h-4 w-4" /> Ships from {shopDetails!.shop_name}</div>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground pt-3"><Truck className="h-4 w-4" /> {t('shipsFrom')} {shopDetails!.shop_name}</div>
     </div>
   );
 };
@@ -226,6 +228,7 @@ export const AddToCartBlock = () => {
 /* ── Specifications ────────────────────────────────────────────────────── */
 export const SpecificationsBlock = () => {
   const { specs } = useProductDetail();
+  const { t } = useSfT();
   // Long spec lists collapse to the first few rows with a read-more expander.
   const [expanded, setExpanded] = useState(false);
   const LIMIT = 4;
@@ -233,7 +236,7 @@ export const SpecificationsBlock = () => {
   const shown = expanded ? specs : specs.slice(0, LIMIT);
   return (
     <div className="pt-4 border-t space-y-2">
-      <h3 className="sf-heading font-semibold">Details</h3>
+      <h3 className="sf-heading font-semibold">{t('details')}</h3>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         {shown.map(([k, v]) => (
           <div key={k}><dt className="text-muted-foreground capitalize">{k}</dt><dd className="font-medium">{Array.isArray(v) ? v.join(', ') : String(v)}</dd></div>
@@ -246,7 +249,7 @@ export const SpecificationsBlock = () => {
           aria-expanded={expanded}
           className="text-sm font-medium text-primary underline-offset-2 hover:underline"
         >
-          {expanded ? 'Show less' : `Read more (${specs.length - LIMIT} more)`}
+          {expanded ? t('showLess') : `${t('readMore')} (${specs.length - LIMIT})`}
         </button>
       )}
     </div>
@@ -279,6 +282,7 @@ const Stars = ({ value, className }: { value: number; className?: string }) => (
 export const ReviewsBlock = ({ props }: { props: { title?: string } }) => {
   const { product } = useProductDetail();
   const { capabilities } = useStorefront();
+  const { t } = useSfT();
   const [reviews, setReviews] = useState<Review[] | null>(null);
 
   useEffect(() => {
@@ -303,29 +307,27 @@ export const ReviewsBlock = ({ props }: { props: { title?: string } }) => {
   return (
     <section className="mt-16">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-6">
-        <h2 className="sf-heading text-2xl font-bold">{props.title || 'Reviews'}</h2>
+        <h2 className="sf-heading text-2xl font-bold">{props.title || t('reviews')}</h2>
         {reviews.length > 0 && (
           <span className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Stars value={avg} /> {avg.toFixed(1)} · {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
+            <Stars value={avg} /> {avg.toFixed(1)} · {reviews.length} {reviews.length === 1 ? t('review') : t('reviewsWord')}
           </span>
         )}
       </div>
       {reviews.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No reviews yet. Reviews come from verified purchases — buy this product and share your experience from <em>My Orders</em>.
-        </p>
+        <p className="text-sm text-muted-foreground">{t('noReviews')}</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {reviews.map((r) => (
             <div key={r.id} className="sf-glass p-4">
               <div className="flex items-center justify-between gap-2 mb-1.5">
-                <span className="text-sm font-semibold">{r.customer_name || 'Verified customer'}</span>
+                <span className="text-sm font-semibold">{r.customer_name || t('verifiedCustomer')}</span>
                 <Stars value={r.rating} />
               </div>
               {r.comment && <p className="text-sm text-muted-foreground leading-relaxed">{r.comment}</p>}
               {r.reply_text && (
                 <div className="mt-3 rounded-md border-l-2 border-primary/40 bg-primary/5 p-3">
-                  <p className="text-xs font-semibold text-primary mb-0.5">Response from the shop</p>
+                  <p className="text-xs font-semibold text-primary mb-0.5">{t('shopResponse')}</p>
                   <p className="text-sm text-muted-foreground leading-relaxed">{r.reply_text}</p>
                 </div>
               )}

@@ -22,6 +22,7 @@ import { SectionInstance } from '../config/types';
 import { activePromotionsFor, computePrice } from '../lib/pricing';
 import { optionEntries, detailEntries, filterKeyTitle } from '@/components/filters/filterVisibility';
 import { useVariantOptionsFor, mergeOptionEntries } from '@/hooks/useVariantOptions';
+import { useSfT } from '../lib/visitorPrefs';
 
 const renderBlock = (section: SectionInstance) => {
   const def = getBlockDef(section.type);
@@ -36,6 +37,7 @@ export const ProductDetailPage = () => {
   const config = useStorefrontConfig();
   const { addToCart } = useCart();
   const { addRecentlyViewed } = useRecentlyViewed();
+  const { t } = useSfT();
   const [quantity, setQuantity] = useState(1);
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [deepLinkResolved, setDeepLinkResolved] = useState(false);
@@ -148,7 +150,7 @@ export const ProductDetailPage = () => {
   return (
     <ProductDetailContext.Provider value={state}>
       <div className="sf-container py-6 md:py-8">
-        <Link to={`/shop/${shopSlug}/products`} className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6"><ArrowLeft className="mr-1.5 h-4 w-4" /> Back to Products</Link>
+        <Link to={`/shop/${shopSlug}/products`} className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6"><ArrowLeft className="mr-1.5 h-4 w-4" /> {t('backToProducts')}</Link>
         <div className={cn('grid gap-8 lg:gap-12', stacked ? 'grid-cols-1' : 'lg:grid-cols-2')}>
           {hasGallery && (
             <div className={cn(galleryLayout === 'sticky-split' && 'lg:sticky lg:top-20 lg:self-start')}>

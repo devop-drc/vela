@@ -13,6 +13,7 @@ import { formatCurrency } from '@/lib/formatters';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { useStorefrontConfig, useStorefrontTokenStyle } from '../theme/StorefrontThemeProvider';
 import { SfButton } from '../components/SfButton';
+import { useSfT } from '../lib/visitorPrefs';
 import LeaveReviewDialog from '@/components/storefront/ProductReviews';
 import { OrderSuccessOverlay } from '@/components/storefront/OrderSuccessOverlay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -70,6 +71,7 @@ export const OrdersPage = () => {
   const config = useStorefrontConfig();
   const [params, setParams] = useSearchParams();
   const token = useStorefrontTokenStyle();
+  const { t } = useSfT();
   // Full-screen celebration on return from a successful card payment.
   const [celebrate, setCelebrate] = useState(() => params.get('payment') === 'success');
 
@@ -155,13 +157,13 @@ export const OrdersPage = () => {
           }}
         />
       )}
-      <h1 className="sf-heading text-3xl md:text-4xl font-bold mb-2">My Orders</h1>
-      <p className="text-muted-foreground mb-6">Orders placed on this device appear automatically. To look up another order, enter your email and the order number from your confirmation.</p>
+      <h1 className="sf-heading text-3xl md:text-4xl font-bold mb-2">{t('myOrders')}</h1>
+      <p className="text-muted-foreground mb-6">{t('ordersIntro')}</p>
 
       <form onSubmit={(e) => { e.preventDefault(); lookup(email, orderNo); }} className="mb-8 flex flex-col gap-2 sm:flex-row">
         <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="flex-1 min-w-0" />
-        <Input value={orderNo} onChange={(e) => setOrderNo(e.target.value)} placeholder="Order # (e.g. 2b7f9933)" className="sm:w-44" />
-        <SfButton type="submit" disabled={loading}>{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}<span className="ml-2 sm:hidden lg:inline">Find Order</span></SfButton>
+        <Input value={orderNo} onChange={(e) => setOrderNo(e.target.value)} placeholder={t('orderNoPlaceholder')} className="sm:w-44" />
+        <SfButton type="submit" disabled={loading}>{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}<span className="ml-2 sm:hidden lg:inline">{t('findOrder')}</span></SfButton>
       </form>
 
       {loading && orders.length === 0 ? (
@@ -170,14 +172,14 @@ export const OrdersPage = () => {
         <div className="py-16 text-center">
           <AlertCircle className="mx-auto mb-4 h-12 w-12 text-destructive opacity-70" />
           <p className="mb-4 text-muted-foreground">{err}</p>
-          <SfButton onClick={() => lookup(email)}>Try again</SfButton>
+          <SfButton onClick={() => lookup(email)}>{t('tryAgain')}</SfButton>
         </div>
       ) : orders.length === 0 ? (
         <div className="py-16 text-center">
           <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-full bg-primary/10 text-primary"><Package className="h-7 w-7" /></div>
-          <h2 className="sf-heading mb-1 text-lg font-semibold">No orders yet</h2>
-          <p className="mb-6 text-sm text-muted-foreground">Orders you place in this shop will show up here.</p>
-          <SfButton asChild><Link to={`/shop/${shopSlug}/products`}>Browse products</Link></SfButton>
+          <h2 className="sf-heading mb-1 text-lg font-semibold">{t('noOrdersYet')}</h2>
+          <p className="mb-6 text-sm text-muted-foreground">{t('noOrdersSub')}</p>
+          <SfButton asChild><Link to={`/shop/${shopSlug}/products`}>{t('browseProducts')}</Link></SfButton>
         </div>
       ) : style === 'table' ? (
         /* Compact table presentation (config.pages.orders.style === 'table'). */
@@ -185,11 +187,11 @@ export const OrdersPage = () => {
           <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="px-4 py-3 font-semibold">Order</th>
-                <th className="px-4 py-3 font-semibold">Date</th>
-                <th className="px-4 py-3 font-semibold">Items</th>
-                <th className="px-4 py-3 font-semibold">Total</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">{t('order')}</th>
+                <th className="px-4 py-3 font-semibold">{t('date')}</th>
+                <th className="px-4 py-3 font-semibold">{t('items')}</th>
+                <th className="px-4 py-3 font-semibold">{t('total')}</th>
+                <th className="px-4 py-3 font-semibold">{t('status')}</th>
               </tr>
             </thead>
             <tbody>
@@ -287,9 +289,9 @@ export const OrdersPage = () => {
                 })}
               </div>
               <div className="space-y-1 border-t pt-3 text-sm">
-                <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span>{formatCurrency(itemsTotal, o.currency)}</span></div>
-                <div className="flex justify-between text-muted-foreground"><span>Shipping</span><span>{shipping > 0 ? formatCurrency(shipping, o.currency) : 'Free'}</span></div>
-                <div className="flex justify-between font-semibold"><span>Total</span><span>{formatCurrency(o.total_amount, o.currency)}</span></div>
+                <div className="flex justify-between text-muted-foreground"><span>{t('subtotal')}</span><span>{formatCurrency(itemsTotal, o.currency)}</span></div>
+                <div className="flex justify-between text-muted-foreground"><span>{t('shipping')}</span><span>{shipping > 0 ? formatCurrency(shipping, o.currency) : t('free')}</span></div>
+                <div className="flex justify-between font-semibold"><span>{t('total')}</span><span>{formatCurrency(o.total_amount, o.currency)}</span></div>
               </div>
               {o.shipping_address && (
                 <p className="text-xs text-muted-foreground">Ship to: {o.shipping_address}, {o.shipping_city}{o.shipping_zip ? ` ${o.shipping_zip}` : ''}, {o.shipping_country}</p>

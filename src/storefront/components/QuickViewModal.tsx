@@ -19,6 +19,7 @@ import { activePromotionsFor, computePrice, promotionBadgeLabel } from '../lib/p
 import { optionEntries } from '@/components/filters/filterVisibility';
 import { useVariantOptionsFor, mergeOptionEntries } from '@/hooks/useVariantOptions';
 import { flyToCart } from '../lib/flyToCart';
+import { useSfT } from '../lib/visitorPrefs';
 import type { ProductLike } from './ProductCard';
 
 interface Props {
@@ -31,6 +32,7 @@ export const QuickViewModal = ({ product, open, onOpenChange }: Props) => {
   const { shopDetails, convertCurrency, promotions, capabilities } = useStorefront();
   const { addToCart } = useCart();
   const token = useStorefrontTokenStyle();
+  const { t } = useSfT();
   const rating = useProductRating(open && capabilities?.reviews ? product.id : undefined);
 
   const [selected, setSelected] = useState<Record<string, string>>({});
@@ -117,7 +119,7 @@ export const QuickViewModal = ({ product, open, onOpenChange }: Props) => {
             )}
             {isOutOfStock && (
               <span className="sf-badge absolute left-3 top-3" style={{ background: 'hsl(var(--warning))', color: 'hsl(var(--warning-foreground))' }}>
-                Sold Out
+                {t('soldOut')}
               </span>
             )}
           </div>
@@ -219,7 +221,7 @@ export const QuickViewModal = ({ product, open, onOpenChange }: Props) => {
               </div>
               <SfButton className="h-10 flex-1" onClick={handleAdd} disabled={isOutOfStock}>
                 <ShoppingBag className="mr-2 h-4 w-4" />
-                {isOutOfStock ? 'Out of stock' : 'Add to cart'}
+                {isOutOfStock ? t('outOfStock') : t('addToCart')}
               </SfButton>
             </div>
             <Link
@@ -227,7 +229,7 @@ export const QuickViewModal = ({ product, open, onOpenChange }: Props) => {
               onClick={() => onOpenChange(false)}
               className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline"
             >
-              View full details <ArrowRight className="h-3.5 w-3.5" />
+              {t('viewFullDetails')} <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         </div>

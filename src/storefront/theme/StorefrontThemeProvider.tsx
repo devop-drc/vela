@@ -6,8 +6,15 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { StorefrontConfig } from '../config/types';
 import { buildTokens, resolveMode } from '../config/tokens';
+import { useVisitorMode } from '../lib/visitorPrefs';
 import { loadGoogleFont } from '@/lib/fontUtils';
 import { cn } from '@/lib/utils';
+
+/** The customer's mode choice overrides the merchant's configured theme.mode
+    (null = follow the shop's design). Forcing it through config keeps the
+    darkTokens/deriveDarkTokens pipeline intact. */
+const withVisitorMode = (config: StorefrontConfig, visitor: 'light' | 'dark' | null): StorefrontConfig =>
+  visitor ? { ...config, theme: { ...config.theme, mode: visitor } } : config;
 
 const StorefrontConfigContext = createContext<StorefrontConfig | null>(null);
 
@@ -50,7 +57,8 @@ export const useStorefrontConfig = (): StorefrontConfig => {
 export const useStorefrontTokenStyle = () => {
   const config = useStorefrontConfig();
   const prefersDark = usesPrefersDark();
-  const tokens = buildTokens(config, prefersDark);
+  const visitor = useVisitorMode();
+  const tokens = buildTokens(withVisitorMode(config, visitor), prefersDark);
   return {
     style: tokens.vars as React.CSSProperties,
     className: cn(tokens.classes),
@@ -64,10 +72,12 @@ interface Props {
   className?: string;
 }
 
-export const StorefrontThemeProvider = ({ config, children, className }: Props) => {
+export const StorefrontThemeProvider = ({ config: rawConfig, children, className }: Props) => {
   const rootRef = useRef<HTMLDivElement>(null);
 
   const prefersDark = usesPrefersDark();
+  const visitor = useVisitorMode();
+  const config = useMemo(() => withVisitorMode(rawConfig, visitor), [rawConfig, visitor]);
 
   const tokens = useMemo(() => buildTokens(config, prefersDark), [config, prefersDark]);
   const mode = resolveMode(config, prefersDark);

@@ -9,10 +9,12 @@ import { forwardRef, useMemo } from 'react';
 import { Mail, Instagram } from 'lucide-react';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
+import { useSfT } from '../lib/visitorPrefs';
 
 export const Footer = forwardRef<HTMLDivElement>((_, ref) => {
   const { shopDetails, products } = useStorefront();
   const config = useStorefrontConfig();
+  const { t } = useSfT();
   const categories = useMemo(() => {
     const s = new Set<string>();
     (products || []).forEach((p) => { if (p.category) s.add(p.category); });
@@ -38,9 +40,9 @@ export const Footer = forwardRef<HTMLDivElement>((_, ref) => {
 
   const links = (
     <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-      <Link to={base} className="hover:text-primary">Home</Link>
-      <Link to={`${base}/products`} className="hover:text-primary">Shop</Link>
-      <Link to={`${base}/orders`} className="hover:text-primary">My Orders</Link>
+      <Link to={base} className="hover:text-primary">{t('home')}</Link>
+      <Link to={`${base}/products`} className="hover:text-primary">{t('shop')}</Link>
+      <Link to={`${base}/orders`} className="hover:text-primary">{t('myOrders')}</Link>
     </div>
   );
 
@@ -54,20 +56,20 @@ export const Footer = forwardRef<HTMLDivElement>((_, ref) => {
     return (
       <footer ref={ref} className="border-t mt-16 py-12">
         <div className="sf-container grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4 md:gap-8">
-          <Col title="Pages">{links}</Col>
-          <Col title="Categories">
+          <Col title={t('pages')}>{links}</Col>
+          <Col title={t('categories')}>
             <div className="flex flex-col gap-2 text-sm text-muted-foreground">
               {categories.length > 0
                 ? categories.map((c) => (
                     <Link key={c} to={`${base}/products?category=${encodeURIComponent(c)}`} className="hover:text-primary">{c}</Link>
                   ))
-                : <Link to={`${base}/products`} className="hover:text-primary">All products</Link>}
+                : <Link to={`${base}/products`} className="hover:text-primary">{t('allProducts')}</Link>}
             </div>
           </Col>
-          <Col title="Contact">
+          <Col title={t('contact')}>
             <div className="flex flex-col gap-2 text-sm text-muted-foreground">
               {shopDetails.contact_email && (
-                <a href={`mailto:${shopDetails.contact_email}`} className="flex items-center gap-2 hover:text-primary"><Mail className="h-4 w-4" /> Email us</a>
+                <a href={`mailto:${shopDetails.contact_email}`} className="flex items-center gap-2 hover:text-primary"><Mail className="h-4 w-4" /> {t('emailUs')}</a>
               )}
               {shopDetails.instagram_url && (
                 <a href={shopDetails.instagram_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-primary"><Instagram className="h-4 w-4" /> Instagram</a>
@@ -80,7 +82,7 @@ export const Footer = forwardRef<HTMLDivElement>((_, ref) => {
         </div>
         <div className="sf-container mt-10 flex flex-col items-center justify-between gap-2 border-t pt-6 text-xs text-muted-foreground sm:flex-row">
           <span className="sf-heading font-semibold text-foreground">{shopDetails.shop_name}</span>
-          <span>© {year} {shopDetails.shop_name}. All rights reserved.</span>
+          <span>© {year} {shopDetails.shop_name}. {t('allRightsReserved')}</span>
         </div>
       </footer>
     );
@@ -94,11 +96,11 @@ export const Footer = forwardRef<HTMLDivElement>((_, ref) => {
           {shopDetails.headline && <p className="text-sm text-muted-foreground max-w-xs">{shopDetails.headline}</p>}
         </div>
         <div>
-          <h4 className="font-semibold text-sm mb-3">Explore</h4>
+          <h4 className="font-semibold text-sm mb-3">{t('explore')}</h4>
           {links}
         </div>
         <div>
-          <h4 className="font-semibold text-sm mb-3">Get in touch</h4>
+          <h4 className="font-semibold text-sm mb-3">{t('getInTouch')}</h4>
           <div className="flex flex-col gap-2 text-sm text-muted-foreground">
             {shopDetails.contact_email && (
               <a href={`mailto:${shopDetails.contact_email}`} className="flex items-center gap-2 hover:text-primary"><Mail className="h-4 w-4" /> {shopDetails.contact_email}</a>
@@ -109,7 +111,7 @@ export const Footer = forwardRef<HTMLDivElement>((_, ref) => {
           </div>
         </div>
       </div>
-      <div className="sf-container mt-8 pt-6 border-t text-xs text-muted-foreground text-center">© {year} {shopDetails.shop_name}. All rights reserved.</div>
+      <div className="sf-container mt-8 pt-6 border-t text-xs text-muted-foreground text-center">© {year} {shopDetails.shop_name}. {t('allRightsReserved')}</div>
     </footer>
   );
 });

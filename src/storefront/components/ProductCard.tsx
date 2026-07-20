@@ -18,6 +18,7 @@ import { flyToCart } from '../lib/flyToCart';
 import { QuickViewModal } from './QuickViewModal';
 import { optionEntries } from '@/components/filters/filterVisibility';
 import { useVariantOptionsFor } from '@/hooks/useVariantOptions';
+import { useSfT } from '../lib/visitorPrefs';
 import type { ComponentVariants } from '../config/types';
 
 export interface ProductLike {
@@ -54,6 +55,7 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
   // Real purchase options live in product_variants (batched, session-cached).
   const variantInfo = useVariantOptionsFor(product.id);
   const v = variant ?? config.components.productCard;
+  const { t } = useSfT();
 
   // Quick view stays mounted after its first open so close animations play.
   const [quickViewOpen, setQuickViewOpen] = useState(false);
@@ -115,7 +117,7 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
 
   const SoldOut = () =>
     isOutOfStock ? (
-      <span className="sf-badge absolute top-2 left-2 z-10" style={{ background: 'hsl(var(--warning))', color: 'hsl(var(--warning-foreground))' }}>Sold Out</span>
+      <span className="sf-badge absolute top-2 left-2 z-10" style={{ background: 'hsl(var(--warning))', color: 'hsl(var(--warning-foreground))' }}>{t('soldOut')}</span>
     ) : null;
 
   // Quick-add: products with option groups (colour/size/material) open the
@@ -139,7 +141,7 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
       pricing_type: product.pricing_type, billing_interval: product.billing_interval,
     } as any, 1);
   };
-  const quickAddLabel = hasOptions ? `Choose options for ${product.name}` : `Add ${product.name} to cart`;
+  const quickAddLabel = `${hasOptions ? t('chooseOptions') : t('addToCart')} — ${product.name}`;
 
   // Floating icon button over the image: hidden until hover (slides up), always
   // visible on touch devices and while focused.
@@ -149,7 +151,7 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
         type="button"
         onClick={quickAdd}
         aria-label={quickAddLabel}
-        title={hasOptions ? 'Choose options' : 'Add to cart'}
+        title={hasOptions ? t('chooseOptions') : t('addToCart')}
         className={cn(
           'absolute bottom-2 right-2 z-10 grid place-items-center rounded-full bg-primary text-primary-foreground shadow-lg',
           small ? 'h-8 w-8' : 'h-9 w-9',
@@ -215,7 +217,7 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
         <div className="relative h-16 w-16 shrink-0 overflow-hidden" style={{ borderRadius: 'calc(var(--sf-radius-card) / 2)' }}>
           <Picture ratio="h-16 w-16" round="" add={false} />
           {isOutOfStock && (
-            <span className="absolute inset-0 grid place-items-center bg-black/45 text-[10px] font-semibold uppercase tracking-wide text-white">Sold out</span>
+            <span className="absolute inset-0 grid place-items-center bg-black/45 text-[10px] font-semibold uppercase tracking-wide text-white">{t('soldOut')}</span>
           )}
         </div>
         <div className="min-w-0 flex-1">
@@ -228,7 +230,7 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
             type="button"
             onClick={quickAdd}
             aria-label={quickAddLabel}
-            title={hasOptions ? 'Choose options' : 'Add to cart'}
+            title={hasOptions ? t('chooseOptions') : t('addToCart')}
             className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary transition-all duration-200 hover:bg-primary hover:text-primary-foreground active:scale-95"
           >
             {hasOptions ? <SlidersHorizontal className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
@@ -304,7 +306,7 @@ export const ProductCard = ({ product, className, variant, ratio }: Props) => {
                 type="button"
                 onClick={quickAdd}
                 aria-label={quickAddLabel}
-                title={hasOptions ? 'Choose options' : 'Add to cart'}
+                title={hasOptions ? t('chooseOptions') : t('addToCart')}
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-md transition-transform duration-200 hover:scale-110 active:scale-95"
               >
                 {hasOptions ? <SlidersHorizontal className="h-4 w-4" /> : <Plus className="h-4 w-4" />}

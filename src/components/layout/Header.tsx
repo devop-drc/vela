@@ -20,8 +20,10 @@ import {
   Search, Link as LinkIcon,
   Sparkles, Package, LayoutDashboard, ShoppingCart,
   Settings as SettingsIcon, CreditCard, LogOut, Languages, ChevronDown,
+  Sun, Moon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useAppTheme, setAppTheme } from "@/lib/appTheme";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,6 +55,7 @@ export default function Header({ title }: { title: string }) {
   const { settings } = useAppearance();
   const { shopDetails } = useShop();
   const { t, i18n } = useTranslation();
+  const appTheme = useAppTheme();
 
   const floating = settings.layoutStyle === "floating";
   const blur = settings.blurEnabled;
@@ -217,6 +220,17 @@ export default function Header({ title }: { title: string }) {
         <Button variant="outline" size="sm" className="h-9 gap-1.5 rounded-lg text-xs" onClick={copyUrl} disabled={!shopDetails?.slug}>
           <LinkIcon className="h-3.5 w-3.5" />
           <span className="hidden lg:inline">{t("header.shop_url")}</span>
+        </Button>
+
+        {/* Light / dark theme */}
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-9 w-9 rounded-lg"
+          onClick={() => setAppTheme(appTheme === "dark" ? "light" : "dark")}
+          aria-label={appTheme === "dark" ? "Light mode" : "Dark mode"}
+        >
+          {appTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
 
         {/* Account menu — surfaces Settings / Billing / Language / Log out that

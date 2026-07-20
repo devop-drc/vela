@@ -5,6 +5,7 @@ import { Session } from '@supabase/supabase-js';
 import { showError, showSuccess } from '@/utils/toast';
 import { hexToHsl } from '@/utils/colors';
 import { loadGoogleFont } from '@/lib/fontUtils'; // Import loadGoogleFont
+import { THEME_TOKEN_KEYS } from '@/lib/appTheme';
 
 // --- THEME DEFINITIONS ---
 interface ColorScheme {
@@ -200,8 +201,13 @@ const applySettingsToDOM = (settings: Partial<DesignSettings>) => {
   // OWNER'S dashboard theme must never repaint their shop while they browse
   // it logged-in (this leaked e.g. a red dashboard foreground into shop text).
   if (window.location.pathname.startsWith('/shop/')) return;
+  // With the app dark theme active, the `.dark` class in globals.css supplies
+  // the color tokens — writing the light values inline here would beat the
+  // class and flip the app back to light on every settings refetch.
+  const appIsDark = root.classList.contains('dark');
   for (const [key, value] of Object.entries(settings)) {
     if (key.startsWith('--')) {
+      if (appIsDark && THEME_TOKEN_KEYS.has(key)) continue;
       root.style.setProperty(key, value as string);
     }
   }

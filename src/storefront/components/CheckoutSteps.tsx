@@ -18,6 +18,7 @@ import { User, MapPin, Building2, Globe, Truck, StickyNote, CreditCard, Banknote
 import { cn } from '@/lib/utils';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { loadSavedAddresses, saveAddress, formatAddressLine, type SavedAddress } from '@/lib/customerAddresses';
+import { useSfT } from '../lib/visitorPrefs';
 import type { CheckoutFields } from '../lib/useCheckout';
 
 const schema = z.object({
@@ -50,6 +51,7 @@ interface Props {
 
 export const CheckoutSteps = ({ step, hasSubscriptionProducts, onContinue, onPlaceOrder, formId = 'sf-checkout-form' }: Props) => {
   const { capabilities } = useStorefront();
+  const { t } = useSfT();
   const { register, handleSubmit, control, setValue, getValues, formState: { errors } } = useForm<CheckoutFields>({
     resolver: zodResolver(schema),
     defaultValues: { shippingCountry: 'AL', paymentMethod: 'cash_on_delivery' },
@@ -97,20 +99,20 @@ export const CheckoutSteps = ({ step, hasSubscriptionProducts, onContinue, onPla
     <form id={formId} onSubmit={handleSubmit(submit)} className="space-y-6">
       <div className={cn(step === 'contact-shipping' ? 'block' : 'hidden', 'space-y-6')}>
         <div className="sf-glass p-5 space-y-5">
-          <h3 className="sf-heading text-lg font-bold flex items-center gap-2"><User className="h-5 w-5 text-primary" /> Contact & Shipping</h3>
+          <h3 className="sf-heading text-lg font-bold flex items-center gap-2"><User className="h-5 w-5 text-primary" /> {t('contactShipping')}</h3>
 
           {savedAddresses.length > 0 && (
             <div className="space-y-2">
-              <Label>Saved addresses</Label>
+              <Label>{t('savedAddresses')}</Label>
               <Select value={selectedAddressId} onValueChange={applyAddress}>
                 <SelectTrigger className="h-auto min-h-10 py-2 [&>span]:min-w-0">
-                  <SelectValue placeholder="Choose a saved address" />
+                  <SelectValue placeholder={t('chooseSavedAddress')} />
                 </SelectTrigger>
                 {/* Popper width follows the trigger so long addresses truncate
                     instead of overflowing on small screens. */}
                 <SelectContent className="w-[--radix-select-trigger-width] max-w-[calc(100vw-2rem)]">
                   <SelectItem value="new">
-                    <span className="block truncate text-sm font-medium">New address…</span>
+                    <span className="block truncate text-sm font-medium">{t('newAddress')}</span>
                   </SelectItem>
                   {savedAddresses.map((a) => {
                     const f = formatAddressLine(a);
@@ -129,24 +131,24 @@ export const CheckoutSteps = ({ step, hasSubscriptionProducts, onContinue, onPla
           )}
 
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>First Name</Label><Input {...register('firstName')} />{err(errors.firstName?.message)}</div>
-            <div className="space-y-2"><Label>Last Name</Label><Input {...register('lastName')} />{err(errors.lastName?.message)}</div>
+            <div className="space-y-2"><Label>{t('firstName')}</Label><Input {...register('firstName')} />{err(errors.firstName?.message)}</div>
+            <div className="space-y-2"><Label>{t('lastName')}</Label><Input {...register('lastName')} />{err(errors.lastName?.message)}</div>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>Email</Label><Input type="email" {...register('email')} />{err(errors.email?.message)}</div>
-            <div className="space-y-2"><Label>Phone (optional)</Label><Input type="tel" {...register('phone')} /></div>
+            <div className="space-y-2"><Label>{t('email')}</Label><Input type="email" {...register('email')} />{err(errors.email?.message)}</div>
+            <div className="space-y-2"><Label>{t('phoneOptional')}</Label><Input type="tel" {...register('phone')} /></div>
           </div>
           <Separator />
-          <div className="space-y-2"><Label className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Address</Label><Input {...register('shippingAddress')} />{err(errors.shippingAddress?.message)}</div>
+          <div className="space-y-2"><Label className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {t('address')}</Label><Input {...register('shippingAddress')} />{err(errors.shippingAddress?.message)}</div>
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2"><Label className="flex items-center gap-2"><Building2 className="h-4 w-4" /> City</Label><Input {...register('shippingCity')} />{err(errors.shippingCity?.message)}</div>
-            <div className="space-y-2"><Label>Zip / Postal Code</Label><Input {...register('shippingZip')} />{err(errors.shippingZip?.message)}</div>
+            <div className="space-y-2"><Label className="flex items-center gap-2"><Building2 className="h-4 w-4" /> {t('city')}</Label><Input {...register('shippingCity')} />{err(errors.shippingCity?.message)}</div>
+            <div className="space-y-2"><Label>{t('zip')}</Label><Input {...register('shippingZip')} />{err(errors.shippingZip?.message)}</div>
           </div>
           <div className="space-y-2">
-            <Label className="flex items-center gap-2"><Globe className="h-4 w-4" /> Country</Label>
+            <Label className="flex items-center gap-2"><Globe className="h-4 w-4" /> {t('country')}</Label>
             <Controller name="shippingCountry" control={control} render={({ field }) => (
               <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('selectCountry')} /></SelectTrigger>
                 <SelectContent>{countries.map((c) => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}</SelectContent>
               </Select>
             )} />
@@ -155,43 +157,43 @@ export const CheckoutSteps = ({ step, hasSubscriptionProducts, onContinue, onPla
           <div className="space-y-2 rounded-lg border border-dashed p-3">
             <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
               <Checkbox checked={saveForNextTime} onCheckedChange={(v) => setSaveForNextTime(v === true)} />
-              <BookmarkPlus className="h-4 w-4 text-primary" /> Save this address for future orders
+              <BookmarkPlus className="h-4 w-4 text-primary" /> {t('saveAddress')}
             </label>
             {saveForNextTime && (
-              <Input value={addressLabel} onChange={(e) => setAddressLabel(e.target.value)} placeholder="Label (e.g. Home, Work)" className="mt-1" />
+              <Input value={addressLabel} onChange={(e) => setAddressLabel(e.target.value)} placeholder={t('addressLabelPlaceholder')} className="mt-1" />
             )}
           </div>
 
-          <div className="space-y-2"><Label className="flex items-center gap-2"><StickyNote className="h-4 w-4" /> Notes for Seller (optional)</Label><Textarea rows={2} {...register('shippingNotesSeller')} /></div>
-          <div className="space-y-2"><Label className="flex items-center gap-2"><Truck className="h-4 w-4" /> Notes for Courier (optional)</Label><Textarea rows={2} {...register('shippingNotesCourier')} /></div>
+          <div className="space-y-2"><Label className="flex items-center gap-2"><StickyNote className="h-4 w-4" /> {t('notesSeller')}</Label><Textarea rows={2} {...register('shippingNotesSeller')} /></div>
+          <div className="space-y-2"><Label className="flex items-center gap-2"><Truck className="h-4 w-4" /> {t('notesCourier')}</Label><Textarea rows={2} {...register('shippingNotesCourier')} /></div>
         </div>
       </div>
 
       <div className={cn(step === 'payment' ? 'block' : 'hidden', 'space-y-6')}>
         <div className="sf-glass p-5 space-y-4">
-          <h3 className="sf-heading text-lg font-bold flex items-center gap-2"><CreditCard className="h-5 w-5 text-primary" /> Payment Method</h3>
+          <h3 className="sf-heading text-lg font-bold flex items-center gap-2"><CreditCard className="h-5 w-5 text-primary" /> {t('paymentMethod')}</h3>
           <Controller name="paymentMethod" control={control} render={({ field }) => (
             <RadioGroup onValueChange={field.onChange} value={field.value} className="space-y-3">
               <Label className={cn('flex items-center gap-3 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-primary', hasSubscriptionProducts && 'opacity-50 cursor-not-allowed')}>
                 <RadioGroupItem value="cash_on_delivery" disabled={hasSubscriptionProducts} />
                 <div>
-                  <p className="font-medium flex items-center gap-2"><Banknote className="h-5 w-5" /> Cash on Delivery</p>
-                  <p className="text-sm text-muted-foreground">Pay with cash when your order is delivered.</p>
-                  {hasSubscriptionProducts && <p className="text-xs text-destructive mt-1">Not available for subscriptions.</p>}
+                  <p className="font-medium flex items-center gap-2"><Banknote className="h-5 w-5" /> {t('cashOnDelivery')}</p>
+                  <p className="text-sm text-muted-foreground">{t('cashOnDeliveryDesc')}</p>
+                  {hasSubscriptionProducts && <p className="text-xs text-destructive mt-1">{t('notAvailableSubs')}</p>}
                 </div>
               </Label>
               {cardAvailable && (
                 <Label className="flex items-center gap-3 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-primary">
                   <RadioGroupItem value="card" />
                   <div>
-                    <p className="font-medium flex items-center gap-2"><CreditCard className="h-5 w-5" /> Credit/Debit Card</p>
-                    <p className="text-sm text-muted-foreground">Secure payment via RaiAccept — you'll be redirected to complete it.</p>
+                    <p className="font-medium flex items-center gap-2"><CreditCard className="h-5 w-5" /> {t('cardTitle')}</p>
+                    <p className="text-sm text-muted-foreground">{t('cardDesc')}</p>
                   </div>
                 </Label>
               )}
             </RadioGroup>
           )} />
-          <div className="flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="h-4 w-4" /> Your payment information is securely processed.</div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="h-4 w-4" /> {t('securelyProcessed')}</div>
         </div>
       </div>
     </form>

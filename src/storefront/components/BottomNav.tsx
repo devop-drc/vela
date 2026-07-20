@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { useCart } from '@/contexts/CartContext';
 import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
+import { useSfT } from '../lib/visitorPrefs';
 
 interface Props { onOpenCart?: () => void }
 
@@ -15,6 +16,7 @@ export const BottomNav = ({ onOpenCart }: Props) => {
   const { totalItems } = useCart();
   const config = useStorefrontConfig();
   const { pathname } = useLocation();
+  const { t } = useSfT();
   if (!shopDetails || !config.layout.nav.mobileBottomBar) return null;
 
   const style = config.layout.nav.bottomBarStyle || 'bar';
@@ -26,13 +28,13 @@ export const BottomNav = ({ onOpenCart }: Props) => {
 
   const Items = (
     <>
-      <Link to={base} aria-label="Home" className={item(pathname === base)}><Home className="h-5 w-5" />{showLabel && 'Home'}</Link>
-      <Link to={`${base}/products`} aria-label="Shop" className={item(pathname.includes('/products'))}><Package className="h-5 w-5" />{showLabel && 'Shop'}</Link>
-      <button onClick={onOpenCart} aria-label={`Cart${totalItems > 0 ? `, ${totalItems} items` : ''}`} className={item(false)} data-sf-cart-target>
+      <Link to={base} aria-label={t('home')} className={item(pathname === base)}><Home className="h-5 w-5" />{showLabel && t('home')}</Link>
+      <Link to={`${base}/products`} aria-label={t('shop')} className={item(pathname.includes('/products'))}><Package className="h-5 w-5" />{showLabel && t('shop')}</Link>
+      <button onClick={onOpenCart} aria-label={`${t('cart')}${totalItems > 0 ? `, ${totalItems}` : ''}`} className={item(false)} data-sf-cart-target>
         <span className="relative"><ShoppingBag className="h-5 w-5" />{totalItems > 0 && <span aria-hidden className="absolute -top-1 -right-2 h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">{totalItems}</span>}</span>
-        {showLabel && 'Cart'}
+        {showLabel && t('cart')}
       </button>
-      <Link to={`${base}/orders`} aria-label="My orders" className={item(pathname.includes('/orders'))}><ClipboardList className="h-5 w-5" />{showLabel && 'Orders'}</Link>
+      <Link to={`${base}/orders`} aria-label={t('myOrders')} className={item(pathname.includes('/orders'))}><ClipboardList className="h-5 w-5" />{showLabel && t('orders')}</Link>
     </>
   );
 

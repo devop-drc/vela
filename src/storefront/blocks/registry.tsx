@@ -220,7 +220,9 @@ export const BLOCK_REGISTRY: Record<string, BlockDef> = {
   specifications: { component: SpecificationsBlock, label: 'Specifications', icon: ListChecks, scope: 'productDetail' },
   reviews: {
     component: ReviewsBlock, label: 'Reviews', icon: Star, scope: 'productDetail',
-    defaultProps: { title: 'Reviews' },
+    // No default title — the block falls back to the visitor-language string;
+    // merchants can still type a fixed title in the Studio.
+    defaultProps: { title: '' },
     editableProps: [{ key: 'title', label: 'Title', kind: 'text' }],
   },
   relatedProducts: {

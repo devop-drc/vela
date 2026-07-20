@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingBag, Search, Package, Home, Menu, ClipboardList } from 'lucide-react';
+import { ShoppingBag, Search, Package, Home, Menu, ClipboardList, Sun, Moon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { useStorefront } from '@/contexts/StorefrontContext';
 import { useCart } from '@/contexts/CartContext';
 import { SfButton } from './SfButton';
 import { useStorefrontConfig, useStorefrontTokenStyle } from '../theme/StorefrontThemeProvider';
+import { useSfT, setVisitorMode } from '../lib/visitorPrefs';
 
 interface Props {
   onOpenCart?: () => void;
@@ -28,6 +29,8 @@ export const Header = ({ onOpenCart, onOpenSearch }: Props) => {
   const { pathname } = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { lang, t, setLang } = useSfT();
+  const isDark = tokenStyle.className.includes('dark');
 
   const categories = useMemo(() => {
     const s = new Set<string>();
@@ -82,10 +85,10 @@ export const Header = ({ onOpenCart, onOpenSearch }: Props) => {
 
   const navLinks = (
     <nav className="flex items-center gap-7">
-      <NavItem to={base} label="Home" active={pathname === base} />
+      <NavItem to={base} label={t('home')} active={pathname === base} />
       {/* Shop — with a hover categories dropdown when enabled. */}
       <div className="group relative">
-        <NavItem to={`${base}/products`} label="Shop" active={pathname.includes('/products')} />
+        <NavItem to={`${base}/products`} label={t('shop')} active={pathname.includes('/products')} />
         {showCategories && (
           <div className="invisible absolute left-1/2 top-full z-50 min-w-[13rem] -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100">
             <div className="rounded-xl border bg-card p-2 text-foreground shadow-xl">
@@ -99,7 +102,7 @@ export const Header = ({ onOpenCart, onOpenSearch }: Props) => {
           </div>
         )}
       </div>
-      <NavItem to={`${base}/orders`} label="Orders" active={pathname.includes('/orders')} />
+      <NavItem to={`${base}/orders`} label={t('orders')} active={pathname.includes('/orders')} />
     </nav>
   );
 
@@ -110,7 +113,7 @@ export const Header = ({ onOpenCart, onOpenSearch }: Props) => {
   const hamburger = showHamburger && (
     <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu">
+        <Button variant="ghost" size="icon" className="md:hidden" aria-label={t('openMenu')}>
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
@@ -118,9 +121,9 @@ export const Header = ({ onOpenCart, onOpenSearch }: Props) => {
         <p className="sf-heading pr-8 text-lg font-bold leading-tight">{shopDetails.shop_name}</p>
         <nav className="mt-4 flex flex-col gap-1">
           {[
-            { to: base, label: 'Home', icon: Home },
-            { to: `${base}/products`, label: 'Shop', icon: Package },
-            { to: `${base}/orders`, label: 'My Orders', icon: ClipboardList },
+            { to: base, label: t('home'), icon: Home },
+            { to: `${base}/products`, label: t('shop'), icon: Package },
+            { to: `${base}/orders`, label: t('myOrders'), icon: ClipboardList },
           ].map(({ to, label, icon: Icon }) => (
             <Link key={to} to={to} className={cn('flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors', pathname === to ? 'bg-primary/10 text-primary' : 'hover:bg-accent')}>
               <Icon className="h-4 w-4" /> {label}
@@ -129,7 +132,7 @@ export const Header = ({ onOpenCart, onOpenSearch }: Props) => {
         </nav>
         {categories.length > 0 && (
           <div className="mt-5">
-            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Categories</p>
+            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t('categories')}</p>
             {categories.map((c) => (
               <Link key={c} to={`${base}/products?category=${encodeURIComponent(c)}`} className="block rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground">
                 {c}
@@ -138,7 +141,7 @@ export const Header = ({ onOpenCart, onOpenSearch }: Props) => {
           </div>
         )}
         <SfButton className="mt-6 w-full" onClick={() => { setMenuOpen(false); onOpenCart?.(); }}>
-          <ShoppingBag className="mr-2 h-4 w-4" /> Cart{totalItems > 0 ? ` (${totalItems})` : ''}
+          <ShoppingBag className="mr-2 h-4 w-4" /> {t('cart')}{totalItems > 0 ? ` (${totalItems})` : ''}
         </SfButton>
       </SheetContent>
     </Sheet>
@@ -146,8 +149,26 @@ export const Header = ({ onOpenCart, onOpenSearch }: Props) => {
 
   const actions = (
     <div className="flex items-center gap-0.5">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setLang(lang === 'sq' ? 'en' : 'sq')}
+        aria-label={lang === 'sq' ? 'Switch to English' : 'Kalo në shqip'}
+        className="rounded-full text-[11px] font-bold uppercase tracking-wide hover:bg-foreground/10"
+      >
+        {lang === 'sq' ? 'SQ' : 'EN'}
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setVisitorMode(isDark ? 'light' : 'dark')}
+        aria-label={isDark ? t('lightMode') : t('darkMode')}
+        className="rounded-full hover:bg-foreground/10"
+      >
+        {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+      </Button>
       {h.showSearch && (
-        <Button variant="ghost" size="icon" onClick={onOpenSearch} aria-label="Search" className="rounded-full hover:bg-foreground/10"><Search className="h-5 w-5" /></Button>
+        <Button variant="ghost" size="icon" onClick={onOpenSearch} aria-label={t('search')} className="rounded-full hover:bg-foreground/10"><Search className="h-5 w-5" /></Button>
       )}
       <Button variant="ghost" size="icon" onClick={onOpenCart} aria-label={`Cart${totalItems > 0 ? `, ${totalItems} items` : ''}`} className="relative rounded-full hover:bg-foreground/10" data-sf-cart-target>
         <ShoppingBag className="h-5 w-5" />

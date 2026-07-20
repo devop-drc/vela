@@ -11,8 +11,9 @@
  *   only shine is the end-card CTA pill.
  * • Type beats: chrome-free blur-slam words with weight; ≥2.8s UI holds.
  * • Cursor clicks measured, real targets; feedback chips; order ping.
- * • The merchant storefront beats stay in the merchant's own (light)
- *   theme even in dark mode — only ADMIN screens switch to dark shots.
+ * • In dark mode EVERY screenshot beat switches to its dark variant —
+ *   admin screens AND the storefront (captured with the customer
+ *   dark-mode toggle; see scripts/capture-dark.mjs).
  *
  * Render (per theme; --scale=1.4 for retina sharpness, props via FILE):
  *   npx remotion render src/remotion.ts HeroFilm public/hero/hero-film.mp4 --codec=h264 --crf=22 --scale=1.4 --props=scripts/.film-light-baked.json
@@ -91,7 +92,10 @@ type Theme = (typeof THEMES)["light"];
 
 /* admin screens have real dark captures; the merchant storefront keeps its
    own (light) theme by design */
-const DARK_SHOTS = new Set(["products.png", "orders.png", "dashboard.png"]);
+const DARK_SHOTS = new Set([
+  "products.png", "orders.png", "dashboard.png",
+  "storefront-custom.png", "storefront-product.png", "storefront-checkout.png",
+]);
 const shotSrc = (name: string, dark: boolean) =>
   staticFile(dark && DARK_SHOTS.has(name) ? `hero/dark/${name}` : `hero/${name}`);
 
@@ -273,7 +277,8 @@ const TypeBeat: React.FC<{ th: Theme; local: number; dur: number; lines: { text:
   const wordCount = lines.reduce((n, ws) => n + ws.length, 0);
   const rule = sp(local, 10 + wordCount * 3 + 10, 13);
   const size = lines.length > 1 ? 136 : 158;
-  const slam = (delay: number) => spring({ frame: local - delay, fps: FPS, config: { damping: 10.5, stiffness: 240, mass: 1.1 } });
+  // subtle reveal: a calm, well-damped settle — small scale drift + soft blur
+  const slam = (delay: number) => spring({ frame: local - delay, fps: FPS, config: { damping: 16, stiffness: 170, mass: 1 } });
   let wordIndex = 0;
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", opacity: 1 - out, filter: `blur(${out * 14}px)`, fontFamily: "'Clash Display', Inter, sans-serif" }}>
@@ -304,9 +309,9 @@ const TypeBeat: React.FC<{ th: Theme; local: number; dur: number; lines: { text:
                     color: w.grad ? "transparent" : th.ink,
                     background: w.grad ? th.textGrad : undefined,
                     WebkitBackgroundClip: w.grad ? "text" : undefined,
-                    opacity: Math.min(1, s * 1.6),
-                    filter: `blur(${Math.max(0, 1 - s) * 18}px)`,
-                    transform: `scale(${1.65 - s * 0.65})`,
+                    opacity: Math.min(1, s * 1.4),
+                    filter: `blur(${Math.max(0, 1 - s) * 10}px)`,
+                    transform: `translateY(${(1 - s) * 14}px) scale(${1.12 - s * 0.12})`,
                   }}
                 >
                   {w.text}

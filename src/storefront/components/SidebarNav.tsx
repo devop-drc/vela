@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { useCart } from '@/contexts/CartContext';
 import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
+import { useSfT } from '../lib/visitorPrefs';
 
 interface Props {
   onOpenCart?: () => void;
@@ -21,6 +22,7 @@ export const SidebarNav = ({ onOpenCart }: Props) => {
   const { totalItems } = useCart();
   const config = useStorefrontConfig();
   const { pathname } = useLocation();
+  const { t } = useSfT();
 
   const categories = useMemo(() => {
     const m = new Map<string, number>();
@@ -35,9 +37,9 @@ export const SidebarNav = ({ onOpenCart }: Props) => {
   const base = `/shop/${shopDetails.slug}`;
 
   const links = [
-    { to: base, label: 'Home', icon: Home, active: pathname === base },
-    { to: `${base}/products`, label: 'Shop', icon: Package, active: pathname.includes('/products') },
-    { to: `${base}/orders`, label: 'My Orders', icon: ClipboardList, active: pathname.includes('/orders') },
+    { to: base, label: t('home'), icon: Home, active: pathname === base },
+    { to: `${base}/products`, label: t('shop'), icon: Package, active: pathname.includes('/products') },
+    { to: `${base}/orders`, label: t('myOrders'), icon: ClipboardList, active: pathname.includes('/orders') },
   ];
 
   return (
@@ -67,7 +69,7 @@ export const SidebarNav = ({ onOpenCart }: Props) => {
 
         {config.layout.nav.showCategories && categories.length > 0 && (
           <div>
-            <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Categories</p>
+            <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t('categories')}</p>
             <div className="flex flex-col gap-0.5">
               {categories.map((c) => (
                 <Link
@@ -84,7 +86,7 @@ export const SidebarNav = ({ onOpenCart }: Props) => {
 
         <div className="mt-auto">
           <Button variant="outline" className="w-full justify-start gap-2" onClick={onOpenCart} data-sf-cart-target>
-            <ShoppingBag className="h-4 w-4" /> Cart
+            <ShoppingBag className="h-4 w-4" /> {t('cart')}
             {totalItems > 0 && (
               <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold text-primary-foreground">{totalItems}</span>
             )}

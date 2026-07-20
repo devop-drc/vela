@@ -12,6 +12,7 @@ import { SyncStatusWidget } from "./SyncStatusWidget";
 import NotificationSidebar from "./NotificationSidebar";
 import { VelaChat } from "@/components/VelaChat";
 import { useAppearance } from "@/contexts/AppearanceContext";
+import { useAppTheme, applyAppTheme } from "@/lib/appTheme";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { TutorialProvider } from "@/components/tutorial/TutorialProvider";
@@ -26,6 +27,14 @@ const DashboardLayout = () => {
   const { shopDetails } = useShop();
   const { settings } = useAppearance();
   const isMobile = useIsMobile();
+  const appTheme = useAppTheme();
+
+  // Admin light/dark theme — scoped to the dashboard's lifetime so the landing
+  // and auth pages (which theme themselves) never inherit the dark class.
+  useEffect(() => {
+    applyAppTheme(appTheme);
+    return () => applyAppTheme('light');
+  }, [appTheme]);
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {

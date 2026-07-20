@@ -69,42 +69,54 @@ const shot = async (name) => {
 };
 
 try {
-  await p.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 60000 });
-  await p.evaluate(() => sessionStorage.setItem("vela-capture-bypass", "1"));
-  await sleep(1800);
-  await p.type('input[type="email"]', local.email, { delay: 10 });
-  await p.type('input[type="password"]', local.password, { delay: 10 });
-  await p.keyboard.press("Enter");
-  await sleep(7000);
-  console.log("after login:", p.url());
+  if (!process.env.SKIP_ADMIN) {
+    await p.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await p.evaluate(() => sessionStorage.setItem("vela-capture-bypass", "1"));
+    await sleep(1800);
+    await p.type('input[type="email"]', local.email, { delay: 10 });
+    await p.type('input[type="password"]', local.password, { delay: 10 });
+    await p.keyboard.press("Enter");
+    await sleep(7000);
+    console.log("after login:", p.url());
 
-  for (const [path, name, wait] of [
-    ["/dashboard", "dashboard", 5000],
-    ["/products", "products", 5000],
-    ["/orders", "orders", 4200],
-  ]) {
-    await p.goto(`${BASE}${path}`, { waitUntil: "domcontentloaded", timeout: 90000 }).catch(() => {});
-    await forceDark();
-    await sleep(wait);
-    await dismiss();
-    await forceDark();
-    await sleep(1200);
-    await dismiss();
-    await settle(1400);
-    await shot(name);
+    for (const [path, name, wait] of [
+      ["/dashboard", "dashboard", 5000],
+      ["/products", "products", 5000],
+      ["/orders", "orders", 4200],
+    ]) {
+      await p.goto(`${BASE}${path}`, { waitUntil: "domcontentloaded", timeout: 90000 }).catch(() => {});
+      await forceDark();
+      await sleep(wait);
+      await dismiss();
+      await forceDark();
+      await sleep(1200);
+      await dismiss();
+      await settle(1400);
+      await shot(name);
+    }
   }
 
-  /* storefront pages: try forcing dark; whatever renders is what we ship */
+  /* Storefront pages theme themselves via the customer dark-mode toggle
+     (src/storefront/lib/visitorPrefs.ts) — just preset the preference. */
+  const imagesSettled = async () => {
+    await p.evaluate(() => Promise.all(
+      [...document.images].filter((i) => !i.complete).map((i) => new Promise((r) => { i.onload = i.onerror = r; }))
+    )).catch(() => {});
+    await sleep(800);
+  };
   await p.goto(`${BASE}/shop/${local.slug}?preview=1`, { waitUntil: "domcontentloaded", timeout: 90000 });
-  await forceDark();
-  await settle(4200);
+  await p.evaluate(() => localStorage.setItem("sf-visitor-mode", "dark"));
+  await p.reload({ waitUntil: "domcontentloaded", timeout: 90000 });
+  await p.waitForSelector('a[href*="/product/"]', { timeout: 45000 });
+  await settle(3500);
+  await imagesSettled();
   await shot("storefront-custom");
 
   const prodHref = await p.evaluate(() => [...document.querySelectorAll("a")].map((x) => x.getAttribute("href") || "").find((h) => /\/product\//.test(h)));
   if (prodHref) {
     await p.goto(`${BASE}${prodHref}${prodHref.includes("?") ? "&" : "?"}preview=1`, { waitUntil: "domcontentloaded", timeout: 60000 });
-    await forceDark();
     await settle(3000);
+    await imagesSettled();
     await shot("storefront-product");
     await p.evaluate(() => {
       const btn = [...document.querySelectorAll("button")].find((x) => /add to cart|shto në shportë/i.test(x.textContent || ""));
@@ -115,14 +127,13 @@ try {
     await sleep(500);
   }
   await p.goto(`${BASE}/shop/${local.slug}/cart?preview=1`, { waitUntil: "domcontentloaded", timeout: 60000 });
-  await forceDark();
-  await settle(2200);
+  await settle(2600);
+  await imagesSettled();
   await p.evaluate(() => {
     const btn = [...document.querySelectorAll("button")].find((x) => /proceed|vazhdo/i.test(x.textContent || ""));
     btn?.click();
   });
   await sleep(2200);
-  await forceDark();
   await settle(600);
   await shot("storefront-checkout");
   console.log("DARK CAPTURES DONE");
