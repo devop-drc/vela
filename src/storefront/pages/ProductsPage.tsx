@@ -238,6 +238,9 @@ export const ProductsPage = () => {
       list = list.filter((p) =>
         p.name?.toLowerCase().includes(q) ||
         p.caption?.toLowerCase().includes(q) ||
+        // translated copy is what SQ visitors actually see — match it too
+        ((p as any).translations?.sq?.name || '').toLowerCase().includes(q) ||
+        ((p as any).translations?.sq?.caption || '').toLowerCase().includes(q) ||
         p.category?.toLowerCase().includes(q) ||
         ((p as any).sku || '').toLowerCase().includes(q) ||
         (p as any).tags?.some((t: string) => t?.toLowerCase().includes(q))

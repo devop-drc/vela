@@ -82,9 +82,11 @@ const RESPONSE_SCHEMA = {
     isProductPost: { type: 'BOOLEAN' },
     isSaleOrPromotion: { type: 'BOOLEAN', nullable: true },
     productName: { type: 'STRING', nullable: true },
+    productNameSq: { type: 'STRING', nullable: true },
     categoryName: { type: 'STRING', nullable: true },
     typeName: { type: 'STRING', nullable: true },
     description: { type: 'STRING', nullable: true },
+    descriptionSq: { type: 'STRING', nullable: true },
     price: { type: 'NUMBER', nullable: true },
     currency: { type: 'STRING', nullable: true },
     inventory: { type: 'INTEGER', nullable: true },
@@ -100,6 +102,7 @@ const RESPONSE_SCHEMA = {
         type: 'OBJECT',
         properties: {
           productName: { type: 'STRING' },
+          productNameSq: { type: 'STRING', nullable: true },
           categoryName: { type: 'STRING', nullable: true },
           typeName: { type: 'STRING', nullable: true },
           price: { type: 'NUMBER', nullable: true },
@@ -165,11 +168,15 @@ ${similarProducts.map(p => `- ${p.name} (Category: ${p.category}${p.details?.typ
 
   2. **productName:** Extract a clear, concise product name (max 10 words). Remove emojis, hashtags, and promotional text. If in Albanian, translate to English for the name.
 
+  2b. **productNameSq:** The SAME product name in natural Albanian (max 10 words). Keep brand names, model numbers and established loanwords exactly as-is (e.g. "template" stays "template", never "shabllon"; "smartphone" stays "smartphone"). If the caption was Albanian, prefer the merchant's own wording.
+
   3. **categoryName:** ALWAYS assign a specific category — top-level AND on every item inside "products" for multi-product posts. Choose from: "Clothing & Apparel", "Electronics & Tech", "Home & Living", "Beauty & Personal Care", "Art & Handmade", "Food & Beverages", "Sports & Fitness", "Books & Media", "Services", "Automotive & Parts", "Toys & Games", "Pet Supplies", "Bags & Luggage". Or create a fitting category if none match. NEVER return "Uncategorized".
 
   4. **typeName:** ALWAYS assign a specific product type within the category (e.g., "T-Shirts", "Smartphones", "Skincare"). NEVER return "General".
 
   5. **description:** Write a compelling 3-4 sentence product description in English that would attract customers. Do NOT just copy the caption. Describe the product's key features, benefits, and use cases. This must be a professional e-commerce description.
+
+  5b. **descriptionSq:** The same description written natively in Albanian (not a word-for-word translation) — same length and quality, correct diacritics (ë, ç). Keep brand names and established loanwords as-is ("template" stays "template", never "shabllon").
 
   6. **price:** Extract from caption. Look for patterns like "1500 ALL", "1500 Lek", "€25", "$30", "Çmimi: 1500". If no price found, set to 0.
 
@@ -188,6 +195,7 @@ ${similarProducts.map(p => `- ${p.name} (Category: ${p.category}${p.details?.typ
   **Multi-Product Posts:** If the caption lists multiple products, output them in a \`products\` array. Each item follows this schema:
   {
     "productName": string,
+    "productNameSq": string | null,
     "price": number | null,
     "currency": string | null,
     "inventory": number | null,

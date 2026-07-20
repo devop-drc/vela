@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     user_id uuid,
     product_type text DEFAULT 'physical' NOT NULL,
     interval_repetitions integer,
+    translations jsonb, -- per-locale overrides for customer-facing text: { "sq": { "name", "caption" } }
     CONSTRAINT products_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(id) ON DELETE CASCADE,
     CONSTRAINT products_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );

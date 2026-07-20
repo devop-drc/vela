@@ -17,6 +17,7 @@ import { SectionHeader } from '../components/SectionHeader';
 import { SfButton } from '../components/SfButton';
 import { activePromotionsFor, computePrice } from '../lib/pricing';
 import { useSfT, type SfKey } from '../lib/visitorPrefs';
+import { productText } from '../lib/productText';
 
 type Source = 'bestSellers' | 'newArrivals' | 'recommended';
 type Display = 'carousel' | 'grid' | 'masonry' | 'editorial';
@@ -32,7 +33,7 @@ interface Props { props: { source?: Source; title?: string; display?: Display; l
 
 export const ProductSectionBlock = ({ props }: Props) => {
   const config = useStorefrontConfig();
-  const { t, ld } = useSfT();
+  const { t, ld, lang } = useSfT();
   const { products, bestSellers, recommendedProducts, shopDetails, convertCurrency, promotions } = useStorefront();
   const railRef = useDragToScroll<HTMLDivElement>();
   const source = props.source ?? 'newArrivals';
@@ -84,6 +85,7 @@ export const ProductSectionBlock = ({ props }: Props) => {
             const base = convertCurrency ? convertCurrency(p.price, p.currency) : p.price;
             const { original, discounted, hasDiscount } = computePrice(base, activePromotionsFor(promotions as any, p.id));
             const price = hasDiscount ? discounted : original;
+            const txt = productText(p as any, lang);
             return (
               <div key={p.id} className={cn('grid items-center gap-6 md:gap-12 md:grid-cols-2')}>
                 <Link
@@ -92,13 +94,13 @@ export const ProductSectionBlock = ({ props }: Props) => {
                   style={{ borderRadius: 'var(--sf-radius-card)' }}
                 >
                   <div className="aspect-[4/3] md:aspect-[5/4] w-full overflow-hidden">
-                    <MediaItem src={img} alt={p.name} type={p.media_type} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <MediaItem src={img} alt={txt.name} type={p.media_type} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                   </div>
                 </Link>
                 <div className={cn('text-center md:text-left', i % 2 === 1 && 'md:order-1')}>
                   {p.category && <p className="text-[11px] uppercase tracking-widest text-muted-foreground mb-2">{p.category}</p>}
-                  <h3 className="sf-heading text-2xl md:text-3xl font-bold leading-snug mb-3">{p.name}</h3>
-                  {p.caption && <p className="text-muted-foreground line-clamp-3 mb-4 max-w-md mx-auto md:mx-0">{p.caption}</p>}
+                  <h3 className="sf-heading text-2xl md:text-3xl font-bold leading-snug mb-3">{txt.name}</h3>
+                  {txt.caption && <p className="text-muted-foreground line-clamp-3 mb-4 max-w-md mx-auto md:mx-0">{txt.caption}</p>}
                   <div className="flex items-baseline justify-center md:justify-start gap-2 mb-5">
                     {hasDiscount && original != null && <span className="text-muted-foreground line-through">{formatCurrency(original, shopDetails.currency)}</span>}
                     <span className="text-2xl font-bold text-primary">{price != null ? formatCurrency(price, shopDetails.currency) : ''}</span>

@@ -20,6 +20,7 @@ import { optionEntries } from '@/components/filters/filterVisibility';
 import { useVariantOptionsFor, mergeOptionEntries } from '@/hooks/useVariantOptions';
 import { flyToCart } from '../lib/flyToCart';
 import { useSfT } from '../lib/visitorPrefs';
+import { productText } from '../lib/productText';
 import type { ProductLike } from './ProductCard';
 
 interface Props {
@@ -28,12 +29,14 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-export const QuickViewModal = ({ product, open, onOpenChange }: Props) => {
+export const QuickViewModal = ({ product: rawProduct, open, onOpenChange }: Props) => {
   const { shopDetails, convertCurrency, promotions, capabilities } = useStorefront();
   const { addToCart } = useCart();
   const token = useStorefrontTokenStyle();
-  const { t } = useSfT();
-  const rating = useProductRating(open && capabilities?.reviews ? product.id : undefined);
+  const { t, lang } = useSfT();
+  // Localized display copy — everything below reads the visitor's language.
+  const product = { ...rawProduct, ...productText(rawProduct, lang) };
+  const rating = useProductRating(open && capabilities?.reviews ? rawProduct.id : undefined);
 
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);

@@ -23,6 +23,7 @@ import { activePromotionsFor, computePrice } from '../lib/pricing';
 import { optionEntries, detailEntries, filterKeyTitle } from '@/components/filters/filterVisibility';
 import { useVariantOptionsFor, mergeOptionEntries } from '@/hooks/useVariantOptions';
 import { useSfT } from '../lib/visitorPrefs';
+import { productText } from '../lib/productText';
 
 const renderBlock = (section: SectionInstance) => {
   const def = getBlockDef(section.type);
@@ -37,7 +38,7 @@ export const ProductDetailPage = () => {
   const config = useStorefrontConfig();
   const { addToCart } = useCart();
   const { addRecentlyViewed } = useRecentlyViewed();
-  const { t } = useSfT();
+  const { t, lang } = useSfT();
   const [quantity, setQuantity] = useState(1);
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [deepLinkResolved, setDeepLinkResolved] = useState(false);
@@ -46,7 +47,14 @@ export const ProductDetailPage = () => {
 
   useEffect(() => { window.scrollTo(0, 0); setQuantity(1); setSelected({}); setDeepLinkResolved(false); }, [productId]);
 
-  const product = products.find((p) => p.id === productId);
+  const rawProduct = products.find((p) => p.id === productId);
+  // Localize the customer-facing copy once — every detail block reads this
+  // through the ProductDetailContext, so name/caption follow the visitor
+  // language automatically (fallback to base text when untranslated).
+  const product = useMemo(
+    () => (rawProduct ? { ...rawProduct, ...productText(rawProduct as any, lang) } : rawProduct),
+    [rawProduct, lang]
+  );
 
   // Deep link: if the product isn't in the loaded page, fetch it directly by id
   // (single server round-trip) instead of paginating the whole catalog.

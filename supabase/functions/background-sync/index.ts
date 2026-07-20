@@ -17,7 +17,9 @@ interface InstagramPost {
 interface AnalysisResult {
   isProductPost: boolean;
   productName?: string;
+  productNameSq?: string;
   description?: string;
+  descriptionSq?: string;
   price?: number;
   currency?: string;
   tags?: string[];
@@ -52,6 +54,8 @@ interface ProductPayload {
   pricing_type?: 'one_time' | 'subscription';
   billing_interval?: 'month' | 'year' | null;
   product_type?: 'physical' | 'digital';
+  /** Per-locale overrides for customer-facing text: { sq: { name, caption } } */
+  translations?: { [locale: string]: { name?: string; caption?: string } };
 }
 
 const corsHeaders = {
@@ -688,9 +692,19 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
           // Permanent storage URLs (persisted in parallel above, reused on update)
           const persisted = await mediaFor(post);
 
+          // Albanian counterparts from the classifier → translations.sq
+          // (base name/caption stay English-canonical; storefront picks by
+          // visitor language with fallback).
+          const itemNameSq = (item as any)?.productNameSq || (analysis as any).productNameSq || null;
+          const descriptionSq = (analysis as any).descriptionSq || null;
+          const translations = (itemNameSq || descriptionSq)
+            ? { sq: { ...(itemNameSq ? { name: itemNameSq } : {}), ...(descriptionSq ? { caption: descriptionSq } : {}) } }
+            : undefined;
+
           const productPayload: ProductPayload = {
             name: itemName || post.caption?.split('\n')[0]?.slice(0, 60) || 'Product',
             caption: aiDescription || post.caption || '',
+            ...(translations ? { translations } : {}),
             price: priceInALL,
             currency: 'ALL',
             tags: aiTags || [],

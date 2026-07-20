@@ -19,6 +19,7 @@ import { QuickViewModal } from './QuickViewModal';
 import { optionEntries } from '@/components/filters/filterVisibility';
 import { useVariantOptionsFor } from '@/hooks/useVariantOptions';
 import { useSfT } from '../lib/visitorPrefs';
+import { productText } from '../lib/productText';
 import type { ComponentVariants } from '../config/types';
 
 export interface ProductLike {
@@ -37,6 +38,7 @@ export interface ProductLike {
   pricing_type?: 'one_time' | 'subscription';
   billing_interval?: 'month' | 'year' | null;
   details?: any;
+  translations?: { [locale: string]: { name?: string; caption?: string } } | null;
 }
 
 interface Props {
@@ -47,15 +49,17 @@ interface Props {
   ratio?: string;
 }
 
-export const ProductCard = ({ product, className, variant, ratio }: Props) => {
+export const ProductCard = ({ product: rawProduct, className, variant, ratio }: Props) => {
   const config = useStorefrontConfig();
   const { shopDetails, convertCurrency, promotions, capabilities } = useStorefront();
   const { addToCart } = useCart();
-  const rating = useProductRating(capabilities?.reviews ? product.id : undefined);
+  const rating = useProductRating(capabilities?.reviews ? rawProduct.id : undefined);
   // Real purchase options live in product_variants (batched, session-cached).
-  const variantInfo = useVariantOptionsFor(product.id);
+  const variantInfo = useVariantOptionsFor(rawProduct.id);
   const v = variant ?? config.components.productCard;
-  const { t } = useSfT();
+  const { t, lang } = useSfT();
+  // Localized display copy — everything below reads the visitor's language.
+  const product = { ...rawProduct, ...productText(rawProduct, lang) };
 
   // Quick view stays mounted after its first open so close animations play.
   const [quickViewOpen, setQuickViewOpen] = useState(false);
