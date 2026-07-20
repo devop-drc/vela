@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Vela brand asset — primary mark — tag-sails riding a wake. Wordmark is outlined (no font dependency). -->
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="vm-front" gradientUnits="userSpaceOnUse" x1="312" y1="70" x2="244" y2="316">
+      <stop offset="0" stop-color="#FACC15"/><stop offset="0.42" stop-color="#F59E0B"/><stop offset="1" stop-color="#FF2E4D"/>
+    </linearGradient>
+    <linearGradient id="vm-back" gradientUnits="userSpaceOnUse" x1="184" y1="116" x2="124" y2="316">
+      <stop offset="0" stop-color="#FF2E4D"/><stop offset="0.55" stop-color="#A31234"/><stop offset="1" stop-color="#7F1D3B"/>
+    </linearGradient>
+    <linearGradient id="vm-hull" gradientUnits="userSpaceOnUse" x1="56" y1="390" x2="452" y2="360">
+      <stop offset="0" stop-color="#7F1D3B"/><stop offset="0.3" stop-color="#A31234"/><stop offset="0.62" stop-color="#FF2E4D"/><stop offset="0.86" stop-color="#F59E0B"/><stop offset="1" stop-color="#FACC15"/>
+    </linearGradient>
+    <linearGradient id="vm-wake" gradientUnits="userSpaceOnUse" x1="230" y1="430" x2="436" y2="396">
+      <stop offset="0" stop-color="#FF2E4D" stop-opacity="0.55"/><stop offset="0.7" stop-color="#F59E0B"/><stop offset="1" stop-color="#FACC15"/>
+    </linearGradient>
+  </defs>
+  <g>
+      <path fill="url(#vm-back)" fill-rule="evenodd" d="M 168 122 Q 174 100 189 98 L 204 104 Q 214 109 216 124 C 226 178 231 246 232 296 Q 233 318 214 318 L 140 318 Q 123 318 126 299 C 132 242 147 178 168 122 Z M 192 136 a 9 9 0 1 0 0.001 0 Z"/>
+      <path fill="url(#vm-front)" fill-rule="evenodd" d="M 280 86 Q 286 60 304 56 L 322 63 Q 334 69 337 88 C 356 164 367 248 369 295 Q 371 318 350 318 L 262 318 Q 243 318 246 297 C 252 236 264 154 280 86 Z M 309 102 a 12 12 0 1 0 0.001 0 Z"/>
+      <path fill="url(#vm-hull)" d="M 58 340 C 150 362 300 360 382 338 L 394 334 Q 400 332 398 326 L 392 312 Q 390 304 398 309 L 446 332 Q 453 336 446 341 C 420 360 388 380 352 396 C 292 422 202 420 148 400 C 108 384 76 362 58 340 Z"/>
+      <path fill="url(#vm-wake)" d="M 234 432 C 304 452 372 440 428 396 Q 436 389 426 390 C 368 424 306 432 242 416 Q 228 413 234 432 Z"/>
+  </g>
+</svg>

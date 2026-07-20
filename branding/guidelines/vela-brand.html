@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+<meta charset="UTF-8">
+<title>Vela — Brand Guidelines</title>
+<style>
+  @font-face { font-family:'Clash Display'; src:url('../fonts/ClashDisplay-Regular.otf') format('opentype'); font-weight:400; }
+  @font-face { font-family:'Clash Display'; src:url('../fonts/ClashDisplay-Medium.otf') format('opentype'); font-weight:500; }
+  @font-face { font-family:'Clash Display'; src:url('../fonts/ClashDisplay-Semibold.otf') format('opentype'); font-weight:600; }
+  @font-face { font-family:'Clash Display'; src:url('../fonts/ClashDisplay-Bold.otf') format('opentype'); font-weight:700; }
+
+  @page { size: 210mm 297mm; margin: 0; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --gold:#FACC15; --amber:#F59E0B; --neon:#FF2E4D; --wine:#A31234; --deep:#7F1D3B;
+    --ink:#2A1D22; --muted:#796770; --cream:#FBF6F4; --night:#140A0E;
+    --grad:linear-gradient(115deg,#7F1D3B,#A31234 40%,#FF2E4D 75%,#F59E0B 115%);
+  }
+  body { font-family:'Inter','Segoe UI',sans-serif; color:var(--ink); }
+  .page { width:210mm; height:296.8mm; page-break-after:always; position:relative; overflow:hidden; background:var(--cream); padding:18mm 16mm; }
+  .page.dark { background:var(--night); color:#fff; }
+  h1,h2,h3,.display { font-family:'Clash Display',sans-serif; letter-spacing:-0.02em; }
+  .eyebrow { display:inline-flex; align-items:center; gap:2.2mm; font-size:8.5pt; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:5mm; }
+  .eyebrow::before { content:''; width:2.4mm; height:2.4mm; border-radius:99mm; background:var(--grad); }
+  .dark .eyebrow { color:rgba(255,255,255,.65); }
+  h2 { font-size:24pt; font-weight:600; margin-bottom:3mm; }
+  .sub { font-size:10pt; color:var(--muted); max-width:120mm; line-height:1.55; }
+  .dark .sub { color:rgba(255,255,255,.6); }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:6mm; }
+  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6mm; }
+  .card { background:#fff; border:.35mm solid #EDE4E1; border-radius:6mm; padding:8mm; }
+  .dark .card { background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.14); }
+  .lbl { font-size:7.5pt; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+  .dark .lbl { color:rgba(255,255,255,.55); }
+  .foot { position:absolute; bottom:10mm; left:16mm; right:16mm; display:flex; justify-content:space-between; font-size:7.5pt; color:var(--muted); }
+  .dark .foot { color:rgba(255,255,255,.45); }
+  .swatch { border-radius:5mm; padding:6mm; color:#fff; min-height:34mm; display:flex; flex-direction:column; justify-content:flex-end; }
+  .swatch b { font-family:'Clash Display'; font-size:12.5pt; font-weight:600; }
+  .swatch span { font-size:8pt; opacity:.85; }
+  .chip { display:inline-block; border-radius:99mm; padding:2.6mm 6mm; color:#fff; font-weight:600; font-size:9pt; }
+  ul.rules { list-style:none; font-size:9.5pt; line-height:1.5; }
+  ul.rules li { padding-left:6mm; position:relative; margin-bottom:2.6mm; }
+  ul.rules li::before { content:'✓'; position:absolute; left:0; color:#059669; font-weight:700; }
+  ul.rules.dont li::before { content:'✕'; color:var(--neon); }
+</style>
+</head>
+<body>
+
+<!-- ── 1 · COVER ── -->
+<div class="page dark" style="display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
+  <div style="position:absolute; inset:0; background:
+    radial-gradient(55% 34% at 82% 6%, rgba(255,46,77,.22), transparent 70%),
+    radial-gradient(45% 30% at 10% 96%, rgba(245,158,11,.16), transparent 70%);"></div>
+  <img src="../logo/vela-lockup-white.svg" style="width:96mm; position:relative;">
+  <div style="height:1mm; width:44mm; margin:14mm 0 10mm; border-radius:99mm; background:var(--grad); position:relative;"></div>
+  <div class="display" style="font-size:15pt; font-weight:500; position:relative;">Udhëzimet e Markës · Brand Guidelines</div>
+  <div style="margin-top:4mm; font-size:9.5pt; color:rgba(255,255,255,.55); position:relative;">Versioni 2.0 · Korrik 2026 · vela.al</div>
+  <div class="foot"><span>© 2026 Vela</span><span>Kthe Instagramin në dyqan online</span></div>
+</div>
+
+<!-- ── 2 · THE MARK ── -->
+<div class="page">
+  <div class="eyebrow">01 · Simboli</div>
+  <h2>Dy etiketa çmimi, me vela të hapura.</h2>
+  <p class="sub">Simboli i Vela-s është një varkë me vela — ku secila velë është një etiketë çmimi. Tregtia që lëviz përpara me erën: nga postimet e Instagramit drejt një dyqani të vërtetë. Bishti i valës formon një shigjetë — gjithmonë përpara.</p>
+  <div style="display:grid; grid-template-columns:1.25fr 1fr; gap:6mm; margin-top:8mm;">
+    <div class="card" style="display:flex; align-items:center; justify-content:center; height:92mm;">
+      <img src="../logo/vela-mark.svg" style="height:74mm;">
+    </div>
+    <div style="display:grid; gap:6mm;">
+      <div class="card" style="display:flex; align-items:center; justify-content:space-around; height:43mm;">
+        <img src="../logo/vela-mark-mono-black.svg" style="height:26mm;">
+        <div style="background:var(--night); border-radius:4mm; padding:5mm;"><img src="../logo/vela-mark-mono-white.svg" style="height:22mm; display:block;"></div>
+      </div>
+      <div class="card" style="display:flex; align-items:center; justify-content:center; height:43mm;">
+        <img src="../logo/vela-app-icon.svg" style="height:28mm;">
+      </div>
+    </div>
+  </div>
+  <div class="grid3" style="margin-top:6mm;">
+    <div class="card"><div class="lbl">Hapësira e lirë</div><p style="font-size:9pt; margin-top:2.5mm; line-height:1.5;">Rreth logos mbahet hapësirë sa <b>vrima e etiketës × 3</b> — asnjë element tjetër brenda saj.</p></div>
+    <div class="card"><div class="lbl">Madhësia minimale</div><p style="font-size:9pt; margin-top:2.5mm; line-height:1.5;">Simboli: <b>16 px / 5 mm</b>. Lockup-i horizontal: <b>90 px / 24 mm</b> gjerësi.</p></div>
+    <div class="card"><div class="lbl">Sfonde</div><p style="font-size:9pt; margin-top:2.5mm; line-height:1.5;">Gradient mbi sfonde të qeta; mono-bardhë mbi foto/errësirë; mono-ink mbi letër.</p></div>
+  </div>
+  <div class="foot"><span>Vela · Brand Guidelines</span><span>02</span></div>
+</div>
+
+<!-- ── 3 · LOCKUPS ── -->
+<div class="page">
+  <div class="eyebrow">02 · Lockup-et</div>
+  <h2>Simboli + fjala, gjithmonë bashkë siç duhet.</h2>
+  <div class="grid2" style="margin-top:8mm;">
+    <div class="card" style="display:flex; align-items:center; justify-content:center; height:44mm;"><img src="../logo/vela-lockup.svg" style="width:74mm;"></div>
+    <div class="card" style="display:flex; align-items:center; justify-content:center; height:44mm; background:var(--night); border-color:var(--night);"><img src="../logo/vela-lockup-white.svg" style="width:74mm;"></div>
+    <div class="card" style="display:flex; align-items:center; justify-content:center; height:52mm;"><img src="../logo/vela-lockup-vertical.svg" style="height:40mm;"></div>
+    <div class="card" style="display:flex; align-items:center; justify-content:center; height:52mm; background:var(--night); border-color:var(--night);"><img src="../logo/vela-lockup-vertical-white.svg" style="height:40mm;"></div>
+  </div>
+  <div class="grid2" style="margin-top:7mm;">
+    <div class="card">
+      <div class="lbl" style="margin-bottom:3mm;">Bëj</div>
+      <ul class="rules">
+        <li>Përdor skedarët zyrtarë nga <b>branding/logo/</b></li>
+        <li>Wordmark-u është i konvertuar në kthesa — pa varësi fontesh</li>
+        <li>Zgjidh variantin sipas kontrastit të sfondit</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="lbl" style="margin-bottom:3mm;">Mos bëj</div>
+      <ul class="rules dont">
+        <li>Mos e zgjat, rrotullo apo pasqyro logon</li>
+        <li>Mos ndrysho ngjyrat apo gradientin</li>
+        <li>Mos shto hije, kontur apo efekte</li>
+        <li>Mos e vendos gradient-in mbi foto të ngarkuara</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>Vela · Brand Guidelines</span><span>03</span></div>
+</div>
+
+<!-- ── 4 · COLOR ── -->
+<div class="page">
+  <div class="eyebrow">03 · Ngjyrat</div>
+  <h2>Verë e thellë, e kuqe neon, ar.</h2>
+  <p class="sub">Paleta lëviz nga vera e thellë drejt arit — si perëndim dielli mbi det. E kuqja neon është aksenti kryesor i veprimit; ari shpërblen; vera ankoron.</p>
+  <div class="grid3" style="margin-top:7mm;">
+    <div class="swatch" style="background:#7F1D3B;"><b>Deep Wine</b><span>#7F1D3B · hsl(343 63% 31%)</span></div>
+    <div class="swatch" style="background:#A31234;"><b>Wine · Primary</b><span>#A31234 · hsl(346 80% 35%)</span></div>
+    <div class="swatch" style="background:#FF2E4D;"><b>Neon Red · Accent</b><span>#FF2E4D · hsl(351 100% 59%)</span></div>
+    <div class="swatch" style="background:#F59E0B;"><b>Amber</b><span>#F59E0B · hsl(38 92% 50%)</span></div>
+    <div class="swatch" style="background:#FACC15; color:#2A1D22;"><b>Gold</b><span>#FACC15 · hsl(48 96% 53%)</span></div>
+    <div class="swatch" style="background:#2A1D22;"><b>Ink</b><span>#2A1D22 · teksti kryesor</span></div>
+  </div>
+  <div class="grid2" style="margin-top:6mm;">
+    <div class="swatch" style="background:#FBF6F4; color:#2A1D22; border:.35mm solid #EDE4E1;"><b>Cream</b><span>#FBF6F4 · sfondi i çelët</span></div>
+    <div class="swatch" style="background:#140A0E;"><b>Night</b><span>#140A0E · sfondi i errët</span></div>
+  </div>
+  <div class="card" style="margin-top:6mm; padding:6mm 8mm;">
+    <div class="lbl" style="margin-bottom:3mm;">Gradienti i markës</div>
+    <div style="height:11mm; border-radius:99mm; background:var(--grad);"></div>
+    <p style="font-size:8.5pt; color:var(--muted); margin-top:2.5mm;">linear-gradient(115°, #7F1D3B → #A31234 40% → #FF2E4D 75% → #F59E0B 115%) — përdoret si "erëz": CTA-t, thekse, jo sipërfaqe të mëdha statike. Në lëvizje bëhet "lava lamp" (pozicione që rrjedhin, kurrë madhësi që pulson).</p>
+  </div>
+  <div class="foot"><span>Vela · Brand Guidelines</span><span>04</span></div>
+</div>
+
+<!-- ── 5 · TYPOGRAPHY ── -->
+<div class="page">
+  <div class="eyebrow">04 · Tipografia</div>
+  <h2>Clash Display flet. Inter shpjegon.</h2>
+  <div class="card" style="margin-top:7mm; padding:10mm;">
+    <div class="lbl">Display · Clash Display Semibold/Bold</div>
+    <div class="display" style="font-size:30pt; font-weight:600; margin-top:3mm; line-height:1.05;">Kthe Instagramin në dyqan online<span style="background:var(--grad); -webkit-background-clip:text; color:transparent;"> brenda pak minutash.</span></div>
+  </div>
+  <div class="grid2" style="margin-top:6mm;">
+    <div class="card">
+      <div class="lbl">Peshat e Clash Display</div>
+      <div class="display" style="font-size:15pt; font-weight:400; margin-top:3mm;">Regular 400 — rrallë</div>
+      <div class="display" style="font-size:15pt; font-weight:500;">Medium 500 — nëntituj</div>
+      <div class="display" style="font-size:15pt; font-weight:600;">Semibold 600 — tituj</div>
+      <div class="display" style="font-size:15pt; font-weight:700;">Bold 700 — numra & theks</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Tekst · Inter / Satoshi</div>
+      <p style="font-size:10pt; line-height:1.6; margin-top:3mm;">Sistemi i kthen postimet e tua në produkte — çmim, kategori, variante. Ti menaxhon gjithçka nga një panel: porositë, pagesat në Lekë dhe klientët.</p>
+      <p style="font-size:8.5pt; color:var(--muted); margin-top:3mm;">Madhësitë bazë: 15–17 px trup · 13.5 px sekondar · shkronja të vogla UPPERCASE me gjurmim .18em për eyebrow-et.</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:6mm;">
+    <div class="lbl" style="margin-bottom:3mm;">Hierarkia në praktikë</div>
+    <div class="eyebrow" style="margin-bottom:2mm;">Eyebrow etikete</div>
+    <div class="display" style="font-size:19pt; font-weight:600;">Titull seksioni i qartë</div>
+    <p style="font-size:9.5pt; color:var(--muted); margin-top:1.5mm;">Nëntekst i shkurtër që shpjegon vlerën — një fjali, jo paragraf.</p>
+  </div>
+  <div class="foot"><span>Vela · Brand Guidelines</span><span>05</span></div>
+</div>
+
+<!-- ── 6 · APPLICATION ── -->
+<div class="page dark">
+  <div class="eyebrow">05 · Zbatimi</div>
+  <h2>Xham i ngrohtë, lëvizje me peshë.</h2>
+  <p class="sub">Sipërfaqet janë xham i bardhë i ngrohtë me tekst ink (kurrë panele të errëta mbi faqe të çelëta). Lëvizjet janë me spring — hyrje me peshë, mbivendosje të vogla, kurrë shkëlqime të përsëritura.</p>
+  <div class="grid2" style="margin-top:8mm;">
+    <div class="card" style="padding:8mm;">
+      <div class="lbl" style="margin-bottom:4mm;">Butonat</div>
+      <span class="chip" style="background:var(--grad);">Fillo falas →</span>
+      <span class="chip" style="background:rgba(255,255,255,.08); border:.35mm solid rgba(255,255,255,.2); margin-left:3mm;">Shiko demo live</span>
+      <p style="font-size:8.5pt; color:rgba(255,255,255,.55); margin-top:4mm;">CTA primar = gradient + tekst i bardhë; sekondar = xham me kontur. Rreze të plota (pill).</p>
+    </div>
+    <div class="card" style="padding:8mm;">
+      <div class="lbl" style="margin-bottom:4mm;">Parimet e lëvizjes</div>
+      <ul class="rules" style="color:#fff;">
+        <li>Spring me overshoot të vogël — "peshë"</li>
+        <li>Reveal nga blur për tekste të mëdha</li>
+        <li>Gradient "lava" — pozicion, jo madhësi</li>
+        <li>Pauzë kur elementi s'është në ekran</li>
+      </ul>
+    </div>
+  </div>
+  <div class="grid3" style="margin-top:6mm;">
+    <div class="card" style="display:flex; align-items:center; justify-content:center; height:30mm;"><img src="../logo/vela-mark-mono-white.svg" style="height:18mm;"></div>
+    <div class="card" style="display:flex; align-items:center; justify-content:center; height:30mm; background:#fff;"><img src="../logo/vela-mark.svg" style="height:18mm;"></div>
+    <div class="card" style="display:flex; align-items:center; justify-content:center; height:30mm;"><img src="../logo/vela-lockup-mono-white.svg" style="width:34mm;"></div>
+  </div>
+  <div class="card" style="margin-top:6mm; padding:6mm 8mm;">
+    <div class="lbl" style="margin-bottom:2.5mm;">Zëri i markës</div>
+    <p style="font-size:9.5pt; line-height:1.55; color:rgba(255,255,255,.85);">I drejtpërdrejtë, i ngrohtë, shqip së pari. Fjali të shkurtra. Premtime konkrete ("brenda pak minutash", "pa kod", "në Lekë") — kurrë zhargon teknik. "Sistemi" punon; ti shet.</p>
+  </div>
+  <div class="foot"><span>Vela · Brand Guidelines · v2.0</span><span>06</span></div>
+</div>
+
+</body>
+</html>

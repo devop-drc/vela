@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Vela brand asset — mark, mono white. Wordmark is outlined (no font dependency). -->
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <g>
+      <path fill="#FFFFFF" fill-rule="evenodd" d="M 168 122 Q 174 100 189 98 L 204 104 Q 214 109 216 124 C 226 178 231 246 232 296 Q 233 318 214 318 L 140 318 Q 123 318 126 299 C 132 242 147 178 168 122 Z M 192 136 a 9 9 0 1 0 0.001 0 Z"/>
+      <path fill="#FFFFFF" fill-rule="evenodd" d="M 280 86 Q 286 60 304 56 L 322 63 Q 334 69 337 88 C 356 164 367 248 369 295 Q 371 318 350 318 L 262 318 Q 243 318 246 297 C 252 236 264 154 280 86 Z M 309 102 a 12 12 0 1 0 0.001 0 Z"/>
+      <path fill="#FFFFFF" d="M 58 340 C 150 362 300 360 382 338 L 394 334 Q 400 332 398 326 L 392 312 Q 390 304 398 309 L 446 332 Q 453 336 446 341 C 420 360 388 380 352 396 C 292 422 202 420 148 400 C 108 384 76 362 58 340 Z"/>
+      <path fill="#FFFFFF" opacity="0.55" d="M 234 432 C 304 452 372 440 428 396 Q 436 389 426 390 C 368 424 306 432 242 416 Q 228 413 234 432 Z"/>
+  </g>
+</svg>
