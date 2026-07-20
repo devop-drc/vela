@@ -10,6 +10,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildOrderPayload, createOrderEntry, createPaymentSession } from "../_shared/raiaccept.ts";
+import { checkPlanFits, type PlanRow } from "../_shared/planGuard.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -44,7 +45,28 @@ serve(async (req) => {
         : plan.price_all;
 
     const { data: sub } = await supabase.from("subscriptions")
-      .select("id").eq("user_id", user.id).maybeSingle();
+      .select("id, status, trial_started_at").eq("user_id", user.id).maybeSingle();
+
+    // One trial per account — a consumed/running trial can never be
+    // restarted through a fresh trial_setup checkout.
+    if (trialSetup && sub && (sub.status !== "incomplete" || sub.trial_started_at != null)) {
+      return json({ error: "trial_already_used" }, 400);
+    }
+
+    // Anti-exploit: the target tier must fit the account's current usage
+    // (e.g. 200 products synced on a Business trial → Starter is refused).
+    const { data: allPlans } = await supabase.from("plans")
+      .select("id, name, product_limit, trial_days, is_active, display_order")
+      .eq("is_active", true);
+    const guard = await checkPlanFits(supabase, user.id, plan as PlanRow, (allPlans ?? []) as PlanRow[]);
+    if (!guard.ok) {
+      return json({
+        error: "over_limit",
+        productCount: guard.productCount,
+        limit: guard.limit,
+        allowedPlanIds: guard.allowedPlanIds,
+      }, 409);
+    }
 
     // Payment intent first — its uuid doubles as the unique merchantOrderReference.
     const { data: payment, error: payErr } = await supabase.from("payments").insert({

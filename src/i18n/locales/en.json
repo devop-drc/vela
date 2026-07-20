@@ -825,19 +825,40 @@
       "products_100": "Up to 100 active products",
       "cod_only": "Cash on delivery only (COD)",
       "card_and_cod": "Card payments + cash on delivery",
-      "trial_7_days": "7-day free trial"
+      "trial_7_days": "7-day free trial",
+      "trial_14_days": "14-day free trial",
+      "trial_30_days": "30-day free trial"
     },
     "payment_types": {
       "initial": "New subscription",
       "renewal": "Renewal",
       "switch": "Plan change",
-      "trial": "Free trial"
+      "trial": "Free trial",
+      "trial_setup": "Trial card verification",
+      "retry": "Payment retry",
+      "order": "Shop order"
     },
     "payment_status": {
       "paid": "Paid",
       "pending": "Pending",
-      "failed": "Failed"
-    }
+      "failed": "Failed",
+      "canceled": "Cancelled",
+      "refunded": "Refunded"
+    },
+    "trial_hint_tiered": "Your trial mirrors this tier exactly — what you see now is what you get after subscribing. You can switch your trial tier below; the remaining time recalculates automatically.",
+    "trial_pick_hint": "Choose your free trial below: Business for 7 days, Pro for 14 days, or Starter for 1 month. Each trial works exactly like the paid tier.",
+    "trial_already_used": "Your account has already used its free trial.",
+    "trial_switched": "Trial switched to {{plan}} — time recalculated.",
+    "trial_switch_error": "Couldn't switch trial: {{error}}",
+    "start_trial_days": "Try free for {{days}} days",
+    "subscribe_now": "Subscribe now",
+    "your_trial_plan": "Your current trial tier",
+    "switch_trial_here": "Switch trial here ({{days}}-day tier)",
+    "failed_payments": "Failed & cancelled attempts",
+    "over_limit_title": "{{plan}} doesn't fit your shop",
+    "over_limit_desc": "You have {{count}} active products, but this tier allows up to {{limit}}. Switching would take your shop offline above that limit — that's why it's not possible.",
+    "over_limit_pick": "Pick a tier that fits your catalog, or reduce your active products first.",
+    "subscribe_to": "Subscribe to {{plan}}"
   },
   "notfound": {
     "title": "404",

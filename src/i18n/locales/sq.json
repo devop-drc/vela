@@ -825,19 +825,40 @@
       "products_100": "Deri në 100 produkte aktive",
       "cod_only": "Vetëm para në dorë (COD)",
       "card_and_cod": "Pagesa me kartë + para në dorë",
-      "trial_7_days": "7 ditë provë falas"
+      "trial_7_days": "7 ditë provë falas",
+      "trial_14_days": "Provë falas 14-ditore",
+      "trial_30_days": "Provë falas 30-ditore"
     },
     "payment_types": {
       "initial": "Abonim i ri",
       "renewal": "Rinovim",
       "switch": "Ndryshim plani",
-      "trial": "Provë falas"
+      "trial": "Provë falas",
+      "trial_setup": "Verifikim karte për provën",
+      "retry": "Riprovim pagese",
+      "order": "Porosi dyqani"
     },
     "payment_status": {
       "paid": "Paguar",
       "pending": "Në pritje",
-      "failed": "Dështoi"
-    }
+      "failed": "Dështoi",
+      "canceled": "Anuluar",
+      "refunded": "Rimbursuar"
+    },
+    "trial_hint_tiered": "Prova pasqyron saktësisht këtë paketë — ajo që sheh tani është ajo që merr pas abonimit. Mund ta ndërrosh paketën e provës më poshtë; koha e mbetur rillogaritet automatikisht.",
+    "trial_pick_hint": "Zgjidh provën falas më poshtë: Business për 7 ditë, Pro për 14 ditë, ose Starter për 1 muaj. Çdo provë funksionon saktësisht si paketa me pagesë.",
+    "trial_already_used": "Llogaria jote e ka përdorur tashmë provën falas.",
+    "trial_switched": "Prova u kalua te {{plan}} — koha u rillogarit.",
+    "trial_switch_error": "Prova nuk u ndërrua dot: {{error}}",
+    "start_trial_days": "Provo falas për {{days}} ditë",
+    "subscribe_now": "Abonohu tani",
+    "your_trial_plan": "Paketa jote aktuale e provës",
+    "switch_trial_here": "Kalo provën këtu (paketë {{days}}-ditore)",
+    "failed_payments": "Tentativa të dështuara & të anuluara",
+    "over_limit_title": "{{plan}} nuk i përshtatet dyqanit tënd",
+    "over_limit_desc": "Ke {{count}} produkte aktive, por kjo paketë lejon deri në {{limit}}. Kalimi do ta nxirrte dyqanin offline mbi atë kufi — prandaj nuk është i mundur.",
+    "over_limit_pick": "Zgjidh një paketë që i përshtatet katalogut tënd, ose pakëso produktet aktive fillimisht.",
+    "subscribe_to": "Abonohu në {{plan}}"
   },
   "notfound": {
     "title": "404",

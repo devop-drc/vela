@@ -148,7 +148,7 @@ const getShopMeta = (shopSlug: string) =>
     // capped at 10 products with COD-only + no promotions/reviews, Pro at 100.
     const { data: subRow } = await supabaseAdmin
       .from('subscriptions')
-      .select('plan_id, status, plans(id, product_limit, features)')
+      .select('plan_id, status, trial_ends_at, plans(id, product_limit, features)')
       .eq('user_id', shopDetails.businesses.user_id)
       .maybeSingle();
 
@@ -169,6 +169,19 @@ const buildPayload = async (shopSlug: string, page: number, limit: number, looku
 
   const businessId = shopDetails.businesses.id;
   const userId = shopDetails.businesses.user_id;
+
+  // Subscription lifecycle gate: an expired trial or lapsed subscription
+  // takes the PUBLIC shop offline. Without this, a 7-day Business trial
+  // could leave a fully-synced shop selling forever for free. No
+  // subscription row fails open (pre-migration accounts).
+  const subStatus: string | null = (subRow as any)?.status ?? null;
+  if (subStatus) {
+    const trialEnds = (subRow as any)?.trial_ends_at ? new Date((subRow as any).trial_ends_at).getTime() : null;
+    const entitled =
+      subStatus === 'active' ||
+      (subStatus === 'trialing' && trialEnds != null && trialEnds > Date.now());
+    if (!entitled) throw new Error('Shop not found or inaccessible.');
+  }
 
   const planRow: any = (subRow as any)?.plans || null;
   const planId: string = planRow?.id || (subRow as any)?.plan_id || 'pro';

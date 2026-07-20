@@ -93,26 +93,33 @@ export default function AuthLayout({ title, subtitle, children, points, lang }: 
         </div>
       </div>
 
-      {/* ── Brand panel ── */}
-      <div className={cn("relative hidden overflow-hidden lg:block", BRAND)}>
-        <div className="ls-aurora absolute -left-16 -top-16 h-80 w-80 rounded-full bg-white/20 blur-3xl" />
-        <div className="ls-aurora absolute -bottom-24 -right-12 h-96 w-96 rounded-full bg-white/10 blur-3xl" style={{ animationDelay: "-7s" }} />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.07]"
-          style={{ backgroundImage: "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)", backgroundSize: "44px 44px" }}
-        />
+      {/* ── Brand panel — same canvas as the landing hero (bg-background +
+             rotating conic mesh + brand auroras), so dark mode gets the deep
+             night hero look instead of a full-bright gradient wall. ── */}
+      <div className="relative hidden overflow-hidden border-l border-border bg-background lg:block">
+        <div className="ls-mesh" />
+        <div className="ls-aurora absolute -left-16 -top-16 h-80 w-80 rounded-full bg-[#FF2E4D]/15 blur-3xl" />
+        <div className="ls-aurora absolute -bottom-24 -right-12 h-96 w-96 rounded-full bg-amber-400/15 blur-3xl" style={{ animationDelay: "-7s" }} />
 
-        <div className="relative flex h-full flex-col justify-center px-12 py-16 text-white xl:px-16">
+        <div className="relative flex h-full flex-col justify-center px-12 py-16 text-foreground xl:px-16">
           {/* Centered content column so ultrawide screens don't leave the
               story hugging the left of a huge gradient field. */}
           <div className="mx-auto w-full max-w-xl 2xl:max-w-2xl">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground backdrop-blur">
+            <span className={cn("h-2.5 w-2.5 rounded-full", BRAND)} />
+            {lang === "sq" ? "Dyqani yt online" : "Your shop, online"}
+          </div>
           <h2 className="font-display-brand max-w-lg text-3xl font-semibold leading-tight xl:text-[2.6rem] xl:leading-[1.15] 2xl:max-w-2xl 2xl:text-5xl">
-            {lang === "sq" ? "Kthe Instagramin në dyqan online." : "Turn your Instagram into an online store."}
+            {lang === "sq" ? (
+              <>Kthe Instagramin në <span className="brand-text">dyqan online</span>.</>
+            ) : (
+              <>Turn your Instagram into an <span className="brand-text">online store</span>.</>
+            )}
           </h2>
           <ul ref={pointsRef} className="mt-7 space-y-3">
             {points.map((p) => (
-              <li key={p} data-reveal className="flex items-center gap-2.5 text-[15px] text-white/95">
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white/25"><Check className="h-3 w-3" /></span>
+              <li key={p} data-reveal className="flex items-center gap-2.5 text-[15px] text-foreground/90">
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary/15 text-primary"><Check className="h-3 w-3" /></span>
                 {p}
               </li>
             ))}
@@ -152,8 +159,8 @@ export default function AuthLayout({ title, subtitle, children, points, lang }: 
             </div>
           </div>
 
-          <p className="mt-12 text-sm text-white/85">
-            {lang === "sq" ? "7 ditë provë falas · Anulo kurdo · Pa kod" : "7-day free trial · Cancel anytime · No code"}
+          <p className="mt-12 text-sm text-muted-foreground">
+            {lang === "sq" ? "Deri në 1 muaj provë falas · Anulo kurdo · Pa kod" : "Up to 1 month free trial · Cancel anytime · No code"}
           </p>
           </div>
         </div>

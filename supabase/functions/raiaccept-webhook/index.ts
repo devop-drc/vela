@@ -94,15 +94,34 @@ serve(async (req) => {
             .eq("id", shopOrderId);
         }
       } else if (payment.type === "trial_setup") {
-        // Card verified (zero-amount) → start the 7-day trial.
-        await supabase.from("subscriptions").update({
-          plan_id: planId ?? "pro",
-          status: "trialing",
-          billing_cycle: cycle === "annual" ? "annual" : "monthly",
-          trial_ends_at: new Date(now.getTime() + 7 * 86400000).toISOString(),
-          raiaccept_customer_ref: payment.user_id,
-          ...(cardToken ? { raiaccept_card_token: cardToken } : {}),
-        }).eq("user_id", payment.user_id);
+        // Card verified (zero-amount) → start the trial with the CHOSEN
+        // plan's length (Business 7d / Pro 14d / Starter 30d). One trial per
+        // account: if this subscription ever started a trial (or is already
+        // past 'incomplete'), only refresh the card token — never reset the
+        // clock. Otherwise re-running trial_setup would mint a fresh trial.
+        const { data: subRow } = await supabase.from("subscriptions")
+          .select("status, trial_started_at").eq("user_id", payment.user_id).maybeSingle();
+        const canStartTrial =
+          subRow && subRow.status === "incomplete" && subRow.trial_started_at == null;
+        if (canStartTrial) {
+          const { data: planRow } = await supabase.from("plans")
+            .select("trial_days").eq("id", planId ?? "pro").maybeSingle();
+          const trialDays = planRow?.trial_days ?? 7;
+          await supabase.from("subscriptions").update({
+            plan_id: planId ?? "pro",
+            status: "trialing",
+            billing_cycle: cycle === "annual" ? "annual" : "monthly",
+            trial_started_at: now.toISOString(),
+            trial_ends_at: new Date(now.getTime() + trialDays * 86400000).toISOString(),
+            raiaccept_customer_ref: payment.user_id,
+            ...(cardToken ? { raiaccept_card_token: cardToken } : {}),
+          }).eq("user_id", payment.user_id);
+        } else if (cardToken) {
+          await supabase.from("subscriptions").update({
+            raiaccept_card_token: cardToken,
+            raiaccept_customer_ref: payment.user_id,
+          }).eq("user_id", payment.user_id);
+        }
       } else {
         // Real charge → active period.
         await supabase.from("subscriptions").update({

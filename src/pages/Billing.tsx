@@ -69,15 +69,26 @@ export default function Billing() {
 
   useEffect(() => { setTitle(t("nav.billing", "Billing")); }, [setTitle, t]);
 
-  // Landing back from the RaiAccept hosted page.
+  // Landing back from the RaiAccept hosted page. Cancelled/failed attempts
+  // get their pending intent closed out (ref param) so they land in the
+  // failed-payments table instead of hanging as "pending" forever.
   useEffect(() => {
     const result = params.get("result");
     if (!result) return;
+    const ref = params.get("ref");
     if (result === "success") { showSuccess(t("billing.payment_success", "Payment successful!")); refresh(); }
-    else if (result === "cancel") showError(t("billing.payment_canceled", "Payment canceled."));
-    else showError(t("billing.payment_failed", "Payment failed. Please try again."));
+    else {
+      if (result === "cancel") showError(t("billing.payment_canceled", "Payment canceled."));
+      else showError(t("billing.payment_failed", "Payment failed. Please try again."));
+      if (ref) {
+        supabase.functions.invoke("mark-payment-canceled", { body: { paymentId: ref } })
+          .finally(() => loadHistory());
+      }
+    }
     params.delete("result");
+    params.delete("ref");
     setParams(params, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params, setParams, refresh, t]);
 
   const loadHistory = useCallback(async () => {
@@ -100,16 +111,66 @@ export default function Billing() {
   const yearlyTotal = (p: Plan) => p.price_all * (12 - p.annual_free_months);
   const maxFreeMonths = plans.reduce((m, p) => Math.max(m, p.annual_free_months || 0), 0);
 
+  /** Downgrade guard result — opens the "this tier doesn't fit" dialog. */
+  const [blocked, setBlocked] = useState<{ planName: string; productCount: number; limit: number; allowedPlanIds: string[] } | null>(null);
+
+  /** Extract a structured error body from a FunctionsHttpError, if any. */
+  const readFnError = async (error: any): Promise<any | null> => {
+    try { return error?.context ? await error.context.json() : null; } catch { return null; }
+  };
+
+  const handleOverLimit = (planName: string, body: any) => {
+    setBlocked({
+      planName,
+      productCount: Number(body?.productCount ?? 0),
+      limit: Number(body?.limit ?? 0),
+      allowedPlanIds: Array.isArray(body?.allowedPlanIds) ? body.allowedPlanIds : [],
+    });
+  };
+
   const subscribe = async (planId: string, trialSetup = false) => {
-    setBusy(trialSetup ? "trial" : planId);
+    setBusy(trialSetup ? `trial-${planId}` : planId);
     try {
       const { data, error } = await supabase.functions.invoke("create-subscription-payment", {
         body: { planId, cycle: annual ? "annual" : "monthly", trialSetup, returnUrl: `${window.location.origin}/billing` },
       });
-      if (error || !data?.url) throw new Error(error?.message || data?.error || "No payment URL");
+      if (error) {
+        const body = await readFnError(error);
+        if (body?.error === "over_limit") {
+          handleOverLimit(plans.find((p) => p.id === planId)?.name ?? planId, body);
+          setBusy(null);
+          return;
+        }
+        if (body?.error === "trial_already_used") {
+          showError(t("billing.trial_already_used", "Your account has already used its free trial."));
+          setBusy(null);
+          return;
+        }
+        throw new Error(body?.error || error.message || "No payment URL");
+      }
+      if (!data?.url) throw new Error(data?.error || "No payment URL");
       window.location.href = data.url;
     } catch (e: any) {
       showError(t("billing.start_payment_error", { defaultValue: "Couldn't start payment: {{error}}", error: e.message }));
+      setBusy(null);
+    }
+  };
+
+  /** Switch the tier of a RUNNING trial — time is recalculated server-side. */
+  const switchTrial = async (p: Plan) => {
+    setBusy(`switch-${p.id}`);
+    try {
+      const { error } = await supabase.functions.invoke("switch-trial-plan", { body: { planId: p.id } });
+      if (error) {
+        const body = await readFnError(error);
+        if (body?.error === "over_limit") { handleOverLimit(p.name, body); return; }
+        throw new Error(body?.error || error.message);
+      }
+      showSuccess(t("billing.trial_switched", { defaultValue: "Trial switched to {{plan}} — time recalculated.", plan: p.name }));
+      await refresh();
+    } catch (e: any) {
+      showError(t("billing.trial_switch_error", { defaultValue: "Couldn't switch trial: {{error}}", error: e.message }));
+    } finally {
       setBusy(null);
     }
   };
@@ -146,7 +207,10 @@ export default function Billing() {
       periodEnd = new Date(subscription.current_period_end).getTime();
     } else if (trialValid && subscription.trial_ends_at) {
       periodEnd = new Date(subscription.trial_ends_at).getTime();
-      periodStart = periodEnd - 7 * 86400000; // trials are always 7 days
+      // Trial length is tier-specific (Business 7 / Pro 14 / Starter 30).
+      periodStart = subscription.trial_started_at
+        ? new Date(subscription.trial_started_at).getTime()
+        : periodEnd - (heroPlan?.trial_days ?? 7) * 86400000;
     }
     const periodPct =
       periodStart != null && periodEnd != null && periodEnd > periodStart
@@ -200,18 +264,15 @@ export default function Billing() {
           )}
 
           {trialValid && (
-            <p className="text-sm text-muted-foreground">{t("billing.trial_hint", "Pick a plan below so your shop never stops.")}</p>
+            <p className="text-sm text-muted-foreground">
+              {t("billing.trial_hint_tiered", "Your trial mirrors this tier exactly — what you see now is what you get after subscribing. You can switch your trial tier below; the remaining time recalculates automatically.")}
+            </p>
           )}
 
           {s === "incomplete" && (
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="min-w-0 flex-1 text-sm">
-                {t("billing.trial_setup_hint", "Start your 7-day free trial — no card required.")}
-              </p>
-              <Button size="sm" disabled={busy != null} onClick={() => subscribe("pro", true)} className={BRAND_CTA}>
-                {busy === "trial" ? <Spinner className="h-4 w-4" /> : t("billing.start_trial", "Start free trial")}
-              </Button>
-            </div>
+            <p className="text-sm">
+              {t("billing.trial_pick_hint", "Choose your free trial below: Business for 7 days, Pro for 14 days, or Starter for 1 month. Each trial works exactly like the paid tier.")}
+            </p>
           )}
 
           {!isActive && s !== "incomplete" && (
@@ -227,6 +288,26 @@ export default function Billing() {
 
   const statusLabel = (s: string) => t(`billing.payment_status.${s}`, s);
   const typeLabel = (ty: string) => t(`billing.payment_types.${ty}`, ty);
+
+  // Cancelled / failed attempts live in their own table so the main history
+  // only shows money that actually moved (or is about to).
+  const okHistory = history.filter((h) => h.status !== "failed" && h.status !== "canceled");
+  const failedHistory = history.filter((h) => h.status === "failed" || h.status === "canceled");
+
+  const paymentRow = (h: PaymentRow) => (
+    <div key={h.id} className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 px-3.5 py-3 sm:grid-cols-[1fr_1.2fr_auto_auto]">
+      <span className="text-sm font-medium tabular-nums">
+        {new Date(h.created_at).toLocaleDateString(lang === "sq" ? "sq-AL" : "en-US", { day: "numeric", month: "short", year: "numeric" })}
+      </span>
+      <span className="order-3 col-span-2 text-xs text-muted-foreground sm:order-none sm:col-span-1 sm:text-sm">
+        {typeLabel(h.type)}
+      </span>
+      <span className="text-right text-sm font-semibold tabular-nums">{fmt(h.amount_all)} ALL</span>
+      <StatusBadge tone={paymentStatusTone(h.status)} size="sm" className="justify-self-end capitalize">
+        {statusLabel(h.status)}
+      </StatusBadge>
+    </div>
+  );
 
   const historyCard = () => (
     <Card>
@@ -264,21 +345,25 @@ export default function Billing() {
         ) : history.length === 0 ? (
           <EmptyState compact icon={Receipt} title={t("billing.no_payments", "No payments yet.")} />
         ) : (
-          <div className="divide-y divide-border rounded-lg border border-border">
-            {history.map((h) => (
-              <div key={h.id} className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 px-3.5 py-3 sm:grid-cols-[1fr_1.2fr_auto_auto]">
-                <span className="text-sm font-medium tabular-nums">
-                  {new Date(h.created_at).toLocaleDateString(lang === "sq" ? "sq-AL" : "en-US", { day: "numeric", month: "short", year: "numeric" })}
-                </span>
-                <span className="order-3 col-span-2 text-xs text-muted-foreground sm:order-none sm:col-span-1 sm:text-sm">
-                  {typeLabel(h.type)}
-                </span>
-                <span className="text-right text-sm font-semibold tabular-nums">{fmt(h.amount_all)} ALL</span>
-                <StatusBadge tone={paymentStatusTone(h.status)} size="sm" className="justify-self-end capitalize">
-                  {statusLabel(h.status)}
-                </StatusBadge>
+          <div className="space-y-5">
+            {okHistory.length > 0 ? (
+              <div className="divide-y divide-border rounded-lg border border-border">
+                {okHistory.map(paymentRow)}
               </div>
-            ))}
+            ) : (
+              <EmptyState compact icon={Receipt} title={t("billing.no_payments", "No payments yet.")} />
+            )}
+            {failedHistory.length > 0 && (
+              <div>
+                <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-destructive">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {t("billing.failed_payments", "Failed & cancelled attempts")}
+                </p>
+                <div className="divide-y divide-border rounded-lg border border-destructive/30 bg-destructive/5">
+                  {failedHistory.map(paymentRow)}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
@@ -324,7 +409,14 @@ export default function Billing() {
       <div ref={gridRef} className="grid items-start gap-4 pt-3 lg:grid-cols-3">
         {plans.map((p) => {
           const featured = p.id === "pro";
+          const s = subscription?.status;
           const current = isActive && subscription?.plan_id === p.id && subscription.status === "active";
+          // Fresh account (no trial ever consumed): every card starts its own
+          // tier-length trial. While trialing: the current card upgrades to
+          // paid, the others offer a trial switch (server recalculates time).
+          const trialPickable = s === "incomplete" && !subscription?.trial_started_at;
+          const isTrialCurrent = s === "trialing" && subscription?.plan_id === p.id;
+          const canSwitchTrial = s === "trialing" && trialDaysLeft != null && !isTrialCurrent;
           // Paid subscribers switch plans through a confirmation dialog (no refund
           // of the running period — the new plan supersedes it immediately).
           const isSwitch = subscription?.status === "active" && !current;
@@ -358,17 +450,46 @@ export default function Billing() {
                     ? t("billing.billed_yearly", { defaultValue: "Billed {{amount}} ALL yearly", amount: fmt(yearlyTotal(p)) })
                     : t("billing.cycle_monthly", "Billed monthly")}
                 </p>
-                <Button
-                  disabled={busy != null || current}
-                  onClick={() => (isSwitch ? setSwitchTarget(p) : subscribe(p.id))}
-                  className={cn("mt-4 w-full", featured && BRAND_CTA)}
-                  variant={featured ? "default" : "outline"}
-                >
-                  {busy === p.id ? <Spinner className="h-4 w-4" />
-                    : current ? t("billing.current_plan", "Current plan")
-                    : isSwitch ? switchLabel
-                    : t("billing.choose_plan", "Choose plan")}
-                </Button>
+                {trialPickable ? (
+                  <Button
+                    disabled={busy != null}
+                    onClick={() => subscribe(p.id, true)}
+                    className={cn("mt-4 w-full", BRAND_CTA)}
+                  >
+                    {busy === `trial-${p.id}` ? <Spinner className="h-4 w-4" />
+                      : t("billing.start_trial_days", { defaultValue: "Try free for {{days}} days", days: p.trial_days ?? 7 })}
+                  </Button>
+                ) : (
+                  <Button
+                    disabled={busy != null || current}
+                    onClick={() => (isSwitch ? setSwitchTarget(p) : subscribe(p.id))}
+                    className={cn("mt-4 w-full", featured && BRAND_CTA)}
+                    variant={featured ? "default" : "outline"}
+                  >
+                    {busy === p.id ? <Spinner className="h-4 w-4" />
+                      : current ? t("billing.current_plan", "Current plan")
+                      : isSwitch ? switchLabel
+                      : isTrialCurrent ? t("billing.subscribe_now", "Subscribe now")
+                      : t("billing.choose_plan", "Choose plan")}
+                  </Button>
+                )}
+                {isTrialCurrent && (
+                  <p className="mt-2 text-center text-xs font-medium text-primary">
+                    {t("billing.your_trial_plan", "Your current trial tier")}
+                  </p>
+                )}
+                {canSwitchTrial && (
+                  <Button
+                    disabled={busy != null}
+                    onClick={() => switchTrial(p)}
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 w-full text-muted-foreground"
+                  >
+                    {busy === `switch-${p.id}` ? <Spinner className="h-4 w-4" />
+                      : t("billing.switch_trial_here", { defaultValue: "Switch trial here ({{days}}-day tier)", days: p.trial_days ?? 7 })}
+                  </Button>
+                )}
                 <ul className="mt-4 space-y-2">
                   {(p.features as string[]).map((f) => (
                     <li key={f} className="flex gap-2 text-sm">
@@ -392,6 +513,43 @@ export default function Billing() {
       <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
         <CreditCard className="h-3.5 w-3.5" /> {t("billing.secure_payments", "Secure payments via Raiffeisen (RaiAccept)")}
       </p>
+
+      {/* Downgrade guard: current usage doesn't fit the requested tier. */}
+      <AlertDialog open={blocked != null} onOpenChange={(open) => { if (!open) setBlocked(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("billing.over_limit_title", { defaultValue: "{{plan}} doesn't fit your shop", plan: blocked?.planName ?? "" })}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                {t("billing.over_limit_desc", {
+                  defaultValue: "You have {{count}} active products, but this tier allows up to {{limit}}. Switching would take your shop offline above that limit — that's why it's not possible.",
+                  count: blocked?.productCount ?? 0,
+                  limit: blocked?.limit ?? 0,
+                })}
+              </span>
+              <span className="block font-medium text-foreground">
+                {t("billing.over_limit_pick", "Pick a tier that fits your catalog, or reduce your active products first.")}
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-wrap gap-2">
+            <AlertDialogCancel>{t("common.cancel", "Cancel")}</AlertDialogCancel>
+            {plans
+              .filter((p) => blocked?.allowedPlanIds.includes(p.id))
+              .map((p) => (
+                <AlertDialogAction
+                  key={p.id}
+                  className={BRAND_CTA}
+                  onClick={() => { setBlocked(null); subscribe(p.id); }}
+                >
+                  {t("billing.subscribe_to", { defaultValue: "Subscribe to {{plan}}", plan: p.name })}
+                </AlertDialogAction>
+              ))}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={switchTarget != null} onOpenChange={(open) => { if (!open) setSwitchTarget(null); }}>
         <AlertDialogContent>

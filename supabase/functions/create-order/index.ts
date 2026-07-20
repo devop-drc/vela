@@ -99,22 +99,38 @@ serve(async (req) => {
     const ownerUserId = (shopData as any).businesses?.user_id;
     const shopCurrency = shopData.currency || 'ALL';
 
-    // Plan gate: card payments are a Pro/Business entitlement — a Starter
-    // merchant only accepts cash on delivery. Enforced server-side so a
-    // hand-crafted request can't route a card payment either.
-    if (paymentMethod !== 'cash_on_delivery' && ownerUserId) {
+    // Plan gates, enforced server-side so hand-crafted requests can't bypass
+    // them either:
+    //  • lifecycle — an expired trial / lapsed subscription can't take orders
+    //    at all (otherwise a dead shop keeps selling via saved links);
+    //  • card payments are a Pro/Business entitlement — Starter is COD-only.
+    // No subscription row fails open (pre-migration accounts).
+    if (ownerUserId) {
       const { data: subRow } = await supabaseAdmin
         .from('subscriptions')
-        .select('plan_id, plans(id, features)')
+        .select('plan_id, status, trial_ends_at, plans(id, features)')
         .eq('user_id', ownerUserId)
         .maybeSingle();
-      const feats: string[] = Array.isArray((subRow as any)?.plans?.features) ? (subRow as any).plans.features : [];
-      const planId = (subRow as any)?.plans?.id || (subRow as any)?.plan_id || 'pro';
-      const cardAllowed = planId === 'business' || feats.includes('card_and_cod') || feats.includes('card_payments');
-      if (!cardAllowed) {
-        return new Response(JSON.stringify({ error: 'This shop accepts cash on delivery only.' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+      if (subRow) {
+        const trialEnds = (subRow as any).trial_ends_at ? new Date((subRow as any).trial_ends_at).getTime() : null;
+        const entitled =
+          (subRow as any).status === 'active' ||
+          ((subRow as any).status === 'trialing' && trialEnds != null && trialEnds > Date.now());
+        if (!entitled) {
+          return new Response(JSON.stringify({ error: 'This shop is temporarily unavailable.' }), {
+            status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+      if (paymentMethod !== 'cash_on_delivery') {
+        const feats: string[] = Array.isArray((subRow as any)?.plans?.features) ? (subRow as any).plans.features : [];
+        const planId = (subRow as any)?.plans?.id || (subRow as any)?.plan_id || 'pro';
+        const cardAllowed = planId === 'business' || feats.includes('card_and_cod') || feats.includes('card_payments');
+        if (!cardAllowed) {
+          return new Response(JSON.stringify({ error: 'This shop accepts cash on delivery only.' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
       }
     }
 

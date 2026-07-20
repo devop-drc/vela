@@ -15,6 +15,8 @@ export interface Plan {
   annual_free_months: number;
   features: string[];
   product_limit: number | null;
+  /** trial length when this tier is chosen at signup (Business 7 / Pro 14 / Starter 30) */
+  trial_days: number;
   display_order: number;
 }
 
@@ -23,6 +25,7 @@ export interface Subscription {
   plan_id: string;
   status: "incomplete" | "trialing" | "active" | "past_due" | "canceled" | "expired";
   billing_cycle: "monthly" | "annual";
+  trial_started_at: string | null;
   trial_ends_at: string | null;
   current_period_start: string | null;
   current_period_end: string | null;
