@@ -278,7 +278,9 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
           {/* Variants */}
           {hasVariants && (
             <div data-reveal>
-              <div className="flex items-center justify-between mb-2">
+              {/* xl: the right column's top row sits beside the dialog's absolute
+                  close (X) button — reserve space so Manage Stock never overlaps it. */}
+              <div className="flex items-center justify-between mb-2 xl:pr-10">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   <Layers className="h-4 w-4" />
                   Variants
