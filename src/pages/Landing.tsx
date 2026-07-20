@@ -811,7 +811,7 @@ export default function Landing() {
           {/* film — its own column; the transparent video can scale up past
               the column edges (scale lives on THIS wrapper, never on
               .hero-visual whose transform GSAP owns) */}
-          <div className="relative z-0 w-full max-w-2xl lg:max-w-none lg:scale-[1.12] xl:scale-[1.16] lg:origin-center">
+          <div className="relative z-0 w-full max-w-2xl lg:max-w-none lg:origin-center lg:scale-125 xl:scale-[1.28] 2xl:scale-[1.45]">
             {/* pre-rendered hero film (see src/compositions/HeroFilm.tsx) */}
             <div className="hero-visual w-full">
               <HeroFilmVideo />
