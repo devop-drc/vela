@@ -118,12 +118,12 @@ export const CartContents = ({ onClose, variant = 'drawer' }: { onClose?: () => 
         )}
         <div className="flex items-center justify-between mt-2 gap-2">
           <div className="flex h-10 items-center rounded-md border md:h-8">
-            <button aria-label="Decrease quantity" onClick={() => updateQuantity(item.uid, item.quantity - 1)} disabled={item.quantity <= 1} className="flex h-full w-10 items-center justify-center disabled:opacity-40 md:w-8"><Minus className="h-3.5 w-3.5" /></button>
+            <button aria-label={t('decreaseQty')} onClick={() => updateQuantity(item.uid, item.quantity - 1)} disabled={item.quantity <= 1} className="flex h-full w-10 items-center justify-center disabled:opacity-40 md:w-8"><Minus className="h-3.5 w-3.5" /></button>
             <span className="w-8 text-center text-sm tabular-nums">{item.quantity}</span>
-            <button aria-label="Increase quantity" onClick={() => updateQuantity(item.uid, item.quantity + 1)} disabled={item.quantity >= 99} className="flex h-full w-10 items-center justify-center disabled:opacity-40 md:w-8"><Plus className="h-3.5 w-3.5" /></button>
+            <button aria-label={t('increaseQty')} onClick={() => updateQuantity(item.uid, item.quantity + 1)} disabled={item.quantity >= 99} className="flex h-full w-10 items-center justify-center disabled:opacity-40 md:w-8"><Plus className="h-3.5 w-3.5" /></button>
           </div>
           <span className={cn('font-semibold', item.isDiscounted && 'text-success')}>{price(item.price * item.quantity, item.currency)}</span>
-          <button aria-label={`Remove ${item.name} from cart`} onClick={() => removeFromCart(item.uid)} className="-m-2 p-2 text-muted-foreground hover:text-destructive"><XCircle className="h-5 w-5" /></button>
+          <button aria-label={`${t('remove')}: ${item.name}`} onClick={() => removeFromCart(item.uid)} className="-m-2 p-2 text-muted-foreground hover:text-destructive"><XCircle className="h-5 w-5" /></button>
         </div>
       </div>
     </div>
@@ -205,6 +205,7 @@ export const Cart = () => {
   const { isOpen, close } = useCartUI();
   const config = useStorefrontConfig();
   const token = useStorefrontTokenStyle();
+  const { t } = useSfT();
   const variant = config.components.cart;
 
   if (variant === 'page') return null; // rendered by the /cart route instead
@@ -215,7 +216,7 @@ export const Cart = () => {
     return (
       <Dialog open={isOpen} onOpenChange={(o) => !o && close()}>
         <DialogContent aria-describedby={undefined} className={cn('sm:max-w-2xl h-[88vh] p-0 flex flex-col bg-background text-foreground rounded-[var(--sf-radius-card,1rem)] sm:rounded-[var(--sf-radius-card,1rem)]', token.className)} style={token.style} {...token.attrs}>
-          <DialogTitle className="sr-only">Shopping cart</DialogTitle>
+          <DialogTitle className="sr-only">{t('cart')}</DialogTitle>
           <CartContents onClose={close} />
         </DialogContent>
       </Dialog>
@@ -228,7 +229,7 @@ export const Cart = () => {
       <SheetContent side="right" aria-describedby={undefined} className={cn('w-full sm:max-w-md p-0 flex flex-col bg-background text-foreground', token.className)} style={token.style} {...token.attrs}>
         {/* Sheet is built on the same Radix dialog primitive, so DialogTitle
             satisfies its accessible-title requirement. */}
-        <DialogTitle className="sr-only">Shopping cart</DialogTitle>
+        <DialogTitle className="sr-only">{t('cart')}</DialogTitle>
         <CartContents onClose={close} />
       </SheetContent>
     </Sheet>

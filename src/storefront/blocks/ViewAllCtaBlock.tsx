@@ -8,6 +8,7 @@ import { ArrowRight } from 'lucide-react';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
 import { SfButton } from '../components/SfButton';
+import { useSfT } from '../lib/visitorPrefs';
 
 type Variant = 'button' | 'banner' | 'link';
 interface Props { props: { label?: string; variant?: Variant; heading?: string } }
@@ -15,9 +16,10 @@ interface Props { props: { label?: string; variant?: Variant; heading?: string }
 export const ViewAllCtaBlock = ({ props }: Props) => {
   const { shopDetails } = useStorefront();
   const config = useStorefrontConfig();
+  const { ld } = useSfT();
   if (!shopDetails) return null;
   const variant: Variant = props.variant ?? 'button';
-  const label = props.label || 'View All Products';
+  const label = ld(props.label, 'viewAllProducts');
   const to = `/shop/${shopDetails.slug}/products`;
 
   if (variant === 'link') {

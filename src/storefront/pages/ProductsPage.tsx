@@ -27,18 +27,19 @@ import {
   deriveAttributeKeys, attributeValues, filterKeyTitle, isFilterVisible, productMatchesAttr,
 } from '@/components/filters/filterVisibility';
 import { getAttributeIcon } from '@/lib/attributeIcons';
+import { useSfT, type SfKey } from '../lib/visitorPrefs';
 
-const SORTS = [
-  { value: 'newest', label: 'Newest' },
-  { value: 'price-asc', label: 'Price: Low to High' },
-  { value: 'price-desc', label: 'Price: High to Low' },
-  { value: 'rating', label: 'Top Rated' },
-  { value: 'name', label: 'Name A–Z' },
+const SORTS: Array<{ value: string; label: SfKey }> = [
+  { value: 'newest', label: 'newest' },
+  { value: 'price-asc', label: 'priceLowHigh' },
+  { value: 'price-desc', label: 'priceHighLow' },
+  { value: 'rating', label: 'topRated' },
+  { value: 'name', label: 'nameAZ' },
 ];
 
-const AVAILABILITY = [
-  { value: 'in', label: 'In stock' },
-  { value: 'out', label: 'Out of stock' },
+const AVAILABILITY: Array<{ value: string; label: SfKey }> = [
+  { value: 'in', label: 'inStock' },
+  { value: 'out', label: 'outOfStock' },
 ];
 
 const RATING_STEPS = [4, 3, 2, 1];
@@ -91,6 +92,7 @@ export const ProductsPage = () => {
   const { products, promotions, isLoading, hasMoreProducts, fetchMoreProducts, isLoadingMore, convertCurrency, shopDetails, capabilities } = useStorefront();
   const config = useStorefrontConfig();
   const token = useStorefrontTokenStyle();
+  const { t, lang } = useSfT();
   const [params, setParams] = useSearchParams();
   const currency = shopDetails?.currency || 'USD';
 
@@ -278,18 +280,21 @@ export const ProductsPage = () => {
       label: `${formatCurrency(priceRange[0], currency)} – ${formatCurrency(priceRange[1], currency)}`,
       clear: () => { priceTouched.current = false; setPriceRange([0, maxPrice]); },
     });
-    availability.forEach((a) => chips.push({
-      id: `avail:${a}`, label: AVAILABILITY.find((x) => x.value === a)?.label || a,
-      clear: () => setAvailability((prev) => prev.filter((x) => x !== a)),
-    }));
-    if (minRating > 0) chips.push({ id: 'rating', label: `${minRating}★ & up`, clear: () => setMinRating(0) });
+    availability.forEach((a) => {
+      const key = AVAILABILITY.find((x) => x.value === a)?.label;
+      chips.push({
+        id: `avail:${a}`, label: key ? t(key) : a,
+        clear: () => setAvailability((prev) => prev.filter((x) => x !== a)),
+      });
+    });
+    if (minRating > 0) chips.push({ id: 'rating', label: `${minRating}★ ${t('andUp')}`, clear: () => setMinRating(0) });
     tags.forEach((t) => chips.push({ id: `tag:${t}`, label: `#${t}`, clear: () => setTags((prev) => prev.filter((x) => x !== t)) }));
     Object.entries(attrSel).forEach(([key, vals]) => vals.forEach((v) =>
       chips.push({ id: `${key}:${v}`, label: `${filterKeyTitle(key)}: ${v}`, clear: () => toggleAttr(key, v) })
     ));
     return chips;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categories, priceActive, priceRange, availability, minRating, tags, attrSel, currency, maxPrice]);
+  }, [categories, priceActive, priceRange, availability, minRating, tags, attrSel, currency, maxPrice, lang]);
 
   const clearAll = () => {
     setSearchInput('');
@@ -374,9 +379,9 @@ export const ProductsPage = () => {
   const facetPanel = (
     <div className="space-y-4">
       {facetAvailable.categories && (
-        <Facet title="Category" active={categories.length > 0} onClear={() => { setCategories([]); setParam('category', ''); }}>
+        <Facet title={t('category')} active={categories.length > 0} onClear={() => { setCategories([]); setParam('category', ''); }}>
           <div className="flex flex-col gap-1">
-            {[{ id: '__all', label: 'All Products', count: products.length },
+            {[{ id: '__all', label: t('allProducts'), count: products.length },
               ...allCategories.map((c) => ({ id: c, label: c, count: categoryCounts.get(c) || 0 }))].map((c) => {
               const active = c.id === '__all' ? categories.length === 0 : categories.includes(c.id);
               return (
@@ -398,7 +403,7 @@ export const ProductsPage = () => {
       )}
 
       {facetAvailable.priceRange && (
-        <Facet title="Price" active={priceActive} onClear={() => { priceTouched.current = false; setPriceRange([0, maxPrice]); }}>
+        <Facet title={t('price')} active={priceActive} onClear={() => { priceTouched.current = false; setPriceRange([0, maxPrice]); }}>
           <div className="space-y-3 px-1">
             <Slider
               min={0}
@@ -417,11 +422,11 @@ export const ProductsPage = () => {
       )}
 
       {facetAvailable.availability && (
-        <Facet title="Availability" icon={PackageCheck} active={availability.length > 0} onClear={() => setAvailability([])}>
+        <Facet title={t('availability')} icon={PackageCheck} active={availability.length > 0} onClear={() => setAvailability([])}>
           <div className="flex flex-wrap gap-1.5">
             {AVAILABILITY.map((a) => (
               <button key={a.value} onClick={() => setAvailability((prev) => toggleIn(prev, a.value))} className={chipCls(availability.includes(a.value))}>
-                {a.label}
+                {t(a.label)}
               </button>
             ))}
           </div>
@@ -429,7 +434,7 @@ export const ProductsPage = () => {
       )}
 
       {facetAvailable.rating && (
-        <Facet title="Rating" icon={Star} active={minRating > 0} onClear={() => setMinRating(0)}>
+        <Facet title={t('rating')} icon={Star} active={minRating > 0} onClear={() => setMinRating(0)}>
           <div className="flex flex-wrap gap-1.5">
             {RATING_STEPS.map((min) => (
               <button
@@ -438,7 +443,7 @@ export const ProductsPage = () => {
                 className={cn(chipCls(minRating === min), 'inline-flex items-center gap-1')}
               >
                 <Star className={cn('h-3 w-3', minRating === min ? 'fill-current' : 'fill-amber-400 text-amber-400')} />
-                {min}+ stars
+                {min}+ {t('stars')}
               </button>
             ))}
           </div>
@@ -446,7 +451,7 @@ export const ProductsPage = () => {
       )}
 
       {facetAvailable.tags && (
-        <Facet title="Tags" icon={Tag} active={tags.length > 0} onClear={() => setTags([])} defaultOpen={false}>
+        <Facet title={t('tags')} icon={Tag} active={tags.length > 0} onClear={() => setTags([])} defaultOpen={false}>
           <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
             {allTags.map((t) => (
               <button key={t} onClick={() => setTags((prev) => toggleIn(prev, t))} className={chipCls(tags.includes(t))}>{t}</button>
@@ -463,9 +468,9 @@ export const ProductsPage = () => {
   // Shared filter drawer: mobile fallback for sidebar mode, the primary
   // presentation for 'drawer' mode, and the "all filters" surface for topbar.
   // Controlled so re-renders (facet clicks inside it) never close it.
-  const filterTrigger = (triggerClassName?: string, triggerLabel = 'Filters') => (
+  const filterTrigger = (triggerClassName?: string, triggerLabel?: string) => (
     <Button variant="outline" className={cn('relative', triggerClassName)} onClick={() => setFilterSheetOpen(true)}>
-      <SlidersHorizontal className="mr-2 h-4 w-4" /> {triggerLabel}
+      <SlidersHorizontal className="mr-2 h-4 w-4" /> {triggerLabel ?? t('filters')}
       {activeChips.length > 0 && (
         <span className="ml-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[11px] font-semibold text-primary-foreground">
           {activeChips.length}
@@ -479,9 +484,9 @@ export const ProductsPage = () => {
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative min-w-[200px] flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Search products…" className="pl-9 pr-9" />
+          <Input value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder={t('searchPlaceholder')} className="pl-9 pr-9" />
           {searchInput && (
-            <button type="button" onClick={() => setSearchInput('')} aria-label="Clear search"
+            <button type="button" onClick={() => setSearchInput('')} aria-label={t('clearSearch')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
               <X className="h-4 w-4" />
             </button>
@@ -489,11 +494,11 @@ export const ProductsPage = () => {
         </div>
         <Select value={sort} onValueChange={(v) => setParam('sort', v)}>
           <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
-          <SelectContent>{SORTS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+          <SelectContent>{SORTS.map((s) => <SelectItem key={s.value} value={s.value}>{t(s.label)}</SelectItem>)}</SelectContent>
         </Select>
         {anyFacet && filtersMode === 'drawer' && filterTrigger()}
         {anyFacet && filtersMode === 'sidebar' && filterTrigger('lg:hidden')}
-        {anyFacet && filtersMode === 'topbar' && filterTrigger(undefined, 'All filters')}
+        {anyFacet && filtersMode === 'topbar' && filterTrigger(undefined, t('allFilters'))}
       </div>
       {/* Topbar mode: categories as a wrapping chip row — scannable in one glance. */}
       {filtersMode === 'topbar' && facetAvailable.categories && (
@@ -506,7 +511,7 @@ export const ProductsPage = () => {
                 onClick={() => (c === 'all' ? (setCategories([]), setParam('category', '')) : toggleCategory(c))}
                 className={chipCls(active)}
               >
-                {c === 'all' ? 'All' : c}
+                {c === 'all' ? t('all') : c}
               </button>
             );
           })}
@@ -526,7 +531,7 @@ export const ProductsPage = () => {
             </button>
           ))}
           <button onClick={clearAll} className="ml-1 text-xs font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
-            Clear all
+            {t('clearAll')}
           </button>
         </div>
       )}
@@ -544,7 +549,7 @@ export const ProductsPage = () => {
 
   const heading = activePromo
     ? activePromo.name
-    : categories.length === 1 ? categories[0] : 'All Products';
+    : categories.length === 1 ? categories[0] : t('allProducts');
 
   return (
     <div className="sf-container py-8">
@@ -552,7 +557,7 @@ export const ProductsPage = () => {
         <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
           <SheetContent side="left" aria-describedby={undefined} className={cn('w-80 overflow-y-auto bg-background text-foreground', token.className)} style={token.style} {...token.attrs}>
             {/* Sheet is built on the Radix dialog primitive — a11y title required. */}
-            <DialogTitle className="sr-only">Product filters</DialogTitle>
+            <DialogTitle className="sr-only">{t('productFilters')}</DialogTitle>
             <div className="pt-8">{facetPanel}</div>
           </SheetContent>
         </Sheet>
@@ -560,17 +565,17 @@ export const ProductsPage = () => {
       <div className="mb-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h1 className="sf-heading text-3xl font-bold md:text-4xl">{heading}</h1>
         <span className="text-sm tabular-nums text-muted-foreground">
-          {filtered.length} {filtered.length === 1 ? 'product' : 'products'}
+          {filtered.length} {filtered.length === 1 ? t('productWord') : t('productsWord')}
         </span>
       </div>
       {activePromo && (
         <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3">
           <Tag className="h-4 w-4 shrink-0 text-primary" />
           <span className="text-sm font-medium">
-            Showing products in <span className="font-semibold">{activePromo.name}</span>
+            {t('showingIn')} <span className="font-semibold">{activePromo.name}</span>
           </span>
           <Button variant="ghost" size="sm" className="ml-auto h-7 gap-1 text-xs" onClick={() => setParam('promotion', '')}>
-            <X className="h-3.5 w-3.5" /> Clear
+            <X className="h-3.5 w-3.5" /> {t('clear')}
           </Button>
         </div>
       )}
@@ -585,17 +590,17 @@ export const ProductsPage = () => {
           {isFiltering && hasMoreProducts && (
             <p className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Showing matches from loaded products — loading the rest of the catalog…
+              {t('loadingRest')}
             </p>
           )}
           {filtered.length === 0 && !(isFiltering && hasMoreProducts) ? (
             <div className="py-16 text-center text-muted-foreground">
               {products.length === 0 ? (
-                <><Package className="mx-auto mb-4 h-12 w-12 opacity-40" /><p>No products have been added yet — check back soon!</p></>
+                <><Package className="mx-auto mb-4 h-12 w-12 opacity-40" /><p>{t('noProductsYet')}</p></>
               ) : (
                 <>
-                  <p className="mb-4">No products match your filters.</p>
-                  <Button variant="outline" size="sm" onClick={clearAll}>Clear filters</Button>
+                  <p className="mb-4">{t('noProductsMatch')}</p>
+                  <Button variant="outline" size="sm" onClick={clearAll}>{t('clearFilters')}</Button>
                 </>
               )}
             </div>

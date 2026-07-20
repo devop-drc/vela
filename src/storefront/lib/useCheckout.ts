@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 import { useCart } from '@/contexts/CartContext';
 import { useStorefront } from '@/contexts/StorefrontContext';
+import { sft, getVisitorLang } from './visitorPrefs';
 
 export interface CheckoutFields {
   firstName: string;
@@ -34,11 +35,13 @@ export const useCheckout = (onDone?: () => void) => {
 
   const placeOrder = useCallback(
     async (data: CheckoutFields) => {
-      if (!shopDetails) { showError('Shop details not loaded. Cannot place order.'); return; }
-      if (cartItems.length === 0) { showError('Your cart is empty.'); return; }
+      // Read the visitor language at call time — toasts fire outside render.
+      const t = (key: Parameters<typeof sft>[1]) => sft(getVisitorLang(), key);
+      if (!shopDetails) { showError(t('shopNotLoaded')); return; }
+      if (cartItems.length === 0) { showError(t('emptyCart')); return; }
 
       setIsSubmitting(true);
-      const toastId = toast.loading('Placing your order...');
+      const toastId = toast.loading(t('placingYourOrder'));
       try {
         const orderPayload = {
           shopSlug: shopDetails.slug,
@@ -78,7 +81,7 @@ export const useCheckout = (onDone?: () => void) => {
           // already placed (stock reserved, payment 'processing'); the gateway
           // redirect brings the customer back to their orders page, where the
           // webhook-settled payment status shows up.
-          toast.loading('Redirecting to secure payment…', { id: toastId });
+          toast.loading(t('redirectingPayment'), { id: toastId });
           const returnUrl = `${window.location.origin}/shop/${shopDetails.slug}/orders`;
           const { data: payRes, error: payErr } = await supabase.functions.invoke('create-order-payment', {
             body: { orderId: responseData.order.id, shopSlug: shopDetails.slug, returnUrl },
@@ -92,13 +95,13 @@ export const useCheckout = (onDone?: () => void) => {
           return;
         }
 
-        toast.success('Order placed! Redirecting to your orders.', { id: toastId });
+        toast.success(t('orderPlaced'), { id: toastId });
         clearCart();
         onDone?.();
         navigate(`/shop/${shopDetails.slug}/orders?orderId=${responseData.order.id}`);
       } catch (err: any) {
         console.error('Checkout failed:', err);
-        toast.error(`Failed to place order: ${err.message || 'An unexpected error occurred.'}`, { id: toastId });
+        toast.error(`${t('orderFailed')}: ${err.message || ''}`, { id: toastId });
       } finally {
         setIsSubmitting(false);
       }

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
 import { SfButton } from '../components/SfButton';
+import { useSfT } from '../lib/visitorPrefs';
 
 /* ── Value props ───────────────────────────────────────────────────────── */
 // variant: row (slim inline strip) | cards (glass tiles)
@@ -20,7 +21,13 @@ const VALUE_ICONS: Record<string, any> = { truck: Truck, shield: ShieldCheck, ch
 interface ValueItem { icon?: string; title: string; text?: string }
 
 export const ValuePropsBlock = ({ props }: { props: { variant?: 'row' | 'cards'; items?: ValueItem[] } }) => {
-  const items: ValueItem[] = props.items?.length ? props.items : DEFAULT_VALUE_ITEMS;
+  const { ld } = useSfT();
+  // Localize the seeded English defaults; merchant-customized copy passes through.
+  const items: ValueItem[] = (props.items?.length ? props.items : DEFAULT_VALUE_ITEMS).map((it) => ({
+    ...it,
+    title: ld(it.title, 'fastDelivery'),
+    text: it.text ? ld(it.text, 'fastDeliverySub') : it.text,
+  }));
   const variant = props.variant ?? 'row';
 
   // Trust signals are INFORMATION, not controls — no borders, shadows or
@@ -88,7 +95,8 @@ export const ValuePropsBlock = ({ props }: { props: { variant?: 'row' | 'cards';
 // own about text so it's never empty on a fresh store.
 export const RichTextBlock = ({ props }: { props: { variant?: 'centered' | 'split'; title?: string; body?: string } }) => {
   const { shopDetails } = useStorefront();
-  const title = props.title || `About ${shopDetails?.shop_name ?? 'us'}`;
+  const { t } = useSfT();
+  const title = props.title || `${t('about')} ${shopDetails?.shop_name ?? ''}`.trim();
   const body = props.body || shopDetails?.about;
   if (!body) return null;
 
@@ -114,6 +122,7 @@ export const RichTextBlock = ({ props }: { props: { variant?: 'centered' | 'spli
 export const PromoBannerBlock = ({ props }: { props: { variant?: 'gradient' | 'outline'; heading?: string; text?: string; ctaLabel?: string } }) => {
   const { shopDetails } = useStorefront();
   const config = useStorefrontConfig();
+  const { t, ld } = useSfT();
   if (!shopDetails) return null;
   const heading = props.heading || shopDetails.headline;
   if (!heading) return null;
@@ -136,7 +145,7 @@ export const PromoBannerBlock = ({ props }: { props: { variant?: 'gradient' | 'o
         </div>
         <SfButton asChild size="lg" className="shrink-0">
           <Link to={to} className="group/cta">
-            {props.ctaLabel || 'Shop Now'}
+            {ld(props.ctaLabel, 'shopNow')}
             <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover/cta:translate-x-1" />
           </Link>
         </SfButton>
@@ -164,7 +173,7 @@ export const PromoBannerBlock = ({ props }: { props: { variant?: 'gradient' | 'o
 
       <div className="relative">
         <span className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-primary-foreground/15 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary-foreground backdrop-blur-sm">
-          <Sparkles className="h-3.5 w-3.5" /> {props.ctaLabel ? 'Special offer' : 'Don’t miss out'}
+          <Sparkles className="h-3.5 w-3.5" /> {props.ctaLabel ? t('specialOffer') : t('dontMissOut')}
         </span>
         <h2 className="sf-heading mx-auto max-w-2xl text-2xl font-bold text-primary-foreground drop-shadow-sm md:text-4xl">{heading}</h2>
         {props.text && <p className="mx-auto mt-3 max-w-xl text-sm text-primary-foreground/85 md:text-base">{props.text}</p>}
@@ -176,7 +185,7 @@ export const PromoBannerBlock = ({ props }: { props: { variant?: 'gradient' | 'o
             to={to}
             className="group/cta inline-flex h-12 items-center rounded-full bg-white px-8 text-base font-semibold text-zinc-900 shadow-xl transition-all duration-200 hover:scale-[1.04] hover:shadow-2xl"
           >
-            {props.ctaLabel || 'Shop Now'}
+            {ld(props.ctaLabel, 'shopNow')}
             <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover/cta:translate-x-1" />
           </Link>
         </div>

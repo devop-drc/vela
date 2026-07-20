@@ -13,7 +13,7 @@ import { formatCurrency } from '@/lib/formatters';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { useStorefrontConfig, useStorefrontTokenStyle } from '../theme/StorefrontThemeProvider';
 import { SfButton } from '../components/SfButton';
-import { useSfT } from '../lib/visitorPrefs';
+import { useSfT, sfStatus, useVisitorLang } from '../lib/visitorPrefs';
 import LeaveReviewDialog from '@/components/storefront/ProductReviews';
 import { OrderSuccessOverlay } from '@/components/storefront/OrderSuccessOverlay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -32,12 +32,16 @@ const STATUS_COLORS: Record<string, string> = {
   Cancelled: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400',
 };
 
-/** Pill status chip, sized like the .sf-badge element but semantically colored. */
-const StatusChip = ({ status }: { status: string }) => (
-  <span className={cn('inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold leading-none', STATUS_COLORS[status] || 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400')}>
-    {status}
-  </span>
-);
+/** Pill status chip, sized like the .sf-badge element but semantically colored.
+    Colors key off the raw DB status; the label follows the visitor language. */
+const StatusChip = ({ status }: { status: string }) => {
+  const lang = useVisitorLang();
+  return (
+    <span className={cn('inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold leading-none', STATUS_COLORS[status] || 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400')}>
+      {sfStatus(lang, status)}
+    </span>
+  );
+};
 
 /** Overlapping product thumbnails for an order row (up to 4, then +N). */
 const OrderThumbs = ({ items }: { items: any[] }) => {
@@ -80,8 +84,8 @@ export const OrdersPage = () => {
   useEffect(() => {
     const p = params.get('payment');
     if (!p || p === 'success') return;
-    if (p === 'cancelled') toast.info('Payment was cancelled. Your order is saved — you can retry or contact the shop.');
-    else toast.error('Payment failed. Your order is saved — please try again or contact the shop.');
+    if (p === 'cancelled') toast.info(t('paymentCancelled'));
+    else toast.error(t('paymentFailed'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [email, setEmail] = useState('');
@@ -115,7 +119,7 @@ export const OrdersPage = () => {
     if (!customerEmail && ids.length === 0) return;
     // Guest lookups need email + order number together (server enforces it too).
     if (customerEmail && !orderNumber?.trim() && ids.length === 0) {
-      setErr('Enter both your email and the order number from your confirmation.');
+      setErr(t('lookupHint'));
       return;
     }
     setLoading(true);
@@ -133,7 +137,7 @@ export const OrdersPage = () => {
       setOrders(data?.customerOrders || []);
     } catch (e) {
       console.error('Order lookup failed', e);
-      setErr("We couldn't load your orders. Please check your connection and try again.");
+      setErr(t('ordersLoadError'));
     } finally {
       setLoading(false);
     }
@@ -217,7 +221,7 @@ export const OrdersPage = () => {
             <div key={o.id} className="sf-glass overflow-hidden">
               <button onClick={() => setExpanded(o.id)} className="w-full flex items-center justify-between gap-3 p-4 text-left">
                 <div className="min-w-0">
-                  <p className="font-semibold">Order #{o.id.substring(0, 8)}</p>
+                  <p className="font-semibold">{t('order')} #{o.id.substring(0, 8)}</p>
                   <p className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleDateString()} · {formatCurrency(o.total_amount, o.currency)}</p>
                   <div className="mt-2"><OrderThumbs items={o.order_items} /></div>
                 </div>
@@ -246,11 +250,11 @@ export const OrdersPage = () => {
             >
               <DialogHeader>
                 <DialogTitle className="sf-heading flex flex-wrap items-center gap-2 text-lg">
-                  Order #{o.id.substring(0, 8)} <StatusChip status={o.status} />
+                  {t('order')} #{o.id.substring(0, 8)} <StatusChip status={o.status} />
                 </DialogTitle>
               </DialogHeader>
               <p className="text-xs text-muted-foreground -mt-2">
-                Placed {new Date(o.created_at).toLocaleDateString()} · {o.payment_method === 'cash_on_delivery' ? 'Cash on delivery' : 'Card payment'}
+                {t('placedOn')} {new Date(o.created_at).toLocaleDateString()} · {o.payment_method === 'cash_on_delivery' ? t('cashOnDelivery') : t('cardPayment')}
               </p>
               <div className="divide-y">
                 {(o.order_items || []).map((it: any, i: number) => {
@@ -263,22 +267,22 @@ export const OrdersPage = () => {
                     <div key={i} className="flex items-start gap-3 py-3">
                       <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-lg border bg-muted">
                         {it.products?.media_url
-                          ? <MediaItem src={it.products.media_url} alt={it.products?.name || 'Item'} className="h-full w-full object-cover" />
+                          ? <MediaItem src={it.products.media_url} alt={it.products?.name || t('item')} className="h-full w-full object-cover" />
                           : <Package className="h-5 w-5 text-muted-foreground" />}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium leading-snug">{it.products?.name || 'Item'}</p>
+                        <p className="text-sm font-medium leading-snug">{it.products?.name || t('item')}</p>
                         {opts && <p className="mt-0.5 text-xs text-muted-foreground">{opts}</p>}
                         <p className="mt-0.5 text-xs text-muted-foreground">{formatCurrency(it.price_at_purchase, o.currency)} × {it.quantity}</p>
                         {canReview && (
                           alreadyReviewed ? (
-                            <span className="mt-1 inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400"><Star className="h-3.5 w-3.5 fill-emerald-500 text-emerald-500" /> Reviewed</span>
+                            <span className="mt-1 inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400"><Star className="h-3.5 w-3.5 fill-emerald-500 text-emerald-500" /> {t('reviewedLabel')}</span>
                           ) : (
                             <SfButton
                               variant="outline" size="sm" className="mt-1.5 h-7 px-2 text-xs"
                               onClick={() => setReviewTarget({ orderId: o.id, productId: it.product_id, productName: it.products?.name || 'this product', customerEmail: o.customer_email })}
                             >
-                              <Star className="mr-1 h-3.5 w-3.5" /> Leave review
+                              <Star className="mr-1 h-3.5 w-3.5" /> {t('leaveReview')}
                             </SfButton>
                           )
                         )}
@@ -294,7 +298,7 @@ export const OrdersPage = () => {
                 <div className="flex justify-between font-semibold"><span>{t('total')}</span><span>{formatCurrency(o.total_amount, o.currency)}</span></div>
               </div>
               {o.shipping_address && (
-                <p className="text-xs text-muted-foreground">Ship to: {o.shipping_address}, {o.shipping_city}{o.shipping_zip ? ` ${o.shipping_zip}` : ''}, {o.shipping_country}</p>
+                <p className="text-xs text-muted-foreground">{t('shipTo')}: {o.shipping_address}, {o.shipping_city}{o.shipping_zip ? ` ${o.shipping_zip}` : ''}, {o.shipping_country}</p>
               )}
             </DialogContent>
           </Dialog>

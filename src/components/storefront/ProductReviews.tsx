@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
+import { useSfT } from "@/storefront/lib/visitorPrefs";
 
 interface LeaveReviewDialogProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ export const LeaveReviewDialog = ({
   const [hover, setHover] = useState(0);
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { t } = useSfT();
 
   const reset = () => {
     setRating(0);
@@ -44,7 +46,7 @@ export const LeaveReviewDialog = ({
 
   const handleSubmit = async () => {
     if (rating < 1) {
-      showError("Please select a star rating.");
+      showError(t('selectRating'));
       return;
     }
     setIsSubmitting(true);
@@ -54,12 +56,12 @@ export const LeaveReviewDialog = ({
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      showSuccess(data?.message || "Thanks for your review!");
+      showSuccess(data?.message || t('reviewThanks'));
       onSubmitted?.(productId);
       reset();
       onClose();
     } catch (err: any) {
-      showError(err.message || "Failed to submit review.");
+      showError(err.message || t('reviewFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -69,8 +71,8 @@ export const LeaveReviewDialog = ({
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { reset(); onClose(); } }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Review “{productName}”</DialogTitle>
-          <DialogDescription>Share your experience with this product.</DialogDescription>
+          <DialogTitle>{t('reviewProduct')} “{productName}”</DialogTitle>
+          <DialogDescription>{t('shareExperience')}</DialogDescription>
         </DialogHeader>
 
         <div className="flex items-center justify-center gap-1 py-2">
@@ -97,15 +99,15 @@ export const LeaveReviewDialog = ({
         <Textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Tell others what you liked (optional)…"
+          placeholder={t('reviewPlaceholder')}
           rows={4}
           maxLength={2000}
         />
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => { reset(); onClose(); }}>Cancel</Button>
+          <Button variant="ghost" onClick={() => { reset(); onClose(); }}>{t('cancel')}</Button>
           <Button onClick={handleSubmit} disabled={isSubmitting || rating < 1}>
-            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting…</> : <><Send className="mr-2 h-4 w-4" /> Submit Review</>}
+            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('submitting')}</> : <><Send className="mr-2 h-4 w-4" /> {t('submitReview')}</>}
           </Button>
         </DialogFooter>
       </DialogContent>

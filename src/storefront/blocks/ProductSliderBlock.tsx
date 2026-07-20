@@ -14,12 +14,14 @@ import { useStorefront } from '@/contexts/StorefrontContext';
 import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
 import { ProductCard, ProductLike } from '../components/ProductCard';
 import { SectionHeader } from '../components/SectionHeader';
+import { useSfT, type SfKey } from '../lib/visitorPrefs';
 
 type Source = 'bestSellers' | 'newArrivals' | 'recommended';
 type Variant = 'peek' | 'centered' | 'wide';
 
 const ICONS: Record<Source, any> = { bestSellers: Crown, newArrivals: Sparkles, recommended: Gift };
-const EYEBROWS: Record<Source, string> = { bestSellers: 'Most loved', newArrivals: 'Just in', recommended: 'For you' };
+const TITLE_KEYS: Record<Source, SfKey> = { bestSellers: 'bestSellers', newArrivals: 'newArrivals', recommended: 'recommendedForYou' };
+const EYEBROW_KEYS: Record<Source, SfKey> = { bestSellers: 'mostLoved', newArrivals: 'justIn', recommended: 'forYou' };
 
 interface Props { props: { source?: Source; title?: string; variant?: Variant; limit?: number } }
 
@@ -28,6 +30,7 @@ const mod = (v: number, s: number) => ((v % s) + s) % s;
 export const ProductSliderBlock = ({ props }: Props) => {
   const { products, bestSellers, recommendedProducts, shopDetails } = useStorefront();
   const config = useStorefrontConfig();
+  const { t, ld } = useSfT();
   const railRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const [mult, setMult] = useState(2);
@@ -185,10 +188,10 @@ export const ProductSliderBlock = ({ props }: Props) => {
   return (
     <div>
       <SectionHeader
-        title={props.title}
+        title={ld(props.title, TITLE_KEYS[source])}
         icon={ICONS[source]}
-        eyebrow={EYEBROWS[source]}
-        action={{ label: 'View all', to: `/shop/${shopDetails.slug}/products?sort=${source}` }}
+        eyebrow={t(EYEBROW_KEYS[source])}
+        action={{ label: t('viewAll'), to: `/shop/${shopDetails.slug}/products?sort=${source}` }}
       />
       <div className="relative">
         <div

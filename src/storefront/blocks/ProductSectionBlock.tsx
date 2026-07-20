@@ -16,11 +16,14 @@ import { ProductCard, ProductLike } from '../components/ProductCard';
 import { SectionHeader } from '../components/SectionHeader';
 import { SfButton } from '../components/SfButton';
 import { activePromotionsFor, computePrice } from '../lib/pricing';
+import { useSfT, type SfKey } from '../lib/visitorPrefs';
 
 type Source = 'bestSellers' | 'newArrivals' | 'recommended';
 type Display = 'carousel' | 'grid' | 'masonry' | 'editorial';
 
 const ICONS: Record<Source, any> = { bestSellers: Crown, newArrivals: Sparkles, recommended: Gift };
+const TITLE_KEYS: Record<Source, SfKey> = { bestSellers: 'bestSellers', newArrivals: 'newArrivals', recommended: 'recommendedForYou' };
+const EYEBROW_KEYS: Record<Source, SfKey> = { bestSellers: 'mostLoved', newArrivals: 'justIn', recommended: 'forYou' };
 
 // Masonry rhythm: image aspects cycle so columns break at different heights.
 const MASONRY_RATIOS = ['aspect-[3/4]', 'aspect-square', 'aspect-[4/5]', 'aspect-[5/6]', 'aspect-square', 'aspect-[3/4]'];
@@ -29,6 +32,7 @@ interface Props { props: { source?: Source; title?: string; display?: Display; l
 
 export const ProductSectionBlock = ({ props }: Props) => {
   const config = useStorefrontConfig();
+  const { t, ld } = useSfT();
   const { products, bestSellers, recommendedProducts, shopDetails, convertCurrency, promotions } = useStorefront();
   const railRef = useDragToScroll<HTMLDivElement>();
   const source = props.source ?? 'newArrivals';
@@ -47,13 +51,12 @@ export const ProductSectionBlock = ({ props }: Props) => {
   const Icon = ICONS[source];
   const cols = config.layout.productGrid.columns;
 
-  const EYEBROWS: Record<Source, string> = { bestSellers: 'Most loved', newArrivals: 'Just in', recommended: 'For you' };
   const heading = (
     <SectionHeader
-      title={props.title}
+      title={ld(props.title, TITLE_KEYS[source])}
       icon={Icon}
-      eyebrow={EYEBROWS[source]}
-      action={{ label: 'View all', to: `/shop/${shopDetails.slug}/products?sort=${source}` }}
+      eyebrow={t(EYEBROW_KEYS[source])}
+      action={{ label: t('viewAll'), to: `/shop/${shopDetails.slug}/products?sort=${source}` }}
     />
   );
 
@@ -101,7 +104,7 @@ export const ProductSectionBlock = ({ props }: Props) => {
                     <span className="text-2xl font-bold text-primary">{price != null ? formatCurrency(price, shopDetails.currency) : ''}</span>
                   </div>
                   <SfButton asChild>
-                    <Link to={`/shop/${shopDetails.slug}/product/${p.id}`}>View Product <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                    <Link to={`/shop/${shopDetails.slug}/product/${p.id}`}>{t('viewProduct')} <ArrowRight className="ml-2 h-4 w-4" /></Link>
                   </SfButton>
                 </div>
               </div>

@@ -11,33 +11,35 @@ import { MediaItem } from '@/components/MediaItem';
 import { getCategoryIcon } from '@/lib/categoryIcons';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { SectionHeader } from '../components/SectionHeader';
+import { useSfT } from '../lib/visitorPrefs';
 
 type Variant = 'tiles' | 'pills' | 'mosaic';
 interface Props { props: { title?: string; variant?: Variant } }
 
 export const CategoryGridBlock = ({ props }: Props) => {
   const { products, shopDetails } = useStorefront();
+  const { t, ld, lang } = useSfT();
   const variant: Variant = props.variant ?? 'tiles';
 
   const categories = useMemo(() => {
     const m = new Map<string, { count: number; img?: string }>();
     (products || []).forEach((p) => {
-      const c = p.category || 'Uncategorized';
+      const c = p.category || t('uncategorized');
       const cur = m.get(c) || { count: 0 };
       const img = p.thumbnail_url || p.media_gallery?.[0] || p.media_url;
       m.set(c, { count: cur.count + 1, img: cur.img || (p.media_type !== 'video' ? img : cur.img) });
     });
     return Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [products]);
+  }, [products, lang]);
 
   if (!shopDetails || categories.length === 0) return null;
 
   const heading = (
     <SectionHeader
-      title={props.title || 'Shop by Category'}
+      title={ld(props.title, 'shopByCategory')}
       icon={Package}
-      eyebrow="Browse"
-      action={{ label: 'All products', to: `/shop/${shopDetails.slug}/products` }}
+      eyebrow={t('browse')}
+      action={{ label: t('allProducts'), to: `/shop/${shopDetails.slug}/products` }}
     />
   );
   const linkTo = (category: string) => `/shop/${shopDetails.slug}/products?category=${encodeURIComponent(category)}`;

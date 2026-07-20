@@ -83,7 +83,7 @@ export const ProductDetailPage = () => {
     return (
       <div className="sf-container py-16 flex flex-col items-center justify-center gap-3 text-muted-foreground">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="text-sm">Loading product…</p>
+        <p className="text-sm">{t('loadingProduct')}</p>
       </div>
     );
   }
@@ -91,8 +91,8 @@ export const ProductDetailPage = () => {
   if (!product) {
     return (
       <div className="sf-container py-16 text-center text-muted-foreground">
-        <h1 className="sf-heading text-2xl font-bold">Product Not Found</h1>
-        <SfButton asChild className="mt-4"><Link to={`/shop/${shopSlug}/products`}><Home className="mr-2 h-4 w-4" /> Back to Shop</Link></SfButton>
+        <h1 className="sf-heading text-2xl font-bold">{t('productNotFound')}</h1>
+        <SfButton asChild className="mt-4"><Link to={`/shop/${shopSlug}/products`}><Home className="mr-2 h-4 w-4" /> {t('backToShop')}</Link></SfButton>
       </div>
     );
   }
@@ -113,10 +113,10 @@ export const ProductDetailPage = () => {
     .map(([k, vals]) => [filterKeyTitle(k), vals] as [string, string[]]);
 
   const addToCartHandler = (sourceEl?: HTMLElement) => {
-    if (isOutOfStock) { toast.error('This product is currently out of stock.'); return; }
+    if (isOutOfStock) { toast.error(t('outOfStockToast')); return; }
     // Require a choice for every option group (color/size/material) before adding.
     const missing = options.find(([key]) => !selected[key]);
-    if (missing) { toast.error(`Please choose a ${missing[0]} first.`); return; }
+    if (missing) { toast.error(`${t('choosePrefix')} ${missing[0]} ${t('chooseSuffix')}`); return; }
     if (sourceEl) flyToCart(sourceEl, product.media_type === 'video' ? undefined : product.media_url);
     addToCart({
       productId: product.id, name: product.name,

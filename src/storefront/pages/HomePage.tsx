@@ -7,10 +7,12 @@ import { useStorefront } from '@/contexts/StorefrontContext';
 import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
 import { SectionRenderer } from '../blocks/SectionRenderer';
 import { SfButton } from '../components/SfButton';
+import { useSfT } from '../lib/visitorPrefs';
 
 export const HomePage = () => {
   const { shopDetails, products, isLoading, isLoadingMore, hasMoreProducts, bestSellers, recommendedProducts, error } = useStorefront();
   const config = useStorefrontConfig();
+  const { t } = useSfT();
 
   if (isLoading) {
     return (
@@ -26,7 +28,7 @@ export const HomePage = () => {
   }
 
   if (error) return <div className="sf-container py-8 text-destructive">{error}</div>;
-  if (!shopDetails) return <div className="sf-container py-8 text-center text-muted-foreground">Shop details not found.</div>;
+  if (!shopDetails) return <div className="sf-container py-8 text-center text-muted-foreground">{t('shopNotFound')}</div>;
 
   // Only show the empty state once loading has genuinely finished AND there is
   // truly nothing to display from any source (main products, best sellers, or
@@ -43,11 +45,11 @@ export const HomePage = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center text-muted-foreground p-8">
         <Wrench className="h-24 w-24 text-primary mb-8" />
-        <h1 className="sf-heading text-4xl font-bold mb-4">Store Under Construction</h1>
-        <p className="text-lg max-w-xl mb-8">We're busy curating amazing products for you! Our shop will be available soon.</p>
+        <h1 className="sf-heading text-4xl font-bold mb-4">{t('underConstruction')}</h1>
+        <p className="text-lg max-w-xl mb-8">{t('underConstructionSub')}</p>
         {shopDetails.contact_email && (
           <SfButton asChild variant="outline" size="lg">
-            <a href={`mailto:${shopDetails.contact_email}`} className="flex items-center gap-2"><Mail className="h-5 w-5" /> Contact Us</a>
+            <a href={`mailto:${shopDetails.contact_email}`} className="flex items-center gap-2"><Mail className="h-5 w-5" /> {t('contactUs')}</a>
           </SfButton>
         )}
       </div>

@@ -7,6 +7,7 @@ import { MediaItem } from '@/components/MediaItem';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { useStorefrontConfig } from '../theme/StorefrontThemeProvider';
 import { SfButton } from '../components/SfButton';
+import { useSfT } from '../lib/visitorPrefs';
 
 type HeroVariant = 'banner' | 'compact' | 'full' | 'split' | 'minimal' | 'gradient' | 'collage' | 'editorial' | 'slideshow' | 'split-slideshow' | 'marquee-type' | 'video';
 interface Props { props: { variant?: HeroVariant; showLogo?: boolean; ctaLabel?: string; slideshowImages?: string; slideInterval?: number } }
@@ -37,6 +38,7 @@ const Slideshow = ({ sources, intervalMs }: { sources: string[]; intervalMs: num
 export const HeroBlock = ({ props }: Props) => {
   const { shopDetails, products } = useStorefront();
   const config = useStorefrontConfig();
+  const { ld } = useSfT();
 
   // Slideshow sources: owner-picked URLs (one per line in the Studio) win;
   // otherwise the newest product photos roll.
@@ -88,7 +90,7 @@ export const HeroBlock = ({ props }: Props) => {
 
   const cta = (
     <SfButton asChild size="lg" className="text-base px-6 py-5 shadow-xl hover:scale-105 transition-transform">
-      <Link to={`/shop/${shopDetails.slug}/products`}>{props.ctaLabel || 'Shop Now'} <ArrowRight className="ml-2 h-4 w-4" /></Link>
+      <Link to={`/shop/${shopDetails.slug}/products`}>{ld(props.ctaLabel, 'shopNow')} <ArrowRight className="ml-2 h-4 w-4" /></Link>
     </SfButton>
   );
 

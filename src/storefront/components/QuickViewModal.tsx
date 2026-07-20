@@ -70,9 +70,9 @@ export const QuickViewModal = ({ product, open, onOpenChange }: Props) => {
   const detailPath = shopDetails ? `/shop/${shopDetails.slug}/product/${product.id}` : '#';
 
   const handleAdd = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (isOutOfStock) { toast.error('This product is currently out of stock.'); return; }
+    if (isOutOfStock) { toast.error(t('outOfStockToast')); return; }
     const missing = options.find(([key]) => !selected[key]);
-    if (missing) { toast.error(`Please choose a ${missing[0]} first.`); return; }
+    if (missing) { toast.error(`${t('choosePrefix')} ${missing[0]} ${t('chooseSuffix')}`); return; }
     flyToCart(e.currentTarget, product.media_type === 'video' ? undefined : media[activeImg] || product.media_url);
     addToCart({
       productId: product.id, name: product.name,
@@ -203,7 +203,7 @@ export const QuickViewModal = ({ product, open, onOpenChange }: Props) => {
                 <button
                   type="button"
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  aria-label="Decrease quantity"
+                  aria-label={t('decreaseQty')}
                   className="grid h-10 w-10 place-items-center text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
                   disabled={quantity <= 1}
                 >
@@ -213,7 +213,7 @@ export const QuickViewModal = ({ product, open, onOpenChange }: Props) => {
                 <button
                   type="button"
                   onClick={() => setQuantity((q) => q + 1)}
-                  aria-label="Increase quantity"
+                  aria-label={t('increaseQty')}
                   className="grid h-10 w-10 place-items-center text-muted-foreground transition-colors hover:text-foreground"
                 >
                   <Plus className="h-4 w-4" />

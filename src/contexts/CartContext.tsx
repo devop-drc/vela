@@ -2,6 +2,10 @@ import React, { createContext, useState, useContext, useEffect, useCallback, use
 import { supabase } from '@/integrations/supabase/client';
 import { useStorefront } from './StorefrontContext';
 import { showSuccess } from '@/utils/toast';
+import { sft, getVisitorLang } from '@/storefront/lib/visitorPrefs';
+
+// Toasts fire outside render — read the visitor language at call time.
+const ct = (key: Parameters<typeof sft>[1]) => sft(getVisitorLang(), key);
 
 export interface CartItem {
   uid: string; // stable identifier for a unique line (product + variant options)
@@ -117,10 +121,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isDiscounted: item.isDiscounted,
           currency,
         };
-        setTimeout(() => showSuccess(`${item.name} quantity updated in cart!`), 0);
+        setTimeout(() => showSuccess(`${item.name} ${ct('qtyUpdatedSuffix')}`), 0);
         return updated;
       }
-      setTimeout(() => showSuccess(`${item.name} added to cart!`), 0);
+      setTimeout(() => showSuccess(`${item.name} ${ct('addedToCartSuffix')}`), 0);
       return [
         ...prevItems,
         {
@@ -160,19 +164,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeFromCart = useCallback((uid: string) => {
     setCartItems(prevItems => prevItems.filter(item => item.uid !== uid));
-    setTimeout(() => showSuccess("Item removed from cart."), 0);
+    setTimeout(() => showSuccess(ct('itemRemoved')), 0);
   }, []);
 
   const clearCart = useCallback(() => {
     setCartItems([]);
-    setTimeout(() => showSuccess("Cart cleared."), 0);
+    setTimeout(() => showSuccess(ct('cartCleared')), 0);
   }, []);
 
   const saveForLater = useCallback((item: CartItem) => {
     setCartItems(prevItems => prevItems.filter(cartItem => cartItem.uid !== item.uid));
     setSavedItems(prevItems => {
       if (!prevItems.some(savedItem => savedItem.uid === item.uid)) {
-        setTimeout(() => showSuccess(`${item.name} saved for later.`), 0);
+        setTimeout(() => showSuccess(`${item.name} ${ct('savedForLaterSuffix')}`), 0);
         return [...prevItems, item];
       }
       return prevItems;
@@ -186,12 +190,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // add can't silently drop the item.
     await addToCart(itemToMove, itemToMove.quantity);
     setSavedItems(prev => prev.filter(item => item.uid !== uid));
-    showSuccess(`${itemToMove.name} moved to cart.`);
+    showSuccess(`${itemToMove.name} ${ct('movedToCartSuffix')}`);
   }, [savedItems, addToCart]);
 
   const removeSavedItem = useCallback((uid: string) => {
     setSavedItems(prevItems => prevItems.filter(item => item.uid !== uid));
-    setTimeout(() => showSuccess("Saved item removed."), 0);
+    setTimeout(() => showSuccess(ct('savedItemRemoved')), 0);
   }, []);
 
   const totalItems = useMemo(() => cartItems.reduce((sum, item) => sum + item.quantity, 0), [cartItems]);

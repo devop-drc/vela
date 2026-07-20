@@ -212,9 +212,9 @@ export const AddToCartBlock = () => {
     <div>
       <div className="flex items-center gap-3">
         <div className="flex items-center border rounded-md h-11">
-          <button aria-label="Decrease quantity" onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="h-full w-10 flex items-center justify-center"><Minus className="h-4 w-4" /></button>
+          <button aria-label={t('decreaseQty')} onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="h-full w-10 flex items-center justify-center"><Minus className="h-4 w-4" /></button>
           <span className="w-12 text-center tabular-nums">{quantity}</span>
-          <button aria-label="Increase quantity" onClick={() => setQuantity((q) => Math.min(99, q + 1))} className="h-full w-10 flex items-center justify-center"><Plus className="h-4 w-4" /></button>
+          <button aria-label={t('increaseQty')} onClick={() => setQuantity((q) => Math.min(99, q + 1))} className="h-full w-10 flex items-center justify-center"><Plus className="h-4 w-4" /></button>
         </div>
         <SfButton size="lg" className="flex-1" disabled={isOutOfStock} onClick={(e) => addToCartHandler(e.currentTarget)}>
           <ShoppingCart className="mr-2 h-5 w-5" /> {isOutOfStock ? t('soldOut') : t('addToCart')}
@@ -282,7 +282,7 @@ const Stars = ({ value, className }: { value: number; className?: string }) => (
 export const ReviewsBlock = ({ props }: { props: { title?: string } }) => {
   const { product } = useProductDetail();
   const { capabilities } = useStorefront();
-  const { t } = useSfT();
+  const { t, ld } = useSfT();
   const [reviews, setReviews] = useState<Review[] | null>(null);
 
   useEffect(() => {
@@ -307,7 +307,7 @@ export const ReviewsBlock = ({ props }: { props: { title?: string } }) => {
   return (
     <section className="mt-16">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-6">
-        <h2 className="sf-heading text-2xl font-bold">{props.title || t('reviews')}</h2>
+        <h2 className="sf-heading text-2xl font-bold">{ld(props.title, 'reviews')}</h2>
         {reviews.length > 0 && (
           <span className="flex items-center gap-2 text-sm text-muted-foreground">
             <Stars value={avg} /> {avg.toFixed(1)} · {reviews.length} {reviews.length === 1 ? t('review') : t('reviewsWord')}
@@ -342,12 +342,13 @@ export const ReviewsBlock = ({ props }: { props: { title?: string } }) => {
 
 /* ── Related products ──────────────────────────────────────────────────── */
 export const RelatedProductsBlock = ({ props }: { props: { title?: string } }) => {
+  const { ld } = useSfT();
   const config = useStorefrontConfig();
   const { related } = useProductDetail();
   if (related.length === 0) return null;
   return (
     <section className="mt-16">
-      <h2 className="sf-heading text-2xl font-bold mb-6">{props.title || 'You may also like'}</h2>
+      <h2 className="sf-heading text-2xl font-bold mb-6">{ld(props.title, 'youMayAlsoLike')}</h2>
       <div className={cn('grid gap-[var(--sf-grid-gap)] grid-cols-2 sm:grid-cols-3', config.layout.productGrid.columns >= 4 && 'lg:grid-cols-4')}>
         {related.map((p) => <ProductCard key={p.id} product={p} />)}
       </div>

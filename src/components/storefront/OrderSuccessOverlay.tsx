@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 import confetti from "canvas-confetti";
 import { motion } from "framer-motion";
 import { Check, PartyPopper } from "lucide-react";
+import { useSfT } from "@/storefront/lib/visitorPrefs";
 
 interface Props {
   orderNumber?: string | null;
@@ -19,6 +20,7 @@ interface Props {
 
 export const OrderSuccessOverlay = ({ orderNumber, onContinue, title, subtitle, ctaLabel }: Props) => {
   const fired = useRef(false);
+  const { t } = useSfT();
 
   useEffect(() => {
     if (fired.current) return;
@@ -40,7 +42,7 @@ export const OrderSuccessOverlay = ({ orderNumber, onContinue, title, subtitle, 
       animate={{ opacity: 1 }}
       className="fixed inset-0 z-[210] flex flex-col items-center justify-center bg-background/95 px-6 text-center backdrop-blur-sm"
       role="dialog"
-      aria-label={title || "Payment successful"}
+      aria-label={title || t('paymentSuccess')}
     >
       <motion.div
         initial={{ scale: 0, rotate: -20 }}
@@ -57,7 +59,7 @@ export const OrderSuccessOverlay = ({ orderNumber, onContinue, title, subtitle, 
         transition={{ delay: 0.25 }}
         className="mt-6 flex items-center gap-2 text-2xl font-bold tracking-tight"
       >
-        <PartyPopper className="h-6 w-6 text-amber-500" /> {title || "Payment successful!"}
+        <PartyPopper className="h-6 w-6 text-amber-500" /> {title || t('paymentSuccess')}
       </motion.h1>
 
       <motion.p
@@ -66,7 +68,7 @@ export const OrderSuccessOverlay = ({ orderNumber, onContinue, title, subtitle, 
         transition={{ delay: 0.35 }}
         className="mt-2 max-w-sm text-sm text-muted-foreground"
       >
-        {subtitle || "Thank you for your purchase — your order is confirmed and the shop is on it."}
+        {subtitle || t('paymentSuccessSub')}
       </motion.p>
 
       {orderNumber && (
@@ -76,7 +78,7 @@ export const OrderSuccessOverlay = ({ orderNumber, onContinue, title, subtitle, 
           transition={{ delay: 0.45 }}
           className="mt-4 rounded-full border bg-card px-4 py-1.5 font-mono text-sm font-semibold"
         >
-          Order #{orderNumber}
+          {t('order')} #{orderNumber}
         </motion.p>
       )}
 
@@ -87,7 +89,7 @@ export const OrderSuccessOverlay = ({ orderNumber, onContinue, title, subtitle, 
         onClick={onContinue}
         className="mt-8 rounded-full bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-105"
       >
-        {ctaLabel || "Show my orders"}
+        {ctaLabel || t('showMyOrders')}
       </motion.button>
     </motion.div>
   );
