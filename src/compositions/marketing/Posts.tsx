@@ -12,7 +12,7 @@
  */
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig, Easing } from "remotion";
-import { BRAND, CLASH, SATOSHI, GRAD, GRAD_TEXT, NightShell, Cta, springy, rise, exitUp, OrderNotif, StatTile } from "./mkKit";
+import { BRAND, CLASH, SATOSHI, GRAD, GRAD_TEXT, NightShell, Cta, springy, rise, exitUp, OrderNotif, StatTile, CurrencyRoll } from "./mkKit";
 
 const clamp = (f: number, a: [number, number], b: [number, number], ease?: (t: number) => number) =>
   interpolate(f, a, b, { extrapolateLeft: "clamp", extrapolateRight: "clamp", ...(ease ? { easing: ease } : {}) });
@@ -53,7 +53,8 @@ export const PostOrders: React.FC = () => {
           </div>
           <div style={{ ...rise(springy(frame, fps, 126)), textAlign: "center", fontFamily: CLASH, fontWeight: 700, fontSize: 66, color: "#fff", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
             Porosi online.<br />
-            <span style={{ backgroundImage: GRAD_TEXT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>Pagesa me kartë, në Lekë.</span>
+            <span style={{ backgroundImage: GRAD_TEXT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>Pagesa me kartë, në </span>
+            <CurrencyRoll size={66} gradient width={290} style={{ textAlign: "left" }} />
           </div>
         </AbsoluteFill>
       )}

@@ -17,6 +17,8 @@ import { Footer } from '../components/Footer';
 import { BottomNav } from '../components/BottomNav';
 import { Cart, CartUIProvider, useCartUI } from '../components/Cart';
 import { Toaster as Sonner } from '@/components/ui/sonner';
+import { toast } from 'sonner';
+import { sft, getVisitorLang } from '../lib/visitorPrefs';
 
 const Chrome = () => {
   const { shopDetails, appearanceSettings, products } = useStorefront();
@@ -86,6 +88,24 @@ const Chrome = () => {
     return () => window.removeEventListener('message', onMsg);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPreview, shopDetails?.slug, products, navigate, open, config.components.cart]);
+
+  // Returning from the RaiAccept hosted form: checkout sends the gateway back
+  // to the exact page the customer paid from, so the ?payment= result can land
+  // on ANY storefront route. Surface it here and clean the URL. /orders keeps
+  // its own richer handling (success overlay + order highlight) — skip it.
+  useEffect(() => {
+    const sp = new URLSearchParams(location.search);
+    const p = sp.get('payment');
+    if (!p || location.pathname.endsWith('/orders')) return;
+    const lang = getVisitorLang();
+    if (p === 'success') toast.success(sft(lang, 'paymentSuccess'), { description: sft(lang, 'paymentSuccessSub') });
+    else if (p === 'cancelled') toast.info(sft(lang, 'paymentCancelled'));
+    else toast.error(sft(lang, 'paymentFailed'));
+    sp.delete('payment');
+    sp.delete('orderId');
+    navigate({ search: sp.toString() ? `?${sp.toString()}` : '' }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, location.search]);
 
   // Scroll restoration: SPA route changes keep the previous scroll position,
   // so tapping "Shop" from a scrolled homepage landed mid-page. Reset to top

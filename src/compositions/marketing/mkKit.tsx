@@ -180,6 +180,44 @@ export const Eyebrow: React.FC<{ children: React.ReactNode; dark?: boolean; styl
   </div>
 );
 
+/* ── rolling currency ticker ──────────────────────────────────────────── */
+/** Every currency a Vela shop can sell in (src/lib/currencies.ts). */
+export const CURRENCY_WORDS = ["Lekë", "Euro", "Dollarë", "Paund", "Jen", "CAD", "AUD"];
+export const CURRENCY_SYMBOLS = ["L", "€", "$", "£", "¥", "CA$", "A$"];
+
+/**
+ * Odometer-style roll through all supported currencies. Inline element —
+ * drop it where the static currency word used to sit.
+ */
+export const CurrencyRoll: React.FC<{
+  size: number;
+  color?: string;
+  gradient?: boolean;
+  period?: number;
+  width?: number;
+  style?: React.CSSProperties;
+}> = ({ size, color = "#fff", gradient, period = 28, width, style }) => {
+  const frame = useCurrentFrame();
+  const H = Math.round(size * 1.3);
+  const idx = Math.floor(frame / period);
+  const local = frame - idx * period;
+  const t = interpolate(local, [0, 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: (x) => 1 - Math.pow(1 - x, 3) });
+  const cur = CURRENCY_WORDS[idx % CURRENCY_WORDS.length];
+  const next = CURRENCY_WORDS[(idx + 1) % CURRENCY_WORDS.length];
+  const textStyle: React.CSSProperties = gradient
+    ? { backgroundImage: GRAD_TEXT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }
+    : { color };
+  return (
+    <span style={{ display: "inline-flex", overflow: "hidden", height: H, width: width ?? size * 3.4, verticalAlign: "bottom", ...style }}>
+      <span style={{ display: "flex", flexDirection: "column", transform: `translateY(${-t * H}px)` }}>
+        {[cur, next].map((w, i) => (
+          <span key={i} style={{ height: H, lineHeight: `${H}px`, whiteSpace: "nowrap", ...textStyle }}>{w}</span>
+        ))}
+      </span>
+    </span>
+  );
+};
+
 /* ══ UI-card primitives (typographic mockups — no screenshots) ══════════ */
 
 /** Stylized Instagram-post card built purely from shapes + type. */

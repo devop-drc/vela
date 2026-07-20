@@ -22,6 +22,8 @@ import { mkSchema, mkDefaults, ReelPostToProduct, ReelFiveMin, ReelBoom, REEL_P2
 import { PostOrders, PostPanel, PostSteps, POST_ORDERS_FRAMES, POST_PANEL_FRAMES, POST_STEPS_FRAMES } from "./compositions/marketing/Posts";
 import { StillPostToProduct, StillFiveMin, StillBoom, StillOrders, StillPanel, GallerySlide1, GallerySlide2, GallerySlide3 } from "./compositions/marketing/Stills";
 import { ReelMorph, ReelPanelLive, ReelQuiet, PostCheckout, PostStock, PostLink, StillMorphLight, StillPanelLight, StillQuiet, StillCheckout, StillStock, StillLink, REEL_MORPH_FRAMES, REEL_PANEL_FRAMES, REEL_QUIET_FRAMES, POST_CHECKOUT_FRAMES, POST_STOCK_FRAMES, POST_LINK_FRAMES } from "./compositions/marketing/Light";
+import { ReelBeforeAfter, ReelDayWithVela, ReelYourBrand, PostNightSales, PostSplit, PostThemes, StillBeforeAfter, StillDayTimeline, StillBrand, StillNightSales, StillSplitPost, StillThemes, REEL_BA_FRAMES, REEL_DAY_FRAMES, REEL_BRAND_FRAMES, POST_NIGHT_FRAMES, POST_SPLIT_FRAMES, POST_THEMES_FRAMES } from "./compositions/marketing/Duo";
+import { ReelSecure, PostSecure, StillSecure, StillSecurePost, REEL_SECURE_FRAMES, POST_SECURE_FRAMES } from "./compositions/marketing/Secure";
 
 const common = { fps: VIDEO.fps, width: VIDEO.width, height: VIDEO.height };
 /** Instagram story canvas (9:16). */
@@ -99,5 +101,25 @@ export const RemotionRoot = () => (
     <Composition id="StillCheckout" component={StillCheckout} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
     <Composition id="StillStock" component={StillStock} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
     <Composition id="StillLink" component={StillLink} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+
+    {/* ── Marketing DUO series (night × paper hybrid) ── */}
+    <Composition id="ReelBeforeAfter" component={ReelBeforeAfter} durationInFrames={REEL_BA_FRAMES} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="ReelDayWithVela" component={ReelDayWithVela} durationInFrames={REEL_DAY_FRAMES} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="ReelYourBrand" component={ReelYourBrand} durationInFrames={REEL_BRAND_FRAMES} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="PostNightSales" component={PostNightSales} durationInFrames={POST_NIGHT_FRAMES} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="PostSplit" component={PostSplit} durationInFrames={POST_SPLIT_FRAMES} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="PostThemes" component={PostThemes} durationInFrames={POST_THEMES_FRAMES} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillBeforeAfter" component={StillBeforeAfter} durationInFrames={30} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillDayTimeline" component={StillDayTimeline} durationInFrames={30} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillBrand" component={StillBrand} durationInFrames={30} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillNightSales" component={StillNightSales} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillSplitPost" component={StillSplitPost} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillThemes" component={StillThemes} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+
+    {/* ── Marketing SECURE set (RaiAccept trust) ── */}
+    <Composition id="ReelSecure" component={ReelSecure} durationInFrames={REEL_SECURE_FRAMES} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="PostSecure" component={PostSecure} durationInFrames={POST_SECURE_FRAMES} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillSecure" component={StillSecure} durationInFrames={30} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillSecurePost" component={StillSecurePost} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
   </>
 );

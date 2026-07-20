@@ -19,7 +19,7 @@ The five core messages:
 | 1 | Postimet → produkte, vetë | `reels/01-post-to-product` | `reel-stills/01` |
 | 2 | Dyqani gati për 5 minuta | `reels/02-5-minuta` | `reel-stills/02` |
 | 3 | Bumi digjital në Shqipëri — mos e humb | `reels/03-boom` | `reel-stills/03`, carousel slide 1 |
-| 4 | Porosi online + pagesa me kartë, në Lekë | `posts/01-porosite` | `post-stills/01` |
+| 4 | Porosi online + pagesa me kartë, në çdo monedhë | `posts/01-porosite` | `post-stills/01` |
 | 5 | Paneli që kontrollon gjithçka | `posts/02-paneli` | `post-stills/02` |
 | + | Si funksionon, në 3 hapa | `posts/03-si-funksionon` | carousel slides 2–3 |
 
@@ -161,12 +161,13 @@ curve with glowing gold tip, years 2022–2026. Underneath: giant gradient
 > notification cards cascade in one after another (Elisa nga Tirana · 4,500 L,
 > Andi nga Durrësi · 2,900 L, Sara nga Vlora, Klea nga Shkodra — all "pagesë
 > me kartë"), while a counter ticks "Sot: 1…4 porosi". Beneath: "Porosi
-> online. / **Pagesa me kartë, në Lekë**." PAYOFF (6–8.2s): "Kjo ndjesi. /
+> online. / **Pagesa me kartë, në [Lekë→Euro→Dollarë…]**" (rolling
+> currency odometer). PAYOFF (6–8.2s): "Kjo ndjesi. /
 > Çdo ditë." + CTA "Provo 7 ditë falas → vela.al".
 
 **Caption:**
 > Kjo ndjesi kur bie porosia. 🎉
-> Porosi online, pagesa me kartë, në Lekë → vela.al
+> Porosi online, me kartë — në Lekë, Euro, Dollarë… → vela.al
 > #porosionline #pagesaonline #vela
 
 ### 2 · `02-paneli.mp4` — "Gjithçka nën kontroll" (~8.5s)
@@ -211,11 +212,11 @@ curve with glowing gold tip, years 2022–2026. Underneath: giant gradient
 cards stacked with slight rotation and depth-dimming (top ones faded), each
 with buyer name + city + "pagesë me kartë" + amount in gradient. Headline
 "Kjo ndjesi. / **Çdo ditë**." Support line "Porosi online · pagesa me kartë ·
-në Lekë". CTA pill "Provo 7 ditë falas → vela.al".
+në L € $ £ ¥". CTA pill "Provo 7 ditë falas → vela.al".
 
 **Caption:**
 > Njoftimi më i bukur i ditës. 🎉
-> vela.al — porosi online, pagesa në Lekë
+> vela.al — porosi online, në çdo monedhë
 > #porosionline #vela
 
 ### 2 · `02-paneli.png` — the dashboard card
@@ -236,7 +237,7 @@ Slide 1 "01 — MOMENTI": "Shqipëria po blen online. / **Pa ty?**" + FOMO copy
 humb momentin.") + "Rrëshqit →".
 Slide 2 "02 — VELA": "Nga postimi te pagesa — **vetë**." + four gradient-dot
 bullets (Postimet → produkte, me çmim e variante · Dyqani yt gati për 5
-minuta · Porosi online, kartë në Lekë · Një panel për gjithçka) + "Rrëshqit →".
+minuta · Porosi online — në L, €, $, £… · Një panel për gjithçka) + "Rrëshqit →".
 Slide 3: boat + "Zër vendin tënd. / **Sot**." + CTA pill "Provo 7 ditë falas"
 + "Pa kartë · pa kod · vela.al".
 
@@ -319,14 +320,14 @@ morphs through four lives.
 
 **Prompt / creative brief:**
 > Vertical reel, paper canvas, typography only. Giant ink Clash words
-> blur-morph through: "Pa kod." → "Pa website." → "Pa DM të humbura." —
+> blur-morph through: "Pa kod." → "Pa programues." → "Pa DM të humbura." —
 > each springs in with weight and exits scaling up through blur. Then the
 > single gradient moment of the whole series: "Vetëm **shitje**." with a
 > gradient underline drawing left→right. PAYOFF: "E thjeshtë, si postimi."
 > + ink CTA "Fillo falas → vela.al".
 
 **Caption:**
-> Pa kod. Pa website. Vetëm shitje. 🎯
+> Pa kod. Pa programues. Vetëm shitje. 🎯
 > Fillo falas → vela.al
 > #pakod #dyqanionline
 
@@ -354,7 +355,7 @@ stoku, pagesat. Gjithçka, pa dalë nga telefoni." + ink CTA.
 
 ### 6 · `06-pa-zhurme.png` — quiet type poster
 **Prompt:** Paper poster, left-aligned ink stack with rising opacity:
-"Pa kod. / Pa website. / Pa DM të humbura." then gradient "Vetëm shitje." +
+"Pa kod. / Pa programues. / Pa DM të humbura." then gradient "Vetëm shitje." +
 gradient rule + ink CTA "Fillo falas → vela.al".
 
 **Caption:**
@@ -370,12 +371,12 @@ PROCESS: a clean checkout card — product row (Atlete Vrapi Air · 42 ·
 4,500 L), card-number field where dot-groups type themselves in
 (•••• •••• •••• 4242), ink button "Paguaj 4,500 L" gets pressed (subtle
 scale) — the card content crossfades to a success state: green ring draws
-itself, check strokes in, "Porosia u krye" + "Pagesa në Lekë · e sigurt ·
+itself, check strokes in, "Porosia u krye" + "Pagesa në [Lekë→Euro→…] · e sigurt ·
 në çast". PAYOFF line: "Karta ose në dorëzim — ti zgjedh."
 
 **Caption:**
 > Kliko. Paguaj. U krye. 💳
-> Pagesa online në Lekë → vela.al
+> Pagesa online në monedhën tënde → vela.al
 > #pagesaonline #vela
 
 ### 5 · `05-stoku.mp4` — the stock table (~8.2s)
@@ -406,7 +407,8 @@ Shit kudo."
 ## LIGHT POST STILLS — image (1080×1350) · `post-stills/`
 
 ### 4 · `04-checkout.png` — payment success card
-**Prompt:** Paper poster: "Pagesa **online**. Në Lekë." + white card with
+**Prompt:** Paper poster: "Pagesa **online**. Në monedhën tënde." + currency
+symbol chips (L € $ £ ¥ CA$ A$) + white card with
 green ring-check, "Porosia u krye", "Atlete Vrapi Air · 4,500 L · me kartë"
 + "Karta ose në dorëzim — ti zgjedh."
 
@@ -434,6 +436,131 @@ kudo. Shit kudo."
 > Kopjo. Ngjit. Shit. 🔗
 > vela.al
 > #dyqanionline #vela
+
+---
+
+# DUO SERIES (07–09) — night × paper hybrid
+
+The third wave mixes the two voices in the same frame: night canvas and
+gradient headlines from wave 1, clean white UI fragments and morph moves
+from wave 2. Signature effects: a **gradient blade wipe** that swaps
+night→paper mid-reel, **white UI cards floating on the night canvas**, and
+**live theme-morphing product cards**. Compositions in
+`src/compositions/marketing/Duo.tsx`.
+
+```bash
+npx remotion render src/remotion.ts ReelBeforeAfter branding/marketing/instagram/reels/07-para-pas.mp4
+npx remotion render src/remotion.ts ReelDayWithVela branding/marketing/instagram/reels/08-nje-dite.mp4
+npx remotion render src/remotion.ts ReelYourBrand   branding/marketing/instagram/reels/09-marka-jote.mp4
+npx remotion render src/remotion.ts PostNightSales  branding/marketing/instagram/posts/07-ti-fle.mp4
+npx remotion render src/remotion.ts PostSplit       branding/marketing/instagram/posts/08-para-pas.mp4
+npx remotion render src/remotion.ts PostThemes      branding/marketing/instagram/posts/09-marka.mp4
+npx remotion still src/remotion.ts StillBeforeAfter branding/marketing/instagram/reel-stills/07-para-pas.png  --frame=25
+npx remotion still src/remotion.ts StillDayTimeline branding/marketing/instagram/reel-stills/08-nje-dite.png  --frame=25
+npx remotion still src/remotion.ts StillBrand       branding/marketing/instagram/reel-stills/09-marka-jote.png --frame=25
+npx remotion still src/remotion.ts StillNightSales  branding/marketing/instagram/post-stills/07-ti-fle.png    --frame=25
+npx remotion still src/remotion.ts StillSplitPost   branding/marketing/instagram/post-stills/08-para-pas.png  --frame=25
+npx remotion still src/remotion.ts StillThemes      branding/marketing/instagram/post-stills/09-marka.png     --frame=25
+```
+
+### 7 · Para / Pas — `07-para-pas` (reel ~12s · post ~8s · 2 stills)
+**Hook:** the DM chaos everyone recognizes — then a gradient blade wipes the
+whole world clean.
+
+**Prompt (reel):**
+> Night canvas: giant "Para." — tilted white DM bubbles pile up ("Sa
+> kushton? 🙏", "Çmimi ju lutem", "A ka masë M?"…), a red badge slams "47 DM
+> pa përgjigje". A glowing gradient BLADE sweeps left→right and physically
+> wipes the night away, revealing warm paper: "Pas." — clean order
+> notifications, the revenue tile, "Porositë vijnë vetë. Ti vetëm dërgon."
+> Payoff back on night: "Nga kaosi te **kontrolli**." + CTA. The post/stills
+> keep a settled 50/50 split with a floating verdict card "Ti zgjedh anën."
+
+**Caption:**
+> Para: 47 DM pa përgjigje. Pas: gjithçka nën kontroll. ⚡
+> Ti zgjedh anën → vela.al
+> #dyqanionline #vela
+
+### 8 · Një ditë me Vela — `08-nje-dite` (reel ~12.3s · 2 stills)
+**Hook:** a day told in four gradient timestamps, with the real UI doing the
+work on the night canvas.
+
+**Prompt (reel):**
+> Night canvas. Four beats, each: a giant gradient timestamp + a white UI
+> card springing beneath — 08:00 "Ti poston, si gjithmonë." (IG post card) →
+> 12:30 "Sistemi e kthen në produkt." (product card) → 17:45 "Porositë
+> vijnë." (two order notifications) → 23:10 "Ti sheh vetëm shifrat."
+> (revenue tile). Payoff: "Një ditë me Vela. / **Çdo ditë, vetë**." + CTA.
+
+**Caption:**
+> 08:00 poston. 23:10 numëron. Mes tyre? Vela. ⏰
+> Fillo falas → vela.al
+> #biznesonline #vela
+
+### 9 · Marka jote — `09-marka-jote` (reel ~11.7s · post ~7.7s · 2 stills)
+**Hook:** your shop re-brands itself in front of you.
+
+**Prompt (reel):**
+> Paper canvas: ink "Dyqani yt. / Marka jote." A product card MORPHS its
+> brand live — accent color, button, badge — as a selection ring hops
+> across three color dots (verë → det → ar). "Ngjyrat, stili, emri — të
+> gjitha të tuat." Then the canvas itself flips to night for the payoff:
+> "Jo një marketplace. / Dyqani **YT**." + CTA "Ndërtoje tëndin → vela.al".
+
+**Caption:**
+> Jo marketplace. Dyqani YT, me markën tënde. 🎨
+> Personalizoje → vela.al
+> #markajote #vela
+
+### + Ti fle. Dyqani shet. — `07-ti-fle` (post ~8.2s · still)
+**Prompt:** Night canvas: giant gradient "23:47", two white order
+notifications drop in like lock-screen pings, "Ti fle. / **Dyqani shet**." +
+"Porosi edhe natën — me kartë, në [Lekë→Euro→Dollarë…]" (rolling currency)
++ CTA "Provo 7 ditë falas".
+
+**Caption:**
+> Porosia më e ëmbël: ajo e orës 23:47. 😴💸
+> Dyqani yt punon 24/7 → vela.al
+> #vela #porosionline
+
+---
+
+# SECURE SET (10) — RaiAccept · Raiffeisen Bank
+
+The trust message, on the clean paper canvas with the Raiffeisen-yellow
+badge as the single accent. Compositions in
+`src/compositions/marketing/Secure.tsx`.
+
+```bash
+npx remotion render src/remotion.ts ReelSecure      branding/marketing/instagram/reels/10-siguria.mp4
+npx remotion render src/remotion.ts PostSecure      branding/marketing/instagram/posts/10-siguria.mp4
+npx remotion still src/remotion.ts StillSecure      branding/marketing/instagram/reel-stills/10-siguria.png --frame=25
+npx remotion still src/remotion.ts StillSecurePost  branding/marketing/instagram/post-stills/10-siguria.png --frame=25
+```
+
+### 10 · Siguria — `10-siguria` (reel ~11.7s · post ~8.3s · 2 stills)
+**Hook:** the question every hesitant buyer asks — "Po kartat?"
+
+**Prompt (reel):**
+> Paper canvas. HOOK: giant ink "Po kartat?" / wine "A janë të sigurta?".
+> PROCESS: a padlock's shackle drops SHUT with a weighted spring; the
+> yellow badge "🔒 RaiAccept · Raiffeisen Bank" stamps beneath; copy: "Çdo
+> pagesë me kartë kalon nëpërmjet RaiAccept — portës zyrtare të pagesave të
+> Raiffeisen Bank." A three-node flow assembles — [💳 Karta e klientit] →
+> [🛡 RaiAccept] → [✓ Pagesa u krye] — with an encrypted pulse traveling the
+> dashes. "Të dhënat e kartës enkriptohen. Ne nuk i shohim kurrë." PAYOFF on
+> night: "Të sigurta. / **Si në bankë**." + CTA + badge.
+
+**Caption:**
+> Kartat e klientëve? Punë banke, jo e jona. 🔒
+> Çdo pagesë kalon nëpërmjet RaiAccept — porta zyrtare e Raiffeisen Bank.
+> Fillo falas → vela.al
+> #siguria #pagesaonline #vela
+
+**Currency note:** everywhere the copy used to say a fixed "në Lekë", the
+videos now run a rolling odometer through every currency a Vela shop can
+sell in — Lekë, Euro, Dollarë, Paund, Jen, CAD, AUD — and the stills show
+the symbol chips (L € $ £ ¥ CA$ A$).
 
 ---
 

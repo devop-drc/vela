@@ -206,10 +206,10 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
 
       if (data.paymentMethod === 'card' && responseData?.order?.id) {
         // Continue on RaiAccept's hosted form; the gateway returns the
-        // customer to this shop with the order id, and the webhook settles
-        // the payment status.
+        // customer to the exact page they checked out from (the IG layout
+        // surfaces the ?payment= result), and the webhook settles the status.
         if (toastId) toast.loading('Redirecting to secure payment…', { id: toastId });
-        const returnUrl = `${window.location.origin}/instagramShop/${shopDetails.slug}`;
+        const returnUrl = `${window.location.origin}${window.location.pathname}`;
         const { data: payRes, error: payErr } = await supabase.functions.invoke('create-order-payment', {
           body: { orderId: responseData.order.id, shopSlug: shopDetails.slug, returnUrl },
         });

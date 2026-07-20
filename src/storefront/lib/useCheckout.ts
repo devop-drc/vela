@@ -79,10 +79,10 @@ export const useCheckout = (onDone?: () => void) => {
         if (data.paymentMethod === 'card') {
           // Card orders continue on RaiAccept's hosted form. The order is
           // already placed (stock reserved, payment 'processing'); the gateway
-          // redirect brings the customer back to their orders page, where the
-          // webhook-settled payment status shows up.
+          // redirect brings the customer back to the page they checked out
+          // from (StorefrontLayout surfaces the ?payment= result anywhere).
           toast.loading(t('redirectingPayment'), { id: toastId });
-          const returnUrl = `${window.location.origin}/shop/${shopDetails.slug}/orders`;
+          const returnUrl = `${window.location.origin}${window.location.pathname}`;
           const { data: payRes, error: payErr } = await supabase.functions.invoke('create-order-payment', {
             body: { orderId: responseData.order.id, shopSlug: shopDetails.slug, returnUrl },
           });

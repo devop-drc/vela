@@ -143,7 +143,7 @@ export const StillOrders: React.FC = () => (
         Kjo ndjesi.<br /><span style={{ backgroundImage: GRAD_TEXT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>Çdo ditë.</span>
       </H>
       <div style={{ fontFamily: SATOSHI, fontSize: 34, fontWeight: 700, color: "rgba(255,255,255,0.65)" }}>
-        Porosi online · pagesa me kartë · në Lekë
+        Porosi online · me kartë · në L € $ £ ¥
       </div>
       <Cta size={38}>Provo 7 ditë falas → vela.al</Cta>
     </AbsoluteFill>
@@ -192,7 +192,7 @@ export const GallerySlide2: React.FC = () => (
         {[
           "Postimet → produkte, me çmim e variante",
           "Dyqani yt gati për 5 minuta",
-          "Porosi online, kartë në Lekë",
+          "Porosi online — në L, €, $, £…",
           "Një panel për gjithçka",
         ].map((t, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 20, fontFamily: SATOSHI, fontSize: 40, fontWeight: 700, color: "#fff" }}>

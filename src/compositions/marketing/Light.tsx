@@ -9,7 +9,7 @@
  *
  *  ReelMorph     ~12s  one white card morphs: IG post → product → order → profit
  *  ReelPanelLive ~11s  the admin panel assembles itself; toggle flips, order ships
- *  ReelQuiet     ~10s  giant ink kinetic type: Pa kod / Pa website / Vetëm shitje
+ *  ReelQuiet     ~10s  giant ink kinetic type: Pa kod / Pa programues / Vetëm shitje
  *  PostCheckout  ~8s   checkout UI: card dots type in, Paguaj press → success ✓
  *  PostStock     ~8s   stock table: order lands, size-42 count rolls 12 → 11
  *  PostLink      ~7.6s browser bar types dyqani-yt.vela.al → storefront assembles
@@ -17,7 +17,7 @@
  */
 import React from "react";
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
-import { BRAND, CLASH, SATOSHI, GRAD, GRAD_TEXT, Grain, springy, rise, exitUp } from "./mkKit";
+import { BRAND, CLASH, SATOSHI, GRAD, GRAD_TEXT, Grain, springy, rise, exitUp, CurrencyRoll, CURRENCY_SYMBOLS } from "./mkKit";
 
 const clamp = (f: number, a: [number, number], b: [number, number], ease?: (t: number) => number) =>
   interpolate(f, a, b, { extrapolateLeft: "clamp", extrapolateRight: "clamp", ...(ease ? { easing: ease } : {}) });
@@ -69,13 +69,13 @@ const InkCta: React.FC<{ children: React.ReactNode; size?: number; style?: React
 );
 
 /* ── light UI fragments ───────────────────────────────────────────────── */
-const photoPanel = (h: number, fs = 30): React.ReactNode => (
+export const photoPanel = (h: number, fs = 30): React.ReactNode => (
   <div style={{ height: h, background: "#EFE5E1", display: "grid", placeItems: "center" }}>
     <div style={{ fontFamily: CLASH, fontWeight: 600, fontSize: fs, color: "rgba(20,10,14,0.4)", letterSpacing: "0.06em" }}>FOTO</div>
   </div>
 );
 
-const LIgPost: React.FC<{ width?: number }> = ({ width = 600 }) => (
+export const LIgPost: React.FC<{ width?: number }> = ({ width = 600 }) => (
   <div style={{ width, background: CARD, borderRadius: 28, overflow: "hidden", border: `2px solid ${LINE}`, boxShadow: SHADOW, fontFamily: SATOSHI }}>
     <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "20px 24px" }}>
       <div style={{ width: 50, height: 50, borderRadius: 999, background: INK }} />
@@ -92,7 +92,7 @@ const LIgPost: React.FC<{ width?: number }> = ({ width = 600 }) => (
   </div>
 );
 
-const LProductCard: React.FC<{ width?: number }> = ({ width = 600 }) => (
+export const LProductCard: React.FC<{ width?: number }> = ({ width = 600 }) => (
   <div style={{ width, background: CARD, borderRadius: 28, overflow: "hidden", border: `2px solid ${LINE}`, boxShadow: SHADOW, fontFamily: SATOSHI }}>
     {photoPanel(width * 0.5)}
     <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 14 }}>
@@ -113,7 +113,7 @@ const LProductCard: React.FC<{ width?: number }> = ({ width = 600 }) => (
   </div>
 );
 
-const LNotif: React.FC<{ width?: number; name?: string; amount?: string }> = ({ width = 690, name = "Elisa nga Tirana", amount = "4,500 L" }) => (
+export const LNotif: React.FC<{ width?: number; name?: string; amount?: string }> = ({ width = 690, name = "Elisa nga Tirana", amount = "4,500 L" }) => (
   <div style={{ width, display: "flex", alignItems: "center", gap: 20, background: CARD, borderRadius: 26, border: `2px solid ${LINE}`, padding: "22px 28px", boxShadow: SHADOW, fontFamily: SATOSHI }}>
     <div style={{ width: 60, height: 60, borderRadius: 18, background: INK, display: "grid", placeItems: "center", fontSize: 30, flexShrink: 0 }}>🛍️</div>
     <div style={{ flex: 1, minWidth: 0 }}>
@@ -124,7 +124,7 @@ const LNotif: React.FC<{ width?: number; name?: string; amount?: string }> = ({ 
   </div>
 );
 
-const LStat: React.FC<{ width?: number }> = ({ width = 730 }) => (
+export const LStat: React.FC<{ width?: number }> = ({ width = 730 }) => (
   <div style={{ width, background: CARD, borderRadius: 26, border: `2px solid ${LINE}`, padding: "26px 32px", boxShadow: SHADOW, fontFamily: SATOSHI, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
     <div>
       <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: MUTED }}>Të ardhurat sot</div>
@@ -310,7 +310,7 @@ export const REEL_PANEL_FRAMES = 344;
 /* ══ REEL 6 — quiet kinetic type ════════════════════════════════════════ */
 const QUIET_WORDS: [string, number, number][] = [
   ["Pa kod.", 6, 62],
-  ["Pa website.", 62, 116],
+  ["Pa programues.", 62, 116],
   ["Pa DM të humbura.", 116, 174],
 ];
 
@@ -399,7 +399,9 @@ export const PostCheckout: React.FC = () => {
               <path d="M42 67 L59 84 L90 50" fill="none" stroke="#1E7C3F" strokeWidth={10} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={80} strokeDashoffset={80 * (1 - clamp(frame, [172, 194], [0, 1], Easing.out(Easing.cubic)))} />
             </svg>
             <div style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 42, color: INK }}>Porosia u krye</div>
-            <div style={{ fontSize: 25, color: MUTED, fontWeight: 700 }}>Pagesa në Lekë · e sigurt · në çast</div>
+            <div style={{ fontSize: 25, color: MUTED, fontWeight: 700, display: "flex", alignItems: "center" }}>
+              Pagesa në&nbsp;<CurrencyRoll size={25} color={INK} width={118} />&nbsp;· e sigurt · në çast
+            </div>
           </div>
         </div>
         <div style={{ ...rise(springy(frame, fps, 206)), fontSize: 30, fontWeight: 700, color: MUTED }}>
@@ -569,7 +571,7 @@ export const StillPanelLight: React.FC = () => {
 export const StillQuiet: React.FC = () => (
   <LightShell reel>
     <AbsoluteFill style={{ alignItems: "flex-start", justifyContent: "center", padding: "0 30px", gap: 26 }}>
-      {["Pa kod.", "Pa website.", "Pa DM të humbura."].map((t, i) => (
+      {["Pa kod.", "Pa programues.", "Pa DM të humbura."].map((t, i) => (
         <div key={t} style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 104, color: INK, opacity: 0.34 + i * 0.22, letterSpacing: "-0.02em" }}>{t}</div>
       ))}
       <div style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 124, letterSpacing: "-0.02em", backgroundImage: GRAD_TEXT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
@@ -590,8 +592,13 @@ export const StillCheckout: React.FC = () => {
   return (
     <LightShell>
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 40 }}>
-        <div style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 84, color: INK }}>
-          Pagesa <span style={{ color: WINE }}>online.</span> Në Lekë.
+        <div style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 84, color: INK, textAlign: "center", lineHeight: 1.14 }}>
+          Pagesa <span style={{ color: WINE }}>online.</span><br />Në monedhën tënde.
+        </div>
+        <div style={{ display: "flex", gap: 16 }}>
+          {CURRENCY_SYMBOLS.map((s) => (
+            <span key={s} style={{ border: `2px solid ${LINE}`, background: CARD, borderRadius: 99, padding: "10px 24px", fontFamily: CLASH, fontWeight: 700, fontSize: 28, color: WINE, boxShadow: SHADOW }}>{s}</span>
+          ))}
         </div>
         <div style={{ width: 780, background: CARD, borderRadius: 30, border: `2px solid ${LINE}`, boxShadow: SHADOW, padding: "48px 40px", display: "flex", flexDirection: "column", alignItems: "center", gap: 22 }}>
           <svg width={130} height={130} viewBox="0 0 130 130">
