@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!--
-  Vela app icon — ANIMATED "face" edition. The owner's edited mark reads as
-  a face (tag-sails = eyes, holes = pupils, hull = smile), so this copy
-  leans in: the pupils glance around, the gold eye winks, the smile grins.
-  • Geometry is identical to vela-app-icon.svg (owner's edit); the tag
-    holes are separate white circles here so the pupils can move — on the
-    white tile that renders identically to a true cutout.
-  • Pure CSS inside the SVG → animates even in <img>; ~6s loop;
-    prefers-reduced-motion gets the still logo.
+  Vela app icon — ANIMATED, full intro (plays ONCE, ends on the exact
+  static logo):
+    1. the smile morphs open from a thin line, the arrow sprouting;
+    2. the tag-eyes morph up out of the smile (SMIL path morphs);
+    3. the pupils pop in, look AT THE CAMERA (centre, enlarged),
+    4. the gold eye winks while the smile grins,
+    5. the pupils return to their frozen tag-hole position — final frame.
+  Loop-only companion: vela-app-icon-animated-loop.svg
+  Geometry identical to vela-app-icon.svg (owner's edit).
 -->
 <svg width="512" height="512" viewBox="0 0 512 512" version="1.1"
      xmlns="http://www.w3.org/2000/svg">
@@ -31,64 +32,68 @@
     </linearGradient>
   </defs>
 
-  <style>
-    .eye, .pupil, .smile, .face { transform-box: fill-box; }
-    .face  { transform-origin: 50% 60%; animation: v-bob 6s ease-in-out infinite; }
-    .pupil { animation: v-look 6s ease-in-out infinite; }
-    .eye-front { transform-origin: 50% 82%; animation: v-wink 6s ease-in-out infinite; }
-    .pupil-front { animation: v-look 6s ease-in-out infinite, v-pupil-hide 6s linear infinite; }
-    .smile { transform-origin: 50% 20%; animation: v-grin 6s cubic-bezier(.34,1.56,.64,1) infinite; }
-
-    @keyframes v-bob {
-      0%, 100% { transform: translateY(0); }
-      50%      { transform: translateY(-5px); }
-    }
-    /* glance right, glance left, back to centre */
-    @keyframes v-look {
-      0%, 20%   { transform: translate(0, 0); }
-      27%, 38%  { transform: translate(10px, 1.5px); }
-      45%, 57%  { transform: translate(-9px, 1.5px); }
-      64%, 100% { transform: translate(0, 0); }
-    }
-    /* the gold eye winks */
-    @keyframes v-wink {
-      0%, 71%   { transform: scaleY(1); }
-      75%, 77%  { transform: scaleY(0.1); }
-      82%, 100% { transform: scaleY(1); }
-    }
-    @keyframes v-pupil-hide {
-      0%, 71%   { opacity: 1; }
-      73%, 80%  { opacity: 0; }
-      82%, 100% { opacity: 1; }
-    }
-    /* the smile grins wider on the wink */
-    @keyframes v-grin {
-      0%, 68%   { transform: scale(1, 1) translateY(0); }
-      76%       { transform: scale(1.05, 0.93) translateY(-3px); }
-      86%, 100% { transform: scale(1, 1) translateY(0); }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .face, .pupil, .eye-front, .pupil-front, .smile { animation: none; }
-    }
-  </style>
-
   <rect width="512" height="512" rx="115" fill="#FFFFFF"/>
   <rect width="512" height="512" rx="115" fill="none" stroke="#2A1D22" stroke-opacity="0.06" stroke-width="4"/>
 
-  <g class="face">
-    <!-- back eye (wine tag) — hole is a movable white pupil -->
-    <g class="eye eye-back">
-      <path fill="url(#vm-back)" d="m 206.06641,157.78516 c -7.4,0.98666 -12.58102,6.90643 -15.54102,17.75976 -15.54,41.44 -26.64008,88.80047 -31.08008,130.98047 -0.34742,2.20037 -0.42285,4.14234 -0.22656,5.82617 32.5269,-0.23634 57.25986,0.70925 77.11914,1.91797 1.21727,-2.54948 1.73293,-5.8717 1.54688,-9.96484 -0.74,-37 -4.43985,-87.3193 -11.83985,-127.2793 -0.98666,-7.4 -3.94557,-12.33411 -8.8789,-14.80078 z"/>
-      <circle class="pupil" cx="208.29" cy="192.57" r="6.66" fill="#FFFFFF"/>
+  <!-- ── the smile: morphs open from a thin line, arrow sprouting ── -->
+  <g transform="translate(283,345)">
+    <g>
+      <animateTransform attributeName="transform" type="scale" additive="sum"
+        values="1 1;1.05 0.93;1 1" keyTimes="0;0.5;1" begin="2.9s" dur="0.65s"
+        calcMode="spline" keySplines="0.34 1.3 0.64 1;0.34 1.3 0.64 1"/>
+      <g transform="translate(-283,-345)">
+        <path fill="url(#vm-hull)">
+          <animate attributeName="d" begin="0s" dur="1s" fill="freeze"
+            calcMode="spline" keySplines="0.22 1 0.36 1" keyTimes="0;1"
+            values="m 108.92,341.2 c 168.55,-0.62 179.08,1.4 239.76,-0.14 l 8.88,-0.28 c 2.96,-0.09 3.95,-0.28 2.96,-0.56 l -4.44,-0.98 c -0.99,-0.37 0.49,-0.44 4.44,-0.21 l 3.4,1.62 c 0.33,0.19 0.33,0.4 0,0.63 c -19.24,1.33 -42.92,2.74 -69.56,3.87 c -44.4,1.83 -111,1.69 -150.96,0.28 c -29.6,-1.12 -53.28,-2.67 -66.6,-4.23 z;m 108.92,317.6 c 168.54958,-6.53405 179.08,14.8 239.76,-1.48 l 8.88,-2.96 c 2.96,-0.98667 3.94667,-2.96 2.96,-5.92 l -4.44,-10.36 c -0.98667,-3.94667 0.49333,-4.68667 4.44,-2.22 l 35.52,17.02 c 3.45333,1.97333 3.45333,4.19333 0,6.66 c -19.24,14.06 -42.92,28.86 -69.56,40.7 c -44.4,19.24 -111,17.76 -150.96,2.96 c -29.6,-11.84 -53.28,-28.12 -66.6,-44.4 z"/>
+        </path>
+      </g>
     </g>
+  </g>
 
-    <!-- front eye (gold tag) — this one winks -->
-    <g class="eye eye-front">
-      <path fill="url(#vm-front)" d="M 284.96094 129.43945 C 276.08094 131.41279 270.15922 138.81397 267.19922 151.64062 C 255.35922 201.96062 246.47906 262.6393 242.03906 307.7793 C 241.6825 310.27524 241.64262 312.47062 241.91602 314.36523 C 284.64641 317.02933 304.58109 320.82939 331.95898 316.25391 C 333.04355 313.65354 333.41149 310.33666 333.06055 306.30078 C 331.58055 271.52078 323.44086 209.35914 309.38086 153.11914 C 307.90086 143.74581 304.1993 137.57914 298.2793 134.61914 L 284.96094 129.43945 z"/>
-      <circle class="pupil pupil-front" cx="288.25" cy="164.96" r="7.02" fill="#FFFFFF"/>
+  <!-- ── back eye: morphs up out of the boom line ── -->
+  <g>
+    <path fill="url(#vm-back)">
+      <animate attributeName="d" begin="0.45s" dur="0.9s" fill="freeze"
+        calcMode="spline" keySplines="0.22 1 0.36 1" keyTimes="0;1"
+        values="m 196,310 c -0.74,0.0987 -1.2581,0.6906 -1.5541,1.776 c -1.554,4.144 -2.664,8.88 -3.108,13.098 c -0.0347,0.22 -0.0423,0.4142 -0.0227,0.5826 c 3.2527,-0.0236 5.726,0.0709 7.7119,0.1918 c 0.1217,-0.2549 0.1733,-0.5872 0.1547,-0.9965 c -0.074,-3.7 -0.444,-8.7319 -1.184,-12.7279 c -0.0987,-0.74 -0.3946,-1.2334 -0.8879,-1.4801 z;m 206.06641,157.78516 c -7.4,0.98666 -12.58102,6.90643 -15.54102,17.75976 -15.54,41.44 -26.64008,88.80047 -31.08008,130.98047 -0.34742,2.20037 -0.42285,4.14234 -0.22656,5.82617 32.5269,-0.23634 57.25986,0.70925 77.11914,1.91797 1.21727,-2.54948 1.73293,-5.8717 1.54688,-9.96484 -0.74,-37 -4.43985,-87.3193 -11.83985,-127.2793 -0.98666,-7.4 -3.94557,-12.33411 -8.8789,-14.80078 z"/>
+    </path>
+    <circle cx="208.29" cy="192.57" r="0" fill="#FFFFFF">
+      <animate attributeName="r" begin="1.55s" dur="0.3s" fill="freeze" values="0;6.66" calcMode="spline" keySplines="0.34 1.4 0.64 1" keyTimes="0;1"/>
+      <!-- look at the camera: centre of the eye, larger -->
+      <animate attributeName="cx" begin="2.1s" dur="0.45s" fill="freeze" values="208.29;184" calcMode="spline" keySplines="0.3 0 0.2 1" keyTimes="0;1"/>
+      <animate attributeName="cy" begin="2.1s" dur="0.45s" fill="freeze" values="192.57;238" calcMode="spline" keySplines="0.3 0 0.2 1" keyTimes="0;1"/>
+      <animate attributeName="r" begin="2.1s" dur="0.45s" fill="freeze" values="6.66;9" calcMode="spline" keySplines="0.3 0 0.2 1" keyTimes="0;1"/>
+      <!-- back to the frozen tag-hole position — the final frame -->
+      <animate attributeName="cx" begin="3.75s" dur="0.5s" fill="freeze" values="184;208.29" calcMode="spline" keySplines="0.3 0 0.2 1" keyTimes="0;1"/>
+      <animate attributeName="cy" begin="3.75s" dur="0.5s" fill="freeze" values="238;192.57" calcMode="spline" keySplines="0.3 0 0.2 1" keyTimes="0;1"/>
+      <animate attributeName="r" begin="3.75s" dur="0.5s" fill="freeze" values="9;6.66" calcMode="spline" keySplines="0.3 0 0.2 1" keyTimes="0;1"/>
+    </circle>
+  </g>
+
+  <!-- ── front eye (winks): morphs up, nested groups give the squish a
+        bottom origin ── -->
+  <g transform="translate(288,318)">
+    <g>
+      <animateTransform attributeName="transform" type="scale" additive="sum"
+        values="1 1;1 0.08;1 1" keyTimes="0;0.5;1" begin="2.9s" dur="0.65s"
+        calcMode="spline" keySplines="0.4 0 0.2 1;0.34 1.3 0.64 1"/>
+      <g transform="translate(-288,-318)">
+        <path fill="url(#vm-front)">
+          <animate attributeName="d" begin="0.65s" dur="0.9s" fill="freeze"
+            calcMode="spline" keySplines="0.22 1 0.36 1" keyTimes="0;1"
+            values="M 287.70 295.54 C 286.81 295.74 286.22 296.48 285.92 297.76 C 284.74 302.80 283.85 308.86 283.40 313.38 C 283.37 313.63 283.36 313.85 283.39 314.04 C 287.66 314.30 289.66 314.68 292.40 314.23 C 292.50 313.97 292.54 313.63 292.51 313.23 C 292.36 309.75 291.54 303.54 290.14 297.91 C 289.99 296.98 289.62 296.36 289.03 296.06 L 287.70 295.54 z;M 284.96094 129.43945 C 276.08094 131.41279 270.15922 138.81397 267.19922 151.64062 C 255.35922 201.96062 246.47906 262.6393 242.03906 307.7793 C 241.6825 310.27524 241.64262 312.47062 241.91602 314.36523 C 284.64641 317.02933 304.58109 320.82939 331.95898 316.25391 C 333.04355 313.65354 333.41149 310.33666 333.06055 306.30078 C 331.58055 271.52078 323.44086 209.35914 309.38086 153.11914 C 307.90086 143.74581 304.1993 137.57914 298.2793 134.61914 L 284.96094 129.43945 z"/>
+        </path>
+        <circle cx="288.25" cy="164.96" r="0" fill="#FFFFFF">
+          <animate attributeName="r" begin="1.65s" dur="0.3s" fill="freeze" values="0;7.02" calcMode="spline" keySplines="0.34 1.4 0.64 1" keyTimes="0;1"/>
+          <animate attributeName="cy" begin="2.1s" dur="0.45s" fill="freeze" values="164.96;228" calcMode="spline" keySplines="0.3 0 0.2 1" keyTimes="0;1"/>
+          <animate attributeName="r" begin="2.1s" dur="0.45s" fill="freeze" values="7.02;9.5" calcMode="spline" keySplines="0.3 0 0.2 1" keyTimes="0;1"/>
+          <!-- hidden while the lid is shut -->
+          <animate attributeName="opacity" begin="2.95s" dur="0.55s" fill="freeze" values="1;0;0;1" keyTimes="0;0.15;0.8;1"/>
+          <animate attributeName="cy" begin="3.75s" dur="0.5s" fill="freeze" values="228;164.96" calcMode="spline" keySplines="0.3 0 0.2 1" keyTimes="0;1"/>
+          <animate attributeName="r" begin="3.75s" dur="0.5s" fill="freeze" values="9.5;7.02" calcMode="spline" keySplines="0.3 0 0.2 1" keyTimes="0;1"/>
+        </circle>
+      </g>
     </g>
-
-    <!-- the smile -->
-    <path class="smile" fill="url(#vm-hull)" d="m 108.92,317.6 c 168.54958,-6.53405 179.08,14.8 239.76,-1.48 l 8.88,-2.96 c 2.96,-0.98667 3.94667,-2.96 2.96,-5.92 l -4.44,-10.36 c -0.98667,-3.94667 0.49333,-4.68667 4.44,-2.22 l 35.52,17.02 c 3.45333,1.97333 3.45333,4.19333 0,6.66 -19.24,14.06 -42.92,28.86 -69.56,40.7 -44.4,19.24 -111,17.76 -150.96,2.96 -29.6,-11.84 -53.28,-28.12 -66.6,-44.4 z"/>
   </g>
 </svg>

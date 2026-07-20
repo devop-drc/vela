@@ -12,6 +12,7 @@ import { LowerThird, lowerThirdSchema, lowerThirdDefaults } from "./compositions
 import { KineticText, kineticTextSchema, kineticTextDefaults } from "./compositions/KineticText";
 import { TransparentBadge, transparentBadgeSchema, transparentBadgeDefaults } from "./compositions/TransparentBadge";
 import { HeroFilm, heroFilmSchema, heroFilmDefaults, HERO_FILM } from "./compositions/HeroFilm";
+import { LogoStingIntro, LogoStingLoop, logoStingSchema, logoStingDefaults, LOGO_STING } from "./compositions/LogoSting";
 import { StoryIntro, storyIntroSchema, storyIntroDefaults } from "./compositions/stories/StoryIntro";
 import { StoryProblem, storyProblemSchema, storyProblemDefaults } from "./compositions/stories/StoryProblem";
 import { StorySteps, storyStepsSchema, storyStepsDefaults } from "./compositions/stories/StorySteps";
@@ -57,6 +58,8 @@ export const RemotionRoot = () => (
       defaultProps={transparentBadgeDefaults}
     />
     <Composition id="HeroFilm" component={HeroFilm} durationInFrames={HERO_FILM.durationInFrames} fps={HERO_FILM.fps} width={HERO_FILM.width} height={HERO_FILM.height} schema={heroFilmSchema} defaultProps={heroFilmDefaults} />
+    <Composition id="LogoStingIntro" component={LogoStingIntro} durationInFrames={LOGO_STING.introFrames} fps={LOGO_STING.fps} width={LOGO_STING.width} height={LOGO_STING.height} schema={logoStingSchema} defaultProps={logoStingDefaults} />
+    <Composition id="LogoStingLoop" component={LogoStingLoop} durationInFrames={LOGO_STING.loopFrames} fps={LOGO_STING.fps} width={LOGO_STING.width} height={LOGO_STING.height} schema={logoStingSchema} defaultProps={logoStingDefaults} />
     <Composition id="StoryIntro" component={StoryIntro} durationInFrames={sec(7)} {...story} schema={storyIntroSchema} defaultProps={storyIntroDefaults} />
     <Composition id="StoryProblem" component={StoryProblem} durationInFrames={sec(8)} {...story} schema={storyProblemSchema} defaultProps={storyProblemDefaults} />
     <Composition id="StorySteps" component={StorySteps} durationInFrames={sec(10)} {...story} schema={storyStepsSchema} defaultProps={storyStepsDefaults} />

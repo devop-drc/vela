@@ -21,10 +21,19 @@ branding/
 ├─ guidelines/
 │  ├─ vela-brand.html               libri i markës (burimi)
 │  └─ Vela-Brand-Guidelines.pdf     versioni PDF (gjenerohet nga HTML-ja)
+├─ motion/                grafika lëvizëse (RENDERUAR me Remotion)
+│  ├─ vela-sting-intro.webm/.mp4    logo ndërtohet → sheh kamerën → wink
+│  └─ vela-sting-loop.webm/.mp4     vetëm pjesa e përsëritshme (seamless)
 ├─ fonts/                 Clash Display (6 pesha, OTF)
 ├─ deck/                  prezantimi i ekspansionit SaaS (HTML + PPTX)
 └─ legacy/                logo e vjetër & asetet e para — VETËM arkiv
 ```
+
+**Motion = Remotion.** Çdo grafikë lëvizëse e markës prodhohet si
+kompozicion Remotion (`src/compositions/LogoSting.tsx`, i regjistruar në
+`src/Root.tsx`; hap studion me `npx remotion studio src/remotion.ts`).
+`.webm` = alfa transparente për web; `.mp4` = me sfond krem për vende pa
+alfa. `vela-app-icon-animated.svg` mbetet si bonus i lehtë për <img>.
 
 ## Rregulla të shpejta
 
