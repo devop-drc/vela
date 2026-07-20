@@ -138,7 +138,17 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
   return (
     <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
       <ScrollArea className="flex-1 overflow-y-auto">
-        <div ref={contentRef} className="p-4 space-y-5">
+        {/* With variants present, wide screens split into two columns:
+            media + details + specs on the left, the variants table on the
+            right — so long variant lists don't push the specs off-screen. */}
+        <div
+          ref={contentRef}
+          className={cn(
+            'p-4 space-y-5',
+            hasVariants && 'xl:grid xl:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] xl:items-start xl:gap-6 xl:space-y-0'
+          )}
+        >
+          <div className="min-w-0 space-y-5">
           {/* Hero: Media + Core Info */}
           <div data-reveal className="grid grid-cols-1 md:grid-cols-10 gap-5">
             <div className="md:col-span-4">
@@ -262,7 +272,9 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </div>
             </div>
           )}
+          </div>
 
+          <div className="min-w-0 space-y-5">
           {/* Variants */}
           {hasVariants && (
             <div data-reveal>
@@ -313,7 +325,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   <span className="w-24 text-right">Price</span>
                   <span className="w-28 text-right">Stock</span>
                 </div>
-                <div className="max-h-[400px] overflow-y-auto">
+                <div className="max-h-[400px] xl:max-h-[62vh] overflow-y-auto">
                 {filteredVariants.length === 0 ? (
                   <div className="py-6 text-center text-xs text-muted-foreground">No variants match your search</div>
                 ) : filteredVariants.map((v: any, i: number) => {
@@ -372,6 +384,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </div>
             </div>
           )}
+          </div>
         </div>
       </ScrollArea>
       {/* flex-col (not the DialogFooter default col-reverse) so the stacked

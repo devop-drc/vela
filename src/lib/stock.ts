@@ -73,10 +73,17 @@ export async function syncDerivedStockFromVariants(
   });
 
   if (valueUpdates.length) {
-    const { error } = await supabase
-      .from("option_values")
-      .upsert(valueUpdates, { onConflict: "id" });
-    if (error) throw error;
+    // Per-row UPDATE, not upsert: upsert's INSERT arm carries user_id = NULL,
+    // which fails option_values' RLS WITH CHECK (auth.uid() = user_id) even
+    // though every row already exists. UPDATE checks USING against the stored
+    // row and passes.
+    const results = await Promise.all(
+      valueUpdates.map(({ id, inventory }) =>
+        supabase.from("option_values").update({ inventory }).eq("id", id),
+      ),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) throw failed.error;
   }
 
   // 3. Sync product base inventory + status from variant totals.
