@@ -247,6 +247,196 @@ Slide 3: boat + "Zër vendin tënd. / **Sot**." + CTA pill "Provo 7 ditë falas"
 
 ---
 
+# LIGHT SERIES (04–06) — ink on paper, UI-first
+
+The second wave. Same hook-first strategy, opposite voice: **warm paper
+canvas, ink typography, hairline borders, soft shadows** — gradients almost
+gone (flat wine `#A31234` accents; the brand gradient appears once per asset
+at most). The star is the product's UI, rebuilt as clean motion graphics:
+product cards, the admin panel, checkout, the stock table, the shop link.
+Signature move: **card-to-card morphs**. Compositions live in
+`src/compositions/marketing/Light.tsx`.
+
+**Re-render the light series:**
+```bash
+npx remotion render src/remotion.ts ReelMorph      branding/marketing/instagram/reels/04-metamorfoza.mp4
+npx remotion render src/remotion.ts ReelPanelLive  branding/marketing/instagram/reels/05-paneli-live.mp4
+npx remotion render src/remotion.ts ReelQuiet      branding/marketing/instagram/reels/06-pa-zhurme.mp4
+npx remotion render src/remotion.ts PostCheckout   branding/marketing/instagram/posts/04-checkout.mp4
+npx remotion render src/remotion.ts PostStock      branding/marketing/instagram/posts/05-stoku.mp4
+npx remotion render src/remotion.ts PostLink       branding/marketing/instagram/posts/06-nje-link.mp4
+npx remotion still src/remotion.ts StillMorphLight branding/marketing/instagram/reel-stills/04-metamorfoza.png --frame=25
+npx remotion still src/remotion.ts StillPanelLight branding/marketing/instagram/reel-stills/05-paneli.png      --frame=25
+npx remotion still src/remotion.ts StillQuiet      branding/marketing/instagram/reel-stills/06-pa-zhurme.png   --frame=25
+npx remotion still src/remotion.ts StillCheckout   branding/marketing/instagram/post-stills/04-checkout.png    --frame=25
+npx remotion still src/remotion.ts StillStock      branding/marketing/instagram/post-stills/05-stoku.png       --frame=25
+npx remotion still src/remotion.ts StillLink       branding/marketing/instagram/post-stills/06-nje-link.png    --frame=25
+```
+
+## LIGHT REELS — video (1080×1920 · 30fps) · `reels/`
+
+### 4 · `04-metamorfoza.mp4` — the morph (~12.4s)
+**Hook:** "Shiko çfarë bëhet një postim." — then ONE white card physically
+morphs through four lives.
+
+**Prompt / creative brief:**
+> Vertical reel on warm paper. HOOK (0–2s): ink Clash type "Shiko çfarë
+> bëhet / **një postim**." (wine accent). PROCESS (2–10.5s): a single white
+> card MORPHS — its frame resizes and re-rounds with weighted springs while
+> content cross-blurs: clean IG-post card ("dyqani.yt", neutral FOTO panel,
+> real caption) → storefront product card (sizes, price, ink "Shto në
+> shportë") → slim order-notification bar → revenue stat tile ("Të ardhurat
+> sot 18,300 L · +24%"). A quiet caption tracks each state: "Postimi yt në
+> Instagram… bëhet produkt… sjell porosinë e parë… dhe fitimi është yti."
+> PAYOFF: "Nga postimi te fitimi. **Vetë**." + ink CTA pill "Fillo falas →
+> vela.al".
+
+**Caption:**
+> Një postim, katër jetë. 🔁
+> Postim → produkt → porosi → fitim. Vetë. → vela.al
+> #dyqanionline #vela
+
+### 5 · `05-paneli-live.mp4` — the panel assembles (~11.5s)
+**Hook:** "Ky është paneli yt." with a wine underline drawing itself.
+
+**Prompt / creative brief:**
+> Vertical reel, paper canvas. HOOK (0–2s): giant ink "Ky është paneli yt."
+> + wine rule. PROCESS (2–9.4s): a white admin window (traffic-light dots,
+> "vela.al / paneli") assembles piece by piece: sidebar items slide in
+> (Paneli · Porositë · Produktet · Stoku · Pagesat), the "Dyqani" toggle
+> flips OFF→ON (knob slides, goes green "Aktiv"), two product rows populate
+> with "Live" chips, and the order row's badge does a 3D flip "Në pritje" →
+> "U dërgua ✓". Sub: "Gjithçka, pa dalë nga telefoni." PAYOFF: "Kontroll i
+> plotë. **Zero kaos**." + ink CTA "Shihe vetë → vela.al".
+
+**Caption:**
+> Paneli që punon sa ti fle. 📋
+> Porositë, stoku, pagesat — live → vela.al
+> #biznesonline #vela
+
+### 6 · `06-pa-zhurme.mp4` — quiet kinetic type (~10.2s)
+**Hook:** giant ink words, one at a time, each blur-morphing into the next.
+
+**Prompt / creative brief:**
+> Vertical reel, paper canvas, typography only. Giant ink Clash words
+> blur-morph through: "Pa kod." → "Pa website." → "Pa DM të humbura." —
+> each springs in with weight and exits scaling up through blur. Then the
+> single gradient moment of the whole series: "Vetëm **shitje**." with a
+> gradient underline drawing left→right. PAYOFF: "E thjeshtë, si postimi."
+> + ink CTA "Fillo falas → vela.al".
+
+**Caption:**
+> Pa kod. Pa website. Vetëm shitje. 🎯
+> Fillo falas → vela.al
+> #pakod #dyqanionline
+
+## LIGHT REEL STILLS — image (1080×1920) · `reel-stills/`
+
+### 4 · `04-metamorfoza.png` — the morph chain, frozen
+**Prompt:** Paper poster: "Nga postimi te **fitimi**." then the four states
+stacked vertically with thin ink arrows — IG post → product card → order
+bar → revenue tile. Footer "Vela e bën vetë, hap pas hapi."
+
+**Caption:**
+> Rrjedha e parave, në një foto. 🔁
+> vela.al — fillo falas
+> #dyqanionline #vela
+
+### 5 · `05-paneli.png` — the panel poster
+**Prompt:** Paper poster: "Ky është paneli yt." + the assembled admin window
+(toggle Aktiv, Live rows, "Në pritje" order) + sub "Porositë, produktet,
+stoku, pagesat. Gjithçka, pa dalë nga telefoni." + ink CTA.
+
+**Caption:**
+> Zyra jote = telefoni yt. 📋
+> vela.al
+> #biznesonline #vela
+
+### 6 · `06-pa-zhurme.png` — quiet type poster
+**Prompt:** Paper poster, left-aligned ink stack with rising opacity:
+"Pa kod. / Pa website. / Pa DM të humbura." then gradient "Vetëm shitje." +
+gradient rule + ink CTA "Fillo falas → vela.al".
+
+**Caption:**
+> Më pak zhurmë, më shumë shitje. 🤫
+> vela.al
+> #pakod #vela
+
+## LIGHT POSTS — video (1080×1350 · 30fps) · `posts/`
+
+### 4 · `04-checkout.mp4` — the payment (~8.4s)
+**Prompt:** Feed video, paper canvas. HOOK: "Kështu duket **pagesa**."
+PROCESS: a clean checkout card — product row (Atlete Vrapi Air · 42 ·
+4,500 L), card-number field where dot-groups type themselves in
+(•••• •••• •••• 4242), ink button "Paguaj 4,500 L" gets pressed (subtle
+scale) — the card content crossfades to a success state: green ring draws
+itself, check strokes in, "Porosia u krye" + "Pagesa në Lekë · e sigurt ·
+në çast". PAYOFF line: "Karta ose në dorëzim — ti zgjedh."
+
+**Caption:**
+> Kliko. Paguaj. U krye. 💳
+> Pagesa online në Lekë → vela.al
+> #pagesaonline #vela
+
+### 5 · `05-stoku.mp4` — the stock table (~8.2s)
+**Prompt:** Feed video, paper canvas. HOOK: "Harroje **Excel-in**."
+PROCESS: a stock table (Atlete Vrapi Air, masat 40–44 me copë) builds row
+by row; an order notification drops in top-right ("Porosi · masa 42"), the
+size-42 row highlights wine and its counter ROLLS 12 → 11 like an odometer;
+a green chip stamps "Stoku përditësohet vetë ✓". PAYOFF: "Ti shet. Sistemi
+numëron."
+
+**Caption:**
+> Stoku numërohet vetë. 📦
+> Zero Excel, zero gabime → vela.al
+> #stoku #biznesonline
+
+### 6 · `06-nje-link.mp4` — the link (~7.7s)
+**Prompt:** Feed video, paper canvas. HOOK: "Dyqani yt = **një link**."
+PROCESS: a browser address bar types "dyqani-yt.vela.al" with a wine caret,
+"Hap ↵" appears — and a 2×2 mini-storefront assembles underneath (four
+product tiles springing in with names + wine prices). PAYOFF: "Ndaje kudo.
+Shit kudo."
+
+**Caption:**
+> Një link. Gjithë dyqani. 🔗
+> dyqani-yt.vela.al → provo → vela.al
+> #dyqanionline #vela
+
+## LIGHT POST STILLS — image (1080×1350) · `post-stills/`
+
+### 4 · `04-checkout.png` — payment success card
+**Prompt:** Paper poster: "Pagesa **online**. Në Lekë." + white card with
+green ring-check, "Porosia u krye", "Atlete Vrapi Air · 4,500 L · me kartë"
++ "Karta ose në dorëzim — ti zgjedh."
+
+**Caption:**
+> Njoftimi që s'lodhet kurrë. ✓
+> vela.al
+> #pagesaonline #vela
+
+### 5 · `05-stoku.png` — stock table card
+**Prompt:** Paper poster: "Stoku numërohet **vetë**." + the stock table with
+size-42 highlighted (11 copë) + green "Stoku përditësohet vetë ✓" chip +
+"Ti shet. Sistemi numëron."
+
+**Caption:**
+> Excel? S'e njohim. 📦
+> vela.al
+> #stoku #vela
+
+### 6 · `06-nje-link.png` — the link card
+**Prompt:** Paper poster: "Dyqani yt = **një link**." + browser bar
+("dyqani-yt.vela.al" + ink "Hap ↵") + 2×2 mini storefront grid + "Ndaje
+kudo. Shit kudo."
+
+**Caption:**
+> Kopjo. Ngjit. Shit. 🔗
+> vela.al
+> #dyqanionline #vela
+
+---
+
 ## Posting notes
 
 - **Launch order (2 weeks, message-per-day):** boom still → post-to-product
@@ -254,6 +444,11 @@ Slide 3: boat + "Zër vendin tënd. / **Sot**." + CTA pill "Provo 7 ditë falas"
   product still → 5-minuta reel → porosite still → si-funksionon post →
   boom reel → paneli still. Hooks alternate between FOMO / product-magic /
   cha-ching so the grid never repeats a beat twice in a row.
+- **Grid rhythm with the light series:** alternate night ↔ paper assets so
+  the profile grid checker-boards (dark, light, dark…). The light series is
+  also the better fit for mid-funnel content (viewers who already know Vela)
+  since it shows the actual tools; the night series is the louder top-funnel
+  hook.
 - Reels: add trending low-key audio; all type finishes by 80% of each reel
   so end-screens survive IG's UI overlays.
 - Stills use the same safe areas as the reels (IG chrome top ~250px /

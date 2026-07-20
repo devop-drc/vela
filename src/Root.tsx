@@ -21,6 +21,7 @@ import { StoryCTA, storyCtaSchema, storyCtaDefaults } from "./compositions/stori
 import { mkSchema, mkDefaults, ReelPostToProduct, ReelFiveMin, ReelBoom, REEL_P2P_FRAMES, REEL_5MIN_FRAMES, REEL_BOOM_FRAMES } from "./compositions/marketing/Reels";
 import { PostOrders, PostPanel, PostSteps, POST_ORDERS_FRAMES, POST_PANEL_FRAMES, POST_STEPS_FRAMES } from "./compositions/marketing/Posts";
 import { StillPostToProduct, StillFiveMin, StillBoom, StillOrders, StillPanel, GallerySlide1, GallerySlide2, GallerySlide3 } from "./compositions/marketing/Stills";
+import { ReelMorph, ReelPanelLive, ReelQuiet, PostCheckout, PostStock, PostLink, StillMorphLight, StillPanelLight, StillQuiet, StillCheckout, StillStock, StillLink, REEL_MORPH_FRAMES, REEL_PANEL_FRAMES, REEL_QUIET_FRAMES, POST_CHECKOUT_FRAMES, POST_STOCK_FRAMES, POST_LINK_FRAMES } from "./compositions/marketing/Light";
 
 const common = { fps: VIDEO.fps, width: VIDEO.width, height: VIDEO.height };
 /** Instagram story canvas (9:16). */
@@ -84,5 +85,19 @@ export const RemotionRoot = () => (
     <Composition id="GallerySlide1" component={GallerySlide1} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
     <Composition id="GallerySlide2" component={GallerySlide2} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
     <Composition id="GallerySlide3" component={GallerySlide3} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+
+    {/* ── Marketing LIGHT series (cleaner, ink-on-paper, UI morphs) ── */}
+    <Composition id="ReelMorph" component={ReelMorph} durationInFrames={REEL_MORPH_FRAMES} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="ReelPanelLive" component={ReelPanelLive} durationInFrames={REEL_PANEL_FRAMES} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="ReelQuiet" component={ReelQuiet} durationInFrames={REEL_QUIET_FRAMES} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="PostCheckout" component={PostCheckout} durationInFrames={POST_CHECKOUT_FRAMES} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="PostStock" component={PostStock} durationInFrames={POST_STOCK_FRAMES} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="PostLink" component={PostLink} durationInFrames={POST_LINK_FRAMES} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillMorphLight" component={StillMorphLight} durationInFrames={30} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillPanelLight" component={StillPanelLight} durationInFrames={30} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillQuiet" component={StillQuiet} durationInFrames={30} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillCheckout" component={StillCheckout} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillStock" component={StillStock} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillLink" component={StillLink} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
   </>
 );
