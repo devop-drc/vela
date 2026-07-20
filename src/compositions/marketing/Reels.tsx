@@ -1,230 +1,286 @@
 /**
- * Instagram REELS (1080×1920 · 30fps) — motion graphics + typography only.
+ * Instagram REELS (1080×1920 · 30fps) — hook-first structure:
+ * HOOK (owns the first beat) → PROCESS (one idea, shown) → PAYOFF (one CTA).
  *
- *  ReelChaos     ~11s  DM-question chaos floods in → gradient arrow-sweep
- *                      clears it → "Ti poston. / Vela shet." → boat + CTA.
- *  ReelNumbers   ~10s  Kinetic stat beats (3 min · 0 kod · 10+ template ·
- *                      100% në Lekë) → end card.
- *  ReelManifesto ~11s  Blur-rise manifesto lines → "Dyqani YT." gradient +
- *                      underline sweep → wordmark end card.
+ *  ReelPostToProduct ~12s  THE core process: a stylized IG post gets scanned,
+ *                          its data flies out as chips, and it becomes a
+ *                          sellable product card.
+ *  ReelFiveMin       ~11s  "Dyqan për 5 minuta" — a draining timer races
+ *                          through the three setup steps to 0:00 → "Gati."
+ *  ReelBoom          ~11s  Albania's online market is booming — rising chart
+ *                          line + FOMO pivot "s'është NËSE… por KUR."
  */
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig, Easing } from "remotion";
 import { z } from "zod";
-import { BRAND, CLASH, GRAD, GRAD_TEXT, NightShell, Boat, Wordmark, Cta, springy, rise } from "./mkKit";
+import { BRAND, CLASH, SATOSHI, GRAD, GRAD_TEXT, NightShell, Boat, Cta, springy, rise, exitUp, IgPostCard, ProductCardMock } from "./mkKit";
 
 export const mkSchema = z.object({});
 export const mkDefaults = {};
 
-/* ── shared end card: boat + line + CTA ─────────────────────────────────── */
-const EndCard: React.FC<{ from: number; line?: string }> = ({ from, line = "Provo 7 ditë falas" }) => {
+const clamp = (f: number, a: [number, number], b: [number, number], ease?: (t: number) => number) =>
+  interpolate(f, a, b, { extrapolateLeft: "clamp", extrapolateRight: "clamp", ...(ease ? { easing: ease } : {}) });
+
+/* shared end card */
+const EndCard: React.FC<{ from: number; line: string; cta?: string }> = ({ from, line, cta = "Fillo falas → vela.al" }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const sBoat = springy(frame, fps, from, { damping: 13 });
-  const sLine = springy(frame, fps, from + 10);
-  const sCta = springy(frame, fps, from + 20);
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 44 }}>
-      <div style={{ opacity: Math.min(1, sBoat * 1.4), transform: `translateY(${(1 - sBoat) * -60}px) scale(${0.7 + sBoat * 0.3})` }}>
-        <Boat size={330} bob />
+      <div style={{ opacity: Math.min(1, springy(frame, fps, from, { damping: 13 }) * 1.4), transform: `translateY(${(1 - springy(frame, fps, from, { damping: 13 })) * -60}px) scale(${0.7 + springy(frame, fps, from, { damping: 13 }) * 0.3})` }}>
+        <Boat size={320} bob />
       </div>
-      <div style={{ ...rise(sLine), fontFamily: CLASH, fontWeight: 700, fontSize: 74, color: "#fff", letterSpacing: "-0.02em", textAlign: "center" }}>
+      <div style={{ ...rise(springy(frame, fps, from + 10)), fontFamily: CLASH, fontWeight: 700, fontSize: 72, color: "#fff", letterSpacing: "-0.02em", textAlign: "center", lineHeight: 1.15 }}>
         {line}
       </div>
-      <div style={{ ...rise(sCta) }}>
-        <Cta>Fillo falas → vela.al</Cta>
+      <div style={{ ...rise(springy(frame, fps, from + 20)) }}>
+        <Cta size={42}>{cta}</Cta>
       </div>
     </AbsoluteFill>
   );
 };
 
-/* ══ REEL 1 — "DM-t s'janë dyqan" ═══════════════════════════════════════ */
-const QUESTIONS = [
-  "Sa kushton? 🙏", "A ka masë M?", "Çmimi ju lutem", "Si porosis? 🥺", "A bëni dërgesa?",
-  "Sa kushton?", "Ende në stok?", "Çmimi?? 😩", "A ka të kuqe?", "Postoje çmimin!",
-  "Sa kushton kjo?", "Info në DM?", "Çmimi ju lutem 🙏", "A punon me porosi?",
+/* ══ REEL 1 — Post → Product (the core process) ═════════════════════════ */
+const CHIPS = [
+  { label: "Emri", value: "Atlete Vrapi Air" },
+  { label: "Çmimi", value: "4,500 L" },
+  { label: "Variantet", value: "Masat 40–44" },
 ];
 
-// deterministic pseudo-random per index (no Math.random in Remotion)
-const rnd = (i: number, salt = 0) => {
-  const x = Math.sin(i * 127.1 + salt * 311.7) * 43758.5453;
-  return x - Math.floor(x);
-};
-
-export const ReelChaos: React.FC = () => {
+export const ReelPostToProduct: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const SWEEP_AT = 128;
-  const sweep = interpolate(frame, [SWEEP_AT, SWEEP_AT + 26], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
+  // Timeline: hook 0-55 · card 40-150 · scan 95-135 · chips 120-200 ·
+  // morph 200-240 · product 200-290 · payoff 290-360
+  const HOOK_OUT = clamp(frame, [44, 58], [0, 1], Easing.in(Easing.cubic));
+  const cardIn = springy(frame, fps, 46, { damping: 15 });
+  const scan = clamp(frame, [95, 133], [0, 1], Easing.inOut(Easing.cubic));
+  const morph = clamp(frame, [200, 228], [0, 1], Easing.inOut(Easing.cubic));
+  const stageOut = clamp(frame, [278, 292], [0, 1], Easing.in(Easing.cubic));
 
   return (
-    <NightShell reel chromeFrom={SWEEP_AT + 30}>
-      {/* Act 1 — the DM flood (each bubble springs in, slight scatter+tilt) */}
-      {sweep < 1 && (
-        <AbsoluteFill style={{ padding: "40px 10px" }}>
-          {QUESTIONS.map((q, i) => {
-            const delay = 6 + i * 7;
-            const s = springy(frame, fps, delay, { damping: 12, stiffness: 200 });
-            if (s <= 0.01) return null;
-            const x = rnd(i) * 620 - 20;
-            const y = 40 + ((i * 173) % 1210);
-            const tilt = (rnd(i, 1) - 0.5) * 10;
-            // swept away: fly off along the sweep diagonal
-            const gone = sweep * 1400;
-            return (
-              <div
-                key={i}
-                style={{
-                  position: "absolute",
-                  left: x,
-                  top: y,
-                  transform: `translate(${gone}px, ${-gone * 0.35}px) rotate(${tilt}deg) scale(${0.7 + s * 0.3})`,
-                  opacity: Math.min(1, s * 1.5) * (1 - sweep),
-                  background: "rgba(255,255,255,0.96)",
-                  color: "#111",
-                  borderRadius: 32,
-                  borderBottomLeftRadius: 8,
-                  padding: "22px 34px",
-                  fontSize: 34,
-                  fontWeight: 600,
-                  boxShadow: "0 18px 50px -18px rgba(0,0,0,0.55)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {q}
-              </div>
-            );
-          })}
-          {/* mounting pressure counter */}
-          <div style={{ position: "absolute", top: -10, right: 6, opacity: interpolate(frame, [40, 60], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) * (1 - sweep), background: "#E11D48", color: "#fff", borderRadius: 999, padding: "14px 30px", fontSize: 32, fontWeight: 800 }}>
-            {Math.min(47, Math.max(0, Math.round((frame - 30) / 2)))} mesazhe
+    <NightShell reel chromeFrom={60}>
+      {/* HOOK — one line, full frame */}
+      {frame < 60 && (
+        <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", ...exitUp(HOOK_OUT) }}>
+          <div style={{ ...rise(springy(frame, fps, 4, { damping: 12, stiffness: 210 })), fontFamily: CLASH, fontWeight: 700, fontSize: 112, color: "#fff", textAlign: "center", lineHeight: 1.08, letterSpacing: "-0.03em" }}>
+            Ky postim<br />sapo u bë<br /><span style={{ backgroundImage: GRAD_TEXT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>produkt.</span>
           </div>
         </AbsoluteFill>
       )}
 
-      {/* the arrow-sweep — a gradient blade clears the chaos (the hull arrow) */}
-      {sweep > 0 && sweep < 1.001 && frame < SWEEP_AT + 40 && (
-        <div
-          style={{
-            position: "absolute",
-            top: "-10%",
-            bottom: "-10%",
-            width: 260,
-            left: `${-30 + sweep * 160}%`,
-            transform: "rotate(16deg)",
-            backgroundImage: GRAD,
-            filter: "blur(6px)",
-            opacity: 0.95,
-            borderRadius: 60,
-            boxShadow: "0 0 120px 30px rgba(255,46,77,0.45)",
-          }}
-        />
-      )}
-
-      {/* Act 2 — the answer */}
-      {frame >= SWEEP_AT + 18 && frame < 252 && (
-        <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <div style={{ ...rise(springy(frame, fps, SWEEP_AT + 22)), fontFamily: CLASH, fontWeight: 700, fontSize: 128, color: "#fff", letterSpacing: "-0.03em" }}>
-            Ti poston.
+      {/* PROCESS — IG card scanned → chips → product card */}
+      {frame >= 44 && frame < 295 && (
+        <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", ...exitUp(stageOut) }}>
+          <div style={{ position: "relative", width: 640 }}>
+            {/* IG post card */}
+            <div style={{ opacity: Math.min(1, cardIn * 1.5) * (1 - morph), transform: `translateY(${(1 - cardIn) * 120}px) scale(${0.9 + cardIn * 0.1}) rotate(${(1 - morph) * 0 - morph * 4}deg)`, filter: `blur(${morph * 10}px)` }}>
+              <IgPostCard width={640} />
+            </div>
+            {/* product card takes its place */}
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", opacity: morph, transform: `translateY(${(1 - morph) * 60}px) scale(${0.94 + morph * 0.06})` }}>
+              <ProductCardMock width={640} />
+            </div>
+            {/* the scan line */}
+            {scan > 0 && scan < 1 && (
+              <div style={{ position: "absolute", left: -30, right: -30, top: `${scan * 100}%`, height: 7, borderRadius: 99, backgroundImage: GRAD, boxShadow: "0 0 60px 12px rgba(255,46,77,0.65)" }} />
+            )}
+            {/* extracted chips fly out to the right of the card */}
+            {CHIPS.map((c, i) => {
+              const s = springy(frame, fps, 126 + i * 16, { damping: 13 });
+              const away = morph; // chips tuck INTO the product card as it morphs
+              if (s <= 0.01) return null;
+              return (
+                <div
+                  key={c.label}
+                  style={{
+                    position: "absolute",
+                    right: -46,
+                    top: 130 + i * 120,
+                    opacity: Math.min(1, s * 1.6) * (1 - away),
+                    transform: `translateX(${(1 - s) * 140 - away * 130}px) scale(${0.85 + s * 0.15 - away * 0.2})`,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 16,
+                    background: "rgba(20,10,14,0.92)",
+                    border: "2px solid rgba(255,255,255,0.22)",
+                    borderRadius: 999,
+                    padding: "18px 30px",
+                    fontFamily: SATOSHI,
+                    boxShadow: "0 24px 60px -20px rgba(0,0,0,0.7)",
+                  }}
+                >
+                  <span style={{ width: 40, height: 40, borderRadius: 99, backgroundImage: GRAD, display: "grid", placeItems: "center", color: "#fff", fontSize: 22, fontWeight: 800 }}>✓</span>
+                  <span style={{ fontSize: 24, color: "rgba(255,255,255,0.55)", fontWeight: 700 }}>{c.label}</span>
+                  <span style={{ fontSize: 26, color: "#fff", fontWeight: 700 }}>{c.value}</span>
+                </div>
+              );
+            })}
           </div>
-          <div style={{ ...rise(springy(frame, fps, SWEEP_AT + 40)), fontFamily: CLASH, fontWeight: 700, fontSize: 128, letterSpacing: "-0.03em", backgroundImage: GRAD_TEXT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", opacity: Math.min(1, springy(frame, fps, SWEEP_AT + 40) * 1.4) * interpolate(frame, [246, 252], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) }}>
-            Vela shet.
+          {/* process caption under the card */}
+          <div style={{ marginTop: 46, fontFamily: SATOSHI, fontWeight: 700, fontSize: 38, color: "rgba(255,255,255,0.75)", opacity: clamp(frame, [100, 118], [0, 1]) }}>
+            {morph < 0.5 ? "Sistemi po e lexon postimin…" : "Gati për t'u shitur. Vetë."}
           </div>
         </AbsoluteFill>
       )}
-      {frame >= 246 && <EndCard from={252} />}
+
+      {/* PAYOFF */}
+      {frame >= 290 && <EndCard from={296} line={"Çdo postim.\nAutomatikisht."} />}
     </NightShell>
   );
 };
-export const REEL_CHAOS_FRAMES = 330;
+export const REEL_P2P_FRAMES = 366;
 
-/* ══ REEL 2 — "Dyqan në shifra" ═════════════════════════════════════════ */
-const STATS: Array<{ big: string; suffix?: string; label: string; count?: number }> = [
-  { big: "3", suffix: " min", label: "nga postimi te dyqani", count: 3 },
-  { big: "0", label: "rreshta kod", count: 0 },
-  { big: "10", suffix: "+", label: "template për vitrinën", count: 10 },
-  { big: "100", suffix: "%", label: "pagesa në Lekë", count: 100 },
+/* ══ REEL 2 — "Dyqan për 5 minuta" ══════════════════════════════════════ */
+const STEPS: Array<{ t: string; take: string }> = [
+  { t: "Lidh Instagramin", take: "30 sek" },
+  { t: "Sistemi ndërton produktet", take: "3 min" },
+  { t: "Publiko & ndaj linkun", take: "90 sek" },
 ];
-const BEAT = 56;
 
-export const ReelNumbers: React.FC = () => {
+export const ReelFiveMin: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const endFrom = STATS.length * BEAT + 10;
+
+  const HOOK_END = 62;
+  const TIMER_END = 250;
+  // the big countdown 5:00 → 0:00 across the step section
+  const t = clamp(frame, [HOOK_END, TIMER_END], [300, 0]);
+  const mm = Math.floor(t / 60);
+  const ss = String(Math.floor(t % 60)).padStart(2, "0");
+  const done = frame >= TIMER_END;
+  const hookOut = clamp(frame, [HOOK_END - 14, HOOK_END], [0, 1], Easing.in(Easing.cubic));
+  const stageOut = clamp(frame, [286, 298], [0, 1], Easing.in(Easing.cubic));
+
+  return (
+    <NightShell reel chromeFrom={HOOK_END}>
+      {/* HOOK — a challenge */}
+      {frame < HOOK_END && (
+        <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", ...exitUp(hookOut) }}>
+          <div style={{ ...rise(springy(frame, fps, 4, { damping: 12, stiffness: 210 })), fontFamily: CLASH, fontWeight: 700, fontSize: 104, color: "#fff", textAlign: "center", lineHeight: 1.1, letterSpacing: "-0.03em" }}>
+            Dyqan online<br />për <span style={{ backgroundImage: GRAD_TEXT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>5 minuta?</span>
+          </div>
+          <div style={{ ...rise(springy(frame, fps, 22)), marginTop: 30, fontFamily: SATOSHI, fontWeight: 700, fontSize: 42, color: "rgba(255,255,255,0.65)" }}>
+            Po. Ja si:
+          </div>
+        </AbsoluteFill>
+      )}
+
+      {/* PROCESS — timer + steps */}
+      {frame >= HOOK_END - 4 && frame < 300 && (
+        <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 60, ...exitUp(stageOut) }}>
+          <div style={{ fontFamily: CLASH, fontWeight: 700, fontSize: done ? 150 : 210, lineHeight: 1, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", ...(done ? { backgroundImage: GRAD_TEXT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" } : { color: "#fff" }), transform: `scale(${0.9 + springy(frame, fps, HOOK_END) * 0.1})` }}>
+            {done ? "Gati." : `${mm}:${ss}`}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 26, width: 820 }}>
+            {STEPS.map((s, i) => {
+              const from = HOOK_END + 14 + i * 56;
+              const sp = springy(frame, fps, from, { damping: 14 });
+              const fill = clamp(frame, [from + 6, from + 50], [0, 1]);
+              return (
+                <div key={i} style={{ ...rise(sp), display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: SATOSHI }}>
+                    <span style={{ fontSize: 40, fontWeight: 700, color: "#fff" }}>
+                      <span style={{ fontFamily: CLASH, backgroundImage: GRAD_TEXT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", marginRight: 18 }}>{`0${i + 1}`}</span>
+                      {s.t}
+                    </span>
+                    <span style={{ fontSize: 30, fontWeight: 700, color: "rgba(255,255,255,0.5)" }}>{s.take}</span>
+                  </div>
+                  <div style={{ height: 12, borderRadius: 99, background: "rgba(255,255,255,0.1)", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${fill * 100}%`, borderRadius: 99, backgroundImage: GRAD }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </AbsoluteFill>
+      )}
+
+      {/* PAYOFF */}
+      {frame >= 296 && <EndCard from={302} line={"5 minuta.\nDyqani yt, online."} cta="Provo tani → vela.al" />}
+    </NightShell>
+  );
+};
+export const REEL_5MIN_FRAMES = 372;
+
+/* ══ REEL 3 — the boom ("mos e humb momentin") ══════════════════════════ */
+export const ReelBoom: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+
+  const CHART_END = 150;
+  const draw = clamp(frame, [40, CHART_END], [0, 1], Easing.inOut(Easing.cubic));
+  const stageOut = clamp(frame, [166, 180], [0, 1], Easing.in(Easing.cubic));
+  const PIVOT_AT = 182;
+  const pivotOut = clamp(frame, [262, 274], [0, 1], Easing.in(Easing.cubic));
+
+  // chart geometry (accelerating growth curve)
+  const W = 860, H = 620;
+  const pts = Array.from({ length: 60 }, (_, i) => {
+    const x = i / 59;
+    return { x: x * W, y: H - Math.pow(x, 1.9) * H * 0.92 - 20 };
+  });
+  const visible = Math.floor(draw * pts.length);
+  const path = pts.slice(0, Math.max(2, visible)).map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+  const tip = pts[Math.max(0, visible - 1)];
+  const YEARS = ["2022", "2023", "2024", "2025", "2026"];
 
   return (
     <NightShell reel>
-      {STATS.map((st, i) => {
-        const from = 8 + i * BEAT;
-        const local = frame - from;
-        if (local < 0 || local > BEAT + 6) return null;
-        const s = springy(frame, fps, from, { damping: 12, stiffness: 190 });
-        const out = interpolate(local, [BEAT - 10, BEAT + 2], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.in(Easing.cubic) });
-        const n = st.count === 0 ? 0 : Math.round(Math.min(1, Math.max(0, local / 20)) * (st.count ?? 0));
-        return (
-          <AbsoluteFill key={i} style={{ alignItems: "center", justifyContent: "center", opacity: 1 - out, transform: `translateY(${-out * 90}px)`, filter: `blur(${out * 8}px)` }}>
-            <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: "0.24em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: 6, opacity: Math.min(1, s * 1.6) }}>
-              {String(i + 1).padStart(2, "0")} / 04
-            </div>
-            <div style={{ transform: `scale(${0.8 + s * 0.2})`, fontFamily: CLASH, fontWeight: 700, fontSize: 300, lineHeight: 0.95, letterSpacing: "-0.04em", backgroundImage: GRAD_TEXT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", filter: `blur(${Math.max(0, 1 - s) * 12}px)` }}>
-              {st.count != null ? n : st.big}
-              <span style={{ fontSize: 150 }}>{st.suffix ?? ""}</span>
-            </div>
-            <div style={{ ...rise(springy(frame, fps, from + 10)), fontFamily: CLASH, fontWeight: 600, fontSize: 62, color: "#fff", marginTop: 18, textAlign: "center" }}>
-              {st.label}
-            </div>
-          </AbsoluteFill>
-        );
-      })}
-      {frame >= endFrom - 6 && <EndCard from={endFrom} line="Vela. Dyqani yt online." />}
-    </NightShell>
-  );
-};
-export const REEL_NUMBERS_FRAMES = STATS.length * BEAT + 10 + 66;
-
-/* ══ REEL 3 — Manifesto ═════════════════════════════════════════════════ */
-const LINES = ["Postimet e tua.", "Produktet e tua.", "Klientët e tu."];
-
-export const ReelManifesto: React.FC = () => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const FINAL_AT = 30 + LINES.length * 34 + 8;
-  const underline = interpolate(frame, [FINAL_AT + 16, FINAL_AT + 40], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
-  const outro = interpolate(frame, [FINAL_AT + 82, FINAL_AT + 94], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-
-  return (
-    <NightShell reel>
-      <AbsoluteFill style={{ alignItems: "flex-start", justifyContent: "center", padding: "0 90px", gap: 26, opacity: 1 - outro, filter: `blur(${outro * 10}px)` }}>
-        {LINES.map((l, i) => {
-          const s = springy(frame, fps, 24 + i * 34);
-          const dim = frame > FINAL_AT ? 0.38 : 1;
-          return (
-            <div key={i} style={{ ...rise(s), fontFamily: CLASH, fontWeight: 700, fontSize: 96, letterSpacing: "-0.03em", color: `rgba(255,255,255,${dim})`, transition: "color 0.3s" }}>
-              {l}
-            </div>
-          );
-        })}
-        <div style={{ position: "relative" }}>
-          <div style={{ ...rise(springy(frame, fps, FINAL_AT)), fontFamily: CLASH, fontWeight: 700, fontSize: 128, letterSpacing: "-0.03em", backgroundImage: GRAD_TEXT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
-            Dyqani YT.
+      {/* HOOK + chart — the claim draws itself */}
+      {frame < 182 && (
+        <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 40, ...exitUp(stageOut) }}>
+          <div style={{ ...rise(springy(frame, fps, 4, { damping: 12, stiffness: 210 })), fontFamily: CLASH, fontWeight: 700, fontSize: 96, color: "#fff", textAlign: "center", lineHeight: 1.1, letterSpacing: "-0.03em" }}>
+            Shqipëria po<br /><span style={{ backgroundImage: GRAD_TEXT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>blen online.</span>
           </div>
-          {/* the hull-arrow underline draws left → right */}
-          <div style={{ position: "absolute", left: 4, bottom: -26, height: 14, width: `${underline * 100}%`, borderRadius: 99, backgroundImage: GRAD, boxShadow: "0 0 40px rgba(255,46,77,0.6)" }} />
-          <div style={{ position: "absolute", bottom: -40, left: `calc(${underline * 100}% - 20px)`, opacity: underline > 0.15 ? 1 : 0, fontSize: 44, color: "#FACC15", transform: "rotate(-8deg)" }}>➤</div>
-        </div>
-      </AbsoluteFill>
-      {frame >= FINAL_AT + 88 && (
-        <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 48 }}>
-          <div style={{ opacity: Math.min(1, springy(frame, fps, FINAL_AT + 92) * 1.4), transform: `scale(${0.85 + springy(frame, fps, FINAL_AT + 92) * 0.15})` }}>
-            <Wordmark width={640} />
+          <div style={{ position: "relative", width: W, height: H }}>
+            {/* grid hints */}
+            {[0.25, 0.5, 0.75].map((g) => (
+              <div key={g} style={{ position: "absolute", left: 0, right: 0, top: H * g, height: 2, background: "rgba(255,255,255,0.08)" }} />
+            ))}
+            <svg width={W} height={H} style={{ position: "absolute", inset: 0, overflow: "visible" }}>
+              <defs>
+                <linearGradient id="boomGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#7F1D3B" />
+                  <stop offset="45%" stopColor="#FF2E4D" />
+                  <stop offset="100%" stopColor="#FACC15" />
+                </linearGradient>
+              </defs>
+              <path d={path} stroke="url(#boomGrad)" strokeWidth={14} fill="none" strokeLinecap="round" />
+            </svg>
+            {/* glowing tip */}
+            {draw > 0.02 && (
+              <div style={{ position: "absolute", left: tip.x - 16, top: tip.y - 16, width: 32, height: 32, borderRadius: 99, background: "#FACC15", boxShadow: "0 0 50px 16px rgba(250,204,21,0.55)" }} />
+            )}
+            {/* years */}
+            <div style={{ position: "absolute", left: 0, right: 0, bottom: -64, display: "flex", justifyContent: "space-between", fontFamily: SATOSHI, fontSize: 30, fontWeight: 700, color: "rgba(255,255,255,0.5)" }}>
+              {YEARS.map((y, i) => (
+                <span key={y} style={{ opacity: draw * YEARS.length > i ? 1 : 0.25 }}>{y}</span>
+              ))}
+            </div>
           </div>
-          <div style={{ ...rise(springy(frame, fps, FINAL_AT + 104)) }}>
-            <Cta size={40}>Fillo falas → vela.al</Cta>
+          <div style={{ ...rise(springy(frame, fps, 110)), fontFamily: SATOSHI, fontWeight: 700, fontSize: 40, color: "rgba(255,255,255,0.75)", marginTop: 40 }}>
+            Blerjet online rriten çdo vit. Klientët e tu janë aty.
           </div>
         </AbsoluteFill>
       )}
+
+      {/* PIVOT — the FOMO beat */}
+      {frame >= PIVOT_AT && frame < 278 && (
+        <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 20, ...exitUp(pivotOut) }}>
+          <div style={{ ...rise(springy(frame, fps, PIVOT_AT + 2)), fontFamily: CLASH, fontWeight: 700, fontSize: 92, color: "#fff", letterSpacing: "-0.02em" }}>
+            Pyetja s'është <span style={{ textDecoration: "line-through", textDecorationColor: BRAND.fuchsia, opacity: 0.85 }}>NËSE</span>.
+          </div>
+          <div style={{ ...rise(springy(frame, fps, PIVOT_AT + 26)), fontFamily: CLASH, fontWeight: 700, fontSize: 130, letterSpacing: "-0.02em", backgroundImage: GRAD_TEXT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
+            Por KUR.
+          </div>
+        </AbsoluteFill>
+      )}
+
+      {/* PAYOFF */}
+      {frame >= 274 && <EndCard from={280} line={"Zër vendin tënd.\nSot."} cta="Fillo falas → vela.al" />}
     </NightShell>
   );
 };
-export const REEL_MANIFESTO_FRAMES = 30 + LINES.length * 34 + 8 + 170;
+export const REEL_BOOM_FRAMES = 350;
