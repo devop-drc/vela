@@ -2,6 +2,7 @@
 
 import { useMemo, useCallback, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams, useOutletContext } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Package, XCircle, Filter, ArrowUpNarrowWide } from "lucide-react";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,7 @@ interface InstagramShopLayoutContext {
 }
 
 const InstagramProductsFeedPage = () => {
+  const { t } = useTranslation();
   const { shopSlug, productId: productIdFromUrl } = useParams<{ shopSlug: string; productId: string }>();
   const { shopDetails, products: allProductsFromContext, isLoading, error, convertCurrency: convertCurrencyFromContext, promotions } = useStorefront();
   const navigate = useNavigate();
@@ -177,7 +179,7 @@ const InstagramProductsFeedPage = () => {
   }
 
   if (!shopDetails) {
-    return <div className="container py-8 text-center text-muted-foreground text-base md:text-lg">Shop details not found.</div>;
+    return <div className="container py-8 text-center text-muted-foreground text-base md:text-lg">{t('ig_shop.shop_not_found')}</div>;
   }
 
   return (
@@ -193,7 +195,7 @@ const InstagramProductsFeedPage = () => {
             onClick={() => setIsFilterDrawerOpen(true)}
             className="h-10 flex-1 rounded-xl bg-[hsl(var(--card))] font-semibold text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]"
           >
-            <Filter className="mr-2 h-4 w-4" /> Filter
+            <Filter className="mr-2 h-4 w-4" /> {t('ig_shop.filter')}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -201,11 +203,11 @@ const InstagramProductsFeedPage = () => {
                 variant="outline" size="sm"
                 className="h-10 flex-1 rounded-xl bg-[hsl(var(--card))] font-semibold text-[hsl(var(--foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]"
               >
-                Sort <ArrowUpNarrowWide className="ml-2 h-4 w-4" />
+                {t('ig_shop.sort')} <ArrowUpNarrowWide className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {[['newest', 'Newest'], ['oldest', 'Oldest'], ['price-asc', 'Price: Low to High'], ['price-desc', 'Price: High to Low'], ['name-asc', 'Name: A-Z'], ['name-desc', 'Name: Z-A']].map(([v, label]) => (
+              {[['newest', t('ig_shop.sort_newest')], ['oldest', t('ig_shop.sort_oldest')], ['price-asc', t('ig_shop.sort_price_asc')], ['price-desc', t('ig_shop.sort_price_desc')], ['name-asc', t('ig_shop.sort_name_asc')], ['name-desc', t('ig_shop.sort_name_desc')]].map(([v, label]) => (
                 <DropdownMenuItem key={v} className="text-sm" onClick={() => {
                   const next = new URLSearchParams(searchParams);
                   if (v === 'newest') next.delete('sort'); else next.set('sort', v);
@@ -221,17 +223,17 @@ const InstagramProductsFeedPage = () => {
             <EmptyState
               className="mx-4"
               icon={Package}
-              title="No products found"
+              title={t('ig_shop.no_products_title')}
               description={
                 hasActiveFilters
-                  ? "No products match your current filters or search criteria."
-                  : "It looks like this store doesn't have any products yet."
+                  ? t('ig_shop.no_products_filtered')
+                  : t('ig_shop.no_products_yet')
               }
               action={
                 hasActiveFilters ? (
                   <Button variant="outline" onClick={handleResetFilters}>
                     <XCircle className="mr-2 h-4 w-4" />
-                    Clear all filters
+                    {t('ig_shop.clear_all_filters')}
                   </Button>
                 ) : undefined
               }

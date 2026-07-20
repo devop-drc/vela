@@ -29,7 +29,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 const Register = () => {
   const navigate = useNavigate();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const lang: "sq" | "en" = i18n.language?.startsWith("sq") ? "sq" : "en";
   const [showPassword, setShowPassword] = useState(false);
 
@@ -70,7 +70,7 @@ const Register = () => {
       // We can't write profile rows under RLS without a session, and a DB trigger
       // sets up the business on confirmation — so guide the user to their inbox.
       if (authData.user && !authData.session) {
-        showSuccess(`Almost there! We sent a confirmation link to ${data.email}. Click it to finish setting up your shop.`);
+        showSuccess(t("misc.register_confirm_email", { defaultValue: "Almost there! We sent a confirmation link to {{email}}. Click it to finish setting up your shop.", email: data.email }));
         navigate('/login');
         return;
       }
@@ -104,12 +104,12 @@ const Register = () => {
         }, { onConflict: 'business_id' }); // Conflict on 'business_id'
         if (shopDetailsError) throw shopDetailsError;
 
-        showSuccess('Registration successful! Welcome to Vela.');
+        showSuccess(t("misc.register_success", "Registration successful! Welcome to Vela."));
         navigate('/dashboard');
       }
     } catch (error: any) {
       console.error('Registration error:', error);
-      showError(toFriendlyError(error, "Couldn't create your account. Please try again."));
+      showError(toFriendlyError(error, t("misc.register_failed", "Couldn't create your account. Please try again.")));
     }
   };
 
@@ -134,7 +134,7 @@ const Register = () => {
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input id="firstName" autoComplete="given-name" {...register('firstName')} className="h-11 rounded-xl pl-10" />
             </div>
-            {errors.firstName && <p className="text-sm text-destructive">{errors.firstName.message}</p>}
+            {errors.firstName && <p className="text-sm text-destructive">{t("misc.first_name_required", "First name is required")}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="lastName">{lang === "sq" ? "Mbiemri" : "Last name"}</Label>
@@ -142,7 +142,7 @@ const Register = () => {
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input id="lastName" autoComplete="family-name" {...register('lastName')} className="h-11 rounded-xl pl-10" />
             </div>
-            {errors.lastName && <p className="text-sm text-destructive">{errors.lastName.message}</p>}
+            {errors.lastName && <p className="text-sm text-destructive">{t("misc.last_name_required", "Last name is required")}</p>}
           </div>
         </div>
         <div className="space-y-2" data-reveal>
@@ -151,7 +151,7 @@ const Register = () => {
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input id="email" type="email" autoComplete="email" inputMode="email" placeholder="ti@dyqani.al" {...register('email')} className="h-11 rounded-xl pl-10" />
           </div>
-          {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+          {errors.email && <p className="text-sm text-destructive">{t("settings.invalid_email", "Enter a valid email address.")}</p>}
         </div>
         <div className="space-y-2" data-reveal>
           <Label htmlFor="password">{lang === "sq" ? "Fjalëkalimi" : "Password"}</Label>
@@ -159,12 +159,12 @@ const Register = () => {
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" {...register('password')} className="h-11 rounded-xl pl-10 pr-10" />
             <button type="button" onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-label={showPassword ? t("misc.hide_password", "Hide password") : t("misc.show_password", "Show password")}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground">
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-          {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+          {errors.password && <p className="text-sm text-destructive">{t("misc.password_min", "Password must be at least 8 characters")}</p>}
         </div>
         <div className="space-y-2" data-reveal>
           <Label htmlFor="phoneNumber">{lang === "sq" ? "Telefoni (opsional)" : "Phone (optional)"}</Label>

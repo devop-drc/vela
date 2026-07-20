@@ -65,7 +65,14 @@ const ActivityIcon = ({ activity }: { activity: Activity }) => {
 };
 
 // ── value badge / text ────────────────────────────────────────────────────────
+const PRODUCT_STATUS_KEY: Record<string, string> = {
+  'Active': 'common.active',
+  'Draft': 'common.draft',
+  'Out of Stock': 'common.out_of_stock',
+};
+
 const ActivityValue = ({ activity }: { activity: Activity }) => {
+  const { t } = useTranslation();
   if (activity.type === 'sale' || activity.type === 'new_order') {
     return <span className="font-semibold text-xs tabular-nums">{activity.value}</span>;
   }
@@ -74,19 +81,22 @@ const ActivityValue = ({ activity }: { activity: Activity }) => {
     const status = activity.value as string;
     if (status) {
       const tone = status in ORDER_STATUS_TONE ? orderStatusTone(status) : productStatusTone(status);
-      return <StatusBadge tone={tone} size="sm">{status}</StatusBadge>;
+      const label = status in ORDER_STATUS_TONE
+        ? t('notifications.status_' + status.toLowerCase().replace(/\s+/g, '_'), { defaultValue: status })
+        : (PRODUCT_STATUS_KEY[status] ? t(PRODUCT_STATUS_KEY[status]) : status);
+      return <StatusBadge tone={tone} size="sm">{label}</StatusBadge>;
     }
   }
 
   if (activity.type === 'dispute') {
-    return <StatusBadge tone="warning" size="sm">New</StatusBadge>;
+    return <StatusBadge tone="warning" size="sm">{t("sync.label_new", "New")}</StatusBadge>;
   }
 
   return <span className="font-semibold text-xs">{activity.value}</span>;
 };
 
 // ── relative time (compact) ───────────────────────────────────────────────────
-const relativeTime = (date: string) => {
+const relativeTime = (date: string, t: (key: string, defaultValue?: string) => string) => {
   try {
     return formatDistanceToNowStrict(new Date(date), { addSuffix: false })
       .replace(' seconds', 's').replace(' second', 's')
@@ -96,7 +106,7 @@ const relativeTime = (date: string) => {
       .replace(' weeks', 'w').replace(' week', 'w')
       .replace(' months', 'mo').replace(' month', 'mo')
       .replace(' years', 'y').replace(' year', 'y')
-      + ' ago';
+      + ' ' + t("misc.time_ago", "ago");
   } catch {
     return '';
   }
@@ -156,9 +166,9 @@ export const ActivityFeed = () => {
         const currency = shopDetailsRef.current?.currency;
         const amount = convertCurrencyRef.current(order.total_amount, order.currency, currency);
         if (order.status === 'Fulfilled' && order.payment_status === 'paid') {
-          return { id: order.id, type: 'sale', title: t('dashboard.new_sale'), description: `to ${order.customer_name}`, value: formatCurrency(amount, currency), date: order.created_at, orderId: order.id };
+          return { id: order.id, type: 'sale', title: t('dashboard.new_sale'), description: t('dashboard.to_customer', { defaultValue: 'to {{name}}', name: order.customer_name }), value: formatCurrency(amount, currency), date: order.created_at, orderId: order.id };
         }
-        return { id: order.id, type: 'new_order', title: t('dashboard.new_order'), description: `from ${order.customer_name}`, value: formatCurrency(amount, currency), date: order.created_at, orderId: order.id };
+        return { id: order.id, type: 'new_order', title: t('dashboard.new_order'), description: t('dashboard.from_customer', { defaultValue: 'from {{name}}', name: order.customer_name }), value: formatCurrency(amount, currency), date: order.created_at, orderId: order.id };
       });
 
       const productActivities: Activity[] = (productsRes.data || []).map(product => ({
@@ -203,7 +213,7 @@ export const ActivityFeed = () => {
           const o = payload.new as any;
           const currency = shopDetailsRef.current?.currency;
           const amount = convertCurrencyRef.current(o.total_amount, o.currency, currency);
-          const a: Activity = { id: o.id, type: 'new_order', title: t('dashboard.new_order'), description: `from ${o.customer_name}`, value: formatCurrency(amount, currency), date: o.created_at, orderId: o.id };
+          const a: Activity = { id: o.id, type: 'new_order', title: t('dashboard.new_order'), description: t('dashboard.from_customer', { defaultValue: 'from {{name}}', name: o.customer_name }), value: formatCurrency(amount, currency), date: o.created_at, orderId: o.id };
           if (isMounted) setActivities(prev => [a, ...prev].sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime()).slice(0, 20));
         } else if (payload.eventType === 'UPDATE') {
           const oldO = payload.old as any; const newO = payload.new as any;
@@ -244,12 +254,12 @@ export const ActivityFeed = () => {
   const handleActivityClick = async (activity: Activity) => {
     if (activity.type === 'product') {
       const { data, error } = await supabase.from('products').select('*').eq('id', activity.id.split('-')[0]).single();
-      if (error) showError("Failed to load product details.");
+      if (error) showError(t("dashboard.load_product_failed", "Failed to load product details."));
       else setSelectedProduct(data);
     }
     if (['sale', 'new_order', 'order_fulfilled', 'dispute', 'order_status_update'].includes(activity.type)) {
       const { data, error } = await supabase.from('orders').select('*').eq('id', activity.orderId).single();
-      if (error) showError("Failed to load order details.");
+      if (error) showError(t("dashboard.load_order_failed", "Failed to load order details."));
       else setSelectedOrder(data);
     }
   };
@@ -319,7 +329,7 @@ export const ActivityFeed = () => {
                             </div>
                           </div>
                           <p className="text-[10px] text-muted-foreground/70 mt-0.5 tabular-nums">
-                            {relativeTime(activity.date)}
+                            {relativeTime(activity.date, t)}
                           </p>
                         </div>
                       </button>

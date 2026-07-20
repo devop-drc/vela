@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -58,6 +59,7 @@ export const ProductFilterDrawer = ({
   handleSetRatingFilter,
   drawerKeys,
 }: ProductFilterDrawerProps) => {
+  const { t } = useTranslation();
   const { shopDetails, convertCurrency } = useShop();
 
   const FilterSection = ({ title, icon: Icon, filterKey, children }: { title: string; icon: React.ElementType; filterKey: keyof FilterState | 'status'; children: React.ReactNode }) => {
@@ -97,7 +99,7 @@ export const ProductFilterDrawer = ({
                 transition={{ duration: 0.15 }}
                 onClick={handleClear}
                 className="p-1 rounded-full hover:bg-accent-foreground/10 text-muted-foreground hover:text-foreground"
-                aria-label={`Clear ${title} filters`}
+                aria-label={t('filter_drawer.clear_section', { section: title })}
               >
                 <XCircle className="h-4 w-4" />
               </motion.button>
@@ -117,16 +119,16 @@ export const ProductFilterDrawer = ({
         <DrawerHeader className="p-4 border-b flex-row items-center justify-between flex-shrink-0">
           <DrawerTitle className="flex items-center gap-2 text-xl font-bold">
             <Filter className="h-6 w-6 text-primary" />
-            Filters
+            {t('common.filters')}
           </DrawerTitle>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
             <X className="h-4 w-4" />
-            <span className="sr-only">Close filters</span>
+            <span className="sr-only">{t('filter_drawer.close_filters')}</span>
           </Button>
         </DrawerHeader>
 
         <ScrollArea className="flex-1 px-4 py-6">
-          <Accordion type="multiple" defaultValue={["Status", "Categories", "Price Range"]} className="w-full">
+          <Accordion type="multiple" defaultValue={[t('filter_drawer.status'), t('filter_drawer.categories'), t('filter_drawer.price_range')]} className="w-full">
             {(() => {
               const normalize = (s: string) => s.toLowerCase().replace(/\s|_/g, '');
               const attrByName = new Map(allDetailsAttributes.map(a => [a.name, a] as const));
@@ -149,7 +151,7 @@ export const ProductFilterDrawer = ({
               return keys.map((k) => {
                 if (k === 'availability') {
                   return (
-                    <FilterSection key="availability" title="Status" icon={ListFilter} filterKey="status">
+                    <FilterSection key="availability" title={t('filter_drawer.status')} icon={ListFilter} filterKey="status">
                       <div className="flex flex-wrap gap-2">
                         {['Active', 'Draft', 'Out of Stock'].map(status => (
                           <Button
@@ -159,7 +161,7 @@ export const ProductFilterDrawer = ({
                             onClick={() => handleToggleStatusFilter(status)}
                             className={cn("text-sm", statusFilter.includes(status) && "ring-2 ring-primary ring-offset-2")}
                           >
-                            {status}
+                            {t('status_labels.' + status.toLowerCase().replace(/\s+/g, '_'), { defaultValue: status })}
                           </Button>
                         ))}
                       </div>
@@ -168,7 +170,7 @@ export const ProductFilterDrawer = ({
                 }
                 if (k === 'rating') {
                   return (
-                    <FilterSection key="rating" title="Reviews" icon={Star} filterKey="rating">
+                    <FilterSection key="rating" title={t('filter_drawer.reviews')} icon={Star} filterKey="rating">
                       <div className="flex flex-wrap gap-2">
                         {[4, 3, 2, 1].map(min => (
                           <Button
@@ -179,7 +181,7 @@ export const ProductFilterDrawer = ({
                             className={cn("text-sm gap-1", ratingFilter === min && "ring-2 ring-primary ring-offset-2")}
                           >
                             <Star className={cn("h-3.5 w-3.5", ratingFilter === min ? "fill-current" : "fill-amber-400 text-amber-400")} />
-                            {min}+ stars
+                            {t('filter_drawer.stars_plus', { min })}
                           </Button>
                         ))}
                       </div>
@@ -189,7 +191,7 @@ export const ProductFilterDrawer = ({
                 if (k === 'categories') {
                   return (
                     allCategories.length > 0 ? (
-                      <FilterSection key="categories" title="Categories" icon={Info} filterKey="categories">
+                      <FilterSection key="categories" title={t('filter_drawer.categories')} icon={Info} filterKey="categories">
                         <div className="flex flex-wrap gap-2">
                           {allCategories.map(category => (
                             <Button
@@ -209,7 +211,7 @@ export const ProductFilterDrawer = ({
                 }
                 if (k === 'priceRange') {
                   return (
-                    <FilterSection key="priceRange" title="Price Range" icon={DollarSign} filterKey="priceRange">
+                    <FilterSection key="priceRange" title={t('filter_drawer.price_range')} icon={DollarSign} filterKey="priceRange">
                       <div className="px-2 space-y-4">
                         <Slider
                           min={0}
@@ -230,7 +232,7 @@ export const ProductFilterDrawer = ({
                 if (k === 'tags') {
                   return (
                     allTags.length > 0 ? (
-                      <FilterSection key="tags" title="Tags" icon={Tag} filterKey="tags">
+                      <FilterSection key="tags" title={t('filter_drawer.tags')} icon={Tag} filterKey="tags">
                         <div className="flex flex-wrap gap-2">
                           {allTags.map(tag => (
                             <Button
@@ -274,8 +276,8 @@ export const ProductFilterDrawer = ({
           </Accordion>
         </ScrollArea>
         <DrawerFooter className="p-4 border-t flex gap-2 flex-shrink-0">
-          <Button variant="outline" onClick={handleResetAllFilters} className="flex-1 text-sm">Clear All</Button>
-          <Button onClick={onClose} className="flex-1 text-sm">Apply Filters</Button>
+          <Button variant="outline" onClick={handleResetAllFilters} className="flex-1 text-sm">{t('common.clear_all')}</Button>
+          <Button onClick={onClose} className="flex-1 text-sm">{t('filter_drawer.apply_filters')}</Button>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>

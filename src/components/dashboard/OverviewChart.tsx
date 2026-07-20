@@ -103,15 +103,15 @@ export const OverviewChart = ({ data, dateRange, setDateRange, granularity, setG
         <div className="-mx-1 overflow-x-auto px-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex w-max items-center gap-2">
             <ToggleGroup type="single" variant="outline" size="sm" value={periodValue} onValueChange={applyPeriod}>
-              <ToggleGroupItem value="7" aria-label="Last 7 days">7D</ToggleGroupItem>
-              <ToggleGroupItem value="30" aria-label="Last 30 days">30D</ToggleGroupItem>
-              <ToggleGroupItem value="90" aria-label="Last 90 days">90D</ToggleGroupItem>
-              <ToggleGroupItem value="6m" aria-label="Last 6 months">6M</ToggleGroupItem>
-              <ToggleGroupItem value="all" aria-label="All time">{t("common.all")}</ToggleGroupItem>
+              <ToggleGroupItem value="7" aria-label={t("dashboard.last_days", { defaultValue: "Last {{count}} days", count: 7 })}>7D</ToggleGroupItem>
+              <ToggleGroupItem value="30" aria-label={t("dashboard.last_days", { defaultValue: "Last {{count}} days", count: 30 })}>30D</ToggleGroupItem>
+              <ToggleGroupItem value="90" aria-label={t("dashboard.last_days", { defaultValue: "Last {{count}} days", count: 90 })}>90D</ToggleGroupItem>
+              <ToggleGroupItem value="6m" aria-label={t("dashboard.last_6_months", "Last 6 months")}>6M</ToggleGroupItem>
+              <ToggleGroupItem value="all" aria-label={t("dashboard.all_time", "All time")}>{t("common.all")}</ToggleGroupItem>
             </ToggleGroup>
             <ToggleGroup type="single" variant="outline" size="sm" value={granularity} onValueChange={(value: 'day' | 'month') => value && setGranularity(value)}>
-              <ToggleGroupItem value="month" aria-label="By Month">{t("dashboard.month")}</ToggleGroupItem>
-              <ToggleGroupItem value="day" aria-label="By Day">{t("dashboard.day")}</ToggleGroupItem>
+              <ToggleGroupItem value="month" aria-label={t("dashboard.by_month", "By Month")}>{t("dashboard.month")}</ToggleGroupItem>
+              <ToggleGroupItem value="day" aria-label={t("dashboard.by_day", "By Day")}>{t("dashboard.day")}</ToggleGroupItem>
             </ToggleGroup>
             <DateRangePicker date={dateRange} onDateChange={(r) => { setPeriodValue(''); setDateRange(r); }} />
           </div>

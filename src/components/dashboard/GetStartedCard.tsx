@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BrandButton } from "@/components/BrandButton";
@@ -14,27 +15,28 @@ interface GetStartedCardProps {
 }
 
 export const GetStartedCard = ({ hasIntegration, hasProducts, onConnect, onAddProducts, onShare, canShare }: GetStartedCardProps) => {
+  const { t } = useTranslation();
   const steps = [
     {
       done: hasIntegration,
       icon: Instagram,
-      title: "Connect your Instagram",
-      desc: "Link your Instagram Business account so we can turn your posts into products.",
-      action: !hasIntegration ? { label: "Connect", onClick: onConnect } : null,
+      title: t('get_started.connect_title'),
+      desc: t('get_started.connect_desc'),
+      action: !hasIntegration ? { label: t('get_started.connect_action'), onClick: onConnect } : null,
     },
     {
       done: hasProducts,
       icon: Package,
-      title: "Add your products",
-      desc: "Import them from Instagram, or add a product by hand.",
-      action: !hasProducts ? { label: "Add products", onClick: onAddProducts } : null,
+      title: t('get_started.products_title'),
+      desc: t('get_started.products_desc'),
+      action: !hasProducts ? { label: t('get_started.products_action'), onClick: onAddProducts } : null,
     },
     {
       done: false,
       icon: Share2,
-      title: "Share your shop",
-      desc: "Copy your shop link and send it to your customers.",
-      action: canShare ? { label: "Copy link", onClick: onShare } : null,
+      title: t('get_started.share_title'),
+      desc: t('get_started.share_desc'),
+      action: canShare ? { label: t('get_started.share_action'), onClick: onShare } : null,
     },
   ];
 
@@ -45,9 +47,9 @@ export const GetStartedCard = ({ hasIntegration, hasProducts, onConnect, onAddPr
       <CardContent className="p-5">
         <div className="flex items-center gap-2 mb-1">
           <img src="/vela-icon.svg" alt="Vela" className="h-6 w-6 rounded-md ring-1 ring-border" />
-          <h2 className="text-lg font-semibold">Let's set up your shop</h2>
+          <h2 className="text-lg font-semibold">{t('get_started.title')}</h2>
         </div>
-        <p className="text-sm text-muted-foreground mb-4">A few quick steps and you'll be ready to sell.</p>
+        <p className="text-sm text-muted-foreground mb-4">{t('get_started.subtitle')}</p>
 
         <div className="space-y-2.5">
           {steps.map((step, i) => {

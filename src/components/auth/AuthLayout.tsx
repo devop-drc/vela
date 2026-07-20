@@ -30,7 +30,7 @@ interface Props {
 
 export default function AuthLayout({ title, subtitle, children, points, lang }: Props) {
   const pointsRef = useReveal<HTMLUListElement>({ y: 8, delay: 0.1 }, [points.length]);
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [dark, setDark] = useState(() => {
     try { return localStorage.getItem(THEME_KEY) === "dark"; } catch { return false; }
   });
@@ -69,7 +69,7 @@ export default function AuthLayout({ title, subtitle, children, points, lang }: 
               </div>
               <button
                 onClick={toggleTheme}
-                aria-label={dark ? "Light mode" : "Dark mode"}
+                aria-label={dark ? t("misc.light_mode", "Light mode") : t("misc.dark_mode", "Dark mode")}
                 className="grid h-8 w-8 place-items-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:text-foreground"
               >
                 {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

@@ -4,6 +4,7 @@
 // heartbeat-backed so it never goes stale.
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Monitor, Smartphone, ExternalLink, Lock, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,7 @@ export const ScaledFrame = ({ src, virtualW, virtualH, title, className, interac
 };
 
 export const DockedPreview = ({ previewPath, previewUrl, config, navTarget, className }: Props) => {
+  const { t } = useTranslation();
   // A merchant editing on a phone wants the mobile view first — it also scales
   // ~3x larger than the desktop frame in a narrow dock (readable vs. a strip).
   const [device, setDevice] = useState<'desktop' | 'mobile'>(() =>
@@ -104,19 +106,19 @@ export const DockedPreview = ({ previewPath, previewUrl, config, navTarget, clas
           {!dual && (
             <div className="flex rounded-md border p-0.5">
               <button type="button" onClick={() => setDevice('desktop')} className={cn('flex h-7 items-center gap-1 rounded px-2 text-xs', device === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')} aria-pressed={device === 'desktop'}>
-                <Monitor className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Desktop</span>
+                <Monitor className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t('studio_panels.desktop')}</span>
               </button>
               <button type="button" onClick={() => setDevice('mobile')} className={cn('flex h-7 items-center gap-1 rounded px-2 text-xs', device === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')} aria-pressed={device === 'mobile'}>
-                <Smartphone className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Mobile</span>
+                <Smartphone className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t('studio_panels.mobile')}</span>
               </button>
             </div>
           )}
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setReloadKey((k) => k + 1)} aria-label="Reload preview">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setReloadKey((k) => k + 1)} aria-label={t('studio_panels.reload_preview')}>
             <RotateCcw className="h-3.5 w-3.5" />
           </Button>
           {previewUrl && (
             <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-              <a href={previewUrl} target="_blank" rel="noopener noreferrer" aria-label="Open storefront in new tab"><ExternalLink className="h-3.5 w-3.5" /></a>
+              <a href={previewUrl} target="_blank" rel="noopener noreferrer" aria-label={t('studio_panels.open_storefront_new_tab')}><ExternalLink className="h-3.5 w-3.5" /></a>
             </Button>
           )}
         </div>
@@ -125,16 +127,16 @@ export const DockedPreview = ({ previewPath, previewUrl, config, navTarget, clas
       {/* Scaled device(s) */}
       <div ref={holderRef} className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden p-3">
         {!previewPath ? (
-          <p className="text-sm text-muted-foreground">Save your shop name to preview.</p>
+          <p className="text-sm text-muted-foreground">{t('studio_panels.save_shop_name_to_preview')}</p>
         ) : dual ? (
           <div className="flex items-start" style={{ gap: GAP }}>
             <div className="flex flex-col items-center gap-2">
               <PreviewFrame key={`d-${reloadKey}`} innerRef={deskRef} src={previewPath} dev={DESKTOP} scale={dualScale} />
-              <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"><Monitor className="h-3 w-3" /> Desktop</span>
+              <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"><Monitor className="h-3 w-3" /> {t('studio_panels.desktop')}</span>
             </div>
             <div className="flex flex-col items-center gap-2">
               <PreviewFrame key={`m-${reloadKey}`} innerRef={mobRef} src={previewPath} dev={MOBILE} scale={dualScale} phone />
-              <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"><Smartphone className="h-3 w-3" /> Mobile</span>
+              <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"><Smartphone className="h-3 w-3" /> {t('studio_panels.mobile')}</span>
             </div>
           </div>
         ) : device === 'desktop' ? (
@@ -144,7 +146,7 @@ export const DockedPreview = ({ previewPath, previewUrl, config, navTarget, clas
         )}
       </div>
       <p className="shrink-0 border-t bg-background/80 py-1 text-center text-[11px] text-muted-foreground">
-        {dual ? 'Desktop + mobile' : device === 'desktop' ? 'Desktop · 1280px' : 'Mobile · 390px'} — edits apply instantly
+        {dual ? t('studio_panels.preview_meta_dual') : t('studio_panels.preview_meta', { device: device === 'desktop' ? t('studio_panels.desktop') : t('studio_panels.mobile'), size: device === 'desktop' ? '1280px' : '390px' })}
       </p>
     </div>
   );

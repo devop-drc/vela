@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 import { invalidateProductRating } from '@/hooks/useProductRating';
+import { useTranslation } from 'react-i18next';
 
 interface Review {
   id: string;
@@ -44,6 +45,7 @@ const Stars = ({ value }: { value: number }) => (
 );
 
 export const ProductReviewsManager = ({ open, onOpenChange, productId, productName }: Props) => {
+  const { t } = useTranslation();
   const [reviews, setReviews] = useState<Review[] | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export const ProductReviewsManager = ({ open, onOpenChange, productId, productNa
       .rpc('get_product_reviews_owner', { p_product_id: productId })
       .then(({ data, error }) => {
         if (cancelled) return;
-        if (error) { showError('Could not load reviews.'); setReviews([]); return; }
+        if (error) { showError(t('reviews_mgr.load_failed')); setReviews([]); return; }
         setReviews((data ?? []) as Review[]);
         setDrafts(Object.fromEntries((data ?? []).map((r: any) => [r.id, r.reply_text ?? ''])));
       });
@@ -73,9 +75,9 @@ export const ProductReviewsManager = ({ open, onOpenChange, productId, productNa
       if (error) throw error;
       setReviews((prev) => (prev ?? []).map((r) => (r.id === reviewId ? { ...r, reply_text: reply.trim() || null, replied_at: reply.trim() ? new Date().toISOString() : null } : r)));
       invalidateProductRating(productId);
-      showSuccess(reply.trim() ? 'Reply published.' : 'Reply removed.');
+      showSuccess(reply.trim() ? t('reviews_mgr.reply_published') : t('reviews_mgr.reply_removed'));
     } catch (e: any) {
-      showError(e.message || 'Could not save the reply.');
+      showError(e.message || t('reviews_mgr.save_failed'));
     } finally {
       setSavingId(null);
     }
@@ -88,12 +90,12 @@ export const ProductReviewsManager = ({ open, onOpenChange, productId, productNa
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" /> Reviews — {productName}
+            <MessageSquare className="h-5 w-5" /> {t('reviews_mgr.title', { name: productName })}
           </DialogTitle>
           <DialogDescription>
             {reviews?.length
-              ? <span className="inline-flex items-center gap-2"><Stars value={Math.round(avg)} /> {avg.toFixed(1)} average · {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}. Replies are shown publicly on your storefront.</span>
-              : 'Verified-purchase reviews for this product.'}
+              ? <span className="inline-flex items-center gap-2"><Stars value={Math.round(avg)} /> {t('reviews_mgr.summary', { avg: avg.toFixed(1), count: reviews.length })}</span>
+              : t('reviews_mgr.verified_desc')}
           </DialogDescription>
         </DialogHeader>
 
@@ -103,8 +105,8 @@ export const ProductReviewsManager = ({ open, onOpenChange, productId, productNa
           <EmptyState
             compact
             icon={MessageSquare}
-            title="No reviews yet"
-            description="Customers can review from “My Orders” once their order is fulfilled."
+            title={t('reviews_mgr.no_reviews')}
+            description={t('reviews_mgr.no_reviews_desc')}
           />
         ) : (
           <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
@@ -112,7 +114,7 @@ export const ProductReviewsManager = ({ open, onOpenChange, productId, productNa
               <div key={r.id} className="rounded-lg border p-4">
                 <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{r.customer_name || 'Verified customer'}</p>
+                    <p className="truncate text-sm font-semibold">{r.customer_name || t('reviews_mgr.verified_customer')}</p>
                     <p className="truncate text-[11px] text-muted-foreground">{r.customer_email} · {new Date(r.created_at).toLocaleDateString()}</p>
                   </div>
                   <Stars value={r.rating} />
@@ -123,14 +125,14 @@ export const ProductReviewsManager = ({ open, onOpenChange, productId, productNa
                   <Textarea
                     value={drafts[r.id] ?? ''}
                     onChange={(e) => setDrafts((d) => ({ ...d, [r.id]: e.target.value }))}
-                    placeholder="Write a public reply…"
+                    placeholder={t('reviews_mgr.reply_placeholder')}
                     rows={2}
                     maxLength={2000}
                     className="text-sm"
                   />
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[11px] text-muted-foreground">
-                      {r.replied_at ? `Replied ${new Date(r.replied_at).toLocaleDateString()}` : 'No reply yet'}
+                      {r.replied_at ? t('reviews_mgr.replied_on', { date: new Date(r.replied_at).toLocaleDateString() }) : t('reviews_mgr.no_reply')}
                     </span>
                     <Button
                       size="sm"
@@ -138,8 +140,8 @@ export const ProductReviewsManager = ({ open, onOpenChange, productId, productNa
                       onClick={() => saveReply(r.id)}
                     >
                       {savingId === r.id
-                        ? <><Spinner className="mr-1.5 h-3.5 w-3.5" /> Saving…</>
-                        : <><Send className="mr-1.5 h-3.5 w-3.5" /> {r.reply_text ? 'Update reply' : 'Reply'}</>}
+                        ? <><Spinner className="mr-1.5 h-3.5 w-3.5" /> {t('reviews_mgr.saving')}</>
+                        : <><Send className="mr-1.5 h-3.5 w-3.5" /> {r.reply_text ? t('reviews_mgr.update_reply') : t('reviews_mgr.reply')}</>}
                     </Button>
                   </div>
                 </div>

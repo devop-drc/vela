@@ -20,6 +20,7 @@ import { getStockStatus } from "@/lib/stock";
 import { stockTone, toneDotBg } from "@/lib/status";
 import { StatCard, SearchInput, EmptyState } from "@/components/ui-app";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation, Trans } from "react-i18next";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type OptionValue = { id?: string; value: string; price_difference: number; is_active: boolean; is_default: boolean; inventory?: number };
@@ -87,6 +88,7 @@ const serializeState = (options: ProductOption[], variants: VariantRow[]): strin
 };
 
 const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurrency, convertCurrency }: VariantsManagerProps, ref: any) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   // Kept in a ref so handleSave's useCallback identity doesn't churn on auth changes.
   const userIdRef = React.useRef<string | null>(user?.id ?? null);
@@ -313,7 +315,7 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
 
   // ── Save (hardened: syncs option_values stock + product base inventory/status) ─
   const handleSave = useCallback(async () => {
-    if (!userIdRef.current) throw new Error("You're not signed in. Please sign in to save options and variants.");
+    if (!userIdRef.current) throw new Error(t('variants.not_signed_in'));
 
     // Only save options that have a name, and values that have a value — blank
     // rows are incomplete and would collide on the unique (product_id, name) /
@@ -377,7 +379,7 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
     // Refresh the dirty-check baseline so the form is considered clean post-save.
     initialSnapshotRef.current = serializeState(options, rows);
     return true;
-  }, [options, rows, variants, productId]);
+  }, [options, rows, variants, productId, t]);
 
   const isDirty = useCallback(() => {
     if (!snapshotCapturedRef.current) return false;
@@ -397,23 +399,23 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold flex items-center gap-2">
-            <Settings2 className="h-4 w-4" /> Options
+            <Settings2 className="h-4 w-4" /> {t('variants.options')}
             {snapshotCapturedRef.current && isDirty() && (
-              <Badge variant="outline" className="h-5 text-[11px] font-medium border-warning/60 text-warning">Unsaved changes</Badge>
+              <Badge variant="outline" className="h-5 text-[11px] font-medium border-warning/60 text-warning">{t('variants.unsaved_changes')}</Badge>
             )}
           </h3>
-          <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={addOption}><Plus className="h-3.5 w-3.5 mr-1" /> Add option</Button>
+          <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={addOption}><Plus className="h-3.5 w-3.5 mr-1" /> {t('variants.add_option')}</Button>
         </div>
 
         {options.length === 0 ? (
           <EmptyState
             compact
             icon={Layers}
-            title="No options yet"
-            description={<>Add an option like <b>Size</b> or <b>Color</b> to generate variants.</>}
+            title={t('variants.no_options_title')}
+            description={<Trans i18nKey="variants.no_options_desc" components={{ b: <b /> }} />}
             action={
               <Button type="button" size="sm" variant="outline" className="h-8" onClick={addOption}>
-                <Plus className="h-3.5 w-3.5 mr-1.5" /> Add your first option
+                <Plus className="h-3.5 w-3.5 mr-1.5" /> {t('variants.add_first_option')}
               </Button>
             }
           />
@@ -422,19 +424,19 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
             {options.map((opt, idx) => (
               <div key={idx} className="rounded-lg border overflow-hidden">
                 <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border-b">
-                  <Input value={opt.name} onChange={e => patchOption(idx, { name: e.target.value })} placeholder="Option name (e.g. Size)" className="h-7 text-sm font-medium max-w-[220px]" />
-                  <span className="text-xs text-muted-foreground ml-auto">{opt.values.length} value{opt.values.length !== 1 ? 's' : ''}</span>
+                  <Input value={opt.name} onChange={e => patchOption(idx, { name: e.target.value })} placeholder={t('variants.option_name_placeholder')} className="h-7 text-sm font-medium max-w-[220px]" />
+                  <span className="text-xs text-muted-foreground ml-auto">{t('variants.value_count', { count: opt.values.length })}</span>
                   <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => removeOption(idx)}><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
                 {opt.values.length > 0 && (
                   <div className="grid grid-cols-[1fr_110px_52px_56px_32px] items-center gap-2 px-3 py-1.5 border-b bg-muted/20 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-                    <span>Value</span><span>Price +/-</span><span className="text-center">Active</span><span className="text-center">Default</span><span />
+                    <span>{t('variants.value')}</span><span>{t('variants.price_diff')}</span><span className="text-center">{t('common.active')}</span><span className="text-center">{t('variants.default')}</span><span />
                   </div>
                 )}
                 <div className="divide-y">
                   {opt.values.map((v, vidx) => (
                     <div key={vidx} className="grid grid-cols-[1fr_110px_52px_56px_32px] items-center gap-2 px-3 py-1.5">
-                      <Input value={v.value} onChange={e => patchValue(idx, vidx, { value: e.target.value })} placeholder="e.g. Medium" className="h-8 text-sm" />
+                      <Input value={v.value} onChange={e => patchValue(idx, vidx, { value: e.target.value })} placeholder={t('variants.value_placeholder')} className="h-8 text-sm" />
                       <div className="relative">
                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">{currencySymbol}</span>
                         <Input type="number" step="0.01" value={convertCurrency(v.price_difference || 0, 'ALL', displayCurrency)} onChange={e => { const entered = parseFloat(e.target.value || '0'); const backToALL = convertCurrency(entered, displayCurrency, 'ALL'); patchValue(idx, vidx, { price_difference: isFinite(backToALL) ? backToALL : 0 }); }} className="h-8 text-sm pl-6" />
@@ -447,7 +449,7 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
                 </div>
                 <div className="px-3 py-2 border-t bg-muted/10 flex items-center gap-2">
                   <Input
-                    placeholder="Type values and press Enter — e.g. S, M, L"
+                    placeholder={t('variants.bulk_add_placeholder')}
                     className="h-8 text-sm flex-1"
                     onKeyDown={(e) => {
                       if (e.key !== 'Enter') return;
@@ -457,7 +459,7 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
                       el.value = '';
                     }}
                   />
-                  <Button type="button" size="sm" variant="ghost" className="h-8 text-xs px-2 shrink-0" onClick={() => addValue(idx)}><Plus className="h-3.5 w-3.5 mr-1" /> Add row</Button>
+                  <Button type="button" size="sm" variant="ghost" className="h-8 text-xs px-2 shrink-0" onClick={() => addValue(idx)}><Plus className="h-3.5 w-3.5 mr-1" /> {t('variants.add_row')}</Button>
                 </div>
               </div>
             ))}
@@ -469,15 +471,15 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
       {rows.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold flex items-center gap-2"><Layers className="h-4 w-4" /> Variants & Inventory <Badge variant="secondary" className="h-5 text-xs">{rows.length}</Badge></h3>
+            <h3 className="text-sm font-semibold flex items-center gap-2"><Layers className="h-4 w-4" /> {t('variants.variants_inventory')} <Badge variant="secondary" className="h-5 text-xs">{rows.length}</Badge></h3>
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <StatCard title="Total units" value={stats.units} icon={Layers} tone="brand" />
-            <StatCard title="In stock" value={stats.inS} icon={CheckCircle2} tone="success" />
-            <StatCard title="Low stock" value={stats.low} icon={AlertTriangle} tone="warning" />
-            <StatCard title="Out of stock" value={stats.out} icon={XCircle} tone="danger" />
+            <StatCard title={t('variants.total_units')} value={stats.units} icon={Layers} tone="brand" />
+            <StatCard title={t('common.in_stock')} value={stats.inS} icon={CheckCircle2} tone="success" />
+            <StatCard title={t('common.low_stock')} value={stats.low} icon={AlertTriangle} tone="warning" />
+            <StatCard title={t('common.out_of_stock')} value={stats.out} icon={XCircle} tone="danger" />
           </div>
 
           {/* Toolbar */}
@@ -485,27 +487,27 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
             <SearchInput
               value={search}
               onValueChange={setSearch}
-              placeholder="Search variants or SKU…"
+              placeholder={t('variants.search_placeholder')}
               containerClassName="h-8 flex-1 min-w-[180px]"
             />
             <div className="flex items-center rounded-md border p-0.5 gap-0.5">
-              {([["all", "All"], ["in", "In"], ["low", "Low"], ["out", "Out"]] as [StatusFilter, string][]).map(([k, lbl]) => (
+              {([["all", t('common.all')], ["in", t('variants.filter_in')], ["low", t('variants.filter_low')], ["out", t('variants.filter_out')]] as [StatusFilter, string][]).map(([k, lbl]) => (
                 <button key={k} type="button" onClick={() => setStatusFilter(k)} className={cn("px-2.5 h-7 text-xs rounded transition-colors", statusFilter === k ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground")}>{lbl}</button>
               ))}
             </div>
             <Select value={sortKey} onValueChange={v => setSortKey(v as SortKey)}>
               <SelectTrigger className="w-[140px] h-8 text-sm"><div className="flex items-center gap-1.5"><ArrowUpDown className="h-3.5 w-3.5" /><SelectValue /></div></SelectTrigger>
               <SelectContent>
-                <SelectItem value="inventory">Stock</SelectItem>
-                <SelectItem value="price">Price</SelectItem>
+                <SelectItem value="inventory">{t('variants.stock')}</SelectItem>
+                <SelectItem value="price">{t('variants.price')}</SelectItem>
                 <SelectItem value="sku">SKU</SelectItem>
-                {activeOptionNames.map(n => <SelectItem key={`opt:${n}`} value={`opt:${n}`}>By {n}</SelectItem>)}
+                {activeOptionNames.map(n => <SelectItem key={`opt:${n}`} value={`opt:${n}`}>{t('variants.by_option', { name: n })}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Button type="button" variant="outline" size="icon" className="h-8 w-8" onClick={() => setSortDir(d => d === "asc" ? "desc" : "asc")} title={sortDir === "asc" ? "Ascending" : "Descending"}>
+            <Button type="button" variant="outline" size="icon" className="h-8 w-8" onClick={() => setSortDir(d => d === "asc" ? "desc" : "asc")} title={sortDir === "asc" ? t('variants.ascending') : t('variants.descending')}>
               <ArrowUpDown className={cn("h-3.5 w-3.5 transition-transform", sortDir === "asc" && "rotate-180")} />
             </Button>
-            {hasActiveFilters && <Button type="button" variant="ghost" size="sm" className="h-8 text-xs" onClick={clearFilters}><X className="h-3.5 w-3.5 mr-1" /> Clear</Button>}
+            {hasActiveFilters && <Button type="button" variant="ghost" size="sm" className="h-8 text-xs" onClick={clearFilters}><X className="h-3.5 w-3.5 mr-1" /> {t('common.clear')}</Button>}
           </div>
 
           {/* Per-option value filter chips */}
@@ -522,15 +524,15 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
           {/* Bulk action bar */}
           {selectedKeys.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">
-              <span className="text-xs font-medium">{selectedKeys.length} selected</span>
-              <Input type="number" min={0} placeholder="Qty" value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="h-7 w-20 text-sm" />
-              <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyBulk("set")}>Set</Button>
-              <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyBulk("add")}>Add</Button>
-              <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyBulk("zero")}><PackageX className="h-3.5 w-3.5 mr-1" />Zero</Button>
+              <span className="text-xs font-medium">{t('variants.selected_count', { count: selectedKeys.length })}</span>
+              <Input type="number" min={0} placeholder={t('variants.qty')} value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="h-7 w-20 text-sm" />
+              <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyBulk("set")}>{t('variants.set')}</Button>
+              <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyBulk("add")}>{t('common.add')}</Button>
+              <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyBulk("zero")}><PackageX className="h-3.5 w-3.5 mr-1" />{t('variants.zero')}</Button>
               <span className="w-px h-5 bg-border mx-0.5" />
-              <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyBulk("activate")}>Activate</Button>
-              <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyBulk("deactivate")}>Deactivate</Button>
-              <Button type="button" size="sm" variant="ghost" className="h-7 text-xs ml-auto" onClick={() => setSelected({})}>Clear selection</Button>
+              <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyBulk("activate")}>{t('variants.activate')}</Button>
+              <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyBulk("deactivate")}>{t('variants.deactivate')}</Button>
+              <Button type="button" size="sm" variant="ghost" className="h-7 text-xs ml-auto" onClick={() => setSelected({})}>{t('variants.clear_selection')}</Button>
             </div>
           )}
 
@@ -538,10 +540,10 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
           <div className="rounded-lg border overflow-hidden">
             <div className="grid items-center gap-2 px-3 py-2 bg-muted/40 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wide" style={{ gridTemplateColumns: '28px 1fr 96px 110px 1fr 48px 52px' }}>
               <Checkbox checked={allVisibleSelected} onCheckedChange={c => toggleSelectAll(!!c)} className="mx-auto" />
-              <span>Variant</span><span className="text-right">Stock</span><span>Price</span><span>SKU</span><span className="text-center">Active</span><span className="text-center">Default</span>
+              <span>{t('variants.variant')}</span><span className="text-right">{t('variants.stock')}</span><span>{t('variants.price')}</span><span>SKU</span><span className="text-center">{t('common.active')}</span><span className="text-center">{t('variants.default')}</span>
             </div>
             {sorted.length === 0 ? (
-              <div className="py-10 text-center text-sm text-muted-foreground">No variants match your filters.</div>
+              <div className="py-10 text-center text-sm text-muted-foreground">{t('variants.no_match')}</div>
             ) : (
               <div className="divide-y max-h-[420px] overflow-y-auto">
                 {sorted.map((r, ri) => {
@@ -567,7 +569,7 @@ const VariantsManager = React.forwardRef(({ productId, basePriceALL, displayCurr
               </div>
             )}
           </div>
-          <p className="text-[11px] text-muted-foreground">Variant price = base + option adjustments, shown in {displayCurrency}. Saving syncs the product's total stock automatically.</p>
+          <p className="text-[11px] text-muted-foreground">{t('variants.footer_note', { currency: displayCurrency })}</p>
         </section>
       )}
     </div>

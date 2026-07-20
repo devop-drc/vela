@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "./ui/button";
 import { CheckCircle, XCircle, Trash2, X, Archive, Percent } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 
@@ -13,6 +14,7 @@ interface BulkActionsToolbarProps {
 }
 
 export const BulkActionsToolbar = ({ selectedCount, onClear, onSetStatus, onDelete, onAddSale }: BulkActionsToolbarProps) => {
+  const { t } = useTranslation();
   return (
     <motion.div
       // Keep x pinned at -50% throughout so framer's transform doesn't clobber
@@ -23,12 +25,12 @@ export const BulkActionsToolbar = ({ selectedCount, onClear, onSetStatus, onDele
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className="fixed bottom-6 left-1/2 z-[60] flex w-max max-w-[calc(100vw-2rem)] items-center gap-2 overflow-x-auto rounded-xl border bg-background/80 p-2 shadow-2xl backdrop-blur-[20px] md:gap-3"
     >
-      <p className="text-sm font-medium px-2">{selectedCount} selected</p>
-      <Button variant="outline" size="sm" onClick={() => onSetStatus('Active')} className="text-success border-success/40 hover:bg-success/10 hover:text-success"><CheckCircle className="mr-2 h-4 w-4" />Set Active</Button>
-      <Button variant="outline" size="sm" onClick={() => onSetStatus('Draft')} className="text-warning border-warning/40 hover:bg-warning/10 hover:text-warning"><XCircle className="mr-2 h-4 w-4" />Set Draft</Button>
-      <Button variant="outline" size="sm" onClick={() => onSetStatus('Out of Stock')} className="text-muted-foreground border-border hover:bg-muted hover:text-foreground"><Archive className="mr-2 h-4 w-4" />Set Out of Stock</Button>
-      <Button variant="outline" size="sm" onClick={onAddSale}><Percent className="mr-2 h-4 w-4" />Add Sale</Button>
-      <Button variant="destructive" size="sm" onClick={onDelete}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>
+      <p className="text-sm font-medium px-2">{t('products_ui.selected_count', { count: selectedCount })}</p>
+      <Button variant="outline" size="sm" onClick={() => onSetStatus('Active')} className="text-success border-success/40 hover:bg-success/10 hover:text-success"><CheckCircle className="mr-2 h-4 w-4" />{t('products_ui.set_active')}</Button>
+      <Button variant="outline" size="sm" onClick={() => onSetStatus('Draft')} className="text-warning border-warning/40 hover:bg-warning/10 hover:text-warning"><XCircle className="mr-2 h-4 w-4" />{t('products_ui.set_draft')}</Button>
+      <Button variant="outline" size="sm" onClick={() => onSetStatus('Out of Stock')} className="text-muted-foreground border-border hover:bg-muted hover:text-foreground"><Archive className="mr-2 h-4 w-4" />{t('products_ui.set_out_of_stock')}</Button>
+      <Button variant="outline" size="sm" onClick={onAddSale}><Percent className="mr-2 h-4 w-4" />{t('products_ui.add_sale')}</Button>
+      <Button variant="destructive" size="sm" onClick={onDelete}><Trash2 className="mr-2 h-4 w-4" />{t('common.delete')}</Button>
       <Button variant="ghost" size="icon" onClick={onClear} className="h-8 w-8"><X className="h-4 w-4" /></Button>
     </motion.div>
   );

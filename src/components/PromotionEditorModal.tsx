@@ -23,9 +23,11 @@ import { useShop } from "@/contexts/ShopContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrency, currencySymbol } from "@/lib/formatters";
 import { Switch } from "@/components/ui/switch";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 
 const promotionSchema = z.object({
-  name: z.string().min(1, "Promotion name is required"),
+  name: z.string().min(1, { message: i18n.t('promo_editor.name_required') }),
   type: z.enum(['discount', 'offer']),
   value: z.any(),
   start_date: z.date().optional().nullable(),
@@ -38,14 +40,14 @@ const promotionSchema = z.object({
     if (!data.value?.discountType) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Discount type is required.",
+        message: i18n.t('promo_editor.discount_type_required'),
         path: ["value.discountType"],
       });
     }
     if (data.value?.discountValue === undefined || data.value.discountValue === null || data.value.discountValue <= 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Discount value must be greater than 0.",
+        message: i18n.t('promo_editor.discount_value_required'),
         path: ["value.discountValue"],
       });
     }
@@ -53,14 +55,14 @@ const promotionSchema = z.object({
     if (!data.value?.offerType) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Offer type is required.",
+        message: i18n.t('promo_editor.offer_type_required'),
         path: ["value.offerType"],
       });
     }
     if (data.value?.offerType === 'free_shipping' && (data.value?.minOrderValue === undefined || data.value.minOrderValue < 0)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Minimum order value is required for free shipping.",
+        message: i18n.t('promo_editor.min_order_required'),
         path: ["value.minOrderValue"],
       });
     }
@@ -89,6 +91,7 @@ interface PromotionEditorModalProps {
 }
 
 export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: PromotionEditorModalProps) => {
+  const { t } = useTranslation();
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
   const [selectedProductNames, setSelectedProductNames] = useState<Array<{ id: string; name: string }>>([]);
   // Opt-in: also show this promotion as a scrolling banner on the storefront.
@@ -162,7 +165,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
     // user comes from AuthContext (cached session) — no per-save network round-
     // trip to getUser(), which could hang/fail and silently block the save.
     if (!user) {
-      showError("You must be logged in.");
+      showError(t('categories.must_login'));
       return;
     }
 
@@ -189,19 +192,19 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
     }
 
     if (error) {
-      showError(`Failed to save promotion: ${error.message}`);
+      showError(t('promo_editor.save_failed', { message: error.message }));
     } else {
-      showSuccess(`Promotion ${promotion ? 'updated' : 'added'} successfully!`);
+      showSuccess(promotion ? t('promo_editor.updated_success') : t('promo_editor.added_success'));
 
       if (promotionId && createAnnouncement) {
         let announcementMessage = data.name;
         if (data.type === 'discount') {
-          if (data.value?.discountType === 'percentage') announcementMessage = `${data.value.discountValue}% OFF - ${data.name}`;
-          if (data.value?.discountType === 'flat') announcementMessage = `${formatCurrency(data.value.discountValue, shopDetails?.currency || 'USD')} OFF - ${data.name}`;
+          if (data.value?.discountType === 'percentage') announcementMessage = t('promo_editor.announcement_percent_off', { value: data.value.discountValue, name: data.name });
+          if (data.value?.discountType === 'flat') announcementMessage = t('promo_editor.announcement_flat_off', { amount: formatCurrency(data.value.discountValue, shopDetails?.currency || 'USD'), name: data.name });
         } else if (data.type === 'offer' && data.value?.offerType === 'free_shipping') {
-          announcementMessage = `FREE SHIPPING - ${data.name}`;
+          announcementMessage = t('promo_editor.announcement_free_shipping', { name: data.name });
           if (data.value?.minOrderValue > 0) {
-            announcementMessage += ` (Min. ${formatCurrency(data.value.minOrderValue, shopDetails?.currency || 'USD')})`;
+            announcementMessage += t('promo_editor.announcement_min_suffix', { amount: formatCurrency(data.value.minOrderValue, shopDetails?.currency || 'USD') });
           }
         }
 
@@ -230,10 +233,10 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
 
         if (existingAnnouncement) {
           await supabase.from('marquee_elements').update(announcementPayload).eq('id', existingAnnouncement.id);
-          showSuccess("Storefront announcement updated!");
+          showSuccess(t('promo_editor.announcement_updated'));
         } else {
           await supabase.from('marquee_elements').insert(announcementPayload);
-          showSuccess("Storefront announcement created!");
+          showSuccess(t('promo_editor.announcement_created'));
         }
       }
 
@@ -247,29 +250,29 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
     const first = Object.values(errs)[0] as { message?: string } | undefined;
     const nested = first && !first.message ? Object.values(first)[0] as { message?: string } | undefined : undefined;
     const message = first?.message || nested?.message;
-    showError(message || "Please check the promotion fields and try again.");
+    showError(message || t('promo_editor.check_fields'));
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl h-[90vh] flex flex-col p-6"> {/* Reverted DialogContent padding */}
         <DialogHeader className="pb-4">
-          <DialogTitle>{promotion ? "Edit Promotion" : "Create New Promotion"}</DialogTitle>
+          <DialogTitle>{promotion ? t('promo_editor.edit_title') : t('promo_editor.create_title')}</DialogTitle>
           <DialogDescription>
-            Define your marketing campaigns, discounts, and special offers.
+            {t('promo_editor.dialog_desc')}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="flex-1 flex flex-col overflow-hidden">
           <ScrollArea className="flex-1 pr-4"> {/* Removed horizontal padding from ScrollArea, added right padding */}
             <div className="space-y-6 py-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Promotion Name</Label>
-                <Input id="name" {...register("name")} placeholder="e.g., Summer Sale, Free Shipping" />
+                <Label htmlFor="name">{t('promo_editor.name_label')}</Label>
+                <Input id="name" {...register("name")} placeholder={t('promo_editor.name_placeholder')} />
                 {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="type">Promotion Type</Label>
+                <Label htmlFor="type">{t('promo_editor.type_label')}</Label>
                 <Controller
                   name="type"
                   control={control}
@@ -282,11 +285,11 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                       {/* SelectValue already renders the item's icon+label; a second
                           icon wrapper made the content wrap onto two lines on mobile */}
                       <SelectTrigger id="type" className="h-10 px-3 py-2">
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue placeholder={t('promo_editor.select_type')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="discount"><span className="inline-flex items-center whitespace-nowrap"><Percent className="mr-2 h-4 w-4" /> Discount</span></SelectItem>
-                        <SelectItem value="offer"><span className="inline-flex items-center whitespace-nowrap"><Gift className="mr-2 h-4 w-4" /> Offer</span></SelectItem>
+                        <SelectItem value="discount"><span className="inline-flex items-center whitespace-nowrap"><Percent className="mr-2 h-4 w-4" /> {t('promo_editor.discount')}</span></SelectItem>
+                        <SelectItem value="offer"><span className="inline-flex items-center whitespace-nowrap"><Gift className="mr-2 h-4 w-4" /> {t('promo_editor.offer')}</span></SelectItem>
                       </SelectContent>
                     </Select>
                   )}
@@ -297,18 +300,18 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
               {promotionType === 'discount' && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="discountType">Discount Type</Label>
+                    <Label htmlFor="discountType">{t('promo_editor.discount_type_label')}</Label>
                     <Controller
                       name="value.discountType"
                       control={control}
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value}>
                           <SelectTrigger id="discountType" className="h-10 px-3 py-2">
-                            <SelectValue placeholder="Select discount type" />
+                            <SelectValue placeholder={t('promo_editor.select_discount_type')} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="percentage"><span className="inline-flex items-center whitespace-nowrap"><Percent className="mr-2 h-4 w-4" /> Percentage Off</span></SelectItem>
-                            <SelectItem value="flat"><span className="inline-flex items-center whitespace-nowrap"><DollarSign className="mr-2 h-4 w-4" /> Flat Amount Off</span></SelectItem>
+                            <SelectItem value="percentage"><span className="inline-flex items-center whitespace-nowrap"><Percent className="mr-2 h-4 w-4" /> {t('promo_editor.percentage_off')}</span></SelectItem>
+                            <SelectItem value="flat"><span className="inline-flex items-center whitespace-nowrap"><DollarSign className="mr-2 h-4 w-4" /> {t('promo_editor.flat_amount_off')}</span></SelectItem>
                           </SelectContent>
                         </Select>
                       )}
@@ -316,7 +319,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                     {errors.value?.discountType && <p className="text-sm text-destructive mt-1">{errors.value.discountType.message}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="discountValue">Discount Value</Label>
+                    <Label htmlFor="discountValue">{t('promo_editor.discount_value_label')}</Label>
                     <div className="relative">
                       {discountType === 'flat' && shopDetails?.currency && (
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
@@ -328,7 +331,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                         type="number"
                         step="0.01"
                         {...register("value.discountValue", { valueAsNumber: true })}
-                        placeholder={discountType === 'percentage' ? "e.g., 15" : "e.g., 10.00"}
+                        placeholder={discountType === 'percentage' ? t('promo_editor.percentage_placeholder') : t('promo_editor.flat_placeholder')}
                         className={cn(discountType === 'flat' && "pl-8")}
                       />
                     </div>
@@ -339,17 +342,17 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
 
               {promotionType === 'offer' && (
                 <div className="space-y-2">
-                  <Label htmlFor="offerType">Offer Type</Label>
+                  <Label htmlFor="offerType">{t('promo_editor.offer_type_label')}</Label>
                   <Controller
                     name="value.offerType"
                     control={control}
                     render={({ field }) => (
                       <Select onValueChange={field.onChange} value={field.value}>
                         <SelectTrigger id="offerType" className="h-10 px-3 py-2">
-                          <SelectValue placeholder="Select offer type" />
+                          <SelectValue placeholder={t('promo_editor.select_offer_type')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="free_shipping"><span className="inline-flex items-center whitespace-nowrap"><Truck className="mr-2 h-4 w-4" /> Free Shipping</span></SelectItem>
+                          <SelectItem value="free_shipping"><span className="inline-flex items-center whitespace-nowrap"><Truck className="mr-2 h-4 w-4" /> {t('promo_editor.free_shipping')}</span></SelectItem>
                           {/* Add more offer types here */}
                         </SelectContent>
                       </Select>
@@ -359,7 +362,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
 
                   {offerType === 'free_shipping' && (
                     <div className="space-y-2 mt-4">
-                      <Label htmlFor="minOrderValue">Minimum Order Value for Free Shipping</Label>
+                      <Label htmlFor="minOrderValue">{t('promo_editor.min_order_label')}</Label>
                       <div className="relative">
                         {shopDetails?.currency && (
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
@@ -371,7 +374,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                           type="number"
                           step="0.01"
                           {...register("value.minOrderValue", { valueAsNumber: true })}
-                          placeholder="e.g., 50.00"
+                          placeholder={t('promo_editor.min_order_placeholder')}
                           className="pl-8"
                         />
                       </div>
@@ -383,10 +386,10 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
 
               {(promotionType === 'discount' || promotionType === 'offer') && (
                 <div className="space-y-4 border p-4 rounded-lg">
-                  <h3 className="font-semibold text-base flex items-center gap-2"><Package className="h-4 w-4" /> Target Products</h3>
-                  <p className="text-sm text-muted-foreground">Select specific products this promotion applies to. Leave empty to apply to all products.</p>
+                  <h3 className="font-semibold text-base flex items-center gap-2"><Package className="h-4 w-4" /> {t('promo_editor.target_products')}</h3>
+                  <p className="text-sm text-muted-foreground">{t('promo_editor.target_products_desc')}</p>
                   <Button type="button" variant="outline" onClick={() => setIsProductSelectorOpen(true)} className="h-10 px-4 py-2">
-                    Select Products ({targetProducts?.length || 0})
+                    {t('promo_editor.select_products_count', { count: targetProducts?.length || 0 })}
                   </Button>
                   {selectedProductNames.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-3">
@@ -405,7 +408,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date (Optional)</Label>
+                  <Label htmlFor="startDate">{t('promo_editor.start_date_label')}</Label>
                   <Controller
                     name="start_date"
                     control={control}
@@ -420,7 +423,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                            {field.value ? format(field.value, "PPP") : <span>{t('promo_editor.pick_date')}</span>}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -436,7 +439,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date (Optional)</Label>
+                  <Label htmlFor="endDate">{t('promo_editor.end_date_label')}</Label>
                   <Controller
                     name="end_date"
                     control={control}
@@ -451,7 +454,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                            {field.value ? format(field.value, "PPP") : <span>{t('promo_editor.pick_date')}</span>}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -469,21 +472,21 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="repeat_interval" className="flex items-center gap-2"><Repeat className="h-4 w-4" /> Repeat (Optional)</Label>
+                <Label htmlFor="repeat_interval" className="flex items-center gap-2"><Repeat className="h-4 w-4" /> {t('promo_editor.repeat_label')}</Label>
                 <Controller
                   name="repeat_interval"
                   control={control}
                   render={({ field }) => (
                     <Select onValueChange={(value) => field.onChange(value === '' ? 'none' : value)} value={field.value || 'none'}>
                       <SelectTrigger id="repeat_interval" className="h-10 px-3 py-2">
-                        <SelectValue placeholder="No repeat" />
+                        <SelectValue placeholder={t('promo_editor.no_repeat')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">No repeat</SelectItem>
-                        <SelectItem value="daily">Daily</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="yearly">Yearly</SelectItem>
+                        <SelectItem value="none">{t('promo_editor.no_repeat')}</SelectItem>
+                        <SelectItem value="daily">{t('promo_editor.daily')}</SelectItem>
+                        <SelectItem value="weekly">{t('promo_editor.weekly')}</SelectItem>
+                        <SelectItem value="monthly">{t('promo_editor.monthly')}</SelectItem>
+                        <SelectItem value="yearly">{t('promo_editor.yearly')}</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
@@ -492,8 +495,8 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
 
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
-                  <Label htmlFor="isActive" className="text-base">Active</Label>
-                  <p className="text-sm text-muted-foreground">Enable or disable this promotion.</p>
+                  <Label htmlFor="isActive" className="text-base">{t('promo_editor.active_label')}</Label>
+                  <p className="text-sm text-muted-foreground">{t('promo_editor.active_desc')}</p>
                 </div>
                 <Controller
                   name="is_active"
@@ -510,8 +513,8 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
 
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
-                  <Label htmlFor="createAnnouncement" className="text-base">Show as storefront banner</Label>
-                  <p className="text-sm text-muted-foreground">Also display this promotion as a scrolling announcement on your shop.</p>
+                  <Label htmlFor="createAnnouncement" className="text-base">{t('promo_editor.banner_label')}</Label>
+                  <p className="text-sm text-muted-foreground">{t('promo_editor.banner_desc')}</p>
                 </div>
                 <Switch
                   id="createAnnouncement"
@@ -522,10 +525,10 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
             </div>
           </ScrollArea>
           <DialogFooter className="pt-4 px-6 flex-shrink-0">
-            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
-              Save Promotion
+              {t('promo_editor.save_promotion')}
             </Button>
           </DialogFooter>
         </form>
@@ -534,8 +537,8 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
       <Dialog open={isProductSelectorOpen} onOpenChange={setIsProductSelectorOpen}>
         <DialogContent className="max-w-3xl h-[90vh] flex flex-col p-0">
           <DialogHeader className="p-4 border-b">
-            <DialogTitle>Select Products</DialogTitle>
-            <DialogDescription>Choose which products this promotion applies to.</DialogDescription>
+            <DialogTitle>{t('promo_editor.select_products_title')}</DialogTitle>
+            <DialogDescription>{t('promo_editor.select_products_desc')}</DialogDescription>
           </DialogHeader>
           <ProductSelector
             selectedProductIds={targetProducts || []}

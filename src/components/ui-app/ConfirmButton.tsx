@@ -4,6 +4,7 @@
  * bulk ops) get a consistent confirm step app-wide.
  */
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,15 +31,16 @@ export interface ConfirmButtonProps extends Omit<ButtonProps, "onClick"> {
 
 export const ConfirmButton = ({
   onConfirm,
-  confirmTitle = "Are you sure?",
-  confirmDescription = "This action cannot be undone.",
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmTitle,
+  confirmDescription,
+  confirmLabel,
+  cancelLabel,
   destructive,
   children,
   variant,
   ...buttonProps
 }: ConfirmButtonProps) => {
+  const { t } = useTranslation();
   const isDestructive = destructive ?? variant === "destructive";
   return (
     <AlertDialog>
@@ -49,11 +51,11 @@ export const ConfirmButton = ({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{confirmTitle}</AlertDialogTitle>
-          <AlertDialogDescription>{confirmDescription}</AlertDialogDescription>
+          <AlertDialogTitle>{confirmTitle ?? t('app_ui.are_you_sure')}</AlertDialogTitle>
+          <AlertDialogDescription>{confirmDescription ?? t('app_ui.action_cannot_be_undone')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogCancel>{cancelLabel ?? t('common.cancel')}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
             className={cn(
@@ -61,7 +63,7 @@ export const ConfirmButton = ({
                 "bg-destructive text-destructive-foreground hover:bg-destructive/90",
             )}
           >
-            {confirmLabel}
+            {confirmLabel ?? t('common.confirm')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

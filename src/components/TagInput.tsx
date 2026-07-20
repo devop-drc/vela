@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface TagInputProps {
   value: string[];
@@ -10,7 +11,8 @@ interface TagInputProps {
   placeholder?: string;
 }
 
-export const TagInput = forwardRef<HTMLDivElement, TagInputProps>(({ value = [], onChange, placeholder = "Add..." }, ref) => {
+export const TagInput = forwardRef<HTMLDivElement, TagInputProps>(({ value = [], onChange, placeholder }, ref) => {
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState('');
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -42,7 +44,7 @@ export const TagInput = forwardRef<HTMLDivElement, TagInputProps>(({ value = [],
         </Badge>
       ))}
       <Input
-        placeholder={placeholder}
+        placeholder={placeholder ?? t('products_ui.add_placeholder')}
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}

@@ -108,7 +108,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
   // nothing (the date/repeat fields have no inline error text).
   const onInvalid = (errs: typeof errors) => {
     const first = Object.values(errs)[0]?.message as string | undefined;
-    showError(first ? t(first) : "Please check the announcement fields and try again.");
+    showError(first ? t(first) : t("announcement_editor.check_fields", "Please check the announcement fields and try again."));
   };
 
   const messageValue = watch('message');

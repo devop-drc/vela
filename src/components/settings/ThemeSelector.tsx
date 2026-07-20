@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useAppearance, presetThemes, CustomTheme } from "@/contexts/AppearanceContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle, Trash2 } from "lucide-react";
@@ -5,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 
 export const ThemeSelector = () => {
+  const { t } = useTranslation();
   const { settings, setTheme, deleteCustomTheme } = useAppearance();
   const customThemes = settings.customThemes || [];
 
@@ -52,14 +54,14 @@ export const ThemeSelector = () => {
     <div className="space-y-6">
       {customThemes.length > 0 && (
         <div className="space-y-4">
-          <h3 className="font-semibold">Your Themes</h3>
+          <h3 className="font-semibold">{t('studio_panels.your_themes')}</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {customThemes.map(theme => renderTheme(theme, true))}
           </div>
         </div>
       )}
       <div className="space-y-4">
-        <h3 className="font-semibold">Preset Palettes</h3>
+        <h3 className="font-semibold">{t('studio_panels.preset_palettes')}</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {presetThemes.map(theme => renderTheme(theme))}
         </div>

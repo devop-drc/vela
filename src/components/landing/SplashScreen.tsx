@@ -22,6 +22,9 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
   doneRef.current = onDone;
 
   useLayoutEffect(() => {
+    // Our overlay is up — release the index.html pre-cover (see index.html:
+    // it hides the pre-hydration frames so the landing never flashes first).
+    document.documentElement.classList.remove("pre-splash", "pre-splash-dark");
     const done = () => doneRef.current();
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {

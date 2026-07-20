@@ -152,7 +152,7 @@ const VariantSubRow = ({ variant, isSelected, onSelect, onStockChange }: Variant
       .eq("id", variant.id);
 
     if (error) {
-      showError(`Failed to save: ${error.message}`);
+      showError(t("stock.save_failed", { defaultValue: "Failed to save: {{message}}", message: error.message }));
       onStockChange(variant.id, variant.inventory); // revert
     }
     setSaving(false);
@@ -176,7 +176,7 @@ const VariantSubRow = ({ variant, isSelected, onSelect, onStockChange }: Variant
         <Checkbox
           checked={isSelected}
           onCheckedChange={() => onSelect(variant.id)}
-          aria-label={`Select ${optionLabel}`}
+          aria-label={t("stock.select_variant", { defaultValue: "Select {{name}}", name: optionLabel })}
         />
       </div>
 
@@ -284,7 +284,7 @@ const ProductAccordionRow = ({
       .order("is_default", { ascending: false });
 
     if (error) {
-      showError(`Failed to load variants: ${error.message}`);
+      showError(t("stock.load_variants_failed", { defaultValue: "Failed to load variants: {{message}}", message: error.message }));
     } else {
       const rows = (data ?? []).map(parseVariantRow);
       setLocalVariants(rows);
@@ -322,9 +322,9 @@ const ProductAccordionRow = ({
         )
       );
     } catch (e) {
-      showError(toFriendlyError(e, "Couldn't undo the change."));
+      showError(toFriendlyError(e, t("stock.undo_failed", "Couldn't undo the change.")));
     }
-  }, [product.id, onVariantsLoaded]);
+  }, [product.id, onVariantsLoaded, t]);
 
   const applyToAll = async (mode: "set" | "add", rawVal: string) => {
     const num = parseInt(rawVal, 10);
@@ -351,7 +351,7 @@ const ProductAccordionRow = ({
         action: { label: t("common.undo"), onClick: () => undoApplyToAll(previous) },
       });
     } catch (e) {
-      showError(toFriendlyError(e, "Couldn't update the variants."));
+      showError(toFriendlyError(e, t("stock.update_variants_failed", "Couldn't update the variants.")));
       // revert
       setLocalVariants(snapshot);
       onVariantsLoaded(product.id, snapshot);
@@ -376,7 +376,7 @@ const ProductAccordionRow = ({
         role="button"
         tabIndex={0}
         aria-expanded={expanded}
-        aria-label={`${expanded ? "Collapse" : "Expand"} ${product.name}`}
+        aria-label={`${expanded ? t("nav.collapse", "Collapse") : t("nav.expand", "Expand")} ${product.name}`}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
@@ -469,7 +469,7 @@ const ProductAccordionRow = ({
                 <Input
                   type="number"
                   min={0}
-                  placeholder={quickMode === "set" ? "Qty" : "+Qty"}
+                  placeholder={quickMode === "set" ? t("stock.qty", "Qty") : t("stock.qty_add", "+Qty")}
                   className="h-7 w-20 text-sm"
                   value={quickMode === "set" ? setAllValue : addAllValue}
                   aria-label={quickMode === "set" ? t("stock.set_all") : t("stock.add_to_all")}
@@ -687,9 +687,9 @@ const OutOfStock = () => {
         )
       );
     } catch (e) {
-      showError(toFriendlyError(e, "Couldn't undo the change."));
+      showError(toFriendlyError(e, t("stock.undo_failed", "Couldn't undo the change.")));
     }
-  }, []);
+  }, [t]);
 
   const handleBulkApply = async () => {
     if (selectedVariants.length === 0) return;
@@ -738,7 +738,7 @@ const OutOfStock = () => {
       setSelectedVariantIds(new Set());
       setBulkValue("");
     } catch (e) {
-      showError(toFriendlyError(e, "Bulk update failed."));
+      showError(toFriendlyError(e, t("stock.bulk_update_failed", "Bulk update failed.")));
       // revert optimistic update
       restoreInventory(previous);
     }
@@ -917,7 +917,7 @@ const OutOfStock = () => {
               <Input
                 type="number"
                 min={0}
-                placeholder="Qty"
+                placeholder={t("stock.qty", "Qty")}
                 className="h-8 w-20 text-sm"
                 value={bulkValue}
                 aria-label={bulkMode === "set" ? t("stock.set_to") : t("common.add")}

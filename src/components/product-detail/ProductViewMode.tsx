@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,7 @@ const toStockTone = (n: number): StatusTone => {
 };
 
 export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting, specs }: { product: any; mediaItems: any[]; onEdit: () => void; onDelete: () => void; isSubmitting: boolean; specs?: any[] }) => {
+  const { t } = useTranslation();
   const { shopDetails, convertCurrency } = useShop();
   const [options, setOptions] = useState<any[]>([]);
   const [variants, setVariants] = useState<any[]>([]);
@@ -62,8 +64,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
         supabase.from('product_variants').select('*').eq('product_id', product.id).eq('is_active', true),
       ]);
 
-      if (optRes.error) showError("Failed to load options.");
-      if (varRes.error) showError("Failed to load variants.");
+      if (optRes.error) showError(t('product_view.load_options_failed'));
+      if (varRes.error) showError(t('product_view.load_variants_failed'));
       setOptions(optRes.data || []);
       setVariants(varRes.data || []);
       setIsLoadingOptions(false);
@@ -157,7 +159,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   {mediaItems.map((url: string, index: number) => (
                     <CarouselItem key={url || `media-${index}`}>
                       <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
-                        <MediaItem src={url} alt={`${product?.name ?? 'Product'} - ${index + 1}`} />
+                        <MediaItem src={url} alt={`${product?.name ?? t('product_view.product_fallback')} - ${index + 1}`} />
                       </div>
                     </CarouselItem>
                   ))}
@@ -168,26 +170,26 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
             <div className="md:col-span-6 flex flex-col gap-3">
               {/* Breadcrumb */}
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span>{product.category || 'Uncategorized'}</span>
+                <span>{product.category || t('product_view.uncategorized')}</span>
                 {product.details?.type && <><ChevronRight className="h-3 w-3" /><span>{toTitleCase(product.details.type)}</span></>}
               </div>
 
               {/* Name + Status */}
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">{product.name}</h1>
-                <StatusBadge tone={productStatusTone(product.status)} className="mt-1">{product.status}</StatusBadge>
+                <StatusBadge tone={productStatusTone(product.status)} className="mt-1">{t('status_labels.' + String(product.status || '').toLowerCase().replace(/\s+/g, '_'), { defaultValue: product.status })}</StatusBadge>
               </div>
 
               {/* Price + Inventory */}
               <div className="flex items-baseline gap-4 pt-1">
                 <span className="text-3xl font-bold">
                   {product.pricing_type === 'subscription'
-                    ? `${formatCurrency(displayPrice, currencyCode)} / ${product.billing_interval}`
+                    ? `${formatCurrency(displayPrice, currencyCode)} / ${t('product_view.interval_' + product.billing_interval, { defaultValue: product.billing_interval })}`
                     : formatCurrency(displayPrice, currencyCode)}
                 </span>
                 {product.pricing_type !== 'subscription' && (
                   <span className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Package className="h-3.5 w-3.5" />{product.inventory || 0} in stock
+                    <Package className="h-3.5 w-3.5" />{t('product_view.in_stock_count', { count: product.inventory || 0 })}
                   </span>
                 )}
               </div>
@@ -257,7 +259,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
             <div data-reveal>
               <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
                 <Wrench className="h-4 w-4" />
-                Specifications
+                {t('product_view.specifications')}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0">
                 {specs!.map((spec: any, i: number) => (
@@ -274,20 +276,22 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
           )}
           </div>
 
-          <div className="min-w-0 space-y-5">
+          {/* Right column: sticky, full modal height at xl — the variants
+              table gets all remaining vertical space and its own scroll. */}
+          <div className="min-w-0 space-y-5 xl:sticky xl:top-0 xl:h-[calc(90vh-7rem)] xl:flex xl:flex-col">
           {/* Variants */}
           {hasVariants && (
-            <div data-reveal>
+            <div data-reveal className="xl:flex xl:h-full xl:min-h-0 xl:flex-col">
               {/* xl: the right column's top row sits beside the dialog's absolute
                   close (X) button — reserve space so Manage Stock never overlaps it. */}
               <div className="flex items-center justify-between mb-2 xl:pr-10">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   <Layers className="h-4 w-4" />
-                  Variants
+                  {t('product_view.variants')}
                   <Badge variant="secondary" className="text-xs">{variants.length}</Badge>
                 </h3>
                 <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setStockModalOpen(true)}>
-                  <Package className="mr-1.5 h-3 w-3" />Manage Stock
+                  <Package className="mr-1.5 h-3 w-3" />{t('product_view.manage_stock')}
                 </Button>
               </div>
 
@@ -296,40 +300,40 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 <SearchInput
                   value={varSearch}
                   onValueChange={setVarSearch}
-                  placeholder="Search variants…"
+                  placeholder={t('product_view.search_variants')}
                   containerClassName="h-7 flex-1"
                   className="text-xs"
                 />
                 <Select value={varFilter} onValueChange={(v) => setVarFilter(v as any)}>
                   <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="in_stock">In Stock</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="oos">OOS</SelectItem>
+                    <SelectItem value="all">{t('common.all')}</SelectItem>
+                    <SelectItem value="in_stock">{t('common.in_stock')}</SelectItem>
+                    <SelectItem value="low">{t('product_view.filter_low')}</SelectItem>
+                    <SelectItem value="oos">{t('product_view.oos')}</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={varSort} onValueChange={(v) => setVarSort(v as any)}>
                   <SelectTrigger className="h-7 w-28 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="default">Default</SelectItem>
-                    <SelectItem value="stock_asc">Stock &uarr;</SelectItem>
-                    <SelectItem value="stock_desc">Stock &darr;</SelectItem>
-                    <SelectItem value="price_asc">Price &uarr;</SelectItem>
-                    <SelectItem value="price_desc">Price &darr;</SelectItem>
+                    <SelectItem value="default">{t('product_view.sort_default')}</SelectItem>
+                    <SelectItem value="stock_asc">{t('product_view.sort_stock_asc')}</SelectItem>
+                    <SelectItem value="stock_desc">{t('product_view.sort_stock_desc')}</SelectItem>
+                    <SelectItem value="price_asc">{t('product_view.sort_price_asc')}</SelectItem>
+                    <SelectItem value="price_desc">{t('product_view.sort_price_desc')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="rounded-lg border overflow-hidden">
-                <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-1.5 bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  <span>Variant</span>
-                  <span className="w-24 text-right">Price</span>
-                  <span className="w-28 text-right">Stock</span>
+              <div className="rounded-lg border overflow-hidden xl:flex xl:min-h-0 xl:flex-1 xl:flex-col">
+                <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-1.5 bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider xl:shrink-0">
+                  <span>{t('product_view.variant')}</span>
+                  <span className="w-24 text-right">{t('product_view.price')}</span>
+                  <span className="w-28 text-right">{t('product_view.stock')}</span>
                 </div>
-                <div className="max-h-[400px] xl:max-h-[62vh] overflow-y-auto">
+                <div className="max-h-[400px] xl:max-h-none xl:min-h-0 xl:flex-1 overflow-y-auto">
                 {filteredVariants.length === 0 ? (
-                  <div className="py-6 text-center text-xs text-muted-foreground">No variants match your search</div>
+                  <div className="py-6 text-center text-xs text-muted-foreground">{t('product_view.no_variants_match')}</div>
                 ) : filteredVariants.map((v: any, i: number) => {
                   const status = getStockStatus(v.effectiveStock);
                   const isOOS = status === 'out';
@@ -361,7 +365,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                         "text-success bg-success/10 hover:bg-success/20"
                       )}>
                         <Package className="h-3 w-3" />
-                        {isOOS ? 'OOS' : isCritical ? `${v.effectiveStock} critical` : isLow ? `${v.effectiveStock} low` : `${v.effectiveStock}`}
+                        {isOOS ? t('product_view.oos') : isCritical ? t('product_view.stock_critical', { count: v.effectiveStock }) : isLow ? t('product_view.stock_low', { count: v.effectiveStock }) : `${v.effectiveStock}`}
                       </button>
                     </div>
                   );
@@ -394,10 +398,10 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
       <DialogFooter className="p-4 border-t flex-col gap-2 sm:gap-0">
         <Button variant="outline" onClick={() => setReviewsOpen(true)} disabled={isSubmitting} className="mr-auto">
           <Star className="mr-2 h-4 w-4" />
-          Reviews{ratingSummary && ratingSummary.count > 0 ? ` (${ratingSummary.count} · ★ ${ratingSummary.avg.toFixed(1)})` : ''}
+          {t('product_view.reviews')}{ratingSummary && ratingSummary.count > 0 ? ` (${ratingSummary.count} · ★ ${ratingSummary.avg.toFixed(1)})` : ''}
         </Button>
-        <Button variant="outline" onClick={onEdit} disabled={isSubmitting}><Edit className="mr-2 h-4 w-4" />Edit</Button>
-        <Button variant="destructive" onClick={onDelete} disabled={isSubmitting}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>
+        <Button variant="outline" onClick={onEdit} disabled={isSubmitting}><Edit className="mr-2 h-4 w-4" />{t('common.edit')}</Button>
+        <Button variant="destructive" onClick={onDelete} disabled={isSubmitting}><Trash2 className="mr-2 h-4 w-4" />{t('common.delete')}</Button>
       </DialogFooter>
 
       <ProductReviewsManager open={reviewsOpen} onOpenChange={setReviewsOpen} productId={product.id} productName={product.name} />
@@ -408,8 +412,8 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
-              Manage Variant Stock
-              <Badge variant="secondary" className="text-xs ml-auto">{variants.length} variants</Badge>
+              {t('product_view.manage_variant_stock')}
+              <Badge variant="secondary" className="text-xs ml-auto">{t('product_view.variants_count', { count: variants.length })}</Badge>
             </DialogTitle>
           </DialogHeader>
 
@@ -418,7 +422,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
             <SearchInput
               value={stockSearch}
               onValueChange={setStockSearch}
-              placeholder="Search variants…"
+              placeholder={t('product_view.search_variants')}
               containerClassName="h-8 flex-1"
               className="text-xs"
             />
@@ -427,10 +431,10 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                 <Filter className="h-3 w-3 mr-1" /><SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="in_stock">In Stock</SelectItem>
-                <SelectItem value="low">Low (&lt;10)</SelectItem>
-                <SelectItem value="oos">Out of Stock</SelectItem>
+                <SelectItem value="all">{t('common.all')}</SelectItem>
+                <SelectItem value="in_stock">{t('common.in_stock')}</SelectItem>
+                <SelectItem value="low">{t('product_view.filter_low_lt10')}</SelectItem>
+                <SelectItem value="oos">{t('common.out_of_stock')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -491,7 +495,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                       "text-xs w-12 text-right font-medium",
                       toneText[stockTone]
                     )}>
-                      {isOOS ? 'OOS' : currentStock}
+                      {isOOS ? t('product_view.oos') : currentStock}
                     </span>
                   </div>
                 );
@@ -501,9 +505,9 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
 
           <DialogFooter className="pt-3 border-t flex items-center">
             <span className="text-xs text-muted-foreground mr-auto">
-              {Object.keys(stockEdits).length > 0 ? `${Object.keys(stockEdits).length} changed` : 'No changes'}
+              {Object.keys(stockEdits).length > 0 ? t('product_view.changed_count', { count: Object.keys(stockEdits).length }) : t('product_view.no_changes')}
             </span>
-            <Button variant="outline" size="sm" onClick={() => { setStockEdits({}); setStockModalOpen(false); }}>Cancel</Button>
+            <Button variant="outline" size="sm" onClick={() => { setStockEdits({}); setStockModalOpen(false); }}>{t('common.cancel')}</Button>
             <Button size="sm"
               disabled={isSavingStock || Object.keys(stockEdits).length === 0}
               onClick={async () => {
@@ -524,13 +528,13 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   setStockEdits({});
                   setStockModalOpen(false);
                 } catch (e: any) {
-                  showError('Failed to update stock: ' + (e.message || e));
+                  showError(t('product_view.update_stock_failed', { message: e.message || e }));
                 }
                 setIsSavingStock(false);
               }}
             >
               {isSavingStock ? <Spinner className="mr-1.5 h-3.5 w-3.5" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
-              Save
+              {t('common.save')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -4,6 +4,7 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import BottomNav from "./BottomNav";
 import { usePageTitle } from "@/contexts/PageTitleContext";
+import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { motion } from "framer-motion";
 import { useShop } from "@/contexts/ShopContext";
@@ -23,6 +24,7 @@ const SIDEBAR_COLLAPSED_KEY = "sidebar-collapsed";
 
 const DashboardLayout = () => {
   const { title } = usePageTitle();
+  const { t } = useTranslation();
   const location = useLocation();
   const { shopDetails } = useShop();
   const { settings } = useAppearance();
@@ -181,7 +183,7 @@ const DashboardLayout = () => {
         {location.pathname !== '/chat' && (
           <Link
             to="/chat"
-            aria-label="Vela Assistant"
+            aria-label={t('app_ui.vela_assistant')}
             className="grid h-12 w-12 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg ring-1 ring-inset ring-primary-foreground/25 transition-transform hover:scale-105 md:hidden"
           >
             <MessageCircle className="h-5 w-5" aria-hidden="true" />

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Archive, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { productStatusTone, toneText } from "@/lib/status";
+import { useTranslation } from 'react-i18next';
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 
@@ -28,6 +29,8 @@ const STATUS_META: Record<ProductStatus, { icon: React.ElementType; label: strin
 const STATUS_ORDER: ProductStatus[] = ['Active', 'Draft', 'Out of Stock'];
 
 export const ProductStatusDropdown = ({ currentStatus, onStatusChange }: ProductStatusDropdownProps) => {
+  const { t } = useTranslation();
+  const statusLabel = (value: string) => t('status_labels.' + value.toLowerCase().replace(/\s+/g, '_'), { defaultValue: value });
   const meta = STATUS_META[currentStatus] || STATUS_META['Draft'];
   const CurrentIcon = meta.icon;
   const currentColor = toneText[productStatusTone(currentStatus)];
@@ -42,7 +45,7 @@ export const ProductStatusDropdown = ({ currentStatus, onStatusChange }: Product
       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
         <Button variant="ghost" size="sm" className={cn("h-7 gap-1 px-1.5 text-xs font-semibold hover:bg-accent", currentColor)}>
           <CurrentIcon className="h-3.5 w-3.5" />
-          {meta.label}
+          {statusLabel(meta.label)}
           <ChevronDown className="h-3 w-3 opacity-60" />
         </Button>
       </DropdownMenuTrigger>
@@ -56,7 +59,7 @@ export const ProductStatusDropdown = ({ currentStatus, onStatusChange }: Product
               onClick={(e) => handleSelect(e as any, status)}
             >
               <Icon className={cn("h-4 w-4", toneText[productStatusTone(status)])} />
-              <span>{label}</span>
+              <span>{statusLabel(label)}</span>
             </DropdownMenuItem>
           );
         })}

@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { Controller } from "react-hook-form";
 import { DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -51,6 +52,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     // DB row's "Untitled product"/0 values must not leak in (nor overwrite the
     // user's typing when the product object refreshes mid-edit).
     const blankInitFor = useRef<string | null>(null);
+    const { t } = useTranslation();
     const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = form;
     const { shopDetails, convertCurrency } = useShop();
     const { user } = useAuth();
@@ -190,10 +192,10 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     };
     const handleFindSpecs = async () => {
         setIsReanalyzing(true);
-        const toastId = toast.loading("Finding specs with the system...");
+        const toastId = toast.loading(t('product_edit.finding_specs'));
         try {
-            if (!product?.id) throw new Error("Please save the product before analyzing so variants can be created.");
-            if (!user) throw new Error("User not authenticated.");
+            if (!product?.id) throw new Error(t('product_edit.save_before_analyzing'));
+            if (!user) throw new Error(t('product_edit.not_authenticated'));
 
             // force_search: the button explicitly promises AI — always run the
             // live search instead of settling for cached/template data.
@@ -237,15 +239,15 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             if (data?.options_created) setRefreshKey((k: number) => k + 1);
 
             const bits: string[] = [];
-            if (foundSpecs > 0) bits.push(`${foundSpecs} spec${foundSpecs === 1 ? '' : 's'}`);
-            if (data?.options_created) bits.push('options & variants');
+            if (foundSpecs > 0) bits.push(t('product_edit.spec_count', { count: foundSpecs }));
+            if (data?.options_created) bits.push(t('product_edit.options_and_variants'));
             if (bits.length > 0) {
-              toast.success(`The system found ${bits.join(' + ')} — check the Variants tab.`, { id: toastId });
+              toast.success(t('product_edit.specs_found', { items: bits.join(' + ') }), { id: toastId });
             } else {
-              toast.success('No additional details found for this product.', { id: toastId });
+              toast.success(t('product_edit.no_details_found'), { id: toastId });
             }
         } catch (err: any) {
-            toast.error(err.message || 'Failed to find specs', { id: toastId });
+            toast.error(err.message || t('product_edit.find_specs_failed'), { id: toastId });
         } finally {
             setIsReanalyzing(false);
         }
@@ -260,7 +262,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
             // Save combined options + variants in one go
             const combinedSaved = await combinedManagerRef.current?.handleSaveCombined?.();
             if (combinedSaved === false) {
-                throw new Error("Failed to save product options/variants.");
+                throw new Error(t('product_edit.save_variants_failed'));
             }
 
             // 2. Prepare details payload: only include fields present in the form/type attributes
@@ -294,7 +296,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
 
             if (updateError) {
                 error = updateError;
-                showError(`Failed to update product: ${error.message}`);
+                showError(t('product_edit.update_failed', { message: error.message }));
                 console.error("ProductEditor: Error updating product:", error);
             }
             else {
@@ -312,12 +314,12 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     }, { onConflict: 'product_id,key' });
                   }
                 }
-                showSuccess("Product updated successfully!");
+                showSuccess(t('product_edit.update_success'));
                 if (onUpdate) onUpdate(); // Refresh parent product list
             }
         } catch (e: any) {
             error = e;
-            showError(`An unexpected error occurred: ${e.message}`);
+            showError(t('product_edit.unexpected_error', { message: e.message }));
             console.error("ProductEditor: Unexpected error during save:", e);
         } finally {
             setIsSubmitting(false);
@@ -340,12 +342,12 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
     return (
       <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
         <form onSubmit={handleSubmit(handleSave)} className="flex-1 flex flex-col min-h-0">
-          <DialogHeader className="sr-only"><DialogTitle>Update Product</DialogTitle></DialogHeader>
+          <DialogHeader className="sr-only"><DialogTitle>{t('product_edit.update_product')}</DialogTitle></DialogHeader>
           <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
             <div className="px-4 pt-3 border-b">
               <TabsList className="h-9">
-                <TabsTrigger value="details" className="text-sm">Details</TabsTrigger>
-                <TabsTrigger value="variants" className="text-sm">Variants &amp; Inventory</TabsTrigger>
+                <TabsTrigger value="details" className="text-sm">{t('product_edit.tab_details')}</TabsTrigger>
+                <TabsTrigger value="variants" className="text-sm">{t('product_edit.tab_variants')}</TabsTrigger>
               </TabsList>
             </div>
             <ScrollArea className="flex-1 overflow-y-auto">
@@ -359,7 +361,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                               {mediaItems.map((url: string, index: number) => (
                                   <CarouselItem key={index}>
                                       <div className="relative aspect-square w-full bg-muted flex items-center justify-center">
-                                          <MediaItem src={url} alt={`${product?.name ?? 'Product'} - media ${index + 1}`} type={index === 0 ? (product?.media_type ?? undefined) : undefined} />
+                                          <MediaItem src={url} alt={t('product_edit.media_alt', { name: product?.name ?? t('product_edit.product_fallback'), index: index + 1 })} type={index === 0 ? (product?.media_type ?? undefined) : undefined} />
                                       </div>
                                   </CarouselItem>
                               ))}
@@ -381,9 +383,9 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                         onDragStart={(e) => handleDragStart(e, index)}
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, index)}
-                        title="Drag to reorder"
+                        title={t('product_edit.drag_to_reorder')}
                       >
-                        <MediaItem src={url} alt="Thumbnail" className="h-16 w-16 rounded-md object-cover border" />
+                        <MediaItem src={url} alt={t('product_edit.thumbnail_alt')} className="h-16 w-16 rounded-md object-cover border" />
                         <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleImageDelete(url); }}><XCircle className="h-4 w-4" /></Button>
                       </div>
                     ))}
@@ -391,7 +393,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                   <Button asChild size="sm" variant="outline" className="mt-2">
                     <label htmlFor="image-upload" className="cursor-pointer">
                       {isUploading ? <Spinner className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-                      Add Media
+                      {t('product_edit.add_media')}
                     </label>
                   </Button>
                   <Input id="image-upload" type="file" className="hidden" accept="image/*,video/*" onChange={handleImageUpload} disabled={isUploading} />
@@ -399,39 +401,39 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 <div className="md:col-span-6 flex flex-col space-y-4">
                   <div>
                     <div className="flex shrink gap-4 text-sm font-medium">
-                      <div className="w-fit min-w-[165px]"><Controller name="category" control={control} render={({ field }) => (<CreatableCombobox options={categoryOptions} placeholder="Category..." {...field} />)} /></div>
-                      <div className="w-fit min-w-[165px]"><Controller name="details.type" control={control} render={({ field }) => (<CreatableCombobox options={typeOptions} placeholder="Type..." {...field} />)} /></div>
+                      <div className="w-fit min-w-[165px]"><Controller name="category" control={control} render={({ field }) => (<CreatableCombobox options={categoryOptions} placeholder={t('product_edit.category_placeholder')} {...field} />)} /></div>
+                      <div className="w-fit min-w-[165px]"><Controller name="details.type" control={control} render={({ field }) => (<CreatableCombobox options={typeOptions} placeholder={t('product_edit.type_placeholder')} {...field} />)} /></div>
                     </div>
                     {/* flex-wrap + min-w-0: the 3xl name input has a wide intrinsic
                         size and used to shove the status select off-screen on phones */}
                     <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <Input id="name" {...register("name")} placeholder="Product Name" className={cn(underlineBase, "min-w-0 flex-1 basis-52 p-0 text-2xl md:text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors")} />
-                      <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn(underlineBase, "w-[140px] hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50", currentStatusConfig?.color)}>{StatusIcon ? (<div className="flex items-center gap-2"><StatusIcon className="h-4 w-4" /><span>{currentStatusConfig.label}</span></div>) : <SelectValue placeholder="Set status..." />}</SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{label}</span></div></SelectItem>))}</SelectContent></Select>)} />
+                      <Input id="name" {...register("name")} placeholder={t('product_edit.name_placeholder')} className={cn(underlineBase, "min-w-0 flex-1 basis-52 p-0 text-2xl md:text-3xl font-bold tracking-tight focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors")} />
+                      <Controller control={control} name="status" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn(underlineBase, "w-[140px] hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50", currentStatusConfig?.color)}>{StatusIcon ? (<div className="flex items-center gap-2"><StatusIcon className="h-4 w-4" /><span>{t('status_labels.' + statusValue.toLowerCase().replace(/\s+/g, '_'), { defaultValue: currentStatusConfig.label })}</span></div>) : <SelectValue placeholder={t('product_edit.set_status_placeholder')} />}</SelectTrigger><SelectContent>{Object.entries(statusConfig).map(([status, { icon: Icon, color, label }]) => (<SelectItem key={status} value={status} className={color}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{t('status_labels.' + status.toLowerCase().replace(/\s+/g, '_'), { defaultValue: label })}</span></div></SelectItem>))}</SelectContent></Select>)} />
                     </div>
                     {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
                   </div>
-                  <Textarea id="caption" {...captionProps} ref={(e) => { rhfRef(e); textAreaRef.current = e as HTMLTextAreaElement; }} placeholder="No description provided." className={cn(underlineBase, "p-0 text-base text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors resize-none")} />
-                  <div><Label>Tags</Label><Controller control={control} name="tags" render={({ field }) => <TagInput {...field} value={Array.isArray(field.value) ? field.value : (field.value ? [field.value] : [])} />} /></div>
+                  <Textarea id="caption" {...captionProps} ref={(e) => { rhfRef(e); textAreaRef.current = e as HTMLTextAreaElement; }} placeholder={t('product_edit.description_placeholder')} className={cn(underlineBase, "p-0 text-base text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 h-auto hover:bg-muted/50 transition-colors resize-none")} />
+                  <div><Label>{t('product_edit.tags')}</Label><Controller control={control} name="tags" render={({ field }) => <TagInput {...field} value={Array.isArray(field.value) ? field.value : (field.value ? [field.value] : [])} />} /></div>
                   <div className="space-y-2 pt-2">
-                    <Label>Pricing Model</Label>
+                    <Label>{t('product_edit.pricing_model')}</Label>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                      <Controller control={control} name="pricing_type" render={({ field }) => (<ToggleGroup type="single" onValueChange={field.onChange} value={field.value} variant="outline" size="sm"><ToggleGroupItem value="one_time">One-time</ToggleGroupItem><ToggleGroupItem value="subscription">Subscription</ToggleGroupItem></ToggleGroup>)} />
+                      <Controller control={control} name="pricing_type" render={({ field }) => (<ToggleGroup type="single" onValueChange={field.onChange} value={field.value} variant="outline" size="sm"><ToggleGroupItem value="one_time">{t('product_edit.one_time')}</ToggleGroupItem><ToggleGroupItem value="subscription">{t('product_edit.subscription')}</ToggleGroupItem></ToggleGroup>)} />
                       <Controller control={control} name="product_type" render={({ field }) => (
                         <RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-4">
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="physical" id="product-type-physical" />
-                            <Label htmlFor="product-type-physical" className="flex items-center gap-1"><Package className="h-4 w-4" /> Physical</Label>
+                            <Label htmlFor="product-type-physical" className="flex items-center gap-1"><Package className="h-4 w-4" /> {t('product_edit.physical')}</Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="digital" id="product-type-digital" />
-                            <Label htmlFor="product-type-digital" className="flex items-center gap-1"><Cloud className="h-4 w-4" /> Digital</Label>
+                            <Label htmlFor="product-type-digital" className="flex items-center gap-1"><Cloud className="h-4 w-4" /> {t('product_edit.digital')}</Label>
                           </div>
                         </RadioGroup>
                       )} />
                     </div>
                     <div className="grid grid-cols-3 gap-4 pt-2">
-                        <div className="space-y-1 col-span-2"><Label htmlFor="price" className="text-xs">Price</Label><div className="flex items-center gap-2"><div className="relative flex-1"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{currencySymbol}</span><Input id="price" type="number" step="0.01" {...register("price")} className={cn(underlineBase, "w-full focus-visible:ring-0 focus-visible:ring-offset-0 pl-8")} /></div><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn(underlineBase, "w-28 hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50")}><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
-                        <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">Quantity in stock</Label><Input id="inventory" type="number" {...register("inventory")} className={cn(underlineBase, "w-full focus-visible:ring-0 focus-visible:ring-offset-0")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">Interval</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className={cn(underlineBase, "w-full hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50")}><SelectValue placeholder="Interval" /></SelectTrigger><SelectContent><SelectItem value="month">/ month</SelectItem><SelectItem value="year">/ year</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
+                        <div className="space-y-1 col-span-2"><Label htmlFor="price" className="text-xs">{t('product_edit.price')}</Label><div className="flex items-center gap-2"><div className="relative flex-1"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{currencySymbol}</span><Input id="price" type="number" step="0.01" {...register("price")} className={cn(underlineBase, "w-full focus-visible:ring-0 focus-visible:ring-offset-0 pl-8")} /></div><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn(underlineBase, "w-28 hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50")}><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
+                        <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">{t('product_edit.quantity_in_stock')}</Label><Input id="inventory" type="number" {...register("inventory")} className={cn(underlineBase, "w-full focus-visible:ring-0 focus-visible:ring-offset-0")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">{t('product_edit.interval')}</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className={cn(underlineBase, "w-full hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50")}><SelectValue placeholder={t('product_edit.interval')} /></SelectTrigger><SelectContent><SelectItem value="month">{t('product_edit.per_month')}</SelectItem><SelectItem value="year">{t('product_edit.per_year')}</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
                     </div>
                   </div>
                 </div>
@@ -442,24 +444,24 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
                     <Settings className="h-4 w-4" />
-                    Specifications
+                    {t('product_edit.specifications')}
                     {specs && specs.length > 0 && <Badge variant="secondary" className="text-xs h-5">{specs.length}</Badge>}
                   </h3>
                   <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={handleFindSpecs} disabled={isReanalyzing}>
-                    {isReanalyzing ? <Spinner className="mr-1.5 h-3 w-3" /> : <Sparkles className="mr-1.5 h-3 w-3 text-primary" />}Find with the system
+                    {isReanalyzing ? <Spinner className="mr-1.5 h-3 w-3" /> : <Sparkles className="mr-1.5 h-3 w-3 text-primary" />}{t('product_edit.find_with_system')}
                   </Button>
                 </div>
                 {specs && specs.length > 0 ? (
                   <div className="space-y-2">
                     {/* Column labels */}
                     <div className="grid grid-cols-[1fr_1.5fr_70px_28px] gap-2 px-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      <span>Attribute</span><span>Value</span><span>Unit</span><span></span>
+                      <span>{t('product_edit.attribute')}</span><span>{t('product_edit.value')}</span><span>{t('product_edit.unit')}</span><span></span>
                     </div>
                     {specs.map((spec: any, idx: number) => (
                       <div key={spec.id || idx} className="grid grid-cols-[1fr_1.5fr_70px_28px] items-center gap-2">
-                        <Input value={spec.key} placeholder="e.g. material" onChange={(e) => setSpecs(specs.map((s: any, i: number) => i === idx ? { ...s, key: e.target.value } : s))} className="h-8 text-sm capitalize" />
-                        <Input value={spec.value} placeholder="e.g. Cotton" onChange={(e) => setSpecs(specs.map((s: any, i: number) => i === idx ? { ...s, value: e.target.value } : s))} className="h-8 text-sm" />
-                        <Input value={spec.unit || ''} placeholder="g, mm..." onChange={(e) => setSpecs(specs.map((s: any, i: number) => i === idx ? { ...s, unit: e.target.value } : s))} className="h-8 text-xs text-muted-foreground" />
+                        <Input value={spec.key} placeholder={t('product_edit.spec_key_placeholder')} onChange={(e) => setSpecs(specs.map((s: any, i: number) => i === idx ? { ...s, key: e.target.value } : s))} className="h-8 text-sm capitalize" />
+                        <Input value={spec.value} placeholder={t('product_edit.spec_value_placeholder')} onChange={(e) => setSpecs(specs.map((s: any, i: number) => i === idx ? { ...s, value: e.target.value } : s))} className="h-8 text-sm" />
+                        <Input value={spec.unit || ''} placeholder={t('product_edit.spec_unit_placeholder')} onChange={(e) => setSpecs(specs.map((s: any, i: number) => i === idx ? { ...s, unit: e.target.value } : s))} className="h-8 text-xs text-muted-foreground" />
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setSpecs(specs.filter((_: any, i: number) => i !== idx))}><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     ))}
@@ -468,12 +470,12 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                   <EmptyState
                     compact
                     icon={Settings}
-                    title="No specifications yet"
-                    description={'Click "Find with the system" or add manually below.'}
+                    title={t('product_edit.no_specs_title')}
+                    description={t('product_edit.no_specs_desc')}
                   />
                 )}
                 <Button type="button" variant="outline" size="sm" className="h-8 text-xs w-full border-dashed" onClick={() => setSpecs([...(specs || []), { key: '', value: '', unit: '' }])}>
-                  <PlusCircle className="mr-1.5 h-3.5 w-3.5" />Add specification
+                  <PlusCircle className="mr-1.5 h-3.5 w-3.5" />{t('product_edit.add_specification')}
                 </Button>
               </div>
 
@@ -492,15 +494,15 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 ) : (
                   <EmptyState
                     icon={Layers}
-                    title="Save the product first"
-                    description="Save this product to start adding options and variants."
+                    title={t('product_edit.save_first_title')}
+                    description={t('product_edit.save_first_desc')}
                   />
                 )}
               </TabsContent>
             </div>
           </ScrollArea>
           </Tabs>
-          <DialogFooter className="p-4 border-t"><Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Spinner className="mr-2 h-4 w-4" />}Update Product</Button></DialogFooter>
+          <DialogFooter className="p-4 border-t"><Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>{t('common.cancel')}</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Spinner className="mr-2 h-4 w-4" />}{t('product_edit.update_product')}</Button></DialogFooter>
         </form>
       </motion.div>
     )

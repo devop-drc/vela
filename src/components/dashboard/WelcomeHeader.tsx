@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { sq as sqLocale } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,13 +12,13 @@ interface WelcomeHeaderProps {
 }
 
 export const WelcomeHeader = ({ pendingOrders, activeProducts, totalOrders = 0, isLoading }: WelcomeHeaderProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // Name resolves instantly from the cached session (no getUser round-trip, no
   // extra profiles query) — AuthContext already has the user.
   const { user } = useAuth();
   const firstName = (user?.user_metadata?.first_name as string | undefined) || null;
 
-  const todayLabel = format(new Date(), "EEEE, MMMM d, yyyy");
+  const todayLabel = format(new Date(), "EEEE, MMMM d, yyyy", i18n.language?.startsWith("sq") ? { locale: sqLocale } : undefined);
 
   if (isLoading) {
     return (

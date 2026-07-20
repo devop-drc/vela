@@ -6,6 +6,7 @@
 //   DualPreview      — desktop + mobile side by side (used in onboarding).
 
 import { RefObject, useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Monitor, Smartphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StorefrontConfig } from '@/storefront/config/types';
@@ -23,19 +24,22 @@ export const PreviewFrame = ({ innerRef, src, dev, scale, phone, interactive = t
   phone?: boolean;
   interactive?: boolean;
   title?: string;
-}) => (
+}) => {
+  const { t } = useTranslation();
+  return (
   <div className={cn('shrink-0 bg-background shadow-xl', phone ? 'rounded-[2rem] border-[7px] border-foreground/85' : 'rounded-xl border')}>
     <div className="overflow-hidden bg-background" style={{ width: Math.round(dev.w * scale), height: Math.round(dev.h * scale), borderRadius: phone ? '1.35rem' : '0.6rem' }}>
       <iframe
         ref={innerRef}
         src={src ?? undefined}
-        title={title ?? (phone ? 'Mobile preview' : 'Desktop preview')}
+        title={title ?? (phone ? t('studio_panels.mobile_preview') : t('studio_panels.desktop_preview'))}
         className={cn('origin-top-left border-0 bg-background', !interactive && 'pointer-events-none')}
         style={{ width: dev.w, height: dev.h, transform: `scale(${scale})` }}
       />
     </div>
   </div>
-);
+  );
+};
 
 /** Streams config + navigation to every iframe in `refs` (heartbeat-backed). */
 export function usePreviewBridge(refs: RefObject<HTMLIFrameElement>[], config: StorefrontConfig, navTarget?: { target: string; n: number } | null) {
@@ -83,6 +87,7 @@ interface Props {
 const GAP = 32;
 
 export const DualPreview = ({ previewPath, config, navTarget, className }: Props) => {
+  const { t } = useTranslation();
   const holderRef = useRef<HTMLDivElement>(null);
   const deskRef = useRef<HTMLIFrameElement>(null);
   const mobRef = useRef<HTMLIFrameElement>(null);
@@ -112,7 +117,7 @@ export const DualPreview = ({ previewPath, config, navTarget, className }: Props
       ));
 
   if (!previewPath) {
-    return <div className={cn('flex items-center justify-center text-sm text-muted-foreground', className)}>Save your shop name to preview.</div>;
+    return <div className={cn('flex items-center justify-center text-sm text-muted-foreground', className)}>{t('studio_panels.save_shop_name_to_preview')}</div>;
   }
 
   return (
@@ -121,12 +126,12 @@ export const DualPreview = ({ previewPath, config, navTarget, className }: Props
         {!mobileOnly && (
           <div className="flex flex-col items-center gap-2">
             <PreviewFrame innerRef={deskRef} src={previewPath} dev={DESKTOP} scale={scale} />
-            <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Monitor className="h-3.5 w-3.5" /> Desktop</span>
+            <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Monitor className="h-3.5 w-3.5" /> {t('studio_panels.desktop')}</span>
           </div>
         )}
         <div className="flex flex-col items-center gap-2">
           <PreviewFrame innerRef={mobRef} src={previewPath} dev={MOBILE} scale={scale} phone />
-          <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Smartphone className="h-3.5 w-3.5" /> Mobile</span>
+          <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Smartphone className="h-3.5 w-3.5" /> {t('studio_panels.mobile')}</span>
         </div>
       </div>
     </div>

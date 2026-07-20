@@ -5,6 +5,7 @@
 // bridge never connects, it falls back to reloading so the preview is never stale.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Monitor, Smartphone, ExternalLink, ChevronRight, Eye, Lock, ChevronLeft, Share, BookOpen, SquareStack, Wifi, SignalHigh, BatteryFull, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ const DESKTOP_OUTER = { w: DESKTOP.content.w, h: DESKTOP.content.h + DESKTOP.bro
 const MOBILE_OUTER = { w: MOBILE.content.w + MOBILE.bezel * 2, h: MOBILE.content.h + MOBILE.status + MOBILE.address + MOBILE.bottom + MOBILE.gesture + MOBILE.bezel * 2 };
 
 export const StorefrontPreviewPanel = ({ previewPath, previewUrl, config, typeKey, open, onOpenChange }: Props) => {
+  const { t } = useTranslation();
   // Default the preview to the device the merchant is actually on — a phone
   // user editing their shop wants the mobile view, not a scaled-down desktop.
   const [device, setDevice] = useState<'desktop' | 'mobile'>(() =>
@@ -96,7 +98,7 @@ export const StorefrontPreviewPanel = ({ previewPath, previewUrl, config, typeKe
       ref={iframeRef}
       key={`${typeKey}-${reloadKey}`}
       src={previewPath}
-      title="Storefront preview"
+      title={t('studio_panels.storefront_preview')}
       className="border-0 bg-white block"
       style={device === 'desktop'
         ? { width: DESKTOP.content.w, height: DESKTOP.content.h }
@@ -152,9 +154,9 @@ export const StorefrontPreviewPanel = ({ previewPath, previewUrl, config, typeKe
           onClick={() => onOpenChange(!open)}
           className="fixed top-1/2 -translate-y-1/2 z-[101] flex items-center gap-1.5 rounded-l-lg bg-primary text-primary-foreground px-2.5 py-3 shadow-lg transition-all duration-300 ease-in-out"
           style={{ right: handleRight }}
-          aria-label={open ? 'Hide preview' : 'Show preview'}
+          aria-label={open ? t('studio_panels.hide_preview') : t('studio_panels.show_preview')}
         >
-          {open && !compact ? <ChevronRight className="h-4 w-4" /> : <><Eye className="h-4 w-4" /><span className="text-xs font-semibold [writing-mode:vertical-rl] rotate-180 py-1">Preview</span></>}
+          {open && !compact ? <ChevronRight className="h-4 w-4" /> : <><Eye className="h-4 w-4" /><span className="text-xs font-semibold [writing-mode:vertical-rl] rotate-180 py-1">{t('studio_panels.preview')}</span></>}
         </button>
       )}
 
@@ -174,14 +176,14 @@ export const StorefrontPreviewPanel = ({ previewPath, previewUrl, config, typeKe
         style={compact ? undefined : { width: panelW }}
       >
         <div className="flex items-center justify-between gap-2 px-3 py-2 border-b bg-muted/40 shrink-0">
-          <span className="text-sm font-semibold">Live preview</span>
+          <span className="text-sm font-semibold">{t('studio_panels.live_preview')}</span>
           <div className="flex items-center gap-1">
             <div className="flex rounded-md border p-0.5">
-              <button type="button" onClick={() => setDevice('desktop')} className={cn('h-7 px-2 rounded flex items-center gap-1 text-xs', device === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}><Monitor className="h-3.5 w-3.5" /> Desktop</button>
-              <button type="button" onClick={() => setDevice('mobile')} className={cn('h-7 px-2 rounded flex items-center gap-1 text-xs', device === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}><Smartphone className="h-3.5 w-3.5" /> Mobile</button>
+              <button type="button" onClick={() => setDevice('desktop')} className={cn('h-7 px-2 rounded flex items-center gap-1 text-xs', device === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}><Monitor className="h-3.5 w-3.5" /> {t('studio_panels.desktop')}</button>
+              <button type="button" onClick={() => setDevice('mobile')} className={cn('h-7 px-2 rounded flex items-center gap-1 text-xs', device === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}><Smartphone className="h-3.5 w-3.5" /> {t('studio_panels.mobile')}</button>
             </div>
-            {previewUrl && <Button variant="outline" size="icon" className="h-8 w-8" asChild><a href={previewUrl} target="_blank" rel="noopener noreferrer" aria-label="Open in new tab"><ExternalLink className="h-3.5 w-3.5" /></a></Button>}
-            {compact && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onOpenChange(false)} aria-label="Close preview"><X className="h-4 w-4" /></Button>}
+            {previewUrl && <Button variant="outline" size="icon" className="h-8 w-8" asChild><a href={previewUrl} target="_blank" rel="noopener noreferrer" aria-label={t('studio_panels.open_in_new_tab')}><ExternalLink className="h-3.5 w-3.5" /></a></Button>}
+            {compact && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onOpenChange(false)} aria-label={t('studio_panels.close_preview')}><X className="h-4 w-4" /></Button>}
           </div>
         </div>
 
@@ -193,10 +195,10 @@ export const StorefrontPreviewPanel = ({ previewPath, previewUrl, config, typeKe
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground py-10">Save your shop name to preview.</p>
+            <p className="text-sm text-muted-foreground py-10">{t('studio_panels.save_shop_name_to_preview')}</p>
           )}
         </div>
-        <p className="text-[11px] text-muted-foreground text-center py-1.5 border-t bg-muted/40 shrink-0">{device === 'desktop' ? 'Desktop · 1280×720' : 'Mobile · 390px'} — edits apply instantly</p>
+        <p className="text-[11px] text-muted-foreground text-center py-1.5 border-t bg-muted/40 shrink-0">{t('studio_panels.preview_meta', { device: device === 'desktop' ? t('studio_panels.desktop') : t('studio_panels.mobile'), size: device === 'desktop' ? '1280×720' : '390px' })}</p>
       </aside>
     </>
   );

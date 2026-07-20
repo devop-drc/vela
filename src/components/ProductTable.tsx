@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/ui-app/StatusBadge";
 import { productStatusTone } from "@/lib/status";
 import { Product } from "@/hooks/useProductData";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useTranslation } from 'react-i18next';
 
 interface ProductTableProps {
   isLoading: boolean;
@@ -24,6 +25,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
   handleSelectOne,
   handleSelectAll,
 }) => {
+  const { t } = useTranslation();
   const { shopDetails, convertCurrency } = useShop();
 
   return (
@@ -31,7 +33,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
       {isLoading ? (
         <div className="p-4 space-y-2">
           <Spinner className="h-8 w-8 mx-auto" />
-          <p className="text-center text-muted-foreground">Loading products...</p>
+          <p className="text-center text-muted-foreground">{t('products_ui.loading_products')}</p>
         </div>
       ) : (
         <Table>
@@ -41,13 +43,13 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                 <Checkbox
                   checked={currentSelection.length === filteredAndSortedProducts.length && filteredAndSortedProducts.length > 0}
                   onCheckedChange={(checked) => handleSelectAll(!!checked)}
-                  aria-label="Select all products"
+                  aria-label={t('products_ui.select_all_products')}
                 />
               </TableHead>
-              <TableHead className="w-[80px]">Image</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Price</TableHead>
+              <TableHead className="w-[80px]">{t('products_ui.image')}</TableHead>
+              <TableHead>{t('products_ui.name')}</TableHead>
+              <TableHead>{t('products.status')}</TableHead>
+              <TableHead>{t('products_ui.price')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -58,7 +60,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                     <Checkbox
                       checked={currentSelection.includes(product.id)}
                       onCheckedChange={() => handleSelectOne(product.id)}
-                      aria-label={`Select ${product.name}`}
+                      aria-label={t('products_ui.select_product_aria', { name: product.name })}
                     />
                   </TableCell>
                   <TableCell>
@@ -67,14 +69,14 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>
                     <StatusBadge tone={productStatusTone(product.status)} size="sm">
-                      {product.status}
+                      {t('status_labels.' + product.status.toLowerCase().replace(/\s+/g, '_'), { defaultValue: product.status })}
                     </StatusBadge>
                   </TableCell>
                   <TableCell>
                     {product.price != null ? (
                       formatCurrency(convertCurrency(product.price, product.currency), shopDetails?.currency)
                     ) : (
-                      <span className="text-muted-foreground">N/A</span>
+                      <span className="text-muted-foreground">{t('products_ui.not_applicable')}</span>
                     )}
                   </TableCell>
                 </TableRow>
@@ -82,7 +84,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             ) : (
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                  No products found.
+                  {t('products_ui.no_products_found')}
                 </TableCell>
               </TableRow>
             )}

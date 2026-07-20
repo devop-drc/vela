@@ -2,6 +2,7 @@
 // tokens (the wrapping OptionGrid applies the token CSS vars). Each returns a
 // compact visual (~h-14) that conveys the option at a glance.
 
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 
 const box = 'bg-card border';
@@ -23,6 +24,7 @@ const HeaderBar = ({ kind }: { kind: 'classic' | 'minimal' | 'centered' | 'split
 );
 
 export const Demo = ({ kind, value }: { kind: string; value: string }) => {
+  const { t } = useTranslation();
   const r = { borderRadius: 'var(--radius-sm)' };
   switch (kind) {
     // ── Hero ──
@@ -124,7 +126,7 @@ export const Demo = ({ kind, value }: { kind: string; value: string }) => {
       : <div className="w-full space-y-1">{[0,1].map(i=><div key={i} className="h-4 bg-card border rounded-sm" />)}</div>;
     case 'mode': return <div className={cn('h-10 w-full flex items-center justify-center', value==='dark'?'bg-zinc-900':value==='light'?'bg-zinc-50 border':'bg-gradient-to-r from-zinc-50 to-zinc-900')} style={r}><span className={cn('h-2 w-8 rounded-full', value==='dark'?'bg-zinc-100':'bg-zinc-800')} /></div>;
     case 'motion': return <div className="w-full flex items-center justify-center gap-1 h-10">{[0,1,2].map(i=><span key={i} className={cn('bg-primary rounded-full', value==='none'?'h-1.5 w-1.5':value==='subtle'?'h-2 w-1.5':value==='standard'?'h-3 w-1.5':'h-4 w-1.5')} style={{transitionDelay:`${i*60}ms`}} />)}</div>;
-    case 'headingCase': return <div className="h-10 flex items-center justify-center"><span className={cn('text-xs font-bold', value==='uppercase'&&'uppercase', value==='capitalize'&&'capitalize')}>Title</span></div>;
+    case 'headingCase': return <div className="h-10 flex items-center justify-center"><span className={cn('text-xs font-bold', value==='uppercase'&&'uppercase', value==='capitalize'&&'capitalize')}>{t('studio_panels.demo_title')}</span></div>;
     default: return <div className="h-10 flex items-center justify-center text-[10px] text-muted-foreground capitalize">{value}</div>;
   }
 };

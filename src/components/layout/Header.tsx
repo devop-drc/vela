@@ -91,11 +91,11 @@ export default function Header({ title }: { title: string }) {
       let orders: SearchResult[] = [];
       try {
         const { data } = await supabase.from("products").select("id, name, category").or(`name.ilike.%${query}%,category.ilike.%${query}%`).limit(5);
-        products = (data || []).map((p: any) => ({ kind: "product", id: p.id, label: p.name, subtitle: p.category || "Product", path: `/products?openProduct=${p.id}` }));
+        products = (data || []).map((p: any) => ({ kind: "product", id: p.id, label: p.name, subtitle: p.category || t("misc.product", "Product"), path: `/products?openProduct=${p.id}` }));
       } catch { }
       try {
         const { data } = await supabase.from("orders").select("id, customer_name, customer_email, status").or(`customer_name.ilike.%${query}%,customer_email.ilike.%${query}%`).limit(5);
-        orders = (data || []).map((o: any) => ({ kind: "order", id: o.id, label: o.customer_name || o.customer_email || "Order", subtitle: o.status || "Order", path: `/orders?orderId=${o.id}` }));
+        orders = (data || []).map((o: any) => ({ kind: "order", id: o.id, label: o.customer_name || o.customer_email || t("orders.order", "Order"), subtitle: o.status ? t('notifications.status_' + String(o.status).toLowerCase().replace(/\s+/g, '_'), { defaultValue: o.status }) : t("orders.order", "Order"), path: `/orders?orderId=${o.id}` }));
       } catch { }
       if (!cancelled) { setGrouped({ pages, products, orders }); setOpen(true); setActive(-1); refs.current.clear(); }
       if (!cancelled) setLoading(false);
@@ -159,9 +159,9 @@ export default function Header({ title }: { title: string }) {
 
   // ── Actions ──────────────────────────────────────────────────────────────
   const copyUrl = async () => {
-    if (!shopDetails?.slug) { showError("Set your shop name in settings first."); return; }
-    try { await navigator.clipboard.writeText(getStorefrontUrl(shopDetails.slug, shopDetails.storefront_type)); showSuccess("URL copied!"); }
-    catch { showError("Copy failed."); }
+    if (!shopDetails?.slug) { showError(t("header.set_shop_name_first", "Set your shop name in settings first.")); return; }
+    try { await navigator.clipboard.writeText(getStorefrontUrl(shopDetails.slug, shopDetails.storefront_type)); showSuccess(t("header.url_copied", "URL copied!")); }
+    catch { showError(t("header.copy_failed", "Copy failed.")); }
   };
 
   // ── JSX ──────────────────────────────────────────────────────────────────
@@ -228,7 +228,7 @@ export default function Header({ title }: { title: string }) {
           size="icon"
           className="h-9 w-9 rounded-lg"
           onClick={() => setAppTheme(appTheme === "dark" ? "light" : "dark")}
-          aria-label={appTheme === "dark" ? "Light mode" : "Dark mode"}
+          aria-label={appTheme === "dark" ? t("misc.light_mode", "Light mode") : t("misc.dark_mode", "Dark mode")}
         >
           {appTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>

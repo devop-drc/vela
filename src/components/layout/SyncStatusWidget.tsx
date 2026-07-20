@@ -79,7 +79,7 @@ export const SyncStatusWidget = () => {
     setIsAborting(true);
     const { error } = await supabase
       .from('sync_jobs')
-      .update({ status: 'failed', message: 'Sync aborted by user.' })
+      .update({ status: 'failed', message: t('sync.aborted_by_user', 'Sync aborted by user.') })
       .eq('id', activeJob.id);
     if (error) showError(t('sync.abort_failed', { message: error.message }));
     else showSuccess(t('sync.aborted'));

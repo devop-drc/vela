@@ -34,7 +34,7 @@ const ProductRow = ({ item, type }: { item: ProductPayload; type: 'created' | 'u
     </div>
     <div className="flex-1 min-w-0">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium truncate">{item.name || 'Untitled'}</p>
+        <p className="text-sm font-medium truncate">{item.name || t('sync.untitled', 'Untitled')}</p>
         <StatusBadge tone={type === 'created' ? 'success' : 'info'} size="sm" className="shrink-0">
           {type === 'created' ? t('sync.label_new') : t('sync.label_updated')}
         </StatusBadge>

@@ -19,6 +19,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Label } from "./ui/label"; // Import Label
 import { Textarea } from "./ui/textarea"; // Import Textarea
+import { useTranslation } from "react-i18next";
 
 type OrderStatusType = 'Pending' | 'Order Seen' | 'Order Packaged' | 'Given to Courier' | 'Fulfilled' | 'Problematic' | 'Cancelled';
 
@@ -91,6 +92,7 @@ interface OrderDetailModalProps {
 }
 
 export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDetailModalProps) => {
+  const { t } = useTranslation();
   const { shopDetails, convertCurrency } = useShop();
   const [items, setItems] = useState<OrderItem[]>([]);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
@@ -123,7 +125,7 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
           .eq('order_id', order.id);
 
         if (itemsError) {
-          showError("Failed to fetch order items.");
+          showError(t('order_detail.fetch_items_failed'));
         } else {
           setItems(itemsData || []);
         }
@@ -174,9 +176,9 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
       .eq('id', order.id);
 
     if (error) {
-      showError(`Failed to update status: ${error.message}`);
+      showError(t('order_detail.update_status_failed', { message: error.message }));
     } else {
-      showSuccess(`Order marked as ${newStatus}.`);
+      showSuccess(t('order_detail.marked_as', { status: t('status_labels.' + newStatus.toLowerCase().replace(/\s+/g, '_'), { defaultValue: newStatus }) }));
       setCurrentStatus(newStatus); // Update local state immediately
       onUpdate(); // Trigger parent to refetch/update
     }
@@ -194,12 +196,12 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
 
       if (error) throw error;
 
-      showSuccess("Dispute updated successfully!");
+      showSuccess(t('order_detail.dispute_updated'));
       setDispute(prev => prev ? { ...prev, reply_message: replyMessage, status: disputeStatus } : null);
       onUpdate();
     } catch (err: any) {
       console.error("Failed to update dispute:", err);
-      showError(`Failed to update dispute: ${err.message || "An unexpected error occurred."}`);
+      showError(t('order_detail.dispute_update_failed', { message: err.message || t('order_detail.unexpected_error') }));
     } finally {
       setIsUpdating(false);
     }
@@ -217,14 +219,17 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
     }
   };
 
+  // Displayed label for a DB enum value (order/payment/dispute statuses, payment methods).
+  const statusLabel = (value: string) => t('status_labels.' + value.toLowerCase().replace(/\s+/g, '_'), { defaultValue: value });
+
   const statusOptions = [
-    { value: 'Pending', label: 'Pending', icon: Package },
-    { value: 'Order Seen', label: 'Order Seen', icon: Eye },
-    { value: 'Order Packaged', label: 'Order Packaged', icon: Box },
-    { value: 'Given to Courier', label: 'Given to Courier', icon: Truck },
-    { value: 'Fulfilled', label: 'Fulfilled', icon: CheckCircle },
-    { value: 'Problematic', label: 'Problematic', icon: MessageSquareWarning },
-    { value: 'Cancelled', label: 'Cancelled', icon: XCircle },
+    { value: 'Pending', label: statusLabel('Pending'), icon: Package },
+    { value: 'Order Seen', label: statusLabel('Order Seen'), icon: Eye },
+    { value: 'Order Packaged', label: statusLabel('Order Packaged'), icon: Box },
+    { value: 'Given to Courier', label: statusLabel('Given to Courier'), icon: Truck },
+    { value: 'Fulfilled', label: statusLabel('Fulfilled'), icon: CheckCircle },
+    { value: 'Problematic', label: statusLabel('Problematic'), icon: MessageSquareWarning },
+    { value: 'Cancelled', label: statusLabel('Cancelled'), icon: XCircle },
   ];
 
   // Enable the dispute action when EITHER the reply text or the status changed,
@@ -253,18 +258,18 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
       <AlertDialog open={pendingCancel} onOpenChange={setPendingCancel}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
+            <AlertDialogTitle>{t('order_detail.cancel_order_title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              The reserved stock will be returned to your inventory. This can't be undone.
+              {t('order_detail.cancel_order_desc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep order</AlertDialogCancel>
+            <AlertDialogCancel>{t('order_detail.keep_order')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => { setPendingCancel(false); handleStatusUpdate('Cancelled'); }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Cancel order
+              {t('order_detail.cancel_order')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -272,19 +277,19 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Order #{order.id.substring(0, 8)}</DialogTitle>
+          <DialogTitle>{t('order_detail.order_number', { id: order.id.substring(0, 8) })}</DialogTitle>
           <DialogDescription>
-            Details for the order placed on {new Date(order.created_at).toLocaleDateString()}.
+            {t('order_detail.placed_on', { date: new Date(order.created_at).toLocaleDateString() })}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-6">
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><User className="h-4 w-4" /> Customer</div><p>{order.customer_name}</p></div>
-              <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4" /> Email</div><p>{order.customer_email}</p></div>
-              <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" /> Date</div><p>{new Date(order.created_at).toLocaleString()}</p></div>
+              <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><User className="h-4 w-4" /> {t('order_detail.customer')}</div><p>{order.customer_name}</p></div>
+              <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4" /> {t('order_detail.email')}</div><p>{order.customer_email}</p></div>
+              <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" /> {t('order_detail.date')}</div><p>{new Date(order.created_at).toLocaleString()}</p></div>
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground"><Banknote className="h-4 w-4" /> Total</div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground"><Banknote className="h-4 w-4" /> {t('order_detail.total')}</div>
                 <p className="text-lg font-bold leading-tight text-foreground">
                   {/* Convert order.total_amount from its stored currency (order.currency) to shopDetails.currency */}
                   {formatCurrency(orderTotal, shopDetails.currency)}
@@ -295,15 +300,15 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                   )}
                 </p>
               </div>
-              <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><CreditCard className="h-4 w-4" /> Payment Method</div><p className="capitalize">{order.payment_method.replace(/_/g, ' ')}</p></div>
+              <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><CreditCard className="h-4 w-4" /> {t('order_detail.payment_method')}</div><p className="capitalize">{t('status_labels.' + order.payment_method.toLowerCase().replace(/\s+/g, '_'), { defaultValue: order.payment_method.replace(/_/g, ' ') })}</p></div>
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground"><CheckCircle className="h-4 w-4" /> Payment Status</div>
-                <StatusBadge tone={paymentStatusTone(order.payment_status)} className="capitalize">{order.payment_status}</StatusBadge>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground"><CheckCircle className="h-4 w-4" /> {t('order_detail.payment_status')}</div>
+                <StatusBadge tone={paymentStatusTone(order.payment_status)} className="capitalize">{statusLabel(order.payment_status)}</StatusBadge>
               </div>
             </div>
             <Separator />
             <div>
-              <h3 className="font-semibold mb-3 flex items-center gap-2"><MapPin className="h-5 w-5" /> Shipping Details</h3>
+              <h3 className="font-semibold mb-3 flex items-center gap-2"><MapPin className="h-5 w-5" /> {t('order_detail.shipping_details')}</h3>
               {shippingLines.length > 0 ? (
                 <div className="rounded-md border bg-muted/50 p-3 text-sm">
                   <p className="font-medium text-foreground">{order.customer_name}</p>
@@ -312,20 +317,20 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No shipping address provided.</p>
+                <p className="text-sm text-muted-foreground">{t('order_detail.no_shipping_address')}</p>
               )}
               {(order.shipping_notes_seller || order.shipping_notes_courier) && (
                 <div className="mt-2 space-y-2">
                   {order.shipping_notes_seller && (
                     <div className="flex items-start gap-2 rounded-md border border-info/25 bg-info/10 p-2.5 text-sm text-info">
                       <StickyNote className="mt-0.5 h-4 w-4 shrink-0" />
-                      <div><span className="font-medium">Notes for Seller: </span><span className="text-foreground">{order.shipping_notes_seller}</span></div>
+                      <div><span className="font-medium">{t('order_detail.notes_for_seller')} </span><span className="text-foreground">{order.shipping_notes_seller}</span></div>
                     </div>
                   )}
                   {order.shipping_notes_courier && (
                     <div className="flex items-start gap-2 rounded-md border border-warning/25 bg-warning/10 p-2.5 text-sm text-warning">
                       <Truck className="mt-0.5 h-4 w-4 shrink-0" />
-                      <div><span className="font-medium">Notes for Courier: </span><span className="text-foreground">{order.shipping_notes_courier}</span></div>
+                      <div><span className="font-medium">{t('order_detail.notes_for_courier')} </span><span className="text-foreground">{order.shipping_notes_courier}</span></div>
                     </div>
                   )}
                 </div>
@@ -333,7 +338,7 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
             </div>
             <Separator />
             <div>
-              <h3 className="font-semibold mb-4 flex items-center gap-2"><Package className="h-5 w-5" /> Items Ordered</h3>
+              <h3 className="font-semibold mb-4 flex items-center gap-2"><Package className="h-5 w-5" /> {t('order_detail.items_ordered')}</h3>
               {isLoadingItems ? (
                 <div className="space-y-4">
                   {Array.from({ length: 3 }).map((_, i) => (
@@ -353,8 +358,8 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                     <div key={index} className="flex items-center gap-4">
                       <ProductThumb src={item.products?.media_url} alt={item.products?.name} />
                       <div className="flex-1">
-                        <p className="font-medium">{item.products?.name || 'Deleted product'}</p>
-                        <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                        <p className="font-medium">{item.products?.name || t('order_detail.deleted_product')}</p>
+                        <p className="text-sm text-muted-foreground">{t('order_detail.qty', { count: item.quantity })}</p>
                       </div>
                       <p className="font-medium">
                         {/* Convert item.price_at_purchase from its stored currency ('ALL') to shopDetails.currency */}
@@ -365,11 +370,11 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                   {items.length > 0 && (
                     <div className="space-y-1 border-t pt-3 text-sm">
                       <div className="flex justify-between text-muted-foreground">
-                        <span>Subtotal</span>
+                        <span>{t('order_detail.subtotal')}</span>
                         <span>{formatCurrency(itemsSubtotal, shopDetails.currency)}</span>
                       </div>
                       <div className="flex justify-between font-semibold text-foreground">
-                        <span>Total</span>
+                        <span>{t('order_detail.total')}</span>
                         <span>{formatCurrency(orderTotal, shopDetails.currency)}</span>
                       </div>
                     </div>
@@ -379,53 +384,53 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
             </div>
             <Separator />
             <div>
-              <h3 className="font-semibold mb-4 flex items-center gap-2"><MessageSquareWarning className="h-5 w-5" /> Client Dispute</h3>
+              <h3 className="font-semibold mb-4 flex items-center gap-2"><MessageSquareWarning className="h-5 w-5" /> {t('order_detail.client_dispute')}</h3>
               {isLoadingDispute ? <Spinner /> : dispute ? (
                 <div className="space-y-3 p-3 border rounded-md bg-muted/50">
                   <div className="flex items-center justify-between">
-                    <p className="font-medium flex items-center gap-2"><Hash className="h-4 w-4" /> Dispute ID: {dispute.id.substring(0, 8)}</p>
-                    <StatusBadge tone={disputeStatusTone(dispute.status)}>{dispute.status}</StatusBadge>
+                    <p className="font-medium flex items-center gap-2"><Hash className="h-4 w-4" /> {t('order_detail.dispute_id')} {dispute.id.substring(0, 8)}</p>
+                    <StatusBadge tone={disputeStatusTone(dispute.status)}>{statusLabel(dispute.status)}</StatusBadge>
                   </div>
-                  <p className="text-sm"><span className="font-medium">Reason:</span> {dispute.reason}</p>
-                  {dispute.message && <p className="text-sm"><span className="font-medium">Customer's Message:</span> {dispute.message}</p>}
+                  <p className="text-sm"><span className="font-medium">{t('order_detail.reason')}</span> {dispute.reason}</p>
+                  {dispute.message && <p className="text-sm"><span className="font-medium">{t('order_detail.customer_message')}</span> {dispute.message}</p>}
                   <div className="space-y-2 mt-3">
-                    <Label htmlFor="replyMessage" className="flex items-center gap-2 text-sm"><Reply className="h-4 w-4" /> Your Reply</Label>
-                    <Textarea id="replyMessage" rows={3} value={replyMessage} onChange={(e) => setReplyMessage(e.target.value)} placeholder="Type your response to the customer here..." />
+                    <Label htmlFor="replyMessage" className="flex items-center gap-2 text-sm"><Reply className="h-4 w-4" /> {t('order_detail.your_reply')}</Label>
+                    <Textarea id="replyMessage" rows={3} value={replyMessage} onChange={(e) => setReplyMessage(e.target.value)} placeholder={t('order_detail.reply_placeholder')} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="disputeStatus">Dispute Status</Label>
+                    <Label htmlFor="disputeStatus">{t('order_detail.dispute_status')}</Label>
                     <Select value={disputeStatus} onValueChange={(value: Dispute['status']) => setDisputeStatus(value)}>
                       <SelectTrigger id="disputeStatus">
-                        <SelectValue placeholder="Change Status" />
+                        <SelectValue placeholder={t('order_detail.change_status')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Open">Open</SelectItem>
-                        <SelectItem value="In Review">In Review</SelectItem>
-                        <SelectItem value="Resolved">Resolved</SelectItem>
-                        <SelectItem value="Closed">Closed</SelectItem>
+                        <SelectItem value="Open">{statusLabel('Open')}</SelectItem>
+                        <SelectItem value="In Review">{statusLabel('In Review')}</SelectItem>
+                        <SelectItem value="Resolved">{statusLabel('Resolved')}</SelectItem>
+                        <SelectItem value="Closed">{statusLabel('Closed')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <Button onClick={handleDisputeUpdate} disabled={isUpdating || !disputeDirty} size="sm">
                     {isUpdating && <Spinner className="mr-2 h-4 w-4" />}
-                    Update Dispute
+                    {t('order_detail.update_dispute')}
                   </Button>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No dispute reported for this order.</p>
+                <p className="text-sm text-muted-foreground">{t('order_detail.no_dispute')}</p>
               )}
             </div>
           </div>
         </ScrollArea>
         <DialogFooter className="pt-4 flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
           <div className="flex items-center gap-2 mr-auto">
-            <span className="text-sm">Status:</span>
-            <StatusBadge tone={orderStatusTone(currentStatus)}>{currentStatus}</StatusBadge>
+            <span className="text-sm">{t('order_detail.status')}</span>
+            <StatusBadge tone={orderStatusTone(currentStatus)}>{statusLabel(currentStatus)}</StatusBadge>
           </div>
           <div className="flex gap-2">
             <Select value={currentStatus} onValueChange={(value: OrderStatusType) => handleStatusSelect(value)} disabled={isUpdating}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Change Status" />
+                <SelectValue placeholder={t('order_detail.change_status')} />
               </SelectTrigger>
               <SelectContent>
                 {statusOptions.map(option => (
@@ -438,7 +443,7 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="ghost" onClick={onClose}>Close</Button>
+            <Button variant="ghost" onClick={onClose}>{t('common.close')}</Button>
           </div>
         </DialogFooter>
       </DialogContent>

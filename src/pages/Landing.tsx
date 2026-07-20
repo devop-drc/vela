@@ -35,7 +35,10 @@ import "@/components/landing/landing.css";
 // Remotion film — heavy, so it loads only when its section is reached. One
 // combined motion graphic serves both the hero and the "how it works" section.
 import HeroFilmVideo from "@/components/landing/HeroFilmVideo";
-const SplashScreen = lazy(() => import("@/components/landing/SplashScreen"));
+// Eager, NOT lazy: a lazy splash chunk arrived a few frames after the
+// (prerendered) landing painted — the page flashed, then the splash covered
+// it. GSAP is already in this bundle, so eager costs nothing.
+import SplashScreen from "@/components/landing/SplashScreen";
 const MomentumBand = lazy(() => import("@/components/landing/MomentumBand"));
 const ComparisonTable = lazy(() => import("@/components/landing/ComparisonTable"));
 const ProblemSection = lazy(() => import("@/components/landing/ProblemSection"));

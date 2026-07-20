@@ -8,6 +8,7 @@ import { useShop } from "@/contexts/ShopContext";
 import { formatCurrency } from "@/lib/formatters";
 import { FilterState } from "@/hooks/useProductFilters";
 import { DetailsAttribute } from "@/hooks/useProductData";
+import { useTranslation } from 'react-i18next';
 
 interface ProductFilterBarProps {
   allCategories: string[];
@@ -36,6 +37,7 @@ export const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
   hasActiveFilters,
   handleResetAllFilters,
 }) => {
+  const { t } = useTranslation();
   const { shopDetails } = useShop();
 
   return (
@@ -45,11 +47,11 @@ export const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-9 px-3">
               <ListFilter className="mr-2 h-4 w-4" />
-              Categories ({filters.categories.length})
+              {t('products.categories')} ({filters.categories.length})
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
-            <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('products_ui.filter_by_category')}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {allCategories.map(category => (
               <DropdownMenuCheckboxItem
@@ -74,11 +76,11 @@ export const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-9 px-3">
               <Tag className="mr-2 h-4 w-4" />
-              Tags ({filters.tags.length})
+              {t('products.tags')} ({filters.tags.length})
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
-            <DropdownMenuLabel>Filter by Tag</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('products_ui.filter_by_tag')}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {allTags.map(tag => (
               <DropdownMenuCheckboxItem
@@ -103,11 +105,11 @@ export const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-9 px-3">
               <DollarSign className="mr-2 h-4 w-4" />
-              Price Range
+              {t('products.price_range')}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-64 p-4">
-            <DropdownMenuLabel>Filter by Price</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('products_ui.filter_by_price')}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <Slider
               min={0}
@@ -144,7 +146,7 @@ export const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56">
-                <DropdownMenuLabel>Filter by {attr.name.replace(/_/g, ' ')}</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('products_ui.filter_by', { name: attr.name.replace(/_/g, ' ') })}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {attr.values.map(value => (
                   <DropdownMenuCheckboxItem
@@ -169,7 +171,7 @@ export const ProductFilterBar: React.FC<ProductFilterBarProps> = ({
       {hasActiveFilters && (
         <Button variant="ghost" size="sm" onClick={handleResetAllFilters} className="text-destructive hover:text-destructive h-9 px-3">
           <XCircle className="mr-2 h-4 w-4" />
-          Clear All Filters
+          {t('products_ui.clear_all_filters')}
         </Button>
       )}
     </div>

@@ -11,10 +11,12 @@ import { Percent, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useShop } from "@/contexts/ShopContext";
 import { currencySymbol } from "@/lib/formatters";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 
 const saleSchema = z.object({
   type: z.enum(["percentage", "flat"]),
-  value: z.coerce.number().min(0.01, "Value must be greater than 0"),
+  value: z.coerce.number().min(0.01, { message: i18n.t('sale_modal.value_required') }),
 });
 
 export type SaleFormData = z.infer<typeof saleSchema>;
@@ -27,6 +29,7 @@ interface SaleModalProps {
 }
 
 export const SaleModal = ({ isOpen, onClose, onApply, productCount }: SaleModalProps) => {
+  const { t } = useTranslation();
   const { shopDetails } = useShop();
   const { register, control, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<SaleFormData>({
     resolver: zodResolver(saleSchema),
@@ -39,14 +42,14 @@ export const SaleModal = ({ isOpen, onClose, onApply, productCount }: SaleModalP
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Apply Sale to {productCount} Products</DialogTitle>
+          <DialogTitle>{t('sale_modal.title', { count: productCount })}</DialogTitle>
           <DialogDescription>
-            Set a discount that will be applied to the current price of the selected products. This action cannot be undone.
+            {t('sale_modal.description')}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onApply)} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label>Discount Type</Label>
+            <Label>{t('sale_modal.discount_type')}</Label>
             <Controller
               control={control}
               name="type"
@@ -60,17 +63,17 @@ export const SaleModal = ({ isOpen, onClose, onApply, productCount }: SaleModalP
                   className="justify-start"
                 >
                   <ToggleGroupItem value="percentage" className="gap-1.5">
-                    <Percent className="h-3.5 w-3.5" /> Percentage Off
+                    <Percent className="h-3.5 w-3.5" /> {t('sale_modal.percentage_off')}
                   </ToggleGroupItem>
                   <ToggleGroupItem value="flat" className="gap-1.5">
-                    <DollarSign className="h-3.5 w-3.5" /> Flat Amount Off
+                    <DollarSign className="h-3.5 w-3.5" /> {t('sale_modal.flat_amount_off')}
                   </ToggleGroupItem>
                 </ToggleGroup>
               )}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="value">Discount Value</Label>
+            <Label htmlFor="value">{t('sale_modal.discount_value')}</Label>
             <div className="relative">
               {saleType === "flat" && shopDetails?.currency && (
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
@@ -91,10 +94,10 @@ export const SaleModal = ({ isOpen, onClose, onApply, productCount }: SaleModalP
             {errors.value && <p className="text-sm text-destructive mt-1">{errors.value.message}</p>}
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
             <Button type="submit" variant="destructive" disabled={isSubmitting}>
               {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
-              Apply Sale
+              {t('sale_modal.apply_sale')}
             </Button>
           </DialogFooter>
         </form>

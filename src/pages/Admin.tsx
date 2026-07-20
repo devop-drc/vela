@@ -6,6 +6,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Users, Gift, ShieldCheck, TrendingUp, Search, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Label } from "@/components/ui/label";
@@ -64,6 +65,7 @@ interface Row {
 }
 
 export default function Admin() {
+  const { t } = useTranslation();
   const { isAdmin, loading: roleLoading } = useIsAdmin();
   const { setTitle } = usePageTitle();
   const [overview, setOverview] = useState<any>(null);
@@ -79,7 +81,7 @@ export default function Admin() {
   const [plans, setPlans] = useState<{ id: string; name: string }[]>([]);
   const [planForm, setPlanForm] = useState({ planId: "", endDate: "", billingCycle: "monthly" });
 
-  useEffect(() => { setTitle("Admin"); }, [setTitle]);
+  useEffect(() => { setTitle(t('nav.admin')); }, [setTitle, t]);
 
   // Available plans (public-read) for the manual plan-assignment control.
   useEffect(() => {
@@ -140,10 +142,10 @@ export default function Admin() {
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
   const stats = [
-    { icon: Users, label: "Përdorues", value: overview ? fmt(overview.userCount) : "…" },
-    { icon: Gift, label: "Në provë", value: overview ? fmt(overview.byStatus?.trialing ?? 0) : "…" },
-    { icon: ShieldCheck, label: "Aktivë", value: overview ? fmt(overview.byStatus?.active ?? 0) : "…" },
-    { icon: TrendingUp, label: "MRR (ALL)", value: overview ? fmt(overview.mrrAll) : "…" },
+    { icon: Users, label: t('admin_page.stat_users'), value: overview ? fmt(overview.userCount) : "…" },
+    { icon: Gift, label: t('admin_page.stat_trialing'), value: overview ? fmt(overview.byStatus?.trialing ?? 0) : "…" },
+    { icon: ShieldCheck, label: t('admin_page.stat_active'), value: overview ? fmt(overview.byStatus?.active ?? 0) : "…" },
+    { icon: TrendingUp, label: t('admin_page.stat_mrr'), value: overview ? fmt(overview.mrrAll) : "…" },
   ];
 
   return (
@@ -169,26 +171,26 @@ export default function Admin() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && load(1, search)}
-            placeholder="Kërko me email, emër ose dyqan…"
+            placeholder={t('admin_page.search_placeholder')}
             className="pl-9"
           />
         </div>
-        <Button variant="outline" onClick={() => load(1, search)}>Kërko</Button>
-        {search && <Button variant="ghost" onClick={() => { setSearch(""); load(1, ""); }}>Pastro</Button>}
+        <Button variant="outline" onClick={() => load(1, search)}>{t('common.search')}</Button>
+        {search && <Button variant="ghost" onClick={() => { setSearch(""); load(1, ""); }}>{t('common.clear')}</Button>}
         <Button className="ml-auto gap-1.5" onClick={() => setCreateOpen(true)}>
-          <UserPlus className="h-4 w-4" /> Krijo llogari
+          <UserPlus className="h-4 w-4" /> {t('admin_page.create_account')}
         </Button>
       </div>
 
       <Card>
         <CardContent className="p-0">
           <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-4 border-b border-border px-4 py-2.5 text-xs font-semibold text-muted-foreground sm:grid-cols-[1.4fr_1fr_auto_auto_auto]">
-            <span>Përdoruesi</span><span className="hidden sm:block">Dyqani</span><span>Plani</span><span>Statusi</span><span>Regjistruar</span>
+            <span>{t('admin_page.col_user')}</span><span className="hidden sm:block">{t('admin_page.col_shop')}</span><span>{t('admin_page.col_plan')}</span><span>{t('admin_page.col_status')}</span><span>{t('admin_page.col_registered')}</span>
           </div>
           {loading ? (
             <div className="space-y-2 p-4">{[...Array(6)].map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
           ) : rows.length === 0 ? (
-            <p className="p-8 text-center text-sm text-muted-foreground">Asnjë përdorues.</p>
+            <p className="p-8 text-center text-sm text-muted-foreground">{t('admin_page.no_users')}</p>
           ) : rows.map((r) => (
             <button key={r.id} onClick={() => openDetail(r.id)}
               className="grid w-full grid-cols-[1fr_auto_auto_auto] items-center gap-x-4 border-b border-border px-4 py-3 text-left text-sm transition-colors last:border-0 hover:bg-accent/50 sm:grid-cols-[1.4fr_1fr_auto_auto_auto]">
@@ -199,7 +201,7 @@ export default function Admin() {
               <span className="hidden min-w-0 truncate text-muted-foreground sm:block">{r.shop_name ?? "—"}</span>
               <span className="text-xs font-medium uppercase">{r.subscription?.plan_id ?? "—"}</span>
               <Badge className={cn("text-[10px]", STATUS_TONE[r.subscription?.status ?? "incomplete"])}>
-                {r.subscription?.status ?? "—"}
+                {r.subscription?.status ? t('status_labels.' + r.subscription.status.toLowerCase().replace(/\s+/g, '_'), { defaultValue: r.subscription.status }) : "—"}
               </Badge>
               <span className="text-xs text-muted-foreground">{dt(r.created_at)}</span>
             </button>
@@ -212,7 +214,7 @@ export default function Admin() {
           <Button variant="outline" size="sm" disabled={page <= 1 || loading} onClick={() => load(page - 1, "")}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm text-muted-foreground">Faqja {page}</span>
+          <span className="text-sm text-muted-foreground">{t('admin_page.page_n', { page })}</span>
           <Button variant="outline" size="sm" disabled={rows.length < 20 || loading} onClick={() => load(page + 1, "")}>
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -222,29 +224,29 @@ export default function Admin() {
       {/* Create-account dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Krijo llogari të re</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t('admin_page.create_account_title')}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Emri</Label>
+                <Label>{t('admin_page.first_name')}</Label>
                 <Input value={nu.firstName} onChange={(e) => setNu({ ...nu, firstName: e.target.value })} />
               </div>
               <div className="space-y-1.5">
-                <Label>Mbiemri</Label>
+                <Label>{t('admin_page.last_name')}</Label>
                 <Input value={nu.lastName} onChange={(e) => setNu({ ...nu, lastName: e.target.value })} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Email</Label>
+              <Label>{t('admin_page.email')}</Label>
               <Input type="email" value={nu.email} onChange={(e) => setNu({ ...nu, email: e.target.value })} />
             </div>
             <div className="space-y-1.5">
-              <Label>Fjalëkalimi (min 8)</Label>
+              <Label>{t('admin_page.password_min')}</Label>
               <Input type="text" value={nu.password} onChange={(e) => setNu({ ...nu, password: e.target.value })} />
             </div>
             <label className="flex items-center gap-2 text-sm">
               <Checkbox checked={nu.admin} onCheckedChange={(v) => setNu({ ...nu, admin: !!v })} />
-              Bëje administrator
+              {t('admin_page.make_admin')}
             </label>
             <Button
               className="w-full"
@@ -258,7 +260,7 @@ export default function Admin() {
                     firstName: nu.firstName, lastName: nu.lastName,
                     ...(nu.admin ? { role: "admin" } : {}),
                   });
-                  showSuccess(`Llogaria u krijua: ${nu.email}`);
+                  showSuccess(t('admin_page.account_created', { email: nu.email }));
                   setCreateOpen(false);
                   setNu({ email: "", password: "", firstName: "", lastName: "", admin: false });
                   setOverview(null);
@@ -267,7 +269,7 @@ export default function Admin() {
                 setActing(false);
               }}
             >
-              {acting ? <Spinner className="h-4 w-4" /> : "Krijo llogarinë"}
+              {acting ? <Spinner className="h-4 w-4" /> : t('admin_page.create_account_submit')}
             </Button>
           </div>
         </DialogContent>
@@ -282,46 +284,46 @@ export default function Admin() {
           ) : detail?.created_at ? (
             <div className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                <span className="text-muted-foreground">Emri</span><span>{detail.name ?? "—"}</span>
-                <span className="text-muted-foreground">Dyqani</span>
+                <span className="text-muted-foreground">{t('admin_page.first_name')}</span><span>{detail.name ?? "—"}</span>
+                <span className="text-muted-foreground">{t('admin_page.col_shop')}</span>
                 <span>{detail.shop_name ?? "—"}{detail.slug ? <a className="ml-1 text-red-600 hover:underline" href={`/shop/${detail.slug}`} target="_blank" rel="noreferrer">/{detail.slug}</a> : null}</span>
-                <span className="text-muted-foreground">Regjistruar</span><span>{dt(detail.created_at)}</span>
-                <span className="text-muted-foreground">Hyrja e fundit</span><span>{dt(detail.last_sign_in_at)}</span>
-                <span className="text-muted-foreground">Produkte / Porosi</span><span>{detail.productCount} / {detail.orderCount}</span>
-                <span className="text-muted-foreground">Postime IG</span>
+                <span className="text-muted-foreground">{t('admin_page.col_registered')}</span><span>{dt(detail.created_at)}</span>
+                <span className="text-muted-foreground">{t('admin_page.last_sign_in')}</span><span>{dt(detail.last_sign_in_at)}</span>
+                <span className="text-muted-foreground">{t('admin_page.products_orders')}</span><span>{detail.productCount} / {detail.orderCount}</span>
+                <span className="text-muted-foreground">{t('admin_page.ig_posts')}</span>
                 <span>
                   {detail.instagram_media_count ?? "—"}
                   {typeof detail.productsFromInstagram === "number" && (
-                    <span className="text-muted-foreground"> · {detail.productsFromInstagram} janë produkte</span>
+                    <span className="text-muted-foreground"> · {t('admin_page.are_products', { count: detail.productsFromInstagram })}</span>
                   )}
                 </span>
                 {detail.aiUsage && (
                   <>
-                    <span className="text-muted-foreground">Përdorimi i sistemit</span>
+                    <span className="text-muted-foreground">{t('header.ai_usage')}</span>
                     <span>
-                      {fmt(detail.aiUsage.calls)} thirrje · {fmt(detail.aiUsage.input_tokens + detail.aiUsage.output_tokens)} tokens ·{" "}
+                      {t('admin_page.calls_count', { count: fmt(detail.aiUsage.calls) })} · {t('admin_page.tokens_count', { count: fmt(detail.aiUsage.input_tokens + detail.aiUsage.output_tokens) })} ·{" "}
                       <b>${detail.aiUsage.cost_usd.toFixed(4)}</b>
                     </span>
                   </>
                 )}
-                <span className="text-muted-foreground">Plani</span>
+                <span className="text-muted-foreground">{t('admin_page.col_plan')}</span>
                 <span className="flex items-center gap-2">
                   <b className="uppercase">{detail.subscription?.plan_id ?? "—"}</b>
                   <Badge className={cn("text-[10px]", STATUS_TONE[detail.subscription?.status ?? "incomplete"])}>
-                    {detail.subscription?.status ?? "—"}
+                    {detail.subscription?.status ? t('status_labels.' + detail.subscription.status.toLowerCase().replace(/\s+/g, '_'), { defaultValue: detail.subscription.status }) : "—"}
                   </Badge>
                 </span>
-                <span className="text-muted-foreground">Prova mbaron</span><span>{dt(detail.subscription?.trial_ends_at)}</span>
-                <span className="text-muted-foreground">Periudha mbaron</span><span>{dt(detail.subscription?.current_period_end)}</span>
+                <span className="text-muted-foreground">{t('admin_page.trial_ends')}</span><span>{dt(detail.subscription?.trial_ends_at)}</span>
+                <span className="text-muted-foreground">{t('admin_page.period_ends')}</span><span>{dt(detail.subscription?.current_period_end)}</span>
               </div>
 
               {detail.ordersByStatus && Object.keys(detail.ordersByStatus).length > 0 && (
                 <div className="border-t border-border pt-3">
-                  <p className="mb-2 text-xs font-semibold text-muted-foreground">Porositë sipas statusit</p>
+                  <p className="mb-2 text-xs font-semibold text-muted-foreground">{t('admin_page.orders_by_status')}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {Object.entries(detail.ordersByStatus).map(([status, count]) => (
                       <span key={status} className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs">
-                        {status} <b>{count as number}</b>
+                        {t('status_labels.' + status.toLowerCase().replace(/\s+/g, '_'), { defaultValue: status })} <b>{count as number}</b>
                       </span>
                     ))}
                   </div>
@@ -330,32 +332,32 @@ export default function Admin() {
 
               {/* Manual plan assignment: choose a plan + end date and activate. */}
               <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
-                <p className="text-xs font-semibold text-muted-foreground">Cakto planin manualisht</p>
+                <p className="text-xs font-semibold text-muted-foreground">{t('admin_page.set_plan_manually')}</p>
                 <div className="flex flex-wrap items-end gap-2">
                   <div className="space-y-1">
-                    <Label className="text-[11px] text-muted-foreground">Plani</Label>
+                    <Label className="text-[11px] text-muted-foreground">{t('admin_page.col_plan')}</Label>
                     <select
                       value={planForm.planId}
                       onChange={(e) => setPlanForm({ ...planForm, planId: e.target.value })}
                       className="h-9 rounded-md border border-input bg-background px-2 text-sm capitalize outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      <option value="">Zgjidh planin…</option>
+                      <option value="">{t('admin_page.select_plan')}</option>
                       {plans.map((p) => <option key={p.id} value={p.id} className="capitalize">{p.name}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[11px] text-muted-foreground">Cikli</Label>
+                    <Label className="text-[11px] text-muted-foreground">{t('admin_page.billing_cycle')}</Label>
                     <select
                       value={planForm.billingCycle}
                       onChange={(e) => setPlanForm({ ...planForm, billingCycle: e.target.value })}
                       className="h-9 rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      <option value="monthly">Mujor</option>
-                      <option value="annual">Vjetor</option>
+                      <option value="monthly">{t('admin_page.monthly')}</option>
+                      <option value="annual">{t('admin_page.annual')}</option>
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[11px] text-muted-foreground">Mbaron më</Label>
+                    <Label className="text-[11px] text-muted-foreground">{t('admin_page.ends_on')}</Label>
                     <Input
                       type="date"
                       value={planForm.endDate}
@@ -374,35 +376,35 @@ export default function Admin() {
                         billingCycle: planForm.billingCycle,
                         endDate: new Date(`${planForm.endDate}T23:59:59`).toISOString(),
                       },
-                      "Plani u aktivizua",
+                      t('admin_page.plan_activated'),
                     )}
                   >
-                    {acting ? <Spinner className="h-3.5 w-3.5" /> : "Aktivizo planin"}
+                    {acting ? <Spinner className="h-3.5 w-3.5" /> : t('admin_page.activate_plan')}
                   </Button>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2 border-t border-border pt-3">
                 <Button size="sm" variant="outline" disabled={acting}
-                  onClick={() => act({ action: "extend_trial", userId: detail.id, days: 7 }, "Prova u zgjat 7 ditë")}>
-                  {acting ? <Spinner className="h-3.5 w-3.5" /> : "+7 ditë provë"}
+                  onClick={() => act({ action: "extend_trial", userId: detail.id, days: 7 }, t('admin_page.trial_extended'))}>
+                  {acting ? <Spinner className="h-3.5 w-3.5" /> : t('admin_page.extend_trial')}
                 </Button>
                 <Button size="sm" variant="outline" className="text-destructive" disabled={acting}
-                  onClick={() => act({ action: "set_status", userId: detail.id, status: "canceled" }, "Abonimi u anulua")}>
-                  Anulo abonimin
+                  onClick={() => act({ action: "set_status", userId: detail.id, status: "canceled" }, t('admin_page.subscription_canceled'))}>
+                  {t('admin_page.cancel_subscription')}
                 </Button>
               </div>
 
               {detail.payments?.length > 0 && (
                 <div className="border-t border-border pt-3">
-                  <p className="mb-2 text-xs font-semibold text-muted-foreground">Pagesat</p>
+                  <p className="mb-2 text-xs font-semibold text-muted-foreground">{t('admin_page.payments')}</p>
                   <div className="max-h-40 space-y-1.5 overflow-y-auto">
                     {detail.payments.map((p: any) => (
                       <div key={p.id} className="flex items-center justify-between rounded-lg border border-border px-2.5 py-1.5 text-xs">
                         <span>{dt(p.created_at)}</span>
-                        <span className="text-muted-foreground">{p.type}</span>
+                        <span className="text-muted-foreground">{t('status_labels.' + String(p.type).toLowerCase().replace(/\s+/g, '_'), { defaultValue: p.type })}</span>
                         <span className="font-medium">{fmt(p.amount_all)} ALL</span>
-                        <Badge variant={p.status === "paid" ? "default" : p.status === "pending" ? "secondary" : "destructive"} className="text-[9px]">{p.status}</Badge>
+                        <Badge variant={p.status === "paid" ? "default" : p.status === "pending" ? "secondary" : "destructive"} className="text-[9px]">{t('status_labels.' + String(p.status).toLowerCase().replace(/\s+/g, '_'), { defaultValue: p.status })}</Badge>
                       </div>
                     ))}
                   </div>

@@ -831,7 +831,7 @@ export default function NotificationSidebar({ asPage = false, linkTo }: { asPage
       >
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h2 className="text-lg font-semibold">{t("notifications.title")}</h2>
-          <button onClick={() => setOpen(false)} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+          <button onClick={() => setOpen(false)} aria-label={t("common.close")} className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>

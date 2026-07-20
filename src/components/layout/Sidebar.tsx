@@ -390,7 +390,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed }: Props) {
               {/* Vela attribution */}
               <div className="flex items-center justify-center gap-1.5 pt-0.5">
                 <img src="/vela-icon.svg" alt="Vela" className="h-3.5 w-3.5 rounded-[4px] ring-1 ring-border" />
-                <span className={cn("text-[10px] font-medium tracking-wide", palette.muted)}>Powered by Vela</span>
+                <span className={cn("text-[10px] font-medium tracking-wide", palette.muted)}>{t("misc.powered_by_vela", "Powered by Vela")}</span>
               </div>
             </div>
           )}

@@ -58,16 +58,18 @@ const getPromotionStatus = (promo: Promotion): 'active' | 'scheduled' | 'expired
   return 'inactive';
 };
 
-const getPromotionDetails = (promotion: Promotion, currency?: string | null): string => {
+const getPromotionDetails = (promotion: Promotion, currency: string | null | undefined, t: (key: string, opts?: any) => string): string => {
   switch (promotion.type) {
     case 'discount':
-      if (promotion.value?.discountType === 'percentage') return `${promotion.value.discountValue}% Off`;
-      if (promotion.value?.discountType === 'flat') return `${formatCurrency(promotion.value.discountValue, currency)} Off`;
-      return 'Discount';
+      if (promotion.value?.discountType === 'percentage') return t("promotions.percent_off", { defaultValue: "{{value}}% Off", value: promotion.value.discountValue });
+      if (promotion.value?.discountType === 'flat') return t("promotions.amount_off", { defaultValue: "{{amount}} Off", amount: formatCurrency(promotion.value.discountValue, currency) });
+      return t("promotions.discount", "Discount");
     case 'offer':
       if (promotion.value?.offerType === 'free_shipping')
-        return `Free Shipping${promotion.value.minOrderValue ? ` (Min ${formatCurrency(promotion.value.minOrderValue, currency)})` : ''}`;
-      return 'Offer';
+        return promotion.value.minOrderValue
+          ? t("promotions.free_shipping_min", { defaultValue: "Free Shipping (Min {{amount}})", amount: formatCurrency(promotion.value.minOrderValue, currency) })
+          : t("promotions.free_shipping", "Free Shipping");
+      return t("promotions.offer", "Offer");
     default:
       return '';
   }
@@ -82,15 +84,15 @@ const TYPE_TILE: Record<Promotion['type'], string> = {
   offer: "bg-info/10 text-info",
 };
 
-const getTypeLabel = (promotion: Promotion): string => {
+const getTypeLabel = (promotion: Promotion, t: (key: string, defaultValue?: string) => string): string => {
   if (promotion.type === 'discount') {
-    if (promotion.value?.discountType === 'percentage') return 'Percentage Off';
-    if (promotion.value?.discountType === 'flat') return 'Fixed Amount Off';
-    return 'Discount';
+    if (promotion.value?.discountType === 'percentage') return t("promotions.percentage_off", "Percentage Off");
+    if (promotion.value?.discountType === 'flat') return t("promotions.fixed_amount_off", "Fixed Amount Off");
+    return t("promotions.discount", "Discount");
   }
   if (promotion.type === 'offer') {
-    if (promotion.value?.offerType === 'free_shipping') return 'Free Shipping';
-    return 'Offer';
+    if (promotion.value?.offerType === 'free_shipping') return t("promotions.free_shipping", "Free Shipping");
+    return t("promotions.offer", "Offer");
   }
   return promotion.type;
 };
@@ -122,8 +124,8 @@ const PromotionCard = ({ promo, onEdit, onDelete, onRerun, onToggle }: Promotion
   const { t } = useTranslation();
   const { shopDetails } = useShop();
   const status = getPromotionStatus(promo);
-  const details = getPromotionDetails(promo, shopDetails?.currency);
-  const typeLabel = getTypeLabel(promo);
+  const details = getPromotionDetails(promo, shopDetails?.currency, t);
+  const typeLabel = getTypeLabel(promo, t);
   const typeIcon = getTypeIcon(promo);
 
   const statusLabels: Record<string, string> = {
@@ -173,7 +175,7 @@ const PromotionCard = ({ promo, onEdit, onDelete, onRerun, onToggle }: Promotion
           {promo.target_products && promo.target_products.length > 0 && (
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <Package className="h-3 w-3" />
-              {promo.target_products.length} product{promo.target_products.length !== 1 ? 's' : ''}
+              {t("dashboard.products_count", { count: promo.target_products.length })}
             </span>
           )}
         </div>
@@ -186,13 +188,13 @@ const PromotionCard = ({ promo, onEdit, onDelete, onRerun, onToggle }: Promotion
               {promo.start_date && promo.end_date
                 ? `${format(parseISO(promo.start_date), 'MMM d')} – ${format(parseISO(promo.end_date), 'MMM d, yyyy')}`
                 : promo.start_date
-                  ? `Starts ${format(parseISO(promo.start_date), 'MMM d, yyyy')}`
-                  : `Ends ${format(parseISO(promo.end_date!), 'MMM d, yyyy')}`}
+                  ? t("promotions.starts_date", { defaultValue: "Starts {{date}}", date: format(parseISO(promo.start_date), 'MMM d, yyyy') })
+                  : t("promotions.ends_date", { defaultValue: "Ends {{date}}", date: format(parseISO(promo.end_date!), 'MMM d, yyyy') })}
             </span>
             {promo.repeat_interval && promo.repeat_interval !== 'none' && (
               <span className="ml-auto flex items-center gap-1 capitalize">
                 <Repeat2 className="h-3 w-3" />
-                {promo.repeat_interval}
+                {t(`announcement_editor.${promo.repeat_interval}`, promo.repeat_interval)}
               </span>
             )}
           </div>
@@ -209,7 +211,7 @@ const PromotionCard = ({ promo, onEdit, onDelete, onRerun, onToggle }: Promotion
             <Switch
               checked={promo.is_active}
               onCheckedChange={() => onToggle(promo.id, promo.is_active)}
-              aria-label={`Toggle ${promo.name} active status`}
+              aria-label={t("promotions.toggle_active", { defaultValue: "Toggle {{name}} active status", name: promo.name })}
               className="scale-90"
             />
             <span className="text-xs text-muted-foreground">{promo.is_active ? t('promotions.enabled') : t('promotions.disabled')}</span>
@@ -323,7 +325,7 @@ const Promotions = () => {
     setSelectedPromotion({
       ...promotion,
       id: crypto.randomUUID(),
-      name: `${promotion.name} (Copy)`,
+      name: `${promotion.name} ${t("promotions.copy_suffix", "(Copy)")}`,
       is_active: false,
       start_date: null,
       end_date: null,
@@ -338,10 +340,10 @@ const Promotions = () => {
       .eq('id', promotionId);
 
     if (error) {
-      showError(toFriendlyError(error, "Couldn't update the promotion. Please try again."));
+      showError(toFriendlyError(error, t("promotions.update_failed", "Couldn't update the promotion. Please try again.")));
     } else {
       invalidateStorefrontCache();
-      showSuccess(`Promotion ${!currentStatus ? 'activated' : 'deactivated'}.`);
+      showSuccess(!currentStatus ? t("promotions.activated", "Promotion activated.") : t("promotions.deactivated", "Promotion deactivated."));
       setPromotions(prev => prev.map(p => p.id === promotionId ? { ...p, is_active: !currentStatus } : p));
     }
   };
@@ -370,10 +372,10 @@ const Promotions = () => {
       .eq('id', elementId);
 
     if (error) {
-      showError(toFriendlyError(error, "Couldn't update the announcement. Please try again."));
+      showError(toFriendlyError(error, t("promotions.announcement_update_failed", "Couldn't update the announcement. Please try again.")));
     } else {
       invalidateStorefrontCache();
-      showSuccess(`Announcement ${!currentStatus ? 'activated' : 'deactivated'}.`);
+      showSuccess(!currentStatus ? t("promotions.announcement_activated", "Announcement activated.") : t("promotions.announcement_deactivated", "Announcement deactivated."));
       setStorefrontAnnouncements(prev => prev.map(e => e.id === elementId ? { ...e, is_active: !currentStatus } : e));
     }
   };
@@ -400,7 +402,7 @@ const Promotions = () => {
       supabase.from('marquee_elements').update({ display_order: a }).eq('id', other.id),
     ]);
     if (e1 || e2) {
-      showError(toFriendlyError(e1 || e2, "Couldn't reorder the announcement. Please try again."));
+      showError(toFriendlyError(e1 || e2, t("promotions.reorder_failed", "Couldn't reorder the announcement. Please try again.")));
       fetchPromotionsAndAnnouncements();
     } else {
       invalidateStorefrontCache();
@@ -417,12 +419,12 @@ const Promotions = () => {
 
     if (itemToDelete.type === 'promotion') {
       const { error } = await supabase.from("promotions").delete().eq("id", itemToDelete.id);
-      if (error) showError(toFriendlyError(error, "Couldn't delete the promotion. Please try again."));
-      else { invalidateStorefrontCache(); showSuccess("Promotion deleted."); fetchPromotionsAndAnnouncements(); }
+      if (error) showError(toFriendlyError(error, t("promotions.delete_failed", "Couldn't delete the promotion. Please try again.")));
+      else { invalidateStorefrontCache(); showSuccess(t("promotions.deleted", "Promotion deleted.")); fetchPromotionsAndAnnouncements(); }
     } else {
       const { error } = await supabase.from("marquee_elements").delete().eq("id", itemToDelete.id);
-      if (error) showError(toFriendlyError(error, "Couldn't delete the announcement. Please try again."));
-      else { invalidateStorefrontCache(); showSuccess("Storefront announcement deleted."); fetchPromotionsAndAnnouncements(); }
+      if (error) showError(toFriendlyError(error, t("promotions.announcement_delete_failed", "Couldn't delete the announcement. Please try again.")));
+      else { invalidateStorefrontCache(); showSuccess(t("promotions.announcement_deleted", "Storefront announcement deleted.")); fetchPromotionsAndAnnouncements(); }
     }
 
     setIsDeleteConfirmOpen(false);
@@ -573,7 +575,7 @@ const Promotions = () => {
             filter === 'all' ? (
               <EmptyPromotions onCreateClick={() => setIsPromotionEditorOpen(true)} />
             ) : (
-              <EmptyState compact icon={Tag} title={t("promotions.no_filtered", { filter })} />
+              <EmptyState compact icon={Tag} title={t("promotions.no_filtered", { filter: (filter === 'active' ? t('common.active') : filter === 'scheduled' ? t('promotions.scheduled') : t('promotions.expired')).toLowerCase() })} />
             )
           ) : (
             <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-tour="promotions-list">
@@ -709,7 +711,7 @@ const Promotions = () => {
                             <Switch
                               checked={element.is_active}
                               onCheckedChange={() => handleToggleAnnouncementActive(element.id, element.is_active)}
-                              aria-label={`Toggle ${element.message} active status`}
+                              aria-label={t("promotions.toggle_active", { defaultValue: "Toggle {{name}} active status", name: element.message })}
                             />
                           </TableCell>
                           <TableCell className="text-right">

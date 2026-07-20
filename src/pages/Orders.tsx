@@ -103,6 +103,9 @@ const ALL_STATUSES: OrderStatus[] = [
   "Cancelled",
 ];
 
+const statusLabel = (s: string, t: TFunction) =>
+  t('notifications.status_' + s.toLowerCase().replace(/\s+/g, '_'), { defaultValue: s });
+
 function relativeTime(dateStr: string, t: TFunction): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const seconds = Math.floor(diff / 1000);
@@ -188,11 +191,11 @@ const InlineStatusDropdown = ({
       .update({ status: newStatus })
       .eq("id", orderId);
     if (error) {
-      showError("Failed to update status.");
+      showError(t("orders.status_update_failed", "Failed to update status."));
       // Revert
       onOptimisticUpdate(orderId, currentStatus);
     } else {
-      showSuccess(`Status updated to "${newStatus}".`);
+      showSuccess(t("orders.status_updated_to", { defaultValue: "Status updated to \"{{status}}\".", status: statusLabel(newStatus, t) }));
     }
     setIsUpdating(false);
   };
@@ -212,15 +215,15 @@ const InlineStatusDropdown = ({
     <AlertDialog open={pendingCancel} onOpenChange={setPendingCancel}>
       <AlertDialogContent onClick={(e) => e.stopPropagation()}>
         <AlertDialogHeader>
-          <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
+          <AlertDialogTitle>{t("orders.cancel_confirm_title", "Cancel this order?")}</AlertDialogTitle>
           <AlertDialogDescription>
-            The reserved stock will be returned to your inventory. This can't be undone.
+            {t("orders.cancel_confirm_desc", "The reserved stock will be returned to your inventory. This can't be undone.")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Keep order</AlertDialogCancel>
+          <AlertDialogCancel>{t("orders.keep_order", "Keep order")}</AlertDialogCancel>
           <AlertDialogAction onClick={() => { setPendingCancel(false); applyStatus("Cancelled"); }}>
-            Cancel order
+            {t("orders.cancel_order", "Cancel order")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -239,7 +242,7 @@ const InlineStatusDropdown = ({
           <Spinner className="h-3 w-3" />
         ) : (
           <StatusBadge tone={orderStatusTone(currentStatus)} size="sm">
-            {currentStatus}
+            {statusLabel(currentStatus, t)}
           </StatusBadge>
         )}
       </SelectTrigger>
@@ -247,7 +250,7 @@ const InlineStatusDropdown = ({
         {ALL_STATUSES.map((s) => (
           <SelectItem key={s} value={s} className="text-xs">
             <StatusBadge tone={orderStatusTone(s)} size="sm">
-              {s}
+              {statusLabel(s, t)}
             </StatusBadge>
           </SelectItem>
         ))}
@@ -296,7 +299,7 @@ const OrderTable = ({
             <Checkbox
               checked={allSelected ? true : someSelected ? "indeterminate" : false}
               onCheckedChange={(checked) => onToggleAll(!!checked)}
-              aria-label="Select all"
+              aria-label={t("products.select_all", "Select All")}
             />
           </TableHead>
           <TableHead>{t("orders.order")}</TableHead>
@@ -324,7 +327,7 @@ const OrderTable = ({
                 <Checkbox
                   checked={selectedIds.has(order.id)}
                   onCheckedChange={() => onToggleSelect(order.id)}
-                  aria-label="Select row"
+                  aria-label={t("orders.select_row", "Select row")}
                 />
               </TableCell>
               <TableCell className="font-mono text-sm font-medium text-muted-foreground">
@@ -423,7 +426,7 @@ const BulkActionBar = ({
             <SelectContent>
               {ALL_STATUSES.map((s) => (
                 <SelectItem key={s} value={s} className="text-xs">
-                  {s}
+                  {statusLabel(s, t)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -498,7 +501,7 @@ const Orders = () => {
       .order("created_at", { ascending: false });
 
     if (error) {
-      if (!silent) showError("Failed to fetch orders.");
+      if (!silent) showError(t("orders.fetch_failed", "Failed to fetch orders."));
     } else {
       const withCounts = (data ?? []).map((o: any) => ({
         ...o,
@@ -670,11 +673,11 @@ const Orders = () => {
       .update({ status })
       .in("id", ids);
     if (error) {
-      showError("Bulk status update failed.");
+      showError(t("orders.bulk_update_failed", "Bulk status update failed."));
       // Revert: refetch
       fetchOrders();
     } else {
-      showSuccess(`${ids.length} order${ids.length !== 1 ? "s" : ""} updated to "${status}".`);
+      showSuccess(t("orders.bulk_updated", { defaultValue: "{{count}} order(s) updated to \"{{status}}\".", count: ids.length, status: statusLabel(status, t) }));
       setSelectedIds(new Set());
     }
     setIsBulkUpdating(false);

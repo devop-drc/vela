@@ -81,7 +81,7 @@ const gridSizeClasses: { [key: string]: string } = {
   lg: "grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(330px,1fr))]",
 };
 
-const sizeLabels: { [key in GridSizeType]: string } = { sm: 'Less Detail', md: 'More Detail', lg: 'Large' };
+const sizeLabelKeys: { [key in GridSizeType]: string } = { sm: 'products.size_sm', md: 'products.size_md', lg: 'products.size_lg' };
 const sizeCycle: GridSizeType[] = ['sm', 'md', 'lg'];
 
 /** A stat that doubles as a status filter — count + label, active when its
@@ -127,11 +127,11 @@ const Products = () => {
   const newProductSaved = useRef(false);
 
   const handleAddProduct = async () => {
-    if (!shopDetails?.id) { showError("Your shop isn't ready yet. Please try again in a moment."); return; }
+    if (!shopDetails?.id) { showError(t("products.shop_not_ready", "Your shop isn't ready yet. Please try again in a moment.")); return; }
     newProductSaved.current = false;
     setIsCreatingProduct(true);
     const { data, error } = await supabase.from('products').insert({
-      name: 'Untitled product',
+      name: t("products.untitled_product", "Untitled product"),
       status: 'Draft',
       business_id: shopDetails.id, // trigger sets user_id from the business owner
       price: 0,
@@ -144,7 +144,7 @@ const Products = () => {
     }).select('*').single();
     setIsCreatingProduct(false);
     if (error || !data) {
-      showError(toFriendlyError(error, "Couldn't create the product. Please try again."));
+      showError(toFriendlyError(error, t("products.create_failed", "Couldn't create the product. Please try again.")));
       return;
     }
     invalidateStorefrontCache();
@@ -273,7 +273,7 @@ const Products = () => {
 
   useEffect(() => {
     if (searchParams.get("instagram_connected") === "true") {
-      showSuccess("Successfully connected! Opening importer...");
+      showSuccess(t("products.connected_importer", "Successfully connected! Opening importer..."));
       setIsImporterOpen(true);
       searchParams.delete("instagram_connected");
       setSearchParams(searchParams, { replace: true });
@@ -362,7 +362,7 @@ const Products = () => {
         }
       } catch (err: any) {
         console.error('handleSync error:', err);
-        showError(err.message || `Failed to start ${syncType} sync.`);
+        showError(err.message || t("products.sync_start_failed", "Failed to start the sync."));
       }
     });
   };
@@ -372,7 +372,7 @@ const Products = () => {
     updateProduct(productId, { status: newStatus });
     const { error } = await supabase.from('products').update({ status: newStatus }).eq('id', productId);
     if (error) {
-      showError(`Failed to update status: ${error.message}`);
+      showError(t("products.status_update_failed", { defaultValue: "Failed to update status: {{message}}", message: error.message }));
       refetch(); // revert on failure
     } else {
       invalidateStorefrontCache();
@@ -385,8 +385,8 @@ const Products = () => {
     const count = selectedProducts.length;
     setSelectedProducts([]);
     const { error } = await supabase.from('products').update({ status }).in('id', selectedProducts);
-    if (error) { showError(`Failed to update products: ${error.message}`); refetch(); }
-    else { invalidateStorefrontCache(); showSuccess(`Updated ${count} products.`); }
+    if (error) { showError(t("products.bulk_update_failed", { defaultValue: "Failed to update products: {{message}}", message: error.message })); refetch(); }
+    else { invalidateStorefrontCache(); showSuccess(t("products.bulk_updated", { defaultValue: "Updated {{count}} products.", count })); }
   };
   // Shared deletion used by both the bulk action and the single-row trash button.
   // Removes the product, its related rows (options/variants/specs/reviews via
@@ -399,7 +399,7 @@ const Products = () => {
       .select('id, instagram_post_id, media_url, thumbnail_url, media_gallery')
       .in('id', ids);
     if (fetchError) {
-      showError(toFriendlyError(fetchError, "Couldn't delete the product. Please try again."));
+      showError(toFriendlyError(fetchError, t("products.delete_failed", "Couldn't delete the product. Please try again.")));
       return;
     }
     const instagramPostIds = (productsToDelete || []).map(p => p.instagram_post_id).filter(Boolean);
@@ -409,12 +409,12 @@ const Products = () => {
     }
     const { error: deleteError } = await supabase.from('products').delete().in('id', ids);
     if (deleteError) {
-      showError(toFriendlyError(deleteError, "Couldn't delete the product. Please try again."));
+      showError(toFriendlyError(deleteError, t("products.delete_failed", "Couldn't delete the product. Please try again.")));
     } else {
       // Storage cleanup after the rows are gone (best-effort, never blocks).
       deleteProductMedia(productsToDelete || []);
       invalidateStorefrontCache();
-      showSuccess(`Deleted ${ids.length} product${ids.length > 1 ? 's' : ''}.`);
+      showSuccess(t("products.deleted_count", { defaultValue: "Deleted {{count}} product(s).", count: ids.length }));
       refetch();
     }
   };
@@ -435,8 +435,8 @@ const Products = () => {
     const updates = allProducts.filter(p => selectedProducts.includes(p.id) && p.price != null).map(p => ({ id: p.id, price: Math.max(0, saleData.type === 'percentage' ? p.price! * (1 - saleData.value / 100) : p.price! - saleData.value) }));
     if (updates.length > 0) {
       const { error } = await supabase.from('products').upsert(updates);
-      if (error) showError(`Failed to apply sale: ${error.message}`);
-      else { invalidateStorefrontCache(); showSuccess(`Sale applied to ${updates.length} products.`); }
+      if (error) showError(t("products.sale_failed", { defaultValue: "Failed to apply sale: {{message}}", message: error.message }));
+      else { invalidateStorefrontCache(); showSuccess(t("products.sale_applied", { defaultValue: "Sale applied to {{count}} products.", count: updates.length })); }
     }
     setSelectedProducts([]);
     setIsSaleModalOpen(false);
@@ -479,7 +479,7 @@ const Products = () => {
   const groupedProducts = useMemo(() => {
     if (grouping === 'category') {
       return filteredAndSortedProducts.reduce((acc, product) => {
-        const category = product.category || 'Uncategorized';
+        const category = product.category || t("dashboard.uncategorized", "Uncategorized");
         if (!acc[category]) {
           acc[category] = [];
         }
@@ -495,13 +495,13 @@ const Products = () => {
         if (isMulti) multis.push(p); else singles.push(p);
       });
       const result: { [key: string]: Product[] } = {};
-      if (multis.length > 0) result['Multi-Products'] = multis;
-      if (singles.length > 0) result['Products'] = singles;
-      return Object.keys(result).length > 0 ? result : { 'All Products': filteredAndSortedProducts };
+      if (multis.length > 0) result[t("products.multi_products", "Multi-Products")] = multis;
+      if (singles.length > 0) result[t("nav.products", "Products")] = singles;
+      return Object.keys(result).length > 0 ? result : { [t("products.all_products", "All Products")]: filteredAndSortedProducts };
     }
     // If no grouping, return a single group or handle as flat list
-    return { 'All Products': filteredAndSortedProducts };
-  }, [filteredAndSortedProducts, grouping]);
+    return { [t("products.all_products", "All Products")]: filteredAndSortedProducts };
+  }, [filteredAndSortedProducts, grouping, t]);
 
   // ── Stats derived from allProducts (not filtered, so numbers are always real totals) ──
   const statsTotal = allProducts.length;
@@ -547,9 +547,9 @@ const Products = () => {
       <AlertDialog open={!!deleteTargetId} onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this product?</AlertDialogTitle>
+            <AlertDialogTitle>{t("products.delete_one_title", "Delete this product?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {(() => { const p = filteredAndSortedProducts.find(p => p.id === deleteTargetId); return p ? `"${p.name}" will be permanently deleted. This can't be undone.` : "This product will be permanently deleted. This can't be undone."; })()}
+              {(() => { const p = filteredAndSortedProducts.find(p => p.id === deleteTargetId); return p ? t("products.delete_one_desc", { defaultValue: "\"{{name}}\" will be permanently deleted. This can't be undone.", name: p.name }) : t("products.delete_one_desc_generic", "This product will be permanently deleted. This can't be undone."); })()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -687,7 +687,7 @@ const Products = () => {
               {/* Card size (grid only) */}
               {viewMode === 'grid' && (
                 <Button variant="outline" size="sm" className="h-9 w-28 justify-start shadow-sm" onClick={cycleGridSize} title={t("products.card_size", "Card size")}>
-                  <LayoutGrid className="mr-2 h-4 w-4" />{sizeLabels[gridSize]}
+                  <LayoutGrid className="mr-2 h-4 w-4" />{t(sizeLabelKeys[gridSize])}
                 </Button>
               )}
 
@@ -711,10 +711,10 @@ const Products = () => {
 
               {/* Grid / Table toggle */}
               <div className="flex items-center rounded-lg border border-border bg-muted/60 p-0.5 shadow-sm">
-                <button type="button" onClick={() => setViewMode('grid')} className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-all duration-150", viewMode === 'grid' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")} aria-label="Grid view">
+                <button type="button" onClick={() => setViewMode('grid')} className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-all duration-150", viewMode === 'grid' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")} aria-label={t("products.grid_view", "Grid view")}>
                   <LayoutGrid className="h-4 w-4" /><span className="hidden xl:inline">{t("products.grid")}</span>
                 </button>
-                <button type="button" onClick={() => setViewMode('table')} className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-all duration-150", viewMode === 'table' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")} aria-label="Table view">
+                <button type="button" onClick={() => setViewMode('table')} className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-all duration-150", viewMode === 'table' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")} aria-label={t("products.table_view", "Table view")}>
                   <List className="h-4 w-4" /><span className="hidden xl:inline">{t("products.table")}</span>
                 </button>
               </div>
@@ -750,7 +750,7 @@ const Products = () => {
             </SelectContent>
           </Select>
           <Button variant="outline" size="sm" className="h-9 shrink-0 shadow-sm" onClick={cycleGridSize}>
-            <LayoutGrid className="mr-1.5 h-4 w-4" />{sizeLabels[gridSize]}
+            <LayoutGrid className="mr-1.5 h-4 w-4" />{t(sizeLabelKeys[gridSize])}
           </Button>
           <Button variant={hasActiveFilters ? "secondary" : "outline"} size="sm" className="h-9 shrink-0 shadow-sm" onClick={() => setIsFilterDrawerOpen(true)}>
             <FilterIcon className="mr-1.5 h-4 w-4" />{t("common.filters")}
@@ -769,7 +769,7 @@ const Products = () => {
         <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3">
           <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
           <p className="min-w-0 flex-1 text-sm text-warning">
-            <b>{statsDraft === 1 ? '1 product is a draft' : `All ${statsDraft} products are drafts`}</b> — drafts don't appear on your storefront. Review them, or publish everything now.
+            <b>{statsDraft === 1 ? t("products.draft_banner_one", "1 product is a draft") : t("products.draft_banner_many", { defaultValue: "All {{count}} products are drafts", count: statsDraft })}</b> {t("products.draft_banner_desc", "— drafts don't appear on your storefront. Review them, or publish everything now.")}
           </p>
           <Button size="sm" className="shrink-0 bg-warning text-warning-foreground hover:bg-warning/90" disabled={isBulkActivating}
             onClick={async () => {
@@ -777,13 +777,13 @@ const Products = () => {
               const ids = allProducts.filter((p) => p.status === 'Draft').map((p) => p.id);
               const { error } = await supabase.from('products').update({ status: 'Active' }).in('id', ids);
               setIsBulkActivating(false);
-              if (error) { showError("Couldn't publish the drafts — try again."); return; }
+              if (error) { showError(t("products.publish_drafts_failed", "Couldn't publish the drafts — try again.")); return; }
               invalidateStorefrontCache();
-              showSuccess(`${ids.length} product${ids.length === 1 ? '' : 's'} published to your storefront.`);
+              showSuccess(t("products.drafts_published", { defaultValue: "{{count}} product(s) published to your storefront.", count: ids.length }));
               refetch();
             }}>
             {isBulkActivating ? <Spinner className="mr-1.5 h-3.5 w-3.5" /> : null}
-            Publish all drafts
+            {t("products.publish_all_drafts", "Publish all drafts")}
           </Button>
         </div>
       )}

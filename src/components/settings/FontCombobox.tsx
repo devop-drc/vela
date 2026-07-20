@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ interface FontComboboxProps {
 }
 
 export function FontCombobox({ fonts, value, onChange }: FontComboboxProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -37,16 +39,16 @@ export function FontCombobox({ fonts, value, onChange }: FontComboboxProps) {
           <span style={{ fontFamily: value }}>
             {value
               ? fonts.find((font) => font.value === value)?.label
-              : "Select font..."}
+              : t('studio.chooseFont')}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
-          <CommandInput placeholder="Search font..." />
+          <CommandInput placeholder={t('studio.searchFonts')} />
           <CommandList>
-            <CommandEmpty>No font found.</CommandEmpty>
+            <CommandEmpty>{t('studio.noFont')}</CommandEmpty>
             <CommandGroup>
               {fonts.map((font) => (
                 <CommandItem

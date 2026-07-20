@@ -67,7 +67,7 @@ const Categories = () => {
       .select("*")
       .order("category_name")
       .order("type_name");
-    if (error) showError("Could not fetch category templates.");
+    if (error) showError(t("categories.fetch_failed", "Could not fetch category templates."));
     else {
       const rows = (data as CategoryTemplate[]) ?? [];
       setTemplates(rows);
@@ -141,8 +141,8 @@ const Categories = () => {
   const handleDeleteType = async () => {
     if (!deleteConfirm) return;
     const { error } = await supabase.from("category_templates").delete().eq("id", deleteConfirm.id);
-    if (error) showError(`Failed to delete: ${error.message}`);
-    else { showSuccess(`Deleted "${deleteConfirm.type_name}".`); fetchTemplates(); }
+    if (error) showError(t("categories.delete_failed", { defaultValue: "Failed to delete: {{message}}", message: error.message }));
+    else { showSuccess(t("categories.deleted", { defaultValue: "Deleted \"{{name}}\".", name: deleteConfirm.type_name })); fetchTemplates(); }
     setDeleteConfirm(null);
   };
   const handleDuplicate = async (template: any) => {
@@ -155,8 +155,8 @@ const Categories = () => {
       is_system: false,
       user_id: userId,
     });
-    if (error) showError(`Failed to duplicate: ${error.message}`);
-    else { showSuccess(`Duplicated "${template.type_name}".`); fetchTemplates(); }
+    if (error) showError(t("categories.duplicate_failed", { defaultValue: "Failed to duplicate: {{message}}", message: error.message }));
+    else { showSuccess(t("categories.duplicated", { defaultValue: "Duplicated \"{{name}}\".", name: template.type_name })); fetchTemplates(); }
   };
 
   const categoryNames = Object.keys(grouped).sort();
@@ -209,7 +209,7 @@ const Categories = () => {
               categoryName={name}
               templates={grouped[name]}
               onEditType={handleEditType}
-              onDeleteType={(t) => { if (t.is_system) { showError("System templates can't be deleted. Duplicate first."); return; } setDeleteConfirm(t); }}
+              onDeleteType={(tpl) => { if (tpl.is_system) { showError(t("categories.system_delete_hint", "System templates can't be deleted. Duplicate first.")); return; } setDeleteConfirm(tpl); }}
               onAddType={handleAddType}
               onDuplicate={handleDuplicate}
               onRenameCategory={handleRenameCategory}

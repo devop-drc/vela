@@ -298,13 +298,13 @@ const Index = () => {
 
   const handleShareShop = async () => {
     const slug = (shopDetails as any)?.slug;
-    if (!slug) { showError("Your shop link isn't ready yet."); return; }
+    if (!slug) { showError(t("dashboard.share_link_not_ready", "Your shop link isn't ready yet.")); return; }
     const url = getStorefrontUrl(slug, (shopDetails as any)?.storefront_type);
     try {
       await navigator.clipboard.writeText(url);
-      showSuccess("Shop link copied to clipboard!");
+      showSuccess(t("dashboard.share_link_copied", "Shop link copied to clipboard!"));
     } catch {
-      showError("Couldn't copy the link. Please copy it from Settings.");
+      showError(t("dashboard.share_link_copy_failed", "Couldn't copy the link. Please copy it from Settings."));
     }
   };
   const { t } = useTranslation();

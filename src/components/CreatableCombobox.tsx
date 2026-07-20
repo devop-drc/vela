@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Check, ChevronsUpDown, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -25,7 +26,8 @@ interface CreatableComboboxProps {
 }
 
 export const CreatableCombobox = React.forwardRef<HTMLButtonElement, CreatableComboboxProps>(
-  ({ options, value, onChange, placeholder = "Select...", disabled }, ref) => {
+  ({ options, value, onChange, placeholder, disabled }, ref) => {
+    const { t } = useTranslation();
     const [open, setOpen] = React.useState(false);
     const [inputValue, setInputValue] = React.useState("");
 
@@ -52,14 +54,14 @@ export const CreatableCombobox = React.forwardRef<HTMLButtonElement, CreatableCo
             className="w-full justify-between font-normal"
             disabled={disabled}
           >
-            {value || placeholder}
+            {value || placeholder || t('products_ui.select_placeholder')}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
           <Command>
             <CommandInput
-              placeholder="Search or create..."
+              placeholder={t('products_ui.search_or_create')}
               value={inputValue}
               onValueChange={setInputValue}
             />
@@ -71,12 +73,12 @@ export const CreatableCombobox = React.forwardRef<HTMLButtonElement, CreatableCo
                     className="flex items-center gap-2 text-primary"
                   >
                     <PlusCircle className="h-4 w-4" />
-                    Create "{inputValue}"
+                    {t('products_ui.create_option', { value: inputValue })}
                   </CommandItem>
                 </CommandGroup>
               )}
               <CommandEmpty>
-                {!showCreateOption && inputValue ? `No results for "${inputValue}".` : "No results found."}
+                {!showCreateOption && inputValue ? t('products_ui.no_results_for', { value: inputValue }) : t('products_ui.no_results_found')}
               </CommandEmpty>
               {(filteredOptions.length > 0) && (
                 <CommandGroup>

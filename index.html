@@ -34,6 +34,36 @@
     <meta name="twitter:image" content="https://instantshop.al/demo/p1.jpg" />
     <!-- was (Instagram-era): #d62976 -->
     <meta name="theme-color" content="#a31234" />
+
+    <!-- Splash pre-cover: on a first visit the (prerendered) landing painted a
+         few frames before the React splash mounted — a visible flicker. This
+         inline script covers the page in the theme background BEFORE first
+         paint whenever the splash is about to show; SplashScreen removes it as
+         soon as its own overlay is up. Failsafe timer so a failed JS load can
+         never leave the page covered. -->
+    <script>
+      try {
+        if (location.pathname === "/" && !sessionStorage.getItem("vela-splash-seen")) {
+          document.documentElement.classList.add("pre-splash");
+          var dark = false;
+          try { dark = localStorage.getItem("landing-theme") === "dark"; } catch (e) {}
+          if (dark) document.documentElement.classList.add("pre-splash-dark");
+          setTimeout(function () {
+            document.documentElement.classList.remove("pre-splash", "pre-splash-dark");
+          }, 4000);
+        }
+      } catch (e) {}
+    </script>
+    <style>
+      .pre-splash body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: #fbf6f4;
+        z-index: 119; /* just under the splash overlay (z-120) */
+      }
+      .pre-splash.pre-splash-dark body::before { background: #140a0e; }
+    </style>
     <link rel="alternate" hreflang="sq" href="https://instantshop.al/" />
     <link rel="alternate" hreflang="en" href="https://instantshop.al/" />
     <link rel="alternate" hreflang="x-default" href="https://instantshop.al/" />

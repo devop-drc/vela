@@ -37,6 +37,11 @@ interface ProductFilterPanelProps {
 }
 
 const STATUS_VALUES = ["Active", "Draft", "Out of Stock"];
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  "Active": "common.active",
+  "Draft": "common.draft",
+  "Out of Stock": "common.out_of_stock",
+};
 const RATING_STEPS = [4, 3, 2, 1];
 
 /** Selected-pill styling per tone (dark-safe, token-based — mirrors the Orders stat pills). */
@@ -161,7 +166,7 @@ export const ProductFilterPanel = ({
                       )}
                     >
                       <span className={cn("h-2 w-2 rounded-full shrink-0", isOn ? toneDotBg[tone] : "bg-muted-foreground/30")} />
-                      {value}
+                      {t(STATUS_LABEL_KEYS[value], value)}
                     </button>
                   );
                 })}

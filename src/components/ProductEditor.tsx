@@ -12,15 +12,17 @@ import { ProductViewMode } from "./product-detail/ProductViewMode";
 import { ProductEditMode } from "./product-detail/ProductEditMode";
 import { useShop } from "@/contexts/ShopContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 
 const productSchema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters"),
+  name: z.string().min(3, { message: i18n.t('product_editor.validation_name_min') }),
   status: z.enum(['Active', 'Draft', 'Out of Stock']),
   caption: z.string().optional(),
-  category: z.string().min(1, "Category is required"),
-  price: z.coerce.number().min(0, "Price must be a positive number"),
-  currency: z.string().min(3, "Currency code is required").max(3),
-  inventory: z.coerce.number().int().min(0, "Inventory must be a non-negative integer").optional(),
+  category: z.string().min(1, { message: i18n.t('product_editor.validation_category_required') }),
+  price: z.coerce.number().min(0, { message: i18n.t('product_editor.validation_price_positive') }),
+  currency: z.string().min(3, { message: i18n.t('product_editor.validation_currency_required') }).max(3),
+  inventory: z.coerce.number().int().min(0, { message: i18n.t('product_editor.validation_inventory_nonneg') }).optional(),
   tags: z.array(z.string()).optional(),
   pricing_type: z.enum(['one_time', 'subscription']),
   billing_interval: z.enum(['month', 'year']).optional().nullable(),
@@ -31,7 +33,7 @@ const productSchema = z.object({
     }
     return true;
 }, {
-    message: "Interval is required for subscriptions.",
+    message: i18n.t('product_editor.validation_interval_required'),
     path: ["billing_interval"],
 });
 
@@ -66,6 +68,7 @@ interface ProductEditorProps {
 }
 
 export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit = false }: ProductEditorProps) => {
+  const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
 
   // New products should open straight into the edit form.
@@ -174,7 +177,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
 
     setIsUploading(true);
     if (!user) {
-      showError("You must be logged in to upload an image.");
+      showError(t('product_editor.must_login_upload'));
       setIsUploading(false);
       return;
     }
@@ -197,7 +200,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
     });
 
     if (error) {
-      showError(`Upload failed: ${error.message}`);
+      showError(t('product_editor.upload_failed', { message: error.message }));
     } else {
       const { data: { publicUrl } } = supabase.storage.from('product-media').getPublicUrl(filePath);
       setMediaItems(prev => [...prev, publicUrl]);
@@ -215,7 +218,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
     const { error } = await supabase.storage.from('product-media').remove([filePath]);
 
     if (error) {
-      showError(`Failed to delete image: ${error.message}`);
+      showError(t('product_editor.delete_image_failed', { message: error.message }));
     } else {
       setMediaItems(prev => prev.filter(url => url !== urlToDelete));
     }
@@ -232,7 +235,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
         .eq('instagram_post_id', product.instagram_post_id);
       if (cacheError) {
         console.error("Failed to delete AI analysis cache entry:", cacheError);
-        showError(`Failed to clear the system's analysis cache: ${cacheError.message}`);
+        showError(t('product_editor.clear_cache_failed', { message: cacheError.message }));
       }
     }
 
@@ -240,10 +243,10 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
     // order history is preserved via SET NULL), then clean up storage media.
     const { error } = await supabase.from('products').delete().eq('id', product!.id);
     if (error) {
-      showError(`Failed to delete product: ${error.message}`);
+      showError(t('product_editor.delete_product_failed', { message: error.message }));
     } else {
       deleteProductMedia([product!]); // best-effort, never blocks
-      showSuccess("Product deleted.");
+      showSuccess(t('product_editor.product_deleted'));
       onUpdate(); // <-- Call onUpdate here to trigger parent refresh
       onClose();
     }
@@ -266,8 +269,8 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) attemptClose(); }}>
         <DialogContent className="sm:max-w-6xl xl:max-w-[min(94vw,96rem)] max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="sr-only">
-            <DialogTitle>Product Details: {product?.name}</DialogTitle>
-            <DialogDescription>View or edit product details for {product?.name}.</DialogDescription>
+            <DialogTitle>{t('product_editor.dialog_title', { name: product?.name })}</DialogTitle>
+            <DialogDescription>{t('product_editor.dialog_desc', { name: product?.name })}</DialogDescription>
           </DialogHeader>
           <AnimatePresence mode="wait">
             {isEditing ? (
@@ -313,16 +316,16 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
           </AnimatePresence>
         </DialogContent>
       </Dialog>
-      <AlertDialog open={isDeleting} onOpenChange={setIsDeleting}><AlertDialogContent><AlertDialogHeader><AlertDialogTitleComponent>Are you absolutely sure?</AlertDialogTitleComponent><AlertDialogDescriptionComponent>This action cannot be undone. This will permanently delete the product.</AlertDialogDescriptionComponent></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete product</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <AlertDialog open={isDeleting} onOpenChange={setIsDeleting}><AlertDialogContent><AlertDialogHeader><AlertDialogTitleComponent>{t('product_editor.delete_confirm_title')}</AlertDialogTitleComponent><AlertDialogDescriptionComponent>{t('product_editor.delete_confirm_desc')}</AlertDialogDescriptionComponent></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t('product_editor.delete_confirm_action')}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitleComponent>Discard your changes?</AlertDialogTitleComponent>
-            <AlertDialogDescriptionComponent>You have unsaved changes to this product. If you leave now, they'll be lost.</AlertDialogDescriptionComponent>
+            <AlertDialogTitleComponent>{t('product_editor.discard_title')}</AlertDialogTitleComponent>
+            <AlertDialogDescriptionComponent>{t('product_editor.discard_desc')}</AlertDialogDescriptionComponent>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep editing</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setShowDiscardConfirm(false); doClose(); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Discard changes</AlertDialogAction>
+            <AlertDialogCancel>{t('product_editor.keep_editing')}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowDiscardConfirm(false); doClose(); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t('product_editor.discard_action')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

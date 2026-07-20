@@ -3,6 +3,7 @@
 // by the block registry metadata (variants / editableProps).
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors,
   type DragEndEvent,
@@ -26,11 +27,12 @@ interface Props {
 }
 
 const VariantPicker = ({ def, section, onProp }: { def: BlockDef; section: SectionInstance; onProp: (key: string, value: any) => void }) => {
+  const { t } = useTranslation();
   if (!def.variantProp || !def.variants?.length) return null;
   const current = section.props?.[def.variantProp] ?? def.defaultProps?.[def.variantProp] ?? def.variants[0].value;
   return (
     <div>
-      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Layout</p>
+      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t('studio.layout')}</p>
       <div className="flex flex-wrap gap-1.5">
         {def.variants.map((v) => (
           <button
@@ -100,6 +102,7 @@ const SortableRow = ({
   onRemove: () => void;
   onProp: (key: string, value: any) => void;
 }) => {
+  const { t } = useTranslation();
   const def = BLOCK_REGISTRY[section.type];
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
   const hasDetails = !!(def?.variants?.length || def?.editableProps?.length);
@@ -112,18 +115,18 @@ const SortableRow = ({
       className={cn('rounded-md border bg-card', isDragging && 'z-10 opacity-80 shadow-lg')}
     >
       <div className="flex items-center gap-2 p-2">
-        <button type="button" className="cursor-grab touch-none text-muted-foreground/60 hover:text-foreground" aria-label={`Drag to reorder ${def?.label || section.type}`} {...attributes} {...listeners}>
+        <button type="button" className="cursor-grab touch-none text-muted-foreground/60 hover:text-foreground" aria-label={t('studio_panels.drag_to_reorder', { name: def?.label || section.type })} {...attributes} {...listeners}>
           <GripVertical className="h-4 w-4" />
         </button>
         <Switch checked={section.enabled} onCheckedChange={onEnable} />
         {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
         <span className={cn('flex-1 text-sm', !section.enabled && 'text-muted-foreground line-through decoration-muted-foreground/40')}>{def?.label || section.type}</span>
         {hasDetails && (
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onToggleExpand} aria-label={`Edit ${def?.label || section.type}`} aria-expanded={expanded}>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onToggleExpand} aria-label={t('studio_panels.edit_section', { name: def?.label || section.type })} aria-expanded={expanded}>
             <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')} />
           </Button>
         )}
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={onRemove} aria-label={`Remove ${def?.label || section.type}`}>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={onRemove} aria-label={t('studio_panels.remove_section', { name: def?.label || section.type })}>
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>

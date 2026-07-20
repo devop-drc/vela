@@ -5,6 +5,7 @@
 import { Component, ReactNode } from 'react';
 import { AlertTriangle, RotateCcw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import i18n from '@/i18n';
 
 interface Props {
   children: ReactNode;
@@ -41,16 +42,16 @@ export class ErrorBoundary extends Component<Props, State> {
           <span className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-destructive/10 text-destructive">
             <AlertTriangle className="h-6 w-6" />
           </span>
-          <h1 className="text-xl font-bold">Something went wrong</h1>
+          <h1 className="text-xl font-bold">{i18n.t('app_ui.error_title')}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            This page hit an unexpected error. Your data is safe — reloading usually fixes it.
+            {i18n.t('app_ui.error_description')}
           </p>
           <div className="mt-6 flex justify-center gap-3">
             <Button onClick={() => window.location.reload()}>
-              <RotateCcw className="mr-2 h-4 w-4" /> Reload page
+              <RotateCcw className="mr-2 h-4 w-4" /> {i18n.t('app_ui.reload_page')}
             </Button>
             <Button variant="outline" onClick={() => { window.location.href = '/'; }}>
-              <Home className="mr-2 h-4 w-4" /> Go home
+              <Home className="mr-2 h-4 w-4" /> {i18n.t('app_ui.go_home')}
             </Button>
           </div>
           <p className="mt-4 break-all text-[11px] text-muted-foreground/70">{this.state.error.message}</p>

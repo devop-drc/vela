@@ -5,6 +5,7 @@
  */
 import * as React from "react";
 import { Search, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 export interface SearchInputProps
@@ -29,6 +30,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
     },
     ref,
   ) => {
+    const { t } = useTranslation();
     return (
       <div
         className={cn(
@@ -53,7 +55,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
           <button
             type="button"
             onClick={() => onValueChange("")}
-            aria-label="Clear search"
+            aria-label={t('app_ui.clear_search')}
             className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <X className="h-3.5 w-3.5" />

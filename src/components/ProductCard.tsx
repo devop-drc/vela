@@ -12,6 +12,7 @@ import { useShop } from "@/contexts/ShopContext";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "./ui/carousel";
 import { MediaItem } from "./MediaItem";
 import { getStockStatus } from "@/lib/stock";
+import { useTranslation } from 'react-i18next';
 
 type ProductStatus = 'Active' | 'Draft' | 'Out of Stock';
 type GridSizeType = 'sm' | 'md' | 'lg';
@@ -55,6 +56,7 @@ const DetailRow = ({ icon: Icon, children }: { icon: React.ElementType, children
 );
 
 export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSize, onSelect, onEdit, onStatusChange }: ProductCardProps) => {
+  const { t } = useTranslation();
   const { shopDetails, convertCurrency } = useShop();
   const rating = useProductRating(product.id);
 
@@ -87,19 +89,19 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
   // warning, out → danger, subscription → success, unknown → neutral.
   const getStockDot = (inventory: number | null) => {
     if (product.pricing_type === 'subscription') {
-      return <span className="inline-flex items-center gap-1 text-[10px] font-medium text-success"><StatusDot tone="success" />Sub</span>;
+      return <span className="inline-flex items-center gap-1 text-[10px] font-medium text-success"><StatusDot tone="success" />{t('products_ui.subscription_short')}</span>;
     }
     if (inventory === null) {
-      return <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground"><StatusDot tone="neutral" />N/A</span>;
+      return <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground"><StatusDot tone="neutral" />{t('products_ui.not_applicable')}</span>;
     }
     const status = getStockStatus(inventory);
     if (status === "in") {
       return <span className="inline-flex items-center gap-1 text-[10px] font-medium text-success"><StatusDot tone="success" />{inventory}</span>;
     }
     if (status === "low" || status === "critical") {
-      return <span className="inline-flex items-center gap-1 text-[10px] font-medium text-warning"><StatusDot tone="warning" />{inventory} left</span>;
+      return <span className="inline-flex items-center gap-1 text-[10px] font-medium text-warning"><StatusDot tone="warning" />{t('products_ui.stock_left', { count: inventory })}</span>;
     }
-    return <span className="inline-flex items-center gap-1 text-[10px] font-medium text-destructive"><StatusDot tone="danger" />Out</span>;
+    return <span className="inline-flex items-center gap-1 text-[10px] font-medium text-destructive"><StatusDot tone="danger" />{t('products_ui.out_short')}</span>;
   };
 
   return (
@@ -122,7 +124,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
                 <div className="aspect-square overflow-hidden bg-muted">
                   <MediaItem 
                     src={url} 
-                    alt={`${product.name} media ${index + 1}`} 
+                    alt={t('products_ui.media_alt', { name: product.name, index: index + 1 })}
                     type={index === 0 ? product.media_type : null}
                     className="transition-transform duration-300 group-hover:scale-105"
                   />
@@ -140,7 +142,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
           <div className="space-y-1.5">
             {/* Category · Type on one line */}
             <p className="text-[10px] text-muted-foreground truncate">
-              {product.category || 'Uncategorized'}
+              {product.category || t('dashboard.uncategorized')}
               {product.details?.type && (
                 <span> · {product.details.type}</span>
               )}
@@ -174,7 +176,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
             {gridSize !== 'sm' && (
               <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                 {Object.keys(details || {}).filter(k => !['type', 'options', 'multi_product', 'Brand'].includes(k)).length > 0 && (
-                  <span>{Object.keys(details || {}).filter(k => !['type', 'options', 'multi_product', 'Brand'].includes(k)).length} specs</span>
+                  <span>{t('products_ui.specs_count', { count: Object.keys(details || {}).filter(k => !['type', 'options', 'multi_product', 'Brand'].includes(k)).length })}</span>
                 )}
               </div>
             )}
@@ -184,7 +186,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
             {product.details?.multi_product ? (
               <div className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground">
                 <Layers className="h-4 w-4" />
-                Multi-Product
+                {t('products_ui.multi_product')}
               </div>
             ) : (
               <div className="flex flex-col min-w-0">
@@ -198,10 +200,10 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
                             currency: shopDetails.currency
                           }).format(displayPrice)}
                           {product.pricing_type === 'subscription' && (
-                            <span className="text-xs font-normal text-muted-foreground">/{product.billing_interval === 'month' ? 'mo' : 'yr'}</span>
+                            <span className="text-xs font-normal text-muted-foreground">/{product.billing_interval === 'month' ? t('products_ui.interval_month_short') : t('products_ui.interval_year_short')}</span>
                           )}
                         </>
-                      ) : 'N/A'}
+                      ) : t('products_ui.not_applicable')}
                     </p>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       {product.currency && product.currency !== shopDetails.currency && (
@@ -213,7 +215,7 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
                 ) : (
                   <div className="flex items-center gap-1.5 text-sm font-semibold text-warning">
                     <AlertTriangle className="h-4 w-4" />
-                    Set Price
+                    {t('products_ui.set_price')}
                   </div>
                 )}
               </div>

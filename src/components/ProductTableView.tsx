@@ -10,6 +10,7 @@ import { productStatusTone } from "@/lib/status"; // Canonical status → tone m
 import { cn } from "@/lib/utils"; // Import cn
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from 'react-i18next';
 
 interface Product {
   id: string;
@@ -52,6 +53,7 @@ const variantStockCache = new Map<string, StockSummary>();
 const cacheKeyFor = (p: { id: string; updated_at?: string | null }) => `${p.id}:${p.updated_at ?? ''}`;
 
 export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSelectOne, onEdit, onDelete, showStatusColumn = true, selectableRowsMode = 'checkbox' }: ProductTableViewProps) => {
+  const { t } = useTranslation();
   const { shopDetails, convertCurrency } = useShop();
   // Displayed summaries keyed by productId (the current cache key for that product).
   const [stockSummaries, setStockSummaries] = useState(new Map<string, StockSummary>());
@@ -140,7 +142,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
   }, [products, fetchVariantStocks]);
 
   const renderVariantStockSummary = (productId: string, pricingType: 'one_time' | 'subscription') => {
-    if (pricingType === 'subscription') return 'N/A';
+    if (pricingType === 'subscription') return t('products_ui.not_applicable');
     
     const summary = stockSummaries.get(productId);
 
@@ -151,16 +153,16 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
     if (summary && summary.total > 0) {
       return (
         <div className="text-xs text-muted-foreground">
-          <p className="font-medium">{summary.total} variants</p>
+          <p className="font-medium">{t('products_ui.variants_count', { count: summary.total })}</p>
           <p className={cn(summary.inStock > 0 ? 'text-success' : 'text-destructive')}>
-            {summary.inStock} in stock / {summary.outOfStock} out of stock
+            {t('products_ui.stock_summary', { inStock: summary.inStock, outOfStock: summary.outOfStock })}
           </p>
         </div>
       );
     }
     
     // If no options are found, display N/A
-    return 'N/A';
+    return t('products_ui.not_applicable');
   };
 
   if (!shopDetails) {
@@ -179,18 +181,18 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
               <Checkbox
                 checked={products.length > 0 && selectedProducts.length === products.length}
                 onCheckedChange={(checked) => onSelectAll(!!checked)}
-                aria-label="Select all rows"
+                aria-label={t('products_ui.select_all_rows')}
               />
             </TableHead>
           )}
-          <TableHead className="w-[80px]">Image</TableHead>
-          <TableHead>Name</TableHead>
-          {showStatusColumn && <TableHead>Status</TableHead>}
-          <TableHead>Price</TableHead>
-          <TableHead>In stock</TableHead>
-          <TableHead>Variants</TableHead>
-          <TableHead>Total Earned</TableHead>
-          <TableHead className="text-right w-[150px]">Actions</TableHead>
+          <TableHead className="w-[80px]">{t('products_ui.image')}</TableHead>
+          <TableHead>{t('products_ui.name')}</TableHead>
+          {showStatusColumn && <TableHead>{t('products.status')}</TableHead>}
+          <TableHead>{t('products_ui.price')}</TableHead>
+          <TableHead>{t('products_ui.in_stock')}</TableHead>
+          <TableHead>{t('products_ui.variants')}</TableHead>
+          <TableHead>{t('products_ui.total_earned')}</TableHead>
+          <TableHead className="text-right w-[150px]">{t('products_ui.actions')}</TableHead>
         </TableRow>
       </TableHeader><TableBody>
         {products.length > 0 ? products.map((product) => (
@@ -208,7 +210,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
                 <Checkbox
                   checked={selectedProducts.includes(product.id)}
                   onCheckedChange={() => onSelectOne(product.id)}
-                  aria-label={`Select row for ${product.name}`}
+                  aria-label={t('products_ui.select_row_for', { name: product.name })}
                 />
               </TableCell>
             )}
@@ -221,7 +223,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
             {showStatusColumn && (
               <TableCell className="cursor-pointer py-3">
                 <StatusBadge tone={productStatusTone(product.status)} size="sm">
-                  {product.status}
+                  {t('status_labels.' + product.status.toLowerCase().replace(/\s+/g, '_'), { defaultValue: product.status })}
                 </StatusBadge>
               </TableCell>
             )}
@@ -234,13 +236,13 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
                     return formatCurrency(convertedPrice, shopDetails.currency);
                   })()
                 ) : (
-                  <span className="text-muted-foreground">N/A</span>
+                  <span className="text-muted-foreground">{t('products_ui.not_applicable')}</span>
                 )}
               </div>
             </TableCell>
             <TableCell className="cursor-pointer py-3">
               <div className="flex-1 text-sm text-muted-foreground">
-                {product.pricing_type === 'one_time' ? (product.inventory !== null ? product.inventory : 'N/A') : 'N/A'}
+                {product.pricing_type === 'one_time' ? (product.inventory !== null ? product.inventory : t('products_ui.not_applicable')) : t('products_ui.not_applicable')}
               </div>
             </TableCell>
             <TableCell className="cursor-pointer py-3">
@@ -255,10 +257,10 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
             </TableCell>
             <TableCell className="text-right">
               <div className="flex items-center justify-end gap-2">
-                <Button variant="ghost" size="icon" aria-label={`Edit ${product.name}`} title="Edit" onClick={(e) => { e.stopPropagation(); onEdit(product); }}>
+                <Button variant="ghost" size="icon" aria-label={t('products_ui.edit_product_aria', { name: product.name })} title={t('common.edit')} onClick={(e) => { e.stopPropagation(); onEdit(product); }}>
                   <Edit className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" aria-label={`Delete ${product.name}`} title="Delete" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(product.id); }}>
+                <Button variant="ghost" size="icon" aria-label={t('products_ui.delete_product_aria', { name: product.name })} title={t('common.delete')} className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(product.id); }}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -267,7 +269,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
         )) : (
           <TableRow>
             <TableCell colSpan={9} className="h-24 text-center">
-              No products found.
+              {t('products_ui.no_products_found')}
             </TableCell>
           </TableRow>
         )}

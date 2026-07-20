@@ -4,6 +4,7 @@
 // Presentational over a sparse visibility map: a missing key means "visible".
 
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
@@ -20,12 +21,13 @@ import {
   AttributeDef, ProductLite, deriveAttributeKeys, attributeValues, filterKeyTitle, isFilterVisible,
 } from './filterVisibility';
 
+// `blurb` holds an i18n key — translated with t() at render time.
 const CORE_META: Record<string, { icon: React.ComponentType<{ className?: string }>; blurb: string }> = {
-  categories: { icon: Layers, blurb: 'Browse by product category' },
-  priceRange: { icon: CircleDollarSign, blurb: 'Min–max price slider' },
-  availability: { icon: PackageCheck, blurb: 'In stock / out of stock' },
-  rating: { icon: Star, blurb: 'Minimum review rating' },
-  tags: { icon: TagIcon, blurb: 'Browse by tag' },
+  categories: { icon: Layers, blurb: 'products_ui.fv_categories_blurb' },
+  priceRange: { icon: CircleDollarSign, blurb: 'products_ui.fv_price_blurb' },
+  availability: { icon: PackageCheck, blurb: 'products_ui.fv_availability_blurb' },
+  rating: { icon: Star, blurb: 'products_ui.fv_rating_blurb' },
+  tags: { icon: TagIcon, blurb: 'products_ui.fv_tags_blurb' },
 };
 
 interface Props {
@@ -47,6 +49,7 @@ export function FilterVisibilityModal({
   allCategories, allTags, allDetailsAttributes, allProducts,
   visibilityMap, onToggle, onSetMany,
 }: Props) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
 
   const { options, specs } = useMemo(
@@ -75,9 +78,9 @@ export function FilterVisibilityModal({
     !query.trim() || filterKeyTitle(key).toLowerCase().includes(query.trim().toLowerCase());
 
   const sections: Array<{ title: string; icon: React.ComponentType<{ className?: string }>; keys: string[] }> = [
-    { title: 'Core filters', icon: SlidersHorizontal, keys: coreKeys.filter(matches) },
-    { title: 'Options', icon: Layers, keys: options.filter(matches) },
-    { title: 'Specifications', icon: ClipboardList, keys: specs.filter(matches) },
+    { title: t('products_ui.core_filters'), icon: SlidersHorizontal, keys: coreKeys.filter(matches) },
+    { title: t('products_ui.options'), icon: Layers, keys: options.filter(matches) },
+    { title: t('products.specifications'), icon: ClipboardList, keys: specs.filter(matches) },
   ].filter((s) => s.keys.length > 0);
 
   const allKeys = [...coreKeys, ...options, ...specs];
@@ -118,14 +121,14 @@ export function FilterVisibilityModal({
               ))}
             </div>
           ) : blurb ? (
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">{blurb}</p>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">{t(blurb)}</p>
           ) : null}
         </div>
         <Switch
           checked={on}
           onCheckedChange={(v) => onToggle(keyName, v)}
           onClick={(e) => e.stopPropagation()}
-          aria-label={`${on ? 'Hide' : 'Show'} ${filterKeyTitle(keyName)} filter`}
+          aria-label={t(on ? 'products_ui.hide_filter_aria' : 'products_ui.show_filter_aria', { name: filterKeyTitle(keyName) })}
           className="shrink-0"
         />
       </div>
@@ -137,7 +140,7 @@ export function FilterVisibilityModal({
       <DialogContent className="flex max-h-[85dvh] flex-col gap-0 p-0 sm:max-w-2xl">
         <DialogHeader className="border-b px-5 pb-4 pt-5 text-left">
           <DialogTitle className="flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 text-primary" /> Filter visibility
+            <SlidersHorizontal className="h-4 w-4 text-primary" /> {t('filter_visibility.title')}
           </DialogTitle>
           <DialogDescription>{description}</DialogDescription>
           <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -146,22 +149,22 @@ export function FilterVisibilityModal({
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search filters…"
+                placeholder={t('products_ui.search_filters')}
                 className="h-9 pl-8"
               />
             </div>
             <Button variant="outline" size="sm" className="h-9" onClick={() => onSetMany(allKeys.filter(matches), true)}>
-              Show all
+              {t('products_ui.show_all')}
             </Button>
             <Button variant="outline" size="sm" className="h-9" onClick={() => onSetMany(allKeys.filter(matches), false)}>
-              Hide all
+              {t('products_ui.hide_all')}
             </Button>
           </div>
         </DialogHeader>
         <ScrollArea className="flex-1 overflow-y-auto">
           <div className="space-y-5 px-5 py-4">
             {sections.length === 0 && (
-              <p className="py-8 text-center text-sm text-muted-foreground">No filters match "{query}".</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">{t('products_ui.no_filters_match', { query })}</p>
             )}
             {sections.map((s) => (
               <div key={s.title}>
@@ -176,7 +179,7 @@ export function FilterVisibilityModal({
           </div>
         </ScrollArea>
         <div className="border-t px-5 py-3 text-xs text-muted-foreground">
-          {visibleCount} of {allKeys.length} filter groups visible
+          {t('products_ui.filter_groups_visible', { visible: visibleCount, total: allKeys.length })}
         </div>
       </DialogContent>
     </Dialog>

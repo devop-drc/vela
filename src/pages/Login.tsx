@@ -27,17 +27,18 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 const INSTAGRAM_SETUP_GUIDE_URL = 'https://help.instagram.com/502981923235522';
 
-const InstagramSetupGuide = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => (
+const InstagramSetupGuide = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => {
+  const { t } = useTranslation();
+  return (
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="max-w-2xl">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <Instagram className="h-5 w-5 text-primary" />
-          Instagram Business Setup Required
+          {t("misc.ig_guide_title", "Instagram Business Setup Required")}
         </DialogTitle>
         <DialogDescription>
-          To use Vela, you need to connect an Instagram Business or Creator account to your Facebook page.
-          This is a common step that sometimes requires specific actions within Instagram and Facebook.
+          {t("misc.ig_guide_desc", "To use Vela, you need to connect an Instagram Business or Creator account to your Facebook page. This is a common step that sometimes requires specific actions within Instagram and Facebook.")}
         </DialogDescription>
       </DialogHeader>
 
@@ -45,43 +46,41 @@ const InstagramSetupGuide = ({ open, onOpenChange }: { open: boolean; onOpenChan
         <div className="space-y-2">
           <h4 className="font-medium flex items-center gap-2">
             <CheckCircle className="h-4 w-4 text-success" />
-            Step 1: Convert to Business/Creator Account
+            {t("misc.ig_guide_s1_title", "Step 1: Convert to Business/Creator Account")}
           </h4>
           <p className="text-sm text-muted-foreground pl-6">
-            In your Instagram mobile app, go to <strong className="font-medium text-foreground">Settings and privacy &gt; Account type and tools &gt; Switch to professional account</strong>.
-            Choose either "Business" or "Creator".
+            {t("misc.ig_guide_s1_pre", "In your Instagram mobile app, go to")} <strong className="font-medium text-foreground">{t("misc.ig_guide_s1_path", "Settings and privacy > Account type and tools > Switch to professional account")}</strong>.{" "}
+            {t("misc.ig_guide_s1_post", "Choose either \"Business\" or \"Creator\".")}
           </p>
         </div>
 
         <div className="space-y-2">
           <h4 className="font-medium flex items-center gap-2">
             <CheckCircle className="h-4 w-4 text-success" />
-            Step 2: Link to a Facebook Page
+            {t("misc.ig_guide_s2_title", "Step 2: Link to a Facebook Page")}
           </h4>
           <p className="text-sm text-muted-foreground pl-6">
-            During the professional account setup, you'll be prompted to connect to a Facebook Page.
-            If you skipped it, go to <strong className="font-medium text-foreground">Instagram Profile &gt; Edit Profile &gt; Page</strong> and select the Facebook Page you manage.
+            {t("misc.ig_guide_s2_pre", "During the professional account setup, you'll be prompted to connect to a Facebook Page. If you skipped it, go to")} <strong className="font-medium text-foreground">{t("misc.ig_guide_s2_path", "Instagram Profile > Edit Profile > Page")}</strong> {t("misc.ig_guide_s2_post", "and select the Facebook Page you manage.")}
           </p>
         </div>
 
         <div className="space-y-2">
           <h4 className="font-medium flex items-center gap-2">
             <CheckCircle className="h-4 w-4 text-success" />
-            Step 3: Grant All Permissions
+            {t("misc.ig_guide_s3_title", "Step 3: Grant All Permissions")}
           </h4>
           <p className="text-sm text-muted-foreground pl-6">
-            When you click "Connect with Facebook" below, a popup will ask for permissions.
-            <strong className="font-medium text-foreground"> Crucially, click "Edit Settings" and ensure ALL requested permissions are granted</strong> for both your Facebook Page and your Instagram account.
-            Without all permissions, the integration will fail.
+            {t("misc.ig_guide_s3_pre", "When you click \"Connect with Facebook\" below, a popup will ask for permissions.")}
+            <strong className="font-medium text-foreground"> {t("misc.ig_guide_s3_strong", "Crucially, click \"Edit Settings\" and ensure ALL requested permissions are granted")}</strong> {t("misc.ig_guide_s3_post", "for both your Facebook Page and your Instagram account. Without all permissions, the integration will fail.")}
           </p>
         </div>
 
         <div className="mt-4 flex items-start gap-3 rounded-md border border-warning/20 bg-warning/10 p-4">
           <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-warning" />
           <div>
-            <p className="font-medium text-foreground">Need More Help?</p>
+            <p className="font-medium text-foreground">{t("misc.ig_guide_help_title", "Need More Help?")}</p>
             <p className="text-sm text-muted-foreground">
-              If you're still having trouble, Instagram's official guide can walk you through it.
+              {t("misc.ig_guide_help_desc", "If you're still having trouble, Instagram's official guide can walk you through it.")}
             </p>
           </div>
         </div>
@@ -91,21 +90,22 @@ const InstagramSetupGuide = ({ open, onOpenChange }: { open: boolean; onOpenChan
         <Button variant="outline" asChild>
           <a href={INSTAGRAM_SETUP_GUIDE_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
             <ExternalLink className="h-4 w-4" />
-            View Official Guide
+            {t("misc.ig_guide_view_official", "View Official Guide")}
           </a>
         </Button>
-        <Button onClick={() => onOpenChange(false)}>I've Completed Setup</Button>
+        <Button onClick={() => onOpenChange(false)}>{t("misc.ig_guide_done", "I've Completed Setup")}</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
-);
+  );
+};
 
 const Login = () => {
   const [showSetupGuide, setShowSetupGuide] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const navigate = useNavigate();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const lang: "sq" | "en" = i18n.language?.startsWith("sq") ? "sq" : "en";
 
   // Already signed in? Go straight to the dashboard — re-authenticating over a
@@ -133,11 +133,11 @@ const Login = () => {
         throw error;
       }
 
-      showSuccess('Welcome back! Taking you to your dashboard…');
+      showSuccess(t("misc.login_welcome", "Welcome back! Taking you to your dashboard…"));
       navigate('/dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
-      showError(toFriendlyError(error, "Couldn't sign you in. Please try again."));
+      showError(toFriendlyError(error, t("misc.login_failed", "Couldn't sign you in. Please try again.")));
     }
   };
 
@@ -145,7 +145,7 @@ const Login = () => {
     const email = getValues('email');
     const parsed = loginSchema.shape.email.safeParse(email);
     if (!parsed.success) {
-      showError("Enter a valid email above first, then tap “Forgot password?”.");
+      showError(t("misc.forgot_enter_email", "Enter a valid email above first, then tap “Forgot password?”."));
       return;
     }
     setIsSending(true);
@@ -153,8 +153,8 @@ const Login = () => {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
-      if (error) showError(toFriendlyError(error, "Couldn't send the reset email."));
-      else showSuccess("Password reset link sent — check your email.");
+      if (error) showError(toFriendlyError(error, t("misc.reset_email_failed", "Couldn't send the reset email.")));
+      else showSuccess(t("misc.reset_email_sent", "Password reset link sent — check your email."));
     } finally {
       setIsSending(false);
     }
@@ -177,7 +177,7 @@ const Login = () => {
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input id="email" type="email" autoComplete="email" inputMode="email" placeholder="ti@dyqani.al" {...register('email')} className="h-11 rounded-xl pl-10" />
           </div>
-          {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+          {errors.email && <p className="text-sm text-destructive">{t("settings.invalid_email", "Enter a valid email address.")}</p>}
         </div>
         <div className="space-y-2" data-reveal>
           <div className="flex items-center justify-between">
@@ -192,12 +192,12 @@ const Login = () => {
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" {...register('password')} className="h-11 rounded-xl pl-10 pr-10" />
             <button type="button" onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-label={showPassword ? t("misc.hide_password", "Hide password") : t("misc.show_password", "Show password")}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground">
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-          {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+          {errors.password && <p className="text-sm text-destructive">{t("misc.password_required", "Password is required")}</p>}
         </div>
 
         <Button type="submit" disabled={isSubmitting} data-reveal

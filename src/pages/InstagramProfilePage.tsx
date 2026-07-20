@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Link, useParams, useNavigate, useSearchParams, useOutletContext } from "react-router-dom"; // Import useOutletContext
+import { useTranslation } from "react-i18next";
 import {
   Link as LinkIcon,
   Package,
@@ -100,6 +101,7 @@ const ProfileBio = ({ shopDetails }: { shopDetails: any }) => (
 );
 
 const InstagramProfilePage = () => {
+  const { t } = useTranslation();
   const { shopSlug } = useParams<{ shopSlug: string }>();
   const { shopDetails, products: allProductsFromContext, isLoading, error, convertCurrency: convertCurrencyFromContext, marqueeElements, promotions } = useStorefront();
   const navigate = useNavigate();
@@ -211,7 +213,7 @@ const InstagramProfilePage = () => {
   }
 
   if (!shopDetails) {
-    return <div className="container py-8 text-center text-muted-foreground text-base md:text-lg">Shop details not found.</div>;
+    return <div className="container py-8 text-center text-muted-foreground text-base md:text-lg">{t('ig_shop.shop_not_found')}</div>;
   }
 
   const totalPosts = allProducts.length;
@@ -252,12 +254,12 @@ const InstagramProfilePage = () => {
                     <div className="flex items-center gap-3 md:gap-8 mt-2">
                       <div className="flex flex-col items-center gap-0 text-sm md:text-base">
                         <span className="font-semibold">{formatLargeNumber(totalPosts)}</span>
-                        <span className="text-muted-foreground">posts</span>
+                        <span className="text-muted-foreground">{t('ig_shop.posts')}</span>
                       </div>
                       {shopDetails.followers_count != null && (
                         <div className="flex flex-col items-center gap-1 text-sm md:text-base">
                           <span className="font-semibold">{formatLargeNumber(totalFollowers)}</span>
-                          <span className="text-muted-foreground">followers</span>
+                          <span className="text-muted-foreground">{t('ig_shop.followers')}</span>
                         </div>
                       )}
                     </div>
@@ -300,7 +302,7 @@ const InstagramProfilePage = () => {
               className="flex-1 bg-muted text-foreground border-none hover:bg-muted rounded-xl px-4 py-2 md:px-24 md:py-5 font-semibold"
             >
               <Filter className="mr-2 h-4 w-4 md:h-5 md:w-5" />
-              Filter {hasActiveFilters && <StatusDot tone="info" className="ml-1.5" />}
+              {t('ig_shop.filter')} {hasActiveFilters && <StatusDot tone="info" className="ml-1.5" />}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -309,16 +311,16 @@ const InstagramProfilePage = () => {
                   size="sm"
                   className="flex-1 bg-muted text-foreground border-none hover:bg-muted rounded-xl px-4 py-2 md:px-24 md:py-5 font-semibold"
                 >
-                  Sort <ArrowUpNarrowWide className="ml-2 h-4 w-4" />
+                  {t('ig_shop.sort')} <ArrowUpNarrowWide className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-card text-foreground border-border">
-                <DropdownMenuItem onClick={() => handleSortChange("newest")} className="text-sm hover:bg-muted">Newest</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSortChange("oldest")} className="text-sm hover:bg-muted">Oldest</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSortChange("price-asc")} className="text-sm hover:bg-muted">Price: Low to High</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSortChange("price-desc")} className="text-sm hover:bg-muted">Price: High to Low</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSortChange("name-asc")} className="text-sm hover:bg-muted">Name: A-Z</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSortChange("name-desc")} className="text-sm hover:bg-muted">Name: Z-A</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("newest")} className="text-sm hover:bg-muted">{t('ig_shop.sort_newest')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("oldest")} className="text-sm hover:bg-muted">{t('ig_shop.sort_oldest')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("price-asc")} className="text-sm hover:bg-muted">{t('ig_shop.sort_price_asc')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("price-desc")} className="text-sm hover:bg-muted">{t('ig_shop.sort_price_desc')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("name-asc")} className="text-sm hover:bg-muted">{t('ig_shop.sort_name_asc')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSortChange("name-desc")} className="text-sm hover:bg-muted">{t('ig_shop.sort_name_desc')}</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -336,17 +338,17 @@ const InstagramProfilePage = () => {
             <EmptyState
               className="mx-4"
               icon={Package}
-              title="No products found"
+              title={t('ig_shop.no_products_title')}
               description={
                 hasActiveFilters
-                  ? "No products match your current filters or search criteria."
-                  : "It looks like this store doesn't have any products yet."
+                  ? t('ig_shop.no_products_filtered')
+                  : t('ig_shop.no_products_yet')
               }
               action={
                 hasActiveFilters ? (
                   <Button variant="outline" onClick={handleResetFilters}>
                     <XCircle className="mr-2 h-4 w-4" />
-                    Clear all filters
+                    {t('ig_shop.clear_all_filters')}
                   </Button>
                 ) : undefined
               }

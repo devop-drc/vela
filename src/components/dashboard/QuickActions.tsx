@@ -35,13 +35,15 @@ export const QuickActions = () => {
         const refreshed = data?.refreshed ?? 0;
         const failed = data?.failed ?? 0;
         if (refreshed > 0) {
-          showSuccess(`Refreshed ${refreshed} image${refreshed === 1 ? "" : "s"}${failed ? ` (${failed} failed)` : ""}.`);
+          showSuccess(failed
+            ? t("dashboard.images_refreshed_failed", { defaultValue: "Refreshed {{count}} image(s) ({{failed}} failed).", count: refreshed, failed })
+            : t("dashboard.images_refreshed", { defaultValue: "Refreshed {{count}} image(s).", count: refreshed }));
           setTimeout(() => window.location.reload(), 600);
         } else {
-          showSuccess(data?.message || "All images are up to date.");
+          showSuccess(data?.message || t("dashboard.images_up_to_date", "All images are up to date."));
         }
       } catch (err) {
-        showError(err instanceof Error ? err.message : "Failed to refresh images.");
+        showError(err instanceof Error ? err.message : t("dashboard.images_refresh_failed", "Failed to refresh images."));
       } finally {
         setIsRefreshingImages(false);
       }
@@ -61,7 +63,7 @@ export const QuickActions = () => {
         if (data?.jobId) startNewSync(data.jobId);
       } catch (err) {
         showError(
-          err instanceof Error ? err.message : "Failed to start quick sync."
+          err instanceof Error ? err.message : t("dashboard.quick_sync_failed", "Failed to start quick sync.")
         );
       }
     });
@@ -99,8 +101,8 @@ export const QuickActions = () => {
     },
     {
       icon: <ImageIcon className={cn("h-4 w-4 text-primary", isRefreshingImages && "animate-pulse")} />,
-      title: isRefreshingImages ? "Refreshing…" : "Fix Images",
-      description: "Re-upload broken product images",
+      title: isRefreshingImages ? t("dashboard.refreshing", "Refreshing…") : t("dashboard.fix_images", "Fix Images"),
+      description: t("dashboard.fix_images_desc", "Re-upload broken product images"),
       onClick: handleRefreshImages,
       disabled: isRefreshingImages,
     },

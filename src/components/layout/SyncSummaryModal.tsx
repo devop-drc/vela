@@ -81,7 +81,7 @@ export const SyncSummaryModal = ({ job, isOpen, onClose }: { job: SyncJob | null
                 <AccordionTrigger><div className="flex items-center gap-2"><SkipForward className="h-4 w-4 text-muted-foreground" /> {t('sync.label_skipped')} ({skippedItems.length})</div></AccordionTrigger>
                 <AccordionContent><ScrollArea className="h-64 pr-3"><div className="space-y-3">{skippedItems.map((item, i) => (
                   <div key={i} className="flex items-start gap-4 p-3 text-sm border rounded-lg bg-background">
-                    <img src={item.thumbnail_url} alt="Skipped post" className="h-16 w-16 rounded-md object-cover bg-muted" />
+                    <img src={item.thumbnail_url} alt={t('sync.skipped_post_alt', 'Skipped post')} className="h-16 w-16 rounded-md object-cover bg-muted" />
                     <div className="flex-1 pt-1">
                       <p className="font-semibold truncate leading-tight">{item.name}</p>
                       <p className="text-xs text-muted-foreground mt-1">{item.reason}</p>

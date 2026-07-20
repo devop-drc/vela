@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAppearance, curatedImages } from "@/contexts/AppearanceContext";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
@@ -15,6 +16,7 @@ import { Switch } from "../ui/switch";
 import { MediaItem } from "../MediaItem";
 
 export const HeroBackgroundSettings = () => {
+  const { t } = useTranslation();
   const { settings, updateSetting } = useAppearance();
   const [isUploading, setIsUploading] = useState(false);
 
@@ -25,7 +27,7 @@ export const HeroBackgroundSettings = () => {
     setIsUploading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      showError("You must be logged in to upload media.");
+      showError(t('studio_panels.login_to_upload_media'));
       setIsUploading(false);
       return;
     }
@@ -35,7 +37,7 @@ export const HeroBackgroundSettings = () => {
     const { error } = await supabase.storage.from('hero-media').upload(filePath, file);
 
     if (error) {
-      showError(`Upload failed: ${error.message}`);
+      showError(t('studio_panels.upload_failed', { message: error.message }));
       setIsUploading(false);
       return;
     }
@@ -43,7 +45,7 @@ export const HeroBackgroundSettings = () => {
     const { data: { publicUrl } } = supabase.storage.from('hero-media').getPublicUrl(filePath);
     updateSetting('heroBackgroundMediaUrl', publicUrl);
     updateSetting('heroBackgroundMediaType', fileType);
-    showSuccess("Hero background updated!");
+    showSuccess(t('studio_panels.hero_background_updated'));
     setIsUploading(false);
   };
 
@@ -56,30 +58,30 @@ export const HeroBackgroundSettings = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between rounded-lg border p-4">
         <div className="space-y-0.5">
-          <Label className="text-base">Show Blob Animation</Label>
-          <p className="text-sm text-muted-foreground">Adds a subtle, animated background effect to the hero section.</p>
+          <Label className="text-base">{t('studio_panels.show_blob_animation')}</Label>
+          <p className="text-sm text-muted-foreground">{t('studio_panels.show_blob_animation_desc')}</p>
         </div>
         <Switch checked={settings.showHeroBlobAnimation} onCheckedChange={(checked) => updateSetting('showHeroBlobAnimation', checked)} />
       </div>
 
       <Tabs defaultValue="upload" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="upload">Upload Custom</TabsTrigger>
-          <TabsTrigger value="gallery">Browse Gallery</TabsTrigger>
+          <TabsTrigger value="upload">{t('studio_panels.upload_custom')}</TabsTrigger>
+          <TabsTrigger value="gallery">{t('studio_panels.browse_gallery')}</TabsTrigger>
         </TabsList>
         <TabsContent value="upload" className="pt-4">
           <div className="flex items-center gap-4">
             <Button asChild variant="outline">
               <label htmlFor="hero-media-upload" className="cursor-pointer">
                 {isUploading ? <Spinner className="mr-2 h-4 w-4" /> : <Upload className="mr-2 h-4 w-4" />}
-                Upload Image/Video
+                {t('studio_panels.upload_image_video')}
               </label>
             </Button>
             <Input id="hero-media-upload" type="file" className="hidden" onChange={handleFileChange} accept="image/*,video/*" disabled={isUploading} />
             {settings.heroBackgroundMediaUrl && (
               <Button variant="destructive" onClick={removeMedia}>
                 <Trash2 className="mr-2 h-4 w-4" />
-                Remove
+                {t('common.remove')}
               </Button>
             )}
           </div>
@@ -87,7 +89,7 @@ export const HeroBackgroundSettings = () => {
             <div className="mt-4 p-2 border rounded-lg bg-muted/50 flex items-center justify-center h-48 overflow-hidden">
               <MediaItem 
                 src={settings.heroBackgroundMediaUrl} 
-                alt="Hero background preview" 
+                alt={t('studio_panels.hero_background_preview')}
                 type={settings.heroBackgroundMediaType} 
                 className="max-h-full max-w-full object-contain"
               />
@@ -109,7 +111,7 @@ export const HeroBackgroundSettings = () => {
                     settings.heroBackgroundMediaUrl === img.src && "ring-2 ring-primary"
                   )}
                 >
-                  <img src={`${img.src}&h=200&fit=crop`} alt={`by ${img.author}`} className="w-full h-full object-cover" />
+                  <img src={`${img.src}&h=200&fit=crop`} alt={t('studio_panels.photo_by', { author: img.author })} className="w-full h-full object-cover" />
                 </button>
               ))}
               {/* Add curated videos here if available */}
