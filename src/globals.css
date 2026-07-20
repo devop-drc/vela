@@ -1,4 +1,6 @@
-@import url('https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700&display=swap');
+/* Fontshare (Clash Display + Satoshi) moved to a <link> in index.html —
+   a CSS @import is a render-blocking SERIAL fetch (CSS first, then the font
+   CSS), which Lighthouse flags on every page. The link loads in parallel. */
 
 @tailwind base;
 @tailwind components;

@@ -10,6 +10,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://api.fontshare.com" />
     <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
+    <link rel="preconnect" href="https://wsrv.nl" />
+    <!-- Brand fonts (was a render-blocking @import inside the bundled CSS).
+         media="print" + onload makes the stylesheet NON-blocking: it downloads
+         in parallel and applies the moment it arrives; display=swap means text
+         renders instantly in the fallback font meanwhile. -->
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700&display=swap" media="print" onload="this.media='all'" />
+    <noscript><link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700&display=swap" /></noscript>
     <!-- Pinch zoom stays enabled (a11y); iOS input auto-zoom is prevented by
          16px form-control text on small screens (globals.css), not by locking scale. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -89,11 +96,13 @@
           "@type": "Organization",
           "@id": "https://instantshop.al/#organization",
           "name": "Vela",
+          "alternateName": "InstantShop",
           "url": "https://instantshop.al/",
           "logo": "https://instantshop.al/vela-icon.svg",
           "description": "Vela's system turns an Instagram Business profile into a full online shop — for sellers in Albania.",
           "areaServed": { "@type": "Country", "name": "Albania" },
-          "sameAs": []
+          "knowsLanguage": ["sq", "en"],
+          "sameAs": ["https://www.instagram.com/vela.al/"]
         },
         {
           "@type": "SoftwareApplication",

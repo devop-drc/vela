@@ -94,10 +94,31 @@ const Chrome = () => {
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
   }, [location.pathname]);
 
-  // Document title + favicon.
+  // Document title + favicon + per-shop SEO meta. Google renders SPAs, so a
+  // correct title/description/OG/canonical per shop lets merchant storefronts
+  // rank on their own name.
   useEffect(() => {
     if (!shopDetails) return;
     document.title = shopDetails.shop_name || 'Storefront';
+
+    const setMeta = (attr: 'name' | 'property', key: string, content: string) => {
+      if (!content) return;
+      let el = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
+      if (!el) { el = document.createElement('meta'); el.setAttribute(attr, key); document.head.appendChild(el); }
+      el.content = content;
+    };
+    const desc = shopDetails.headline || shopDetails.about ||
+      `${shopDetails.shop_name} — dyqan online. Porosit me kartë ose para në dorë.`;
+    const url = `https://instantshop.al/shop/${shopDetails.slug}`;
+    setMeta('name', 'description', desc);
+    setMeta('property', 'og:title', shopDetails.shop_name || 'Storefront');
+    setMeta('property', 'og:description', desc);
+    setMeta('property', 'og:type', 'website');
+    setMeta('property', 'og:url', url);
+    if (shopDetails.logo_url) setMeta('property', 'og:image', shopDetails.logo_url);
+    let canon = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canon) { canon = document.createElement('link'); canon.rel = 'canonical'; document.head.appendChild(canon); }
+    canon.href = url;
     const setFavicon = (url: string | null) => {
       document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]').forEach((e) => e.parentNode?.removeChild(e));
       const href = url || '/favicon.ico';
