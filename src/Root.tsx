@@ -18,6 +18,9 @@ import { StoryProblem, storyProblemSchema, storyProblemDefaults } from "./compos
 import { StorySteps, storyStepsSchema, storyStepsDefaults } from "./compositions/stories/StorySteps";
 import { StoryFeatures, storyFeaturesSchema, storyFeaturesDefaults } from "./compositions/stories/StoryFeatures";
 import { StoryCTA, storyCtaSchema, storyCtaDefaults } from "./compositions/stories/StoryCTA";
+import { mkSchema, mkDefaults, ReelChaos, ReelNumbers, ReelManifesto, REEL_CHAOS_FRAMES, REEL_NUMBERS_FRAMES, REEL_MANIFESTO_FRAMES } from "./compositions/marketing/Reels";
+import { PostSting, PostNoCode, PostTrial, POST_STING_FRAMES, POST_NOCODE_FRAMES, POST_TRIAL_FRAMES } from "./compositions/marketing/Posts";
+import { StillReelHook, StillReelManifesto, StillReelChecklist, StillPostQuote, StillPostLogo, GallerySlide1, GallerySlide2, GallerySlide3 } from "./compositions/marketing/Stills";
 
 const common = { fps: VIDEO.fps, width: VIDEO.width, height: VIDEO.height };
 /** Instagram story canvas (9:16). */
@@ -65,5 +68,21 @@ export const RemotionRoot = () => (
     <Composition id="StorySteps" component={StorySteps} durationInFrames={sec(10)} {...story} schema={storyStepsSchema} defaultProps={storyStepsDefaults} />
     <Composition id="StoryFeatures" component={StoryFeatures} durationInFrames={sec(9)} {...story} schema={storyFeaturesSchema} defaultProps={storyFeaturesDefaults} />
     <Composition id="StoryCTA" component={StoryCTA} durationInFrames={sec(6)} {...story} schema={storyCtaSchema} defaultProps={storyCtaDefaults} />
+
+    {/* ── Marketing set (branding/marketing/instagram) ── */}
+    <Composition id="ReelChaos" component={ReelChaos} durationInFrames={REEL_CHAOS_FRAMES} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="ReelNumbers" component={ReelNumbers} durationInFrames={REEL_NUMBERS_FRAMES} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="ReelManifesto" component={ReelManifesto} durationInFrames={REEL_MANIFESTO_FRAMES} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="PostSting" component={PostSting} durationInFrames={POST_STING_FRAMES} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="PostNoCode" component={PostNoCode} durationInFrames={POST_NOCODE_FRAMES} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="PostTrial" component={PostTrial} durationInFrames={POST_TRIAL_FRAMES} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillReelHook" component={StillReelHook} durationInFrames={30} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillReelManifesto" component={StillReelManifesto} durationInFrames={30} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillReelChecklist" component={StillReelChecklist} durationInFrames={30} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillPostQuote" component={StillPostQuote} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="StillPostLogo" component={StillPostLogo} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="GallerySlide1" component={GallerySlide1} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="GallerySlide2" component={GallerySlide2} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="GallerySlide3" component={GallerySlide3} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
   </>
 );
