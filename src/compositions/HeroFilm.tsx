@@ -221,86 +221,63 @@ const OrderPing: React.FC<{ local: number; from: number; lang: "sq" | "en" }> = 
   );
 };
 
-/* ─── kinetic type interstitial v2: full-bleed glass RIBBONS. Each line is
-      an edge-to-edge band that wipes in from alternating sides while its
-      oversized text slides in with counter-motion and an overshoot settle.
-      Poster-style, reads huge, and stays legible over any page background. ── */
+/* ─── kinetic type interstitial v3: no chrome — just huge words that SLAM
+      from oversized-and-blurred down to crisp, with a heavy overshoot so
+      every landing has weight. A soft light wash sits behind the block for
+      legibility over any page background. ── */
 const TypeBeat: React.FC<{ local: number; dur: number; lines: { text: string; grad?: boolean }[][]; eyebrow?: string }> = ({ local, dur, lines, eyebrow }) => {
   const out = clamp01((local - (dur - 12)) / 12);
   const ambient = sp(local, 0, 13);
   const eb = sp(local, 3, 14);
   const wordCount = lines.reduce((n, ws) => n + ws.length, 0);
-  const rule = sp(local, 12 + wordCount * 3 + 12, 13);
-  const size = lines.length > 1 ? 128 : 150;
+  const rule = sp(local, 10 + wordCount * 3 + 10, 13);
+  const size = lines.length > 1 ? 136 : 158;
+  // a punchy spring: stiff, slightly underdamped → lands with an overshoot
+  const slam = (delay: number) => spring({ frame: local - delay, fps: FPS, config: { damping: 10.5, stiffness: 240, mass: 1.1 } });
+  let wordIndex = 0;
   return (
-    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", opacity: 1 - out, fontFamily: "'Clash Display', Inter, sans-serif" }}>
-      {/* lava-lamp wash — stronger now that there's no panel */}
-      <div style={{ position: "absolute", width: 680, height: 520, borderRadius: 999, background: BRAND.wine, opacity: 0.26 * ambient, filter: "blur(110px)", transform: `translate(${-220 + Math.sin(local / 26) * 46}px, ${Math.cos(local / 31) * 34}px)` }} />
-      <div style={{ position: "absolute", width: 560, height: 460, borderRadius: 999, background: BRAND.amber, opacity: 0.2 * ambient, filter: "blur(110px)", transform: `translate(${250 + Math.cos(local / 29) * 40}px, ${Math.sin(local / 24) * 38}px)` }} />
-      <div style={{ position: "absolute", width: 460, height: 400, borderRadius: 999, background: BRAND.neon, opacity: 0.14 * ambient, filter: "blur(100px)", transform: `translate(${Math.sin(local / 21) * 60}px, ${160 + Math.cos(local / 27) * 30}px)` }} />
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", opacity: 1 - out, filter: `blur(${out * 14}px)`, fontFamily: "'Clash Display', Inter, sans-serif" }}>
+      {/* lava-lamp wash */}
+      <div style={{ position: "absolute", width: 680, height: 520, borderRadius: 999, background: BRAND.wine, opacity: 0.24 * ambient, filter: "blur(110px)", transform: `translate(${-220 + Math.sin(local / 26) * 46}px, ${Math.cos(local / 31) * 34}px)` }} />
+      <div style={{ position: "absolute", width: 560, height: 460, borderRadius: 999, background: BRAND.amber, opacity: 0.18 * ambient, filter: "blur(110px)", transform: `translate(${250 + Math.cos(local / 29) * 40}px, ${Math.sin(local / 24) * 38}px)` }} />
+      <div style={{ position: "absolute", width: 460, height: 400, borderRadius: 999, background: BRAND.neon, opacity: 0.13 * ambient, filter: "blur(100px)", transform: `translate(${Math.sin(local / 21) * 60}px, ${160 + Math.cos(local / 27) * 30}px)` }} />
+      {/* soft light wash for legibility — ambience, not a panel */}
+      <div style={{ position: "absolute", width: 1240, height: 560, borderRadius: "50%", background: "radial-gradient(closest-side, rgba(255,251,250,0.85), rgba(255,251,250,0.55) 55%, transparent 75%)", opacity: ambient }} />
 
-      <div style={{ position: "relative", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: 22 }}>
+      <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
         {eyebrow && (
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "10px 24px", borderRadius: 999, border: GLASS_BORDER, background: GLASS, opacity: eb, transform: `translateY(${(1 - eb) * 14}px)`, boxShadow: GLASS_SHADOW }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 16, padding: "10px 24px", borderRadius: 999, border: GLASS_BORDER, background: GLASS, opacity: eb, transform: `translateY(${(1 - eb) * 14}px)`, boxShadow: GLASS_SHADOW }}>
             <span style={{ width: 8, height: 8, borderRadius: 99, background: GRAD, boxShadow: "0 0 10px rgba(255,46,77,0.7)" }} />
             <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: BRAND.muted, fontFamily: "Inter, sans-serif" }}>{eyebrow}</span>
           </div>
         )}
 
-        {lines.map((words, li) => {
-          const dir = li % 2 === 0 ? 1 : -1; // alternate wipe directions
-          const bandIn = sp(local, 7 + li * 7, 13);
-          const textIn = sp(local, 12 + li * 7, 11);
-          // enter clips one side; the exit wipes off toward the other
-          const enterClip = (1 - bandIn) * 100;
-          const exitClip = out * 100;
-          const clipL = dir > 0 ? 0 + exitClip : enterClip;
-          const clipR = dir > 0 ? enterClip : exitClip;
-          return (
-            <div
-              key={li}
-              style={{
-                position: "relative",
-                width: "100%",
-                clipPath: `inset(0 ${clipR}% 0 ${clipL}%)`,
-                background: GLASS,
-                borderTop: GLASS_BORDER,
-                borderBottom: GLASS_BORDER,
-                boxShadow: GLASS_SHADOW,
-                padding: "26px 0 34px",
-              }}
-            >
-              {/* faint gradient edge running along the band */}
-              <div style={{ position: "absolute", inset: 0, background: `linear-gradient(${dir > 0 ? "90deg" : "270deg"}, rgba(255,46,77,0.09), transparent 30%)` }} />
-              <div
-                style={{
-                  // gap must be px-scaled to the TYPE size — an em gap here
-                  // resolves against the row's 16px font and glues the words
-                  display: "flex", justifyContent: "center", gap: size * 0.24, lineHeight: 1,
-                  transform: `translateX(${dir * (1 - textIn) * 160}px)`,
-                  opacity: Math.min(1, textIn * 1.5),
-                }}
-              >
-                {words.map((w, wi) => (
-                  <span
-                    key={wi}
-                    style={{
-                      display: "inline-block",
-                      fontSize: size, fontWeight: 700, letterSpacing: "-0.025em",
-                      color: w.grad ? "transparent" : BRAND.ink,
-                      background: w.grad ? TEXT_GRAD : undefined,
-                      WebkitBackgroundClip: w.grad ? "text" : undefined,
-                    }}
-                  >
-                    {w.text}
-                  </span>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+        {lines.map((words, li) => (
+          <div key={li} style={{ display: "flex", justifyContent: "center", gap: size * 0.24, lineHeight: 1.02 }}>
+            {words.map((w, wi) => {
+              const s = slam(8 + wordIndex++ * 3);
+              return (
+                <span
+                  key={wi}
+                  style={{
+                    display: "inline-block",
+                    fontSize: size, fontWeight: 700, letterSpacing: "-0.025em",
+                    color: w.grad ? "transparent" : BRAND.ink,
+                    background: w.grad ? TEXT_GRAD : undefined,
+                    WebkitBackgroundClip: w.grad ? "text" : undefined,
+                    opacity: Math.min(1, s * 1.6),
+                    filter: `blur(${Math.max(0, (1 - s)) * 18}px)`,
+                    transform: `scale(${1.65 - s * 0.65})`, // lands through 1 with overshoot → weight
+                  }}
+                >
+                  {w.text}
+                </span>
+              );
+            })}
+          </div>
+        ))}
 
-        <div style={{ height: 5, width: 170 * rule, borderRadius: 99, background: GRAD, boxShadow: "0 0 20px rgba(255,46,77,0.6)", opacity: rule }} />
+        <div style={{ marginTop: 20, height: 5, width: 170 * rule, borderRadius: 99, background: GRAD, boxShadow: "0 0 20px rgba(255,46,77,0.6)", opacity: rule }} />
       </div>
     </AbsoluteFill>
   );
