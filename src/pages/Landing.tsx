@@ -814,7 +814,7 @@ export default function Landing() {
           <div className="relative z-0 w-full max-w-2xl lg:max-w-none lg:origin-center lg:scale-125 xl:scale-[1.28] 2xl:scale-[1.45]">
             {/* pre-rendered hero film (see src/compositions/HeroFilm.tsx) */}
             <div className="hero-visual w-full">
-              <HeroFilmVideo />
+              <HeroFilmVideo dark={dark} />
             </div>
           </div>
         </div>
