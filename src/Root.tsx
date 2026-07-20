@@ -24,6 +24,7 @@ import { StillPostToProduct, StillFiveMin, StillBoom, StillOrders, StillPanel, G
 import { ReelMorph, ReelPanelLive, ReelQuiet, PostCheckout, PostStock, PostLink, StillMorphLight, StillPanelLight, StillQuiet, StillCheckout, StillStock, StillLink, REEL_MORPH_FRAMES, REEL_PANEL_FRAMES, REEL_QUIET_FRAMES, POST_CHECKOUT_FRAMES, POST_STOCK_FRAMES, POST_LINK_FRAMES } from "./compositions/marketing/Light";
 import { ReelBeforeAfter, ReelDayWithVela, ReelYourBrand, PostNightSales, PostSplit, PostThemes, StillBeforeAfter, StillDayTimeline, StillBrand, StillNightSales, StillSplitPost, StillThemes, REEL_BA_FRAMES, REEL_DAY_FRAMES, REEL_BRAND_FRAMES, POST_NIGHT_FRAMES, POST_SPLIT_FRAMES, POST_THEMES_FRAMES } from "./compositions/marketing/Duo";
 import { ReelSecure, PostSecure, StillSecure, StillSecurePost, REEL_SECURE_FRAMES, POST_SECURE_FRAMES } from "./compositions/marketing/Secure";
+import { TkPriceInDm, TkOldLek, TkPovSeller, TkHaggle, TK_DM_FRAMES, TK_LEK_FRAMES, TK_POV_FRAMES, TK_HAGGLE_FRAMES } from "./compositions/marketing/TikTok";
 
 const common = { fps: VIDEO.fps, width: VIDEO.width, height: VIDEO.height };
 /** Instagram story canvas (9:16). */
@@ -121,5 +122,11 @@ export const RemotionRoot = () => (
     <Composition id="PostSecure" component={PostSecure} durationInFrames={POST_SECURE_FRAMES} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
     <Composition id="StillSecure" component={StillSecure} durationInFrames={30} {...story} schema={mkSchema} defaultProps={mkDefaults} />
     <Composition id="StillSecurePost" component={StillSecurePost} durationInFrames={30} fps={30} width={1080} height={1350} schema={mkSchema} defaultProps={mkDefaults} />
+
+    {/* ── Marketing TIKTOK set (Albanian meme formats) ── */}
+    <Composition id="TkPriceInDm" component={TkPriceInDm} durationInFrames={TK_DM_FRAMES} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="TkOldLek" component={TkOldLek} durationInFrames={TK_LEK_FRAMES} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="TkPovSeller" component={TkPovSeller} durationInFrames={TK_POV_FRAMES} {...story} schema={mkSchema} defaultProps={mkDefaults} />
+    <Composition id="TkHaggle" component={TkHaggle} durationInFrames={TK_HAGGLE_FRAMES} {...story} schema={mkSchema} defaultProps={mkDefaults} />
   </>
 );
