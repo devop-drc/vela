@@ -5,9 +5,10 @@
  * backdrop) on browsers without VP9-alpha (Safari), where it renders as a
  * rounded card instead. Pauses offscreen; poster-only under reduced motion.
  *
- * Re-render:
- *   npx remotion render src/remotion.ts HeroFilm public/hero/hero-film.mp4 --codec=h264 --crf=22
- *   npx remotion render src/remotion.ts HeroFilm public/hero/hero-film.webm --codec=vp9 --image-format=png --pixel-format=yuva420p --props="{\"transparent\":true,\"lang\":\"sq\"}"
+ * Re-render (--scale=1.4 → 2240×1400 so the film stays crisp at the
+ * page's up-to-1.45× display scale on retina screens; props via FILE):
+ *   npx remotion render src/remotion.ts HeroFilm public/hero/hero-film.mp4 --codec=h264 --crf=22 --scale=1.4
+ *   npx remotion render src/remotion.ts HeroFilm public/hero/hero-film.webm --codec=vp9 --image-format=png --pixel-format=yuva420p --scale=1.4 --props=scripts/.herofilm-props.json
  */
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";

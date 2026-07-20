@@ -43,7 +43,12 @@ const CONTENT = { x: WIN.x, y: WIN.top + WIN.chrome, w: W - 2 * WIN.x, h: H - 2 
 
 const BRAND = { wine: "#A31234", deep: "#7F1D3B", neon: "#FF2E4D", amber: "#F59E0B", gold: "#FACC15", ink: "#2A1D22", muted: "#796770" };
 const GRAD = "linear-gradient(115deg,#7F1D3B,#A31234 40%,#FF2E4D 75%,#F59E0B 115%)";
-const TEXT_GRAD = "linear-gradient(100deg,#FACC15 5%,#F59E0B 30%,#FF2E4D 70%,#FF5A73 95%)";
+const TEXT_GRAD = "linear-gradient(100deg,#F59E0B 0%,#FF2E4D 55%,#A31234 100%)";
+// The landing's own surface language: warm white glass + ink text + soft
+// red-tinted shadows (the navbar / hero-badge look) — NOT dark panels.
+const GLASS = "rgba(255,251,250,0.88)";
+const GLASS_BORDER = "1px solid rgba(42,29,34,0.08)";
+const GLASS_SHADOW = "0 24px 70px -24px rgba(163,18,52,0.28)";
 
 const t = (l: "sq" | "en", sq: string, en: string) => (l === "sq" ? sq : en);
 const sp = (frame: number, delay = 0, damping = 13) => spring({ frame: frame - delay, fps: FPS, config: { damping, stiffness: 140, mass: 0.8 } });
@@ -96,7 +101,7 @@ const Caption: React.FC<{ text: string; local: number; dur: number }> = ({ text,
   const out = clamp01((local - (dur - 12)) / 10);
   return (
     <div style={{ position: "absolute", left: 0, right: 0, bottom: 22, display: "flex", justifyContent: "center", opacity: s * (1 - out) }}>
-      <div style={{ transform: `translateY(${(1 - s) * 18}px)`, display: "flex", alignItems: "center", gap: 12, background: "rgba(26,14,18,0.66)", color: "#fff", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 999, padding: "12px 28px", fontSize: 22, fontWeight: 600, letterSpacing: "-0.01em", fontFamily: "'Clash Display', Inter, sans-serif", boxShadow: "0 18px 50px -18px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)" }}>
+      <div style={{ transform: `translateY(${(1 - s) * 18}px)`, display: "flex", alignItems: "center", gap: 12, background: GLASS, color: BRAND.ink, border: GLASS_BORDER, borderRadius: 999, padding: "12px 28px", fontSize: 22, fontWeight: 600, letterSpacing: "-0.01em", fontFamily: "'Clash Display', Inter, sans-serif", boxShadow: GLASS_SHADOW }}>
         <span style={{ width: 9, height: 9, borderRadius: 99, background: GRAD, boxShadow: "0 0 12px rgba(255,46,77,0.8)" }} />
         {text}
       </div>
@@ -146,10 +151,10 @@ const ClickChip: React.FC<{ local: number; from: number; x: number; y: number; t
         transform: `translate(-50%, ${-46 - l * 1.15}px) scale(${0.6 + s * 0.4})`,
         opacity: s * (1 - fade),
         display: "flex", alignItems: "center", gap: 8,
-        background: "rgba(26,14,18,0.8)", color: "#6EE7A0",
-        border: "1px solid rgba(255,255,255,0.16)", borderRadius: 999, padding: "8px 18px",
+        background: GLASS, color: "#059669",
+        border: GLASS_BORDER, borderRadius: 999, padding: "8px 18px",
         fontSize: 19, fontWeight: 700, fontFamily: "'Clash Display', Inter, sans-serif",
-        boxShadow: "0 16px 40px -12px rgba(0,0,0,0.5)",
+        boxShadow: GLASS_SHADOW,
       }}
     >
       {text}
@@ -199,18 +204,18 @@ const OrderPing: React.FC<{ local: number; from: number; lang: "sq" | "en" }> = 
         position: "absolute", top: WIN.top + WIN.chrome + 18, right: WIN.x + 18, zIndex: 52,
         transform: `translateX(${(1 - s) * 140}px)`, opacity: s,
         display: "flex", alignItems: "center", gap: 12,
-        background: "rgba(26,14,18,0.82)", border: "1px solid rgba(255,255,255,0.15)",
+        background: GLASS, border: GLASS_BORDER,
         borderRadius: 18, padding: "13px 20px", fontFamily: "Inter, sans-serif",
-        boxShadow: "0 22px 60px -18px rgba(0,0,0,0.55)",
+        boxShadow: GLASS_SHADOW,
       }}
     >
-      <span style={{ position: "relative", display: "grid", placeItems: "center", width: 38, height: 38, borderRadius: 12, background: "rgba(255,46,77,0.16)" }}>
+      <span style={{ position: "relative", display: "grid", placeItems: "center", width: 38, height: 38, borderRadius: 12, background: "rgba(255,46,77,0.12)" }}>
         <span style={{ position: "absolute", inset: 0, borderRadius: 12, border: `1.5px solid ${BRAND.neon}`, opacity: Math.max(0, 1 - (l % 40) / 28), transform: `scale(${1 + ((l % 40) / 40) * 0.5})` }} />
         <span style={{ fontSize: 18 }}>🔔</span>
       </span>
       <div>
-        <div style={{ color: "#fff", fontSize: 16.5, fontWeight: 700 }}>{t(lang, "Porosi e re", "New order")}</div>
-        <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 13.5 }}>Atlete Vrapi Air · <b style={{ color: "#6EE7A0" }}>+11.900 L</b></div>
+        <div style={{ color: BRAND.ink, fontSize: 16.5, fontWeight: 700 }}>{t(lang, "Porosi e re", "New order")}</div>
+        <div style={{ color: BRAND.muted, fontSize: 13.5 }}>Atlete Vrapi Air · <b style={{ color: "#059669" }}>+11.900 L</b></div>
       </div>
     </div>
   );
@@ -236,9 +241,9 @@ const TypeBeat: React.FC<{ local: number; dur: number; lines: { text: string; gr
 
       <div style={{ position: "relative", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: 22 }}>
         {eyebrow && (
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "10px 24px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.18)", background: "rgba(26,14,18,0.72)", opacity: eb, transform: `translateY(${(1 - eb) * 14}px)`, boxShadow: "0 14px 40px -14px rgba(0,0,0,0.5)" }}>
-            <span style={{ width: 8, height: 8, borderRadius: 99, background: GRAD, boxShadow: "0 0 10px rgba(255,46,77,0.9)" }} />
-            <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.78)", fontFamily: "Inter, sans-serif" }}>{eyebrow}</span>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "10px 24px", borderRadius: 999, border: GLASS_BORDER, background: GLASS, opacity: eb, transform: `translateY(${(1 - eb) * 14}px)`, boxShadow: GLASS_SHADOW }}>
+            <span style={{ width: 8, height: 8, borderRadius: 99, background: GRAD, boxShadow: "0 0 10px rgba(255,46,77,0.7)" }} />
+            <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: BRAND.muted, fontFamily: "Inter, sans-serif" }}>{eyebrow}</span>
           </div>
         )}
 
@@ -258,15 +263,15 @@ const TypeBeat: React.FC<{ local: number; dur: number; lines: { text: string; gr
                 position: "relative",
                 width: "100%",
                 clipPath: `inset(0 ${clipR}% 0 ${clipL}%)`,
-                background: "rgba(26,14,18,0.72)",
-                borderTop: "1px solid rgba(255,255,255,0.13)",
-                borderBottom: "1px solid rgba(255,255,255,0.13)",
-                boxShadow: "0 30px 80px -30px rgba(20,10,14,0.6)",
+                background: GLASS,
+                borderTop: GLASS_BORDER,
+                borderBottom: GLASS_BORDER,
+                boxShadow: GLASS_SHADOW,
                 padding: "26px 0 34px",
               }}
             >
               {/* faint gradient edge running along the band */}
-              <div style={{ position: "absolute", inset: 0, background: `linear-gradient(${dir > 0 ? "90deg" : "270deg"}, rgba(255,46,77,0.14), transparent 30%)` }} />
+              <div style={{ position: "absolute", inset: 0, background: `linear-gradient(${dir > 0 ? "90deg" : "270deg"}, rgba(255,46,77,0.09), transparent 30%)` }} />
               <div
                 style={{
                   // gap must be px-scaled to the TYPE size — an em gap here
@@ -282,10 +287,9 @@ const TypeBeat: React.FC<{ local: number; dur: number; lines: { text: string; gr
                     style={{
                       display: "inline-block",
                       fontSize: size, fontWeight: 700, letterSpacing: "-0.025em",
-                      color: w.grad ? "transparent" : "#fff",
+                      color: w.grad ? "transparent" : BRAND.ink,
                       background: w.grad ? TEXT_GRAD : undefined,
                       WebkitBackgroundClip: w.grad ? "text" : undefined,
-                      textShadow: w.grad ? undefined : "0 6px 30px rgba(0,0,0,0.35)",
                     }}
                   >
                     {w.text}
@@ -571,11 +575,11 @@ export const HeroFilm: React.FC<z.infer<typeof heroFilmSchema>> = ({ lang, trans
                 opacity: endS,
                 transform: `translateY(${(1 - endS) * 40}px) scale(${0.92 + endS * 0.08})`,
                 textAlign: "center",
-                background: "rgba(26,14,18,0.62)",
-                border: "1px solid rgba(255,255,255,0.14)",
+                background: GLASS,
+                border: GLASS_BORDER,
                 borderRadius: 44,
                 padding: "50px 110px 54px",
-                boxShadow: "0 60px 160px -50px rgba(20,10,14,0.7), inset 0 1px 0 rgba(255,255,255,0.1)",
+                boxShadow: "0 60px 160px -50px rgba(163,18,52,0.35)",
               }}
             >
               <div style={{ position: "relative", width: 108, height: 108, margin: "0 auto" }}>
@@ -587,7 +591,7 @@ export const HeroFilm: React.FC<z.infer<typeof heroFilmSchema>> = ({ lang, trans
                 })}
                 <Img src={staticFile("vela-icon.svg")} style={{ width: 108, height: 108, borderRadius: 28, boxShadow: "0 30px 80px -25px rgba(255,46,77,0.5)" }} />
               </div>
-              <div style={{ marginTop: 24, fontSize: 72, fontWeight: 700, letterSpacing: "-0.02em", color: "#fff" }}>
+              <div style={{ marginTop: 24, fontSize: 72, fontWeight: 700, letterSpacing: "-0.02em", color: BRAND.ink }}>
                 Dyqani yt. <span style={{ background: TEXT_GRAD, WebkitBackgroundClip: "text", color: "transparent" }}>Online.</span>
               </div>
               {(() => {
@@ -608,7 +612,7 @@ export const HeroFilm: React.FC<z.infer<typeof heroFilmSchema>> = ({ lang, trans
                   </div>
                 );
               })()}
-              <div style={{ marginTop: 14, fontSize: 22, color: "rgba(255,255,255,0.72)", fontFamily: "Inter, sans-serif" }}>
+              <div style={{ marginTop: 14, fontSize: 22, color: BRAND.muted, fontFamily: "Inter, sans-serif" }}>
                 {t(lang, "7 ditë falas · pa kartë krediti", "7 days free · no credit card")}
               </div>
             </div>
