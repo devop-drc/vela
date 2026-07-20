@@ -44,7 +44,7 @@ const NightBg: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
 };
 
 /** RaiAccept badge — the trust anchor of the whole set. */
-const RaiBadge: React.FC<{ size?: number }> = ({ size = 26 }) => (
+export const RaiBadge: React.FC<{ size?: number }> = ({ size = 26 }) => (
   <div style={{ display: "inline-flex", alignItems: "center", gap: 14, background: RAI_YELLOW, borderRadius: 999, padding: `${size * 0.5}px ${size * 1.1}px`, boxShadow: "0 20px 50px -22px rgba(180,150,0,0.55)", fontFamily: SATOSHI }}>
     <span style={{ fontSize: size * 1.05 }}>🔒</span>
     <span style={{ fontWeight: 800, fontSize: size, color: "#151002" }}>
@@ -54,7 +54,7 @@ const RaiBadge: React.FC<{ size?: number }> = ({ size = 26 }) => (
 );
 
 /** Padlock whose shackle drops shut. */
-const Padlock: React.FC<{ closed: number; size?: number }> = ({ closed, size = 210 }) => (
+export const Padlock: React.FC<{ closed: number; size?: number }> = ({ closed, size = 210 }) => (
   <svg width={size} height={size} viewBox="0 0 120 120">
     <path
       d="M38 58 V40 a22 22 0 0 1 44 0 V58"
@@ -73,7 +73,7 @@ const FLOW = [
   ["🛡️", "RaiAccept"],
   ["✓", "Pagesa u krye"],
 ];
-const FlowRow: React.FC<{ frame: number; fps: number; from?: number; width?: number; still?: boolean }> = ({ frame, fps, from = 0, width = 880, still }) => {
+export const FlowRow: React.FC<{ frame: number; fps: number; from?: number; width?: number; still?: boolean }> = ({ frame, fps, from = 0, width = 880, still }) => {
   const dotLoop = still ? 0.5 : ((frame - from) % 70) / 70;
   const nodeW = 250;
   const gap = (width - nodeW * 3) / 2;

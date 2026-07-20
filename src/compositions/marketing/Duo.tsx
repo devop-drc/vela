@@ -29,7 +29,7 @@ const WINE = "#A31234";
 const SHADOW = "0 30px 70px -34px rgba(20,10,14,0.28)";
 
 /* raw canvases (no chrome) for layered/wiped comps */
-const NightBg: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
+export const NightBg: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const frame = useCurrentFrame();
   return (
     <AbsoluteFill style={{ background: BRAND.dark, fontFamily: SATOSHI }}>
@@ -39,7 +39,7 @@ const NightBg: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     </AbsoluteFill>
   );
 };
-const PaperBg: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
+export const PaperBg: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
   <AbsoluteFill style={{ background: CREAM, fontFamily: SATOSHI }}>
     <div style={{ position: "absolute", right: -260, top: -300, width: 940, height: 940, borderRadius: 999, background: "rgba(163,18,52,0.05)", filter: "blur(160px)" }} />
     <div style={{ position: "absolute", left: -300, bottom: -340, width: 980, height: 980, borderRadius: 999, background: "rgba(245,158,11,0.06)", filter: "blur(160px)" }} />
@@ -49,7 +49,7 @@ const PaperBg: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
 );
 
 /* DM bubble (the chaos side) */
-const Bubble: React.FC<{ text: string; style?: React.CSSProperties }> = ({ text, style }) => (
+export const Bubble: React.FC<{ text: string; style?: React.CSSProperties }> = ({ text, style }) => (
   <div style={{ display: "inline-block", background: "rgba(255,255,255,0.96)", color: "#222", borderRadius: 26, borderBottomLeftRadius: 8, padding: "18px 28px", fontSize: 27, fontWeight: 700, fontFamily: SATOSHI, boxShadow: "0 24px 60px -22px rgba(0,0,0,0.55)", ...style }}>
     {text}
   </div>
@@ -191,13 +191,13 @@ export const ReelDayWithVela: React.FC = () => {
 export const REEL_DAY_FRAMES = 370;
 
 /* ══ theme-morphing product card ════════════════════════════════════════ */
-const THEMES = [
+export const THEMES = [
   { name: "Vera", accent: WINE, btn: INK, badgeBg: "#EAF7EE", badgeFg: "#1E7C3F" },
   { name: "Deti", accent: "#0E7490", btn: "#0E7490", badgeBg: "#E0F2FE", badgeFg: "#0C4A6E" },
   { name: "Ari", accent: "#B45309", btn: "#B45309", badgeBg: "#FEF3C7", badgeFg: "#92400E" },
 ];
 
-const ThemedProduct: React.FC<{ theme: (typeof THEMES)[0]; width?: number }> = ({ theme, width = 580 }) => (
+export const ThemedProduct: React.FC<{ theme: (typeof THEMES)[0]; width?: number }> = ({ theme, width = 580 }) => (
   <div style={{ width, background: "#fff", borderRadius: 28, overflow: "hidden", border: `2px solid ${LINE}`, boxShadow: SHADOW, fontFamily: SATOSHI }}>
     {photoPanel(width * 0.44)}
     <div style={{ padding: "22px 26px", display: "flex", flexDirection: "column", gap: 13 }}>
@@ -213,7 +213,7 @@ const ThemedProduct: React.FC<{ theme: (typeof THEMES)[0]; width?: number }> = (
   </div>
 );
 
-const ThemeDots: React.FC<{ s1: number; s2: number }> = ({ s1, s2 }) => {
+export const ThemeDots: React.FC<{ s1: number; s2: number }> = ({ s1, s2 }) => {
   const ringX = 78 * s1 + 78 * s2; // dot spacing 78
   return (
     <div style={{ position: "relative", display: "flex", gap: 30 }}>
@@ -226,7 +226,7 @@ const ThemeDots: React.FC<{ s1: number; s2: number }> = ({ s1, s2 }) => {
 };
 
 /** Cross-faded theme stack: which theme shows follows the two springs. */
-const ThemeMorph: React.FC<{ s1: number; s2: number; width?: number }> = ({ s1, s2, width = 580 }) => {
+export const ThemeMorph: React.FC<{ s1: number; s2: number; width?: number }> = ({ s1, s2, width = 580 }) => {
   const ops = [1 - s1, s1 * (1 - s2), s2];
   return (
     <div style={{ position: "relative", width, height: width * 0.44 + 150 }}>

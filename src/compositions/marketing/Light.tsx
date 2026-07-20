@@ -32,7 +32,7 @@ const CARD = "#FFFFFF";
 const SHADOW = "0 30px 70px -34px rgba(20,10,14,0.28)";
 
 /** Paper canvas with ink chrome — the light twin of NightShell. */
-const LightShell: React.FC<{ children: React.ReactNode; reel?: boolean; chrome?: boolean; chromeFrom?: number }> = ({ children, reel, chrome = true, chromeFrom = 8 }) => {
+export const LightShell: React.FC<{ children: React.ReactNode; reel?: boolean; chrome?: boolean; chromeFrom?: number }> = ({ children, reel, chrome = true, chromeFrom = 8 }) => {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
   const inA = chromeFrom;
@@ -61,7 +61,7 @@ const LightShell: React.FC<{ children: React.ReactNode; reel?: boolean; chrome?:
 };
 
 /** Ink CTA pill — quiet twin of the gradient Cta. */
-const InkCta: React.FC<{ children: React.ReactNode; size?: number; style?: React.CSSProperties }> = ({ children, size = 40, style }) => (
+export const InkCta: React.FC<{ children: React.ReactNode; size?: number; style?: React.CSSProperties }> = ({ children, size = 40, style }) => (
   <div style={{ display: "inline-flex", alignItems: "center", gap: 16, padding: `${size * 0.62}px ${size * 1.4}px`, borderRadius: 999, background: INK, color: CREAM, fontFamily: CLASH, fontWeight: 600, fontSize: size, letterSpacing: "-0.01em", boxShadow: "0 26px 60px -26px rgba(20,10,14,0.55)", ...style }}>
     <span style={{ width: size * 0.3, height: size * 0.3, borderRadius: 99, backgroundImage: GRAD }} />
     {children}
@@ -209,7 +209,7 @@ export const REEL_MORPH_FRAMES = 372;
 /* ══ REEL 5 — the panel assembles itself ════════════════════════════════ */
 const NAV = ["Paneli", "Porositë", "Produktet", "Stoku", "Pagesat"];
 
-const PanelWindow: React.FC<{ frame: number; fps: number; from?: number; still?: boolean }> = ({ frame, fps, from = 0, still }) => {
+export const PanelWindow: React.FC<{ frame: number; fps: number; from?: number; still?: boolean }> = ({ frame, fps, from = 0, still }) => {
   const s = (d: number, cfg?: { damping?: number; stiffness?: number }) => (still ? 1 : springy(frame, fps, from + d, cfg));
   const on = still || frame >= from + 68; // shop toggle
   const shipped = still || frame >= from + 178;
