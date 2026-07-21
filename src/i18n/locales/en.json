@@ -1977,7 +1977,7 @@
     "tab_story": "Story",
     "tab_carousel": "Carousel",
     "tab_video": "Video",
-    "carousel_hint": "The first slide carries the full design; follow-ups stay cleaner.",
+    "carousel_hint": "One connected design — the ribbon, baseline and arrows flow across the slides as you swipe.",
     "video_soon": "Coming soon",
     "video_hint": "Videos currently publish plain; animated overlays are on the way.",
     "template_spotlight": "Spotlight",
@@ -1993,6 +1993,9 @@
     "zoom": "Zoom",
     "pos_x": "Position X",
     "pos_y": "Position Y",
-    "reset_media": "Reset"
+    "reset_media": "Reset",
+    "car_ribbon": "Ribbon",
+    "car_gallery": "Gallery",
+    "car_story_arc": "Story arc"
   }
 }

@@ -13,7 +13,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { useShop } from "@/contexts/ShopContext";
 import { useStudioSettings } from "@/hooks/useStudioSettings";
-import { renderTemplate, removeImageBackground, TEMPLATE_IDS, DEFAULT_TRANSFORM, type StudioSettings } from "@/lib/igStudio";
+import { renderTemplate, renderCarouselSlide, removeImageBackground, TEMPLATE_IDS, DEFAULT_TRANSFORM, type StudioSettings, type MediaKind, type CarouselTemplateId, type VideoTemplateId, type TemplateId } from "@/lib/igStudio";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Instagram, Clapperboard, RotateCcw, ImageIcon } from "lucide-react";
@@ -52,6 +52,28 @@ const TemplateCanvas = ({ settings, format, subject, shopName, className }: {
   return <canvas ref={ref} className={cn("h-auto w-full max-w-full rounded-lg", className)} />;
 };
 
+const CarouselCanvas = ({ settings, subject, shopName, index, count, className }: {
+  settings: StudioSettings; subject: typeof PLACEHOLDER; shopName: string; index: number; count: number; className?: string;
+}) => {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const t = setTimeout(() => {
+      if (!ref.current || cancelled) return;
+      renderCarouselSlide(ref.current, {
+        images: [subject.imageUrl], name: subject.name, price: subject.price,
+        currency: subject.currency, shopName, settings, slideCount: count,
+      }, index).catch(() => {});
+    }, 120);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [settings, subject, shopName, index, count]);
+  return <canvas ref={ref} className={cn("h-auto w-full max-w-full rounded-lg", className)} />;
+};
+
+const CAROUSEL_TEMPLATES: CarouselTemplateId[] = ["ribbon", "gallery", "story-arc"];
+const VIDEO_TEMPLATES: VideoTemplateId[] = ["gradient", "banner", "badge"];
+const MEDIA_KINDS: MediaKind[] = ["post", "story", "carousel", "video"];
+
 const InstagramStudio = () => {
   const { t } = useTranslation();
   const { userId } = useAuth();
@@ -60,6 +82,7 @@ const InstagramStudio = () => {
   const [rawSubject, setRawSubject] = useState(PLACEHOLDER);
   const [cutoutUrl, setCutoutUrl] = useState<string | null>(null);
   const [cutoutBusy, setCutoutBusy] = useState(false);
+  const [mediaKind, setMediaKind] = useState<MediaKind>("post");
   const shopName = shopDetails?.shop_name || "Vela Shop";
 
   // Prefer a real product of the merchant as the preview subject.
@@ -140,13 +163,13 @@ const InstagramStudio = () => {
                 <TemplateCanvas settings={settings} format="post" subject={subject} shopName={shopName} className="mx-auto max-w-md xl:max-w-none" />
               </TabsContent>
               <TabsContent value="story" className="mt-4">
-                <TemplateCanvas settings={settings} format="story" subject={subject} shopName={shopName} className="mx-auto max-w-[240px] sm:max-w-[280px]" />
+                <TemplateCanvas settings={{ ...settings, template: settings.storyTemplate }} format="story" subject={subject} shopName={shopName} className="mx-auto max-w-[240px] sm:max-w-[280px]" />
               </TabsContent>
               <TabsContent value="carousel" className="mt-4">
-                <div className="flex snap-x gap-3 overflow-x-auto pb-2">
-                  {[settings, { ...settings, showName: false }, { ...settings, showPrice: false, showName: false }].map((s, i) => (
-                    <div key={i} className="w-36 shrink-0 snap-start sm:w-44">
-                      <TemplateCanvas settings={s} format="post" subject={subject} shopName={shopName} />
+                <div className="flex snap-x gap-[2px] overflow-x-auto pb-2">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="w-40 shrink-0 snap-start sm:w-48">
+                      <CarouselCanvas settings={settings} subject={subject} shopName={shopName} index={i} count={3} className="rounded-none first:rounded-l-lg last:rounded-r-lg" />
                     </div>
                   ))}
                 </div>
@@ -181,24 +204,32 @@ const InstagramStudio = () => {
               <CardTitle>{t("ig_studio.templates")}</CardTitle>
               <CardDescription>{t("ig_studio.templates_desc")}</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-1.5">
+                {MEDIA_KINDS.map((k) => (
+                  <button key={k} type="button" onClick={() => setMediaKind(k)}
+                    className={cn("rounded-full px-3 py-1 text-xs font-medium transition-colors sm:text-sm",
+                      mediaKind === k ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground")}>
+                    {t(`ig_studio.tab_${k}`)}
+                  </button>
+                ))}
+              </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 2xl:grid-cols-4">
-                {TEMPLATE_IDS.map((id) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => set({ template: id })}
-                    className={cn(
-                      "group min-w-0 rounded-xl border-2 p-1.5 text-left transition-colors sm:p-2",
-                      settings.template === id ? "border-primary bg-primary/5" : "border-transparent hover:border-border"
-                    )}
-                  >
-                    <TemplateCanvas
-                      settings={{ ...settings, template: id }}
-                      format="post"
-                      subject={subject}
-                      shopName={shopName}
-                    />
+                {mediaKind === "carousel" ? CAROUSEL_TEMPLATES.map((id) => (
+                  <button key={id} type="button" onClick={() => set({ carouselTemplate: id })}
+                    className={cn("group min-w-0 rounded-xl border-2 p-1.5 text-left transition-colors sm:p-2",
+                      settings.carouselTemplate === id ? "border-primary bg-primary/5" : "border-transparent hover:border-border")}>
+                    <CarouselCanvas settings={{ ...settings, carouselTemplate: id }} subject={subject} shopName={shopName} index={0} count={3} />
+                    <p className="mt-1.5 truncate text-center text-xs font-medium sm:text-sm">{t(`ig_studio.car_${id.replace("-", "_")}`)}</p>
+                  </button>
+                )) : (mediaKind === "video" ? VIDEO_TEMPLATES : TEMPLATE_IDS).map((id) => (
+                  <button key={id} type="button"
+                    onClick={() => set(mediaKind === "post" ? { template: id as TemplateId } : mediaKind === "story" ? { storyTemplate: id as TemplateId } : { videoTemplate: id as VideoTemplateId })}
+                    className={cn("group min-w-0 rounded-xl border-2 p-1.5 text-left transition-colors sm:p-2",
+                      (mediaKind === "post" ? settings.template : mediaKind === "story" ? settings.storyTemplate : settings.videoTemplate) === id
+                        ? "border-primary bg-primary/5" : "border-transparent hover:border-border")}>
+                    <TemplateCanvas settings={{ ...settings, template: id as TemplateId }}
+                      format={mediaKind === "story" ? "story" : "post"} subject={subject} shopName={shopName} />
                     <p className="mt-1.5 truncate text-center text-xs font-medium sm:text-sm">{t(`ig_studio.template_${id}`)}</p>
                   </button>
                 ))}

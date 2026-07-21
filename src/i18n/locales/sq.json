@@ -1977,7 +1977,7 @@
     "tab_story": "Story",
     "tab_carousel": "Carousel",
     "tab_video": "Video",
-    "carousel_hint": "Slide-i i parë mban dizajnin e plotë; të tjerët qëndrojnë më të pastër.",
+    "carousel_hint": "Një dizajn i lidhur — fjongoja, vija dhe shigjetat rrjedhin nëpër slide-t kur bën swipe.",
     "video_soon": "Së shpejti",
     "video_hint": "Videot publikohen të thjeshta për momentin; overlay-t e animuara janë rrugës.",
     "template_spotlight": "Spotlight",
@@ -1993,6 +1993,9 @@
     "zoom": "Zmadhimi",
     "pos_x": "Pozicioni X",
     "pos_y": "Pozicioni Y",
-    "reset_media": "Rikthe"
+    "reset_media": "Rikthe",
+    "car_ribbon": "Fjongo",
+    "car_gallery": "Galeri",
+    "car_story_arc": "Hark tregimi"
   }
 }

@@ -29,8 +29,17 @@ export interface CaptionStyle {
   language: 'sq' | 'en';
 }
 
+export type CarouselTemplateId = 'ribbon' | 'gallery' | 'story-arc';
+export type VideoTemplateId = 'gradient' | 'banner' | 'badge';
+export type MediaKind = 'post' | 'story' | 'carousel' | 'video';
+
 export interface StudioSettings {
+  /** Post template (feed single image). */
   template: TemplateId;
+  /** Independent styles for the other three content types. */
+  storyTemplate: TemplateId;
+  carouselTemplate: CarouselTemplateId;
+  videoTemplate: VideoTemplateId;
   accent: string;
   showPrice: boolean;
   showName: boolean;
@@ -41,6 +50,9 @@ export interface StudioSettings {
 
 export const DEFAULT_STUDIO_SETTINGS: StudioSettings = {
   template: 'gradient',
+  storyTemplate: 'spotlight',
+  carouselTemplate: 'ribbon',
+  videoTemplate: 'gradient',
   accent: '#A31234',
   showPrice: true,
   showName: true,
@@ -442,4 +454,150 @@ export async function renderToJpegBlob(input: RenderInput): Promise<Blob> {
   return await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not export the design.'))), 'image/jpeg', 0.92)
   );
+}
+
+/* ══ Connected carousel ══════════════════════════════════════════════════
+ * Slides are windows into ONE virtual panorama (total width = n × 1080):
+ * the accent ribbon, baseline and swipe arrows are drawn in panorama
+ * coordinates and offset per slide, so every element flows seamlessly
+ * across slide boundaries when the viewer swipes. */
+
+export interface CarouselInput {
+  images: string[];              // one per slide (1-10); reused cyclically if short
+  name: string;
+  price: number | null;
+  currency: string;
+  shopName: string;
+  settings: StudioSettings;
+  slideCount?: number;           // default: images.length (min 2, max 10)
+}
+
+export async function renderCarouselSlide(canvas: HTMLCanvasElement, input: CarouselInput, index: number): Promise<void> {
+  const W = 1080, H = 1350;
+  const n = Math.min(Math.max(input.slideCount ?? input.images.length, 2), 10);
+  const total = W * n;
+  const off = index * W; // panorama → slide space: x_slide = x_pan - off
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
+  await ensureFonts();
+  const s = input.settings;
+  const accent = s.accent || '#A31234';
+  const tpl = s.carouselTemplate || 'ribbon';
+  const price = s.showPrice ? fmtPrice(input.price, input.currency) : '';
+  const isLast = index === n - 1;
+
+  // Shared canvas background per template family
+  const dark = tpl !== 'gallery';
+  ctx.fillStyle = dark ? '#140A0E' : '#FFFFFF';
+  ctx.fillRect(0, 0, W, H);
+
+  // Panorama-space diagonal ribbon (crosses every boundary)
+  if (tpl !== 'gallery') {
+    ctx.save();
+    ctx.translate(-off, 0);
+    const grad = ctx.createLinearGradient(0, 0, total, 0);
+    grad.addColorStop(0, accent);
+    grad.addColorStop(1, '#FF2E4D');
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = tpl === 'story-arc' ? 10 : 26;
+    ctx.beginPath();
+    if (tpl === 'story-arc') {
+      // gentle sine arc through the whole panorama
+      for (let x = 0; x <= total; x += 24) {
+        const y = H * 0.5 + Math.sin((x / total) * Math.PI * 2.2) * H * 0.16;
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+    } else {
+      ctx.moveTo(-60, H * 0.78);
+      ctx.lineTo(total + 60, H * 0.22);
+    }
+    ctx.globalAlpha = 0.9;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  // Media card per slide, slightly offset alternately so the flow feels alive
+  const img = await loadImage(proxied(input.images[index % input.images.length], 840, 900));
+  const cardW = tpl === 'gallery' ? 900 : 820;
+  const cardH = tpl === 'gallery' ? 980 : 880;
+  const cx = (W - cardW) / 2;
+  const cy = (H - cardH) / 2 + (tpl === 'gallery' ? 0 : (index % 2 === 0 ? -40 : 40));
+  ctx.save();
+  rounded(ctx, cx, cy, cardW, cardH, 28);
+  ctx.clip();
+  const cover = Math.max(cardW / img.width, cardH / img.height);
+  ctx.drawImage(img, cx + (cardW - img.width * cover) / 2, cy + (cardH - img.height * cover) / 2, img.width * cover, img.height * cover);
+  ctx.restore();
+  ctx.strokeStyle = dark ? 'rgba(255,255,255,0.16)' : 'rgba(20,10,14,0.1)';
+  ctx.lineWidth = 2;
+  rounded(ctx, cx, cy, cardW, cardH, 28);
+  ctx.stroke();
+
+  // Continuous baseline + slide counter dots (panorama-aware)
+  ctx.save();
+  ctx.translate(-off, 0);
+  ctx.fillStyle = dark ? 'rgba(255,255,255,0.25)' : 'rgba(20,10,14,0.18)';
+  ctx.fillRect(80, H - 96, total - 160, 4);
+  for (let i = 0; i < n; i++) {
+    ctx.beginPath();
+    ctx.arc(80 + ((total - 160) / (n - 1)) * i, H - 94, i === index ? 14 : 8, 0, Math.PI * 2);
+    ctx.fillStyle = i === index ? accent : (dark ? 'rgba(255,255,255,0.35)' : 'rgba(20,10,14,0.25)');
+    ctx.fill();
+  }
+  ctx.restore();
+
+  ctx.textBaseline = 'middle';
+  // Swipe arrow straddling the right boundary (not on the last slide)
+  if (!isLast) {
+    ctx.font = HEAD(64);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = accent;
+    ctx.fillText('⟶', W - 70, H / 2);
+  }
+
+  // Copy: name on slide 1, price + CTA on the last, shop pill on every slide
+  if (input.shopName && s.showLogo) {
+    ctx.font = BODY(28);
+    ctx.textAlign = 'center';
+    const tw = ctx.measureText(input.shopName).width;
+    ctx.fillStyle = dark ? 'rgba(255,255,255,0.12)' : 'rgba(20,10,14,0.06)';
+    rounded(ctx, (W - tw - 56) / 2, 40, tw + 56, 60, 999);
+    ctx.fill();
+    ctx.fillStyle = dark ? '#FFFFFF' : '#140A0E';
+    ctx.fillText(input.shopName, W / 2, 71);
+  }
+  if (index === 0 && s.showName && input.name) {
+    ctx.textAlign = 'left';
+    ctx.fillStyle = dark ? '#FFFFFF' : '#140A0E';
+    fitText(ctx, input.name, W - 200, HEAD, 60);
+    ctx.shadowColor = dark ? 'rgba(0,0,0,0.6)' : 'transparent';
+    ctx.shadowBlur = 16;
+    ctx.fillText(input.name, 88, cy + cardH - 60, cardW - 100);
+    ctx.shadowBlur = 0;
+  }
+  if (isLast && price) {
+    ctx.font = BODY(46);
+    const tw = ctx.measureText(price).width;
+    const pw = tw + 80, ph = 96;
+    ctx.fillStyle = accent;
+    rounded(ctx, (W - pw) / 2, cy + cardH - ph / 2, pw, ph, ph / 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textAlign = 'center';
+    ctx.fillText(price, W / 2, cy + cardH + 2);
+  }
+}
+
+/** Render every slide of the connected carousel as JPEG blobs. */
+export async function renderCarouselToBlobs(input: CarouselInput): Promise<Blob[]> {
+  const n = Math.min(Math.max(input.slideCount ?? input.images.length, 2), 10);
+  const out: Blob[] = [];
+  for (let i = 0; i < n; i++) {
+    const canvas = document.createElement('canvas');
+    await renderCarouselSlide(canvas, input, i);
+    out.push(await new Promise<Blob>((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error('export failed'))), 'image/jpeg', 0.92)));
+  }
+  return out;
 }
