@@ -1,6 +1,7 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { motion, useMotionValue, useTransform, LayoutGroup, AnimatePresence, type PanInfo } from "framer-motion";
+import gsap from "gsap";
+import { Draggable } from "gsap/Draggable";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -9,12 +10,14 @@ import { showError, showSuccess } from "@/utils/toast";
 import { cn } from "@/lib/utils";
 import { Image as ImageIcon, Clapperboard, X, Send } from "lucide-react";
 
+gsap.registerPlugin(Draggable);
+
 /**
  * "Choose what to generate and post" — bulk Instagram publishing.
- * Selected products sit in a center card stack (drag physics adapted from
- * the vendored React Bits Stack); dragging the top card onto one of the four
- * columns assigns its post type. Confirming queues the bulk-publish
- * background job, which then lives in the process widget.
+ * Selected products sit in a center card stack (React Bits Stack look, GSAP
+ * Draggable physics); dragging the top card onto one of the four columns
+ * assigns its post type via Draggable.hitTest. Confirming queues the
+ * bulk-publish background job, which then lives in the process widget.
  */
 
 export type BulkKind = "post_image" | "post_video" | "story_image" | "story_video";
@@ -27,58 +30,95 @@ const KINDS: Array<{ kind: BulkKind; group: "post" | "story"; icon: typeof Image
   { kind: "story_video", group: "story", icon: Clapperboard },
 ];
 
-/** Top card of the stack — React Bits Stack tilt physics + drop targeting. */
-const DraggableTopCard = ({ product, onDrop, onCycle }: {
-  product: BulkProduct;
-  onDrop: (point: { x: number; y: number }) => boolean;
-  onCycle: () => void;
-}) => {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const rotateX = useTransform(y, [-100, 100], [30, -30]);
-  const rotateY = useTransform(x, [-100, 100], [-30, 30]);
-
-  const handleDragEnd = (e: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    // Prefer the raw pointer's viewport coordinates; fall back to
-    // framer's page-based info.point corrected for scroll.
-    const pe = e as PointerEvent;
-    const point = typeof pe.clientX === 'number' && (pe.clientX || pe.clientY)
-      ? { x: pe.clientX, y: pe.clientY }
-      : { x: info.point.x - window.scrollX, y: info.point.y - window.scrollY };
-    const dropped = onDrop(point);
-    if (!dropped) {
-      if (Math.abs(info.offset.x) > 160 || Math.abs(info.offset.y) > 160) onCycle();
-      x.set(0);
-      y.set(0);
-    }
-  };
-
-  return (
-    <motion.div
-      layoutId={`bp-${product.id}`}
-      className="absolute inset-0 cursor-grab active:cursor-grabbing"
-      style={{ x, y, rotateX, rotateY, zIndex: 30 }}
-      drag
-      dragConstraints={{ top: 0, right: 0, bottom: 0, left: 0 }}
-      dragElastic={0.9}
-      whileTap={{ scale: 1.06 }}
-      onDragEnd={handleDragEnd}
-    >
-      <CardFace product={product} />
-    </motion.div>
-  );
-};
-
 const CardFace = ({ product }: { product: BulkProduct }) => (
-  <div className="h-full w-full overflow-hidden rounded-2xl border bg-card shadow-xl">
+  <div className="relative h-full w-full overflow-hidden rounded-2xl border bg-card shadow-xl">
     {product.media_url
-      ? <img src={product.media_url} alt="" className="pointer-events-none h-full w-full object-cover" draggable={false} />
+      ? <img src={product.media_url} alt="" className="pointer-events-none h-full w-full select-none object-cover" draggable={false} />
       : <div className="grid h-full w-full place-items-center bg-muted text-xs text-muted-foreground">{product.name}</div>}
     <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-8">
       <p className="truncate text-xs font-semibold text-white">{product.name}</p>
     </div>
   </div>
 );
+
+/**
+ * Top card: GSAP Draggable with the React Bits Stack tilt (rotation follows
+ * displacement). On release, Draggable.hitTest against the four zones decides
+ * assignment; a big fling with no hit cycles the stack.
+ */
+const DraggableTopCard = ({ product, zones, onAssign, onCycle }: {
+  product: BulkProduct;
+  zones: () => Array<{ kind: BulkKind; el: HTMLDivElement | null }>;
+  onAssign: (kind: BulkKind, doneTween: gsap.core.Tween | null) => void;
+  onCycle: () => void;
+}) => {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const qRotX = gsap.quickTo(el, "rotationX", { duration: 0.2, ease: "power2.out" });
+    const qRotY = gsap.quickTo(el, "rotationY", { duration: 0.2, ease: "power2.out" });
+    const [drag] = Draggable.create(el, {
+      type: "x,y",
+      zIndexBoost: false,
+      onPress() { gsap.to(el, { scale: 1.06, duration: 0.18, ease: "power2.out" }); },
+      onDrag() {
+        qRotX(gsap.utils.clamp(-30, 30, -this.y * 0.25));
+        qRotY(gsap.utils.clamp(-30, 30, this.x * 0.25));
+      },
+      onRelease() {
+        gsap.to(el, { scale: 1, duration: 0.18 });
+        const hit = zones().find((z) => z.el && this.hitTest(z.el, "40%"));
+        if (hit) {
+          // shrink toward the drop point, then hand over to the chip pop-in
+          const tween = gsap.to(el, { scale: 0.25, opacity: 0, duration: 0.28, ease: "power3.in" });
+          onAssign(hit.kind, tween);
+          return;
+        }
+        const flung = Math.abs(this.x) > 160 || Math.abs(this.y) > 160;
+        gsap.to(el, {
+          x: 0, y: 0, rotationX: 0, rotationY: 0,
+          duration: 0.55, ease: "elastic.out(1, 0.55)",
+          onComplete: () => { if (flung) onCycle(); },
+        });
+      },
+    });
+    return () => { drag.kill(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
+
+  return (
+    <div ref={ref} className="absolute inset-0 z-30 cursor-grab touch-none active:cursor-grabbing" style={{ transformStyle: "preserve-3d" }}>
+      <CardFace product={product} />
+    </div>
+  );
+};
+
+/** Column chip that pops in when a product lands. */
+const AssignedChip = ({ product, onRemove }: { product: BulkProduct; onRemove: () => void }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (ref.current) {
+      gsap.fromTo(ref.current, { scale: 0.4, opacity: 0, y: -10 }, { scale: 1, opacity: 1, y: 0, duration: 0.45, ease: "back.out(1.8)" });
+    }
+  }, []);
+  return (
+    <div ref={ref} className="group relative flex items-center gap-1.5 rounded-lg border bg-card p-1 shadow-sm">
+      {product.media_url
+        ? <img src={product.media_url} alt="" className="h-9 w-9 rounded-md object-cover" />
+        : <span className="grid h-9 w-9 place-items-center rounded-md bg-muted text-[9px]">{product.name.slice(0, 2)}</span>}
+      <span className="min-w-0 flex-1 truncate text-[11px] font-medium">{product.name}</span>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  );
+};
 
 export const BulkPublishModal = ({ open, onOpenChange, products, onQueued }: {
   open: boolean;
@@ -104,26 +144,21 @@ export const BulkPublishModal = ({ open, onOpenChange, products, onQueued }: {
   }
 
   const totalAssigned = KINDS.reduce((n, k) => n + assigned[k.kind].length, 0);
+  const zoneList = () => KINDS.map(({ kind }) => ({ kind, el: zoneRefs.current[kind] ?? null }));
 
-  const dropTopCard = (point: { x: number; y: number }): boolean => {
-    const px = point.x;
-    const py = point.y;
-    for (const { kind } of KINDS) {
-      const el = zoneRefs.current[kind];
-      if (!el) continue;
-      const r = el.getBoundingClientRect();
-      if (px >= r.left && px <= r.right && py >= r.top && py <= r.bottom) {
-        // Assignment must happen OUTSIDE the setStack updater (updaters must
-        // be pure — nested setState inside one is dropped in production).
-        const top = stack[0];
+  const assignTop = (kind: BulkKind, doneTween: gsap.core.Tween | null) => {
+    const finish = () => {
+      setStack((s) => {
+        const top = s[0];
         if (top) {
-          setStack((s) => s.slice(1));
-          setAssigned((a) => ({ ...a, [kind]: [...a[kind], top] }));
+          // queue outside this updater tick — updaters must stay pure
+          queueMicrotask(() => setAssigned((a) => ({ ...a, [kind]: [...a[kind], top] })));
         }
-        return true;
-      }
-    }
-    return false;
+        return s.slice(1);
+      });
+    };
+    if (doneTween) doneTween.eventCallback("onComplete", finish);
+    else finish();
   };
 
   const cycleStack = () => setStack((s) => (s.length > 1 ? [...s.slice(1), s[0]] : s));
@@ -164,28 +199,9 @@ export const BulkPublishModal = ({ open, onOpenChange, products, onQueued }: {
           "hover:border-primary/40"
         )}
       >
-        <AnimatePresence>
-          {assigned[kind].map((p) => (
-            <motion.div
-              key={p.id}
-              layoutId={`bp-${p.id}`}
-              initial={false}
-              className="group relative flex items-center gap-1.5 rounded-lg border bg-card p-1 shadow-sm"
-            >
-              {p.media_url
-                ? <img src={p.media_url} alt="" className="h-9 w-9 rounded-md object-cover" />
-                : <span className="grid h-9 w-9 place-items-center rounded-md bg-muted text-[9px]">{p.name.slice(0, 2)}</span>}
-              <span className="min-w-0 flex-1 truncate text-[11px] font-medium">{p.name}</span>
-              <button
-                type="button"
-                onClick={() => unassign(kind, p)}
-                className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        {assigned[kind].map((p) => (
+          <AssignedChip key={p.id} product={p} onRemove={() => unassign(kind, p)} />
+        ))}
       </div>
     </div>
   );
@@ -198,59 +214,56 @@ export const BulkPublishModal = ({ open, onOpenChange, products, onQueued }: {
           <DialogDescription>{t("bulk_publish.subtitle")}</DialogDescription>
         </DialogHeader>
 
-        <LayoutGroup>
-          <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-[1fr_auto_1fr]">
-            {/* Post group */}
-            <div className="min-w-0">
-              <p className="mb-1.5 text-center font-semibold">{t("bulk_publish.group_post")}</p>
-              <div className="flex gap-2">
-                <Column kind="post_image" icon={ImageIcon} />
-                <Column kind="post_video" icon={Clapperboard} />
-              </div>
-            </div>
-
-            {/* Center stack (React Bits Stack physics) */}
-            <div className="flex flex-col items-center gap-3 self-center justify-self-center md:pt-10" style={{ perspective: 700 }}>
-              <div className="relative h-48 w-40 sm:h-56 sm:w-48">
-                {stack.length === 0 ? (
-                  <div className="grid h-full w-full place-items-center rounded-2xl border-2 border-dashed text-center text-xs text-muted-foreground">
-                    {t("bulk_publish.stack_empty")}
-                  </div>
-                ) : (
-                  stack.slice(0, 4).reverse().map((p, revIdx, arr) => {
-                    const idx = arr.length - 1 - revIdx; // 0 = top
-                    return idx === 0 ? (
-                      <DraggableTopCard key={p.id} product={p} onDrop={dropTopCard} onCycle={cycleStack} />
-                    ) : (
-                      <motion.div
-                        key={p.id}
-                        layoutId={`bp-${p.id}`}
-                        className="absolute inset-0"
-                        animate={{ rotate: idx % 2 === 0 ? idx * 3 : idx * -3, scale: 1 - idx * 0.05, y: idx * 6 }}
-                        transition={{ type: "spring", stiffness: 260, damping: 22 }}
-                        style={{ zIndex: 20 - idx }}
-                      >
-                        <CardFace product={p} />
-                      </motion.div>
-                    );
-                  })
-                )}
-              </div>
-              <p className="max-w-[180px] text-center text-[11px] leading-snug text-muted-foreground">
-                {t("bulk_publish.stack_hint", { count: stack.length })}
-              </p>
-            </div>
-
-            {/* Story/Reel group */}
-            <div className="min-w-0">
-              <p className="mb-1.5 text-center font-semibold">{t("bulk_publish.group_story")}</p>
-              <div className="flex gap-2">
-                <Column kind="story_image" icon={ImageIcon} />
-                <Column kind="story_video" icon={Clapperboard} />
-              </div>
+        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-[1fr_auto_1fr]">
+          {/* Post group */}
+          <div className="min-w-0">
+            <p className="mb-1.5 text-center font-semibold">{t("bulk_publish.group_post")}</p>
+            <div className="flex gap-2">
+              <Column kind="post_image" icon={ImageIcon} />
+              <Column kind="post_video" icon={Clapperboard} />
             </div>
           </div>
-        </LayoutGroup>
+
+          {/* Center stack */}
+          <div className="flex flex-col items-center gap-3 self-center justify-self-center md:pt-10" style={{ perspective: 700 }}>
+            <div className="relative h-48 w-40 sm:h-56 sm:w-48">
+              {stack.length === 0 ? (
+                <div className="grid h-full w-full place-items-center rounded-2xl border-2 border-dashed text-center text-xs text-muted-foreground">
+                  {t("bulk_publish.stack_empty")}
+                </div>
+              ) : (
+                stack.slice(0, 4).map((p, idx) =>
+                  idx === 0 ? (
+                    <DraggableTopCard key={p.id} product={p} zones={zoneList} onAssign={assignTop} onCycle={cycleStack} />
+                  ) : (
+                    <div
+                      key={p.id}
+                      className="absolute inset-0 transition-transform duration-300"
+                      style={{
+                        transform: `rotate(${idx % 2 === 0 ? idx * 3 : idx * -3}deg) scale(${1 - idx * 0.05}) translateY(${idx * 6}px)`,
+                        zIndex: 20 - idx,
+                      }}
+                    >
+                      <CardFace product={p} />
+                    </div>
+                  )
+                )
+              )}
+            </div>
+            <p className="max-w-[180px] text-center text-[11px] leading-snug text-muted-foreground">
+              {t("bulk_publish.stack_hint", { count: stack.length })}
+            </p>
+          </div>
+
+          {/* Story/Reel group */}
+          <div className="min-w-0">
+            <p className="mb-1.5 text-center font-semibold">{t("bulk_publish.group_story")}</p>
+            <div className="flex gap-2">
+              <Column kind="story_image" icon={ImageIcon} />
+              <Column kind="story_video" icon={Clapperboard} />
+            </div>
+          </div>
+        </div>
 
         <DialogFooter className="items-center gap-2 sm:justify-between">
           <p className="text-xs text-muted-foreground">
