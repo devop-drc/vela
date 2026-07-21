@@ -27,8 +27,8 @@ export interface SkippedItem {
 
 // This is the new summary structure from the backend
 export interface SyncJobSummary {
-  /** 'import' marks spreadsheet-import jobs (rendered separately in the widget). */
-  job_kind?: 'import';
+  /** Marks non-sync jobs (rendered separately in the process widget). */
+  job_kind?: 'import' | 'bulk_publish';
   failed?: number;
   created: number;
   updated: number;
@@ -61,8 +61,14 @@ export interface SyncContextType {
   activeJob: SyncJob | null;
   /** Spreadsheet import running in the background (independent of IG sync). */
   activeImportJob: SyncJob | null;
+  /** Bulk Instagram publishing job. */
+  bulkJob: SyncJob | null;
+  /** Active (or just-finished) Remotion video render jobs. */
+  videoJobs: any[];
   isSyncing: boolean;
   dismissJob: () => void;
   dismissImportJob: () => void;
+  dismissBulkJob: () => void;
+  dismissVideoJob: (id: string) => void;
   startNewSync: (jobId: string) => Promise<void>;
 }

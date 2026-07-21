@@ -2039,5 +2039,38 @@
     "pv_likes": "127 pëlqime",
     "pv_translation": "Shiko përkthimin",
     "pv_reply": "Dërgo mesazh…"
+  },
+  "bulk_publish": {
+    "action": "Posto në Instagram ({{count}})",
+    "title": "Zgjidh çfarë të gjenerohet e postohet",
+    "subtitle": "Tërhiq produktet nga grumbulli te kolona e llojit të postimit që do të gjenerojë sistemi.",
+    "group_post": "Post",
+    "group_story": "Story / Reel",
+    "col_image": "Foto",
+    "col_video": "Video",
+    "stack_empty": "Të gjitha produktet u caktuan ✓",
+    "stack_hint": "{{count}} të mbetura — tërhiq kartën e sipërme te një kolonë, ose hidhe për ta kaluar.",
+    "summary": "{{assigned}} të caktuara · {{remaining}} në grumbull",
+    "confirm": "Gjenero & posto {{count}}",
+    "queued": "Publikimi masiv nisi — ndiqe te procesit në widget.",
+    "queue_failed": "Nuk nisi dot: {{message}}"
+  },
+  "processes": {
+    "title": "Proceset në sfond",
+    "running": "{{count}} në punë",
+    "finished": "Proceset përfunduan",
+    "kind_sync": "Sinkronizim Instagrami",
+    "kind_import": "Importim skedari",
+    "kind_bulk_publish": "Publikim masiv në Instagram",
+    "kind_video": "Gjenerim videoje",
+    "details": "Detajet",
+    "abort": "Ndalo",
+    "aborted": "Procesi u ndal.",
+    "items": "artikuj",
+    "status_running": "Në punë…",
+    "status_completed": "Përfundoi",
+    "status_done": "Përfundoi",
+    "status_failed": "Dështoi",
+    "status_queued": "Në radhë"
   }
 }

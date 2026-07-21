@@ -2039,5 +2039,38 @@
     "pv_likes": "127 likes",
     "pv_translation": "See translation",
     "pv_reply": "Send message…"
+  },
+  "bulk_publish": {
+    "action": "Post to Instagram ({{count}})",
+    "title": "Choose what to generate and post",
+    "subtitle": "Drag products from the stack onto the column of the post type you want the system to generate.",
+    "group_post": "Post",
+    "group_story": "Story / Reel",
+    "col_image": "Image",
+    "col_video": "Video",
+    "stack_empty": "All products assigned ✓",
+    "stack_hint": "{{count}} left — drag the top card to a column, or fling it to cycle.",
+    "summary": "{{assigned}} assigned · {{remaining}} in the stack",
+    "confirm": "Generate & post {{count}}",
+    "queued": "Bulk publishing started — follow it in the process widget.",
+    "queue_failed": "Couldn't start: {{message}}"
+  },
+  "processes": {
+    "title": "Background processes",
+    "running": "{{count}} running",
+    "finished": "Processes finished",
+    "kind_sync": "Instagram sync",
+    "kind_import": "File import",
+    "kind_bulk_publish": "Bulk Instagram publish",
+    "kind_video": "Video render",
+    "details": "Details",
+    "abort": "Abort",
+    "aborted": "Process aborted.",
+    "items": "items",
+    "status_running": "Running…",
+    "status_completed": "Completed",
+    "status_done": "Completed",
+    "status_failed": "Failed",
+    "status_queued": "Queued"
   }
 }

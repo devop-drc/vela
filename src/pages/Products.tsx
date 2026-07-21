@@ -12,6 +12,7 @@ import { deleteProductMedia } from "@/lib/productCleanup";
 import { InstagramPostModal } from "@/components/InstagramPostModal";
 import { AddProductWizard } from "@/components/products/AddProductWizard";
 import { ImportProductsDialog } from "@/components/products/ImportProductsDialog";
+import { BulkPublishModal, type BulkProduct } from "@/components/products/BulkPublishModal";
 import { ProductEditor } from "@/components/ProductEditor";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductTableView } from "@/components/ProductTableView";
@@ -119,6 +120,7 @@ const Products = () => {
   const [isImporterOpen, setIsImporterOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isFileImportOpen, setIsFileImportOpen] = useState(false);
+  const [bulkPublishOpen, setBulkPublishOpen] = useState(false);
   const [promptIgForNew, setPromptIgForNew] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
@@ -543,6 +545,14 @@ const Products = () => {
         open={isFileImportOpen}
         onOpenChange={setIsFileImportOpen}
         onImported={() => { invalidateStorefrontCache(); refetch(); }}
+      />
+      <BulkPublishModal
+        open={bulkPublishOpen}
+        onOpenChange={setBulkPublishOpen}
+        products={allProducts
+          .filter(p => selectedProducts.includes(p.id) && !(p as any).instagram_post_id)
+          .map(p => ({ id: p.id, name: p.name, media_url: (p as any).media_url ?? null })) as BulkProduct[]}
+        onQueued={() => { setSelectedProducts([]); }}
       />
       <ProductEditor
         isOpen={!!selectedProduct}
@@ -994,6 +1004,8 @@ const Products = () => {
             onSetStatus={handleBulkStatusChange}
             onDelete={() => setBulkDeleteConfirm(true)}
             onAddSale={() => setIsSaleModalOpen(true)}
+            unpostedCount={allProducts.filter(p => selectedProducts.includes(p.id) && !(p as any).instagram_post_id).length}
+            onBulkPublish={() => setBulkPublishOpen(true)}
           />
         )}
       </AnimatePresence>

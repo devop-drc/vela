@@ -31,9 +31,12 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
   }, []);
   const [activeJob, setActiveJob] = useState<SyncJob | null>(null);
   const [activeImportJob, setActiveImportJob] = useState<SyncJob | null>(null);
+  const [bulkJob, setBulkJob] = useState<SyncJob | null>(null);
+  const [videoJobs, setVideoJobs] = useState<any[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
 
   const isImportJob = (j: SyncJob | null | undefined) => j?.summary?.job_kind === 'import';
+  const isBulkJob = (j: SyncJob | null | undefined) => (j?.summary as any)?.job_kind === 'bulk_publish';
 
   // Fetch active sync jobs for the current user
   const fetchActiveJob = useCallback(async () => {
@@ -53,11 +56,21 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
         return;
       }
 
-      const syncJob = (data || []).find((j: SyncJob) => !isImportJob(j)) ?? null;
+      const syncJob = (data || []).find((j: SyncJob) => !isImportJob(j) && !isBulkJob(j)) ?? null;
       const importJob = (data || []).find((j: SyncJob) => isImportJob(j)) ?? null;
       setActiveJob(syncJob);
       setActiveImportJob(importJob);
+      setBulkJob((data || []).find((j: SyncJob) => isBulkJob(j)) ?? null);
       setIsSyncing(Boolean(syncJob));
+
+      const { data: vids } = await supabase
+        .from('video_render_jobs')
+        .select('*')
+        .eq('user_id', user.id)
+        .in('status', ['queued', 'rendering'])
+        .order('created_at', { ascending: false })
+        .limit(5);
+      setVideoJobs(vids || []);
     } catch (error) {
       console.error('Error in fetchActiveJob:', error);
       setIsSyncing(false);
@@ -90,6 +103,8 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
             const job = { ...payload.new } as SyncJob;
             if (isImportJob(job)) {
               setActiveImportJob(job);
+            } else if (isBulkJob(job)) {
+              setBulkJob(job);
             } else {
               setActiveJob(job);
               setIsSyncing(['starting', 'in_progress'].includes(job.status));
@@ -98,6 +113,21 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
             const gone = payload.old as { id?: string };
             setActiveJob((j) => (j && j.id === gone?.id ? null : j));
             setActiveImportJob((j) => (j && j.id === gone?.id ? null : j));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'video_render_jobs', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          if (['INSERT', 'UPDATE'].includes(payload.eventType)) {
+            const vj = { ...payload.new } as any;
+            setVideoJobs((prev) => {
+              const rest = prev.filter((j) => j.id !== vj.id);
+              return ['queued', 'rendering'].includes(vj.status) || ['done', 'failed'].includes(vj.status)
+                ? [vj, ...rest].slice(0, 5)
+                : rest;
+            });
           }
         }
       )
@@ -132,12 +162,19 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
     // Real-time subscription will replace this with actual data from DB
   }, [user]);
 
+  const dismissBulkJob = useCallback(() => setBulkJob(null), []);
+  const dismissVideoJob = useCallback((id: string) => setVideoJobs((prev) => prev.filter((j) => j.id !== id)), []);
+
   const contextValue: SyncContextType = {
     activeJob,
     activeImportJob,
+    bulkJob,
+    videoJobs,
     isSyncing,
     dismissJob,
     dismissImportJob,
+    dismissBulkJob,
+    dismissVideoJob,
     startNewSync
   };
 

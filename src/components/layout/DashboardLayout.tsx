@@ -9,7 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { motion } from "framer-motion";
 import { useShop } from "@/contexts/ShopContext";
 import { Suspense, useEffect, useState } from "react";
-import { SyncStatusWidget } from "./SyncStatusWidget";
+import { ProcessesWidget } from "./ProcessesWidget";
 import NotificationSidebar from "./NotificationSidebar";
 import { VelaChat } from "@/components/VelaChat";
 import { useAppearance } from "@/contexts/AppearanceContext";
@@ -189,7 +189,7 @@ const DashboardLayout = () => {
             <MessageCircle className="h-5 w-5" aria-hidden="true" />
           </Link>
         )}
-        <SyncStatusWidget />
+        <ProcessesWidget />
         {/* JS conditional (not CSS hidden) so exactly one instance mounts —
             each mounted NotificationSidebar opens its own realtime channels. */}
         {isMobile ? (
