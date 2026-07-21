@@ -468,6 +468,27 @@ export const StorefrontProvider = ({ children }: { children: ReactNode }) => {
     fetchStorefrontData(1); // Initial fetch on mount or shopSlug change
   }, [fetchStorefrontData]);
 
+  // Revalidate when the tab regains focus so an already-open storefront picks
+  // up design or catalog changes without a manual reload (the mount fetch above
+  // otherwise runs only once). Throttled so focus/blur cycling can't spam the
+  // backend; the cached snapshot keeps it flicker-free.
+  useEffect(() => {
+    let last = Date.now();
+    const revalidate = () => {
+      if (document.visibilityState === 'hidden') return;
+      const now = Date.now();
+      if (now - last < 30_000) return;
+      last = now;
+      fetchStorefrontData(1);
+    };
+    window.addEventListener('focus', revalidate);
+    document.addEventListener('visibilitychange', revalidate);
+    return () => {
+      window.removeEventListener('focus', revalidate);
+      document.removeEventListener('visibilitychange', revalidate);
+    };
+  }, [fetchStorefrontData]);
+
   const convertCurrency = useCallback((amount: number | null | undefined, fromCurrency?: string) => {
     const numericAmount = amount ?? 0;
     if (!shopDetails || !exchangeRates || !shopDetails.currency) {

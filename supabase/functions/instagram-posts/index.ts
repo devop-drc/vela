@@ -176,11 +176,16 @@ serve(async (req) => {
         mediaUrl = pageData.paging?.next || null;
     }
 
+    // If the loop stopped because it hit the page cap (not because it ran out
+    // of pages), the media list is incomplete. Callers that diff this list to
+    // detect deletions MUST NOT treat missing posts as deleted in that case.
+    const truncated = mediaUrl !== null;
+
     // 4. Upload media to Supabase Storage and replace URLs
     // Skip upload if called with skip_upload flag (e.g., during sync — uses Instagram CDN URLs directly)
     const skipUpload = body?.skip_upload === true;
     if (skipUpload) {
-      return new Response(JSON.stringify({ posts: allMedia }), {
+      return new Response(JSON.stringify({ posts: allMedia, truncated }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });

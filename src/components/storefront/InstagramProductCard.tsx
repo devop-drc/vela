@@ -3,6 +3,7 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formatters";
+import { activePromotionsFor, computePrice, promotionBadgeLabel } from "@/storefront/lib/pricing";
 import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { Reveal } from "@/lib/anim";
@@ -63,50 +64,11 @@ export const InstagramProductCard = ({
 
   const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && product.inventory <= 0);
 
-  const activePromotions = effectivePromotions.filter(promo => {
-    if (!promo.is_active) return false;
-    const now = new Date();
-    const startDate = promo.start_date ? new Date(promo.start_date) : null;
-    const endDate = promo.end_date ? new Date(promo.end_date) : null;
+  const activePromotions = activePromotionsFor(effectivePromotions as any, product.id);
+  const { discounted: discountedPrice, hasDiscount } = computePrice(originalDisplayPrice, activePromotions);
 
-    if (startDate && now < startDate) return false;
-    if (endDate && now > endDate) return false;
-
-    if (promo.target_products && promo.target_products.length > 0) {
-      return promo.target_products.includes(product.id);
-    }
-    return true;
-  });
-
-  let discountedPrice = originalDisplayPrice;
-  let hasDiscount = false;
-
-  if (activePromotions.length > 0 && originalDisplayPrice !== null) {
-    const firstDiscount = activePromotions.find(p => p.type === 'discount');
-    if (firstDiscount && firstDiscount.value) {
-      if (firstDiscount.value.discountType === 'percentage') {
-        discountedPrice = originalDisplayPrice * (1 - firstDiscount.value.discountValue / 100);
-        hasDiscount = true;
-      } else if (firstDiscount.value.discountType === 'flat') {
-        discountedPrice = originalDisplayPrice - firstDiscount.value.discountValue;
-        hasDiscount = true;
-      }
-      discountedPrice = Math.max(0, discountedPrice);
-    }
-  }
-
-  const getPromotionBadge = (promo: any) => {
-    switch (promo.type) {
-      case 'discount':
-        if (promo.value?.discountType === 'percentage') return `${promo.value.discountValue}% OFF`;
-        if (promo.value?.discountType === 'flat') return `-${formatCurrency(promo.value.discountValue, effectiveShopDetails?.currency)} OFF`;
-        return 'Discount';
-      case 'offer':
-        if (promo.value?.offerType === 'free_shipping') return 'Free Shipping';
-        return 'Offer';
-      default: return null;
-    }
-  };
+  const getPromotionBadge = (promo: any) =>
+    promotionBadgeLabel(promo, undefined, (v) => formatCurrency(v, effectiveShopDetails?.currency));
 
   if (!effectiveShopDetails) {
     return null;

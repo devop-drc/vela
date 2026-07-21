@@ -43,10 +43,17 @@ export const computePrice = (
   return { original, discounted: d, hasDiscount: d !== original };
 };
 
-export const promotionBadgeLabel = (p: PromotionLike, currencySymbol = ''): string | null => {
+export const promotionBadgeLabel = (
+  p: PromotionLike,
+  currencySymbol = '',
+  /** Optional formatter for the flat-discount amount (e.g. a full
+      `formatCurrency`). Defaults to a bare `${symbol}${value}` prefix. */
+  formatAmount?: (value: number) => string,
+): string | null => {
+  const money = formatAmount ?? ((v: number) => `${currencySymbol}${v}`);
   if (p.type === 'discount') {
     if (p.value?.discountType === 'percentage') return `${p.value.discountValue}% OFF`;
-    if (p.value?.discountType === 'flat') return `-${currencySymbol}${p.value.discountValue} OFF`;
+    if (p.value?.discountType === 'flat') return `-${money(p.value.discountValue)} OFF`;
     return 'Discount';
   }
   if (p.type === 'offer') return p.value?.offerType === 'free_shipping' ? 'Free Shipping' : 'Offer';

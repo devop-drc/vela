@@ -16,9 +16,9 @@ import {
   type StudioSettings, type MediaKind, type CarouselTemplateId, type TemplateId,
 } from "@/lib/igStudio";
 import { IgChoices } from "@/components/products/IgStudioGlyphs";
+import { IgPostChrome } from "@/components/products/IgPostChrome";
 import {
-  Instagram, RotateCcw, ImageIcon, Heart, MessageCircle, Send, Bookmark,
-  MoreHorizontal, Palette, Sun, Moon, Type,
+  Instagram, RotateCcw, ImageIcon, Palette, Sun, Moon, Type,
 } from "lucide-react";
 
 const ACCENT_PRESETS = ["#A31234", "#FF2E4D", "#C9A227", "#140A0E", "#1D4ED8", "#047857"];
@@ -90,72 +90,6 @@ const sampleCaption = (s: StudioSettings, subject: Subject, shopName: string, sl
     ["#" + shopName.toLowerCase().replace(/\s+/g, ""), "#dyqanionline", "#blerjeonline", "#shqiperi", "#porosit", "#moda", "#tirana", "#vela"][i]
   ).filter(Boolean).join(" ");
   return { text: `${hook}\n${body}\n${cta}`, tags };
-};
-
-/* ── realistic Instagram preview chrome ── */
-const IgChrome = ({ handle, logoUrl, children, caption, tags, kind, slideCount }: {
-  handle: string; logoUrl?: string | null; children: React.ReactNode;
-  caption: string; tags: string; kind: MediaKind; slideCount?: number;
-}) => {
-  const { t } = useTranslation();
-  const avatar = logoUrl
-    ? <img src={logoUrl} alt="" className="h-full w-full object-cover" />
-    : <div className="grid h-full w-full place-items-center bg-primary/15 text-[10px] font-bold text-primary">{handle.slice(0, 2).toUpperCase()}</div>;
-  const fullscreen = kind === "story";
-  return (
-    <div className="mx-auto w-full max-w-[340px] overflow-hidden rounded-2xl border bg-background shadow-lg">
-      {!fullscreen && (
-        <div className="flex items-center gap-2 px-3 py-2">
-          <span className="h-8 w-8 overflow-hidden rounded-full ring-2 ring-pink-500/60 ring-offset-1">{avatar}</span>
-          <span className="text-sm font-semibold">{handle}</span>
-          <MoreHorizontal className="ml-auto h-4 w-4 text-muted-foreground" />
-        </div>
-      )}
-      <div className="relative">
-        {children}
-        {fullscreen && (
-          <>
-            <div className="absolute inset-x-2 top-2 flex gap-1">
-              <div className="h-0.5 flex-1 rounded bg-white" /><div className="h-0.5 flex-1 rounded bg-white/40" />
-            </div>
-            <div className="absolute left-2 top-4 flex items-center gap-2">
-              <span className="h-7 w-7 overflow-hidden rounded-full">{avatar}</span>
-              <span className="text-xs font-semibold text-white drop-shadow">{handle}</span>
-              <span className="text-[10px] text-white/70">2h</span>
-            </div>
-            <div className="absolute inset-x-4 bottom-3 flex items-center gap-2">
-              <div className="flex-1 rounded-full border border-white/60 px-3 py-1.5 text-xs text-white/80">{t("ig_studio.pv_reply")}</div>
-              <Heart className="h-5 w-5 text-white" /><Send className="h-5 w-5 text-white" />
-            </div>
-          </>
-        )}
-        {kind === "carousel" && slideCount ? (
-          <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white">1/{slideCount}</span>
-        ) : null}
-      </div>
-      {!fullscreen && (
-        <div className="space-y-1.5 px-3 py-2.5">
-          <div className="flex items-center gap-3.5">
-            <Heart className="h-5 w-5" /><MessageCircle className="h-5 w-5" /><Send className="h-5 w-5" />
-            {kind === "carousel" && (
-              <span className="mx-auto flex gap-1">
-                {Array.from({ length: Math.min(slideCount ?? 3, 6) }).map((_, i) => (
-                  <span key={i} className={cn("h-1.5 w-1.5 rounded-full", i === 0 ? "bg-primary" : "bg-muted-foreground/40")} />
-                ))}
-              </span>
-            )}
-            <Bookmark className="ml-auto h-5 w-5" />
-          </div>
-          <p className="text-xs font-semibold">{t("ig_studio.pv_likes")}</p>
-          <p className="whitespace-pre-line text-xs leading-snug">
-            <span className="font-semibold">{handle}</span> {caption}
-            {tags && <span className="text-blue-600 dark:text-blue-400"> {tags}</span>}
-          </p>
-          <p className="text-[10px] uppercase text-muted-foreground">{t("ig_studio.pv_translation")}</p>
-        </div>
-      )}
-    </div>
-  );
 };
 
 /** Grouped-section header (Storefront-Studio style). */
@@ -262,18 +196,20 @@ const InstagramStudio = () => {
             <Card>
               <CardContent className="p-4">
                 {mediaKind === "post" && (
-                  <IgChrome handle={handle} logoUrl={shopDetails?.logo_url} caption={caption.text} tags={caption.tags} kind="post">
+                  <IgPostChrome handle={handle} avatarUrl={shopDetails?.logo_url} caption={caption.text} tags={caption.tags} kind="post"
+                    likesLabel={t("ig_studio.pv_likes")} translationLabel={t("ig_studio.pv_translation")}>
                     <TemplateCanvas settings={settings} format="post" subject={subject} shopName={shopName} />
-                  </IgChrome>
+                  </IgPostChrome>
                 )}
                 {mediaKind === "story" && (
-                  <IgChrome handle={handle} logoUrl={shopDetails?.logo_url} caption="" tags="" kind="story">
+                  <IgPostChrome handle={handle} avatarUrl={shopDetails?.logo_url} kind="story" replyLabel={t("ig_studio.pv_reply")}>
                     <TemplateCanvas settings={{ ...settings, template: settings.storyTemplate }} format="story" subject={subject} shopName={shopName} />
-                  </IgChrome>
+                  </IgPostChrome>
                 )}
                 {mediaKind === "carousel" && (
                   <>
-                    <IgChrome handle={handle} logoUrl={shopDetails?.logo_url} caption={caption.text} tags={caption.tags} kind="carousel" slideCount={carouselSlides}>
+                    <IgPostChrome handle={handle} avatarUrl={shopDetails?.logo_url} caption={caption.text} tags={caption.tags} kind="carousel" slideCount={carouselSlides}
+                      likesLabel={t("ig_studio.pv_likes")} translationLabel={t("ig_studio.pv_translation")}>
                       {/* scrollable — swipe through every connected slide */}
                       <div className="flex snap-x snap-mandatory overflow-x-auto">
                         {Array.from({ length: carouselSlides }, (_, i) => (
@@ -282,7 +218,7 @@ const InstagramStudio = () => {
                           </div>
                         ))}
                       </div>
-                    </IgChrome>
+                    </IgPostChrome>
                     <p className="mt-2 text-center text-xs text-muted-foreground">
                       {t("ig_studio.car_splits", { count: carouselSlides })}
                     </p>

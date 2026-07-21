@@ -551,7 +551,7 @@ const Products = () => {
         onOpenChange={setBulkPublishOpen}
         products={allProducts
           .filter(p => selectedProducts.includes(p.id) && !(p as any).instagram_post_id)
-          .map(p => ({ id: p.id, name: p.name, media_url: (p as any).media_url ?? null })) as BulkProduct[]}
+          .map(p => ({ id: p.id, name: p.name, media_url: (p as any).media_url ?? null, price: (p as any).price ?? null, currency: (p as any).currency ?? null })) as BulkProduct[]}
         onQueued={() => { setSelectedProducts([]); }}
       />
       <ProductEditor

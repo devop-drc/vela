@@ -102,6 +102,22 @@ export function clearCache(key: string): void {
   try { localStorage.removeItem(lsKey(sk)); } catch { /* ignore */ }
 }
 
+/** Drop every entry whose key starts with `prefix` (e.g. 'storefront:' after a
+    design save, to invalidate all of a shop's page snapshots at once). Best-
+    effort; over-clearing only forces a harmless refetch. */
+export function clearCacheByPrefix(prefix: string): void {
+  for (const k of Array.from(MEM.keys())) {
+    if (k.startsWith(prefix)) MEM.delete(k);
+  }
+  try {
+    const lsNeedle = `${LS_PREFIX}${prefix}`;
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(lsNeedle)) localStorage.removeItem(k);
+    }
+  } catch { /* ignore */ }
+}
+
 /** Wipe every page-cache entry (call on sign-out so the next user starts clean). */
 export function clearAllPageCache(): void {
   MEM.clear();

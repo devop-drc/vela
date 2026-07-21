@@ -9,6 +9,21 @@ import { normalizeConfig } from '../config/normalize';
 import { cloneConfig, DEFAULT_CONFIG } from '../config/defaults';
 import { BLOCK_REGISTRY } from '../blocks/registry';
 import { showError } from '@/utils/toast';
+import { clearCacheByPrefix } from '@/lib/pageCache';
+
+/**
+ * A design save is a plain client-side upsert into `design_settings`, which
+ * bypasses every edge function — so nothing invalidates the public storefront's
+ * caches. Bust them here so the change actually shows on the live /shop:
+ *   • the server-side edge cache (pubshop / pubprod keys, 5-min TTL) via a tiny
+ *     edge function that resolves the caller's shop from their JWT, and
+ *   • this browser's own localStorage storefront snapshots (24h TTL).
+ * Fire-and-forget: a missed bust just delays the change, never blocks the save.
+ */
+function invalidatePublicStorefrontCache() {
+  clearCacheByPrefix('storefront:');
+  supabase.functions.invoke('invalidate-shop-cache').catch(() => { /* best-effort */ });
+}
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -141,6 +156,8 @@ export function useStorefrontStudio() {
       if (gen !== saveGenRef.current) return;
       // Live-restyle the dashboard when "match my storefront" is on.
       window.dispatchEvent(new CustomEvent('sf-settings-updated', { detail: merged }));
+      // The public storefront reads a cached copy — bust it so the edit shows.
+      invalidatePublicStorefrontCache();
       setSaveStatus('saved');
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);

@@ -20,9 +20,9 @@ import {
   renderTemplate, renderToJpegBlob, renderCarouselToBlobs, removeImageBackground,
   TEMPLATE_IDS, DEFAULT_TRANSFORM, type TemplateId, type ImageTransform,
 } from "@/lib/igStudio";
+import { IgPostChrome } from "@/components/products/IgPostChrome";
 import {
   Instagram, RefreshCw, Send, ExternalLink, Unplug, Palette,
-  Heart, MessageCircle, Send as SendIcon, Bookmark, MoreHorizontal,
 } from "lucide-react";
 
 /**
@@ -248,9 +248,8 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
   };
 
   const fullscreen = postKind === "story" || postKind === "story_video" || postKind === "reel_video";
-  const avatarEl = igAvatar
-    ? <img src={igAvatar} alt="" className="h-full w-full object-cover" />
-    : <span className="grid h-full w-full place-items-center bg-primary/15 text-[10px] font-bold text-primary">{igHandle.slice(0, 2).toUpperCase()}</span>;
+  const previewKind = fullscreen ? "story" : postKind === "carousel" ? "carousel" : "post";
+  const carouselCount = postKind === "carousel" && images.length >= 2 ? Math.min(images.length, 10) : undefined;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!publishing) onOpenChange(o); }}>
@@ -294,46 +293,18 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
           <div className="grid gap-6 md:grid-cols-2">
             {/* ── Instagram post preview ── */}
             <div className="order-first">
-              <div className="mx-auto w-full max-w-[320px] overflow-hidden rounded-2xl border bg-background shadow-lg">
-                {!fullscreen && (
-                  <div className="flex items-center gap-2 px-3 py-2">
-                    <span className="h-8 w-8 overflow-hidden rounded-full ring-2 ring-pink-500/60 ring-offset-1">{avatarEl}</span>
-                    <span className="text-sm font-semibold">{igHandle}</span>
-                    <MoreHorizontal className="ml-auto h-4 w-4 text-muted-foreground" />
-                  </div>
-                )}
-                <div className="relative">
-                  <canvas ref={previewRef} className="block w-full" />
-                  {fullscreen && (
-                    <div className="absolute left-2 top-3 flex items-center gap-2">
-                      <span className="h-7 w-7 overflow-hidden rounded-full">{avatarEl}</span>
-                      <span className="text-xs font-semibold text-white drop-shadow">{igHandle}</span>
-                    </div>
-                  )}
-                  {postKind === "carousel" && images.length >= 2 && (
-                    <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white">1/{Math.min(images.length, 10)}</span>
-                  )}
-                </div>
-                {!fullscreen && (
-                  <div className="space-y-1.5 px-3 py-2.5">
-                    <div className="flex items-center gap-3.5">
-                      <Heart className="h-5 w-5" /><MessageCircle className="h-5 w-5" /><SendIcon className="h-5 w-5" />
-                      {postKind === "carousel" && (
-                        <span className="mx-auto flex gap-1">
-                          {Array.from({ length: Math.min(images.length, 5) }).map((_, i) => (
-                            <span key={i} className={cn("h-1.5 w-1.5 rounded-full", i === 0 ? "bg-primary" : "bg-muted-foreground/40")} />
-                          ))}
-                        </span>
-                      )}
-                      <Bookmark className="ml-auto h-5 w-5" />
-                    </div>
-                    <p className="whitespace-pre-line text-xs leading-snug">
-                      <span className="font-semibold">{igHandle}</span> {captionParts.body}
-                      {captionParts.tags && <span className="text-blue-600 dark:text-blue-400"> {captionParts.tags}</span>}
-                    </p>
-                  </div>
-                )}
-              </div>
+              <IgPostChrome
+                handle={igHandle}
+                avatarUrl={igAvatar}
+                kind={previewKind}
+                storyOverlay="minimal"
+                caption={captionParts.body}
+                tags={captionParts.tags}
+                slideCount={carouselCount}
+                className="max-w-[320px]"
+              >
+                <canvas ref={previewRef} className="block w-full" />
+              </IgPostChrome>
               {alreadyPublished && (
                 <Alert className="mt-3">
                   <AlertDescription className="text-xs">{t("ig_publish.already_published")}</AlertDescription>

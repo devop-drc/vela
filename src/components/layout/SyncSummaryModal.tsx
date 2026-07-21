@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { CheckCircle, AlertTriangle, RefreshCw, SkipForward, PlusCircle } from "lucide-react";
+import { CheckCircle, AlertTriangle, RefreshCw, SkipForward, PlusCircle, Archive } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "../ui/badge";
@@ -53,6 +53,7 @@ export const SyncSummaryModal = ({ job, isOpen, onClose }: { job: SyncJob | null
   const createdItems: ProductPayload[] = summary.created_items || [];
   const updatedItems: ProductPayload[] = summary.updated_items || [];
   const skippedItems: SkippedItem[] = summary.skipped_items || [];
+  const draftedDeleted: number = summary.drafted_deleted || 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -68,6 +69,18 @@ export const SyncSummaryModal = ({ job, isOpen, onClose }: { job: SyncJob | null
         </DialogHeader>
         <div className="py-4">
           {isSuccess ? (
+            <>
+            {draftedDeleted > 0 && (
+              <div className="mb-3 flex items-start gap-2 rounded-lg border bg-muted/40 p-3 text-sm">
+                <Archive className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <span>
+                  {t('sync.label_drafted_deleted', {
+                    count: draftedDeleted,
+                    defaultValue: '{{count}} product(s) whose Instagram post was deleted or archived were moved to Draft.',
+                  })}
+                </span>
+              </div>
+            )}
             <Accordion type="single" collapsible className="w-full" defaultValue="created">
               <AccordionItem value="created" disabled={createdItems.length === 0}>
                 <AccordionTrigger><div className="flex items-center gap-2"><PlusCircle className="h-4 w-4 text-success" /> {t('sync.label_created')} ({createdItems.length})</div></AccordionTrigger>
@@ -90,6 +103,7 @@ export const SyncSummaryModal = ({ job, isOpen, onClose }: { job: SyncJob | null
                 ))}</div></ScrollArea></AccordionContent>
               </AccordionItem>
             </Accordion>
+            </>
           ) : (
             <div className="p-4 border rounded-lg bg-destructive/10 text-destructive">
               <p className="font-semibold">{t('sync.error_message')}</p>

@@ -8,6 +8,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { cn } from "@/lib/utils";
+import { useShop } from "@/contexts/ShopContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useStudioSettings } from "@/hooks/useStudioSettings";
+import { renderToJpegBlob, DEFAULT_TRANSFORM } from "@/lib/igStudio";
 import { Image as ImageIcon, Clapperboard, X, Send } from "lucide-react";
 
 gsap.registerPlugin(Draggable);
@@ -21,7 +25,7 @@ gsap.registerPlugin(Draggable);
  */
 
 export type BulkKind = "post_image" | "post_video" | "story_image" | "story_video";
-export interface BulkProduct { id: string; name: string; media_url: string | null }
+export interface BulkProduct { id: string; name: string; media_url: string | null; price?: number | null; currency?: string | null }
 
 const KINDS: Array<{ kind: BulkKind; group: "post" | "story"; icon: typeof ImageIcon }> = [
   { kind: "post_image", group: "post", icon: ImageIcon },
@@ -127,6 +131,9 @@ export const BulkPublishModal = ({ open, onOpenChange, products, onQueued }: {
   onQueued?: () => void;
 }) => {
   const { t } = useTranslation();
+  const { shopDetails } = useShop();
+  const { userId } = useAuth();
+  const { settings: studio } = useStudioSettings();
   const [stack, setStack] = useState<BulkProduct[]>(products);
   const [assigned, setAssigned] = useState<Record<BulkKind, BulkProduct[]>>({
     post_image: [], post_video: [], story_image: [], story_video: [],
@@ -169,10 +176,43 @@ export const BulkPublishModal = ({ open, onOpenChange, products, onQueued }: {
   };
 
   const confirm = async () => {
-    const items = KINDS.flatMap(({ kind }) => assigned[kind].map((p) => ({ productId: p.id, kind })));
-    if (!items.length) return;
+    const queued = KINDS.flatMap(({ kind }) => assigned[kind].map((p) => ({ kind, product: p })));
+    if (!queued.length) return;
     setSubmitting(true);
     try {
+      // Pre-render each image post/story through the merchant's Instagram Studio
+      // design and upload it, so the bulk job publishes the SAME styled image the
+      // single-publish dialog produces — not the raw photo. The backend applies
+      // `imageUrl` when it's an https URL and otherwise falls back to the raw
+      // photo, so a failed render just skips the overlay instead of dropping the
+      // item. (Video kinds carry no imageUrl — the render worker handles those.)
+      const transform = studio.transform ?? DEFAULT_TRANSFORM;
+      const items = await Promise.all(queued.map(async ({ kind, product }) => {
+        const item: { productId: string; kind: BulkKind; imageUrl?: string } = { productId: product.id, kind };
+        const isStory = kind === "story_image";
+        if ((kind !== "post_image" && !isStory) || !product.media_url) return item;
+        try {
+          const blob = await renderToJpegBlob({
+            cutout: transform.removeBg,
+            imageUrl: product.media_url,
+            name: product.name,
+            price: product.price ?? null,
+            currency: product.currency || "ALL",
+            shopName: shopDetails?.shop_name || "",
+            settings: { ...studio, template: isStory ? (studio.storyTemplate ?? studio.template) : studio.template, transform },
+            format: isStory ? "story" : "post",
+          });
+          const path = `${userId}/ig-designs/${product.id}-bulk-${kind}-${Date.now()}.jpg`;
+          const { error: upErr } = await supabase.storage.from("product-media").upload(path, blob, {
+            contentType: "image/jpeg", cacheControl: "31536000", upsert: false,
+          });
+          if (upErr) throw new Error(upErr.message);
+          item.imageUrl = supabase.storage.from("product-media").getPublicUrl(path).data.publicUrl;
+        } catch (e) {
+          console.error(`bulk pre-render ${product.id}/${kind}:`, (e as Error).message);
+        }
+        return item;
+      }));
       const { data, error } = await supabase.functions.invoke("bulk-publish-products", { body: { items } });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
@@ -255,12 +295,12 @@ export const BulkPublishModal = ({ open, onOpenChange, products, onQueued }: {
             </p>
           </div>
 
-          {/* Story/Reel group */}
+          {/* Story group (video/Reel disabled for now, matching IG Studio) */}
           <div className="min-w-0">
             <p className="mb-1.5 text-center font-semibold">{t("bulk_publish.group_story")}</p>
             <div className="flex gap-2">
               <Column kind="story_image" icon={ImageIcon} />
-              <Column kind="story_video" icon={Clapperboard} />
+              {/* Video disabled for now: <Column kind="story_video" icon={Clapperboard} /> */}
             </div>
           </div>
         </div>

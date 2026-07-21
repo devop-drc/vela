@@ -51,12 +51,6 @@ serve(async (req) => {
       if (jobId) await admin.from('sync_jobs').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', jobId);
     };
 
-    // Studio prefs for video renders.
-    const { data: studioRow } = await admin.from('instagram_studio_settings').select('settings').eq('user_id', user.id).maybeSingle();
-    const studio = studioRow?.settings ?? {};
-    const { data: shop } = await admin.from('shop_details')
-      .select('shop_name, businesses!inner(user_id)').eq('businesses.user_id', user.id).maybeSingle();
-
     const invokePublish = async (body: Record<string, unknown>) => {
       const { data, error } = await supabase.functions.invoke('publish-product-post', { body, headers: { Authorization: authHeader } });
       if (error) throw new Error(error.message);
@@ -64,58 +58,75 @@ serve(async (req) => {
       return data;
     };
 
-    let ok = 0, failed = 0, queuedVideos = 0;
-    const results: Array<{ productId: string; kind: string; ok: boolean; error?: string }> = [];
-    for (const [i, item] of items.entries()) {
-      const { productId, kind } = item;
-      try {
-        const { data: product } = await admin.from('products')
-          .select('id, name, price, currency, media_url').eq('id', productId).eq('user_id', user.id).maybeSingle();
-        if (!product) throw new Error('Product not found');
-        await upd({ message: `(${i + 1}/${items.length}) ${product.name}…`, current_post_caption: product.name });
+    // The whole publish loop runs in the background (EdgeRuntime.waitUntil), the
+    // same pattern background-sync uses, so this request returns as soon as the
+    // job row exists. The frontend closes the modal on that response and the
+    // process widget tracks the job via its realtime `sync_jobs` subscription —
+    // the merchant watches progress there instead of behind a blocking modal.
+    const run = async () => {
+      // Studio prefs for video renders (fetched lazily so the response returns fast).
+      const { data: studioRow } = await admin.from('instagram_studio_settings').select('settings').eq('user_id', user.id).maybeSingle();
+      const studio = studioRow?.settings ?? {};
+      const { data: shop } = await admin.from('shop_details')
+        .select('shop_name, businesses!inner(user_id)').eq('businesses.user_id', user.id).maybeSingle();
 
-        const preview = await invokePublish({ productId, mode: 'preview' });
-        if (preview?.error === 'reconnect_required') throw new Error('Instagram connection needs reconnecting');
-        const caption = preview.caption ?? product.name;
+      let ok = 0, failed = 0, queuedVideos = 0;
+      for (const [i, item] of items.entries()) {
+        const { productId, kind, imageUrl } = item;
+        try {
+          const { data: product } = await admin.from('products')
+            .select('id, name, price, currency, media_url').eq('id', productId).eq('user_id', user.id).maybeSingle();
+          if (!product) throw new Error('Product not found');
+          await upd({ message: `(${i + 1}/${items.length}) ${product.name}…`, current_post_caption: product.name });
 
-        if (kind === 'post_image' || kind === 'story_image') {
-          const pub = await invokePublish({
-            productId, mode: 'publish', caption,
-            publishKind: kind === 'story_image' ? 'story' : 'post',
-          });
-          if (pub?.error === 'reconnect_required') throw new Error('Instagram connection needs reconnecting');
-          ok++;
-        } else {
-          // Video kinds: the render worker publishes after rendering.
-          await admin.from('video_render_jobs').insert({
-            user_id: user.id, product_id: productId,
-            format: kind === 'story_video' ? 'story' : 'reel',
-            template: studio.videoTemplate ?? 'gradient',
-            props: {
-              imageUrl: product.media_url, videoUrl: null,
-              name: product.name, price: product.price, currency: product.currency || 'ALL',
-              shopName: shop?.shop_name || '', accent: studio.accent ?? '#A31234',
-              publishAfter: true, caption,
-              publishKind: kind === 'story_video' ? 'story' : 'reel',
-            },
-          });
-          queuedVideos++;
-          ok++;
+          const preview = await invokePublish({ productId, mode: 'preview' });
+          if (preview?.error === 'reconnect_required') throw new Error('Instagram connection needs reconnecting');
+          const caption = preview.caption ?? product.name;
+
+          if (kind === 'post_image' || kind === 'story_image') {
+            const pub = await invokePublish({
+              productId, mode: 'publish', caption,
+              publishKind: kind === 'story_image' ? 'story' : 'post',
+              // imageUrl (present) is the product pre-rendered through the
+              // merchant's Instagram Studio design; without it the raw photo posts.
+              ...(typeof imageUrl === 'string' && imageUrl.startsWith('https://') ? { imageUrl } : {}),
+            });
+            if (pub?.error === 'reconnect_required') throw new Error('Instagram connection needs reconnecting');
+            ok++;
+          } else {
+            // Video kinds: the render worker publishes after rendering.
+            await admin.from('video_render_jobs').insert({
+              user_id: user.id, product_id: productId,
+              format: kind === 'story_video' ? 'story' : 'reel',
+              template: studio.videoTemplate ?? 'gradient',
+              props: {
+                imageUrl: product.media_url, videoUrl: null,
+                name: product.name, price: product.price, currency: product.currency || 'ALL',
+                shopName: shop?.shop_name || '', accent: studio.accent ?? '#A31234',
+                publishAfter: true, caption,
+                publishKind: kind === 'story_video' ? 'story' : 'reel',
+              },
+            });
+            queuedVideos++;
+            ok++;
+          }
+        } catch (e) {
+          failed++;
+          console.error(`bulk-publish item ${productId}/${kind}:`, (e as Error).message);
         }
-        results.push({ productId, kind, ok: true });
-      } catch (e) {
-        failed++;
-        results.push({ productId, kind, ok: false, error: (e as Error).message });
+        await upd({ progress: i + 1, summary: { job_kind: 'bulk_publish', created: ok, failed } });
       }
-      await upd({ progress: i + 1, summary: { job_kind: 'bulk_publish', created: ok, failed } });
-    }
 
-    await upd({
-      status: 'completed',
-      message: `Bulk publish finished — ${ok - queuedVideos} posted now, ${queuedVideos} videos rendering${failed ? `, ${failed} failed` : ''}.`,
-      summary: { job_kind: 'bulk_publish', created: ok, failed },
-    });
-    return json({ jobId, results, published: ok - queuedVideos, queuedVideos, failed });
+      await upd({
+        status: 'completed',
+        message: `Bulk publish finished — ${ok - queuedVideos} posted now, ${queuedVideos} videos rendering${failed ? `, ${failed} failed` : ''}.`,
+        summary: { job_kind: 'bulk_publish', created: ok, failed },
+      });
+    };
+
+    // @ts-ignore — EdgeRuntime is a Supabase Edge (Deno Deploy) global.
+    EdgeRuntime.waitUntil(run());
+    return json({ jobId });
   } catch (e) {
     console.error('bulk-publish-products:', (e as Error).message);
     return json({ error: (e as Error).message }, 500);

@@ -198,6 +198,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
   const summary = {
     created: 0, updated: 0, skipped: 0, cache_hits: 0,
     combo_created: 0,
+    drafted_deleted: 0,
     skipped_items: [] as { name: string; reason: string; thumbnail_url?: string }[],
     created_items: [] as ProductPayload[],
     updated_items: [] as ProductPayload[],
@@ -224,7 +225,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
 
     // Existing products are loaded BEFORE the Graph API fetch so quick syncs
     // can pass `since` and skip re-paginating the merchant's entire history.
-    const { data: existingProducts, error: productsError } = await supabaseAdmin.from('products').select('id, instagram_post_id, media_url, thumbnail_url, category, created_at').eq('business_id', business.id);
+    const { data: existingProducts, error: productsError } = await supabaseAdmin.from('products').select('id, instagram_post_id, media_url, thumbnail_url, category, created_at, source, status').eq('business_id', business.id);
     if (productsError) throw productsError;
     const existingProductMap = new Map((existingProducts || []).map(p => [p.instagram_post_id, p]));
 
@@ -255,6 +256,48 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     }
 
     await updateJobProgress(supabaseAdmin, jobId, { message: `Found ${allPosts.length} posts. Checking for new content...`, summary });
+
+    // ── Deleted / archived post sweep ───────────────────────────────────────
+    // When a merchant deletes OR archives a post on Instagram, the Graph API
+    // stops returning it from the media edge. Any Instagram-sourced product
+    // whose post is no longer in the live media set is therefore orphaned, so
+    // move it to Draft (drops it off the storefront) — the merchant can always
+    // re-activate it manually.
+    //
+    // Guards (all required for correctness):
+    //   • Full syncs only — a quick sync passes `since`, so `allPosts` is just
+    //     the new-posts delta and would flag every older post as "deleted".
+    //   • Not truncated — if the media fetch hit the page cap, older posts
+    //     weren't fetched and must not be treated as deleted.
+    //   • Runs after the `allPosts.length === 0` early-return above, so an
+    //     empty/failed fetch never drafts the merchant's entire catalog.
+    //   • Scoped to `source === 'instagram'` — never touches manual/imported
+    //     products, even if one carries a stray instagram_post_id.
+    //   • Skips rows already in Draft to avoid redundant writes / realtime spam.
+    if (syncType === 'full' && !postsData.truncated) {
+      const liveIds = new Set(allPosts.map(p => p.id));
+      const orphaned = (existingProducts || []).filter((p: any) =>
+        p.instagram_post_id &&
+        p.source === 'instagram' &&
+        p.status !== 'Draft' &&
+        !liveIds.has(p.instagram_post_id)
+      );
+      if (orphaned.length > 0) {
+        const { error: draftErr } = await supabaseAdmin
+          .from('products')
+          .update({ status: 'Draft' })
+          .in('id', orphaned.map((p: any) => p.id));
+        if (draftErr) {
+          console.error(`[${user.id}] Failed to draft ${orphaned.length} products whose IG post was removed:`, draftErr.message);
+        } else {
+          summary.drafted_deleted = orphaned.length;
+          await updateJobProgress(supabaseAdmin, jobId, {
+            message: `${orphaned.length} product(s) whose Instagram post was deleted or archived were moved to Draft.`,
+            summary,
+          });
+        }
+      }
+    }
 
     // Also fetch existing combos to decide if a post needs processing for multi-products
     const { data: existingCombos } = await supabaseAdmin
@@ -719,6 +762,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             business_id: business.id,
             user_id: user.id,
             status: inventory === 0 ? 'Out of Stock' : 'Draft',
+            source: 'instagram',
             instagram_post_id: post.id,
             media_url: persisted.media_url,
             thumbnail_url: persisted.thumbnail_url || persisted.media_url,

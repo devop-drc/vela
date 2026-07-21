@@ -6,6 +6,7 @@ import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formatters";
+import { activePromotionsFor, computePrice, promotionBadgeLabel } from "@/storefront/lib/pricing";
 import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
@@ -298,37 +299,8 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
 
     const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && product.inventory <= 0);
 
-    const activePromotions = promotions.filter(promo => {
-      if (!promo.is_active) return false;
-      const now = new Date();
-      const startDate = promo.start_date ? new Date(promo.start_date) : null;
-      const endDate = promo.end_date ? new Date(promo.end_date) : null;
-
-      if (startDate && now < startDate) return false;
-      if (endDate && now > endDate) return false;
-
-      if (promo.target_products && promo.target_products.length > 0) {
-        return promo.target_products.includes(product.id);
-      }
-      return true;
-    });
-
-    let discountedPrice = originalDisplayPrice;
-    let hasDiscount = false;
-
-    if (activePromotions.length > 0 && originalDisplayPrice !== null) {
-      const firstDiscount = activePromotions.find(p => p.type === 'discount');
-      if (firstDiscount && firstDiscount.value) {
-        if (firstDiscount.value.discountType === 'percentage') {
-          discountedPrice = originalDisplayPrice * (1 - firstDiscount.value.discountValue / 100);
-          hasDiscount = true;
-        } else if (firstDiscount.value.discountType === 'flat') {
-          discountedPrice = originalDisplayPrice - firstDiscount.value.discountValue;
-          hasDiscount = true;
-        }
-        discountedPrice = Math.max(0, discountedPrice);
-      }
-    }
+    const activePromotions = activePromotionsFor(promotions as any, product.id);
+    const { discounted: discountedPrice, hasDiscount } = computePrice(originalDisplayPrice, activePromotions);
 
     const actuallyAddToCart = () => {
       if (!shopDetails?.slug) {
@@ -420,18 +392,8 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
     // Legacy details-derived options (kept as specs only). Real options now come from DB.
     const otherOptions = allDetails.filter(([key]) => key !== 'type');
 
-    const getPromotionBadge = (promo: any) => {
-      switch (promo.type) {
-        case 'discount':
-          if (promo.value?.discountType === 'percentage') return `${promo.value.discountValue}% Off`;
-          if (promo.value?.discountType === 'flat') return `-${formatCurrency(promo.value.discountValue, shopDetails?.currency)} Off`;
-          return 'Discount';
-        case 'offer':
-          if (promo.value?.offerType === 'free_shipping') return 'Free Shipping';
-          return 'Offer';
-        default: return null;
-      }
-    };
+    const getPromotionBadge = (promo: any) =>
+      promotionBadgeLabel(promo, undefined, (v) => formatCurrency(v, shopDetails?.currency));
 
     const primaryColorClass = hasDiscount ? "bg-green-600 hover:bg-green-700 text-white" : "bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/70 text-white";
     const outlineColorClass = hasDiscount ? "bg-transparent border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-transparent" : "bg-transparent hover:bg-transparent border-[hsl(var(--primary))] text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]/70 hover:border-[hsl(var(--primary))]/70";

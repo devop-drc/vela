@@ -10,6 +10,7 @@ import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, 
 import { useCart } from "@/contexts/CartContext";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { formatCurrency } from "@/lib/formatters";
+import { promotionBadgeLabel } from "@/storefront/lib/pricing";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { MediaItem } from "@/components/MediaItem";
@@ -261,18 +262,8 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
     setIsProductQuickViewModalOpen(true);
   };
 
-  const getPromotionBadge = (promo: any) => {
-    switch (promo.type) {
-      case 'discount':
-        if (promo.value?.discountType === 'percentage') return `${promo.value.discountValue}% OFF`;
-        if (promo.value?.discountType === 'flat') return `-${formatCurrency(promo.value.discountValue, shopDetails?.currency)} OFF`;
-        return 'Discount';
-      case 'offer':
-        if (promo.value?.offerType === 'free_shipping') return 'Free Shipping';
-        return 'Offer';
-      default: return null;
-    }
-  };
+  const getPromotionBadge = (promo: any) =>
+    promotionBadgeLabel(promo, undefined, (v) => formatCurrency(v, shopDetails?.currency));
 
   const isMobile = useIsMobile();
 

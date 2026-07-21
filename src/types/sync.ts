@@ -33,6 +33,8 @@ export interface SyncJobSummary {
   failed?: number;
   created: number;
   updated: number;
+  /** Products moved to Draft because their Instagram post was deleted or archived. */
+  drafted_deleted?: number;
   skipped: number;
   cache_hits: number;
   skipped_items: SkippedItem[];
