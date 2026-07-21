@@ -37,7 +37,32 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
   const { userId } = useAuth();
   const [design, setDesign] = useState<TemplateId | "studio">("studio");
   const [adjust, setAdjust] = useState<ImageTransform>(DEFAULT_TRANSFORM);
-  const [postKind, setPostKind] = useState<"single" | "carousel">("single");
+  const [postKind, setPostKind] = useState<"single" | "carousel" | "story" | "post_video" | "story_video" | "reel_video">("single");
+  const isVideoKind = postKind.endsWith("_video");
+  const [videoJob, setVideoJob] = useState<any | null>(null);
+
+  // Poll the render job for video post types.
+  useEffect(() => {
+    if (!videoJob || ["done", "failed"].includes(videoJob.status)) return;
+    const iv = setInterval(async () => {
+      const { data } = await supabase.from("video_render_jobs").select("*").eq("id", videoJob.id).maybeSingle();
+      if (data) setVideoJob(data);
+    }, 5000);
+    return () => clearInterval(iv);
+  }, [videoJob]);
+
+  const queueVideoForPublish = async (kind: string) => {
+    const format = kind === "story_video" ? "story" : kind === "post_video" ? "post" : "reel";
+    const { data, error } = await supabase.from("video_render_jobs").insert({
+      user_id: userId, product_id: product.id, format, template: studio.videoTemplate ?? "gradient",
+      props: {
+        imageUrl: selectedImage, videoUrl: null, name: product.name, price: product.price ?? null,
+        currency: product.currency || "ALL", shopName: shopDetails?.shop_name || "", accent: studio.accent,
+      },
+    }).select("*").single();
+    if (error) showError(error.message);
+    else setVideoJob(data);
+  };
   const [cutoutUrl, setCutoutUrl] = useState<string | null>(null);
   const [cutoutBusy, setCutoutBusy] = useState(false);
   const previewRef = useRef<HTMLCanvasElement>(null);
@@ -142,7 +167,29 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
     setPublishing(true);
     try {
       let body: Record<string, unknown>;
-      if (postKind === "carousel" && images.length >= 2) {
+      if (isVideoKind) {
+        if (videoJob?.status !== "done" || !videoJob.output_url) { showError(t("ig_publish.video_not_ready")); setPublishing(false); return; }
+        body = {
+          productId: product.id, mode: "publish", caption,
+          videoUrl: videoJob.output_url,
+          publishKind: postKind === "story_video" ? "story" : "reel",
+        };
+      } else if (postKind === "story") {
+        // Story still: render with the story template at 9:16, no caption needed.
+        const blob = await renderToJpegBlob({
+          imageUrl: effectiveImage ?? selectedImage!, name: product.name, price: product.price ?? null,
+          currency: product.currency || "ALL", shopName: shopDetails?.shop_name || "",
+          settings: { ...studio, template: studio.storyTemplate ?? studio.template, transform: adjust }, format: "story",
+        });
+        const path = `${userId}/ig-designs/${product.id}-story-${Date.now()}.jpg`;
+        const { error: upErr } = await supabase.storage.from("product-media").upload(path, blob, { contentType: "image/jpeg", cacheControl: "31536000" });
+        if (upErr) throw new Error(upErr.message);
+        body = {
+          productId: product.id, mode: "publish", caption,
+          imageUrl: supabase.storage.from("product-media").getPublicUrl(path).data.publicUrl,
+          publishKind: "story",
+        };
+      } else if (postKind === "carousel" && images.length >= 2) {
         // Render the connected slides, upload them, publish as a CAROUSEL.
         const blobs = await renderCarouselToBlobs({
           images, name: product.name, price: product.price ?? null,
@@ -166,6 +213,9 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
       if (data?.error) throw new Error(data.error);
       setPermalink(data.permalink ?? null);
       showSuccess(t("ig_publish.published"));
+      if (Array.isArray(data.gapsFilled) && data.gapsFilled.length) {
+        showSuccess(t("ig_publish.gaps_filled", { fields: data.gapsFilled.join(", ") }));
+      }
       onPublished?.(data.mediaId);
     } catch (e) {
       showError(t("ig_publish.publish_failed", { message: (e as Error).message }));
@@ -236,16 +286,28 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
                 </div>
                 <Textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={7} disabled={publishing} />
               </div>
-              {images.length >= 2 && (
-                <div className="flex gap-1.5">
-                  {(["single", "carousel"] as const).map((k) => (
-                    <button key={k} type="button" disabled={publishing} onClick={() => setPostKind(k)}
+              <div className="flex flex-wrap gap-1.5">
+                {(["single", "carousel", "story", "post_video", "story_video", "reel_video"] as const)
+                  .filter((k) => k !== "carousel" || images.length >= 2)
+                  .map((k) => (
+                    <button key={k} type="button" disabled={publishing}
+                      onClick={() => { setPostKind(k); if (k.endsWith("_video") && !videoJob) queueVideoForPublish(k); }}
                       className={cn("rounded-full px-3 py-1 text-xs font-medium transition-colors",
                         postKind === k ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground")}>
-                      {k === "single" ? t("ig_publish.kind_single") : t("ig_publish.kind_carousel", { count: Math.min(images.length, 10) })}
+                      {k === "carousel" ? t("ig_publish.kind_carousel", { count: Math.min(images.length, 10) }) : t(`ig_publish.kind_${k}`)}
                     </button>
                   ))}
-                </div>
+              </div>
+              {isVideoKind && (
+                <Alert>
+                  <AlertDescription className="flex items-center gap-2 text-xs">
+                    {videoJob && !["done", "failed"].includes(videoJob.status) && <Spinner className="h-3.5 w-3.5" />}
+                    {!videoJob ? t("ig_publish.video_queueing")
+                      : videoJob.status === "done" ? t("ig_publish.video_ready")
+                      : videoJob.status === "failed" ? t("ig_publish.video_failed")
+                      : t("ig_publish.video_rendering")}
+                  </AlertDescription>
+                </Alert>
               )}
               <div className="space-y-1.5">
                 <span className="flex items-center gap-1.5 text-sm font-medium">
@@ -317,7 +379,7 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
             {permalink ? t("common.close", "Close") : t("common.cancel")}
           </Button>
           {!needsReconnect && !permalink && (
-            <Button onClick={handlePublish} disabled={loading || publishing || !images.length}>
+            <Button onClick={handlePublish} disabled={loading || publishing || !images.length || (isVideoKind && videoJob?.status !== "done")}>
               <Send className="mr-2 h-4 w-4" />
               {publishing ? t("ig_publish.publishing") : t("ig_publish.publish")}
             </Button>

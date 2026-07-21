@@ -1880,8 +1880,18 @@
     "adj_scale": "Zoom",
     "adj_offsetX": "Position X",
     "adj_offsetY": "Position Y",
-    "kind_single": "Single photo",
-    "kind_carousel": "Carousel ({{count}} slides)"
+    "kind_single": "Post (photo)",
+    "kind_carousel": "Carousel ({{count}} slides)",
+    "gaps_filled": "The system completed missing product details from the post: {{fields}}.",
+    "kind_story": "Story",
+    "kind_post_video": "Post video",
+    "kind_story_video": "Story video",
+    "kind_reel_video": "Reel",
+    "video_queueing": "Queueing the video render…",
+    "video_rendering": "The system is rendering the video in the background — you can keep this open or come back.",
+    "video_ready": "Video ready — publish when you like.",
+    "video_failed": "Video render failed. Pick another type or try again.",
+    "video_not_ready": "The video isn't ready yet."
   },
   "ig_status": {
     "column": "Instagram",

@@ -118,7 +118,7 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const { productId, mode = 'preview', caption: captionOverride, imageUrl, imageUrls, videoUrl, captionStyle = {} } = await req.json();
+    const { productId, mode = 'preview', caption: captionOverride, imageUrl, imageUrls, videoUrl, publishKind = 'post', captionStyle = {} } = await req.json();
     if (!productId) return json({ error: 'productId is required' }, 400);
 
     const { data: product } = await admin.from('products')
@@ -205,7 +205,7 @@ serve(async (req) => {
     const rawImage = (typeof imageUrl === 'string' && imageUrl.startsWith('https://')) ? imageUrl : candidates[0];
     if (!rawImage && !(Array.isArray(imageUrls) && imageUrls.length >= 2)) return json({ error: 'This product has no image to post.' }, 400);
     const finalCaption = (captionOverride || '').trim();
-    if (!finalCaption) return json({ error: 'A caption is required to publish.' }, 400);
+    if (!finalCaption && publishKind !== 'story') return json({ error: 'A caption is required to publish.' }, 400);
 
     // Resolve the IG account id (stored; else /me for direct-IG, Pages
     // discovery for legacy Facebook connections).
@@ -233,11 +233,21 @@ serve(async (req) => {
       : [];
     let containerRes: Response;
     if (typeof videoUrl === 'string' && videoUrl.startsWith('https://')) {
-      // Video (rendered by the Studio worker) — published as a Reel.
+      // Video (rendered by the Studio worker) — Reel, or a story video.
+      const mediaType = publishKind === 'story' ? 'STORIES' : 'REELS';
+      const params: Record<string, string> = { media_type: mediaType, video_url: videoUrl, access_token: token };
+      if (mediaType !== 'STORIES') params.caption = finalCaption; // stories carry no caption
       containerRes = await fetch(`${graphBase}/${igId}/media`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ media_type: 'REELS', video_url: videoUrl, caption: finalCaption, access_token: token }),
+        body: new URLSearchParams(params),
+      });
+    } else if (publishKind === 'story') {
+      // Story still — image, no caption.
+      containerRes = await fetch(`${graphBase}/${igId}/media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ media_type: 'STORIES', image_url: asJpeg(rawImage), access_token: token }),
       });
     } else if (slides.length >= 2) {
       const childIds: string[] = [];
@@ -304,7 +314,71 @@ serve(async (req) => {
     } catch { /* permalink is nice-to-have */ }
     await admin.from('products').update({ instagram_post_id: pub.id }).eq('id', product.id);
 
-    return json({ mediaId: pub.id, permalink });
+    // Reanalysis loop: run the just-published caption back through the
+    // classifier and fill ONLY the gaps — merchant data is never overwritten.
+    const gapsFilled: string[] = [];
+    try {
+      const { data: analysis } = await admin.functions.invoke('ai-product-classifier', {
+        body: { caption: finalCaption, user_id: user.id },
+      });
+      if (analysis?.isProductPost) {
+        const patch: Record<string, unknown> = {};
+        if ((product.price == null || product.price === 0) && typeof analysis.price === 'number' && analysis.price > 0) {
+          patch.price = analysis.price;
+          if (analysis.currency) patch.currency = analysis.currency;
+          gapsFilled.push('price');
+        }
+        if (!product.caption && analysis.description) { patch.caption = analysis.description; gapsFilled.push('description'); }
+        const details = { ...(product.details || {}) };
+        if ((!details.type || details.type === 'generic') && analysis.typeName && analysis.typeName !== 'General') {
+          details.type = analysis.typeName;
+          patch.details = details;
+          gapsFilled.push('type');
+        }
+        if (Object.keys(patch).length) await admin.from('products').update(patch).eq('id', product.id);
+
+        // Specifications: add only keys the product doesn't have yet.
+        const specs = analysis.specifications && typeof analysis.specifications === 'object' && !Array.isArray(analysis.specifications)
+          ? Object.entries(analysis.specifications as Record<string, unknown>) : [];
+        if (specs.length) {
+          const { data: existing } = await admin.from('product_specifications').select('key').eq('product_id', product.id);
+          const have = new Set((existing || []).map((s: any) => String(s.key).toLowerCase()));
+          const fresh = specs.filter(([k, v]) => k && v != null && String(v).trim() && !have.has(String(k).toLowerCase()));
+          if (fresh.length) {
+            await admin.from('product_specifications').insert(fresh.map(([k, v], i) => ({
+              product_id: product.id, user_id: user.id,
+              key: String(k).slice(0, 80), value: String(v).slice(0, 200), display_order: have.size + i,
+            })));
+            gapsFilled.push(`specifications (${fresh.length})`);
+          }
+        }
+
+        // Options: only when the product has none at all.
+        const optMap = analysis.options && typeof analysis.options === 'object' && !Array.isArray(analysis.options)
+          ? Object.entries(analysis.options as Record<string, any[]>) : [];
+        if (optMap.length) {
+          const { data: haveOpts } = await admin.from('product_options').select('id').eq('product_id', product.id).limit(1);
+          if (!haveOpts?.length) {
+            for (const [gIdx, [gName, values]] of optMap.entries()) {
+              const vals = (Array.isArray(values) ? values : []).map((v: any) => (typeof v === 'string' ? v : v?.value)).filter(Boolean);
+              if (!vals.length) continue;
+              const { data: opt } = await admin.from('product_options')
+                .insert({ product_id: product.id, user_id: user.id, name: String(gName).slice(0, 60), display_order: gIdx, is_active: true })
+                .select('id').single();
+              if (opt) await admin.from('option_values').insert(vals.map((v: string, i: number) => ({
+                option_id: opt.id, user_id: user.id, value: String(v).slice(0, 60),
+                inventory: product.inventory ?? 0, is_active: true, is_default: i === 0, display_order: i,
+              })));
+            }
+            gapsFilled.push('options');
+          }
+        }
+      }
+    } catch (e) {
+      console.error('reanalysis gap-fill skipped:', (e as Error).message);
+    }
+
+    return json({ mediaId: pub.id, permalink, gapsFilled });
   } catch (e) {
     console.error('publish-product-post:', (e as Error).message);
     return json({ error: (e as Error).message }, 500);

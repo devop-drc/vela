@@ -1880,8 +1880,18 @@
     "adj_scale": "Zmadhimi",
     "adj_offsetX": "Pozicioni X",
     "adj_offsetY": "Pozicioni Y",
-    "kind_single": "Një foto",
-    "kind_carousel": "Carousel ({{count}} slide)"
+    "kind_single": "Post (foto)",
+    "kind_carousel": "Carousel ({{count}} slide)",
+    "gaps_filled": "Sistemi plotësoi të dhënat që mungonin nga postimi: {{fields}}.",
+    "kind_story": "Story",
+    "kind_post_video": "Video post",
+    "kind_story_video": "Video story",
+    "kind_reel_video": "Reel",
+    "video_queueing": "Videoja po futet në radhë…",
+    "video_rendering": "Sistemi po gjeneron videon në sfond — mund ta lësh hapur ose të kthehesh më vonë.",
+    "video_ready": "Videoja është gati — publiko kur të duash.",
+    "video_failed": "Gjenerimi i videos dështoi. Zgjidh një lloj tjetër ose provo sërish.",
+    "video_not_ready": "Videoja s'është gati ende."
   },
   "ig_status": {
     "column": "Instagram",
