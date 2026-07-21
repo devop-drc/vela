@@ -113,11 +113,13 @@ export const BulkPublishModal = ({ open, onOpenChange, products, onQueued }: {
       if (!el) continue;
       const r = el.getBoundingClientRect();
       if (px >= r.left && px <= r.right && py >= r.top && py <= r.bottom) {
-        setStack((s) => {
-          const [top, ...rest] = s;
-          if (top) setAssigned((a) => ({ ...a, [kind]: [...a[kind], top] }));
-          return rest;
-        });
+        // Assignment must happen OUTSIDE the setStack updater (updaters must
+        // be pure — nested setState inside one is dropped in production).
+        const top = stack[0];
+        if (top) {
+          setStack((s) => s.slice(1));
+          setAssigned((a) => ({ ...a, [kind]: [...a[kind], top] }));
+        }
         return true;
       }
     }
