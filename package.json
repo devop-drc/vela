@@ -98,9 +98,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.24.0",
+    "@remotion/bundler": "^4.0.495",
     "@remotion/cli": "^4.0.494",
     "@remotion/google-fonts": "^4.0.494",
     "@remotion/mcp": "^4.0.494",
+    "@remotion/renderer": "^4.0.495",
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^22.14.1",

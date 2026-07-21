@@ -118,7 +118,7 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const { productId, mode = 'preview', caption: captionOverride, imageUrl, captionStyle = {} } = await req.json();
+    const { productId, mode = 'preview', caption: captionOverride, imageUrl, imageUrls, captionStyle = {} } = await req.json();
     if (!productId) return json({ error: 'productId is required' }, 400);
 
     const { data: product } = await admin.from('products')
@@ -203,7 +203,7 @@ serve(async (req) => {
     // Accept any https image the merchant explicitly chose (Instagram Studio
     // uploads rendered overlays to storage, so it won't be in candidates).
     const rawImage = (typeof imageUrl === 'string' && imageUrl.startsWith('https://')) ? imageUrl : candidates[0];
-    if (!rawImage) return json({ error: 'This product has no image to post.' }, 400);
+    if (!rawImage && !(Array.isArray(imageUrls) && imageUrls.length >= 2)) return json({ error: 'This product has no image to post.' }, 400);
     const finalCaption = (captionOverride || '').trim();
     if (!finalCaption) return json({ error: 'A caption is required to publish.' }, 400);
 
@@ -226,12 +226,38 @@ serve(async (req) => {
     }
     if (!igId) return json({ error: 'reconnect_required', detail: 'No Instagram Business account linked.' }, 200);
 
-    // 1) media container
-    const containerRes = await fetch(`${graphBase}/${igId}/media`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ image_url: asJpeg(rawImage), caption: finalCaption, access_token: token }),
-    });
+    // 1) media container — single image, or a CAROUSEL of child containers
+    // when the client sends imageUrls (already-rendered connected slides).
+    const slides: string[] = Array.isArray(imageUrls)
+      ? imageUrls.filter((u: string) => typeof u === 'string' && u.startsWith('https://')).slice(0, 10)
+      : [];
+    let containerRes: Response;
+    if (slides.length >= 2) {
+      const childIds: string[] = [];
+      for (const url of slides) {
+        const cRes = await fetch(`${graphBase}/${igId}/media`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ image_url: asJpeg(url), is_carousel_item: 'true', access_token: token }),
+        });
+        const c = await cRes.json();
+        if (!cRes.ok || !c.id) {
+          return json(isPermissionError(c) ? { error: 'reconnect_required' } : { error: `Instagram rejected slide ${childIds.length + 1}: ${c?.error?.message ?? 'unknown error'}` }, 200);
+        }
+        childIds.push(c.id);
+      }
+      containerRes = await fetch(`${graphBase}/${igId}/media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ media_type: 'CAROUSEL', children: childIds.join(','), caption: finalCaption, access_token: token }),
+      });
+    } else {
+      containerRes = await fetch(`${graphBase}/${igId}/media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ image_url: asJpeg(rawImage), caption: finalCaption, access_token: token }),
+      });
+    }
     const container = await containerRes.json();
     if (!containerRes.ok || !container.id) {
       return json(isPermissionError(container)
