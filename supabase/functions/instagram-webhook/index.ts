@@ -41,13 +41,14 @@ serve(async (req) => {
         const igAccountId = entry.id;
         if (!igAccountId) continue;
 
-        // Find integration to get user + access token
-        const { data: integration } = await supabase
+        // Find integration to get user + access token (either provider —
+        // the new app's events reference direct-IG connections).
+        const { data: integrationRows } = await supabase
           .from('integrations')
-          .select('user_id, access_token')
-          .eq('provider', 'facebook')
-          .eq('ig_account_id', igAccountId)
-          .maybeSingle();
+          .select('user_id, access_token, provider')
+          .in('provider', ['instagram', 'facebook'])
+          .eq('ig_account_id', igAccountId);
+        const integration = integrationRows?.find((r: any) => r.provider === 'instagram') ?? integrationRows?.[0];
 
         if (!integration) continue;
 
@@ -81,9 +82,12 @@ serve(async (req) => {
 
         const accessToken = integration.access_token as string;
 
-        // Fetch latest profile details from Graph API
+        // Fetch latest profile details from Graph API (per provider)
         const fields = 'name,username,profile_picture_url,biography,followers_count,media_count,website';
-        const profileRes = await fetch(`https://graph.facebook.com/v19.0/${igAccountId}?fields=${fields}&access_token=${accessToken}`);
+        const profileUrl = integration.provider === 'instagram'
+          ? `https://graph.instagram.com/me?fields=${fields}&access_token=${accessToken}`
+          : `https://graph.facebook.com/v19.0/${igAccountId}?fields=${fields}&access_token=${accessToken}`;
+        const profileRes = await fetch(profileUrl);
         if (!profileRes.ok) continue;
         const profile = await profileRes.json();
 

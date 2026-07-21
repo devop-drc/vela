@@ -286,13 +286,13 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     if (cacheError) throw cacheError;
     const cacheMap = new Map<string, any>((cacheEntries || []).map((entry: any) => [entry.caption_hash, entry]));
 
-    // Fetch the Instagram access token for image analysis
-    const { data: integration } = await supabaseAdmin
+    // Fetch the Instagram access token for image analysis (prefer direct-IG)
+    const { data: integrationRows } = await supabaseAdmin
       .from('integrations')
-      .select('access_token')
+      .select('provider, access_token')
       .eq('user_id', user.id)
-      .eq('provider', 'facebook')
-      .maybeSingle();
+      .in('provider', ['instagram', 'facebook']);
+    const integration = integrationRows?.find((r: any) => r.provider === 'instagram') ?? integrationRows?.[0];
     const accessToken: string | null = integration?.access_token || null;
 
     // --- Helper functions (defined before batch loop) ---

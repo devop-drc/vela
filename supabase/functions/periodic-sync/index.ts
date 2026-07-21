@@ -149,7 +149,7 @@ const processUser = async (supabaseAdmin: SupabaseClient, integration: Integrati
     // We invoke the function with the service role key but pass the user's token in the body for it to use
     const { data: postsData, error: postsError } = await supabaseAdmin.functions.invoke('instagram-posts', {
         headers: { 'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
-        body: { user_access_token: access_token }
+        body: { user_access_token: access_token, provider: integration.provider, ig_account_id: (integration as any).ig_account_id ?? null }
     });
 
     if (postsError || (postsData && postsData.error)) {
@@ -251,9 +251,38 @@ serve(async (req) => {
 
     const supabaseAdmin = getSupabaseAdmin();
     
-    // Fetch all users with an active Facebook integration
-    const { data: integrations, error } = await supabaseAdmin.from('integrations').select('*').eq('provider', 'facebook');
+    // Fetch every Instagram connection; when a user has both providers,
+    // the direct-IG one wins (legacy 'facebook' rows are being phased out).
+    const { data: allIntegrations, error } = await supabaseAdmin.from('integrations').select('*').in('provider', ['instagram', 'facebook']);
     if (error) throw error;
+    const igUserIds = new Set(allIntegrations.filter((i: Integration) => i.provider === 'instagram').map((i: Integration) => i.user_id));
+    const integrations = allIntegrations.filter((i: Integration) => i.provider === 'instagram' || !igUserIds.has(i.user_id));
+
+    // Direct-IG long-lived tokens last ~60 days: refresh any that are past
+    // half-life (or missing an expiry) so merchants never get disconnected.
+    // Refresh requires the token to be at least 24h old — brand-new tokens
+    // simply have a far-away expiry and are skipped by the window check.
+    for (const integration of integrations) {
+      if (integration.provider !== 'instagram') continue;
+      const expiresAt = (integration as any).token_expires_at ? new Date((integration as any).token_expires_at).getTime() : 0;
+      const needsRefresh = !expiresAt || expiresAt - Date.now() < 30 * 24 * 3600 * 1000;
+      if (!needsRefresh) continue;
+      try {
+        const res = await fetch(`https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${integration.access_token}`);
+        const data = await res.json();
+        if (res.ok && data.access_token) {
+          const newExpiry = new Date(Date.now() + (data.expires_in ?? 5184000) * 1000).toISOString();
+          await supabaseAdmin.from('integrations')
+            .update({ access_token: data.access_token, token_expires_at: newExpiry })
+            .eq('user_id', integration.user_id).eq('provider', 'instagram');
+          integration.access_token = data.access_token;
+        } else {
+          console.error(`Token refresh failed for user ${integration.user_id}:`, data.error?.message ?? data);
+        }
+      } catch (e) {
+        console.error(`Token refresh error for user ${integration.user_id}:`, (e as Error).message);
+      }
+    }
 
     // Process each user's sync sequentially to avoid overwhelming the system,
     // but the analysis for each user's posts will be parallel.

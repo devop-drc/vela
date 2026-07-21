@@ -327,7 +327,8 @@ const Index = () => {
         .from('integrations')
         .select('id')
         .eq('user_id', shopDetails.userId)
-        .eq('provider', 'facebook')
+        .in('provider', ['instagram', 'facebook'])
+        .limit(1)
         .maybeSingle();
 
       if (error) {

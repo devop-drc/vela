@@ -35,6 +35,8 @@ out/
 .remotion/
 build/
 supabase/.access-token.local
+supabase/.*.local
+scripts/.*.local
 
 # extraction test artifacts
 test/report.md
@@ -42,3 +44,4 @@ test/report.json
 
 # local content archives
 branding/marketing/*.zip
+instagramApi/

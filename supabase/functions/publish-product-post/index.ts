@@ -97,11 +97,13 @@ serve(async (req) => {
       .eq('businesses.user_id', user.id).maybeSingle();
     if (!shop) return json({ error: 'Shop not found' }, 404);
 
-    const { data: integration } = await admin.from('integrations')
-      .select('access_token, ig_account_id')
-      .eq('user_id', user.id).eq('provider', 'facebook').maybeSingle();
+    const { data: integrationRows } = await admin.from('integrations')
+      .select('provider, access_token, ig_account_id')
+      .eq('user_id', user.id).in('provider', ['instagram', 'facebook']);
+    const integration = integrationRows?.find((r: any) => r.provider === 'instagram') ?? integrationRows?.[0];
     if (!integration?.access_token) return json({ error: 'reconnect_required', detail: 'No Instagram connection.' }, 200);
     const token = integration.access_token;
+    const graphBase = integration.provider === 'instagram' ? 'https://graph.instagram.com' : GRAPH;
 
     // Image candidates: gallery first, then the primary media (skip videos).
     const candidates: string[] = [
@@ -143,19 +145,27 @@ serve(async (req) => {
     const finalCaption = (captionOverride || '').trim();
     if (!finalCaption) return json({ error: 'A caption is required to publish.' }, 400);
 
-    // Resolve the IG Business account id (stored, or discovered via pages).
+    // Resolve the IG account id (stored; else /me for direct-IG, Pages
+    // discovery for legacy Facebook connections).
     let igId: string | null = integration.ig_account_id ?? null;
-    if (!igId) {
+    if (!igId && integration.provider === 'instagram') {
+      const meRes = await fetch(`${graphBase}/me?fields=user_id&access_token=${token}`);
+      const me = await meRes.json();
+      if (!meRes.ok) return json(isPermissionError(me) ? { error: 'reconnect_required' } : { error: 'Could not resolve the Instagram account.' }, 200);
+      igId = me.user_id ? String(me.user_id) : null;
+    } else if (!igId) {
       const pagesRes = await fetch(`${GRAPH}/me/accounts?fields=instagram_business_account&access_token=${token}`);
       const pages = await pagesRes.json();
       if (!pagesRes.ok) return json(isPermissionError(pages) ? { error: 'reconnect_required' } : { error: 'Could not resolve the Instagram account.' }, 200);
       igId = pages.data?.find((p: any) => p.instagram_business_account)?.instagram_business_account?.id ?? null;
-      if (igId) await admin.from('integrations').update({ ig_account_id: igId }).eq('user_id', user.id).eq('provider', 'facebook');
+    }
+    if (igId && !integration.ig_account_id) {
+      await admin.from('integrations').update({ ig_account_id: igId }).eq('user_id', user.id).eq('provider', integration.provider);
     }
     if (!igId) return json({ error: 'reconnect_required', detail: 'No Instagram Business account linked.' }, 200);
 
     // 1) media container
-    const containerRes = await fetch(`${GRAPH}/${igId}/media`, {
+    const containerRes = await fetch(`${graphBase}/${igId}/media`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ image_url: asJpeg(rawImage), caption: finalCaption, access_token: token }),
@@ -169,14 +179,14 @@ serve(async (req) => {
 
     // 2) wait for the container to be ready (images are usually instant)
     for (let i = 0; i < 6; i++) {
-      const st = await (await fetch(`${GRAPH}/${container.id}?fields=status_code&access_token=${token}`)).json();
+      const st = await (await fetch(`${graphBase}/${container.id}?fields=status_code&access_token=${token}`)).json();
       if (st.status_code === 'FINISHED') break;
       if (st.status_code === 'ERROR') return json({ error: 'Instagram could not process the image.' }, 200);
       await new Promise((r) => setTimeout(r, 1500));
     }
 
     // 3) publish
-    const pubRes = await fetch(`${GRAPH}/${igId}/media_publish`, {
+    const pubRes = await fetch(`${graphBase}/${igId}/media_publish`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ creation_id: container.id, access_token: token }),
@@ -192,7 +202,7 @@ serve(async (req) => {
     //    match this media to THIS product instead of creating a duplicate).
     let permalink: string | null = null;
     try {
-      const info = await (await fetch(`${GRAPH}/${pub.id}?fields=permalink&access_token=${token}`)).json();
+      const info = await (await fetch(`${graphBase}/${pub.id}?fields=permalink&access_token=${token}`)).json();
       permalink = info?.permalink ?? null;
     } catch { /* permalink is nice-to-have */ }
     await admin.from('products').update({ instagram_post_id: pub.id }).eq('id', product.id);

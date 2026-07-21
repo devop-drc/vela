@@ -45,13 +45,13 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const targetProductIds: string[] | undefined = body?.product_ids;
 
-    // Fetch Instagram access token
-    const { data: integration } = await admin
+    // Fetch Instagram access token (prefer the direct-IG connection)
+    const { data: integrations } = await admin
       .from('integrations')
-      .select('access_token')
+      .select('provider, access_token')
       .eq('user_id', user.id)
-      .eq('provider', 'facebook')
-      .maybeSingle();
+      .in('provider', ['instagram', 'facebook']);
+    const integration = integrations?.find((r: any) => r.provider === 'instagram') ?? integrations?.[0];
 
     if (!integration?.access_token) {
       return new Response(JSON.stringify({ error: 'Instagram integration not found. Please reconnect your account.' }), {
@@ -59,6 +59,7 @@ serve(async (req) => {
       });
     }
     const accessToken = integration.access_token;
+    const graphBase = integration.provider === 'instagram' ? 'https://graph.instagram.com' : 'https://graph.facebook.com/v19.0';
 
     // Fetch candidate products
     let query = admin
@@ -124,7 +125,7 @@ serve(async (req) => {
         const productsForPost = byPost[postId];
         try {
           // 1. Fetch the post itself
-          const graphUrl = `https://graph.facebook.com/v19.0/${postId}?fields=media_url,thumbnail_url,media_type&access_token=${accessToken}`;
+          const graphUrl = `${graphBase}/${postId}?fields=media_url,thumbnail_url,media_type&access_token=${accessToken}`;
           const resp = await fetch(graphUrl);
           if (!resp.ok) {
             const errText = await resp.text().catch(() => '');
@@ -139,7 +140,7 @@ serve(async (req) => {
           let childrenUrls: string[] = [];
           if (mediaType === 'CAROUSEL_ALBUM') {
             try {
-              const childResp = await fetch(`https://graph.facebook.com/v19.0/${postId}/children?fields=id,media_url,media_type,thumbnail_url&access_token=${accessToken}`);
+              const childResp = await fetch(`${graphBase}/${postId}/children?fields=id,media_url,media_type,thumbnail_url&access_token=${accessToken}`);
               if (childResp.ok) {
                 const childData = await childResp.json();
                 const items: any[] = Array.isArray(childData.data) ? childData.data : [];

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { Facebook, CheckCircle, XCircle } from 'lucide-react';
+import { Instagram, CheckCircle, XCircle } from 'lucide-react';
 import { Spinner } from "@/components/ui/spinner";
 import { showError, showSuccess, toFriendlyError } from '@/utils/toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from '@/contexts/AuthContext';
 
 interface IntegrationSettingsProps {
-  /** Integration row (provider='facebook'), fetched once by the parent. */
+  /** Integration row (provider 'instagram' or legacy 'facebook'), fetched once by the parent. */
   integration: any | null;
   /** True while the parent is still resolving the integration. */
   isLoading?: boolean;
@@ -42,7 +42,7 @@ export const IntegrationSettings = ({ integration, isLoading = false, onDisconne
       .from('integrations')
       .delete()
       .eq('user_id', userId)
-      .eq('provider', 'facebook');
+      .in('provider', ['instagram', 'facebook']);
 
     if (error) {
       showError(toFriendlyError(error, t("integrations.disconnect_failed")));
@@ -68,7 +68,7 @@ export const IntegrationSettings = ({ integration, isLoading = false, onDisconne
           <div className="flex items-center justify-between p-4 border border-success/25 rounded-lg bg-success/5">
             <div className="flex items-center gap-3">
               <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/15">
-                <Facebook className="h-5 w-5" />
+                <Instagram className="h-5 w-5" />
               </span>
               <div>
                 <p className="font-semibold">{t("integrations.fb_ig")}</p>
@@ -100,7 +100,7 @@ export const IntegrationSettings = ({ integration, isLoading = false, onDisconne
         ) : (
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-3">
-              <Facebook className="h-6 w-6" />
+              <Instagram className="h-6 w-6" />
               <div>
                 <p className="font-semibold">{t("integrations.fb_ig")}</p>
                 <p className="text-sm text-muted-foreground">{t("integrations.not_connected")}</p>

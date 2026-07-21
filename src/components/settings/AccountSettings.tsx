@@ -86,7 +86,9 @@ export const AccountSettings = () => {
       .from('integrations')
       .select('*')
       .eq('user_id', uid)
-      .eq('provider', 'facebook')
+      .in('provider', ['instagram', 'facebook'])
+      .order('provider', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     setIntegration(integrationData);

@@ -93,15 +93,21 @@ const resolveInstagramLogo = async (
   igAccountIdFromShop: string | null,
 ): Promise<string | null> => {
   try {
-    const { data: integration } = await supabaseAdmin
+    const { data: integrationRows } = await supabaseAdmin
       .from('integrations')
-      .select('access_token, ig_account_id')
+      .select('provider, access_token, ig_account_id')
       .eq('user_id', userId)
-      .eq('provider', 'facebook')
-      .maybeSingle();
+      .in('provider', ['instagram', 'facebook']);
+    const integration = integrationRows?.find((r: any) => r.provider === 'instagram') ?? integrationRows?.[0];
 
     const token = integration?.access_token;
     if (!token) return null;
+
+    if (integration.provider === 'instagram') {
+      const profileRes = await fetch(`https://graph.instagram.com/me?fields=profile_picture_url&access_token=${token}`);
+      if (!profileRes.ok) return null;
+      return (await profileRes.json()).profile_picture_url || null;
+    }
 
     let igId: string | null = integration?.ig_account_id || igAccountIdFromShop || null;
 

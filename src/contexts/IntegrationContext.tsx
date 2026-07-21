@@ -20,7 +20,7 @@ export const IntegrationProvider = ({ children }: { children: ReactNode }) => {
   const checkIntegration = useCallback(async () => {
     const uid = userIdRef.current;
     if (!uid) return false;
-    const { data } = await supabase.from('integrations').select('id').eq('user_id', uid).eq('provider', 'facebook').maybeSingle();
+    const { data } = await supabase.from('integrations').select('id').eq('user_id', uid).in('provider', ['instagram', 'facebook']).limit(1).maybeSingle();
     return !!data;
   }, []);
 
