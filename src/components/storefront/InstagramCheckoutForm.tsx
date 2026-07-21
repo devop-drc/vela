@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { Reveal } from "@/lib/anim";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,7 +24,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { motion} from "framer-motion";
 import { Switch } from "@/components/ui/switch"; // Import Switch
 import { useStorefront } from "@/contexts/StorefrontContext";
 
@@ -313,12 +313,8 @@ export const InstagramCheckoutForm = ({
             )}
 
             {checkoutStep === 'contact-shipping' && selectedAddressId === 'new' && (
-              <motion.div
+              <Reveal from="left"
                 key="contact-shipping-form" // Added key for AnimatePresence
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -50 }}
-                transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
                 <Card className="shadow-sm border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
@@ -406,16 +402,12 @@ export const InstagramCheckoutForm = ({
                   </div>
                 </CardContent>
                 </Card>
-              </motion.div>
+              </Reveal>
             )}
 
             {checkoutStep === 'payment' && (
-              <motion.div
+              <Reveal from="left"
                 key="payment-form" // Added key for AnimatePresence
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -50 }}
-                transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
                 <Card className="shadow-sm border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
@@ -443,10 +435,7 @@ export const InstagramCheckoutForm = ({
                             </div>
                           </Label>
                           {currentPaymentMethod === 'cash_on_delivery' && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
+                            <Reveal from="fade"
                               className="text-md text-[hsl(var(--primary))] bg-[hsl(var(--card))] rounded-md"
                             >
                               {/* single inline paragraph — a flex container here split each
@@ -455,7 +444,7 @@ export const InstagramCheckoutForm = ({
                                 <Info className="mr-2 inline-block h-4 w-4 align-[-2px]" />
                                 Please have the exact amount of <strong>{formatCurrency(total, shopDetails?.currency)}</strong> ready for the courier.
                               </p>
-                            </motion.div>
+                            </Reveal>
                         )}
                         {capabilities?.card_payments && (
                           <Label htmlFor="card" className="flex items-center gap-3 border rounded-lg p-4 cursor-pointer has-[input:checked]:border-[hsl(var(--primary))] flex-1">
@@ -478,7 +467,7 @@ export const InstagramCheckoutForm = ({
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </Reveal>
             )}
           </div>
         </ScrollArea>

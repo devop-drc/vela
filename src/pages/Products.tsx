@@ -20,7 +20,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { BulkActionsToolbar } from "@/components/BulkActionsToolbar";
-import { AnimatePresence } from "framer-motion";
 import { SaleModal, SaleFormData } from "@/components/SaleModal";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/contexts/PageTitleContext";
@@ -997,7 +996,6 @@ const Products = () => {
         </div>
       </div>
 
-      <AnimatePresence>
         {selectedProducts.length > 0 && (
           <BulkActionsToolbar
             selectedCount={selectedProducts.length}
@@ -1009,7 +1007,6 @@ const Products = () => {
             onBulkPublish={() => setBulkPublishOpen(true)}
           />
         )}
-      </AnimatePresence>
     </>
   );
 };

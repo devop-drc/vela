@@ -32,7 +32,6 @@ export default defineConfig(() => ({
             return "react-vendor";
           if (id.includes("react-router")) return "router";
           if (id.includes("recharts") || id.includes("d3-")) return "charts";
-          if (id.includes("framer-motion")) return "motion";
           if (id.includes("@supabase")) return "supabase";
           if (id.includes("@radix-ui")) return "radix";
           if (id.includes("i18next") || id.includes("react-i18next")) return "i18n";

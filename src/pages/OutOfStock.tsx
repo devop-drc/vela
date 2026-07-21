@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { AnimatePresence, motion } from "framer-motion";
+import { Collapse, Reveal } from "@/lib/anim";
 import {
   Package,
   X,
@@ -436,15 +436,9 @@ const ProductAccordionRow = ({
       </div>
 
       {/* Expanded content */}
-      <AnimatePresence initial={false}>
+      <Collapse open={expanded}>
         {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
-            style={{ overflow: "hidden" }}
-          >
+          <div>
             {/* Quick apply bar */}
             <div className="flex flex-wrap items-center gap-2 px-4 py-2 bg-muted/30 border-b">
               <div className="flex gap-1.5">
@@ -524,9 +518,9 @@ const ProductAccordionRow = ({
                 />
               ))
             )}
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </Collapse>
     </div>
   );
 };
@@ -885,13 +879,11 @@ const OutOfStock = () => {
       </div>
 
       {/* Bulk Actions Toolbar */}
-      <AnimatePresence>
+      <>
         {selectedVariantIds.size > 0 && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          <Reveal
+            from="up"
+            duration={0.5}
             className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-background/80 backdrop-blur-xl border rounded-xl shadow-lg p-2 flex items-center gap-2 flex-wrap"
           >
             <span className="text-sm font-medium px-2 whitespace-nowrap">
@@ -971,9 +963,9 @@ const OutOfStock = () => {
             >
               <X className="h-4 w-4" />
             </Button>
-          </motion.div>
+          </Reveal>
         )}
-      </AnimatePresence>
+      </>
     </>
   );
 };

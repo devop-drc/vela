@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/contexts/CartContext";
-import { motion } from "framer-motion";
+import gsap from "gsap";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
 
@@ -80,12 +80,10 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, isProducts
               onClick={onOpenCart}
               className="relative text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]"
             >
-              <motion.span
+              <span
                 key={totalItems}
-                initial={{ scale: 1 }}
-                animate={totalItems > 0 ? { scale: [1, 1.2, 1] } : { scale: 1 }}
-                transition={{ duration: 0.3 }}
-                className="relative"
+                ref={(el) => { if (el && totalItems > 0) gsap.fromTo(el, { scale: 1.25 }, { scale: 1, duration: 0.35, ease: "back.out(2.5)" }); }}
+                className="relative inline-flex"
               >
                 <ShoppingBag className="h-5 w-5" />
                 {totalItems > 0 && (
@@ -93,7 +91,7 @@ export const InstagramShopHeader = ({ onOpenCart, onOpenFilterDrawer, isProducts
                     {totalItems}
                   </span>
                 )}
-              </motion.span>
+              </span>
             </Button>
           </div>
           {/* Row 2: Filter and Sort */}

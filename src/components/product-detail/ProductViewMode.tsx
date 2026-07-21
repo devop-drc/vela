@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { Reveal } from "@/lib/anim";
 import { useTranslation } from "react-i18next";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
@@ -184,7 +184,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
   const hasVariants = variants.length > 0;
 
   return (
-    <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
+    <Reveal from="fade" duration={0.25} className="flex-1 flex flex-col min-h-0">
       <ScrollArea className="flex-1 overflow-y-auto">
         {/* With variants present, wide screens split into two columns:
             media + details + specs on the left, the variants table on the
@@ -601,6 +601,6 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </motion.div>
+    </Reveal>
   );
 };

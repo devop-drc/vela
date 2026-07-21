@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { Reveal } from "@/lib/anim";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, X, Minus, Plus, Trash2, Loader2, CreditCard, CheckCircle, ArrowLeft, Bookmark, MoveRight, ArrowRight, User, Mail, MapPin, Phone, StickyNote, Info, Wallet, ShieldCheck, Lock, Banknote, Hash, XCircle, Truck } from "lucide-react";
@@ -13,7 +14,6 @@ import { MediaItem } from "@/components/MediaItem";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -171,19 +171,15 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
           {checkoutStep === 'cart' ? (
             <>
               {cartItems.length === 0 && savedItems.length === 0 ? (
-                <motion.div
+                <Reveal from="up"
                   key="empty-cart"
-                  initial={{ opacity: 0, y: 50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -50 }}
-                  transition={{ duration: 0.2 }}
                   className="flex flex-col items-center justify-center flex-1 p-8 text-center h-full"
                 >
                   <ShoppingBag className="h-20 w-20 text-muted-foreground mb-6" />
                   <h3 className="text-2xl font-bold mb-4">Your cart is empty</h3>
                   <p className="text-base text-muted-foreground mb-8">Looks like you haven't added anything to your cart yet.</p>
                   <Button onClick={onClose} className="text-base bg-red-500 hover:bg-red-600 text-white">Start Shopping</Button>
-                </motion.div>
+                </Reveal>
               ) : (
                 <ScrollArea className="flex-1 p-4 pr-6">
                   <div className="space-y-6">
@@ -196,15 +192,9 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                             <span>This cart includes subscription products. Cash on Delivery is not available.</span>
                           </div>
                         )}
-                        <AnimatePresence>
                           {cartItems.map(item => (
-                            <motion.div
+                            <Reveal from="up"
                               key={item.productId}
-                              layout
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, x: -100 }}
-                              transition={{ duration: 0.2 }}
                             >
                               <Card className="flex items-start p-3 gap-3 shadow-sm border border-border bg-card">
                                 <Link to={`/instagramShop/${shopSlug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
@@ -234,7 +224,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
 
                                   <div className="flex items-center justify-between gap-2 mt-2">
                                     <div className="flex items-center border border-border rounded-md h-9 flex-shrink-0">
-                                      <motion.button
+                                      <button
                                         type="button"
                                         variant="ghost"
                                         size="icon"
@@ -245,7 +235,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                         whileTap={{ scale: 0.9 }}
                                       >
                                         <Minus className="h-4 w-4" />
-                                      </motion.button>
+                                      </Reveal>
                                       <Input
                                         type="number"
                                         value={item.quantity}
@@ -253,7 +243,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                         className="w-14 text-center border-y-0 border-x border-border focus-visible:ring-0 text-sm h-full rounded-none bg-transparent"
                                         min={1}
                                       />
-                                      <motion.button
+                                      <button
                                         type="button"
                                         variant="ghost"
                                         size="icon"
@@ -264,7 +254,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                         whileTap={{ scale: 0.9 }}
                                       >
                                         <Plus className="h-4 w-4" />
-                                      </motion.button>
+                                      </Reveal>
                                     </div>
                                     
                                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -289,7 +279,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                           <Bookmark className="mr-2 h-4 w-4" />
                                           Save
                                       </Button>
-                                      <motion.button
+                                      <button
                                         type="button"
                                         variant="destructive"
                                         size="icon"
@@ -300,28 +290,21 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                       >
                                         <XCircle className="h-5 w-5" />
                                         <span className="sr-only">Remove {item.name}</span>
-                                      </motion.button>
+                                      </Reveal>
                                     </div>
                                   </div>
                                 </Card>
-                              </motion.div>
+                              </Reveal>
                           ))}
-                        </AnimatePresence>
                       </div>
                     )}
 
                     {savedItems.length > 0 && (
                       <div className="space-y-4 mt-6">
                         <h2 className="text-lg font-bold text-foreground">Saved ({savedItems.length})</h2>
-                        <AnimatePresence>
                           {savedItems.map(item => (
-                            <motion.div
+                            <Reveal from="up"
                               key={item.productId}
-                              layout
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, x: -100 }}
-                              transition={{ duration: 0.2 }}
                             >
                               <Card className="flex items-start p-3 gap-3 shadow-sm border border-border bg-card">
                                 <Link to={`/instagramShop/${shopSlug}/product/${item.productId}`} onClick={onClose} className="flex-shrink-0">
@@ -372,7 +355,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                           <MoveRight className="mr-2 h-4 w-4" />
                                           Move to Cart
                                       </Button>
-                                      <motion.button
+                                      <button
                                         type="button"
                                         variant="destructive"
                                         size="icon"
@@ -383,14 +366,13 @@ export const InstagramCartDrawer = ({ isOpen, onClose }: InstagramCartDrawerProp
                                       >
                                         <XCircle className="h-5 w-5" />
                                         <span className="sr-only">Remove {item.name}</span>
-                                      </motion.button>
+                                      </Reveal>
                                     </div>
                                   </div>
                                 </div>
                               </Card>
-                            </motion.div>
+                            </Reveal>
                           ))}
-                        </AnimatePresence>
                       </div>
                     )}
                   </div>

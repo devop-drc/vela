@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bar, ComposedChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Area } from "recharts";
 import { formatDistanceToNow } from "date-fns";
-import { motion } from "framer-motion";
+import { Reveal } from "@/lib/anim";
 import { cn } from "@/lib/utils";
 import { demoChartData, demoProfile, demoTopProducts, demoActivities } from "./data";
 
@@ -150,7 +150,7 @@ const DemoDashboard = () => (
           <ScrollArea className="h-64">
             <div className="space-y-2.5 pr-4">
               {demoActivities.map((a) => (
-                <motion.div key={a.id} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }}
+                <Reveal key={a.id} from="left"
                   className={cn("flex items-center gap-3 rounded-lg p-3 shadow-sm", a.type === "sale" ? "bg-success/5" : "bg-info/5")}>
                   <Avatar className="h-9 w-9">
                     {a.image ? <AvatarImage src={a.image} /> : null}
@@ -162,7 +162,7 @@ const DemoDashboard = () => (
                     <p className="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(a.date), { addSuffix: true })}</p>
                   </div>
                   <p className="text-sm font-semibold tabular-nums">{a.value}</p>
-                </motion.div>
+                </Reveal>
               ))}
             </div>
           </ScrollArea>

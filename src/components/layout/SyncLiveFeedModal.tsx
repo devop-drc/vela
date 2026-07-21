@@ -8,7 +8,7 @@ import { Package, Zap, SkipForward, CheckCircle, XCircle, ImageOff } from "lucid
 import { Spinner } from "@/components/ui/spinner";
 import { useCountUp } from "@/lib/anim";
 import { SyncJob, ProductPayload, SkippedItem } from "@/types/sync";
-import { AnimatePresence, motion } from "framer-motion";
+import { Reveal } from "@/lib/anim";
 import { useTranslation } from "react-i18next";
 
 /** Small count-up number for the sync stat badges. */
@@ -20,9 +20,7 @@ const CountUp = ({ value }: { value: number }) => {
 const ProductRow = ({ item, type }: { item: ProductPayload; type: 'created' | 'updated' }) => {
   const { t } = useTranslation();
   return (
-  <motion.div
-    initial={{ opacity: 0, x: -10 }}
-    animate={{ opacity: 1, x: 0 }}
+  <Reveal from="right"
     className="flex gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/30 transition-colors"
   >
     <div className="h-14 w-14 rounded-md overflow-hidden bg-muted shrink-0 border">
@@ -79,14 +77,12 @@ const ProductRow = ({ item, type }: { item: ProductPayload; type: 'created' | 'u
         </div>
       )}
     </div>
-  </motion.div>
+  </Reveal>
   );
 };
 
 const SkippedRow = ({ item }: { item: SkippedItem }) => (
-  <motion.div
-    initial={{ opacity: 0, x: -10 }}
-    animate={{ opacity: 1, x: 0 }}
+  <Reveal from="right"
     className="flex gap-3 p-2.5 rounded-lg border bg-card"
   >
     <div className="h-10 w-10 rounded-md overflow-hidden bg-muted shrink-0 border">
@@ -100,7 +96,7 @@ const SkippedRow = ({ item }: { item: SkippedItem }) => (
       <p className="text-sm truncate text-muted-foreground">{item.name}</p>
       <p className="text-[11px] text-muted-foreground/70 mt-0.5">{item.reason}</p>
     </div>
-  </motion.div>
+  </Reveal>
 );
 
 interface SyncLiveFeedModalProps {
@@ -176,17 +172,14 @@ export const SyncLiveFeedModal = ({ job, isOpen, onClose }: SyncLiveFeedModalPro
           <TabsContent value="products" className="flex-1 min-h-0 mt-2">
             <ScrollArea className="h-[50vh]">
               <div className="space-y-2 pr-3">
-                <AnimatePresence mode="popLayout">
                   {allProducts.length === 0 && isRunning && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
+                    <Reveal from="fade"
                       className="flex flex-col items-center justify-center py-12 text-muted-foreground"
                     >
                       <Spinner className="h-8 w-8 mb-3" />
                       <p className="text-sm">{t('sync.waiting_ai')}</p>
                       <p className="text-xs mt-1">{t('sync.waiting_ai_desc')}</p>
-                    </motion.div>
+                    </Reveal>
                   )}
                   {allProducts.length === 0 && !isRunning && (
                     <EmptyState compact icon={Package} title={t('sync.no_products_processed')} />
@@ -194,7 +187,6 @@ export const SyncLiveFeedModal = ({ job, isOpen, onClose }: SyncLiveFeedModalPro
                   {allProducts.map((item, i) => (
                     <ProductRow key={item.instagram_post_id || i} item={item} type={item._type} />
                   ))}
-                </AnimatePresence>
               </div>
             </ScrollArea>
           </TabsContent>

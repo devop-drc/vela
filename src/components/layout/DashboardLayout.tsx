@@ -6,7 +6,7 @@ import BottomNav from "./BottomNav";
 import { usePageTitle } from "@/contexts/PageTitleContext";
 import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { motion } from "framer-motion";
+import { Reveal } from "@/lib/anim";
 import { useShop } from "@/contexts/ShopContext";
 import { Suspense, useEffect, useState } from "react";
 import { ProcessesWidget } from "./ProcessesWidget";
@@ -130,16 +130,11 @@ const DashboardLayout = () => {
   // Fast opacity fade on route change (no exit-then-enter serialization) so
   // navigation feels instant in this productivity app.
   const content = (
-    <motion.div
-      key={location.pathname}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.16 }}
-    >
+    <Reveal from="fade" duration={0.16} playKey={location.pathname}>
       <Suspense fallback={pageFallback}>
         <Outlet />
       </Suspense>
-    </motion.div>
+    </Reveal>
   );
 
   // Must match Sidebar.tsx: w-14 (56px), w-52 (208px), w-60 (240px), w-72 (288px)

@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { motion, AnimatePresence } from "framer-motion";
+import { Reveal } from "@/lib/anim";
 import { Controller } from "react-hook-form";
 import { DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -340,7 +340,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
 
 
     return (
-      <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
+      <Reveal from="fade" duration={0.25} className="flex-1 flex flex-col min-h-0">
         <form onSubmit={handleSubmit(handleSave)} className="flex-1 flex flex-col min-h-0">
           <DialogHeader className="sr-only"><DialogTitle>{t('product_edit.update_product')}</DialogTitle></DialogHeader>
           <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
@@ -433,7 +433,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                     </div>
                     <div className="grid grid-cols-3 gap-4 pt-2">
                         <div className="space-y-1 col-span-2"><Label htmlFor="price" className="text-xs">{t('product_edit.price')}</Label><div className="flex items-center gap-2"><div className="relative flex-1"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{currencySymbol}</span><Input id="price" type="number" step="0.01" {...register("price")} className={cn(underlineBase, "w-full focus-visible:ring-0 focus-visible:ring-offset-0 pl-8")} /></div><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn(underlineBase, "w-28 hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50")}><SelectValue placeholder="USD" /></SelectTrigger><SelectContent>{currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} ({c.symbol})</SelectItem>)}</SelectContent></Select>)} /></div>{errors.price && <p className="text-sm text-destructive mt-1">{errors.price.message}</p>}{errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}</div>
-                        <AnimatePresence>{pricingType === 'one_time' && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">{t('product_edit.quantity_in_stock')}</Label><Input id="inventory" type="number" {...register("inventory")} className={cn(underlineBase, "w-full focus-visible:ring-0 focus-visible:ring-offset-0")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></motion.div>)}{pricingType === 'subscription' && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-1"><Label className="text-xs">{t('product_edit.interval')}</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className={cn(underlineBase, "w-full hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50")}><SelectValue placeholder={t('product_edit.interval')} /></SelectTrigger><SelectContent><SelectItem value="month">{t('product_edit.per_month')}</SelectItem><SelectItem value="year">{t('product_edit.per_year')}</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</motion.div>)}</AnimatePresence>
+                        <>{pricingType === 'one_time' && (<Reveal from="down" duration={0.3} className="overflow-hidden"><div className="space-y-1"><Label htmlFor="inventory" className="text-xs">{t('product_edit.quantity_in_stock')}</Label><Input id="inventory" type="number" {...register("inventory")} className={cn(underlineBase, "w-full focus-visible:ring-0 focus-visible:ring-offset-0")} />{errors.inventory && <p className="text-sm text-destructive mt-1">{errors.inventory.message}</p>}</div></Reveal>)}{pricingType === 'subscription' && (<Reveal from="fade" duration={0.25} className="space-y-1"><Label className="text-xs">{t('product_edit.interval')}</Label><Controller name="billing_interval" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value || undefined}><SelectTrigger className={cn(underlineBase, "w-full hover:bg-muted/50 focus:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted/50")}><SelectValue placeholder={t('product_edit.interval')} /></SelectTrigger><SelectContent><SelectItem value="month">{t('product_edit.per_month')}</SelectItem><SelectItem value="year">{t('product_edit.per_year')}</SelectItem></SelectContent></Select>)} />{errors.billing_interval && <p className="text-sm text-destructive mt-1">{errors.billing_interval.message}</p>}</Reveal>)}</>
                     </div>
                   </div>
                 </div>
@@ -504,6 +504,6 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
           </Tabs>
           <DialogFooter className="p-4 border-t"><Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>{t('common.cancel')}</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Spinner className="mr-2 h-4 w-4" />}{t('product_edit.update_product')}</Button></DialogFooter>
         </form>
-      </motion.div>
+      </Reveal>
     )
 };

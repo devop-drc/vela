@@ -3,7 +3,6 @@ import { deleteProductMedia } from "@/lib/productCleanup";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionComponent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleComponent } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -285,7 +284,6 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
             <DialogTitle>{t('product_editor.dialog_title', { name: product?.name })}</DialogTitle>
             <DialogDescription>{t('product_editor.dialog_desc', { name: product?.name })}</DialogDescription>
           </DialogHeader>
-          <AnimatePresence mode="wait">
             {isEditing ? (
               <FormProvider {...form}>
                 <ProductEditMode
@@ -333,7 +331,6 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
                 onIgPublishPrompted={() => setPromptIgPublish(false)}
               />
             )}
-          </AnimatePresence>
         </DialogContent>
       </Dialog>
       <AlertDialog open={isDeleting} onOpenChange={setIsDeleting}><AlertDialogContent><AlertDialogHeader><AlertDialogTitleComponent>{t('product_editor.delete_confirm_title')}</AlertDialogTitleComponent><AlertDialogDescriptionComponent>{t('product_editor.delete_confirm_desc')}</AlertDialogDescriptionComponent></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t('product_editor.delete_confirm_action')}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>

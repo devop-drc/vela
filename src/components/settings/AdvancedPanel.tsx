@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { Reveal } from "@/lib/anim";
 import { useTranslation } from "react-i18next";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { ColorPickerInput } from "./ColorPickerInput";
@@ -8,10 +8,7 @@ export const AdvancedPanel = () => {
     const { settings, updateSetting } = useAppearance();
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+        <Reveal from="down"
             className="space-y-8 pt-8"
         >
             <div className="space-y-4 p-4 border rounded-lg">
@@ -33,6 +30,6 @@ export const AdvancedPanel = () => {
                     <ColorPickerInput label={t('studio_panels.color_informational')} value={settings['--info']} onChange={(v) => updateSetting('--info', v)} />
                 </div>
             </div>
-        </motion.div>
+        </Reveal>
     );
 };

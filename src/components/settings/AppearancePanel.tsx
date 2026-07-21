@@ -12,7 +12,6 @@ import { FontSelector } from "./FontSelector";
 import { AdvancedPanel } from "./AdvancedPanel";
 import { BackgroundImageSelector } from "./BackgroundImageSelector";
 import { HeroBackgroundSettings } from "./HeroBackgroundSettings"; // Import new component
-import { AnimatePresence } from "framer-motion";
 import { Sparkles, Save } from "lucide-react";
 import { Switch } from "../ui/switch";
 import { Slider } from "../ui/slider";
@@ -220,9 +219,7 @@ export const AppearancePanel = () => {
           </AlertDialog>
           <Button variant="ghost" onClick={resetSettings}>{t("appearance.reset_defaults")}</Button>
       </div>
-      <AnimatePresence>
           {isAdvanced && <AdvancedPanel />}
-      </AnimatePresence>
     </div>
   );
 };

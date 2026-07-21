@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { Reveal } from "@/lib/anim";
 import type { CartItem } from "@/contexts/CartContext";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -16,7 +17,6 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { QuantityInput } from "./QuantityInput";
-import { motion, AnimatePresence } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
@@ -292,12 +292,8 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
             {(checkoutStep === 'cart' && !initialCartItems) ? (
               <>
                 {currentCartItems.length === 0 && savedItems.length === 0 ? (
-                  <motion.div
+                  <Reveal from="up"
                     key="empty-cart"
-                    initial={{ opacity: 0, y: 50 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -50 }}
-                    transition={{ duration: 0.2 }}
                     className="flex flex-col items-center justify-center flex-1 p-8 text-center h-full"
                   >
                     <div className="mb-5 grid h-20 w-20 place-items-center rounded-full bg-[hsl(var(--primary))]/10">
@@ -306,7 +302,7 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                     <h3 className="mb-2 text-xl font-bold">Your cart is empty</h3>
                     <p className="mb-6 max-w-[240px] text-sm text-[hsl(var(--muted-foreground))]">Looks like you haven't added anything to your cart yet.</p>
                     <Button onClick={onClose} className="rounded-full bg-[hsl(var(--primary))] px-6 text-white">Start Shopping</Button>
-                  </motion.div>
+                  </Reveal>
                 ) : (
                   <ScrollArea className="flex-1" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' as any }}>
                     <div>
@@ -321,7 +317,6 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                   <span>This cart includes subscription products. Cash on Delivery is not available.</span>
                                 </div>
                               )}
-                              <AnimatePresence>
                                 {currentCartItems.map(item => {
                                   const productPromotions = promotions.filter(promo => {
                                     if (!promo.is_active) return false;
@@ -339,13 +334,8 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                   const hasOffer = productPromotions.some(p => p.type === 'offer');
 
                                   return (
-                                    <motion.div
+                                    <Reveal from="up"
                                       key={item.uid}
-                                      layout
-                                      initial={{ opacity: 0, y: 20 }}
-                                      animate={{ opacity: 1, y: 0 }}
-                                      exit={{ opacity: 0, x: -100 }}
-                                      transition={{ duration: 0.2 }}
                                       className="mb-3 last:mb-0"
                                     >
                                       <Card className="flex gap-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3 shadow-sm">
@@ -418,10 +408,9 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                           </div>
                                         </div>
                                       </Card>
-                                    </motion.div>
+                                    </Reveal>
                                   );
                                 })}
-                              </AnimatePresence>
                             </AccordionContent>
                           </AccordionItem>
                         </Accordion>
@@ -432,15 +421,9 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                           <AccordionItem value="saved-for-later" className="border-b px-5" style={{borderColor:'hsl(var(--border))'}}>
                             <AccordionTrigger className="text-base font-semibold">Saved for later <span className="ml-1 font-normal text-[hsl(var(--muted-foreground))]">({savedItems.length})</span></AccordionTrigger>
                             <AccordionContent>
-                              <AnimatePresence>
                                 {savedItems.map(item => (
-                                  <motion.div
+                                  <Reveal from="up"
                                     key={item.productId}
-                                    layout
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, x: -100 }}
-                                    transition={{ duration: 0.2 }}
                                     className="mb-3 last:mb-0"
                                   >
                                     <Card className="flex gap-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3 shadow-sm">
@@ -470,9 +453,8 @@ export const InstagramCartDrawer = ({ isOpen, onClose, initialCartItems, onOrder
                                         </div>
                                       </div>
                                     </Card>
-                                  </motion.div>
+                                  </Reveal>
                                 ))}
-                              </AnimatePresence>
                             </AccordionContent>
                           </AccordionItem>
                         </Accordion>

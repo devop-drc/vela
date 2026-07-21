@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formatters";
 import { MediaItem } from "@/components/MediaItem";
 import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
+import { Reveal } from "@/lib/anim";
 import { cn } from "@/lib/utils";
 // Use generic types for external props to avoid tight coupling to context types
 
@@ -115,7 +115,7 @@ export const InstagramProductCard = ({
   const mediaUrl = product.thumbnail_url || product.media_url;
 
   return (
-    <motion.div variants={itemVariants} whileHover={{ opacity: 0.8 }} className={className}>
+    <Reveal from="up" className={`${className} transition-opacity duration-200 hover:opacity-80`}>
       <Link
         to={`/instagramShop/${shopSlug}/products/${product.id}`} // Link to the new products feed page
       >
@@ -153,6 +153,6 @@ export const InstagramProductCard = ({
           </CardContent>
         </Card>
       </Link>
-    </motion.div>
+    </Reveal>
   );
 };

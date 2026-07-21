@@ -4,8 +4,8 @@
 // list. Used by BOTH storefront themes.
 
 import { useEffect, useRef } from "react";
+import { Reveal } from "@/lib/anim";
 import confetti from "canvas-confetti";
-import { motion } from "framer-motion";
 import { Check, PartyPopper } from "lucide-react";
 import { useSfT } from "@/storefront/lib/visitorPrefs";
 
@@ -37,60 +37,43 @@ export const OrderSuccessOverlay = ({ orderNumber, onContinue, title, subtitle, 
   }, []);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+    <Reveal from="fade"
       className="fixed inset-0 z-[210] flex flex-col items-center justify-center bg-background/95 px-6 text-center backdrop-blur-sm"
       role="dialog"
       aria-label={title || t('paymentSuccess')}
     >
-      <motion.div
-        initial={{ scale: 0, rotate: -20 }}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.05 }}
+      <Reveal from="scale"
         className="grid h-24 w-24 place-items-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-[0_20px_50px_-12px_rgba(16,185,129,0.55)]"
       >
         <Check className="h-12 w-12 text-white" strokeWidth={3} />
-      </motion.div>
+      </Reveal>
 
-      <motion.h1
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
+      <Reveal as="h1" from="up"
         className="mt-6 flex items-center gap-2 text-2xl font-bold tracking-tight"
       >
         <PartyPopper className="h-6 w-6 text-amber-500" /> {title || t('paymentSuccess')}
-      </motion.h1>
+      </Reveal>
 
-      <motion.p
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35 }}
+      <Reveal as="p" from="up"
         className="mt-2 max-w-sm text-sm text-muted-foreground"
       >
         {subtitle || t('paymentSuccessSub')}
-      </motion.p>
+      </Reveal>
 
       {orderNumber && (
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.45 }}
+        <Reveal as="p" from="fade"
           className="mt-4 rounded-full border bg-card px-4 py-1.5 font-mono text-sm font-semibold"
         >
           {t('order')} #{orderNumber}
-        </motion.p>
+        </Reveal>
       )}
 
-      <motion.button
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.55 }}
+      <Reveal as="button" from="up"
         onClick={onContinue}
         className="mt-8 rounded-full bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-105"
       >
         {ctaLabel || t('showMyOrders')}
-      </motion.button>
-    </motion.div>
+      </Reveal>
+    </Reveal>
   );
 };

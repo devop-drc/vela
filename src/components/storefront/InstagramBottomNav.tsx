@@ -3,7 +3,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import { ShoppingBag, Sun, Moon, Package, House, LayoutGrid } from 'lucide-react';
-import { motion } from 'framer-motion';
+import gsap from "gsap";
+import { Reveal } from "@/lib/anim";
 import { cn } from '@/lib/utils';
 import { useCart } from '@/contexts/CartContext';
 
@@ -71,11 +72,9 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
   const onHome = !onProducts;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 50 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 50 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+    <Reveal
+      from="up"
+      duration={0.5}
       className="fixed left-0 right-0 bottom-0 z-50 flex w-[100vw]"
       style={{ bottom: 0, WebkitTransform: 'translateZ(0)' }}
     >
@@ -117,12 +116,10 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
           </NavItem>
 
           <NavItem onClick={onOpenCart} ariaLabel="Cart">
-            <motion.span
+            <span
               key={totalItems}
-              initial={{ scale: 1 }}
-              animate={totalItems > 0 ? { scale: [1, 1.2, 1] } : { scale: 1 }}
-              transition={{ duration: 0.3 }}
-              className="relative"
+              ref={(el) => { if (el && totalItems > 0) gsap.fromTo(el, { scale: 1.25 }, { scale: 1, duration: 0.35, ease: "back.out(2.5)" }); }}
+              className="relative inline-flex"
             >
               <ShoppingBag className="h-[18px] w-[18px]" />
               {totalItems > 0 && (
@@ -130,7 +127,7 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
                   {totalItems}
                 </span>
               )}
-            </motion.span>
+            </span>
             <ItemLabel>Cart</ItemLabel>
           </NavItem>
 
@@ -140,6 +137,6 @@ export const InstagramBottomNav = ({ onOpenCart, onOpenMyOrders, myOrdersCount }
           </NavItem>
         </div>
       </nav>
-    </motion.div>
+    </Reveal>
   );
 };

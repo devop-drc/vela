@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { motion, AnimatePresence } from "framer-motion";
+import { Collapse } from "@/lib/anim";
 import { StatusBadge } from "@/components/ui-app/StatusBadge";
 import { type StatusTone } from "@/lib/status";
 import { demoProducts, DemoProduct } from "./data";
@@ -41,9 +41,9 @@ const Row = ({ p, stock, setStock }: { p: DemoProduct; stock: Record<string, num
         <span className="w-14 text-right text-sm font-semibold tabular-nums">{total}</span>
         <span className="hidden w-28 sm:block"><StockBadge n={total} /></span>
       </button>
-      <AnimatePresence initial={false}>
+      <Collapse open={open}>
         {open && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t bg-muted/10">
+          <div className="border-t bg-muted/10">
             {variants.map((v) => {
               const key = `${p.id}-${v.name}`;
               const val = stock[key] ?? v.stock;
@@ -59,9 +59,9 @@ const Row = ({ p, stock, setStock }: { p: DemoProduct; stock: Record<string, num
                 </div>
               );
             })}
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </Collapse>
     </div>
   );
 };

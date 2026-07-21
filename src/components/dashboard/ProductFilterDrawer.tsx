@@ -12,7 +12,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { Slider } from "@/components/ui/slider";
-import { motion, AnimatePresence } from "framer-motion";
+import { Reveal } from "@/lib/anim";
 import debounce from 'lodash/debounce';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 
@@ -90,21 +90,15 @@ export const ProductFilterDrawer = ({
               {title}
             </div>
           </AccordionTrigger>
-          <AnimatePresence>
             {isFilterApplied && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.15 }}
+              <Reveal as="button" from="scale" duration={0.25}
                 onClick={handleClear}
                 className="p-1 rounded-full hover:bg-accent-foreground/10 text-muted-foreground hover:text-foreground"
                 aria-label={t('filter_drawer.clear_section', { section: title })}
               >
                 <XCircle className="h-4 w-4" />
-              </motion.button>
+              </Reveal>
             )}
-          </AnimatePresence>
         </div>
         <AccordionContent className="pb-4 pt-2">
           {children}

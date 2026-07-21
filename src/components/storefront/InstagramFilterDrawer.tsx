@@ -17,7 +17,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { useStorefront } from "@/contexts/StorefrontContext";
 import { getAttributeIcon } from "@/lib/attributeIcons";
 import { Slider } from "@/components/ui/slider";
-import { motion, AnimatePresence } from "framer-motion";
+import { Reveal } from "@/lib/anim";
 import debounce from 'lodash/debounce';
 
 interface Product {
@@ -205,21 +205,15 @@ export const InstagramFilterDrawer = ({
               {title}
             </div>
           </AccordionTrigger>
-          <AnimatePresence>
             {isFilterApplied && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.15 }}
+              <Reveal as="button" from="scale" duration={0.25}
                 onClick={(e) => { e.stopPropagation(); handleClearSection(filterKey); }}
                 className="p-1 rounded-full hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
                 aria-label={`Clear ${title} filters`}
               >
                 <XCircle className="h-4 w-4" />
-              </motion.button>
+              </Reveal>
             )}
-          </AnimatePresence>
         </div>
         <AccordionContent className="pb-4 pt-2">
           {children}

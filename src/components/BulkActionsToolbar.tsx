@@ -1,4 +1,5 @@
-import { motion } from "framer-motion";
+import gsap from "gsap";
+import { useLayoutEffect, useRef } from "react";
 import { Button } from "./ui/button";
 import { CheckCircle, XCircle, Trash2, X, Archive, Percent, Instagram } from "lucide-react";
 import { useTranslation } from 'react-i18next';
@@ -18,15 +19,18 @@ interface BulkActionsToolbarProps {
 
 export const BulkActionsToolbar = ({ selectedCount, onClear, onSetStatus, onDelete, onAddSale, unpostedCount = 0, onBulkPublish }: BulkActionsToolbarProps) => {
   const { t } = useTranslation();
+  const rootRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!rootRef.current) return;
+    const tween = gsap.fromTo(rootRef.current, { y: 100, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "back.out(1.4)" });
+    return () => { tween.kill(); };
+  }, []);
   return (
-    <motion.div
-      // Keep x pinned at -50% throughout so framer's transform doesn't clobber
-      // the horizontal centering while it animates y/opacity.
-      initial={{ x: "-50%", y: 100, opacity: 0 }}
-      animate={{ x: "-50%", y: 0, opacity: 1 }}
-      exit={{ x: "-50%", y: 100, opacity: 0 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed bottom-6 left-1/2 z-[60] flex w-max max-w-[calc(100vw-2rem)] items-center gap-2 overflow-x-auto rounded-xl border bg-background/80 p-2 shadow-2xl backdrop-blur-[20px] md:gap-3"
+    <div
+      ref={rootRef}
+      // -translate-x-1/2 stays in CSS; GSAP only animates y/opacity so the
+      // horizontal centering is never clobbered.
+      className="fixed bottom-6 left-1/2 z-[60] flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-2 overflow-x-auto rounded-xl border bg-background/80 p-2 shadow-2xl backdrop-blur-[20px] md:gap-3"
     >
       <p className="text-sm font-medium px-2">{t('products_ui.selected_count', { count: selectedCount })}</p>
       <Button variant="outline" size="sm" onClick={() => onSetStatus('Active')} className="text-success border-success/40 hover:bg-success/10 hover:text-success"><CheckCircle className="mr-2 h-4 w-4" />{t('products_ui.set_active')}</Button>
@@ -40,6 +44,6 @@ export const BulkActionsToolbar = ({ selectedCount, onClear, onSetStatus, onDele
       )}
       <Button variant="destructive" size="sm" onClick={onDelete}><Trash2 className="mr-2 h-4 w-4" />{t('common.delete')}</Button>
       <Button variant="ghost" size="icon" onClick={onClear} className="h-8 w-8"><X className="h-4 w-4" /></Button>
-    </motion.div>
+    </div>
   );
 };
