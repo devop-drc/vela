@@ -1,0 +1,23 @@
+project_id = "hbsetjwlawuxasjbvpyx"
+
+# Functions that are entered WITHOUT an Authorization header — a browser
+# redirect or a third-party server callback. Deploying these with JWT
+# verification on breaks them with UNAUTHORIZED_NO_AUTH_HEADER (this happened
+# on 2026-07-21 when a batch deploy passed --no-verify-jwt=false). The CLI
+# reads these values on `functions deploy`, so per-function flags are no
+# longer needed — just don't pass --no-verify-jwt=false globally.
+
+[functions.instagram-auth]
+# Entered via window.location.href (apikey as a query param) and via
+# Facebook's OAuth callback redirect — neither carries headers.
+verify_jwt = false
+
+[functions.raiaccept-webhook]
+# RaiAccept's server calls this directly; payload is re-verified against
+# the gateway's Retrieve-order-transactions API inside the function.
+verify_jwt = false
+
+[functions.instagram-webhook]
+# Meta's webhook subscription handshake (GET hub.challenge) has no headers;
+# authenticity is checked via IG_WEBHOOK_VERIFY_TOKEN.
+verify_jwt = false
