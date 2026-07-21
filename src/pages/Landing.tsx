@@ -45,6 +45,7 @@ const ProblemSection = lazy(() => import("@/components/landing/ProblemSection"))
 const TrustStrip = lazy(() => import("@/components/landing/TrustStrip"));
 const HowItWorks = lazy(() => import("@/components/landing/HowItWorks"));
 const FeatureShowcase = lazy(() => import("@/components/landing/FeatureShowcase"));
+const ModulesSection = lazy(() => import("@/components/landing/ModulesSection"));
 const Calculator = lazy(() => import("@/components/landing/Calculator"));
 // React Bits effects (brand-adapted at the call sites; sources in landing/fx/)
 import SpecularButton from "@/components/landing/fx/SpecularButton";
@@ -881,6 +882,9 @@ export default function Landing() {
       {/* ── Feature showcase (S7) — alternating real-UI rows, GSAP ── */}
       <Suspense fallback={<div className="h-[800px]" />}>
         <FeatureShowcase lang={lang} />
+
+        {/* Every module, pain-first */}
+        <ModulesSection lang={lang} />
       </Suspense>
 
       {/* ── Scroll-velocity strip (React Bits) — momentum into the dark band ── */}

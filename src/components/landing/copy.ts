@@ -105,6 +105,8 @@ export const sq: LandingCopy = {
       "Porosi nëpër screenshot-e",
       "Pa pagesa me kartë",
       "Shitje të humbura natën",
+      "Orë të tëra për çdo postim produkti",
+      "Katalogu bllokuar në Excel",
     ],
   },
   solution: {
@@ -114,6 +116,8 @@ export const sq: LandingCopy = {
       "Gjithçka në një panel",
       "Pagesa me kartë, në Lekë",
       "Dyqani shet 24/7",
+      "Sistemi poston vetë për ty",
+      "Ngarko Excel-in — dyqani gati",
     ],
   },
   how: {
@@ -288,6 +292,8 @@ export const en: LandingCopy = {
       "Orders in screenshots",
       "No card payments",
       "Lost sales overnight",
+      "Hours spent on every product post",
+      "A catalog stuck in Excel",
     ],
   },
   solution: {
@@ -297,6 +303,8 @@ export const en: LandingCopy = {
       "Everything in one panel",
       "Card payments, in Lek",
       "Your shop sells 24/7",
+      "The system posts for you",
+      "Upload the Excel — shop ready",
     ],
   },
   how: {
