@@ -1918,7 +1918,7 @@
   },
   "import": {
     "title": "Importo nga skedari",
-    "description": "Ngarko një skedar CSV ose Excel — produktet, fotot, specifikimet dhe opsionet krijohen automatikisht.",
+    "description": "Ngarko çdo skedar CSV ose Excel — sistemi i lexon vetë kolonat dhe krijon produktet me foto, specifikime dhe opsione.",
     "drop_hint": "Kliko për të zgjedhur një skedar .csv ose .xlsx",
     "ready": "{{count}} produkte gati për import.",
     "skipped": "({{count}} rreshta u kapërcyen — mungon emri ose çmimi.)",
@@ -1928,7 +1928,9 @@
     "start": "Importo {{count}} produkte",
     "importing": "Duke importuar… {{progress}}%",
     "done": "{{count}} produkte u importuan!",
-    "summary": "U importuan {{ok}} nga {{total}} produkte."
+    "summary": "U importuan {{ok}} nga {{total}} produkte.",
+    "ready_ai": "{{count}} rreshta u gjetën — sistemi do t'i lexojë, strukturojë dhe krijojë produktet automatikisht.",
+    "ai_working": "Sistemi po lexon skedarin dhe po ndërton produktet…"
   },
   "ig_studio": {
     "title": "Instagram Studio",

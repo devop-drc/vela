@@ -1918,7 +1918,7 @@
   },
   "import": {
     "title": "Import from file",
-    "description": "Upload a CSV or Excel file — products, images, specifications and options are created automatically.",
+    "description": "Upload any CSV or Excel file — the system reads the columns itself and creates products with images, specifications and options.",
     "drop_hint": "Click to choose a .csv or .xlsx file",
     "ready": "{{count}} products ready to import.",
     "skipped": "({{count}} rows skipped — missing name or price.)",
@@ -1928,7 +1928,9 @@
     "start": "Import {{count}} products",
     "importing": "Importing… {{progress}}%",
     "done": "{{count}} products imported!",
-    "summary": "Imported {{ok}} of {{total}} products."
+    "summary": "Imported {{ok}} of {{total}} products.",
+    "ready_ai": "{{count}} rows found — the system will read, structure and create the products automatically.",
+    "ai_working": "The system is reading your file and building the products…"
   },
   "ig_studio": {
     "title": "Instagram Studio",

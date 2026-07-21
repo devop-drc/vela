@@ -98,12 +98,14 @@ export const AddProductWizard = ({ open, onOpenChange, onCreated }: {
     if (!shopDetails?.id || !userId) { showError(t("products.shop_not_ready", "Your shop isn't ready yet. Please try again in a moment.")); return; }
     setSaving(true);
     try {
-      // Category: existing, or auto-created from the free-text field.
-      let finalCategoryId: string | null = categoryId !== "none" ? categoryId : null;
-      if (!finalCategoryId && newCategory.trim()) {
-        const { data: cat } = await supabase.from("categories")
-          .insert({ name: newCategory.trim(), user_id: userId }).select("id").single();
-        finalCategoryId = cat?.id ?? null;
+      // Category is a plain text column on products; the categories table
+      // only feeds the manager — create the row there for new names.
+      let categoryName: string | null = categoryId !== "none"
+        ? (categories.find((c) => c.id === categoryId)?.name ?? null)
+        : null;
+      if (!categoryName && newCategory.trim()) {
+        categoryName = newCategory.trim();
+        await supabase.from("categories").insert({ name: categoryName, user_id: userId });
       }
 
       const inv = parseInt(inventory, 10);
@@ -119,7 +121,7 @@ export const AddProductWizard = ({ open, onOpenChange, onCreated }: {
         product_type: "physical",
         details: { type: "generic" },
         tags: [],
-        category_id: finalCategoryId,
+        category: categoryName,
         media_url: images[0] ?? null,
         media_type: images[0] ? "image" : null,
         media_gallery: images.length > 1 ? images : null,

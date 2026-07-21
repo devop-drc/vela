@@ -30,6 +30,8 @@ import { FinReelMachine, FinReelNoNeed, FinReelNight, FIN_MACHINE_FRAMES, FIN_NO
 import { FinPostPanel, FinPostFive, FIN_PANEL_FRAMES, FIN_FIVE_FRAMES } from "./compositions/marketing/final/FinalPosts";
 import { FinReelCover, FinSystemPost, FinStoryTrial, FinStoryTonight, partSchema, partDefaults } from "./compositions/marketing/final/FinalStills";
 import { FinCarousel, carSchema, carDefaults } from "./compositions/marketing/final/FinalCarousel";
+import { ProductPromo, productPromoSchema, productPromoDefaults, PROMO_FPS, PROMO_DEFAULT_FRAMES } from "./compositions/ProductPromo";
+import { getVideoMetadata } from "@remotion/media-utils";
 
 const common = { fps: VIDEO.fps, width: VIDEO.width, height: VIDEO.height };
 /** Instagram story canvas (9:16). */
@@ -145,5 +147,26 @@ export const RemotionRoot = () => (
     <Composition id="FinStoryTrial" component={FinStoryTrial} durationInFrames={30} {...story} schema={langSchema} defaultProps={langDefaults} />
     <Composition id="FinStoryTonight" component={FinStoryTonight} durationInFrames={30} {...story} schema={langSchema} defaultProps={langDefaults} />
     <Composition id="FinCarousel" component={FinCarousel} durationInFrames={30} fps={30} width={1080} height={1350} schema={carSchema} defaultProps={carDefaults} />
+    {/* Instagram Studio motion overlay — duration follows the source video (capped at 60s, reels limit-safe). */}
+    <Composition
+      id="ProductPromo"
+      component={ProductPromo}
+      durationInFrames={PROMO_DEFAULT_FRAMES}
+      fps={PROMO_FPS}
+      width={1080}
+      height={1920}
+      schema={productPromoSchema}
+      defaultProps={productPromoDefaults}
+      calculateMetadata={async ({ props }) => {
+        if (!props.videoUrl) return {};
+        try {
+          const meta = await getVideoMetadata(props.videoUrl);
+          const seconds = Math.min(Math.max(meta.durationInSeconds, 3), 60);
+          return { durationInFrames: Math.round(seconds * PROMO_FPS) };
+        } catch {
+          return {};
+        }
+      }}
+    />
   </>
 );
