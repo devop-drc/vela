@@ -27,6 +27,9 @@ export interface SkippedItem {
 
 // This is the new summary structure from the backend
 export interface SyncJobSummary {
+  /** 'import' marks spreadsheet-import jobs (rendered separately in the widget). */
+  job_kind?: 'import';
+  failed?: number;
   created: number;
   updated: number;
   skipped: number;
@@ -56,7 +59,10 @@ export interface SyncJob {
 
 export interface SyncContextType {
   activeJob: SyncJob | null;
+  /** Spreadsheet import running in the background (independent of IG sync). */
+  activeImportJob: SyncJob | null;
   isSyncing: boolean;
   dismissJob: () => void;
+  dismissImportJob: () => void;
   startNewSync: (jobId: string) => Promise<void>;
 }

@@ -118,7 +118,7 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const { productId, mode = 'preview', caption: captionOverride, imageUrl, imageUrls, captionStyle = {} } = await req.json();
+    const { productId, mode = 'preview', caption: captionOverride, imageUrl, imageUrls, videoUrl, captionStyle = {} } = await req.json();
     if (!productId) return json({ error: 'productId is required' }, 400);
 
     const { data: product } = await admin.from('products')
@@ -232,7 +232,14 @@ serve(async (req) => {
       ? imageUrls.filter((u: string) => typeof u === 'string' && u.startsWith('https://')).slice(0, 10)
       : [];
     let containerRes: Response;
-    if (slides.length >= 2) {
+    if (typeof videoUrl === 'string' && videoUrl.startsWith('https://')) {
+      // Video (rendered by the Studio worker) — published as a Reel.
+      containerRes = await fetch(`${graphBase}/${igId}/media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ media_type: 'REELS', video_url: videoUrl, caption: finalCaption, access_token: token }),
+      });
+    } else if (slides.length >= 2) {
       const childIds: string[] = [];
       for (const url of slides) {
         const cRes = await fetch(`${graphBase}/${igId}/media`, {
@@ -265,8 +272,10 @@ serve(async (req) => {
         : { error: `Instagram rejected the post: ${container?.error?.message ?? 'unknown error'}` }, 200);
     }
 
-    // 2) wait for the container to be ready (images are usually instant)
-    for (let i = 0; i < 6; i++) {
+    // 2) wait for the container to be ready (images are usually instant;
+    //    videos transcode server-side and can take a while)
+    const maxPolls = typeof videoUrl === 'string' ? 60 : 6;
+    for (let i = 0; i < maxPolls; i++) {
       const st = await (await fetch(`${graphBase}/${container.id}?fields=status_code&access_token=${token}`)).json();
       if (st.status_code === 'FINISHED') break;
       if (st.status_code === 'ERROR') return json({ error: 'Instagram could not process the image.' }, 200);

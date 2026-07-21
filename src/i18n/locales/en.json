@@ -241,7 +241,8 @@
     "error_message": "Error Message:",
     "aborted_by_user": "Sync aborted by user.",
     "untitled": "Untitled",
-    "skipped_post_alt": "Skipped post"
+    "skipped_post_alt": "Skipped post",
+    "import_label": "File import"
   },
   "products": {
     "delete_confirm": "Delete {{count}} products?",
@@ -1936,7 +1937,8 @@
     "done": "{{count}} products imported!",
     "summary": "Imported {{ok}} of {{total}} products.",
     "ready_ai": "{{count}} rows found — the system will read, structure and create the products automatically.",
-    "ai_working": "The system is reading your file and building the products…"
+    "ai_working": "The system is reading your file and building the products…",
+    "hide": "Hide (continues in background)"
   },
   "ig_studio": {
     "title": "Instagram Studio",
@@ -1998,6 +2000,34 @@
     "reset_media": "Reset",
     "car_ribbon": "Ribbon",
     "car_gallery": "Gallery",
-    "car_story_arc": "Story arc"
+    "car_story_arc": "Story arc",
+    "general": "Instagram post settings",
+    "general_desc": "Shared by every content type — colors, labels, caption style and how the product photo sits.",
+    "preview_ig_desc": "Exactly how this content type will look on Instagram.",
+    "type_post": "Post settings",
+    "type_post_desc": "Template for single-photo feed posts.",
+    "type_story": "Story settings",
+    "type_story_desc": "Template for stories (9:16).",
+    "type_carousel": "Carousel settings",
+    "type_carousel_desc": "Connected-slide style and slide count.",
+    "type_video": "Video settings",
+    "type_video_desc": "Animated template, format, and generation.",
+    "car_slides": "Slides",
+    "vid_format": "Format",
+    "vidfmt_post": "Post (4:5)",
+    "vidfmt_story": "Story (9:16)",
+    "vidfmt_reel": "Reel (9:16)",
+    "vid_generate": "Generate video",
+    "vid_queued": "Queued…",
+    "vid_rendering": "Rendering…",
+    "vid_done": "Ready",
+    "vid_failed": "Failed",
+    "vid_download": "Download",
+    "vid_queue_failed": "Couldn't queue the video: {{message}}",
+    "vid_queued_toast": "Video queued — it renders in the background.",
+    "vid_async_hint": "Videos render in the background — you can leave this page; the result appears here and in your media.",
+    "pv_likes": "127 likes",
+    "pv_translation": "See translation",
+    "pv_reply": "Send message…"
   }
 }

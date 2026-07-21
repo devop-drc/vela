@@ -75,14 +75,20 @@ export const ImportProductsDialog = ({ open, onOpenChange, onImported }: {
     setImporting(true);
     setFailures([]);
     let ok = 0;
+    let jobId: string | null = null;
     const errs: string[] = [];
     try {
       for (let i = 0; i < rows.length; i += CHUNK) {
         const { data, error } = await supabase.functions.invoke('import-products', {
-          body: { rows: rows.slice(i, i + CHUNK) },
+          body: {
+            rows: rows.slice(i, i + CHUNK),
+            jobId, jobTotal: rows.length, jobOffset: i,
+            jobFinal: i + CHUNK >= rows.length,
+          },
         });
         if (error) throw new Error(error.message);
         if (data?.error && !data?.results?.length) throw new Error(data.error);
+        jobId = data?.jobId ?? jobId;
         ok += data?.created ?? 0;
         for (const r of data?.results ?? []) {
           if (!r.ok) errs.push(`${r.name}: ${r.error}`);
@@ -111,7 +117,7 @@ export const ImportProductsDialog = ({ open, onOpenChange, onImported }: {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!importing) { onOpenChange(o); if (!o) reset(); } }}>
+    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o && !importing) reset(); }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -165,8 +171,8 @@ export const ImportProductsDialog = ({ open, onOpenChange, onImported }: {
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={importing}>
-            {doneCount !== null ? t('common.close') : t('common.cancel')}
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {doneCount !== null ? t('common.close') : importing ? t('import.hide') : t('common.cancel')}
           </Button>
           {doneCount === null && (
             <Button onClick={runImport} disabled={!rows.length || importing}>

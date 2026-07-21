@@ -89,12 +89,29 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const { rows } = await req.json();
+    const { rows, jobId, jobTotal, jobOffset = 0, jobFinal = true } = await req.json();
     if (!Array.isArray(rows) || !rows.length) return json({ error: 'No rows to import.' }, 400);
     if (rows.length > 200) return json({ error: 'Max 200 rows per import.' }, 400);
 
     const { data: business } = await admin.from('businesses').select('id').eq('user_id', user.id).single();
     if (!business) return json({ error: 'No business found for this account.' }, 404);
+
+    // Progress lives in sync_jobs (summary.job_kind='import') so the app's
+    // sync widget shows the import running in the background.
+    const totalRows = Number.isFinite(jobTotal) ? jobTotal : rows.length;
+    let importJobId: string | null = typeof jobId === 'string' ? jobId : null;
+    if (!importJobId) {
+      const { data: job } = await admin.from('sync_jobs').insert({
+        user_id: user.id, status: 'in_progress', progress: 0, total: totalRows,
+        message: `Importing ${totalRows} rows from file…`,
+        summary: { job_kind: 'import', created: 0, failed: 0 },
+      }).select('id').single();
+      importJobId = job?.id ?? null;
+    }
+    const updateJob = async (patch: Record<string, unknown>) => {
+      if (!importJobId) return;
+      await admin.from('sync_jobs').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', importJobId);
+    };
 
     // ── 1. Map raw rows → structured products with Gemini (chunks of 20) ──
     const products: any[] = [];
@@ -131,7 +148,10 @@ serve(async (req) => {
       });
     } catch { /* usage log never blocks */ }
 
-    if (!products.length) return json({ results: [], created: 0, error: 'No products recognized in the file.' });
+    if (!products.length) {
+      if (jobFinal) await updateJob({ status: 'completed', progress: totalRows, message: 'No products recognized in the file.' });
+      return json({ results: [], created: 0, jobId: importJobId, error: 'No products recognized in the file.' });
+    }
 
     // ── 2. Create everything ──
     const { data: existingCats } = await admin.from('categories').select('name').eq('user_id', user.id);
@@ -199,9 +219,28 @@ serve(async (req) => {
       } catch (e) {
         results.push({ name: p.name ?? '?', ok: false, error: (e as Error).message });
       }
+      await updateJob({
+        progress: Math.min(jobOffset + results.length, totalRows),
+        message: `Imported ${created} products…`,
+      });
     }
 
-    return json({ results, created });
+    // Accumulate counts across chunked calls before (maybe) completing.
+    const failed = results.filter((r) => !r.ok).length;
+    if (importJobId) {
+      const { data: cur } = await admin.from('sync_jobs').select('summary').eq('id', importJobId).maybeSingle();
+      const totCreated = (cur?.summary?.created ?? 0) + created;
+      const totFailed = (cur?.summary?.failed ?? 0) + failed;
+      await updateJob({
+        summary: { job_kind: 'import', created: totCreated, failed: totFailed },
+        ...(jobFinal ? {
+          status: 'completed', progress: totalRows,
+          message: `Import finished — ${totCreated} products created${totFailed ? `, ${totFailed} failed` : ''}.`,
+        } : {}),
+      });
+    }
+
+    return json({ results, created, jobId: importJobId });
   } catch (e) {
     console.error('import-products:', (e as Error).message);
     return json({ error: (e as Error).message }, 500);

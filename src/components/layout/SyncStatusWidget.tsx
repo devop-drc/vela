@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui-app/StatusBadge';
-import { CheckCircle, XCircle, X, Info, Bug, Zap, Clock, Package, SkipForward, AlertTriangle, List } from 'lucide-react';
+import { CheckCircle, XCircle, X, Info, Bug, Zap, Clock, Package, SkipForward, AlertTriangle, List, FileSpreadsheet } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useCountUp } from '@/lib/anim';
 import { SyncSummaryModal } from './SyncSummaryModal';
@@ -31,7 +31,7 @@ const CountUp = ({ value }: { value: number }) => {
 
 export const SyncStatusWidget = () => {
   const { t } = useTranslation();
-  const { activeJob, dismissJob } = useSync();
+  const { activeJob, dismissJob, activeImportJob, dismissImportJob } = useSync();
   const [elapsedTime, setElapsedTime] = useState(0);
   // Collapsed by default: the floating button carries count/progress/ETA;
   // clicking it expands this panel. Failures auto-expand so errors are seen.
@@ -131,10 +131,48 @@ export const SyncStatusWidget = () => {
     };
   }, [analysis]);
 
+  // Spreadsheet import runs independently of the IG sync — its chip is
+  // visually distinct (amber + spreadsheet icon) so the two never blur.
+  const importRunning = activeImportJob && ['starting', 'in_progress'].includes(activeImportJob.status);
+  const importPct = activeImportJob
+    ? (activeImportJob.status === 'completed' ? 100 : activeImportJob.total > 0 ? Math.round((activeImportJob.progress / activeImportJob.total) * 100) : 0)
+    : 0;
+  const importChip = activeImportJob ? (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex h-12 items-center gap-2 rounded-full border border-amber-500/50 bg-card px-3.5 shadow-lg ring-1 ring-inset ring-amber-500/20"
+      title={activeImportJob.message ?? ''}
+    >
+      <FileSpreadsheet className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+      <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+        {t('sync.import_label')}
+      </span>
+      {importRunning ? (
+        <>
+          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-amber-500/20">
+            <div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${importPct}%` }} />
+          </div>
+          <span className="text-xs tabular-nums text-muted-foreground">{importPct}%</span>
+        </>
+      ) : activeImportJob.status === 'completed' ? (
+        <CheckCircle className="h-4 w-4 text-success" />
+      ) : (
+        <XCircle className="h-4 w-4 text-destructive" />
+      )}
+      {!importRunning && (
+        <button type="button" onClick={dismissImportJob} aria-label={t('common.close')} className="text-muted-foreground hover:text-foreground">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </motion.div>
+  ) : null;
+
   if (!isVisible) return (
     <>
       <SyncSummaryModal job={activeJob} isOpen={isSummaryOpen} onClose={() => setIsSummaryOpen(false)} />
       <SyncLiveFeedModal job={activeJob} isOpen={isLiveFeedOpen} onClose={() => setIsLiveFeedOpen(false)} />
+      {importChip}
     </>
   );
 
@@ -142,9 +180,10 @@ export const SyncStatusWidget = () => {
   const totalForButton = activeJob?.total || 0;
 
   return (
-    <div className="relative">
+    <div className="relative flex items-center gap-2">
       <SyncSummaryModal job={activeJob} isOpen={isSummaryOpen} onClose={() => setIsSummaryOpen(false)} />
       <SyncLiveFeedModal job={activeJob} isOpen={isLiveFeedOpen} onClose={() => setIsLiveFeedOpen(false)} />
+      {importChip}
 
       {/* Floating button — sits in the dock between chat and notifications. */}
       <motion.button

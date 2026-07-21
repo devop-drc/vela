@@ -241,7 +241,8 @@
     "error_message": "Mesazhi i gabimit:",
     "aborted_by_user": "Sinkronizimi u ndal nga përdoruesi.",
     "untitled": "Pa titull",
-    "skipped_post_alt": "Postim i anashkaluar"
+    "skipped_post_alt": "Postim i anashkaluar",
+    "import_label": "Importim skedari"
   },
   "products": {
     "delete_confirm": "Fshi {{count}} produkte?",
@@ -1936,7 +1937,8 @@
     "done": "{{count}} produkte u importuan!",
     "summary": "U importuan {{ok}} nga {{total}} produkte.",
     "ready_ai": "{{count}} rreshta u gjetën — sistemi do t'i lexojë, strukturojë dhe krijojë produktet automatikisht.",
-    "ai_working": "Sistemi po lexon skedarin dhe po ndërton produktet…"
+    "ai_working": "Sistemi po lexon skedarin dhe po ndërton produktet…",
+    "hide": "Fshih (vazhdon në sfond)"
   },
   "ig_studio": {
     "title": "Instagram Studio",
@@ -1998,6 +2000,34 @@
     "reset_media": "Rikthe",
     "car_ribbon": "Fjongo",
     "car_gallery": "Galeri",
-    "car_story_arc": "Hark tregimi"
+    "car_story_arc": "Hark tregimi",
+    "general": "Cilësimet e postimeve në Instagram",
+    "general_desc": "Të përbashkëta për çdo lloj përmbajtjeje — ngjyrat, etiketat, stili i përshkrimit dhe si vendoset fotoja.",
+    "preview_ig_desc": "Ekzaktësisht si do të duket ky lloj përmbajtjeje në Instagram.",
+    "type_post": "Cilësimet e postit",
+    "type_post_desc": "Template për postime me një foto.",
+    "type_story": "Cilësimet e story-t",
+    "type_story_desc": "Template për stories (9:16).",
+    "type_carousel": "Cilësimet e carousel-it",
+    "type_carousel_desc": "Stili i slide-ve të lidhura dhe numri i tyre.",
+    "type_video": "Cilësimet e videos",
+    "type_video_desc": "Template i animuar, formati dhe gjenerimi.",
+    "car_slides": "Slide",
+    "vid_format": "Formati",
+    "vidfmt_post": "Post (4:5)",
+    "vidfmt_story": "Story (9:16)",
+    "vidfmt_reel": "Reel (9:16)",
+    "vid_generate": "Gjenero videon",
+    "vid_queued": "Në radhë…",
+    "vid_rendering": "Duke u gjeneruar…",
+    "vid_done": "Gati",
+    "vid_failed": "Dështoi",
+    "vid_download": "Shkarko",
+    "vid_queue_failed": "Videoja nuk u fut dot në radhë: {{message}}",
+    "vid_queued_toast": "Videoja u fut në radhë — gjenerohet në sfond.",
+    "vid_async_hint": "Videot gjenerohen në sfond — mund ta lësh faqen; rezultati shfaqet këtu dhe te media jote.",
+    "pv_likes": "127 pëlqime",
+    "pv_translation": "Shiko përkthimin",
+    "pv_reply": "Dërgo mesazh…"
   }
 }

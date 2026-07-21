@@ -9,7 +9,13 @@ import { Edit, Trash2, Package, Settings, Wrench, Layers, Tag, ChevronRight, Sav
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductReviewsManager } from "./ProductReviewsManager";
-import { PublishToInstagramDialog } from "@/components/products/PublishToInstagramDialog";
+import { lazy, Suspense } from "react";
+// Lazy: the publish dialog pulls in the Instagram Studio renderer graph —
+// keeping it out of this chunk avoids a Rollup cross-chunk init cycle (TDZ
+// crash on opening the product modal in production builds).
+const PublishToInstagramDialog = lazy(() =>
+  import("@/components/products/PublishToInstagramDialog").then((m) => ({ default: m.PublishToInstagramDialog }))
+);
 import { useProductRating } from "@/hooks/useProductRating";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
@@ -456,7 +462,11 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
 
       <ProductReviewsManager open={reviewsOpen} onOpenChange={setReviewsOpen} productId={product.id} productName={product.name} />
 
-      <PublishToInstagramDialog open={igPublishOpen} onOpenChange={setIgPublishOpen} product={product} onPublished={() => { setIgPublishedNow(true); setIgUnlinked(false); }} />
+      {igPublishOpen && (
+        <Suspense fallback={null}>
+          <PublishToInstagramDialog open={igPublishOpen} onOpenChange={setIgPublishOpen} product={product} onPublished={() => { setIgPublishedNow(true); setIgUnlinked(false); }} />
+        </Suspense>
+      )}
 
       {/* Stock Management Modal */}
       <Dialog open={stockModalOpen} onOpenChange={(open) => { if (!open) { setStockSearch(''); setStockFilter('all'); } setStockModalOpen(open); }}>

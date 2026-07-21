@@ -30,7 +30,10 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
     };
   }, []);
   const [activeJob, setActiveJob] = useState<SyncJob | null>(null);
+  const [activeImportJob, setActiveImportJob] = useState<SyncJob | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  const isImportJob = (j: SyncJob | null | undefined) => j?.summary?.job_kind === 'import';
 
   // Fetch active sync jobs for the current user
   const fetchActiveJob = useCallback(async () => {
@@ -43,22 +46,18 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
         .eq('user_id', user.id)
         .in('status', ['starting', 'in_progress'])
         .order('created_at', { ascending: false })
-        .limit(1);
+        .limit(4);
 
       if (error) {
         console.error('Error fetching active job:', error);
         return;
       }
 
-      const activeJob = data?.[0];
-
-      if (activeJob) {
-        setActiveJob(activeJob);
-        setIsSyncing(true);
-      } else {
-        setActiveJob(null);
-        setIsSyncing(false);
-      }
+      const syncJob = (data || []).find((j: SyncJob) => !isImportJob(j)) ?? null;
+      const importJob = (data || []).find((j: SyncJob) => isImportJob(j)) ?? null;
+      setActiveJob(syncJob);
+      setActiveImportJob(importJob);
+      setIsSyncing(Boolean(syncJob));
     } catch (error) {
       console.error('Error in fetchActiveJob:', error);
       setIsSyncing(false);
@@ -86,13 +85,19 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
         },
         (payload) => {
           if (['INSERT', 'UPDATE'].includes(payload.eventType)) {
-            // Create a shallow copy to ensure React detects a state change
+            // Shallow copy so React detects a state change; import jobs get
+            // their own slot so they never hijack the sync display.
             const job = { ...payload.new } as SyncJob;
-            setActiveJob(job);
-            setIsSyncing(['starting', 'in_progress'].includes(job.status));
+            if (isImportJob(job)) {
+              setActiveImportJob(job);
+            } else {
+              setActiveJob(job);
+              setIsSyncing(['starting', 'in_progress'].includes(job.status));
+            }
           } else if (payload.eventType === 'DELETE') {
-            setActiveJob(null);
-            setIsSyncing(false);
+            const gone = payload.old as { id?: string };
+            setActiveJob((j) => (j && j.id === gone?.id ? null : j));
+            setActiveImportJob((j) => (j && j.id === gone?.id ? null : j));
           }
         }
       )
@@ -105,6 +110,10 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
 
   const dismissJob = useCallback(() => {
     setActiveJob(null);
+  }, []);
+
+  const dismissImportJob = useCallback(() => {
+    setActiveImportJob(null);
   }, []);
 
   const startNewSync = useCallback(async (jobId: string) => {
@@ -125,8 +134,10 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
 
   const contextValue: SyncContextType = {
     activeJob,
+    activeImportJob,
     isSyncing,
     dismissJob,
+    dismissImportJob,
     startNewSync
   };
 
