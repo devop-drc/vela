@@ -45,3 +45,5 @@ test/report.json
 # local content archives
 branding/marketing/*.zip
 instagramApi/
+.playwright-mcp/
+ig-studio-full.png
