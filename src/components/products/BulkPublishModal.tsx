@@ -39,7 +39,13 @@ const DraggableTopCard = ({ product, onDrop, onCycle }: {
   const rotateY = useTransform(x, [-100, 100], [-30, 30]);
 
   const handleDragEnd = (e: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const dropped = onDrop(info.point);
+    // Prefer the raw pointer's viewport coordinates; fall back to
+    // framer's page-based info.point corrected for scroll.
+    const pe = e as PointerEvent;
+    const point = typeof pe.clientX === 'number' && (pe.clientX || pe.clientY)
+      ? { x: pe.clientX, y: pe.clientY }
+      : { x: info.point.x - window.scrollX, y: info.point.y - window.scrollY };
+    const dropped = onDrop(point);
     if (!dropped) {
       if (Math.abs(info.offset.x) > 160 || Math.abs(info.offset.y) > 160) onCycle();
       x.set(0);
@@ -100,11 +106,13 @@ export const BulkPublishModal = ({ open, onOpenChange, products, onQueued }: {
   const totalAssigned = KINDS.reduce((n, k) => n + assigned[k.kind].length, 0);
 
   const dropTopCard = (point: { x: number; y: number }): boolean => {
+    const px = point.x;
+    const py = point.y;
     for (const { kind } of KINDS) {
       const el = zoneRefs.current[kind];
       if (!el) continue;
       const r = el.getBoundingClientRect();
-      if (point.x >= r.left && point.x <= r.right && point.y >= r.top && point.y <= r.bottom) {
+      if (px >= r.left && px <= r.right && py >= r.top && py <= r.bottom) {
         setStack((s) => {
           const [top, ...rest] = s;
           if (top) setAssigned((a) => ({ ...a, [kind]: [...a[kind], top] }));
