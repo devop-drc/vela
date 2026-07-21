@@ -68,7 +68,10 @@ serve(async (req) => {
               .in('status', ['starting', 'in_progress'])
               .limit(1);
             if (!running?.length) {
-              // Service-role invoke → background-sync's internal auth path.
+              // Give an in-flight publish a moment to write its
+              // instagram_post_id linkback, so the auto-sync can't race it
+              // into a duplicate product.
+              await new Promise((r) => setTimeout(r, 6000));
               const { error: syncErr } = await supabase.functions.invoke('background-sync', {
                 body: { syncType: 'quick', user_id: integration.user_id },
               });

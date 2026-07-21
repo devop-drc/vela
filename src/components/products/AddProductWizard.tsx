@@ -121,6 +121,7 @@ export const AddProductWizard = ({ open, onOpenChange, onCreated }: {
         product_type: "physical",
         details: { type: "generic" },
         tags: [],
+        source: "manual",
         category: categoryName,
         media_url: images[0] ?? null,
         media_type: images[0] ? "image" : null,

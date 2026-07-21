@@ -171,6 +171,7 @@ serve(async (req) => {
         const { data: product, error: pErr } = await admin.from('products').insert({
           user_id: user.id,
           business_id: business.id,
+          source: 'import',
           name: String(p.name).slice(0, 200),
           caption: p.description || null,
           status: 'Active',

@@ -36,6 +36,7 @@ interface AnalysisResult {
 
 interface ProductPayload {
   id?: string;
+  source?: string;
   name?: string;
   caption?: string;
   price?: number;
@@ -268,7 +269,12 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     const total = postsToProcess.length;
 
     if (total === 0) {
-      await updateJobProgress(supabaseAdmin, jobId, { status: 'completed', message: 'No new posts to sync.', summary });
+      // Explicit outcome: every fetched post is already a product.
+      await updateJobProgress(supabaseAdmin, jobId, {
+        status: 'completed',
+        message: `No new posts found — all ${allPosts.length} Instagram posts are already converted to products.`,
+        summary: { ...summary, no_new_posts: true, total_posts_checked: allPosts.length },
+      });
       return;
     }
 
@@ -481,7 +487,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             effective = { isProductPost: true, productName: post.caption?.split('\n')[0]?.slice(0, 40) || 'Product' };
           } else {
             summary.skipped++;
-            summary.skipped_items.push({ name: `"${post.caption?.substring(0, 30) || ''}..."`, reason: error?.message || "Analysis failed.", thumbnail_url: post.thumbnail_url || post.media_url });
+            summary.skipped_items.push({ instagram_post_id: post.id, name: `"${post.caption?.substring(0, 30) || ''}..."`, reason: error?.message || "Analysis failed.", thumbnail_url: post.thumbnail_url || post.media_url });
             continue;
           }
         }
@@ -565,7 +571,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             (analysis as any).products = parsed;
           } else {
             summary.skipped++;
-            summary.skipped_items.push({ name: `"${post.caption?.substring(0, 30) || ''}..."`, reason: "Not a product post.", thumbnail_url: post.thumbnail_url || post.media_url });
+            summary.skipped_items.push({ instagram_post_id: post.id, name: `"${post.caption?.substring(0, 30) || ''}..."`, reason: "Not a product post.", thumbnail_url: post.thumbnail_url || post.media_url });
             continue;
           }
         }
@@ -644,7 +650,7 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
             if (comboErr) {
               console.error('upsert-combo-from-analysis failed:', comboErr.message);
               summary.skipped++;
-              summary.skipped_items.push({ name: `Multi-product: "${post.caption?.substring(0, 30) || ''}..."`, reason: `Combo creation failed: ${comboErr.message}`, thumbnail_url: post.thumbnail_url || post.media_url });
+              summary.skipped_items.push({ instagram_post_id: post.id, name: `Multi-product: "${post.caption?.substring(0, 30) || ''}..."`, reason: `Combo creation failed: ${comboErr.message}`, thumbnail_url: post.thumbnail_url || post.media_url });
             } else if ((comboRes as any)?.error) {
               console.error('upsert-combo-from-analysis error:', (comboRes as any).error);
             } else {

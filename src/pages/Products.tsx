@@ -148,6 +148,7 @@ const Products = () => {
       product_type: 'physical',
       details: { type: 'generic' },
       tags: [],
+      source: 'manual',
     }).select('*').single();
     setIsCreatingProduct(false);
     if (error || !data) {

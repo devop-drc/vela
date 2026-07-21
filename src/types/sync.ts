@@ -20,6 +20,7 @@ export interface ProductPayload {
 }
 
 export interface SkippedItem {
+  instagram_post_id?: string;
   name: string;
   reason: string;
   thumbnail_url?: string;

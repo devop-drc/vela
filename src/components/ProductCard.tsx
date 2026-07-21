@@ -161,6 +161,9 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
               {product.details?.type && (
                 <span> · {product.details.type}</span>
               )}
+              {(product as any).source && (product as any).source !== 'instagram' && (
+                <span> · {t(`products_ui.source_${(product as any).source}`)}</span>
+              )}
             </p>
 
             <div className="flex items-start gap-1.5">

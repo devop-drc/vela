@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { SyncSummaryModal } from "./SyncSummaryModal";
 import { SyncLiveFeedModal } from "./SyncLiveFeedModal";
+import { InstagramPostModal } from "@/components/InstagramPostModal";
 import { cn } from "@/lib/utils";
 import {
   RefreshCw, FileSpreadsheet, Send, Clapperboard, CheckCircle, XCircle,
@@ -151,6 +152,7 @@ export const ProcessesWidget = () => {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [liveFeedOpen, setLiveFeedOpen] = useState(false);
+  const [postsBrowserOpen, setPostsBrowserOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const pillIconRef = useRef<HTMLSpanElement>(null);
   const logsRef = useRef<Map<string, string[]>>(new Map());
@@ -225,6 +227,7 @@ export const ProcessesWidget = () => {
     <div className="relative">
       <SyncSummaryModal job={activeJob} isOpen={summaryOpen} onClose={() => setSummaryOpen(false)} />
       <SyncLiveFeedModal job={activeJob} isOpen={liveFeedOpen} onClose={() => setLiveFeedOpen(false)} />
+      {postsBrowserOpen && <InstagramPostModal onClose={() => setPostsBrowserOpen(false)} onImport={() => {}} />}
       <ProcessDetailModal
         proc={detail}
         log={detail ? (logsRef.current.get(detail.id) ?? []) : []}
@@ -280,7 +283,7 @@ export const ProcessesWidget = () => {
                   <div className="flex gap-1">
                     {p.kind === "sync" && (
                       <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]"
-                        onClick={() => (p.running ? setLiveFeedOpen(true) : setSummaryOpen(true))}>
+                        onClick={() => setPostsBrowserOpen(true)}>
                         {t("processes.details")}<ChevronRight className="ml-0.5 h-3 w-3" />
                       </Button>
                     )}

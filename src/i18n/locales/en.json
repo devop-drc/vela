@@ -1489,7 +1489,10 @@
     "hide_filter_aria": "Hide {{name}} filter",
     "show_filter_aria": "Show {{name}} filter",
     "toggle_size_aria": "Toggle {{size}}",
-    "add_color_placeholder": "Add color name (e.g., Red, Navy Blue)"
+    "add_color_placeholder": "Add color name (e.g., Red, Navy Blue)",
+    "source_instagram": "From Instagram",
+    "source_manual": "Manual",
+    "source_import": "Imported"
   },
   "studio_panels": {
     "demo_title": "Title",
@@ -1609,7 +1612,8 @@
     "select_post_desc": "Choose a post to preview and import it as a product.",
     "post_preview": "Post preview",
     "post_preview_desc": "Full-size preview of the selected Instagram post.",
-    "full_size_alt": "Full size"
+    "full_size_alt": "Full size",
+    "skipped": "Skipped by the system"
   },
   "promo_editor": {
     "name_required": "Promotion name is required",

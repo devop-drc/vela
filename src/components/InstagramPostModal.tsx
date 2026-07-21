@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useSync } from '@/contexts/syncContext';
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 import { Skeleton } from "./ui/skeleton";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { CheckCircle, Image as ImageIcon, RefreshCw, Sparkles, Plus, Package, EyeOff, AlertTriangle } from "lucide-react";
+import { CheckCircle, Image as ImageIcon, RefreshCw, Sparkles, Plus, Package, EyeOff, AlertTriangle, SkipForward } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { MediaItem } from "./MediaItem";
@@ -55,6 +56,28 @@ const POSTS_CACHE_KEY = 'instagram_posts_raw';
 const toTitleCase = (str: string) => str.replace(/_/g, ' ').replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
 export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProps) => {
+  const { activeJob } = useSync();
+  const [lastSyncSkipped, setLastSyncSkipped] = useState<Map<string, string>>(new Map());
+
+  // Latest finished sync → per-post skip reasons (icons in the grid).
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('sync_jobs')
+        .select('summary')
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      const m = new Map<string, string>();
+      for (const row of data ?? []) {
+        for (const it of row.summary?.skipped_items ?? []) {
+          if (it.instagram_post_id && !m.has(it.instagram_post_id)) m.set(it.instagram_post_id, it.reason || '');
+        }
+      }
+      setLastSyncSkipped(m);
+    })();
+  }, [activeJob?.status]);
+
   const { t } = useTranslation();
   const { userId, session, ensureBusinessId } = useAuth();
   // Refs so the memoized fetchPosts callback always reads the freshest auth.
@@ -248,6 +271,16 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                   {posts.filter(p => p.isImported).length > 0 && ` · ${t('ig_post_modal.already_imported', { count: posts.filter(p => p.isImported).length })}`}
                 </DialogDescription>
               </div>
+              <div className="flex items-center gap-3">
+                {activeJob && ['starting', 'in_progress'].includes(activeJob.status) && (
+                  <span className="flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                    {activeJob.total > 0
+                      ? `${activeJob.progress}/${activeJob.total}`
+                      : ''} {activeJob.message?.slice(0, 60)}
+                  </span>
+                )}
+              </div>
               <Button variant="ghost" size="sm" onClick={() => fetchPosts(true)} disabled={isLoadingPosts}>
                 <RefreshCw className={`mr-2 h-3.5 w-3.5 ${isLoadingPosts ? 'animate-spin' : ''}`} />
                 {t('ig_post_modal.refresh')}
@@ -304,6 +337,14 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
                           {analysisMap.has(post.id) && !post.isImported && (
                             <div className="absolute top-1 left-1">
                               <StatusDot tone="success" pulse />
+                            </div>
+                          )}
+                          {!post.isImported && lastSyncSkipped.has(post.id) && (
+                            <div
+                              className="absolute top-1 right-1 grid h-5 w-5 place-items-center rounded-full bg-amber-500/90 text-white"
+                              title={lastSyncSkipped.get(post.id) || t('ig_post_modal.skipped')}
+                            >
+                              <SkipForward className="h-3 w-3" />
                             </div>
                           )}
                         </button>

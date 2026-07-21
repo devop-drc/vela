@@ -1489,7 +1489,10 @@
     "hide_filter_aria": "Fshih filtrin {{name}}",
     "show_filter_aria": "Shfaq filtrin {{name}}",
     "toggle_size_aria": "Aktivizo/çaktivizo {{size}}",
-    "add_color_placeholder": "Shto emër ngjyre (p.sh., E kuqe, Blu marine)"
+    "add_color_placeholder": "Shto emër ngjyre (p.sh., E kuqe, Blu marine)",
+    "source_instagram": "Nga Instagrami",
+    "source_manual": "Manual",
+    "source_import": "I importuar"
   },
   "studio_panels": {
     "demo_title": "Titulli",
@@ -1609,7 +1612,8 @@
     "select_post_desc": "Zgjidhni një postim për ta parë dhe importuar si produkt.",
     "post_preview": "Pamja e postimit",
     "post_preview_desc": "Pamje me madhësi të plotë e postimit të zgjedhur të Instagramit.",
-    "full_size_alt": "Madhësi e plotë"
+    "full_size_alt": "Madhësi e plotë",
+    "skipped": "U kapërcye nga sistemi"
   },
   "promo_editor": {
     "name_required": "Emri i promovimit është i detyrueshëm",

@@ -236,6 +236,9 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
                 <Instagram className="h-3 w-3" />
                 {(product as any).instagram_post_id ? t('ig_status.on_instagram_short') : t('ig_status.shop_only_short')}
               </span>
+              {(product as any).source && (
+                <p className="mt-0.5 text-[10px] text-muted-foreground">{t(`products_ui.source_${(product as any).source}`)}</p>
+              )}
             </TableCell>
             <TableCell className="cursor-pointer py-3">
               <div className="flex-1 text-sm text-muted-foreground">
