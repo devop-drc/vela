@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,22 +8,32 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { cn } from "@/lib/utils";
-import { Instagram, RefreshCw, Send, ExternalLink, Unplug, Palette } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useStudioSettings } from "@/hooks/useStudioSettings";
-import { useShop } from "@/contexts/ShopContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { renderTemplate, renderToJpegBlob, renderCarouselToBlobs, removeImageBackground, TEMPLATE_IDS, DEFAULT_TRANSFORM, type TemplateId, type ImageTransform } from "@/lib/igStudio";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
+import { useStudioSettings } from "@/hooks/useStudioSettings";
+import { useShop } from "@/contexts/ShopContext";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  renderTemplate, renderToJpegBlob, renderCarouselToBlobs, removeImageBackground,
+  TEMPLATE_IDS, DEFAULT_TRANSFORM, type TemplateId, type ImageTransform,
+} from "@/lib/igStudio";
+import {
+  Instagram, RefreshCw, Send, ExternalLink, Unplug, Palette,
+  Heart, MessageCircle, Send as SendIcon, Bookmark, MoreHorizontal,
+} from "lucide-react";
 
 /**
- * The reverse pipeline's front door: previews a system-generated caption for a
- * product (editable), lets the merchant pick the image, and publishes straight
- * to their connected Instagram Business profile via publish-product-post.
+ * The reverse pipeline's front door: the system generates the caption +
+ * hashtags in the merchant's Instagram Studio style, composes the post
+ * design over the product photo, and publishes straight to the connected
+ * Instagram Business profile. The live preview mirrors a real Instagram
+ * post — the merchant's IG profile picture, handle, media and caption.
  */
+type PostKind = "single" | "carousel" | "story" | "post_video" | "story_video" | "reel_video";
+
 export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublished }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -35,71 +45,8 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
   const { settings: studio } = useStudioSettings();
   const { shopDetails } = useShop();
   const { userId } = useAuth();
-  const [design, setDesign] = useState<TemplateId | "studio">("studio");
-  const [adjust, setAdjust] = useState<ImageTransform>(DEFAULT_TRANSFORM);
-  const [postKind, setPostKind] = useState<"single" | "carousel" | "story" | "post_video" | "story_video" | "reel_video">("single");
-  const isVideoKind = postKind.endsWith("_video");
-  const [videoJob, setVideoJob] = useState<any | null>(null);
 
-  // Poll the render job for video post types.
-  useEffect(() => {
-    if (!videoJob || ["done", "failed"].includes(videoJob.status)) return;
-    const iv = setInterval(async () => {
-      const { data } = await supabase.from("video_render_jobs").select("*").eq("id", videoJob.id).maybeSingle();
-      if (data) setVideoJob(data);
-    }, 5000);
-    return () => clearInterval(iv);
-  }, [videoJob]);
-
-  const queueVideoForPublish = async (kind: string) => {
-    const format = kind === "story_video" ? "story" : kind === "post_video" ? "post" : "reel";
-    const { data, error } = await supabase.from("video_render_jobs").insert({
-      user_id: userId, product_id: product.id, format, template: studio.videoTemplate ?? "gradient",
-      props: {
-        imageUrl: selectedImage, videoUrl: null, name: product.name, price: product.price ?? null,
-        currency: product.currency || "ALL", shopName: shopDetails?.shop_name || "", accent: studio.accent,
-      },
-    }).select("*").single();
-    if (error) showError(error.message);
-    else setVideoJob(data);
-  };
-  const [cutoutUrl, setCutoutUrl] = useState<string | null>(null);
-  const [cutoutBusy, setCutoutBusy] = useState(false);
-  const previewRef = useRef<HTMLCanvasElement>(null);
-
-  const activeTemplate = design === "studio" ? studio.template : design;
-  const effectiveImage = adjust.removeBg && cutoutUrl ? cutoutUrl : selectedImage;
-
-  // Per-post adjustments start from the merchant's Studio defaults.
-  useEffect(() => { setAdjust(studio.transform ?? DEFAULT_TRANSFORM); }, [studio.transform]);
-
-  // Live composed preview of exactly what will be posted.
-  useEffect(() => {
-    if (!previewRef.current || !effectiveImage) return;
-    let cancelled = false;
-    const t = setTimeout(() => {
-      if (cancelled || !previewRef.current) return;
-      renderTemplate(previewRef.current, {
-        imageUrl: effectiveImage,
-        name: product.name,
-        price: product.price ?? null,
-        currency: product.currency || "ALL",
-        shopName: shopDetails?.shop_name || "",
-        settings: { ...studio, template: activeTemplate, transform: adjust },
-        format: "post",
-      }).catch(() => {});
-    }, 150);
-    return () => { cancelled = true; clearTimeout(t); };
-  }, [effectiveImage, activeTemplate, adjust, studio, product, shopDetails?.shop_name]);
-
-  const toggleRemoveBg = async (on: boolean) => {
-    setAdjust((a) => ({ ...a, removeBg: on }));
-    if (!on || !selectedImage || cutoutUrl) return;
-    setCutoutBusy(true);
-    try { setCutoutUrl(await removeImageBackground(selectedImage)); }
-    catch { setAdjust((a) => ({ ...a, removeBg: false })); }
-    finally { setCutoutBusy(false); }
-  };
+  // ── all state first (order matters: derived consts below reference these) ──
   const [loading, setLoading] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [caption, setCaption] = useState("");
@@ -108,6 +55,34 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
   const [alreadyPublished, setAlreadyPublished] = useState(false);
   const [needsReconnect, setNeedsReconnect] = useState(false);
   const [permalink, setPermalink] = useState<string | null>(null);
+  const [design, setDesign] = useState<TemplateId | "studio">("studio");
+  const [adjust, setAdjust] = useState<ImageTransform>(DEFAULT_TRANSFORM);
+  const [postKind, setPostKind] = useState<PostKind>("single");
+  const [videoJob, setVideoJob] = useState<any | null>(null);
+  const [cutoutUrl, setCutoutUrl] = useState<string | null>(null);
+  const [cutoutBusy, setCutoutBusy] = useState(false);
+  const previewRef = useRef<HTMLCanvasElement>(null);
+
+  // ── derived ──
+  const isVideoKind = postKind.endsWith("_video");
+  const activeTemplate = design === "studio" ? studio.template : design;
+  const effectiveImage = adjust.removeBg && cutoutUrl ? cutoutUrl : selectedImage;
+
+  // Instagram identity for the preview chrome.
+  const igHandle = (shopDetails?.username
+    || shopDetails?.slug
+    || (shopDetails?.shop_name || "shop").toLowerCase().replace(/\s+/g, ""))!;
+  const igAvatar = shopDetails?.logo_url || null;
+
+  // Caption split for the preview: last line of hashtags shows blue.
+  const captionParts = useMemo(() => {
+    const lines = caption.split("\n");
+    const last = lines[lines.length - 1] ?? "";
+    if (/^#/.test(last.trim())) {
+      return { body: lines.slice(0, -1).join("\n").trim(), tags: last.trim() };
+    }
+    return { body: caption.trim(), tags: "" };
+  }, [caption]);
 
   const loadPreview = async () => {
     setLoading(true);
@@ -133,26 +108,81 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
   useEffect(() => {
     if (open && product?.id) {
       setPermalink(null);
+      setPostKind("single");
+      setVideoJob(null);
+      setCutoutUrl(null);
+      setAdjust(studio.transform ?? DEFAULT_TRANSFORM);
       loadPreview();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, product?.id]);
 
-  /** When a template is chosen, render the overlay client-side and upload it —
-   * the published post then uses the designed image instead of the raw photo. */
+  // Poll the render job for video post types.
+  useEffect(() => {
+    if (!videoJob || ["done", "failed"].includes(videoJob.status)) return;
+    const iv = setInterval(async () => {
+      const { data } = await supabase.from("video_render_jobs").select("*").eq("id", videoJob.id).maybeSingle();
+      if (data) setVideoJob(data);
+    }, 5000);
+    return () => clearInterval(iv);
+  }, [videoJob]);
+
+  // Live composed preview of exactly what will be posted.
+  useEffect(() => {
+    if (!previewRef.current || !effectiveImage) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (cancelled || !previewRef.current) return;
+      renderTemplate(previewRef.current, {
+        imageUrl: effectiveImage,
+        name: product.name,
+        price: product.price ?? null,
+        currency: product.currency || "ALL",
+        shopName: shopDetails?.shop_name || "",
+        settings: { ...studio, template: activeTemplate, transform: adjust },
+        format: postKind === "story" || postKind === "story_video" ? "story" : "post",
+      }).catch(() => {});
+    }, 150);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [effectiveImage, activeTemplate, adjust, studio, product, shopDetails?.shop_name, postKind]);
+
+  const toggleRemoveBg = async (on: boolean) => {
+    setAdjust((a) => ({ ...a, removeBg: on }));
+    if (!on || !selectedImage || cutoutUrl) return;
+    setCutoutBusy(true);
+    try {
+      setCutoutUrl(await removeImageBackground(selectedImage));
+    } catch (e) {
+      setAdjust((a) => ({ ...a, removeBg: false }));
+      showError(t("ig_publish.bg_failed", { message: (e as Error).message }));
+    } finally {
+      setCutoutBusy(false);
+    }
+  };
+
+  const queueVideoForPublish = async (kind: string) => {
+    const format = kind === "story_video" ? "story" : kind === "post_video" ? "post" : "reel";
+    const { data, error } = await supabase.from("video_render_jobs").insert({
+      user_id: userId, product_id: product.id, format, template: studio.videoTemplate ?? "gradient",
+      props: {
+        imageUrl: selectedImage, videoUrl: null, name: product.name, price: product.price ?? null,
+        currency: product.currency || "ALL", shopName: shopDetails?.shop_name || "", accent: studio.accent,
+      },
+    }).select("*").single();
+    if (error) showError(error.message);
+    else setVideoJob(data);
+  };
+
+  /** Render the chosen overlay client-side and upload it. */
   const resolveImageForPublish = async (): Promise<string | null> => {
     if (!effectiveImage) return selectedImage;
     const untouched = activeTemplate === "plain" && !adjust.removeBg
       && adjust.scale === 1 && adjust.offsetX === 0 && adjust.offsetY === 0;
     if (untouched) return selectedImage;
     const blob = await renderToJpegBlob({
-      imageUrl: effectiveImage,
-      name: product.name,
-      price: product.price ?? null,
-      currency: product.currency || "ALL",
-      shopName: shopDetails?.shop_name || "",
-      settings: { ...studio, template: activeTemplate, transform: adjust },
-      format: "post",
+      imageUrl: effectiveImage, name: product.name, price: product.price ?? null,
+      currency: product.currency || "ALL", shopName: shopDetails?.shop_name || "",
+      settings: { ...studio, template: activeTemplate, transform: adjust }, format: "post",
     });
     const path = `${userId}/ig-designs/${product.id}-${Date.now()}.jpg`;
     const { error: upErr } = await supabase.storage.from("product-media").upload(path, blob, {
@@ -163,19 +193,14 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
   };
 
   const handlePublish = async () => {
-    if (!caption.trim()) { showError(t("ig_publish.caption_required")); return; }
+    if (!caption.trim() && postKind !== "story") { showError(t("ig_publish.caption_required")); return; }
     setPublishing(true);
     try {
       let body: Record<string, unknown>;
       if (isVideoKind) {
         if (videoJob?.status !== "done" || !videoJob.output_url) { showError(t("ig_publish.video_not_ready")); setPublishing(false); return; }
-        body = {
-          productId: product.id, mode: "publish", caption,
-          videoUrl: videoJob.output_url,
-          publishKind: postKind === "story_video" ? "story" : "reel",
-        };
+        body = { productId: product.id, mode: "publish", caption, videoUrl: videoJob.output_url, publishKind: postKind === "story_video" ? "story" : "reel" };
       } else if (postKind === "story") {
-        // Story still: render with the story template at 9:16, no caption needed.
         const blob = await renderToJpegBlob({
           imageUrl: effectiveImage ?? selectedImage!, name: product.name, price: product.price ?? null,
           currency: product.currency || "ALL", shopName: shopDetails?.shop_name || "",
@@ -184,13 +209,8 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
         const path = `${userId}/ig-designs/${product.id}-story-${Date.now()}.jpg`;
         const { error: upErr } = await supabase.storage.from("product-media").upload(path, blob, { contentType: "image/jpeg", cacheControl: "31536000" });
         if (upErr) throw new Error(upErr.message);
-        body = {
-          productId: product.id, mode: "publish", caption,
-          imageUrl: supabase.storage.from("product-media").getPublicUrl(path).data.publicUrl,
-          publishKind: "story",
-        };
+        body = { productId: product.id, mode: "publish", caption, imageUrl: supabase.storage.from("product-media").getPublicUrl(path).data.publicUrl, publishKind: "story" };
       } else if (postKind === "carousel" && images.length >= 2) {
-        // Render the connected slides, upload them, publish as a CAROUSEL.
         const blobs = await renderCarouselToBlobs({
           images, name: product.name, price: product.price ?? null,
           currency: product.currency || "ALL", shopName: shopDetails?.shop_name || "",
@@ -224,9 +244,14 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
     }
   };
 
+  const fullscreen = postKind === "story" || postKind === "story_video" || postKind === "reel_video";
+  const avatarEl = igAvatar
+    ? <img src={igAvatar} alt="" className="h-full w-full object-cover" />
+    : <span className="grid h-full w-full place-items-center bg-primary/15 text-[10px] font-bold text-primary">{igHandle.slice(0, 2).toUpperCase()}</span>;
+
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!publishing) onOpenChange(o); }}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Instagram className="h-5 w-5" />
@@ -245,9 +270,7 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
               </Button>
             </AlertDescription>
           </Alert>
-        ) : null}
-
-        {permalink && (
+        ) : permalink ? (
           <Alert>
             <AlertDescription className="flex items-center justify-between gap-2">
               <span>{t("ig_publish.live")}</span>
@@ -259,33 +282,65 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
               </Button>
             </AlertDescription>
           </Alert>
-        )}
-
-        {!needsReconnect && !permalink && (
-          loading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-28 w-full" />
-              <div className="flex gap-2">
-                {[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 w-16 rounded-md" />)}
+        ) : loading ? (
+          <div className="grid gap-6 md:grid-cols-2">
+            <Skeleton className="mx-auto h-[420px] w-full max-w-[320px]" />
+            <div className="space-y-3"><Skeleton className="h-8 w-full" /><Skeleton className="h-28 w-full" /><Skeleton className="h-16 w-full" /></div>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* ── Instagram post preview ── */}
+            <div className="order-first">
+              <div className="mx-auto w-full max-w-[320px] overflow-hidden rounded-2xl border bg-background shadow-lg">
+                {!fullscreen && (
+                  <div className="flex items-center gap-2 px-3 py-2">
+                    <span className="h-8 w-8 overflow-hidden rounded-full ring-2 ring-pink-500/60 ring-offset-1">{avatarEl}</span>
+                    <span className="text-sm font-semibold">{igHandle}</span>
+                    <MoreHorizontal className="ml-auto h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="relative">
+                  <canvas ref={previewRef} className="block w-full" />
+                  {fullscreen && (
+                    <div className="absolute left-2 top-3 flex items-center gap-2">
+                      <span className="h-7 w-7 overflow-hidden rounded-full">{avatarEl}</span>
+                      <span className="text-xs font-semibold text-white drop-shadow">{igHandle}</span>
+                    </div>
+                  )}
+                  {postKind === "carousel" && images.length >= 2 && (
+                    <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white">1/{Math.min(images.length, 10)}</span>
+                  )}
+                </div>
+                {!fullscreen && (
+                  <div className="space-y-1.5 px-3 py-2.5">
+                    <div className="flex items-center gap-3.5">
+                      <Heart className="h-5 w-5" /><MessageCircle className="h-5 w-5" /><SendIcon className="h-5 w-5" />
+                      {postKind === "carousel" && (
+                        <span className="mx-auto flex gap-1">
+                          {Array.from({ length: Math.min(images.length, 5) }).map((_, i) => (
+                            <span key={i} className={cn("h-1.5 w-1.5 rounded-full", i === 0 ? "bg-primary" : "bg-muted-foreground/40")} />
+                          ))}
+                        </span>
+                      )}
+                      <Bookmark className="ml-auto h-5 w-5" />
+                    </div>
+                    <p className="whitespace-pre-line text-xs leading-snug">
+                      <span className="font-semibold">{igHandle}</span> {captionParts.body}
+                      {captionParts.tags && <span className="text-blue-600 dark:text-blue-400"> {captionParts.tags}</span>}
+                    </p>
+                  </div>
+                )}
               </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
               {alreadyPublished && (
-                <Alert>
-                  <AlertDescription>{t("ig_publish.already_published")}</AlertDescription>
+                <Alert className="mt-3">
+                  <AlertDescription className="text-xs">{t("ig_publish.already_published")}</AlertDescription>
                 </Alert>
               )}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{t("ig_publish.caption_label")}</span>
-                  <Button variant="ghost" size="sm" onClick={loadPreview} disabled={publishing}>
-                    <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                    {t("ig_publish.regenerate")}
-                  </Button>
-                </div>
-                <Textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={7} disabled={publishing} />
-              </div>
+            </div>
+
+            {/* ── Controls ── */}
+            <div className="space-y-4">
+              {/* post type */}
               <div className="flex flex-wrap gap-1.5">
                 {(["single", "carousel", "story", "post_video", "story_video", "reel_video"] as const)
                   .filter((k) => k !== "carousel" || images.length >= 2)
@@ -298,6 +353,7 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
                     </button>
                   ))}
               </div>
+
               {isVideoKind && (
                 <Alert>
                   <AlertDescription className="flex items-center gap-2 text-xs">
@@ -309,6 +365,20 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
                   </AlertDescription>
                 </Alert>
               )}
+
+              {/* caption + hashtags */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{t("ig_publish.caption_label")}</span>
+                  <Button variant="ghost" size="sm" onClick={loadPreview} disabled={publishing}>
+                    <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                    {t("ig_publish.regenerate")}
+                  </Button>
+                </div>
+                <Textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={6} disabled={publishing} />
+              </div>
+
+              {/* design template */}
               <div className="space-y-1.5">
                 <span className="flex items-center gap-1.5 text-sm font-medium">
                   <Palette className="h-3.5 w-3.5" />
@@ -324,27 +394,28 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* image adjust */}
               {selectedImage && (
-                <div className="grid grid-cols-[1fr_auto] items-start gap-3">
-                  <div className="space-y-3">
-                    {([["scale", 0.5, 2.5], ["offsetX", -1, 1], ["offsetY", -1, 1]] as const).map(([key, min, max]) => (
-                      <div key={key} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>{t(`ig_publish.adj_${key}`)}</span>
-                          <span>{adjust[key].toFixed(2)}</span>
-                        </div>
-                        <Slider value={[adjust[key]]} min={min} max={max} step={0.05} disabled={publishing}
-                          onValueChange={([v]) => setAdjust((a) => ({ ...a, [key]: v }))} />
+                <div className="space-y-3 rounded-lg border p-3">
+                  {([["scale", 0.5, 2.5], ["offsetX", -1, 1], ["offsetY", -1, 1]] as const).map(([key, min, max]) => (
+                    <div key={key} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{t(`ig_publish.adj_${key}`)}</span>
+                        <span>{adjust[key].toFixed(2)}</span>
                       </div>
-                    ))}
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">{t("ig_studio.remove_bg")}</span>
-                      {cutoutBusy ? <Spinner className="h-4 w-4" /> : <Switch checked={adjust.removeBg} onCheckedChange={toggleRemoveBg} disabled={publishing} />}
+                      <Slider value={[adjust[key]]} min={min} max={max} step={0.05} disabled={publishing}
+                        onValueChange={([v]) => setAdjust((a) => ({ ...a, [key]: v }))} />
                     </div>
+                  ))}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{t("ig_studio.remove_bg")}</span>
+                    {cutoutBusy ? <Spinner className="h-4 w-4" /> : <Switch checked={adjust.removeBg} onCheckedChange={toggleRemoveBg} disabled={publishing} />}
                   </div>
-                  <canvas ref={previewRef} className="w-36 rounded-md border sm:w-44" />
                 </div>
               )}
+
+              {/* image picker */}
               {images.length > 0 ? (
                 <div className="space-y-1.5">
                   <span className="text-sm font-medium">{t("ig_publish.image_label")}</span>
@@ -355,10 +426,8 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
                         type="button"
                         onClick={() => { setSelectedImage(url); setCutoutUrl(null); setAdjust((a) => ({ ...a, removeBg: false })); }}
                         disabled={publishing}
-                        className={cn(
-                          "h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 transition-colors",
-                          selectedImage === url ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"
-                        )}
+                        className={cn("h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 transition-colors",
+                          selectedImage === url ? "border-primary" : "border-transparent opacity-70 hover:opacity-100")}
                       >
                         <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
                       </button>
@@ -371,7 +440,7 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
                 </Alert>
               )}
             </div>
-          )
+          </div>
         )}
 
         <DialogFooter>
@@ -380,7 +449,7 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
           </Button>
           {!needsReconnect && !permalink && (
             <Button onClick={handlePublish} disabled={loading || publishing || !images.length || (isVideoKind && videoJob?.status !== "done")}>
-              <Send className="mr-2 h-4 w-4" />
+              {publishing ? <Spinner className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />}
               {publishing ? t("ig_publish.publishing") : t("ig_publish.publish")}
             </Button>
           )}

@@ -1895,7 +1895,8 @@
     "video_rendering": "The system is rendering the video in the background — you can keep this open or come back.",
     "video_ready": "Video ready — publish when you like.",
     "video_failed": "Video render failed. Pick another type or try again.",
-    "video_not_ready": "The video isn't ready yet."
+    "video_not_ready": "The video isn't ready yet.",
+    "bg_failed": "Background removal failed: {{message}}"
   },
   "ig_status": {
     "column": "Instagram",

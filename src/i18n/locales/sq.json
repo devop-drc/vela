@@ -1895,7 +1895,8 @@
     "video_rendering": "Sistemi po gjeneron videon në sfond — mund ta lësh hapur ose të kthehesh më vonë.",
     "video_ready": "Videoja është gati — publiko kur të duash.",
     "video_failed": "Gjenerimi i videos dështoi. Zgjidh një lloj tjetër ose provo sërish.",
-    "video_not_ready": "Videoja s'është gati ende."
+    "video_not_ready": "Videoja s'është gati ende.",
+    "bg_failed": "Heqja e sfondit dështoi: {{message}}"
   },
   "ig_status": {
     "column": "Instagram",
