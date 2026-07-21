@@ -7,6 +7,7 @@ import { useProductRating } from "@/hooks/useProductRating";
 
 import { ProductStatusDropdown } from "./ProductStatusDropdown";
 import { Badge } from "./ui/badge";
+import { Instagram as InstagramIcon } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { useShop } from "@/contexts/ShopContext";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "./ui/carousel";
@@ -36,6 +37,7 @@ interface Product {
   details: {
     [key: string]: any;
   };
+  instagram_post_id?: string | null;
 }
 
 interface ProductCardProps {
@@ -137,6 +139,19 @@ export const ProductCard = ({ product, isSelected, isSelectionModeActive, gridSi
             <CarouselNext onClick={(e) => e.stopPropagation()} className="right-2 opacity-0 group-hover/carousel:opacity-100" />
           </>}
         </Carousel>
+        {/* Shop-only vs shop+Instagram indicator */}
+        <span
+          className={cn(
+            "pointer-events-none absolute left-2 top-2 z-10 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium backdrop-blur-sm",
+            product.instagram_post_id
+              ? "bg-primary/90 text-primary-foreground"
+              : "bg-background/80 text-muted-foreground"
+          )}
+          title={product.instagram_post_id ? t('ig_status.on_instagram') : t('ig_status.shop_only')}
+        >
+          <InstagramIcon className="h-3 w-3" />
+          {product.instagram_post_id ? t('ig_status.on_instagram_short') : t('ig_status.shop_only_short')}
+        </span>
 
         <div className="bg-card p-3 flex-1 flex flex-col justify-between space-y-2.5" onClick={handleCardClick}>
           <div className="space-y-1.5">

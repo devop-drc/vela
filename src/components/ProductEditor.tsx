@@ -65,9 +65,12 @@ interface ProductEditorProps {
   onUpdate: () => void;
   /** Open directly in edit mode (used for newly-created products). */
   startInEdit?: boolean;
+  /** Offer the Instagram publish dialog as soon as view mode opens (wizard-created products). */
+  promptIgOnOpen?: boolean;
+  onIgPrompted?: () => void;
 }
 
-export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit = false }: ProductEditorProps) => {
+export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit = false, promptIgOnOpen = false, onIgPrompted }: ProductEditorProps) => {
   const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [promptIgPublish, setPromptIgPublish] = useState(false);
@@ -76,6 +79,15 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
   useEffect(() => {
     if (isOpen && startInEdit) setIsEditing(true);
   }, [isOpen, startInEdit]);
+
+  // Wizard-created products land in view mode with the IG prompt queued.
+  useEffect(() => {
+    if (isOpen && promptIgOnOpen) {
+      setPromptIgPublish(true);
+      onIgPrompted?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, promptIgOnOpen]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);

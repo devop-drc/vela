@@ -44,14 +44,46 @@ const isPermissionError = (err: any) => {
   return code === 10 || code === 200 || code === 190 || sub === 463 || sub === 460;
 };
 
-const buildCaptionPrompt = (p: any, shop: any) => {
+/** Caption style knobs (set in Instagram Studio, overridable per publish). */
+interface CaptionStyle {
+  structure?: 'descriptive' | 'paragraph' | 'structured' | 'minimal';
+  tone?: 'friendly' | 'professional' | 'luxury' | 'playful';
+  emojis?: 'none' | 'light' | 'rich';
+  hashtags?: number;
+  language?: 'sq' | 'en';
+}
+
+const STRUCTURE_RULES: Record<string, string> = {
+  descriptive: 'a scroll-stopping first line (hook), then 2-4 short lines painting the product vividly (always include the price with its currency), then a call-to-action line',
+  paragraph: 'one flowing paragraph (3-5 sentences): hook first, the product story with the price woven in naturally, ending in a call-to-action',
+  structured: 'a hook line, then a compact bullet-style list using ▪ for each key fact (price, sizes/options, availability), then a call-to-action line',
+  minimal: 'one punchy hook line, one line with product + price, one short call-to-action — nothing else',
+};
+const TONE_RULES: Record<string, string> = {
+  friendly: 'warm, neighborly and direct — like a small-shop owner talking to regulars',
+  professional: 'polished and confident, no slang, precise wording',
+  luxury: 'elegant and restrained, evocative adjectives, a sense of exclusivity',
+  playful: 'fun, energetic, a bit cheeky — allowed to joke',
+};
+const EMOJI_RULES: Record<string, string> = {
+  none: 'Do NOT use any emojis.',
+  light: 'Use 1-3 well-placed emojis total.',
+  rich: 'Use emojis generously (6-10 total) to add energy, including in the bullet lines.',
+};
+
+const buildCaptionPrompt = (p: any, shop: any, style: CaptionStyle) => {
+  const lang = style.language === 'en' ? 'ENGLISH' : 'ALBANIAN';
   const sq = p.translations?.sq ?? {};
-  const name = sq.name || p.name;
+  const name = (style.language === 'en' ? p.name : (sq.name || p.name));
   const details = Object.entries(p.details || {})
     .filter(([k, v]) => k !== 'type' && v != null && typeof v !== 'object')
     .map(([k, v]) => `${k}: ${v}`).join('; ');
   const shopLink = `${SHOP_ORIGIN}/shop/${shop.slug}`;
-  return `Write an Instagram caption in ALBANIAN for a small shop's product post. Output ONLY the caption text, no quotes, no explanation.
+  const structure = STRUCTURE_RULES[style.structure ?? 'descriptive'] ?? STRUCTURE_RULES.descriptive;
+  const tone = TONE_RULES[style.tone ?? 'friendly'] ?? TONE_RULES.friendly;
+  const emoji = EMOJI_RULES[style.emojis ?? 'light'] ?? EMOJI_RULES.light;
+  const hashtagCount = Math.min(Math.max(style.hashtags ?? 6, 0), 15);
+  return `Write an Instagram caption in ${lang} for a small shop's product post. Output ONLY the caption text, no quotes, no explanation.
 
 Product: ${name}
 ${p.caption ? `Existing description: ${String(p.caption).slice(0, 300)}` : ''}
@@ -61,10 +93,12 @@ ${details ? `Details: ${details}` : ''}
 Shop: ${shop.shop_name || 'our shop'} — order online at ${shopLink}
 
 Rules:
-- Structure: a scroll-stopping first line (hook, may use 1-2 emojis), then 1-3 short lines with the key details (always include the price with its currency), then a call-to-action line pointing to ${shopLink} where they can order online with card or cash.
-- Natural, warm Albanian with correct diacritics (ë, ç). Keep brand names and established loanwords as-is ("template" stays "template", never "shabllon").
-- End with one line of 5-8 relevant Albanian hashtags (no spaces inside tags).
-- Max ~120 words total. No markdown.`;
+- Structure: ${structure}. The call-to-action points to ${shopLink} where they can order online with card or cash.
+- Tone: ${tone}.
+- ${emoji}
+- Natural ${lang === 'ALBANIAN' ? 'Albanian with correct diacritics (ë, ç)' : 'English'}. Keep brand names and established loanwords as-is ("template" stays "template"${lang === 'ALBANIAN' ? ', never "shabllon"' : ''}).
+${hashtagCount > 0 ? `- End with one line of ${Math.max(hashtagCount - 2, 3)}-${hashtagCount} relevant ${lang === 'ALBANIAN' ? 'Albanian' : 'English'} hashtags (no spaces inside tags).` : '- Do not add hashtags.'}
+- Max ~130 words total. No markdown.`;
 };
 
 serve(async (req) => {
@@ -84,7 +118,7 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const { productId, mode = 'preview', caption: captionOverride, imageUrl } = await req.json();
+    const { productId, mode = 'preview', caption: captionOverride, imageUrl, captionStyle = {} } = await req.json();
     if (!productId) return json({ error: 'productId is required' }, 400);
 
     const { data: product } = await admin.from('products')
@@ -111,6 +145,32 @@ serve(async (req) => {
       ...(product.media_url && product.media_type !== 'video' ? [product.media_url] : []),
     ].filter((u, i, arr) => typeof u === 'string' && u.startsWith('http') && arr.indexOf(u) === i);
 
+    /* ── unpublish: toggle the product back to shop-only ── */
+    if (mode === 'unpublish') {
+      if (!product.instagram_post_id) return json({ error: 'This product is not linked to an Instagram post.' }, 400);
+      const mediaId = product.instagram_post_id;
+      let deleted = false;
+      let permalink: string | null = null;
+      if (integration.provider === 'facebook') {
+        // The delete endpoint only exists on the Facebook-login API.
+        try {
+          const delRes = await fetch(`${GRAPH}/${mediaId}?access_token=${token}`, { method: 'DELETE' });
+          const del = await delRes.json().catch(() => ({}));
+          deleted = delRes.ok && del.success !== false;
+        } catch { /* fall through to unlink */ }
+      }
+      if (!deleted) {
+        // IG-login API can't delete/archive — hand back the permalink so the
+        // merchant can archive it in one tap; we unlink either way.
+        try {
+          const info = await (await fetch(`${graphBase}/${mediaId}?fields=permalink&access_token=${token}`)).json();
+          permalink = info?.permalink ?? null;
+        } catch { /* permalink is best-effort */ }
+      }
+      await admin.from('products').update({ instagram_post_id: null }).eq('id', product.id);
+      return json({ unlinked: true, deleted, permalink });
+    }
+
     /* ── preview: generate the caption ── */
     if (mode === 'preview') {
       if (!GEMINI_API_KEY) return json({ error: 'Caption generation is not configured.' }, 500);
@@ -118,7 +178,7 @@ serve(async (req) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: buildCaptionPrompt(product, shop) }] }],
+          contents: [{ parts: [{ text: buildCaptionPrompt(product, shop, captionStyle) }] }],
           generationConfig: { temperature: 0.8, thinkingConfig: { thinkingBudget: 0 } },
         }),
       });
@@ -140,7 +200,9 @@ serve(async (req) => {
     }
 
     /* ── publish ── */
-    const rawImage = imageUrl && candidates.includes(imageUrl) ? imageUrl : candidates[0];
+    // Accept any https image the merchant explicitly chose (Instagram Studio
+    // uploads rendered overlays to storage, so it won't be in candidates).
+    const rawImage = (typeof imageUrl === 'string' && imageUrl.startsWith('https://')) ? imageUrl : candidates[0];
     if (!rawImage) return json({ error: 'This product has no image to post.' }, 400);
     const finalCaption = (captionOverride || '').trim();
     if (!finalCaption) return json({ error: 'A caption is required to publish.' }, 400);

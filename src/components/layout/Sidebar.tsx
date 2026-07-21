@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home, Package, Archive, Layers, MessageSquareQuote, Megaphone,
-  ShoppingBag, Settings, ChevronsLeft, ChevronsRight, Globe, LogOut, CreditCard, ShieldCheck, HelpCircle, Store,
+  ShoppingBag, Settings, ChevronsLeft, ChevronsRight, Globe, LogOut, CreditCard, ShieldCheck, HelpCircle, Store, Instagram,
 } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useTutorial } from "@/components/tutorial/TutorialProvider";
@@ -33,6 +33,7 @@ const nav: NavEntry[] = [
   { to: "/orders", icon: ShoppingBag, labelKey: "nav.orders" },
   { divider: true, labelKey: "nav_groups.storefront" },
   { to: "/storefront-studio", icon: Store, labelKey: "nav.storefront" },
+  { to: "/instagram-studio", icon: Instagram, labelKey: "nav.instagram_studio" },
   { divider: true, labelKey: "nav_groups.app" },
   { to: "/billing", icon: CreditCard, labelKey: "nav.billing" },
   { to: "/settings", icon: Settings, labelKey: "nav.settings" },

@@ -21,7 +21,7 @@ import { MediaItem } from "../MediaItem";
 import { useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { showError } from "@/utils/toast";
+import { showError, showSuccess } from "@/utils/toast";
 import { getStockStatus, syncDerivedStockFromVariants, parseVariantOptionValues } from "@/lib/stock";
 import { StatusBadge } from "@/components/ui-app/StatusBadge";
 import { productStatusTone, toneTint, toneText, type StatusTone } from "@/lib/status";
@@ -45,6 +45,33 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
   const [reviewsOpen, setReviewsOpen] = useState(false);
   const [igPublishOpen, setIgPublishOpen] = useState(false);
   const [igPublishedNow, setIgPublishedNow] = useState(false);
+  const [igUnlinked, setIgUnlinked] = useState(false);
+  const [igToggling, setIgToggling] = useState(false);
+
+  // Toggle OFF: legacy connections delete the post outright; the direct-IG
+  // API can't delete, so we unlink and open the post for one-tap archiving.
+  const handleIgUnpublish = async () => {
+    setIgToggling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('publish-product-post', {
+        body: { productId: product.id, mode: 'unpublish' },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      setIgUnlinked(true);
+      setIgPublishedNow(false);
+      if (data?.deleted) {
+        showSuccess(t('ig_publish.removed_deleted'));
+      } else {
+        showSuccess(t('ig_publish.removed_unlinked'));
+        if (data?.permalink) window.open(data.permalink, '_blank', 'noopener');
+      }
+    } catch (e) {
+      showError(t('ig_publish.remove_failed', { message: (e as Error).message }));
+    } finally {
+      setIgToggling(false);
+    }
+  };
 
   // A freshly-saved manual product lands here with autoOpenIgPublish set —
   // open the publish dialog once and hand the flag back.
@@ -413,8 +440,13 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
           <Star className="mr-2 h-4 w-4" />
           {t('product_view.reviews')}{ratingSummary && ratingSummary.count > 0 ? ` (${ratingSummary.count} · ★ ${ratingSummary.avg.toFixed(1)})` : ''}
         </Button>
-        {!product.instagram_post_id && !igPublishedNow && (
-          <Button variant="outline" onClick={() => setIgPublishOpen(true)} disabled={isSubmitting}>
+        {(product.instagram_post_id || igPublishedNow) && !igUnlinked ? (
+          <Button variant="outline" onClick={handleIgUnpublish} disabled={isSubmitting || igToggling}>
+            <Instagram className="mr-2 h-4 w-4" />
+            {igToggling ? t('ig_publish.removing') : t('ig_publish.remove_from_ig')}
+          </Button>
+        ) : (
+          <Button variant="outline" onClick={() => setIgPublishOpen(true)} disabled={isSubmitting || igToggling}>
             <Instagram className="mr-2 h-4 w-4" />{t('ig_publish.title')}
           </Button>
         )}
@@ -424,7 +456,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
 
       <ProductReviewsManager open={reviewsOpen} onOpenChange={setReviewsOpen} productId={product.id} productName={product.name} />
 
-      <PublishToInstagramDialog open={igPublishOpen} onOpenChange={setIgPublishOpen} product={product} onPublished={() => setIgPublishedNow(true)} />
+      <PublishToInstagramDialog open={igPublishOpen} onOpenChange={setIgPublishOpen} product={product} onPublished={() => { setIgPublishedNow(true); setIgUnlinked(false); }} />
 
       {/* Stock Management Modal */}
       <Dialog open={stockModalOpen} onOpenChange={(open) => { if (!open) { setStockSearch(''); setStockFilter('all'); } setStockModalOpen(open); }}>

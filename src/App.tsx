@@ -38,6 +38,7 @@ const FilterVisibility = lazy(() => import("./pages/FilterVisibility"));
 const Billing = lazy(() => import("./pages/Billing"));
 const Admin = lazy(() => import("./pages/Admin"));
 const StorefrontStudioPage = lazy(() => import("./pages/StorefrontStudioPage"));
+const InstagramStudio = lazy(() => import("./pages/InstagramStudio"));
 // Custom storefront — Storefront Studio (src/storefront)
 const StorefrontLayout = lazy(() => import("./storefront/layout/StorefrontLayout"));
 const StorefrontIndex = lazy(() => import("./storefront/pages/HomePage").then((m) => ({ default: m.HomePage })));
@@ -118,6 +119,7 @@ const AppContent = () => {
                 <Route path="/chat" element={<ChatPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/storefront-studio" element={<StorefrontStudioPage />} />
+                <Route path="/instagram-studio" element={<InstagramStudio />} />
                 <Route path="/filters" element={<FilterVisibility />} />
               </Route>
             </Route>

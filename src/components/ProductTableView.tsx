@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, AlertTriangle } from "lucide-react";
+import { Edit, Trash2, AlertTriangle, Instagram } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Checkbox } from "./ui/checkbox";
 import { formatCurrency } from "@/lib/formatters";
@@ -188,6 +188,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
           <TableHead className="w-[80px]">{t('products_ui.image')}</TableHead>
           <TableHead>{t('products_ui.name')}</TableHead>
           {showStatusColumn && <TableHead>{t('products.status')}</TableHead>}
+          <TableHead>{t('ig_status.column')}</TableHead>
           <TableHead>{t('products_ui.price')}</TableHead>
           <TableHead>{t('products_ui.in_stock')}</TableHead>
           <TableHead>{t('products_ui.variants')}</TableHead>
@@ -227,6 +228,15 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
                 </StatusBadge>
               </TableCell>
             )}
+            <TableCell className="cursor-pointer py-3">
+              <span className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                (product as any).instagram_post_id ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+              )}>
+                <Instagram className="h-3 w-3" />
+                {(product as any).instagram_post_id ? t('ig_status.on_instagram_short') : t('ig_status.shop_only_short')}
+              </span>
+            </TableCell>
             <TableCell className="cursor-pointer py-3">
               <div className="flex-1 text-sm text-muted-foreground">
                 {product.price != null ? (
@@ -268,7 +278,7 @@ export const ProductTableView = ({ products, selectedProducts, onSelectAll, onSe
           </TableRow>
         )) : (
           <TableRow>
-            <TableCell colSpan={9} className="h-24 text-center">
+            <TableCell colSpan={10} className="h-24 text-center">
               {t('products_ui.no_products_found')}
             </TableCell>
           </TableRow>

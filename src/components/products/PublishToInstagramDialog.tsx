@@ -9,7 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { Instagram, RefreshCw, Send, ExternalLink, Unplug } from "lucide-react";
+import { Instagram, RefreshCw, Send, ExternalLink, Unplug, Palette } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useStudioSettings } from "@/hooks/useStudioSettings";
+import { useShop } from "@/contexts/ShopContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { renderToJpegBlob, TEMPLATE_IDS, type TemplateId } from "@/lib/igStudio";
 
 /**
  * The reverse pipeline's front door: previews a system-generated caption for a
@@ -24,6 +29,10 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { settings: studio } = useStudioSettings();
+  const { shopDetails } = useShop();
+  const { userId } = useAuth();
+  const [design, setDesign] = useState<TemplateId | "studio">("studio");
   const [loading, setLoading] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [caption, setCaption] = useState("");
@@ -38,7 +47,7 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
     setNeedsReconnect(false);
     try {
       const { data, error } = await supabase.functions.invoke("publish-product-post", {
-        body: { productId: product.id, mode: "preview" },
+        body: { productId: product.id, mode: "preview", captionStyle: studio.captionStyle },
       });
       if (error) throw new Error(error.message);
       if (data?.error === "reconnect_required") { setNeedsReconnect(true); return; }
@@ -62,12 +71,35 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, product?.id]);
 
+  /** When a template is chosen, render the overlay client-side and upload it —
+   * the published post then uses the designed image instead of the raw photo. */
+  const resolveImageForPublish = async (): Promise<string | null> => {
+    const template = design === "studio" ? studio.template : design;
+    if (!selectedImage || template === "plain") return selectedImage;
+    const blob = await renderToJpegBlob({
+      imageUrl: selectedImage,
+      name: product.name,
+      price: product.price ?? null,
+      currency: product.currency || "ALL",
+      shopName: shopDetails?.shop_name || "",
+      settings: { ...studio, template },
+      format: "post",
+    });
+    const path = `${userId}/ig-designs/${product.id}-${Date.now()}.jpg`;
+    const { error: upErr } = await supabase.storage.from("product-media").upload(path, blob, {
+      contentType: "image/jpeg", cacheControl: "31536000", upsert: false,
+    });
+    if (upErr) throw new Error(upErr.message);
+    return supabase.storage.from("product-media").getPublicUrl(path).data.publicUrl;
+  };
+
   const handlePublish = async () => {
     if (!caption.trim()) { showError(t("ig_publish.caption_required")); return; }
     setPublishing(true);
     try {
+      const finalImage = await resolveImageForPublish();
       const { data, error } = await supabase.functions.invoke("publish-product-post", {
-        body: { productId: product.id, mode: "publish", caption, imageUrl: selectedImage },
+        body: { productId: product.id, mode: "publish", caption, imageUrl: finalImage },
       });
       if (error) throw new Error(error.message);
       if (data?.error === "reconnect_required") { setNeedsReconnect(true); return; }
@@ -143,6 +175,21 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
                   </Button>
                 </div>
                 <Textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={7} disabled={publishing} />
+              </div>
+              <div className="space-y-1.5">
+                <span className="flex items-center gap-1.5 text-sm font-medium">
+                  <Palette className="h-3.5 w-3.5" />
+                  {t("ig_publish.design_label")}
+                </span>
+                <Select value={design} onValueChange={(v) => setDesign(v as TemplateId | "studio")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="studio">{t("ig_publish.design_studio", { template: t(`ig_studio.template_${studio.template}`) })}</SelectItem>
+                    {TEMPLATE_IDS.map((id) => (
+                      <SelectItem key={id} value={id}>{t(`ig_studio.template_${id}`)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {images.length > 0 ? (
                 <div className="space-y-1.5">
