@@ -1,20 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { useShop } from "@/contexts/ShopContext";
 import { useStudioSettings } from "@/hooks/useStudioSettings";
-import { renderTemplate, TEMPLATE_IDS, type StudioSettings, type TemplateId } from "@/lib/igStudio";
+import { renderTemplate, removeImageBackground, TEMPLATE_IDS, DEFAULT_TRANSFORM, type StudioSettings } from "@/lib/igStudio";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Instagram, Clapperboard } from "lucide-react";
+import { Instagram, Clapperboard, RotateCcw, ImageIcon } from "lucide-react";
 
 const ACCENT_PRESETS = ["#A31234", "#FF2E4D", "#C9A227", "#140A0E", "#1D4ED8", "#047857"];
 
@@ -46,8 +48,8 @@ const TemplateCanvas = ({ settings, format, subject, shopName, className }: {
     }, 120);
     return () => { cancelled = true; clearTimeout(t); };
   }, [settings, format, subject, shopName]);
-  if (failed) return <div className={cn("grid place-items-center rounded-lg bg-muted text-xs text-muted-foreground", className)}>—</div>;
-  return <canvas ref={ref} className={cn("h-auto w-full rounded-lg", className)} />;
+  if (failed) return <div className={cn("grid aspect-[4/5] place-items-center rounded-lg bg-muted text-xs text-muted-foreground", className)}>—</div>;
+  return <canvas ref={ref} className={cn("h-auto w-full max-w-full rounded-lg", className)} />;
 };
 
 const InstagramStudio = () => {
@@ -55,7 +57,9 @@ const InstagramStudio = () => {
   const { userId } = useAuth();
   const { shopDetails } = useShop();
   const { settings, update, isLoading } = useStudioSettings();
-  const [subject, setSubject] = useState(PLACEHOLDER);
+  const [rawSubject, setRawSubject] = useState(PLACEHOLDER);
+  const [cutoutUrl, setCutoutUrl] = useState<string | null>(null);
+  const [cutoutBusy, setCutoutBusy] = useState(false);
   const shopName = shopDetails?.shop_name || "Vela Shop";
 
   // Prefer a real product of the merchant as the preview subject.
@@ -71,21 +75,36 @@ const InstagramStudio = () => {
         .neq("media_type", "video")
         .limit(1);
       const p = data?.[0];
-      if (p?.media_url) setSubject({ imageUrl: p.media_url, name: p.name, price: p.price, currency: p.currency || "ALL" });
+      if (p?.media_url) setRawSubject({ imageUrl: p.media_url, name: p.name, price: p.price, currency: p.currency || "ALL" });
     })();
   }, [userId]);
 
+  const subject = settings.transform.removeBg && cutoutUrl ? { ...rawSubject, imageUrl: cutoutUrl } : rawSubject;
+
   const set = (patch: Partial<StudioSettings>) => update(patch);
   const setCaption = (patch: Partial<StudioSettings["captionStyle"]>) => update({ captionStyle: { ...settings.captionStyle, ...patch } as StudioSettings["captionStyle"] });
+  const setTransform = (patch: Partial<StudioSettings["transform"]>) => update({ transform: { ...settings.transform, ...patch } as StudioSettings["transform"] });
 
-  const carouselSettings = useMemo(() => settings, [settings]);
+  const toggleRemoveBg = async (on: boolean) => {
+    setTransform({ removeBg: on });
+    if (!on || cutoutUrl) return;
+    setCutoutBusy(true);
+    try {
+      setCutoutUrl(await removeImageBackground(rawSubject.imageUrl));
+    } catch (e) {
+      console.error("bg removal failed:", (e as Error).message);
+      setTransform({ removeBg: false });
+    } finally {
+      setCutoutBusy(false);
+    }
+  };
 
   if (isLoading) {
     return (
-      <div className="space-y-4 p-1">
+      <div className="mx-auto w-full max-w-screen-2xl space-y-4 p-1">
         <Skeleton className="h-9 w-64" />
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Skeleton className="h-96 lg:col-span-2" />
+        <div className="grid gap-4 xl:grid-cols-3">
+          <Skeleton className="h-96 xl:col-span-2" />
           <Skeleton className="h-96" />
         </div>
       </div>
@@ -93,32 +112,84 @@ const InstagramStudio = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-screen-2xl space-y-4 md:space-y-6">
       <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+        <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight md:text-2xl">
           <Instagram className="h-6 w-6" />
           {t("ig_studio.title")}
         </h1>
         <p className="text-sm text-muted-foreground">{t("ig_studio.subtitle")}</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* ── Left: templates + settings ── */}
-        <div className="space-y-6 lg:col-span-2">
+      <div className="grid gap-4 md:gap-6 xl:grid-cols-3">
+        {/* ── Preview — first on small screens so changes are visible immediately ── */}
+        <Card className="order-first h-fit min-w-0 xl:order-last xl:sticky xl:top-4">
+          <CardHeader className="pb-3">
+            <CardTitle>{t("ig_studio.preview")}</CardTitle>
+            <CardDescription>{t("ig_studio.preview_desc")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="post">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="post" className="text-xs sm:text-sm">{t("ig_studio.tab_post")}</TabsTrigger>
+                <TabsTrigger value="story" className="text-xs sm:text-sm">{t("ig_studio.tab_story")}</TabsTrigger>
+                <TabsTrigger value="carousel" className="text-xs sm:text-sm">{t("ig_studio.tab_carousel")}</TabsTrigger>
+                <TabsTrigger value="video" className="text-xs sm:text-sm">{t("ig_studio.tab_video")}</TabsTrigger>
+              </TabsList>
+              <TabsContent value="post" className="mt-4">
+                <TemplateCanvas settings={settings} format="post" subject={subject} shopName={shopName} className="mx-auto max-w-md xl:max-w-none" />
+              </TabsContent>
+              <TabsContent value="story" className="mt-4">
+                <TemplateCanvas settings={settings} format="story" subject={subject} shopName={shopName} className="mx-auto max-w-[240px] sm:max-w-[280px]" />
+              </TabsContent>
+              <TabsContent value="carousel" className="mt-4">
+                <div className="flex snap-x gap-3 overflow-x-auto pb-2">
+                  {[settings, { ...settings, showName: false }, { ...settings, showPrice: false, showName: false }].map((s, i) => (
+                    <div key={i} className="w-36 shrink-0 snap-start sm:w-44">
+                      <TemplateCanvas settings={s} format="post" subject={subject} shopName={shopName} />
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">{t("ig_studio.carousel_hint")}</p>
+              </TabsContent>
+              <TabsContent value="video" className="mt-4">
+                <div className="relative mx-auto max-w-md overflow-hidden rounded-lg xl:max-w-none">
+                  <TemplateCanvas settings={{ ...settings, template: "plain" }} format="post" subject={subject} shopName={shopName} />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <div className="bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 pt-16">
+                      <p className="font-bold text-white">{subject.name}</p>
+                      <p className="text-sm font-semibold" style={{ color: settings.accent }}>
+                        {subject.price?.toLocaleString("sq-AL")} {subject.currency}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="absolute right-2 top-2 gap-1">
+                    <Clapperboard className="h-3 w-3" />
+                    {t("ig_studio.video_soon")}
+                  </Badge>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">{t("ig_studio.video_hint")}</p>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        {/* ── Controls column ── */}
+        <div className="min-w-0 space-y-4 md:space-y-6 xl:col-span-2">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle>{t("ig_studio.templates")}</CardTitle>
               <CardDescription>{t("ig_studio.templates_desc")}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 2xl:grid-cols-4">
                 {TEMPLATE_IDS.map((id) => (
                   <button
                     key={id}
                     type="button"
                     onClick={() => set({ template: id })}
                     className={cn(
-                      "group rounded-xl border-2 p-2 text-left transition-colors",
+                      "group min-w-0 rounded-xl border-2 p-1.5 text-left transition-colors sm:p-2",
                       settings.template === id ? "border-primary bg-primary/5" : "border-transparent hover:border-border"
                     )}
                   >
@@ -128,7 +199,7 @@ const InstagramStudio = () => {
                       subject={subject}
                       shopName={shopName}
                     />
-                    <p className="mt-2 text-center text-sm font-medium">{t(`ig_studio.template_${id}`)}</p>
+                    <p className="mt-1.5 truncate text-center text-xs font-medium sm:text-sm">{t(`ig_studio.template_${id}`)}</p>
                   </button>
                 ))}
               </div>
@@ -136,7 +207,61 @@ const InstagramStudio = () => {
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon className="h-4 w-4" />
+                {t("ig_studio.media")}
+              </CardTitle>
+              <CardDescription>{t("ig_studio.media_desc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>{t("ig_studio.fit")}</Label>
+                <Select value={settings.transform.fit} onValueChange={(v) => setTransform({ fit: v as "cover" | "contain" })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cover">{t("ig_studio.fit_cover")}</SelectItem>
+                    <SelectItem value="contain">{t("ig_studio.fit_contain")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                <div className="min-w-0">
+                  <Label htmlFor="sw-removebg" className="block">{t("ig_studio.remove_bg")}</Label>
+                  <p className="text-xs text-muted-foreground">{t("ig_studio.remove_bg_hint")}</p>
+                </div>
+                {cutoutBusy
+                  ? <Spinner className="h-5 w-5 shrink-0" />
+                  : <Switch id="sw-removebg" checked={settings.transform.removeBg} onCheckedChange={toggleRemoveBg} />}
+              </div>
+              {([
+                ["scale", t("ig_studio.zoom"), 0.5, 2.5, 0.05],
+                ["offsetX", t("ig_studio.pos_x"), -1, 1, 0.05],
+                ["offsetY", t("ig_studio.pos_y"), -1, 1, 0.05],
+              ] as const).map(([key, label, min, max, step]) => (
+                <div key={key} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>{label}</Label>
+                    <span className="text-xs text-muted-foreground">{(settings.transform[key] as number).toFixed(2)}</span>
+                  </div>
+                  <Slider
+                    value={[settings.transform[key] as number]}
+                    min={min} max={max} step={step}
+                    onValueChange={([v]) => setTransform({ [key]: v } as never)}
+                  />
+                </div>
+              ))}
+              <div className="flex items-end">
+                <Button variant="outline" size="sm" onClick={() => setTransform({ ...DEFAULT_TRANSFORM })}>
+                  <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                  {t("ig_studio.reset_media")}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
               <CardTitle>{t("ig_studio.personalise")}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-6 sm:grid-cols-2">
@@ -178,7 +303,7 @@ const InstagramStudio = () => {
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle>{t("ig_studio.caption_style")}</CardTitle>
               <CardDescription>{t("ig_studio.caption_style_desc")}</CardDescription>
             </CardHeader>
@@ -240,59 +365,6 @@ const InstagramStudio = () => {
             </CardContent>
           </Card>
         </div>
-
-        {/* ── Right: previews per media type ── */}
-        <Card className="h-fit lg:sticky lg:top-4">
-          <CardHeader>
-            <CardTitle>{t("ig_studio.preview")}</CardTitle>
-            <CardDescription>{t("ig_studio.preview_desc")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="post">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="post">{t("ig_studio.tab_post")}</TabsTrigger>
-                <TabsTrigger value="story">{t("ig_studio.tab_story")}</TabsTrigger>
-                <TabsTrigger value="carousel">{t("ig_studio.tab_carousel")}</TabsTrigger>
-                <TabsTrigger value="video">{t("ig_studio.tab_video")}</TabsTrigger>
-              </TabsList>
-              <TabsContent value="post" className="mt-4">
-                <TemplateCanvas settings={settings} format="post" subject={subject} shopName={shopName} />
-              </TabsContent>
-              <TabsContent value="story" className="mt-4">
-                <TemplateCanvas settings={settings} format="story" subject={subject} shopName={shopName} className="mx-auto max-w-[260px]" />
-              </TabsContent>
-              <TabsContent value="carousel" className="mt-4">
-                <div className="flex snap-x gap-3 overflow-x-auto pb-2">
-                  {[settings, { ...carouselSettings, showName: false }, { ...carouselSettings, showPrice: false, showName: false }].map((s, i) => (
-                    <div key={i} className="w-44 shrink-0 snap-start">
-                      <TemplateCanvas settings={s} format="post" subject={subject} shopName={shopName} />
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-2 text-xs text-muted-foreground">{t("ig_studio.carousel_hint")}</p>
-              </TabsContent>
-              <TabsContent value="video" className="mt-4">
-                <div className="relative overflow-hidden rounded-lg">
-                  <TemplateCanvas settings={{ ...settings, template: "plain" }} format="post" subject={subject} shopName={shopName} />
-                  {/* Motion mock: the overlay elements slide in over the media. */}
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <div className="bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 pt-16">
-                      <p className="font-bold text-white">{subject.name}</p>
-                      <p className="text-sm font-semibold" style={{ color: settings.accent }}>
-                        {subject.price?.toLocaleString("sq-AL")} {subject.currency}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary" className="absolute right-2 top-2 gap-1">
-                    <Clapperboard className="h-3 w-3" />
-                    {t("ig_studio.video_soon")}
-                  </Badge>
-                </div>
-                <p className="mt-2 text-xs text-muted-foreground">{t("ig_studio.video_hint")}</p>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

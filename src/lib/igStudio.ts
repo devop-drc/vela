@@ -8,7 +8,18 @@
  * proxy, which serves `Access-Control-Allow-Origin: *`.
  */
 
-export type TemplateId = 'plain' | 'badge' | 'banner' | 'gradient' | 'frame' | 'polaroid';
+export type TemplateId = 'plain' | 'badge' | 'banner' | 'gradient' | 'frame' | 'polaroid' | 'spotlight' | 'minimal' | 'split';
+
+/** How the product image sits inside the canvas. */
+export interface ImageTransform {
+  scale: number;    // 1–3 zoom
+  offsetX: number;  // -1..1 of the overflow range
+  offsetY: number;
+  fit: 'cover' | 'contain';
+  removeBg: boolean;
+}
+
+export const DEFAULT_TRANSFORM: ImageTransform = { scale: 1, offsetX: 0, offsetY: 0, fit: 'cover', removeBg: false };
 
 export interface CaptionStyle {
   structure: 'descriptive' | 'paragraph' | 'structured' | 'minimal';
@@ -25,6 +36,7 @@ export interface StudioSettings {
   showName: boolean;
   showLogo: boolean;
   captionStyle: CaptionStyle;
+  transform: ImageTransform;
 }
 
 export const DEFAULT_STUDIO_SETTINGS: StudioSettings = {
@@ -34,9 +46,25 @@ export const DEFAULT_STUDIO_SETTINGS: StudioSettings = {
   showName: true,
   showLogo: true,
   captionStyle: { structure: 'descriptive', tone: 'friendly', emojis: 'light', hashtags: 6, language: 'sq' },
+  transform: DEFAULT_TRANSFORM,
 };
 
-export const TEMPLATE_IDS: TemplateId[] = ['plain', 'badge', 'banner', 'gradient', 'frame', 'polaroid'];
+export const TEMPLATE_IDS: TemplateId[] = ['plain', 'badge', 'banner', 'gradient', 'frame', 'polaroid', 'spotlight', 'minimal', 'split'];
+
+/* ── background removal (client-side, lazy-loaded, cached per URL) ── */
+const cutoutCache = new Map<string, string>();
+
+/** Cut the product out of its background; returns an object URL. */
+export async function removeImageBackground(url: string): Promise<string> {
+  const hit = cutoutCache.get(url);
+  if (hit) return hit;
+  const { removeBackground } = await import('@imgly/background-removal');
+  // Route through wsrv for CORS + a sane size before the model runs.
+  const blob = await removeBackground(proxied(url, 1080, 1350), { output: { format: 'image/png' } });
+  const objectUrl = URL.createObjectURL(blob);
+  cutoutCache.set(url, objectUrl);
+  return objectUrl;
+}
 
 export interface RenderInput {
   imageUrl: string;
@@ -110,13 +138,69 @@ export async function renderTemplate(canvas: HTMLCanvasElement, input: RenderInp
   const price = settings.showPrice ? fmtPrice(input.price, input.currency) : '';
   const shop = settings.showLogo ? input.shopName : '';
 
-  // Polaroid frames the photo inside a matte; everything else is full-bleed.
-  const matte = settings.template === 'polaroid' ? { x: 60, y: 60, w: W - 120, h: H - 320 } : { x: 0, y: 0, w: W, h: H };
-  const img = await loadImage(proxied(input.imageUrl, matte.w, matte.h));
+  const transform = settings.transform ?? DEFAULT_TRANSFORM;
+  // blob: URLs are pre-processed cutouts — same-origin, drawn directly.
+  const isBlob = input.imageUrl.startsWith('blob:');
 
-  ctx.fillStyle = settings.template === 'polaroid' ? '#FBF6F4' : '#140A0E';
-  ctx.fillRect(0, 0, W, H);
-  ctx.drawImage(img, matte.x, matte.y, matte.w, matte.h);
+  // Media area per template (the rest is chrome).
+  const matte =
+    settings.template === 'polaroid' ? { x: 60, y: 60, w: W - 120, h: H - 320 }
+    : settings.template === 'minimal' ? { x: 90, y: 90, w: W - 180, h: Math.round(H * 0.62) }
+    : settings.template === 'spotlight' ? { x: 110, y: 150, w: W - 220, h: Math.round(H * 0.58) }
+    : settings.template === 'split' ? { x: 0, y: 0, w: W, h: Math.round(H * 0.72) }
+    : { x: 0, y: 0, w: W, h: H };
+
+  const img = await loadImage(isBlob ? input.imageUrl : proxied(input.imageUrl, matte.w, matte.h));
+
+  // Backdrop
+  if (settings.template === 'minimal') {
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, W, H);
+  } else if (settings.template === 'spotlight') {
+    ctx.fillStyle = '#140A0E';
+    ctx.fillRect(0, 0, W, H);
+    const glow = ctx.createRadialGradient(W / 2, H * 0.42, 60, W / 2, H * 0.42, W * 0.75);
+    glow.addColorStop(0, accent + 'AA');
+    glow.addColorStop(0.55, accent + '33');
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+  } else if (settings.template === 'polaroid') {
+    ctx.fillStyle = '#FBF6F4';
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    ctx.fillStyle = '#140A0E';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // Draw the media with zoom/offset. Cutouts and 'contain' keep the whole
+  // subject visible; 'cover' fills the matte and pans inside the overflow.
+  const useContain = transform.fit === 'contain' || isBlob || settings.template === 'spotlight' || settings.template === 'minimal';
+  const scale = Math.min(Math.max(transform.scale || 1, 0.4), 3);
+  if (useContain) {
+    const fitScale = Math.min(matte.w / img.width, matte.h / img.height) * scale;
+    const dw = img.width * fitScale, dh = img.height * fitScale;
+    const dx = matte.x + (matte.w - dw) / 2 + transform.offsetX * matte.w * 0.25;
+    const dy = matte.y + (matte.h - dh) / 2 + transform.offsetY * matte.h * 0.25;
+    if (settings.template === 'spotlight') {
+      ctx.shadowColor = 'rgba(0,0,0,0.55)';
+      ctx.shadowBlur = 70;
+      ctx.shadowOffsetY = 40;
+    }
+    ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+  } else {
+    const coverScale = Math.max(matte.w / img.width, matte.h / img.height) * scale;
+    const dw = img.width * coverScale, dh = img.height * coverScale;
+    const ox = (dw - matte.w) / 2, oy = (dh - matte.h) / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(matte.x, matte.y, matte.w, matte.h);
+    ctx.clip();
+    ctx.drawImage(img, matte.x - ox + transform.offsetX * ox, matte.y - oy + transform.offsetY * oy, dw, dh);
+    ctx.restore();
+  }
 
   ctx.textBaseline = 'middle';
 
@@ -237,6 +321,95 @@ export async function renderTemplate(canvas: HTMLCanvasElement, input: RenderInp
         ctx.fill();
         ctx.fillStyle = '#FFFFFF';
         ctx.fillText(shop, W / 2, 24 + 30);
+      }
+      break;
+    }
+
+    case 'spotlight': {
+      let y = H - 110;
+      if (price) {
+        ctx.font = BODY(44);
+        const tw = ctx.measureText(price).width;
+        const pw = tw + 76, ph = 92;
+        ctx.fillStyle = accent;
+        rounded(ctx, (W - pw) / 2, y - ph, pw, ph, ph / 2);
+        ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.fillText(price, W / 2, y - ph / 2 + 2);
+        y -= ph + 44;
+      }
+      if (name) {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#FFFFFF';
+        fitText(ctx, name, W - 160, HEAD, 72);
+        ctx.fillText(name, W / 2, y - 30, W - 160);
+      }
+      if (shop) {
+        ctx.textAlign = 'center';
+        ctx.font = BODY(30);
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.fillText(shop.toUpperCase(), W / 2, 84);
+      }
+      break;
+    }
+
+    case 'minimal': {
+      let y = matte.y + matte.h + 110;
+      if (name) {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#140A0E';
+        fitText(ctx, name, W - 200, HEAD, 64);
+        ctx.fillText(name, W / 2, y, W - 200);
+        y += 96;
+      }
+      if (price) {
+        ctx.textAlign = 'center';
+        ctx.font = BODY(46);
+        ctx.fillStyle = accent;
+        ctx.fillText(price, W / 2, y);
+      }
+      if (shop) {
+        ctx.textAlign = 'center';
+        ctx.font = BODY(28);
+        ctx.fillStyle = 'rgba(20,10,14,0.45)';
+        ctx.fillText(shop.toUpperCase(), W / 2, H - 70);
+      }
+      // thin accent baseline under the media
+      ctx.fillStyle = accent;
+      ctx.fillRect(W / 2 - 60, matte.y + matte.h + 34, 120, 8);
+      break;
+    }
+
+    case 'split': {
+      const bandY = matte.h;
+      ctx.fillStyle = '#FBF6F4';
+      ctx.fillRect(0, bandY, W, H - bandY);
+      ctx.fillStyle = accent;
+      ctx.fillRect(0, bandY, W, 8);
+      const cx = 56, cw = price ? W - 420 : W - 112;
+      if (name) {
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#140A0E';
+        fitText(ctx, name, cw, HEAD, 58);
+        ctx.fillText(name, cx, bandY + (H - bandY) * 0.42, cw);
+      }
+      if (shop) {
+        ctx.textAlign = 'left';
+        ctx.font = BODY(30);
+        ctx.fillStyle = 'rgba(20,10,14,0.5)';
+        ctx.fillText(shop, cx, bandY + (H - bandY) * 0.72);
+      }
+      if (price) {
+        ctx.font = BODY(42);
+        const tw = ctx.measureText(price).width;
+        const pw = tw + 68, ph = 88;
+        ctx.fillStyle = accent;
+        rounded(ctx, W - pw - 52, bandY + (H - bandY - ph) / 2, pw, ph, ph / 2);
+        ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.fillText(price, W - pw / 2 - 52, bandY + (H - bandY) / 2 + 2);
       }
       break;
     }

@@ -29,6 +29,7 @@ export const useStudioSettings = () => {
           ...DEFAULT_STUDIO_SETTINGS,
           ...data.settings,
           captionStyle: { ...DEFAULT_STUDIO_SETTINGS.captionStyle, ...(data.settings.captionStyle ?? {}) },
+          transform: { ...DEFAULT_STUDIO_SETTINGS.transform, ...(data.settings.transform ?? {}) },
         });
       }
       setIsLoading(false);
@@ -42,6 +43,7 @@ export const useStudioSettings = () => {
         ...prev,
         ...patch,
         captionStyle: { ...prev.captionStyle, ...(patch.captionStyle ?? {}) },
+        transform: { ...prev.transform, ...(patch.transform ?? {}) },
       };
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {

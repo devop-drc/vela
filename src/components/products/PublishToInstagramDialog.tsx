@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useStudioSettings } from "@/hooks/useStudioSettings";
 import { useShop } from "@/contexts/ShopContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { renderToJpegBlob, TEMPLATE_IDS, type TemplateId } from "@/lib/igStudio";
+import { renderTemplate, renderToJpegBlob, removeImageBackground, TEMPLATE_IDS, DEFAULT_TRANSFORM, type TemplateId, type ImageTransform } from "@/lib/igStudio";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Spinner } from "@/components/ui/spinner";
 
 /**
  * The reverse pipeline's front door: previews a system-generated caption for a
@@ -33,6 +36,44 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
   const { shopDetails } = useShop();
   const { userId } = useAuth();
   const [design, setDesign] = useState<TemplateId | "studio">("studio");
+  const [adjust, setAdjust] = useState<ImageTransform>(DEFAULT_TRANSFORM);
+  const [cutoutUrl, setCutoutUrl] = useState<string | null>(null);
+  const [cutoutBusy, setCutoutBusy] = useState(false);
+  const previewRef = useRef<HTMLCanvasElement>(null);
+
+  const activeTemplate = design === "studio" ? studio.template : design;
+  const effectiveImage = adjust.removeBg && cutoutUrl ? cutoutUrl : selectedImage;
+
+  // Per-post adjustments start from the merchant's Studio defaults.
+  useEffect(() => { setAdjust(studio.transform ?? DEFAULT_TRANSFORM); }, [studio.transform]);
+
+  // Live composed preview of exactly what will be posted.
+  useEffect(() => {
+    if (!previewRef.current || !effectiveImage) return;
+    let cancelled = false;
+    const t = setTimeout(() => {
+      if (cancelled || !previewRef.current) return;
+      renderTemplate(previewRef.current, {
+        imageUrl: effectiveImage,
+        name: product.name,
+        price: product.price ?? null,
+        currency: product.currency || "ALL",
+        shopName: shopDetails?.shop_name || "",
+        settings: { ...studio, template: activeTemplate, transform: adjust },
+        format: "post",
+      }).catch(() => {});
+    }, 150);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [effectiveImage, activeTemplate, adjust, studio, product, shopDetails?.shop_name]);
+
+  const toggleRemoveBg = async (on: boolean) => {
+    setAdjust((a) => ({ ...a, removeBg: on }));
+    if (!on || !selectedImage || cutoutUrl) return;
+    setCutoutBusy(true);
+    try { setCutoutUrl(await removeImageBackground(selectedImage)); }
+    catch { setAdjust((a) => ({ ...a, removeBg: false })); }
+    finally { setCutoutBusy(false); }
+  };
   const [loading, setLoading] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [caption, setCaption] = useState("");
@@ -74,15 +115,17 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
   /** When a template is chosen, render the overlay client-side and upload it —
    * the published post then uses the designed image instead of the raw photo. */
   const resolveImageForPublish = async (): Promise<string | null> => {
-    const template = design === "studio" ? studio.template : design;
-    if (!selectedImage || template === "plain") return selectedImage;
+    if (!effectiveImage) return selectedImage;
+    const untouched = activeTemplate === "plain" && !adjust.removeBg
+      && adjust.scale === 1 && adjust.offsetX === 0 && adjust.offsetY === 0;
+    if (untouched) return selectedImage;
     const blob = await renderToJpegBlob({
-      imageUrl: selectedImage,
+      imageUrl: effectiveImage,
       name: product.name,
       price: product.price ?? null,
       currency: product.currency || "ALL",
       shopName: shopDetails?.shop_name || "",
-      settings: { ...studio, template },
+      settings: { ...studio, template: activeTemplate, transform: adjust },
       format: "post",
     });
     const path = `${userId}/ig-designs/${product.id}-${Date.now()}.jpg`;
@@ -191,6 +234,27 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
                   </SelectContent>
                 </Select>
               </div>
+              {selectedImage && (
+                <div className="grid grid-cols-[1fr_auto] items-start gap-3">
+                  <div className="space-y-3">
+                    {([["scale", 0.5, 2.5], ["offsetX", -1, 1], ["offsetY", -1, 1]] as const).map(([key, min, max]) => (
+                      <div key={key} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{t(`ig_publish.adj_${key}`)}</span>
+                          <span>{adjust[key].toFixed(2)}</span>
+                        </div>
+                        <Slider value={[adjust[key]]} min={min} max={max} step={0.05} disabled={publishing}
+                          onValueChange={([v]) => setAdjust((a) => ({ ...a, [key]: v }))} />
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">{t("ig_studio.remove_bg")}</span>
+                      {cutoutBusy ? <Spinner className="h-4 w-4" /> : <Switch checked={adjust.removeBg} onCheckedChange={toggleRemoveBg} disabled={publishing} />}
+                    </div>
+                  </div>
+                  <canvas ref={previewRef} className="w-36 rounded-md border sm:w-44" />
+                </div>
+              )}
               {images.length > 0 ? (
                 <div className="space-y-1.5">
                   <span className="text-sm font-medium">{t("ig_publish.image_label")}</span>
@@ -199,7 +263,7 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
                       <button
                         key={url}
                         type="button"
-                        onClick={() => setSelectedImage(url)}
+                        onClick={() => { setSelectedImage(url); setCutoutUrl(null); setAdjust((a) => ({ ...a, removeBg: false })); }}
                         disabled={publishing}
                         className={cn(
                           "h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 transition-colors",

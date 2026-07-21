@@ -31,7 +31,7 @@ const nav: NavEntry[] = [
   { to: "/promotions", icon: Megaphone, labelKey: "nav.promotions" },
   { divider: true, labelKey: "nav_groups.sales" },
   { to: "/orders", icon: ShoppingBag, labelKey: "nav.orders" },
-  { divider: true, labelKey: "nav_groups.storefront" },
+  { divider: true, labelKey: "nav_groups.design_studio" },
   { to: "/storefront-studio", icon: Store, labelKey: "nav.storefront" },
   { to: "/instagram-studio", icon: Instagram, labelKey: "nav.instagram_studio" },
   { divider: true, labelKey: "nav_groups.app" },

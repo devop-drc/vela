@@ -10,18 +10,19 @@
     "promotions": "Promotions",
     "orders": "Orders",
     "settings": "Settings",
-    "storefront": "Storefront Studio",
+    "storefront": "Storefront",
     "collapse": "Collapse",
     "expand": "Expand",
     "more": "More",
     "logout": "Log out",
-    "instagram_studio": "Instagram Studio"
+    "instagram_studio": "Instagram Posts"
   },
   "nav_groups": {
     "products": "Products",
     "sales": "Sales",
     "storefront": "Storefront",
-    "app": "App"
+    "app": "App",
+    "design_studio": "Design Studio"
   },
   "header": {
     "search_placeholder": "Search…",
@@ -1874,7 +1875,10 @@
     "removed_unlinked": "Unlinked from the shop. Instagram doesn't let apps delete posts — the post was opened so you can archive it there.",
     "remove_failed": "Couldn't remove: {{message}}",
     "design_label": "Design",
-    "design_studio": "My Studio design ({{template}})"
+    "design_studio": "My Studio design ({{template}})",
+    "adj_scale": "Zoom",
+    "adj_offsetX": "Position X",
+    "adj_offsetY": "Position Y"
   },
   "ig_status": {
     "column": "Instagram",
@@ -1975,6 +1979,20 @@
     "tab_video": "Video",
     "carousel_hint": "The first slide carries the full design; follow-ups stay cleaner.",
     "video_soon": "Coming soon",
-    "video_hint": "Videos currently publish plain; animated overlays are on the way."
+    "video_hint": "Videos currently publish plain; animated overlays are on the way.",
+    "template_spotlight": "Spotlight",
+    "template_minimal": "Catalog",
+    "template_split": "Split",
+    "media": "Product image",
+    "media_desc": "Zoom, position and clean up the photo before the design goes on top.",
+    "fit": "Fit",
+    "fit_cover": "Fill the frame",
+    "fit_contain": "Show the whole photo",
+    "remove_bg": "Remove background",
+    "remove_bg_hint": "Cuts the product out — perfect for Spotlight & Catalog.",
+    "zoom": "Zoom",
+    "pos_x": "Position X",
+    "pos_y": "Position Y",
+    "reset_media": "Reset"
   }
 }

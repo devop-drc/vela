@@ -31,6 +31,7 @@ import { FinPostPanel, FinPostFive, FIN_PANEL_FRAMES, FIN_FIVE_FRAMES } from "./
 import { FinReelCover, FinSystemPost, FinStoryTrial, FinStoryTonight, partSchema, partDefaults } from "./compositions/marketing/final/FinalStills";
 import { FinCarousel, carSchema, carDefaults } from "./compositions/marketing/final/FinalCarousel";
 import { ProductPromo, productPromoSchema, productPromoDefaults, PROMO_FPS, PROMO_DEFAULT_FRAMES } from "./compositions/ProductPromo";
+import { HlCover, HlStory, hlSchema, hlDefaults, CleanReelConvert, CleanReelAutoPost, CleanReelPay, CleanPostImport, CleanPostStudio, CLEAN_CONVERT_FRAMES, CLEAN_AUTOPOST_FRAMES, CLEAN_PAY_FRAMES, CLEAN_IMPORT_FRAMES, CLEAN_STUDIO_FRAMES } from "./compositions/marketing/ProfileKit";
 import { getVideoMetadata } from "@remotion/media-utils";
 
 const common = { fps: VIDEO.fps, width: VIDEO.width, height: VIDEO.height };
@@ -147,6 +148,13 @@ export const RemotionRoot = () => (
     <Composition id="FinStoryTrial" component={FinStoryTrial} durationInFrames={30} {...story} schema={langSchema} defaultProps={langDefaults} />
     <Composition id="FinStoryTonight" component={FinStoryTonight} durationInFrames={30} {...story} schema={langSchema} defaultProps={langDefaults} />
     <Composition id="FinCarousel" component={FinCarousel} durationInFrames={30} fps={30} width={1080} height={1350} schema={carSchema} defaultProps={carDefaults} />
+    <Composition id="HlCover" component={HlCover} durationInFrames={1} fps={30} width={1080} height={1920} schema={hlSchema} defaultProps={hlDefaults} />
+    <Composition id="HlStory" component={HlStory} durationInFrames={1} fps={30} width={1080} height={1920} schema={hlSchema} defaultProps={hlDefaults} />
+    <Composition id="CleanReelConvert" component={CleanReelConvert} durationInFrames={CLEAN_CONVERT_FRAMES} fps={30} width={1080} height={1920} />
+    <Composition id="CleanReelAutoPost" component={CleanReelAutoPost} durationInFrames={CLEAN_AUTOPOST_FRAMES} fps={30} width={1080} height={1920} />
+    <Composition id="CleanReelPay" component={CleanReelPay} durationInFrames={CLEAN_PAY_FRAMES} fps={30} width={1080} height={1920} />
+    <Composition id="CleanPostImport" component={CleanPostImport} durationInFrames={CLEAN_IMPORT_FRAMES} fps={30} width={1080} height={1350} />
+    <Composition id="CleanPostStudio" component={CleanPostStudio} durationInFrames={CLEAN_STUDIO_FRAMES} fps={30} width={1080} height={1350} />
     {/* Instagram Studio motion overlay — duration follows the source video (capped at 60s, reels limit-safe). */}
     <Composition
       id="ProductPromo"
