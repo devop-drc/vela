@@ -39,7 +39,7 @@ const FILTER = ARGS.find((a) => a.startsWith('--filter='))?.slice('--filter='.le
 const TEST_USER_ID = '00000000-0000-4000-8000-000000000000';
 
 interface Check { name: string; pass: boolean; detail?: string }
-interface CaseResult { folder: string; checks: Check[]; remoteChecks?: Check[]; crashed?: string }
+interface CaseResult { folder: string; checks: Check[]; remoteChecks?: Check[]; remoteMs?: number; crashed?: string }
 
 const lc = (s: unknown) => String(s ?? '').toLowerCase();
 
@@ -252,7 +252,9 @@ async function main() {
       // 4) remote (deployed handler + real model)
       if (REMOTE && expected.llm_checks && env.VITE_SUPABASE_URL) {
         try {
+          const t0 = performance.now();
           const remote = await callRemote(input, env);
+          r.remoteMs = Math.round(performance.now() - t0);
           if (remote?.error) {
             r.remoteChecks = [{ name: 'remote:invoke', pass: false, detail: `edge fn error: ${remote.error}` }];
           } else {
@@ -283,10 +285,14 @@ async function main() {
     for (const c of [...f, ...rf]) lines.push(`       ✗ ${c.name}: ${c.detail ?? 'failed'}`);
   }
 
+  const times = results.map((r) => r.remoteMs).filter((n): n is number => n != null).sort((a, b) => a - b);
+  const latency = times.length
+    ? `  ·  latency avg ${Math.round(times.reduce((a, b) => a + b, 0) / times.length)}ms · p50 ${times[Math.floor(times.length / 2)]}ms · p95 ${times[Math.floor(times.length * 0.95)]}ms`
+    : '';
   const summary = [
     '',
     `Deterministic: ${passCases}/${results.length} cases passed`,
-    REMOTE ? `Remote (DEPLOYED fn — may lag local fixes): ${remotePass}/${remotePass + remoteFail} cases passed` : 'Remote layer skipped (run with --remote to hit the deployed classifier)',
+    REMOTE ? `Remote (DEPLOYED fn — may lag local fixes): ${remotePass}/${remotePass + remoteFail} cases passed${latency}` : 'Remote layer skipped (run with --remote to hit the deployed classifier)',
     '',
   ];
   console.log(lines.join('\n'));

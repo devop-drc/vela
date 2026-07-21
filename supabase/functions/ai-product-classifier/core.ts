@@ -313,93 +313,26 @@ ${keywords.map((k) => `- When you see "${k.keyword}" in the caption: ${k.descrip
   **Output Format:**
   Respond ONLY with a single, valid JSON object. Do not include any explanation or markdown.
 
-  **REQUIRED FIELDS for product posts — you MUST include ALL of these:**
-  - "isProductPost": true
-  - "productName": string (max 10 words, clear and concise)
-  - "categoryName": string (e.g., "Clothing & Apparel", "Electronics & Tech", "Beauty & Personal Care", "Home & Living", "Food & Beverages", "Sports & Fitness", "Bags & Luggage", etc.)
-  - "typeName": string (e.g., "T-Shirts", "Smartphones", "Skincare", "Furniture", etc.)
-  - "description": string (compelling 3-4 sentence product description, NOT the raw caption)
-  - "price": number (extracted from caption/image ONLY; 0 if not stated)
-  - "currency": string (e.g., "ALL", "EUR", "USD")
-  - "inventory": number (default 10 if not mentioned)
-  - "pricingType": "one_time" or "subscription"
-  - "tags": string[] (3-5 relevant tags)
-  - "specifications": array of {key, value, unit} — everything the caption/image states, plus widely known facts for identifiable branded products. Never fabricate.
-  - "options": object — include common customer-selectable options (color, size, etc.) if applicable
+  The response schema enforces which fields exist — focus on getting the
+  VALUES right per the rules above. Compact reference examples:
 
-  **Example JSON (Single Product — ALL fields required):**
-  {
-    "isProductPost": true,
-    "productName": "Titanium Smartwatch Pro",
-    "categoryName": "Electronics & Tech",
-    "typeName": "Smartwatches",
-    "description": "The Titanium Smartwatch Pro combines elegant design with cutting-edge fitness tracking. Features a vibrant 1.4-inch AMOLED display and up to 14 days of battery life. Water-resistant to 5ATM, perfect for swimming and outdoor activities.",
-    "price": 199,
-    "currency": "USD",
-    "inventory": 10,
-    "pricingType": "one_time",
-    "tags": ["smartwatch", "fitness tracker", "wearable", "titanium"],
-    "options": [
-      { "name": "strap_material", "values": [
-        { "value": "Silicone", "price_difference": 0, "inventory": 20 },
-        { "value": "Titanium Link", "price_difference": 50, "inventory": 5 }
-      ]},
-      { "name": "color", "values": [
-        { "value": "Midnight Black", "price_difference": 0, "inventory": 15 },
-        { "value": "Starlight Silver", "price_difference": 0, "inventory": 10 }
-      ]}
-    ],
-    "specifications": [
-      { "key": "water_resistance", "value": "5ATM", "unit": null },
-      { "key": "battery_life", "value": "14", "unit": "days" },
-      { "key": "display_size", "value": "1.4", "unit": "inches" },
-      { "key": "weight", "value": "52", "unit": "grams" },
-      { "key": "connectivity", "value": "Bluetooth 5.2", "unit": null },
-      { "key": "os", "value": "Wear OS", "unit": null }
-    ]
-  }
+  Single product (one item, its variants as options):
+  { "isProductPost": true, "productName": "Linen Summer Dress", "productNameSq": "Fustan liri veror",
+    "categoryName": "Clothing & Apparel", "typeName": "Dresses",
+    "description": "…3-4 compelling sentences…", "descriptionSq": "…shqip natyrshëm…",
+    "price": 4500, "currency": "ALL", "inventory": 10, "pricingType": "one_time",
+    "tags": ["linen dress", "summer"],
+    "specifications": [{ "key": "material", "value": "100% liri", "unit": null }],
+    "options": [{ "name": "Masat", "values": [{ "value": "S" }, { "value": "M" }, { "value": "L" }] }] }
 
+  Multiple DISTINCT products (each block's own numbers, merchant's wording):
+  { "isProductPost": true, "products": [
+      { "productName": "Kufje Smart", "price": 2500, "currency": "ALL", "inventory": 15, "specifications": [], "options": [] },
+      { "productName": "Kabllo USB-C", "price": 500, "currency": "ALL", "inventory": 40, "specifications": [], "options": [] } ] }
 
-  **EXAMPLE JSON OUTPUT (Multiple products):**
-  {
-    "isProductPost": true,
-    "isSaleOrPromotion": false,
-    "products": [
-      {
-        "productName": "Kufje Smart",
-        "price": 250,
-        "currency": "ALL",
-        "inventory": 150,
-        "specifications": [{ "key": "ref_code", "value": "x3185794", "unit": null }],
-        "options": [
-          { "name": "color", "values": [{ "value": "Black" }, { "value": "White" }] },
-          { "name": "size", "values": [{ "value": "S" }, { "value": "M" }, { "value": "L" }] }
-        ]
-      },
-      {
-        "productName": "Kabell USB-C",
-        "price": 10,
-        "currency": "ALL",
-        "inventory": 250,
-        "specifications": [{ "key": "ref_code", "value": "x3185494", "unit": null }],
-        "options": []
-      }
-    ]
-  }
-
-  **EXAMPLE JSON OUTPUT (Promotion only):**
-  {
-    "isProductPost": false,
-    "isSaleOrPromotion": true,
-    "promotion": {
-      "title": "Back to School Sale",
-      "summary": "Up to 20% off on laptops and accessories",
-      "discount_type": "percent",
-      "discount_value": 20,
-      "currency": "EUR",
-      "valid_until": null
-    }
-  }
+  Promotion without a specific product:
+  { "isProductPost": false, "isSaleOrPromotion": true,
+    "promotion": { "title": "Weekend Sale", "summary": "-20% on everything", "discount_type": "percent", "discount_value": 20, "currency": null, "valid_until": null } }
 
   **FOR NON-PRODUCT POSTS:**
   {

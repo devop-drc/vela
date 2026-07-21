@@ -143,10 +143,31 @@ const PRODUCTS_PER_PAGE = 12; // Define a constant for limit
 // seed the variant-options cache so option pickers / "choose options" buttons
 // render with zero extra round trips. Older responses (field absent) are a
 // no-op — the client-side batched fetch still covers them.
+//
+// They also embed product_specifications rows (specs moved OUT of the details
+// JSONB into their own table, but the whole storefront — detail page, facets,
+// quick view — reads specs from `details`). Fold them back in here, at the
+// single ingestion point, so every consumer works unchanged. Existing details
+// keys win over spec rows (case/underscore-insensitively).
+const normKey = (s: string) => s.toLowerCase().replace(/\s|_/g, '');
 const absorbVariants = <T extends { id: string }>(list: T[] | null | undefined): T[] =>
   (list || []).map((p: any) => {
-    const { product_variants, ...rest } = p;
+    const { product_variants, product_specifications, ...rest } = p;
     if (product_variants !== undefined) primeVariantOptions(rest.id, product_variants);
+    if (Array.isArray(product_specifications) && product_specifications.length > 0) {
+      const details: Record<string, unknown> = { ...(rest.details || {}) };
+      const taken = new Set(Object.keys(details).map(normKey));
+      [...product_specifications]
+        .sort((a, b) => (a?.display_order ?? 0) - (b?.display_order ?? 0))
+        .forEach((s: any) => {
+          if (!s?.key || s.value == null || s.value === '') return;
+          const k = normKey(String(s.key));
+          if (!k || taken.has(k)) return;
+          details[s.key] = s.unit ? `${s.value} ${s.unit}` : s.value;
+          taken.add(k);
+        });
+      rest.details = details;
+    }
     return rest as T;
   });
 

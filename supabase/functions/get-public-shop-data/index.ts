@@ -203,7 +203,7 @@ const buildPayload = async (shopSlug: string, page: number, limit: number, looku
 
   // Product selects embed product_variants so the client can render option
   // pickers and variant facets with zero extra round trips.
-  const PRODUCT_SELECT = '*, product_variants(combination_key, option_values, inventory, price_difference, is_active, is_default)';
+  const PRODUCT_SELECT = '*, product_variants(combination_key, option_values, inventory, price_difference, is_active, is_default), product_specifications(key, value, unit, display_order)';
 
   const productsPromise = pageBeyondCap
     ? Promise.resolve({ data: [], error: null, count: productCap })

@@ -51,7 +51,7 @@ serve(async (req) => {
         // without a second round trip.
         const { data: product, error: productError } = await supabaseAdmin
           .from('products')
-          .select('*, product_variants(combination_key, option_values, inventory, price_difference, is_active, is_default)')
+          .select('*, product_variants(combination_key, option_values, inventory, price_difference, is_active, is_default), product_specifications(key, value, unit, display_order)')
           .eq('id', productId as string)
           .eq('business_id', (shop.businesses as any).id)
           .neq('status', 'Draft')
