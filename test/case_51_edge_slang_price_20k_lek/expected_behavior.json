@@ -16,7 +16,7 @@
     "is_multi": false,
     "product_count": 1,
     "pricing_type": "one_time",
-    "is_sale_or_promotion": false
+    "is_sale_or_promotion": null
   },
   "products": [
     {

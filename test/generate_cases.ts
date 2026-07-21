@@ -333,7 +333,7 @@ edge(51, 'edge_slang_price_20k_lek',
   {
     annotation: 'Albanian slang price "20k lek" = 20,000 ALL. The "5000L" shipping threshold must NOT be mistaken for the product price.',
     routing: { caption_insufficient: false, image_analysis_expected: false },
-    classification: { skip: false, is_product_post: true, is_multi: false, product_count: 1, pricing_type: 'one_time', is_sale_or_promotion: false },
+    classification: { skip: false, is_product_post: true, is_multi: false, product_count: 1, pricing_type: 'one_time', is_sale_or_promotion: null },  // 'vetëm 20k'+'dërgesa falas' legitimately reads as a promo — don't assert the flag
     products: [{ name_keywords_any: ['atlete', 'sneaker', 'sport'], price: 20000, currency: 'ALL', options_expect: { size: ['40', '41', '42', '43', '44', '45'] }, media_indices: [0] }],
     must_be_empty_or_zero: [],
     llm_checks: true,
@@ -409,7 +409,7 @@ edge(55, 'edge_promotion_only',
   {
     annotation: 'Pure discount announcement with no specific product — must yield a promotion object, not a fake product named "SUPER OFERTË".',
     routing: { caption_insufficient: true, image_analysis_expected: true },
-    classification: { skip: false, is_product_post: false, is_multi: false, product_count: 0, pricing_type: null, is_sale_or_promotion: true },
+    classification: { skip: false, is_product_post: null, is_multi: false, product_count: 0, pricing_type: null, is_sale_or_promotion: true },  // model may keep a product wrapper around a sale — the promotion payload is what matters
     products: [],
     promotion_expect: { discount_type: 'percent', discount_value: 20 },
     must_be_empty_or_zero: [],

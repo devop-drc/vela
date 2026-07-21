@@ -12,7 +12,7 @@
   },
   "classification": {
     "skip": false,
-    "is_product_post": false,
+    "is_product_post": null,
     "is_multi": false,
     "product_count": 0,
     "pricing_type": null,

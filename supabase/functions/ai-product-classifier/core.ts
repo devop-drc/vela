@@ -250,6 +250,7 @@ ${similarProducts.map((p) => `- ${p.name} (Category: ${p.category}${p.details?.t
   **EXTRACTION RULES — Follow ALL of these carefully:**
 
   1. **Product Identification:** If there is ANY indication of a product, item, or service, treat it as a product post. Only return \`{"isProductPost": false}\` for clearly personal content (selfies, quotes, memes, holiday greetings).
+     - A caption that is ONLY emojis, or that names no identifiable product, is NOT enough to create a product — return \`{"isProductPost": false}\` (product images, when available, are provided separately and analyzed on retry). NEVER invent placeholder products like "Various Products" or "General Product".
      - Sales/promotions: set \`"isSaleOrPromotion": true\` with a \`promotion\` object.
 
   2. **productName:** Extract a clear, concise product name (max 10 words). Remove emojis, hashtags, and promotional text. If in Albanian, translate to English for the name.
@@ -276,12 +277,13 @@ ${similarProducts.map((p) => `- ${p.name} (Category: ${p.category}${p.details?.t
 
   11. **specifications:** Extract every spec stated in the caption as an array: \`[{"key": "material", "value": "Cotton", "unit": null}]\`. ALWAYS include \`brand\` and \`model\` as specs when identifiable from the caption or image. For well-known branded products you may add widely known factual specs (processor, battery, screen size…). For generic/unbranded products include ONLY what the caption or image shows — an empty array is better than invented specs (a separate enrichment step fills gaps later). Each spec belongs to THIS product only — never borrow specs from other products or examples.
 
-  12. **options:** Include customer-selectable variants found in caption (colors, sizes, etc.). Return as an ARRAY of option groups: \`[{"name": "Color", "values": [{"value": "Black", "price_difference": 0, "inventory": 10}]}]\`. If caption mentions colors (ngjyra) or sizes (madhësi), extract them.
+  12. **options:** Include customer-selectable variants found in caption (colors, sizes, etc.). Option values MUST keep the merchant's ORIGINAL wording from the caption — "e zezë" stays "e zezë", never "Black"; "bezhë" stays "bezhë". Customers see these exact values in the shop. Return as an ARRAY of option groups: \`[{"name": "Color", "values": [{"value": "Black", "price_difference": 0, "inventory": 10}]}]\`. If caption mentions colors (ngjyra) or sizes (madhësi), extract them.
 
   **Single vs Multiple products — decide carefully:**
   - ONE product shown in different colors/sizes/angles is ONE product with OPTIONS — never a products[] array. Phrases like "vjen në tre ngjyra", "available in S/M/L", or a carousel of the same item are VARIANTS.
   - Use the \`products\` array ONLY when the caption clearly lists DISTINCT items (different names, or separate price lines per item).
   - Each item in \`products\` carries ONLY its own price/specs/options — when a detail's owner is ambiguous, leave it null rather than guessing.
+  - Work through multi-product captions block by block, in order: for item N, re-read ONLY block N and copy its price/stock from that block alone. It is a critical error to repeat item 1's price or stock on a later item — every block states its own numbers.
 
   **Multi-Product Posts:** If the caption lists multiple DISTINCT products, output them in a \`products\` array. Each item follows this schema:
   {

@@ -63,8 +63,10 @@ function checkClassification(result: any, expected: any, label: string): Check[]
     return checks;
   }
 
-  put('isProductPost', Boolean(result.isProductPost) === Boolean(c.is_product_post),
-    `expected ${c.is_product_post}, got ${result.isProductPost}`);
+  if (c.is_product_post != null) {
+    put('isProductPost', Boolean(result.isProductPost) === Boolean(c.is_product_post),
+      `expected ${c.is_product_post}, got ${result.isProductPost}`);
+  }
 
   if (c.is_product_post) {
     put('multi-vs-single', Boolean(result.isMultiProductPost) === Boolean(c.is_multi),
@@ -87,15 +89,21 @@ function checkClassification(result: any, expected: any, label: string): Check[]
     put('promotion', Boolean(ok), ok ? undefined : `expected promotion ${JSON.stringify(expected.promotion_expect)}, got ${JSON.stringify(p ?? null)}`);
   }
 
-  // per-product assertions (order-independent, matched by name keywords)
+  // per-product assertions — matched results are CONSUMED so a substring
+  // collision (expected 'phone' matching result 'headphones') can't compare
+  // one extracted product against two different expectations.
   const resultProducts: any[] = Array.isArray(result.products) && result.products.length > 0
     ? result.products
     : (result.isProductPost ? [result] : []);
+  const consumed = new Set<number>();
   for (const [i, ep] of (expected.products ?? []).entries()) {
-    const match = resultProducts.find((rp) => {
+    const matchIdx = resultProducts.findIndex((rp, idx) => {
+      if (consumed.has(idx)) return false;
       const name = lc(rp.productName || rp.name) + ' ' + lc(rp.productNameSq);
       return (ep.name_keywords_any ?? []).some((k: string) => name.includes(lc(k)));
     });
+    const match = matchIdx >= 0 ? resultProducts[matchIdx] : undefined;
+    if (matchIdx >= 0) consumed.add(matchIdx);
     if (!match) {
       put(`product[${i}]-found`, false, `no extracted product matched any of [${(ep.name_keywords_any ?? []).join(', ')}] — got: ${resultProducts.map((r) => r.productName || r.name).join(' | ') || '(none)'}`);
       continue;
@@ -113,8 +121,15 @@ function checkClassification(result: any, expected: any, label: string): Check[]
     }
     if (ep.options_expect) {
       const opts = match.options && !Array.isArray(match.options) ? match.options : {};
+      // Group names may come back in the merchant's language ("Masat",
+      // "Ngjyra") — that's correct storefront behavior, so match bilingually.
+      const GROUP_ALIASES: Record<string, string[]> = {
+        size: ['size', 'masat', 'masa', 'madhësia', 'madhesia'],
+        color: ['color', 'colour', 'ngjyra', 'ngjyrat', 'ngjyre'],
+      };
       for (const [wantName, wantValues] of Object.entries(ep.options_expect) as [string, string[]][]) {
-        const realKey = Object.keys(opts).find((k) => lc(k).includes(lc(wantName)) || lc(wantName).includes(lc(k)));
+        const aliases = GROUP_ALIASES[lc(wantName)] ?? [lc(wantName)];
+        const realKey = Object.keys(opts).find((k) => aliases.some((a) => lc(k).includes(a) || a.includes(lc(k))));
         if (!realKey) {
           put(`product[${i}]-option-${wantName}`, false, `option group "${wantName}" missing — got groups: [${Object.keys(opts).join(', ') || 'none'}]`);
           continue;

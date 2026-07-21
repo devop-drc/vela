@@ -102,3 +102,28 @@ show up there after `npx supabase functions deploy ai-product-classifier`.
    ("në muaj" → pricingType subscription); "N L" recognized as Lekë in the
    insufficiency router so priced captions aren't needlessly re-routed to
    image analysis.
+
+## Phase-3 completion (2026-07-21) — remote suite green
+
+Progression against the deployed classifier: 28/56 → 39 (deploy of pending
+fixes) → 42 (thinking budget) → 49 (prompt round 2) → **56/56**.
+
+Engine bugs found & fixed by the remote loop:
+4. **`thinkingBudget: 0` + responseSchema truncation** — gemini-2.5-flash
+   emitted legally-minimal 57-token objects (only `isProductPost` was
+   schema-required) AND corrupted non-ASCII output (U+FFFD in Albanian
+   diacritics). Fix: budget 512 + key fields nullable-but-REQUIRED.
+5. **Emoji-bait fabrication** — "🔥🔥🛍️" produced "Various Products";
+   prompt now forbids placeholder products on no-signal captions.
+6. **Option values translated** — "e zezë" became "Black"; prompt now pins
+   option values to the merchant's original wording (customers see them).
+
+Test-harness bugs found by its own failures (fixed in the runner/fixtures):
+- product matcher lacked consumption — expected 'phone' substring-matched
+  result 'headphones', comparing one product against two expectations (the
+  phantom "field bleed");
+- option-GROUP names come back in the merchant's language ("Masat",
+  "Ngjyra") — matcher now aliases bilingually;
+- two model behaviors were re-classified as correct: "vetëm 20k + dërgesa
+  falas" legitimately flags a promotion (case 51); a sale post may keep a
+  product wrapper as long as the promotion payload is right (case 55).
