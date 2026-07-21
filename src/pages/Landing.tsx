@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { WAITLIST_MODE, CONTACT_EMAIL, scrollToInterest, waitlistCtaLabel } from "@/config/launch";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import gsap from "gsap";
@@ -203,10 +204,12 @@ const LandingNav = ({ active, copy, dark, onToggleTheme, lang, onSetLang }: NavP
             >
               {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
-            <Button asChild variant="ghost" size="sm"><Link to="/login">{copy.nav.login}</Link></Button>
+            {!WAITLIST_MODE && <Button asChild variant="ghost" size="sm"><Link to="/login">{copy.nav.login}</Link></Button>}
             <Magnetic>
               <Button asChild size="sm" className={cn("text-white hover:opacity-90", BRAND)}>
-                <Link to="/register">{copy.nav.cta}</Link>
+                {WAITLIST_MODE
+                  ? <a href="#interest" onClick={(e) => { e.preventDefault(); scrollToInterest(); }}>{waitlistCtaLabel(lang)}</a>
+                  : <Link to="/register">{copy.nav.cta}</Link>}
               </Button>
             </Magnetic>
           </div>
@@ -253,7 +256,8 @@ const LandingNav = ({ active, copy, dark, onToggleTheme, lang, onSetLang }: NavP
           panelFooter={
             <div className="flex flex-col gap-4">
               <div className="h-px w-full bg-border" />
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className={cn("grid gap-2.5", WAITLIST_MODE ? "grid-cols-1" : "grid-cols-2")}>
+                {!WAITLIST_MODE && (
                 <Link
                   to="/login"
                   onClick={() => lockMenuScroll(false)}
@@ -261,6 +265,16 @@ const LandingNav = ({ active, copy, dark, onToggleTheme, lang, onSetLang }: NavP
                 >
                   {copy.nav.login}
                 </Link>
+                )}
+                {WAITLIST_MODE ? (
+                <a
+                  href="#interest"
+                  onClick={(e) => { e.preventDefault(); lockMenuScroll(false); scrollToInterest(); }}
+                  className={cn("grid place-items-center rounded-full px-4 py-3 text-[15px] font-semibold text-white", BRAND)}
+                >
+                  {waitlistCtaLabel(lang)}
+                </a>
+                ) : (
                 <Link
                   to="/register"
                   onClick={() => lockMenuScroll(false)}
@@ -268,6 +282,7 @@ const LandingNav = ({ active, copy, dark, onToggleTheme, lang, onSetLang }: NavP
                 >
                   {copy.nav.cta}
                 </Link>
+                )}
               </div>
               <div className="flex items-center justify-between">
                 <LangSwitch />
@@ -801,10 +816,10 @@ export default function Landing() {
                   intensity={1.1}
                   followMouse={!reduceFx}
                   backgroundClassName="brand-gradient"
-                  onClick={() => navigate("/register")}
+                  onClick={() => (WAITLIST_MODE ? scrollToInterest() : navigate("/register"))}
                   className="h-12 w-full font-semibold sm:w-auto"
                 >
-                  {copy.hero.ctaPrimary} <ArrowRight className="h-4 w-4" />
+                  {WAITLIST_MODE ? waitlistCtaLabel(lang) : copy.hero.ctaPrimary} <ArrowRight className="h-4 w-4" />
                 </SpecularButton>
               </Magnetic>
               <Button asChild size="lg" variant="outline" className="h-12 w-full gap-2 rounded-full border-border bg-card/80 px-8 text-base backdrop-blur sm:w-auto">
@@ -856,7 +871,9 @@ export default function Landing() {
         <Magnetic>
           <StarBorder>
             <Button asChild size="lg" className={cn("h-12 gap-2 rounded-full px-8 text-base text-white hover:opacity-90", BRAND)}>
-              <Link to="/register">{copy.hero.ctaPrimary} <ArrowRight className="h-4 w-4" /></Link>
+              {WAITLIST_MODE
+                ? <a href="#interest" onClick={(e) => { e.preventDefault(); scrollToInterest(); }}>{waitlistCtaLabel(lang)} <ArrowRight className="h-4 w-4" /></a>
+                : <Link to="/register">{copy.hero.ctaPrimary} <ArrowRight className="h-4 w-4" /></Link>}
             </Button>
           </StarBorder>
         </Magnetic>
@@ -1074,7 +1091,9 @@ export default function Landing() {
                     {annual ? copy.pricing.billedYearly(fmt(yearlyTotal(p.id))) : copy.pricing.billedMonthly}
                   </p>
                   <Button asChild className={cn("mt-6 w-full rounded-full", featured && cn("text-white hover:opacity-90", BRAND))} variant={featured ? "default" : "outline"}>
-                    <Link to="/register">{copy.pricing.trialCta}</Link>
+                    {WAITLIST_MODE
+                      ? <a href="#interest" onClick={(e) => { e.preventDefault(); scrollToInterest(); }}>{waitlistCtaLabel(lang)}</a>
+                      : <Link to="/register">{copy.pricing.trialCta}</Link>}
                   </Button>
                   <p className="mt-2 text-center text-[11px] text-muted-foreground">{copy.pricing.trialNote}</p>
                   <ul className="mt-6 space-y-3">
@@ -1137,14 +1156,14 @@ export default function Landing() {
                 onClick={() => {
                   const subject = encodeURIComponent(lang === "sq" ? "Interes për Vela" : "Interested in Vela");
                   const body = encodeURIComponent(copy.interest.placeholder);
-                  window.location.href = `mailto:info@vela.al?subject=${subject}&body=${body}`;
+                  window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
                 }}
               >
                 <Sparkles className="h-4 w-4" /> {copy.interest.quick}
               </Button>
             </Magnetic>
             <p className="mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground sm:justify-start">
-              <Mail className="h-4 w-4" /> info@vela.al
+              <Mail className="h-4 w-4" /> {CONTACT_EMAIL}
             </p>
           </div>
 
@@ -1181,7 +1200,7 @@ export default function Landing() {
               onClick={() => {
                 const subject = encodeURIComponent(lang === "sq" ? "Interes për Vela" : "Interested in Vela");
                 const bodyText = `${interestMsg || copy.interest.placeholder}${interestName ? `\n\n— ${interestName}` : ""}`;
-                window.location.href = `mailto:info@vela.al?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
+                window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
               }}
             >
               <Send className="h-4 w-4" /> {copy.interest.send}
@@ -1241,10 +1260,10 @@ export default function Landing() {
               baseColor="#FFFFFF"
               intensity={1.15}
               followMouse={!reduceFx}
-              onClick={() => navigate("/register")}
+              onClick={() => (WAITLIST_MODE ? scrollToInterest() : navigate("/register"))}
               className="relative mt-8 font-semibold sm:mt-9"
             >
-              {copy.cta.button} <ArrowRight className="h-4 w-4" />
+              {WAITLIST_MODE ? waitlistCtaLabel(lang) : copy.cta.button} <ArrowRight className="h-4 w-4" />
             </SpecularButton>
           </Magnetic>
         </div>
@@ -1273,8 +1292,12 @@ export default function Landing() {
               <div>
                 <h4 className="text-sm font-semibold">{copy.footer.account}</h4>
                 <div className="mt-3 flex flex-col gap-2.5 text-sm text-muted-foreground">
+                  {WAITLIST_MODE ? (
+                    <a href="#interest" onClick={(e) => { e.preventDefault(); scrollToInterest(); }} className="hover:text-foreground">{waitlistCtaLabel(lang)}</a>
+                  ) : (<>
                   <Link to="/login" className="hover:text-foreground">{copy.nav.login}</Link>
                   <Link to="/register" className="hover:text-foreground">{copy.footer.signup}</Link>
+                  </>)}
                 </div>
               </div>
             </div>
