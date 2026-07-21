@@ -196,15 +196,33 @@ serve(async (req) => {
 
       if (sel && Object.keys(sel).length > 0) {
         combinationKey = buildCombinationKey(sel);
-        // Add the price difference of each selected option value (stored in ALL).
-        const { data: opts } = await supabaseAdmin
-          .from('product_options')
-          .select('name, option_values(value, price_difference)')
-          .eq('product_id', product.id);
-        for (const opt of opts || []) {
-          const chosen = sel[opt.name];
-          const match = (opt.option_values || []).find((v: any) => v.value === chosen);
-          if (match) unitALL += Number(match.price_difference) || 0;
+        // Price the exact selected combination from `product_variants` — the
+        // same table the storefront displays from (get-public-shop-data) and
+        // the stock check locks — so the amount charged matches the price the
+        // customer agreed to. `product_variants.price_difference` is stored in
+        // ALL, like option_values'. The two columns are edited independently in
+        // VariantsManager and can drift, so reading the same source the shopper
+        // saw is what keeps display and charge in sync. Fall back to summing
+        // option_values deltas only when no matching variant row exists.
+        const { data: variantRows } = await supabaseAdmin
+          .from('product_variants')
+          .select('price_difference')
+          .eq('product_id', product.id)
+          .eq('combination_key', combinationKey)
+          .limit(1);
+        const variantRow = variantRows?.[0];
+        if (variantRow) {
+          unitALL += Number(variantRow.price_difference) || 0;
+        } else {
+          const { data: opts } = await supabaseAdmin
+            .from('product_options')
+            .select('name, option_values(value, price_difference)')
+            .eq('product_id', product.id);
+          for (const opt of opts || []) {
+            const chosen = sel[opt.name];
+            const match = (opt.option_values || []).find((v: any) => v.value === chosen);
+            if (match) unitALL += Number(match.price_difference) || 0;
+          }
         }
       }
 

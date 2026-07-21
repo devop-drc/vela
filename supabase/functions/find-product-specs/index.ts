@@ -454,6 +454,37 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // ── Auth & ownership ──────────────────────────────────────────────────
+    // processProduct writes with the service role (RLS bypassed) and DELETEs +
+    // re-inserts a product's specifications/options/variants keyed only on
+    // product_id. This function is called two ways: internally by
+    // background-sync (service-role bearer — trusted), and from the product
+    // editor (a merchant's JWT). Without an ownership check a merchant could
+    // pass a foreign product_id and wipe another shop's specs. For the merchant
+    // path, resolve the caller from the JWT and keep only product_ids they own;
+    // never trust body.user_id for identity.
+    const bearer = (req.headers.get('Authorization') || '').replace('Bearer ', '');
+    const isServiceRole = !!bearer && bearer === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    let ownedIds: Set<string> | null = null; // null = trusted (skip the filter)
+    if (!isServiceRole) {
+      const { data: { user } } = await supabaseAdmin.auth.getUser(bearer);
+      if (!user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      const targetIds = Array.isArray(body.products)
+        ? body.products.map((p: any) => p?.product_id).filter(Boolean)
+        : (body.product_id ? [body.product_id] : []);
+      const { data: owned } = targetIds.length
+        ? await supabaseAdmin.from('products').select('id').eq('user_id', user.id).in('id', targetIds)
+        : { data: [] as { id: string }[] };
+      ownedIds = new Set((owned || []).map((r: any) => r.id));
+      // Force the write context to the authenticated caller, never the body.
+      body.user_id = user.id;
+    }
+    const owns = (id: unknown) => ownedIds === null || (typeof id === 'string' && ownedIds.has(id));
+
     // Batch mode: { products: [{ product_id, product_name, ... }, ...] }.
     // Top-level fields (e.g. user_id) act as defaults for every item.
     if (Array.isArray(body.products)) {
@@ -464,6 +495,9 @@ Deno.serve(async (req) => {
         const chunk = items.slice(i, i + CONCURRENCY);
         const chunkResults = await Promise.all(chunk.map((item: any) => {
           const params = { ...defaults, ...item };
+          if (!owns(params.product_id)) {
+            return Promise.resolve({ product_id: params.product_id ?? null, error: 'not_found' });
+          }
           if (!params.product_name) {
             return Promise.resolve({ product_id: params.product_id ?? null, error: 'product_name is required' });
           }
@@ -479,6 +513,11 @@ Deno.serve(async (req) => {
     }
 
     // Single-product mode (backward compatible)
+    if (!owns(body.product_id)) {
+      return new Response(JSON.stringify({ error: 'not_found' }), {
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
     if (!body.product_name) {
       return new Response(JSON.stringify({ error: 'product_name is required' }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }

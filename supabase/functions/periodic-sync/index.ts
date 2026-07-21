@@ -217,15 +217,17 @@ const processUser = async (supabaseAdmin: SupabaseClient, integration: Integrati
       }
     }
 
-    // Step 5: Check for deleted/archived posts
-    const allInstagramPostIds = new Set(allPosts.map((p: InstagramPost) => p.id));
-    const productsToArchive = existingProducts.filter(p => p.instagram_post_id && !allInstagramPostIds.has(p.instagram_post_id));
-    
-    if (productsToArchive.length > 0) {
-        const idsToUpdate = productsToArchive.map(p => p.id);
-        const { error: updateError } = await supabaseAdmin.from('products').update({ status: 'Draft' }).in('id', idsToUpdate);
-        if (updateError) console.error(`Failed to archive products for user ${user_id}:`, updateError);
-    }
+    // Step 5: Deleted/archived-post sweep — DISABLED.
+    // This path fetched `instagram-posts` WITHOUT skip_upload, so it never had
+    // the `truncated` flag, and it applied none of the guards background-sync's
+    // equivalent sweep relies on (complete-fetch only, full-sync only,
+    // source-scoped). As written it would move every product beyond the 10-page
+    // / ~1000-post Graph cap to Draft on each run — a silent catalog wipe for
+    // any larger merchant. The safe, guarded implementation lives in
+    // background-sync (`syncType === 'full' && fetchComplete`); this function is
+    // unscheduled and its analyzer call (`ai-product-analyzer`) no longer
+    // exists, so rather than run an unguarded destructive sweep we skip it.
+    // Re-enable only by delegating to background-sync's guarded logic.
 
 
   } catch (error) {
