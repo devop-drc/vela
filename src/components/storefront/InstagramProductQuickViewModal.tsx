@@ -116,6 +116,23 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
     }
   }, [product]);
 
+  // Sum of the selected options' price deltas. Declared BEFORE the early
+  // returns below so the hook order stays identical across loading/loaded
+  // renders — otherwise a loading→loaded transition (e.g. a focus revalidate
+  // flipping isLoading while this modal is open) changes the hook count and
+  // React throws "rendered more hooks than during the previous render".
+  const optionsPriceDelta = useMemo(() => {
+    if (!options.length) return 0;
+    let delta = 0;
+    options.forEach(opt => {
+      const sel = selectedValues[opt.name];
+      if (!sel) return;
+      const val = opt.values.find(v => v.value === sel);
+      if (val) delta += val.price_difference || 0;
+    });
+    return delta;
+  }, [options, selectedValues]);
+
   if (isLoading || !shopDetails) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -149,17 +166,6 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
   const mediaItems = product.media_gallery?.length ? product.media_gallery : (product.media_url ? [product.media_url] : []);
   
   const baseDisplayPrice = convertCurrency(product.price, product.currency);
-  const optionsPriceDelta = useMemo(() => {
-    if (!options.length) return 0;
-    let delta = 0;
-    options.forEach(opt => {
-      const sel = selectedValues[opt.name];
-      if (!sel) return;
-      const val = opt.values.find(v => v.value === sel);
-      if (val) delta += val.price_difference || 0;
-    });
-    return delta;
-  }, [options, selectedValues]);
   const originalDisplayPrice = baseDisplayPrice != null ? (baseDisplayPrice + optionsPriceDelta) : null;
 
   const isOutOfStock = product.status === 'Out of Stock' || (product.pricing_type === 'one_time' && product.inventory <= 0);
@@ -177,6 +183,12 @@ export const InstagramProductQuickViewModal = ({ isOpen, onClose, productId, sho
     }
     if (isOutOfStock) {
       toast.error("This product is currently out of stock.");
+      return;
+    }
+    // A product with no price (AI extraction left it null → shows "N/A") can't
+    // be sold; guard here so it never enters the cart as a free line.
+    if (originalDisplayPrice == null) {
+      toast.error("This product isn't available for purchase yet.");
       return;
     }
 

@@ -209,6 +209,14 @@ serve(async (req) => {
       }
 
       unitALL = Math.round(discountedALL(unitALL, product.id) * 100) / 100;
+
+      // A one-time product with no derivable price (e.g. AI extraction left
+      // `price` null, so it renders "N/A") must never be sold for free. Reject
+      // the order rather than inserting a 0-priced line and decrementing stock.
+      if (product.pricing_type !== 'subscription' && unitALL <= 0) {
+        throw new Error("One of the products in your cart isn't available for purchase right now.");
+      }
+
       subtotalALL += unitALL * quantity;
 
       rpcItems.push({

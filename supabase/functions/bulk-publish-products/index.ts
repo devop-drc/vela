@@ -41,12 +41,19 @@ serve(async (req) => {
     if (!Array.isArray(items) || !items.length) return json({ error: 'No items to publish.' }, 400);
     if (items.length > 10) return json({ error: 'Max 10 products per bulk run.' }, 400);
 
-    const { data: job } = await admin.from('sync_jobs').insert({
+    const { data: job, error: jobErr } = await admin.from('sync_jobs').insert({
       user_id: user.id, status: 'in_progress', progress: 0, total: items.length,
       message: `Publishing ${items.length} products to Instagram…`,
       summary: { job_kind: 'bulk_publish', created: 0, failed: 0 },
     }).select('id').single();
     const jobId = job?.id ?? null;
+    // Without a job row the process widget has nothing to subscribe to, so the
+    // whole run would proceed invisibly and the modal would show a false
+    // "queued" success. Fail loudly instead so the merchant can retry.
+    if (jobErr || !jobId) {
+      console.error('bulk-publish-products: could not create job row:', jobErr?.message);
+      return json({ error: 'Could not start the bulk publish. Please try again.' }, 500);
+    }
     const upd = async (patch: Record<string, unknown>) => {
       if (jobId) await admin.from('sync_jobs').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', jobId);
     };

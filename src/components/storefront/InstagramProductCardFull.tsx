@@ -311,6 +311,12 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
         toast.error("This product is currently out of stock.");
         return;
       }
+      // No price (AI left it null → "N/A") means it can't be sold — never let
+      // it enter the cart as a free line.
+      if (originalDisplayPrice == null) {
+        toast.error("This product isn't available for purchase yet.");
+        return;
+      }
 
       const selectedOptions: { [key: string]: string | string[] } = { ...selectedValues };
 
@@ -347,6 +353,12 @@ export const InstagramProductCardFull = forwardRef<HTMLDivElement, InstagramProd
       }
       if (isOutOfStock) {
         toast.error("This product is currently out of stock.");
+        return;
+      }
+      // No price (AI left it null → "N/A") means it can't be sold — never let
+      // it enter the cart as a free line.
+      if (originalDisplayPrice == null) {
+        toast.error("This product isn't available for purchase yet.");
         return;
       }
 

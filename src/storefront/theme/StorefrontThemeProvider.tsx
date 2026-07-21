@@ -23,7 +23,7 @@ const StorefrontConfigContext = createContext<StorefrontConfig | null>(null);
  * matchMedia read, this re-renders when the OS theme changes so 'auto' mode
  * updates live.
  */
-const usesPrefersDark = (): boolean => {
+const usePrefersDark = (): boolean => {
   const [prefersDark, setPrefersDark] = useState<boolean>(
     () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches
   );
@@ -56,7 +56,7 @@ export const useStorefrontConfig = (): StorefrontConfig => {
  */
 export const useStorefrontTokenStyle = () => {
   const config = useStorefrontConfig();
-  const prefersDark = usesPrefersDark();
+  const prefersDark = usePrefersDark();
   const visitor = useVisitorMode();
   const tokens = buildTokens(withVisitorMode(config, visitor), prefersDark);
   return {
@@ -75,7 +75,7 @@ interface Props {
 export const StorefrontThemeProvider = ({ config: rawConfig, children, className }: Props) => {
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const prefersDark = usesPrefersDark();
+  const prefersDark = usePrefersDark();
   const visitor = useVisitorMode();
   const config = useMemo(() => withVisitorMode(rawConfig, visitor), [rawConfig, visitor]);
 

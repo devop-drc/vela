@@ -267,18 +267,25 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
     // Guards (all required for correctness):
     //   • Full syncs only — a quick sync passes `since`, so `allPosts` is just
     //     the new-posts delta and would flag every older post as "deleted".
-    //   • Not truncated — if the media fetch hit the page cap, older posts
-    //     weren't fetched and must not be treated as deleted.
+    //   • Complete fetch only — if the media fetch hit the page cap, older
+    //     posts weren't fetched and must not be treated as deleted. A MISSING
+    //     `truncated` flag (older `instagram-posts` deploy) is treated as
+    //     truncated, so a version skew suppresses the sweep instead of
+    //     over-running it and mass-drafting the merchant's tail.
     //   • Runs after the `allPosts.length === 0` early-return above, so an
     //     empty/failed fetch never drafts the merchant's entire catalog.
-    //   • Scoped to `source === 'instagram'` — never touches manual/imported
-    //     products, even if one carries a stray instagram_post_id.
+    //   • Excludes imported/manual products — IG-synced products carry
+    //     `source` of either 'instagram' (created after this feature shipped)
+    //     or the legacy 'ai_classified' default (everything synced before it),
+    //     so matching on "not import/manual" is what actually covers the real
+    //     catalog. The `instagram_post_id` requirement is the primary guard.
     //   • Skips rows already in Draft to avoid redundant writes / realtime spam.
-    if (syncType === 'full' && !postsData.truncated) {
+    const fetchComplete = postsData.truncated === false;
+    if (syncType === 'full' && fetchComplete) {
       const liveIds = new Set(allPosts.map(p => p.id));
       const orphaned = (existingProducts || []).filter((p: any) =>
         p.instagram_post_id &&
-        p.source === 'instagram' &&
+        p.source !== 'import' && p.source !== 'manual' &&
         p.status !== 'Draft' &&
         !liveIds.has(p.instagram_post_id)
       );
@@ -780,6 +787,16 @@ const syncProcess = async (supabaseAdmin: SupabaseClient, user: { id: string; to
           const existingCat = ((existingRow as any)?.category || '').trim();
           if (existingId && existingCat && existingCat.toLowerCase() !== 'uncategorized' && productPayload.category.toLowerCase() === 'uncategorized') {
             productPayload.category = existingCat;
+          }
+          // A re-sync (esp. a Full re-analyze, which upserts every existing
+          // product) must not silently unpublish the merchant's live catalog:
+          // the payload defaults to 'Draft', which the upsert would write over
+          // an 'Active' row and empty the storefront. If the merchant had
+          // already published this product, keep it published and only reflect
+          // real stock; leave brand-new and still-Draft rows on the default.
+          const existingStatus = (existingRow as any)?.status;
+          if (existingId && existingStatus && existingStatus !== 'Draft') {
+            productPayload.status = inventory === 0 ? 'Out of Stock' : 'Active';
           }
           if (existingId && itemsToCreate.length === 1) {
             productPayload.id = existingId;
