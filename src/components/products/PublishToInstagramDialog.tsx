@@ -134,6 +134,7 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
     const timer = setTimeout(() => {
       if (cancelled || !previewRef.current) return;
       renderTemplate(previewRef.current, {
+        cutout: adjust.removeBg,
         imageUrl: effectiveImage,
         name: product.name,
         price: product.price ?? null,
@@ -180,6 +181,7 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
       && adjust.scale === 1 && adjust.offsetX === 0 && adjust.offsetY === 0;
     if (untouched) return selectedImage;
     const blob = await renderToJpegBlob({
+      cutout: adjust.removeBg,
       imageUrl: effectiveImage, name: product.name, price: product.price ?? null,
       currency: product.currency || "ALL", shopName: shopDetails?.shop_name || "",
       settings: { ...studio, template: activeTemplate, transform: adjust }, format: "post",
@@ -202,6 +204,7 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
         body = { productId: product.id, mode: "publish", caption, videoUrl: videoJob.output_url, publishKind: postKind === "story_video" ? "story" : "reel" };
       } else if (postKind === "story") {
         const blob = await renderToJpegBlob({
+          cutout: adjust.removeBg,
           imageUrl: effectiveImage ?? selectedImage!, name: product.name, price: product.price ?? null,
           currency: product.currency || "ALL", shopName: shopDetails?.shop_name || "",
           settings: { ...studio, template: studio.storyTemplate ?? studio.template, transform: adjust }, format: "story",
@@ -342,7 +345,7 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
             <div className="space-y-4">
               {/* post type */}
               <div className="flex flex-wrap gap-1.5">
-                {(["single", "carousel", "story", "post_video", "story_video", "reel_video"] as const)
+                {(["single", "carousel", "story"] as const)
                   .filter((k) => k !== "carousel" || images.length >= 2)
                   .map((k) => (
                     <button key={k} type="button" disabled={publishing}

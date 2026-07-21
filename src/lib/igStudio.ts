@@ -8,7 +8,16 @@
  * proxy, which serves `Access-Control-Allow-Origin: *`.
  */
 
-export type TemplateId = 'plain' | 'badge' | 'banner' | 'gradient' | 'frame' | 'polaroid' | 'spotlight' | 'minimal' | 'split';
+export type TemplateId = 'gradient' | 'banner' | 'badge' | 'card' | 'spotlight' | 'editorial' | 'frame' | 'sticker';
+export type PostMode = 'light' | 'dark';
+
+/** Mode palette — every template reads these instead of hardcoded colors. */
+const MODE: Record<PostMode, {
+  bg: string; panel: string; text: string; sub: string; scrim: [number, number, number]; line: string; onAccent: string;
+}> = {
+  dark:  { bg: '#140A0E', panel: '#1E1216', text: '#FFFFFF', sub: 'rgba(255,255,255,0.66)', scrim: [20, 10, 14], line: 'rgba(255,255,255,0.16)', onAccent: '#FFFFFF' },
+  light: { bg: '#FBF6F4', panel: '#FFFFFF', text: '#221A1C', sub: 'rgba(34,26,28,0.55)', scrim: [251, 246, 244], line: 'rgba(34,26,28,0.10)', onAccent: '#FFFFFF' },
+};
 
 /** How the product image sits inside the canvas. */
 export interface ImageTransform {
@@ -40,6 +49,8 @@ export interface StudioSettings {
   storyTemplate: TemplateId;
   carouselTemplate: CarouselTemplateId;
   videoTemplate: VideoTemplateId;
+  /** Light or dark post background. */
+  postMode: PostMode;
   accent: string;
   showPrice: boolean;
   showName: boolean;
@@ -53,6 +64,7 @@ export const DEFAULT_STUDIO_SETTINGS: StudioSettings = {
   storyTemplate: 'spotlight',
   carouselTemplate: 'ribbon',
   videoTemplate: 'gradient',
+  postMode: 'dark',
   accent: '#A31234',
   showPrice: true,
   showName: true,
@@ -61,7 +73,7 @@ export const DEFAULT_STUDIO_SETTINGS: StudioSettings = {
   transform: DEFAULT_TRANSFORM,
 };
 
-export const TEMPLATE_IDS: TemplateId[] = ['plain', 'badge', 'banner', 'gradient', 'frame', 'polaroid', 'spotlight', 'minimal', 'split'];
+export const TEMPLATE_IDS: TemplateId[] = ['gradient', 'banner', 'badge', 'card', 'spotlight', 'editorial', 'frame', 'sticker'];
 
 /* ── background removal (client-side, lazy-loaded, cached per URL) ── */
 const cutoutCache = new Map<string, string>();
@@ -117,8 +129,12 @@ export interface RenderInput {
   shopName: string;
   settings: StudioSettings;
   format?: 'post' | 'story';
+  /** True when imageUrl is a background-removed subject (draw it floating). */
+  cutout?: boolean;
 }
 
+/** Remote CDN images need the CORS proxy; local/same-origin ones don't. */
+const needsProxy = (url: string) => /^https?:\/\//.test(url);
 const proxied = (url: string, w: number, h: number) =>
   `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${w}&h=${h}&fit=cover&output=jpg&q=90`;
 
@@ -166,6 +182,48 @@ const fitText = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number, 
   return px;
 };
 
+/** Draw the product image into a rect: cover-clip for photos, contain +
+ *  soft shadow for cutouts / 'contain' fit. Applies zoom + pan. */
+function drawMedia(
+  ctx: CanvasRenderingContext2D, img: HTMLImageElement,
+  rect: { x: number; y: number; w: number; h: number },
+  opts: { contain: boolean; scale: number; ox: number; oy: number; radius?: number; shadow?: boolean },
+) {
+  const { contain, scale, radius = 0 } = opts;
+  if (contain) {
+    const fit = Math.min(rect.w / img.width, rect.h / img.height) * scale;
+    const dw = img.width * fit, dh = img.height * fit;
+    const dx = rect.x + (rect.w - dw) / 2 + opts.ox * rect.w * 0.25;
+    const dy = rect.y + (rect.h - dh) / 2 + opts.oy * rect.h * 0.25;
+    if (opts.shadow) { ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 34; }
+    ctx.drawImage(img, dx, dy, dw, dh);
+    if (opts.shadow) ctx.restore();
+  } else {
+    const cover = Math.max(rect.w / img.width, rect.h / img.height) * scale;
+    const dw = img.width * cover, dh = img.height * cover;
+    const ex = (dw - rect.w) / 2, ey = (dh - rect.h) / 2;
+    ctx.save();
+    if (radius) rounded(ctx, rect.x, rect.y, rect.w, rect.h, radius); else ctx.rect(rect.x, rect.y, rect.w, rect.h);
+    ctx.clip();
+    ctx.drawImage(img, rect.x - ex + opts.ox * ex, rect.y - ey + opts.oy * ey, dw, dh);
+    ctx.restore();
+  }
+}
+
+/** A rounded pill with centered text; returns its width. */
+function pill(ctx: CanvasRenderingContext2D, text: string, cx: number, cy: number, fill: string, textColor: string, fontPx = 44) {
+  ctx.font = BODY(fontPx);
+  const tw = ctx.measureText(text).width;
+  const pw = tw + fontPx * 1.6, ph = fontPx * 2.05;
+  ctx.fillStyle = fill;
+  rounded(ctx, cx - pw / 2, cy - ph / 2, pw, ph, ph / 2);
+  ctx.fill();
+  ctx.fillStyle = textColor;
+  ctx.textAlign = 'center';
+  ctx.fillText(text, cx, cy + 2);
+  return pw;
+}
+
 /** Render one template composition into `canvas`. */
 export async function renderTemplate(canvas: HTMLCanvasElement, input: RenderInput): Promise<void> {
   const { settings } = input;
@@ -176,302 +234,167 @@ export async function renderTemplate(canvas: HTMLCanvasElement, input: RenderInp
   const ctx = canvas.getContext('2d')!;
   await ensureFonts();
 
+  const tpl = settings.template;
+  const m = MODE[settings.postMode ?? 'dark'];
   const accent = settings.accent || '#A31234';
+  const accentBright = accent.toUpperCase() === '#A31234' ? '#FF2E4D' : accent;
   const name = settings.showName ? input.name : '';
   const price = settings.showPrice ? fmtPrice(input.price, input.currency) : '';
   const shop = settings.showLogo ? input.shopName : '';
-
   const transform = settings.transform ?? DEFAULT_TRANSFORM;
-  // blob: URLs are pre-processed cutouts — same-origin, drawn directly.
-  const isBlob = input.imageUrl.startsWith('blob:');
+  const cutout = Boolean(input.cutout) || input.imageUrl.startsWith('blob:');
+  const scale = Math.min(Math.max(transform.scale || 1, 0.4), 3);
+  const scrim = (a: number) => `rgba(${m.scrim[0]},${m.scrim[1]},${m.scrim[2]},${a})`;
 
-  // Media area per template (the rest is chrome).
-  const matte =
-    settings.template === 'polaroid' ? { x: 60, y: 60, w: W - 120, h: H - 320 }
-    : settings.template === 'minimal' ? { x: 90, y: 90, w: W - 180, h: Math.round(H * 0.62) }
-    : settings.template === 'spotlight' ? { x: 110, y: 150, w: W - 220, h: Math.round(H * 0.58) }
-    : settings.template === 'split' ? { x: 0, y: 0, w: W, h: Math.round(H * 0.72) }
+  ctx.fillStyle = m.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Templates where a solid mode panel/margin frames the media.
+  const media =
+    tpl === 'card' ? { x: 80, y: 96, w: W - 160, h: Math.round(H * 0.60) }
+    : tpl === 'editorial' ? { x: 0, y: 0, w: W, h: Math.round(H * 0.62) }
+    : tpl === 'spotlight' ? { x: 130, y: 180, w: W - 260, h: Math.round(H * 0.52) }
     : { x: 0, y: 0, w: W, h: H };
 
-  const img = await loadImage(isBlob ? input.imageUrl : proxied(input.imageUrl, matte.w, matte.h));
+  const img = await loadImage(cutout || !needsProxy(input.imageUrl) ? input.imageUrl : proxied(input.imageUrl, media.w, media.h));
 
-  // Backdrop
-  if (settings.template === 'minimal') {
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, W, H);
-  } else if (settings.template === 'spotlight') {
-    ctx.fillStyle = '#140A0E';
-    ctx.fillRect(0, 0, W, H);
-    const glow = ctx.createRadialGradient(W / 2, H * 0.42, 60, W / 2, H * 0.42, W * 0.75);
-    glow.addColorStop(0, accent + 'AA');
-    glow.addColorStop(0.55, accent + '33');
+  // Spotlight radial glow sits behind the (usually cut-out) product.
+  if (tpl === 'spotlight') {
+    const glow = ctx.createRadialGradient(W / 2, H * 0.42, 60, W / 2, H * 0.42, W * 0.78);
+    glow.addColorStop(0, accent + 'B0');
+    glow.addColorStop(0.5, accent + '33');
     glow.addColorStop(1, 'transparent');
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, W, H);
-  } else if (settings.template === 'polaroid') {
-    ctx.fillStyle = '#FBF6F4';
-    ctx.fillRect(0, 0, W, H);
-  } else {
-    ctx.fillStyle = '#140A0E';
-    ctx.fillRect(0, 0, W, H);
   }
 
-  // Draw the media with zoom/offset. Cutouts and 'contain' keep the whole
-  // subject visible; 'cover' fills the matte and pans inside the overflow.
-  const useContain = transform.fit === 'contain' || isBlob || settings.template === 'spotlight' || settings.template === 'minimal';
-  const scale = Math.min(Math.max(transform.scale || 1, 0.4), 3);
-  if (useContain) {
-    const fitScale = Math.min(matte.w / img.width, matte.h / img.height) * scale;
-    const dw = img.width * fitScale, dh = img.height * fitScale;
-    const dx = matte.x + (matte.w - dw) / 2 + transform.offsetX * matte.w * 0.25;
-    const dy = matte.y + (matte.h - dh) / 2 + transform.offsetY * matte.h * 0.25;
-    if (settings.template === 'spotlight') {
-      ctx.shadowColor = 'rgba(0,0,0,0.55)';
-      ctx.shadowBlur = 70;
-      ctx.shadowOffsetY = 40;
-    }
-    ctx.drawImage(img, dx, dy, dw, dh);
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-  } else {
-    const coverScale = Math.max(matte.w / img.width, matte.h / img.height) * scale;
-    const dw = img.width * coverScale, dh = img.height * coverScale;
-    const ox = (dw - matte.w) / 2, oy = (dh - matte.h) / 2;
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(matte.x, matte.y, matte.w, matte.h);
-    ctx.clip();
-    ctx.drawImage(img, matte.x - ox + transform.offsetX * ox, matte.y - oy + transform.offsetY * oy, dw, dh);
-    ctx.restore();
+  const contain = cutout || transform.fit === 'contain' || tpl === 'spotlight';
+  drawMedia(ctx, img, media, {
+    contain, scale, ox: transform.offsetX, oy: transform.offsetY,
+    radius: tpl === 'card' ? 40 : 0,
+    shadow: cutout || tpl === 'spotlight',
+  });
+  // Card gets a hairline around the media.
+  if (tpl === 'card' && !contain) {
+    ctx.strokeStyle = m.line; ctx.lineWidth = 2;
+    rounded(ctx, media.x, media.y, media.w, media.h, 40); ctx.stroke();
   }
 
   ctx.textBaseline = 'middle';
 
-  switch (settings.template) {
-    case 'plain':
+  switch (tpl) {
+    /* full-bleed photo, bottom scrim, stacked copy */
+    case 'gradient': {
+      const gh = Math.round(H * 0.44);
+      const g = ctx.createLinearGradient(0, H - gh, 0, H);
+      g.addColorStop(0, scrim(0)); g.addColorStop(0.55, scrim(0.72)); g.addColorStop(1, scrim(0.97));
+      ctx.fillStyle = g; ctx.fillRect(0, H - gh, W, gh);
+      let y = H - 92;
+      if (shop) { ctx.textAlign = 'left'; ctx.font = BODY(32); ctx.fillStyle = m.sub; ctx.fillText(shop.toUpperCase(), 56, y); y -= 66; }
+      if (price) { ctx.textAlign = 'left'; ctx.font = HEAD(60); ctx.fillStyle = accentBright; ctx.fillText(price, 56, y); y -= 90; }
+      if (name) { ctx.textAlign = 'left'; ctx.fillStyle = m.text; fitText(ctx, name, W - 112, HEAD, 78); ctx.fillText(name, 56, y, W - 112); }
       break;
+    }
 
+    /* full-bleed photo, solid panel bar bottom */
+    case 'banner': {
+      const bh = 168, by = H - bh;
+      ctx.fillStyle = m.panel; ctx.fillRect(0, by, W, bh);
+      ctx.fillStyle = accent; ctx.fillRect(0, by, W, 7);
+      if (name) { ctx.textAlign = 'left'; ctx.fillStyle = m.text; fitText(ctx, name, price ? W - 440 : W - 112, HEAD, 54); ctx.fillText(name, 52, by + bh / 2 + 2, price ? W - 440 : W - 112); }
+      if (price) pill(ctx, price, W - 52 - (ctx.measureText(price).width + 64) / 2, by + bh / 2, accent, m.onAccent, 42);
+      break;
+    }
+
+    /* clean photo, just a corner price tag + small handle */
     case 'badge': {
       if (price) {
-        ctx.font = BODY(44);
-        const tw = ctx.measureText(price).width;
-        const bw = tw + 72, bh = 92, bx = W - bw - 48, by = 48;
-        ctx.fillStyle = accent;
-        rounded(ctx, bx, by, bw, bh, bh / 2);
-        ctx.fill();
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.fillText(price, bx + bw / 2, by + bh / 2 + 2);
+        ctx.font = BODY(46); const tw = ctx.measureText(price).width;
+        const pw = tw + 74, ph = 96, bx = W - pw - 48, by = 48;
+        pill(ctx, price, bx + pw / 2, by + ph / 2, accent, m.onAccent, 46);
       }
       if (shop) {
-        ctx.font = BODY(34);
-        ctx.textAlign = 'left';
-        ctx.fillStyle = 'rgba(255,255,255,0.92)';
-        ctx.shadowColor = 'rgba(0,0,0,0.55)';
-        ctx.shadowBlur = 12;
-        ctx.fillText(shop, 48, H - 64);
+        ctx.font = BODY(36); ctx.textAlign = 'left';
+        ctx.fillStyle = (settings.postMode ?? "dark") === 'light' ? scrim(0.85) : 'rgba(255,255,255,0.94)';
+        ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 14;
+        ctx.fillText('@' + shop.toLowerCase().replace(/\s+/g, ''), 48, H - 64);
         ctx.shadowBlur = 0;
       }
       break;
     }
 
-    case 'banner': {
-      const bh = 150, by = H - bh;
-      ctx.fillStyle = 'rgba(20,10,14,0.94)';
-      ctx.fillRect(0, by, W, bh);
-      ctx.fillStyle = accent;
-      ctx.fillRect(0, by, W, 6);
-      if (name) {
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#FFFFFF';
-        fitText(ctx, name, price ? W - 420 : W - 96, HEAD, 52);
-        ctx.fillText(name, 48, by + bh / 2 + 2, price ? W - 420 : W - 96);
-      }
-      if (price) {
-        ctx.font = BODY(42);
-        const tw = ctx.measureText(price).width;
-        const pw = tw + 64, ph = 84;
-        ctx.fillStyle = accent;
-        rounded(ctx, W - pw - 48, by + (bh - ph) / 2, pw, ph, ph / 2);
-        ctx.fill();
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.fillText(price, W - pw / 2 - 48, by + bh / 2 + 2);
-      }
+    /* photo in a rounded card on a solid mode background, copy below */
+    case 'card': {
+      let y = media.y + media.h + 96;
+      if (name) { ctx.textAlign = 'center'; ctx.fillStyle = m.text; fitText(ctx, name, W - 200, HEAD, 66); ctx.fillText(name, W / 2, y, W - 200); y += 92; }
+      if (price) { ctx.textAlign = 'center'; ctx.font = HEAD(52); ctx.fillStyle = accentBright; ctx.fillText(price, W / 2, y); }
+      if (shop) { ctx.textAlign = 'center'; ctx.font = BODY(30); ctx.fillStyle = m.sub; ctx.fillText('@' + shop.toLowerCase().replace(/\s+/g, ''), W / 2, H - 70); }
       break;
     }
 
-    case 'gradient': {
-      const gh = Math.round(H * 0.42);
-      const grad = ctx.createLinearGradient(0, H - gh, 0, H);
-      grad.addColorStop(0, 'rgba(20,10,14,0)');
-      grad.addColorStop(0.55, 'rgba(20,10,14,0.72)');
-      grad.addColorStop(1, 'rgba(20,10,14,0.96)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, H - gh, W, gh);
-      let y = H - 92;
-      if (shop) {
-        ctx.textAlign = 'left';
-        ctx.font = BODY(32);
-        ctx.fillStyle = 'rgba(255,255,255,0.75)';
-        ctx.fillText(shop.toUpperCase(), 56, y);
-        y -= 66;
-      }
-      if (price) {
-        ctx.textAlign = 'left';
-        ctx.font = HEAD(58);
-        ctx.fillStyle = accent === '#A31234' ? '#FF2E4D' : accent;
-        ctx.fillText(price, 56, y);
-        y -= 88;
-      }
-      if (name) {
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#FFFFFF';
-        fitText(ctx, name, W - 112, HEAD, 76);
-        ctx.fillText(name, 56, y, W - 112);
-      }
-      break;
-    }
-
-    case 'frame': {
-      ctx.strokeStyle = accent;
-      ctx.lineWidth = 10;
-      ctx.strokeRect(36, 36, W - 72, H - 72);
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(56, 56, W - 112, H - 112);
-      if (name || price) {
-        const label = [name, price].filter(Boolean).join('  ·  ');
-        ctx.font = BODY(40);
-        const px = fitText(ctx, label, W - 260, BODY, 40);
-        const tw = ctx.measureText(label).width;
-        const bw = tw + 88, bh = 96;
-        ctx.fillStyle = 'rgba(20,10,14,0.92)';
-        rounded(ctx, (W - bw) / 2, H - 150, bw, bh, 18);
-        ctx.fill();
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.font = BODY(px);
-        ctx.fillText(label, W / 2, H - 150 + bh / 2 + 2);
-      }
-      if (shop) {
-        ctx.font = BODY(30);
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#FFFFFF';
-        const tw = ctx.measureText(shop).width;
-        ctx.fillStyle = accent;
-        rounded(ctx, (W - tw - 64) / 2, 24, tw + 64, 56, 12);
-        ctx.fill();
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(shop, W / 2, 24 + 30);
-      }
-      break;
-    }
-
+    /* cut-out product on accent glow, centered copy */
     case 'spotlight': {
-      let y = H - 110;
-      if (price) {
-        ctx.font = BODY(44);
-        const tw = ctx.measureText(price).width;
-        const pw = tw + 76, ph = 92;
-        ctx.fillStyle = accent;
-        rounded(ctx, (W - pw) / 2, y - ph, pw, ph, ph / 2);
-        ctx.fill();
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.fillText(price, W / 2, y - ph / 2 + 2);
-        y -= ph + 44;
-      }
-      if (name) {
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#FFFFFF';
-        fitText(ctx, name, W - 160, HEAD, 72);
-        ctx.fillText(name, W / 2, y - 30, W - 160);
+      let y = H - 118;
+      if (price) { pill(ctx, price, W / 2, y - 46, accent, m.onAccent, 46); y -= 148; }
+      if (name) { ctx.textAlign = 'center'; ctx.fillStyle = m.text; fitText(ctx, name, W - 160, HEAD, 74); ctx.fillText(name, W / 2, y, W - 160); }
+      if (shop) { ctx.textAlign = 'center'; ctx.font = BODY(30); ctx.fillStyle = m.sub; ctx.fillText(shop.toUpperCase(), W / 2, 90); }
+      break;
+    }
+
+    /* photo top, magazine panel below with big name + rule */
+    case 'editorial': {
+      const py = media.h;
+      ctx.fillStyle = m.panel; ctx.fillRect(0, py, W, H - py);
+      const cx = 64;
+      let y = py + 92;
+      if (shop) { ctx.textAlign = 'left'; ctx.font = BODY(28); ctx.fillStyle = accent; ctx.fillText(shop.toUpperCase(), cx, y); y += 30; }
+      ctx.fillStyle = accent; ctx.fillRect(cx, y, 64, 6); y += 54;
+      if (name) { ctx.textAlign = 'left'; ctx.fillStyle = m.text; fitText(ctx, name, W - 128, HEAD, 72); ctx.fillText(name, cx, y, W - 128); y += 88; }
+      if (price) { ctx.textAlign = 'left'; ctx.font = BODY(48); ctx.fillStyle = m.sub; ctx.fillText(price, cx, y); }
+      break;
+    }
+
+    /* photo inside a double border + centered caption chip */
+    case 'frame': {
+      ctx.strokeStyle = accent; ctx.lineWidth = 12; ctx.strokeRect(40, 40, W - 80, H - 80);
+      ctx.strokeStyle = (settings.postMode ?? "dark") === 'light' ? scrim(0.9) : 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2; ctx.strokeRect(62, 62, W - 124, H - 124);
+      const label = [name, price].filter(Boolean).join('   ·   ');
+      if (label) {
+        const px = fitText(ctx, label, W - 300, BODY, 42);
+        ctx.font = BODY(px); const tw = ctx.measureText(label).width;
+        const bw = tw + 96, bh = 104;
+        ctx.fillStyle = m.panel; rounded(ctx, (W - bw) / 2, H - 168, bw, bh, 20); ctx.fill();
+        ctx.fillStyle = m.text; ctx.textAlign = 'center'; ctx.fillText(label, W / 2, H - 168 + bh / 2 + 2);
       }
       if (shop) {
-        ctx.textAlign = 'center';
-        ctx.font = BODY(30);
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.fillText(shop.toUpperCase(), W / 2, 84);
+        ctx.font = BODY(30); const tw = ctx.measureText(shop).width;
+        pill(ctx, shop, W / 2, 96, accent, m.onAccent, 30);
+        void tw;
       }
       break;
     }
 
-    case 'minimal': {
-      let y = matte.y + matte.h + 110;
-      if (name) {
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#140A0E';
-        fitText(ctx, name, W - 200, HEAD, 64);
-        ctx.fillText(name, W / 2, y, W - 200);
-        y += 96;
-      }
+    /* playful — rotated price sticker + shop tag */
+    case 'sticker': {
       if (price) {
-        ctx.textAlign = 'center';
-        ctx.font = BODY(46);
-        ctx.fillStyle = accent;
-        ctx.fillText(price, W / 2, y);
+        ctx.save();
+        ctx.translate(W - 176, 176); ctx.rotate(-0.14);
+        ctx.font = HEAD(52); const tw = ctx.measureText(price).width;
+        const r = Math.max(tw / 2 + 46, 96);
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fillStyle = accent; ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, r - 12, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = m.onAccent; ctx.textAlign = 'center'; ctx.fillText(price, 0, 2);
+        ctx.restore();
       }
-      if (shop) {
-        ctx.textAlign = 'center';
-        ctx.font = BODY(28);
-        ctx.fillStyle = 'rgba(20,10,14,0.45)';
-        ctx.fillText(shop.toUpperCase(), W / 2, H - 70);
-      }
-      // thin accent baseline under the media
-      ctx.fillStyle = accent;
-      ctx.fillRect(W / 2 - 60, matte.y + matte.h + 34, 120, 8);
-      break;
-    }
-
-    case 'split': {
-      const bandY = matte.h;
-      ctx.fillStyle = '#FBF6F4';
-      ctx.fillRect(0, bandY, W, H - bandY);
-      ctx.fillStyle = accent;
-      ctx.fillRect(0, bandY, W, 8);
-      const cx = 56, cw = price ? W - 420 : W - 112;
-      if (name) {
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#140A0E';
-        fitText(ctx, name, cw, HEAD, 58);
-        ctx.fillText(name, cx, bandY + (H - bandY) * 0.42, cw);
-      }
-      if (shop) {
-        ctx.textAlign = 'left';
-        ctx.font = BODY(30);
-        ctx.fillStyle = 'rgba(20,10,14,0.5)';
-        ctx.fillText(shop, cx, bandY + (H - bandY) * 0.72);
-      }
-      if (price) {
-        ctx.font = BODY(42);
-        const tw = ctx.measureText(price).width;
-        const pw = tw + 68, ph = 88;
-        ctx.fillStyle = accent;
-        rounded(ctx, W - pw - 52, bandY + (H - bandY - ph) / 2, pw, ph, ph / 2);
-        ctx.fill();
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.fillText(price, W - pw / 2 - 52, bandY + (H - bandY) / 2 + 2);
-      }
-      break;
-    }
-
-    case 'polaroid': {
-      let y = H - 170;
-      if (name) {
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#140A0E';
-        fitText(ctx, name, W - 200, HEAD, 60);
-        ctx.fillText(name, W / 2, y, W - 200);
-        y += 84;
-      }
-      const line = [price, shop].filter(Boolean).join('  —  ');
-      if (line) {
-        ctx.textAlign = 'center';
-        ctx.font = BODY(38);
-        ctx.fillStyle = accent;
-        ctx.fillText(line, W / 2, y);
+      if (name || shop) {
+        const label = name || shop;
+        ctx.font = HEAD(46); const tw = ctx.measureText(label).width;
+        const bw = Math.min(tw + 72, W - 96), bh = 100;
+        ctx.save(); ctx.translate(56, H - 120); ctx.rotate(-0.03);
+        ctx.fillStyle = m.panel; rounded(ctx, 0, 0, bw, bh, 16); ctx.fill();
+        ctx.fillStyle = accent; ctx.fillRect(0, 0, 10, bh);
+        ctx.fillStyle = m.text; ctx.textAlign = 'left'; ctx.font = HEAD(46); ctx.fillText(label, 32, bh / 2 + 2, bw - 56);
+        ctx.restore();
       }
       break;
     }
@@ -550,7 +473,8 @@ export async function renderCarouselSlide(canvas: HTMLCanvasElement, input: Caro
   }
 
   // Media card per slide, slightly offset alternately so the flow feels alive
-  const img = await loadImage(proxied(input.images[index % input.images.length], 840, 900));
+  const carSrc = input.images[index % input.images.length];
+  const img = await loadImage(needsProxy(carSrc) ? proxied(carSrc, 840, 900) : carSrc);
   const cardW = tpl === 'gallery' ? 900 : 820;
   const cardH = tpl === 'gallery' ? 980 : 880;
   const cx = (W - cardW) / 2;

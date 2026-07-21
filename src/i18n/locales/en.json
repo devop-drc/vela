@@ -2043,7 +2043,18 @@
     "vid_async_hint": "Videos render in the background — you can leave this page; the result appears here and in your media.",
     "pv_likes": "127 likes",
     "pv_translation": "See translation",
-    "pv_reply": "Send message…"
+    "pv_reply": "Send message…",
+    "template_card": "Catalog",
+    "template_editorial": "Editorial",
+    "template_sticker": "Sticker",
+    "post_mode": "Background",
+    "mode_light": "Light",
+    "mode_dark": "Dark",
+    "group_design": "Design",
+    "group_design_desc": "Template, colors and what shows on the post.",
+    "group_photo": "Product photo",
+    "group_caption": "Caption",
+    "car_splits": "Splits into {{count}} connected slides"
   },
   "bulk_publish": {
     "action": "Post to Instagram ({{count}})",

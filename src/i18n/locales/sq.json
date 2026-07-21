@@ -2043,7 +2043,18 @@
     "vid_async_hint": "Videot gjenerohen në sfond — mund ta lësh faqen; rezultati shfaqet këtu dhe te media jote.",
     "pv_likes": "127 pëlqime",
     "pv_translation": "Shiko përkthimin",
-    "pv_reply": "Dërgo mesazh…"
+    "pv_reply": "Dërgo mesazh…",
+    "template_card": "Katalog",
+    "template_editorial": "Editorial",
+    "template_sticker": "Ngjitëse",
+    "post_mode": "Sfondi",
+    "mode_light": "I çelët",
+    "mode_dark": "I errët",
+    "group_design": "Dizajni",
+    "group_design_desc": "Template, ngjyrat dhe çfarë shfaqet në postim.",
+    "group_photo": "Fotoja e produktit",
+    "group_caption": "Përshkrimi",
+    "car_splits": "Ndahet në {{count}} slide të lidhura"
   },
   "bulk_publish": {
     "action": "Posto në Instagram ({{count}})",

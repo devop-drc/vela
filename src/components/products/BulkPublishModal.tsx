@@ -220,7 +220,7 @@ export const BulkPublishModal = ({ open, onOpenChange, products, onQueued }: {
             <p className="mb-1.5 text-center font-semibold">{t("bulk_publish.group_post")}</p>
             <div className="flex gap-2">
               <Column kind="post_image" icon={ImageIcon} />
-              <Column kind="post_video" icon={Clapperboard} />
+              {/* Video disabled for now: <Column kind="post_video" icon={Clapperboard} /> */}
             </div>
           </div>
 
