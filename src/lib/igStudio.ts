@@ -66,14 +66,45 @@ export const TEMPLATE_IDS: TemplateId[] = ['plain', 'badge', 'banner', 'gradient
 /* ── background removal (client-side, lazy-loaded, cached per URL) ── */
 const cutoutCache = new Map<string, string>();
 
-/** Cut the product out of its background; returns an object URL. */
+/**
+ * Cut the product out of its background; returns an object URL to a PNG.
+ * Robust: the source is first fetched to a same-origin blob (the model needs
+ * pixel access — a cross-origin URL would be tainted/blocked), the proxy is
+ * contained-not-cropped so nothing is lost, and a clear error is thrown if
+ * the model can't run so the caller can surface it and revert the toggle.
+ */
 export async function removeImageBackground(url: string): Promise<string> {
   const hit = cutoutCache.get(url);
   if (hit) return hit;
-  const { removeBackground } = await import('@imgly/background-removal');
-  // Route through wsrv for CORS + a sane size before the model runs.
-  const blob = await removeBackground(proxied(url, 1080, 1350), { output: { format: 'image/png' } });
-  const objectUrl = URL.createObjectURL(blob);
+
+  // Fetch through the proxy to a blob so the model gets real, CORS-clean
+  // pixels regardless of the source CDN's headers.
+  const fetchSource = async (): Promise<Blob> => {
+    const proxiedUrl = `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=1080&h=1080&fit=inside&output=png`;
+    for (const src of [proxiedUrl, url]) {
+      try {
+        const res = await fetch(src, { mode: 'cors' });
+        if (res.ok) {
+          const blob = await res.blob();
+          if (blob.size > 0) return blob;
+        }
+      } catch { /* try the next source */ }
+    }
+    throw new Error('Could not load the image for background removal.');
+  };
+
+  let removeBackground: typeof import('@imgly/background-removal').removeBackground;
+  try {
+    ({ removeBackground } = await import('@imgly/background-removal'));
+  } catch {
+    throw new Error('Background remover failed to load. Check your connection and try again.');
+  }
+
+  const source = await fetchSource();
+  const out = await removeBackground(source, {
+    output: { format: 'image/png', quality: 0.9 },
+  });
+  const objectUrl = URL.createObjectURL(out);
   cutoutCache.set(url, objectUrl);
   return objectUrl;
 }

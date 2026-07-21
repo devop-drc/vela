@@ -19,6 +19,7 @@ import {
   type StudioSettings, type MediaKind, type CarouselTemplateId, type VideoTemplateId, type TemplateId,
 } from "@/lib/igStudio";
 import { ProductPromo } from "@/compositions/ProductPromo";
+import { IgChoices } from "@/components/products/IgStudioGlyphs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { showError, showSuccess } from "@/utils/toast";
@@ -354,36 +355,22 @@ const InstagramStudio = () => {
                   </div>
                 ))}
               </div>
-              <div className="space-y-4 sm:col-span-2 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0">
-                <div className="space-y-2">
-                  <Label>{t("ig_studio.structure")}</Label>
-                  <Select value={settings.captionStyle.structure} onValueChange={(v) => setCaption({ structure: v as never })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{["descriptive", "paragraph", "structured", "minimal"].map((v) => <SelectItem key={v} value={v}>{t(`ig_studio.structure_${v}`)}</SelectItem>)}</SelectContent>
-                  </Select>
+              <div className="space-y-4 sm:col-span-2">
+                <IgChoices label={t("ig_studio.structure")} kind="structure"
+                  options={["descriptive", "paragraph", "structured", "minimal"].map((v) => ({ value: v, label: t(`ig_studio.structure_${v}`) }))}
+                  value={settings.captionStyle.structure} onChange={(v) => setCaption({ structure: v as never })} />
+                <IgChoices label={t("ig_studio.tone")} kind="tone"
+                  options={["friendly", "professional", "luxury", "playful"].map((v) => ({ value: v, label: t(`ig_studio.tone_${v}`) }))}
+                  value={settings.captionStyle.tone} onChange={(v) => setCaption({ tone: v as never })} />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <IgChoices label={t("ig_studio.emojis")} kind="emojis" cols={3}
+                    options={["none", "light", "rich"].map((v) => ({ value: v, label: t(`ig_studio.emojis_${v}`) }))}
+                    value={settings.captionStyle.emojis} onChange={(v) => setCaption({ emojis: v as never })} />
+                  <IgChoices label={t("ig_studio.language")} kind="language" cols={2}
+                    options={[{ value: "sq", label: "Shqip" }, { value: "en", label: "English" }]}
+                    value={settings.captionStyle.language} onChange={(v) => setCaption({ language: v as never })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>{t("ig_studio.tone")}</Label>
-                  <Select value={settings.captionStyle.tone} onValueChange={(v) => setCaption({ tone: v as never })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{["friendly", "professional", "luxury", "playful"].map((v) => <SelectItem key={v} value={v}>{t(`ig_studio.tone_${v}`)}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t("ig_studio.emojis")}</Label>
-                  <Select value={settings.captionStyle.emojis} onValueChange={(v) => setCaption({ emojis: v as never })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{["none", "light", "rich"].map((v) => <SelectItem key={v} value={v}>{t(`ig_studio.emojis_${v}`)}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t("ig_studio.language")}</Label>
-                  <Select value={settings.captionStyle.language} onValueChange={(v) => setCaption({ language: v as never })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="sq">Shqip</SelectItem><SelectItem value="en">English</SelectItem></SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 sm:col-span-2">
                   <div className="flex items-center justify-between">
                     <Label>{t("ig_studio.hashtags")}</Label>
                     <span className="text-sm text-muted-foreground">{settings.captionStyle.hashtags}</span>
@@ -395,10 +382,9 @@ const InstagramStudio = () => {
               <div className="space-y-4 border-t pt-4 sm:col-span-2 sm:grid sm:grid-cols-2 sm:gap-5 sm:space-y-0">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1.5"><ImageIcon className="h-3.5 w-3.5" />{t("ig_studio.fit")}</Label>
-                  <Select value={settings.transform.fit} onValueChange={(v) => setTransform({ fit: v as "cover" | "contain" })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="cover">{t("ig_studio.fit_cover")}</SelectItem><SelectItem value="contain">{t("ig_studio.fit_contain")}</SelectItem></SelectContent>
-                  </Select>
+                  <IgChoices kind="fit" cols={2}
+                    options={[{ value: "cover", label: t("ig_studio.fit_cover") }, { value: "contain", label: t("ig_studio.fit_contain") }]}
+                    value={settings.transform.fit} onChange={(v) => setTransform({ fit: v as "cover" | "contain" })} />
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
                   <div className="min-w-0">
@@ -484,12 +470,11 @@ const InstagramStudio = () => {
                     ))}
                   </div>
                   <div className="flex flex-wrap items-end gap-3">
-                    <div className="space-y-2">
+                    <div className="w-full max-w-xs space-y-2 sm:w-56">
                       <Label>{t("ig_studio.vid_format")}</Label>
-                      <Select value={videoFormat} onValueChange={(v) => setVideoFormat(v as VideoFormat)}>
-                        <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-                        <SelectContent>{VIDEO_FORMATS.map((f) => <SelectItem key={f} value={f}>{t(`ig_studio.vidfmt_${f}`)}</SelectItem>)}</SelectContent>
-                      </Select>
+                      <IgChoices kind="vidfmt" cols={3}
+                        options={VIDEO_FORMATS.map((f) => ({ value: f, label: t(`ig_studio.vidfmt_${f}`) }))}
+                        value={videoFormat} onChange={(v) => setVideoFormat(v as VideoFormat)} />
                     </div>
                     <Button onClick={queueVideo} disabled={renderJob && !["done", "failed"].includes(renderJob.status)}>
                       <Clapperboard className="mr-2 h-4 w-4" />{t("ig_studio.vid_generate")}
