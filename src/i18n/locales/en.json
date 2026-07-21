@@ -1878,7 +1878,9 @@
     "design_studio": "My Studio design ({{template}})",
     "adj_scale": "Zoom",
     "adj_offsetX": "Position X",
-    "adj_offsetY": "Position Y"
+    "adj_offsetY": "Position Y",
+    "kind_single": "Single photo",
+    "kind_carousel": "Carousel ({{count}} slides)"
   },
   "ig_status": {
     "column": "Instagram",

@@ -1878,7 +1878,9 @@
     "design_studio": "Dizajni im i Studios ({{template}})",
     "adj_scale": "Zmadhimi",
     "adj_offsetX": "Pozicioni X",
-    "adj_offsetY": "Pozicioni Y"
+    "adj_offsetY": "Pozicioni Y",
+    "kind_single": "Një foto",
+    "kind_carousel": "Carousel ({{count}} slide)"
   },
   "ig_status": {
     "column": "Instagram",

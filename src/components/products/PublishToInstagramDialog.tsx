@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useStudioSettings } from "@/hooks/useStudioSettings";
 import { useShop } from "@/contexts/ShopContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { renderTemplate, renderToJpegBlob, removeImageBackground, TEMPLATE_IDS, DEFAULT_TRANSFORM, type TemplateId, type ImageTransform } from "@/lib/igStudio";
+import { renderTemplate, renderToJpegBlob, renderCarouselToBlobs, removeImageBackground, TEMPLATE_IDS, DEFAULT_TRANSFORM, type TemplateId, type ImageTransform } from "@/lib/igStudio";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Spinner } from "@/components/ui/spinner";
@@ -37,6 +37,7 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
   const { userId } = useAuth();
   const [design, setDesign] = useState<TemplateId | "studio">("studio");
   const [adjust, setAdjust] = useState<ImageTransform>(DEFAULT_TRANSFORM);
+  const [postKind, setPostKind] = useState<"single" | "carousel">("single");
   const [cutoutUrl, setCutoutUrl] = useState<string | null>(null);
   const [cutoutBusy, setCutoutBusy] = useState(false);
   const previewRef = useRef<HTMLCanvasElement>(null);
@@ -140,10 +141,26 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
     if (!caption.trim()) { showError(t("ig_publish.caption_required")); return; }
     setPublishing(true);
     try {
-      const finalImage = await resolveImageForPublish();
-      const { data, error } = await supabase.functions.invoke("publish-product-post", {
-        body: { productId: product.id, mode: "publish", caption, imageUrl: finalImage },
-      });
+      let body: Record<string, unknown>;
+      if (postKind === "carousel" && images.length >= 2) {
+        // Render the connected slides, upload them, publish as a CAROUSEL.
+        const blobs = await renderCarouselToBlobs({
+          images, name: product.name, price: product.price ?? null,
+          currency: product.currency || "ALL", shopName: shopDetails?.shop_name || "",
+          settings: studio, slideCount: Math.min(images.length, 10),
+        });
+        const urls: string[] = [];
+        for (const [i, blob] of blobs.entries()) {
+          const path = `${userId}/ig-designs/${product.id}-car${i}-${Date.now()}.jpg`;
+          const { error: upErr } = await supabase.storage.from("product-media").upload(path, blob, { contentType: "image/jpeg", cacheControl: "31536000" });
+          if (upErr) throw new Error(upErr.message);
+          urls.push(supabase.storage.from("product-media").getPublicUrl(path).data.publicUrl);
+        }
+        body = { productId: product.id, mode: "publish", caption, imageUrls: urls };
+      } else {
+        body = { productId: product.id, mode: "publish", caption, imageUrl: await resolveImageForPublish() };
+      }
+      const { data, error } = await supabase.functions.invoke("publish-product-post", { body });
       if (error) throw new Error(error.message);
       if (data?.error === "reconnect_required") { setNeedsReconnect(true); return; }
       if (data?.error) throw new Error(data.error);
@@ -219,6 +236,17 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
                 </div>
                 <Textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={7} disabled={publishing} />
               </div>
+              {images.length >= 2 && (
+                <div className="flex gap-1.5">
+                  {(["single", "carousel"] as const).map((k) => (
+                    <button key={k} type="button" disabled={publishing} onClick={() => setPostKind(k)}
+                      className={cn("rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                        postKind === k ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground")}>
+                      {k === "single" ? t("ig_publish.kind_single") : t("ig_publish.kind_carousel", { count: Math.min(images.length, 10) })}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="space-y-1.5">
                 <span className="flex items-center gap-1.5 text-sm font-medium">
                   <Palette className="h-3.5 w-3.5" />
