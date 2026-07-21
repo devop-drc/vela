@@ -1847,5 +1847,24 @@
     "time_ago": "ago",
     "product": "Product",
     "powered_by_vela": "Powered by Vela"
+  },
+  "ig_publish": {
+    "title": "Publish to Instagram",
+    "description": "The system writes the caption from the product's details — review it, pick the photo, and post.",
+    "caption_label": "Caption",
+    "image_label": "Photo",
+    "regenerate": "Regenerate",
+    "publish": "Publish",
+    "publishing": "Publishing…",
+    "published": "Posted to Instagram!",
+    "view_post": "View post",
+    "live": "Your post is live on Instagram.",
+    "already_published": "This product is already linked to an Instagram post — publishing again creates a new post.",
+    "no_image": "This product has no image to post. Add one first.",
+    "caption_required": "Write a caption before publishing.",
+    "reconnect_needed": "Instagram needs to be reconnected to allow publishing (a new permission is required).",
+    "go_to_settings": "Go to Settings",
+    "preview_failed": "Couldn't prepare the post: {{message}}",
+    "publish_failed": "Publishing failed: {{message}}"
   }
 }

@@ -5,10 +5,11 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Package, Settings, Wrench, Layers, Tag, ChevronRight, Save, Filter, Star } from "lucide-react";
+import { Edit, Trash2, Package, Settings, Wrench, Layers, Tag, ChevronRight, Save, Filter, Star, Instagram } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductReviewsManager } from "./ProductReviewsManager";
+import { PublishToInstagramDialog } from "@/components/products/PublishToInstagramDialog";
 import { useProductRating } from "@/hooks/useProductRating";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
@@ -34,7 +35,7 @@ const toStockTone = (n: number): StatusTone => {
   return s === "out" || s === "critical" ? "danger" : s === "low" ? "warning" : "success";
 };
 
-export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting, specs }: { product: any; mediaItems: any[]; onEdit: () => void; onDelete: () => void; isSubmitting: boolean; specs?: any[] }) => {
+export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmitting, specs, autoOpenIgPublish, onIgPublishPrompted }: { product: any; mediaItems: any[]; onEdit: () => void; onDelete: () => void; isSubmitting: boolean; specs?: any[]; autoOpenIgPublish?: boolean; onIgPublishPrompted?: () => void }) => {
   const { t } = useTranslation();
   const { shopDetails, convertCurrency } = useShop();
   const [options, setOptions] = useState<any[]>([]);
@@ -42,6 +43,18 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
   const [isLoadingOptions, setIsLoadingOptions] = useState(true);
   const [stockModalOpen, setStockModalOpen] = useState(false);
   const [reviewsOpen, setReviewsOpen] = useState(false);
+  const [igPublishOpen, setIgPublishOpen] = useState(false);
+  const [igPublishedNow, setIgPublishedNow] = useState(false);
+
+  // A freshly-saved manual product lands here with autoOpenIgPublish set —
+  // open the publish dialog once and hand the flag back.
+  useEffect(() => {
+    if (autoOpenIgPublish && !product?.instagram_post_id) {
+      setIgPublishOpen(true);
+      onIgPublishPrompted?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenIgPublish]);
   const ratingSummary = useProductRating(product?.id);
   const [stockEdits, setStockEdits] = useState<Record<string, number>>({});
   const [isSavingStock, setIsSavingStock] = useState(false);
@@ -400,11 +413,18 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
           <Star className="mr-2 h-4 w-4" />
           {t('product_view.reviews')}{ratingSummary && ratingSummary.count > 0 ? ` (${ratingSummary.count} · ★ ${ratingSummary.avg.toFixed(1)})` : ''}
         </Button>
+        {!product.instagram_post_id && !igPublishedNow && (
+          <Button variant="outline" onClick={() => setIgPublishOpen(true)} disabled={isSubmitting}>
+            <Instagram className="mr-2 h-4 w-4" />{t('ig_publish.title')}
+          </Button>
+        )}
         <Button variant="outline" onClick={onEdit} disabled={isSubmitting}><Edit className="mr-2 h-4 w-4" />{t('common.edit')}</Button>
         <Button variant="destructive" onClick={onDelete} disabled={isSubmitting}><Trash2 className="mr-2 h-4 w-4" />{t('common.delete')}</Button>
       </DialogFooter>
 
       <ProductReviewsManager open={reviewsOpen} onOpenChange={setReviewsOpen} productId={product.id} productName={product.name} />
+
+      <PublishToInstagramDialog open={igPublishOpen} onOpenChange={setIgPublishOpen} product={product} onPublished={() => setIgPublishedNow(true)} />
 
       {/* Stock Management Modal */}
       <Dialog open={stockModalOpen} onOpenChange={(open) => { if (!open) { setStockSearch(''); setStockFilter('all'); } setStockModalOpen(open); }}>

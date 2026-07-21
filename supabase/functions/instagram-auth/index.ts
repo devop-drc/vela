@@ -228,7 +228,7 @@ serve(async (req) => {
       const statePayload = JSON.stringify({ origin, userId }); // Include userId in state
       const encodedState = btoa(statePayload);
       // Ensure these scopes match or are a subset of what's requested in Login.tsx
-      const scopes = 'public_profile,email,pages_show_list,instagram_basic,pages_read_engagement';
+      const scopes = 'public_profile,email,pages_show_list,instagram_basic,pages_read_engagement,instagram_content_publish';
 
       const authUrl = new URL('https://www.facebook.com/v19.0/dialog/oauth');
       authUrl.searchParams.set('client_id', FACEBOOK_APP_ID);

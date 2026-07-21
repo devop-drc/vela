@@ -70,6 +70,7 @@ interface ProductEditorProps {
 export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit = false }: ProductEditorProps) => {
   const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
+  const [promptIgPublish, setPromptIgPublish] = useState(false);
 
   // New products should open straight into the edit form.
   useEffect(() => {
@@ -293,7 +294,12 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
                     }
                   }}
                   onClose={onClose}
-                  onUpdate={onUpdate}
+                  onUpdate={() => {
+                    // A brand-new manual product just got saved — offer to
+                    // post it on Instagram as soon as view mode opens.
+                    if (startInEdit) setPromptIgPublish(true);
+                    onUpdate();
+                  }}
                   isSubmitting={isSubmitting}
                   isEditing={isEditing}
                   setMediaItems={setMediaItems}
@@ -311,6 +317,8 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
                 onDelete={() => setIsDeleting(true)}
                 isSubmitting={isSubmitting}
                 specs={specs}
+                autoOpenIgPublish={promptIgPublish}
+                onIgPublishPrompted={() => setPromptIgPublish(false)}
               />
             )}
           </AnimatePresence>

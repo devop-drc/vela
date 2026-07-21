@@ -1847,5 +1847,24 @@
     "time_ago": "më parë",
     "product": "Produkt",
     "powered_by_vela": "Mundësuar nga Vela"
+  },
+  "ig_publish": {
+    "title": "Publiko në Instagram",
+    "description": "Sistemi e shkruan përshkrimin nga të dhënat e produktit — rishikoje, zgjidh foton dhe posto.",
+    "caption_label": "Përshkrimi",
+    "image_label": "Fotoja",
+    "regenerate": "Rigjenero",
+    "publish": "Publiko",
+    "publishing": "Duke publikuar…",
+    "published": "U postua në Instagram!",
+    "view_post": "Shiko postimin",
+    "live": "Postimi yt është live në Instagram.",
+    "already_published": "Ky produkt është i lidhur me një postim ekzistues në Instagram — publikimi krijon një postim të ri.",
+    "no_image": "Ky produkt nuk ka foto për t'u postuar. Shto një foto fillimisht.",
+    "caption_required": "Shkruaj një përshkrim para publikimit.",
+    "reconnect_needed": "Instagrami duhet rilidhur për të lejuar publikimin (kërkohet një leje e re).",
+    "go_to_settings": "Shko te Cilësimet",
+    "preview_failed": "Postimi nuk u përgatit dot: {{message}}",
+    "publish_failed": "Publikimi dështoi: {{message}}"
   }
 }
