@@ -92,7 +92,11 @@ export const RESPONSE_SCHEMA = {
       required: ['title'],
     },
   },
-  required: ['isProductPost'],
+  // Nullable-but-REQUIRED: with thinkingBudget 0/low, 2.5-flash happily
+  // emits a legally-minimal object ({isProductPost:true, productName}) and
+  // stops (~57 output tokens observed live). Requiring the keys forces the
+  // model to consider each field; null stays allowed for genuine absences.
+  required: ['isProductPost', 'productName', 'productNameSq', 'categoryName', 'typeName', 'description', 'price', 'currency', 'inventory', 'specifications', 'options'],
 };
 
 /* ── category inference ───────────────────────────────────────────────── */

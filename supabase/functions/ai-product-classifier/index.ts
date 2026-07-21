@@ -166,7 +166,10 @@ serve(async (req) => {
         responseMimeType: "application/json",
         ...(withSchema ? { responseSchema: RESPONSE_SCHEMA } : {}),
         temperature: 0.2,
-        thinkingConfig: { thinkingBudget: 0 },
+        // 512 (not 0): zero thinking + responseSchema makes 2.5-flash emit
+        // truncated minimal objects AND corrupt non-ASCII output (live-
+        // confirmed: 57-token responses, U+FFFD in Albanian diacritics).
+        thinkingConfig: { thinkingBudget: 512 },
       },
     });
     const callGemini = async (withSchema: boolean) => {
