@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { WAITLIST_MODE, CONTACT_EMAIL, scrollToInterest, waitlistCtaLabel } from "@/config/launch";
+import { WAITLIST_MODE, CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_TEL, scrollToInterest, waitlistCtaLabel } from "@/config/launch";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import gsap from "gsap";
@@ -8,7 +8,7 @@ import Lenis from "lenis";
 import {
   Instagram, Sparkles, ShoppingBag, ArrowRight, Check, Wand2,
   Package, BarChart3, CreditCard, Lock, Search, Play,
-  TrendingUp, Bell, Sun, Moon, Mail, Send, Gift, Star, ShieldCheck,
+  TrendingUp, Bell, Sun, Moon, Mail, Phone, Send, Gift, Star, ShieldCheck,
 } from "lucide-react";
 import {
   RiTShirt2Line, RiBrushLine, RiVipDiamondLine, RiRunLine, RiHome5Line,
@@ -586,8 +586,6 @@ export default function Landing() {
   });
   const [iframeOn, setIframeOn] = useState(false);
   const [studioReady, setStudioReady] = useState(false);
-  const [interestName, setInterestName] = useState("");
-  const [interestMsg, setInterestMsg] = useState("");
   const [activeTesti, setActiveTesti] = useState(0);
   const [vp, setVp] = useState(() => ({
     w: typeof window !== "undefined" ? window.innerWidth : 1440,
@@ -1144,67 +1142,31 @@ export default function Landing() {
 
           {/* contact — lives inside the pricing section so "talk to us" sits right
               where the plan decision happens; #interest kept for deep links */}
-          <div id="interest" className="reveal ls-card glare-hover mx-auto mt-12 grid max-w-5xl scroll-mt-24 gap-7 overflow-hidden rounded-[2rem] border border-border bg-card p-5 sm:mt-16 sm:gap-10 sm:p-12 lg:grid-cols-2">
-            <div>
-              <Eyebrow>{copy.interest.badge}</Eyebrow>
-              <h3 className="mt-2 text-[1.55rem] leading-tight tracking-tight sm:mt-0 sm:text-3xl sm:leading-tight">{copy.interest.title}</h3>
-              <p className="mt-2.5 text-[15px] leading-relaxed text-muted-foreground sm:mt-3 sm:text-lg">{copy.interest.sub}</p>
-            <Magnetic>
-              <Button
-                size="lg"
-                className={cn("mt-6 w-full gap-2 rounded-full px-7 text-white hover:opacity-90 sm:mt-8 sm:w-auto", BRAND)}
-                onClick={() => {
-                  const subject = encodeURIComponent(lang === "sq" ? "Interes për Vela" : "Interested in Vela");
-                  const body = encodeURIComponent(copy.interest.placeholder);
-                  window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
-                }}
+          <div id="interest" className="reveal ls-card glare-hover mx-auto mt-12 max-w-3xl scroll-mt-24 overflow-hidden rounded-[2rem] border border-border bg-card p-6 text-center sm:mt-16 sm:p-12">
+            <Eyebrow>{copy.interest.badge}</Eyebrow>
+            <h3 className="mx-auto mt-2 max-w-xl text-[1.55rem] leading-tight tracking-tight sm:mt-3 sm:text-3xl sm:leading-tight">{copy.interest.title}</h3>
+            <p className="mx-auto mt-2.5 max-w-lg text-[15px] leading-relaxed text-muted-foreground sm:mt-3 sm:text-lg">{copy.interest.sub}</p>
+            <div className="mx-auto mt-7 grid max-w-lg gap-3 sm:grid-cols-2 sm:mt-9">
+              <a
+                href={`tel:${CONTACT_PHONE_TEL}`}
+                className={cn("group flex items-center justify-center gap-3 rounded-2xl px-5 py-4 text-white transition-opacity hover:opacity-90", BRAND)}
               >
-                <Sparkles className="h-4 w-4" /> {copy.interest.quick}
-              </Button>
-            </Magnetic>
-            <p className="mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground sm:justify-start">
-              <Mail className="h-4 w-4" /> {CONTACT_EMAIL}
-            </p>
-          </div>
-
-          {/* the written route — "or" divider separates it from the one-click CTA on phones */}
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-3 lg:hidden" aria-hidden>
-              <span className="h-px flex-1 bg-border" />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{copy.interest.or}</span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
-            <label htmlFor="interest-name" className="sr-only">{copy.interest.name}</label>
-            <Input
-              id="interest-name"
-              name="name"
-              autoComplete="name"
-              value={interestName}
-              onChange={(e) => setInterestName(e.target.value)}
-              placeholder={copy.interest.name}
-              className="h-11 rounded-xl"
-            />
-            <label htmlFor="interest-message" className="sr-only">{copy.interest.placeholder}</label>
-            <Textarea
-              id="interest-message"
-              name="message"
-              value={interestMsg}
-              onChange={(e) => setInterestMsg(e.target.value)}
-              placeholder={copy.interest.placeholder}
-              rows={5}
-              className="rounded-xl"
-            />
-            <Button
-              variant="outline"
-              className="h-11 gap-2 rounded-xl"
-              onClick={() => {
-                const subject = encodeURIComponent(lang === "sq" ? "Interes për Vela" : "Interested in Vela");
-                const bodyText = `${interestMsg || copy.interest.placeholder}${interestName ? `\n\n— ${interestName}` : ""}`;
-                window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
-              }}
-            >
-              <Send className="h-4 w-4" /> {copy.interest.send}
-            </Button>
+                <Phone className="h-5 w-5 shrink-0" />
+                <span className="text-left">
+                  <span className="block text-[11px] font-medium uppercase tracking-[0.14em] opacity-80">{lang === "sq" ? "Na telefono" : "Call us"}</span>
+                  <span className="block text-[15px] font-semibold sm:text-base" dir="ltr">{CONTACT_PHONE}</span>
+                </span>
+              </a>
+              <a
+                href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(lang === "sq" ? "Interes për Vela" : "Interested in Vela")}`}
+                className="group flex items-center justify-center gap-3 rounded-2xl border border-border bg-background px-5 py-4 transition-colors hover:border-primary/40 hover:bg-accent"
+              >
+                <Mail className="h-5 w-5 shrink-0 text-primary" />
+                <span className="min-w-0 text-left">
+                  <span className="block text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{lang === "sq" ? "Na shkruaj" : "Email us"}</span>
+                  <span className="block truncate text-[14px] font-semibold sm:text-[15px]">{CONTACT_EMAIL}</span>
+                </span>
+              </a>
             </div>
           </div>
         </div>
