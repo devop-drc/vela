@@ -36,6 +36,7 @@ import { C4MicroOrders, C3MicroDm, MICRO_ORDERS_FRAMES, MICRO_DM_FRAMES } from "
 import { C1MacroDark, C2MacroLight, C5BeforeAfter, MACRO_DARK_FRAMES, MACRO_LIGHT_FRAMES, BEFORE_AFTER_FRAMES } from "./compositions/marketing/nextgen/NextgenMacro";
 import { C6Matrix, C7StatCard, C8TrustProof, STILL_FRAMES } from "./compositions/marketing/nextgen/NextgenStills";
 import { NightfallProof, DaybreakProof, NIGHTFALL_FRAMES, DAYBREAK_FRAMES } from "./compositions/marketing/nextgen/ProofV2";
+import { LaunchDmToShop, LAUNCH_DM_FRAMES } from "./compositions/campaign/Launch";
 import { getVideoMetadata } from "@remotion/media-utils";
 
 const common = { fps: VIDEO.fps, width: VIDEO.width, height: VIDEO.height };
@@ -159,6 +160,9 @@ export const RemotionRoot = () => (
     <Composition id="CleanReelPay" component={CleanReelPay} durationInFrames={CLEAN_PAY_FRAMES} fps={30} width={1080} height={1920} />
     <Composition id="CleanPostImport" component={CleanPostImport} durationInFrames={CLEAN_IMPORT_FRAMES} fps={30} width={1080} height={1350} />
     <Composition id="CleanPostStudio" component={CleanPostStudio} durationInFrames={CLEAN_STUDIO_FRAMES} fps={30} width={1080} height={1350} />
+    {/* ── Launch campaign (content-plan.md) ── */}
+    <Composition id="LaunchDmToShop" component={LaunchDmToShop} durationInFrames={LAUNCH_DM_FRAMES} {...story} />
+
     {/* ── Rebuilt look — proofs (Nightfall dark hero · Daybreak cream editorial) ── */}
     <Composition id="NightfallProof" component={NightfallProof} durationInFrames={NIGHTFALL_FRAMES} {...story} />
     <Composition id="DaybreakProof" component={DaybreakProof} durationInFrames={DAYBREAK_FRAMES} {...story} />

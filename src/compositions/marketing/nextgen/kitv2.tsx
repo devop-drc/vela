@@ -8,7 +8,7 @@ import React from "react";
 import { AbsoluteFill, Img, interpolate, Easing, useCurrentFrame, useVideoConfig } from "remotion";
 import { springIn } from "../../../lib/motion";
 import { BRAND, CLASH, INTER, ensureClash } from "./kit";
-export { shot, DeviceMockup, BRAND, CLASH, INTER, ensureClash } from "./kit";
+export { shot, DeviceMockup, BRAND, CLASH, INTER, ensureClash, ShipWhite, ShipColored } from "./kit";
 
 export const CREAM = "#F5F0E8";
 export const INK = "#161016";
