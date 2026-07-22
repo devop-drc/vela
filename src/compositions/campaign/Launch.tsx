@@ -119,7 +119,7 @@ export const LaunchDmToShop: React.FC = () => {
       {/* ── Scene 2 · Transformation ── */}
       <AbsoluteFill style={{ opacity: s2o, alignItems: "center", justifyContent: "center", gap: 56, padding: "150px 60px 200px" }}>
         <div style={{ ...H, ...blurIn(frame, fps, 84) }}>
-          Vela lexon postimet.<br />Krijon dyqanin <Shimmer frame={frame}>vetvetiu.</Shimmer>
+          Vela lexon postimet.<br />Krijon dyqanin<br /><Shimmer frame={frame}>automatikisht.</Shimmer>
         </div>
         <div style={{ transform: `translateY(${float(frame, 7, 34)}px)` }}>
           <ProductCard frame={frame} fps={fps} base={84} />
@@ -129,10 +129,10 @@ export const LaunchDmToShop: React.FC = () => {
       {/* ── Scene 3 · Order & payment ── */}
       <AbsoluteFill style={{ opacity: s3o, alignItems: "center", justifyContent: "center", gap: 40, padding: "170px 70px 200px" }}>
         <div style={{ ...H, fontSize: 72, ...blurIn(frame, fps, 192) }}>
-          Pagesa me kartë ose në dorë.<br /><span style={{ color: "rgba(255,255,255,0.6)", fontSize: 52 }}>Pa mundim. Pa kod.</span>
+          Pagesa me kartë ose cash.<br /><span style={{ color: "rgba(255,255,255,0.6)", fontSize: 52 }}>Pa mundim. Pa kod.</span>
         </div>
         <div style={{ width: 720, display: "flex", flexDirection: "column", gap: 18 }}>
-          <PayRow title="Kartë · RaiAccept" sub="Pagesa në Lekë (ALL)" icon="💳" selected o={springIn(frame, fps, 206, SPRING)} />
+          <PayRow title="Kartë · RaiAccept" sub="Shumë monedha · RaiAccept" icon="💳" selected o={springIn(frame, fps, 206, SPRING)} />
           <PayRow title="Para në dorë" sub="Cash on delivery" icon="💵" o={springIn(frame, fps, 216, SPRING)} />
         </div>
         {/* order toast springs down */}

@@ -46,8 +46,8 @@ premium kit (`src/compositions/marketing/nextgen/kitv2.tsx`) and motion primitiv
 - **Format:** Remotion `1080×1920` · 30fps · **12s (360f)** · id `LaunchDmToShop`
 - **Trigger:** pattern interrupt + loss aversion. **Objective:** hook DM merchants; show orders automate.
 - **Scene 1 · Hook (0–2.5s / 0–75f):** Night bg + drifting wine glow. DM chat bubbles pop/overlap with spring (damping 12), freeze with slight tilt. Bubble text: *"Çmimi?"* · *"A keni masën M?"* · *"A bëni dërgesa në Shkodër?"* · *"Pse s'po përgjigjeni?"*. Headline blur-reveal: **"Nga haosi në DM…"**
-- **Scene 2 · Transform (2.5–6s / 75–180f):** bubbles collapse toward the ship mark; a glass product panel rises (real app UI) — IG post → structured product (**Atlete Vrapi Air · ALL 4,760 · Aktiv**). Text: **"Vela lexon postimet e tua. Krijon dyqanin vetvetiu."** (gradient keyword *vetvetiu*).
-- **Scene 3 · Order & payment (6–9s / 180–270f):** checkout sheet; payment rows highlight gold — **Kartë · RaiAccept (Lekë)** + **Para në dorë**. Order toast springs down: **"Porosi e re! · ALL 4,760 · Erion Kola, Tiranë"**. Text: **"Pagesa me kartë ose në dorë. Pa mundim. Pa kod."**
+- **Scene 2 · Transform (2.5–6s / 75–180f):** bubbles collapse toward the ship mark; a glass product panel rises (real app UI) — IG post → structured product (**Atlete Vrapi Air · ALL 4,760 · Aktiv**). Text: **"Vela lexon postimet. Krijon dyqanin automatikisht."** (gradient keyword *automatikisht*).
+- **Scene 3 · Order & payment (6–9s / 180–270f):** checkout sheet; payment rows highlight gold — **Kartë · RaiAccept · Shumë monedha** + **Para në dorë (COD)**. Order toast springs down: **"Porosi e re! · ALL 4,760 · Erion Kola, Tiranë"**. Text: **"Pagesa me kartë ose cash. Pa mundim. Pa kod."** (multi-currency — not Lekë-only).
 - **Scene 4 · CTA (9–12s / 270–360f):** ship mark + gradient GlareChip **"Kthe Instagramin në dyqan →"**, sub **"Nise falas sot · vela.al"**. Gradient drifts, chip breathes 1→1.03.
 - **CTA:** *Nise falas sot · vela.al*
 
