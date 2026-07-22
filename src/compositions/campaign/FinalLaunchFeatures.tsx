@@ -38,7 +38,7 @@ export const FinalLaunch26AutoProduct: React.FC = () => {
             <div style={{ width: 460, borderRadius: 26, overflow: "hidden", background: "#150d12", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 50px 110px -46px rgba(0,0,0,0.8)", transform: `translateY(${float(frame, 8, 10)}px)` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 20px" }}>
                 <span style={{ width: 44, height: 44, borderRadius: 999, background: GRAD }} />
-                <span style={{ fontFamily: CLASH, fontWeight: 600, fontSize: 26, color: "#fff" }}>vela_eshop</span>
+                <span style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontWeight: 600, fontSize: 26, color: "#fff" }}>vela_eshop</span>
               </div>
               <Img src={staticFile("campaign/sneaker.jpg")} style={{ width: "100%", height: 300, objectFit: "cover", display: "block" }} />
               <div style={{ padding: "16px 20px", fontFamily: INTER, fontSize: 26, color: "rgba(255,255,255,0.82)" }}>Atlete të reja 🔥 çmimi në DM</div>
