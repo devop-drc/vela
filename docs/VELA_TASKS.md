@@ -28,7 +28,12 @@ Living tracker for the current batch of requests. `[x]` done & committed · `[ ]
 
 ## 🛠️ App / Landing — TODO
 - [x] **Storefront page transitions** — soft fade + up-slide on route change (reuses GSAP Reveal; reduced-motion + motion:'none' aware; preview-safe)
-- [ ] **Hero film** — 3D perspectives for the UI demos + nicer storefront screenshot (custom + IG theme)
+- [ ] **⭐ NEXT (direct, fresh session) — Hero film 3D.** Rework the landing hero video's UI demos:
+  - Files: `src/compositions/HeroFilm.tsx` + `src/components/landing/story/*` (find where it renders app/storefront UI screenshots or device mockups).
+  - **3D perspective:** wrap the UI-demo cards in `perspective` + animated `rotateY/rotateX` (settle-in from depth + gentle sway), same technique as `FinalLaunch25AppDemo`/`29Themes` (`src/compositions/campaign/FinalLaunchDemo.tsx`) — reuse that pattern.
+  - **Nicer storefront screenshots (custom + IG):** captured this session and ready to drop in — `public/campaign/custom-storefront.png` (custom theme, `/shop/velaeshop` products page, 1440×900) and `public/campaign/ig-storefront.png` (IG theme mobile, 440×1320). Re-capture if the hero needs other framing (dev server on :5175; custom `/shop/velaeshop`, IG `/instagramShop/dyqani-yt`; Playwright loaded).
+  - Verify frame-by-frame (`npx remotion still src/remotion.ts HeroFilm out/verify/... --frame=N`) — it's a polished, pre-rendered landing asset; don't degrade it. If it renders to an alpha WebM, re-render per its existing pipeline.
+- [ ] (skipped per owner) Repost-on-restock automation
 - [ ] **Repost-on-restock** automation — when stock goes 0→positive, auto-publish a fresh IG post w/ new caption (needs design review before wiring to real publish; rate limits)
 - [ ] **New app screenshots** — capture nicer custom + IG theme (owner set up their theme; capture the *public* storefront — no login needed on my side)
 
