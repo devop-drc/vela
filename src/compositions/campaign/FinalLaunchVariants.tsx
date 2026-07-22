@@ -17,24 +17,24 @@ const Hi: React.FC<{ text: string; hi?: string }> = ({ text, hi }) => {
 };
 
 /* ── Reels cover template (centred → survives the 1:1 grid crop) ── */
-const ReelCover: React.FC<{ tag: string; title: string; hi?: string }> = ({ tag, title, hi }) => {
+const ReelCover: React.FC<{ tag?: string; title: string; hi?: string }> = ({ tag, title, hi }) => {
   const frame = useCurrentFrame(); ensureClash();
   return (
     <AbsoluteFill style={{ fontFamily: INTER }}>
       <AuroraDark frame={frame} />
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 30, padding: "0 90px" }}>
         <ShipWhite size={104} style={{ filter: "drop-shadow(0 24px 54px rgba(127,29,59,0.5))" }} />
-        <span style={{ display: "inline-block", padding: "10px 26px", borderRadius: 999, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.85)", fontFamily: CLASH, fontWeight: 700, fontSize: 26, letterSpacing: ".18em", textTransform: "uppercase" }}>{tag}</span>
-        <div style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 100, lineHeight: 1.02, letterSpacing: "-0.02em", color: "#fff", textAlign: "center", maxWidth: 900 }}><Hi text={title} hi={hi} /></div>
+        {tag ? <span style={{ display: "inline-block", padding: "10px 26px", borderRadius: 999, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.85)", fontFamily: CLASH, fontWeight: 700, fontSize: 26, letterSpacing: ".18em", textTransform: "uppercase" }}>{tag}</span> : null}
+        <div style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 96, lineHeight: 1.04, letterSpacing: "-0.02em", color: "#fff", textAlign: "center", maxWidth: 880, textWrap: "balance" } as React.CSSProperties}><Hi text={title} hi={hi} /></div>
         <div style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 38, color: "rgba(255,255,255,0.5)", marginTop: 8 }}>vela.al</div>
       </AbsoluteFill>
     </AbsoluteFill>
   );
 };
-export const CoverFL01: React.FC = () => <ReelCover tag="Meme" title="Çmimi në DM 💀" hi="DM" />;
-export const CoverFL02: React.FC = () => <ReelCover tag="Meme" title="Sa e le? 🤝" hi="le?" />;
-export const CoverFL03: React.FC = () => <ReelCover tag="Meme" title="147 DM pa përgjigje" hi="147" />;
-export const CoverFL04: React.FC = () => <ReelCover tag="Meme" title="Të vjetra a të reja?" hi="reja?" />;
+export const CoverFL01: React.FC = () => <ReelCover title="Çmimi në DM 💀" hi="DM" />;
+export const CoverFL02: React.FC = () => <ReelCover title="Sa e le? 🤝" hi="le?" />;
+export const CoverFL03: React.FC = () => <ReelCover title="147 DM pa përgjigje" hi="147" />;
+export const CoverFL04: React.FC = () => <ReelCover title="Të vjetra a të reja?" hi="reja?" />;
 export const CoverFL05: React.FC = () => <ReelCover tag="Klienti" title="45 min scroll, 0 blerje" hi="0 blerje" />;
 export const CoverFL06: React.FC = () => <ReelCover tag="Klienti" title="5 pyetje për 1 blerje" hi="5" />;
 export const CoverFL10: React.FC = () => <ReelCover tag="Udhëzues" title="Vela në 3 hapa" hi="3 hapa" />;

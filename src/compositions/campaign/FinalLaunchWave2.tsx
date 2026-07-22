@@ -113,7 +113,7 @@ export const FinalLaunch12WhyVela: React.FC = () => {
             <div style={{ position: "relative", height: 200, width: 920 }}>
               <div style={{ position: "absolute", inset: 0, opacity: l1, display: "grid", placeItems: "center" }}><div style={H(90, "#fff")}>Pse "Vela"?</div></div>
               <div style={{ position: "absolute", inset: 0, opacity: l2, display: "grid", placeItems: "center" }}>
-                <div><div style={H(58, "rgba(255,255,255,0.72)")}>Vela = velat e anijes.</div><div style={{ ...H(42, "#FACC15"), marginTop: 12 }}>Era që të çon përpara.</div></div>
+                <div><div style={H(60, "rgba(255,255,255,0.9)")}>Vela = velat e anijes</div><div style={{ ...H(44, "#FACC15"), marginTop: 12 }}>që e shtyjnë anijen përpara</div></div>
               </div>
             </div>
           </AbsoluteFill>
@@ -122,11 +122,12 @@ export const FinalLaunch12WhyVela: React.FC = () => {
       {frame >= WHY_CUT && (
         <AbsoluteFill>
           <CreamBase frame={frame} />
-          <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 40, padding: "120px 80px" }}>
-            <KineticWords text="Biznesi yt është anija." frame={frame} fps={fps} delay={WHY_CUT - 4} highlight="anija" style={{ ...H(76, INK), maxWidth: 900 }} />
-            <div style={{ fontFamily: INTER, fontSize: 40, lineHeight: 1.42, color: BRAND.muted, textAlign: "center", maxWidth: 860, opacity: b(20), transform: `translateY(${(1 - b(20)) * 40}px)` }}>Vela është era në vela — të nxjerr nga kaosi i DM-ve, drejt detit të hapur: <b style={{ color: INK }}>dyqanit tënd</b>.</div>
-            <ShipColored size={150} style={{ opacity: b(42), transform: `translateY(${(1 - b(42)) * 30 + float(frame, 8, 16)}px)` }} />
-            <div style={{ opacity: b(58), transform: `translateY(${(1 - b(58)) * 30}px)` }}><GlareChip frame={frame} fontSize={44}>Ngri velat → vela.al</GlareChip></div>
+          <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 28, padding: "90px 76px" }}>
+            <KineticWords text="Anija është biznesi yt." frame={frame} fps={fps} delay={WHY_CUT - 4} highlight="biznesi" style={{ ...H(60, INK), maxWidth: 940 }} />
+            <div style={{ fontFamily: INTER, fontSize: 38, lineHeight: 1.4, color: BRAND.muted, textAlign: "center", maxWidth: 880, opacity: b(18), transform: `translateY(${(1 - b(18)) * 40}px)` }}>Vela është mjeti që të shtyn më tutje — me <b style={{ color: INK }}>konfidencë</b>, drejt <b style={{ color: INK }}>detit të internetit</b>.</div>
+            <div style={{ fontFamily: INTER, fontSize: 30, lineHeight: 1.4, color: "rgba(31,17,23,0.5)", textAlign: "center", maxWidth: 860, opacity: b(34) }}>Prezenca online po kërkohet më shumë se kurrë; bizneset shqiptare po digjitalizohen.</div>
+            <div style={{ opacity: b(48), fontFamily: CLASH, fontWeight: 700, fontSize: 56, color: INK, textAlign: "center" }}>Mos rri në vend. <span style={{ backgroundImage: GRAD, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>Ngri velat!</span> ⛵</div>
+            <div style={{ opacity: b(62), transform: `translateY(${(1 - b(62)) * 30}px)` }}><GlareChip frame={frame} fontSize={42}>Provoje tani · linku në bio</GlareChip></div>
           </AbsoluteFill>
         </AbsoluteFill>
       )}

@@ -80,8 +80,7 @@ export const FinalLaunch24CarCta: React.FC = () => {
       <AuroraDark frame={frame} />
       <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", padding: "0 90px", gap: 40 }}>
         <ShipWhite size={170} style={{ filter: "drop-shadow(0 30px 70px rgba(127,29,59,0.55))" }} />
-        <div style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 92, lineHeight: 1.02, letterSpacing: "-0.02em", color: "#fff", textAlign: "center" }}>Ngri velat<br />me Vela.</div>
-        <div style={{ display: "inline-block", background: GRAD, color: "#fff", borderRadius: 999, padding: "26px 54px", fontFamily: CLASH, fontWeight: 700, fontSize: 46, boxShadow: "0 30px 70px -22px rgba(163,18,52,0.6)" }}>Fillo falas → vela.al</div>
+        <div style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 132, lineHeight: 1.0, letterSpacing: "-0.03em", color: "#fff", textAlign: "center" }}>Ngri <span style={{ backgroundImage: GRAD, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>velat.</span></div>
       </AbsoluteFill>
     </AbsoluteFill>
   );
