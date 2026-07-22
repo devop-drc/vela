@@ -43,6 +43,7 @@ import { LaunchLocal, LOCAL_W, LOCAL_H, LOCAL_FRAMES } from "./compositions/camp
 import { LaunchFuture, LAUNCH_FUTURE_FRAMES } from "./compositions/campaign/LaunchFuture";
 import { LaunchOffer, OFFER_W, OFFER_H, OFFER_FRAMES } from "./compositions/campaign/LaunchOffer";
 import { FinalLaunch01DmPrice, FINAL_DM_FRAMES, FinalLaunch02Haggle, FINAL_HAGGLE_FRAMES, FinalLaunch03PovNoShop, FINAL_POV_FRAMES, FinalLaunch04OldLek, FINAL_LEK_FRAMES, FinalLaunch05ClientScroll, FINAL_SCROLL_FRAMES, FinalLaunch06ClientDm, FINAL_CLIENTDM_FRAMES } from "./compositions/campaign/FinalLaunch";
+import { FinalLaunch07Split, FinalLaunch08DmMeme, FinalLaunch09Stat, STILL_FRAMES } from "./compositions/campaign/FinalLaunchStills";
 import { getVideoMetadata } from "@remotion/media-utils";
 
 const common = { fps: VIDEO.fps, width: VIDEO.width, height: VIDEO.height };
@@ -182,6 +183,9 @@ export const RemotionRoot = () => (
     <Composition id="FinalLaunch04OldLek" component={FinalLaunch04OldLek} durationInFrames={FINAL_LEK_FRAMES} {...story} />
     <Composition id="FinalLaunch05ClientScroll" component={FinalLaunch05ClientScroll} durationInFrames={FINAL_SCROLL_FRAMES} {...story} />
     <Composition id="FinalLaunch06ClientDm" component={FinalLaunch06ClientDm} durationInFrames={FINAL_CLIENTDM_FRAMES} {...story} />
+    <Composition id="FinalLaunch07Split" component={FinalLaunch07Split} durationInFrames={STILL_FRAMES} fps={30} width={1080} height={1350} />
+    <Composition id="FinalLaunch08DmMeme" component={FinalLaunch08DmMeme} durationInFrames={STILL_FRAMES} fps={30} width={1080} height={1350} />
+    <Composition id="FinalLaunch09Stat" component={FinalLaunch09Stat} durationInFrames={STILL_FRAMES} fps={30} width={1080} height={1350} />
 
     {/* ── Rebuilt look — proofs (Nightfall dark hero · Daybreak cream editorial) ── */}
     <Composition id="NightfallProof" component={NightfallProof} durationInFrames={NIGHTFALL_FRAMES} {...story} />
