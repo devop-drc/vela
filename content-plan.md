@@ -113,7 +113,7 @@ premium kit (`src/compositions/marketing/nextgen/kitv2.tsx`) and motion primitiv
 
 - [x] **#1** `LaunchDmToShop` — dark reel · DM chaos → automation · **COMPLETED** (4 scenes render-verified: hook / product-extraction / checkout-in-Lekë / CTA)
 - [x] **#2** `LaunchSteps*` — light carousel · 3 hapa · **COMPLETED** (4 slides render-verified: cover / lidh / produktet / porositë+CTA)
-- [ ] **#3** `LaunchDashboard` — light reel · live dashboard
+- [x] **#3** `LaunchDashboard` — light reel · live dashboard · **COMPLETED** (counter hook / real dashboard+order / one-tap toggle / CTA)
 - [ ] **#4** `LaunchLocal` — dark still · built for Albania
 - [ ] **#5** `LaunchFuture` — dark reel · future value
 - [ ] **#6** `LaunchOffer` — light still · lead-gen offer
