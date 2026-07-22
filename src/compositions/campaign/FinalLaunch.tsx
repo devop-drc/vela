@@ -45,7 +45,6 @@ export const FinalLaunch01DmPrice: React.FC = () => {
   const { fps } = useVideoConfig();
   ensureClash();
 
-  const aOut = interpolate(frame, [CUT - 8, CUT], [1, 0], clamp); // hard-ish cut
   const bIn = frame >= CUT ? 1 : 0;
   const b = (d: number) => springIn(frame, fps, CUT + d, SPRING);
   const point = Math.abs(Math.sin((frame - CUT - 90) / 11)) * 12;
@@ -53,8 +52,8 @@ export const FinalLaunch01DmPrice: React.FC = () => {
   return (
     <AbsoluteFill style={{ fontFamily: INTER }}>
       {/* ── DARK hook: the DM joke ── */}
-      {frame < CUT + 2 && (
-        <AbsoluteFill style={{ opacity: aOut }}>
+      {frame < CUT && (
+        <AbsoluteFill>
           <AuroraDark frame={frame} />
           <AbsoluteFill style={{ padding: "60px 70px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 30 }}>
             <div style={{ display: "flex", justifyContent: "center" }}>
@@ -77,7 +76,7 @@ export const FinalLaunch01DmPrice: React.FC = () => {
         <AbsoluteFill>
           <CreamBase frame={frame} />
           <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 50, padding: "150px 70px" }}>
-            <KineticWords text="Me Vela, çmimi rri te produkti." frame={frame} fps={fps} delay={CUT + 4} highlight="produkti" style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 68, color: INK, textAlign: "center", letterSpacing: "-0.02em", maxWidth: 900 }} />
+            <KineticWords text="Me Vela, çmimi rri te produkti." frame={frame} fps={fps} delay={CUT - 4} highlight="produkti" style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 68, color: INK, textAlign: "center", letterSpacing: "-0.02em", maxWidth: 900 }} />
             {/* clean light product card */}
             <div style={{ width: 560, borderRadius: 32, overflow: "hidden", ...glassLight, opacity: b(24), transform: `translateY(${(1 - b(24)) * 60 + float(frame, 6, 40)}px)` }}>
               <Img src={staticFile("campaign/sneaker.jpg")} style={{ width: "100%", height: 380, objectFit: "cover", display: "block" }} />
@@ -100,8 +99,8 @@ export const FinalLaunch01DmPrice: React.FC = () => {
 /* ══════════════════════ shared: hard-cut dark→light stage ══════════════════════ */
 const Stage: React.FC<{ frame: number; cut: number; dark: React.ReactNode; light: React.ReactNode }> = ({ frame, cut, dark, light }) => (
   <AbsoluteFill style={{ fontFamily: INTER }}>
-    {frame < cut + 2 && (
-      <AbsoluteFill style={{ opacity: interpolate(frame, [cut - 8, cut], [1, 0], clamp) }}>
+    {frame < cut && (
+      <AbsoluteFill>
         <AuroraDark frame={frame} />{dark}
       </AbsoluteFill>
     )}
@@ -152,7 +151,7 @@ export const FinalLaunch02Haggle: React.FC = () => {
   );
   const light = (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 46, padding: "150px 70px" }}>
-      <KineticWords text="Çmimi është çmim." frame={frame} fps={fps} delay={cut + 4} highlight="çmim" style={{ ...H2(70), maxWidth: 900 }} />
+      <KineticWords text="Çmimi është çmim." frame={frame} fps={fps} delay={cut - 4} highlight="çmim" style={{ ...H2(70), maxWidth: 900 }} />
       <div style={{ width: 560, ...glassLight, borderRadius: 28, padding: "34px 40px", display: "flex", flexDirection: "column", gap: 20, opacity: b(24), transform: `translateY(${(1 - b(24)) * 60}px)` }}>
         <div style={{ position: "relative", display: "flex", justifyContent: "space-between", fontFamily: CLASH, fontWeight: 600, fontSize: 34, color: INK }}><span>Fustan liri</span><span>4,500 L</span></div>
         <div style={{ position: "relative", background: "linear-gradient(115deg,#A31234,#FF2E4D)", color: "#fff", borderRadius: 16, textAlign: "center", padding: "20px 0", fontFamily: CLASH, fontWeight: 600, fontSize: 34 }}>Paguaj 4,500 L</div>
@@ -187,7 +186,7 @@ export const FinalLaunch03PovNoShop: React.FC = () => {
   );
   const light = (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 40, padding: "150px 70px" }}>
-      <KineticWords text="Vela i kthen postimet në dyqan." frame={frame} fps={fps} delay={cut + 4} highlight="dyqan" style={{ ...H2(64), maxWidth: 900 }} />
+      <KineticWords text="Vela i kthen postimet në dyqan." frame={frame} fps={fps} delay={cut - 4} highlight="dyqan" style={{ ...H2(64), maxWidth: 900 }} />
       {[["Ana nga Tirana", "3,500 L"], ["Sara nga Vlora", "6,900 L"]].map(([n, a], i) => (
         <div key={i} style={{ width: 620, ...glassLight, borderRadius: 24, padding: "24px 30px", display: "flex", alignItems: "center", gap: 20, opacity: b(20 + i * 14), transform: `translateY(${(1 - b(20 + i * 14)) * 50}px)` }}>
           <span style={{ position: "relative", width: 56, height: 56, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(16,185,129,0.16)", fontSize: 28 }}>🎉</span>
@@ -218,7 +217,7 @@ export const FinalLaunch04OldLek: React.FC = () => {
   const b = (d: number) => springIn(frame, fps, cut + d, SPRING);
   const light = (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 44, padding: "150px 70px" }}>
-      <KineticWords text="Çmimi i qartë. Në çdo monedhë." frame={frame} fps={fps} delay={cut + 4} highlight="qartë" style={{ ...H2(62), maxWidth: 900 }} />
+      <KineticWords text="Çmimi i qartë. Në çdo monedhë." frame={frame} fps={fps} delay={cut - 4} highlight="qartë" style={{ ...H2(62), maxWidth: 900 }} />
       <div style={{ ...glassLight, borderRadius: 30, padding: "40px 60px", opacity: b(24), transform: `translateY(${(1 - b(24)) * 60}px)` }}>
         <div style={{ position: "relative", fontFamily: CLASH, fontWeight: 700, fontSize: 96, color: BRAND.wine, textAlign: "center" }}>4,760 L</div>
         <div style={{ position: "relative", fontFamily: INTER, fontSize: 30, color: BRAND.muted, textAlign: "center", marginTop: 6 }}>ose 46 € · ose 50 $</div>
@@ -259,7 +258,7 @@ export const FinalLaunch05ClientScroll: React.FC = () => {
   );
   const light = (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 40, padding: "150px 70px" }}>
-      <KineticWords text="Kërko. Filtro. Gjej." frame={frame} fps={fps} delay={cut + 4} highlight="Gjej" style={{ ...H2(76), maxWidth: 900 }} />
+      <KineticWords text="Kërko. Filtro. Gjej." frame={frame} fps={fps} delay={cut - 4} highlight="Gjej" style={{ ...H2(76), maxWidth: 900 }} />
       <div style={{ width: 720, display: "flex", flexDirection: "column", gap: 18, opacity: b(22), transform: `translateY(${(1 - b(22)) * 50}px)` }}>
         <div style={{ ...glassLight, borderRadius: 999, padding: "24px 34px", display: "flex", alignItems: "center", gap: 16 }}><span style={{ position: "relative", fontSize: 32 }}>🔎</span><span style={{ position: "relative", fontFamily: INTER, fontSize: 34, color: INK, fontWeight: 600 }}>fustan i kuq, masa M</span></div>
         <div style={{ display: "flex", gap: 12 }}>{["Fustane", "Kuqe", "Masa M"].map((c, i) => <span key={c} style={{ padding: "14px 28px", borderRadius: 999, fontFamily: CLASH, fontWeight: 600, fontSize: 26, ...(i === 1 ? { background: "linear-gradient(115deg,#A31234,#FF2E4D)", color: "#fff" } : { ...glassLight, color: INK }) }}>{c}</span>)}</div>
@@ -293,7 +292,7 @@ export const FinalLaunch06ClientDm: React.FC = () => {
   );
   const light = (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 36, padding: "150px 70px" }}>
-      <KineticWords text="1 klik. Zero DM." frame={frame} fps={fps} delay={cut + 4} highlight="Zero" style={{ ...H2(80), maxWidth: 900 }} />
+      <KineticWords text="1 klik. Zero DM." frame={frame} fps={fps} delay={cut - 4} highlight="Zero" style={{ ...H2(80), maxWidth: 900 }} />
       <div style={{ width: 700, ...glassLight, borderRadius: 28, padding: "32px 38px", display: "flex", flexDirection: "column", gap: 16, opacity: b(22), transform: `translateY(${(1 - b(22)) * 50}px)` }}>
         {[["💳", "Kartë ose cash"], ["🚚", "Dërgesa automatike, çdo qytet"], ["📦", "Stoku përditësohet vetë"]].map(([ic, t]) => (
           <div key={t} style={{ position: "relative", display: "flex", alignItems: "center", gap: 18 }}>
