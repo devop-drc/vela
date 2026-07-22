@@ -45,6 +45,7 @@ import { LaunchOffer, OFFER_W, OFFER_H, OFFER_FRAMES } from "./compositions/camp
 import { FinalLaunch01DmPrice, FINAL_DM_FRAMES, FinalLaunch02Haggle, FINAL_HAGGLE_FRAMES, FinalLaunch03PovNoShop, FINAL_POV_FRAMES, FinalLaunch04OldLek, FINAL_LEK_FRAMES, FinalLaunch05ClientScroll, FINAL_SCROLL_FRAMES, FinalLaunch06ClientDm, FINAL_CLIENTDM_FRAMES } from "./compositions/campaign/FinalLaunch";
 import { FinalLaunch07Split, FinalLaunch08DmMeme, FinalLaunch09Stat, STILL_FRAMES } from "./compositions/campaign/FinalLaunchStills";
 import { FinalLaunch10HowItWorks, WAVE2_HIW_FRAMES, FinalLaunch11Manifesto, FinalLaunch12WhyVela, WAVE2_WHY_FRAMES, FinalLaunch13WeListen, WAVE2_LISTEN_FRAMES, FinalLaunch14Stats, WAVE2_STATS_FRAMES, FinalLaunch15TimeCalc, WAVE2_TIME_FRAMES } from "./compositions/campaign/FinalLaunchWave2";
+import { POST_FRAMES, FinalLaunch16Search, FinalLaunch17Shop247, FinalLaunch18Currency, FinalLaunch19Checkout, FinalLaunch20CarCover, FinalLaunch21CarR1, FinalLaunch22CarR2, FinalLaunch23CarR3, FinalLaunch24CarCta } from "./compositions/campaign/FinalLaunchPosts";
 import { getVideoMetadata } from "@remotion/media-utils";
 
 const common = { fps: VIDEO.fps, width: VIDEO.width, height: VIDEO.height };
@@ -193,6 +194,15 @@ export const RemotionRoot = () => (
     <Composition id="FinalLaunch13WeListen" component={FinalLaunch13WeListen} durationInFrames={WAVE2_LISTEN_FRAMES} {...story} />
     <Composition id="FinalLaunch14Stats" component={FinalLaunch14Stats} durationInFrames={WAVE2_STATS_FRAMES} {...story} />
     <Composition id="FinalLaunch15TimeCalc" component={FinalLaunch15TimeCalc} durationInFrames={WAVE2_TIME_FRAMES} {...story} />
+    <Composition id="FinalLaunch16Search" component={FinalLaunch16Search} durationInFrames={POST_FRAMES} fps={30} width={1080} height={1350} />
+    <Composition id="FinalLaunch17Shop247" component={FinalLaunch17Shop247} durationInFrames={POST_FRAMES} fps={30} width={1080} height={1350} />
+    <Composition id="FinalLaunch18Currency" component={FinalLaunch18Currency} durationInFrames={POST_FRAMES} fps={30} width={1080} height={1350} />
+    <Composition id="FinalLaunch19Checkout" component={FinalLaunch19Checkout} durationInFrames={POST_FRAMES} fps={30} width={1080} height={1350} />
+    <Composition id="FinalLaunch20CarCover" component={FinalLaunch20CarCover} durationInFrames={POST_FRAMES} fps={30} width={1080} height={1350} />
+    <Composition id="FinalLaunch21CarR1" component={FinalLaunch21CarR1} durationInFrames={POST_FRAMES} fps={30} width={1080} height={1350} />
+    <Composition id="FinalLaunch22CarR2" component={FinalLaunch22CarR2} durationInFrames={POST_FRAMES} fps={30} width={1080} height={1350} />
+    <Composition id="FinalLaunch23CarR3" component={FinalLaunch23CarR3} durationInFrames={POST_FRAMES} fps={30} width={1080} height={1350} />
+    <Composition id="FinalLaunch24CarCta" component={FinalLaunch24CarCta} durationInFrames={POST_FRAMES} fps={30} width={1080} height={1350} />
 
     {/* ── Rebuilt look — proofs (Nightfall dark hero · Daybreak cream editorial) ── */}
     <Composition id="NightfallProof" component={NightfallProof} durationInFrames={NIGHTFALL_FRAMES} {...story} />
