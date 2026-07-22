@@ -56,7 +56,7 @@ export const FinalLaunch01DmPrice: React.FC = () => {
       {frame < CUT + 2 && (
         <AbsoluteFill style={{ opacity: aOut }}>
           <AuroraDark frame={frame} />
-          <AbsoluteFill style={{ padding: "150px 70px 200px", display: "flex", flexDirection: "column", gap: 30 }}>
+          <AbsoluteFill style={{ padding: "60px 70px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 30 }}>
             <div style={{ display: "flex", justifyContent: "center" }}>
               <POV frame={frame} fps={fps}>POV: pyet një dyqan shqiptar për çmimin</POV>
             </div>
@@ -65,7 +65,7 @@ export const FinalLaunch01DmPrice: React.FC = () => {
               <Bubble who="seller" text="Çmimi në DM 🙏" s={springIn(frame, fps, 72, SPRING)} />
               <Bubble who="buyer" text="…po jemi në DM 💀" s={springIn(frame, fps, 120, SPRING)} />
             </div>
-            <div style={{ marginTop: "auto", opacity: interpolate(springIn(frame, fps, 150, SPRING), [0, 1], [0, 1]) }}>
+            <div style={{ marginTop: 48, opacity: interpolate(springIn(frame, fps, 150, SPRING), [0, 1], [0, 1]) }}>
               <KineticWords text="Klasika shqiptare." frame={frame} fps={fps} delay={150} highlight="shqiptare" style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 70, color: "#fff", letterSpacing: "-0.02em" }} />
             </div>
           </AbsoluteFill>
@@ -136,7 +136,7 @@ export const FinalLaunch02Haggle: React.FC = () => {
   const frame = useCurrentFrame(); const { fps } = useVideoConfig(); ensureClash();
   const cut = 192; const b = (d: number) => springIn(frame, fps, cut + d, SPRING);
   const dark = (
-    <AbsoluteFill style={{ padding: "150px 70px 200px", display: "flex", flexDirection: "column", gap: 22 }}>
+    <AbsoluteFill style={{ padding: "60px 70px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 22 }}>
       <div style={{ display: "flex", justifyContent: "center" }}><POV frame={frame} fps={fps}>Pazari shqiptar, edicioni online</POV></div>
       <div style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: 24 }}>
         <Bubble who="buyer" text="Sa kushton?" s={springIn(frame, fps, 30, SPRING)} />
@@ -145,7 +145,7 @@ export const FinalLaunch02Haggle: React.FC = () => {
         <Bubble who="seller" text="4,500." s={springIn(frame, fps, 108, SPRING)} />
         <Bubble who="buyer" text="3,000 e lëmë, hajde 🤝" s={springIn(frame, fps, 134, SPRING)} />
       </div>
-      <div style={{ marginTop: "auto", opacity: interpolate(springIn(frame, fps, 160, SPRING), [0, 1], [0, 1]) }}>
+      <div style={{ marginTop: 48, opacity: interpolate(springIn(frame, fps, 160, SPRING), [0, 1], [0, 1]) }}>
         <KineticWords text="Dyqani s'bën pazar." frame={frame} fps={fps} delay={160} highlight="pazar" style={{ ...H2(70, "#fff") }} />
       </div>
     </AbsoluteFill>
@@ -246,13 +246,13 @@ export const FinalLaunch05ClientScroll: React.FC = () => {
   const frame = useCurrentFrame(); const { fps } = useVideoConfig(); ensureClash();
   const cut = 192; const b = (d: number) => springIn(frame, fps, cut + d, SPRING);
   const dark = (
-    <AbsoluteFill style={{ padding: "150px 70px 200px", display: "flex", flexDirection: "column", alignItems: "center", gap: 26 }}>
+    <AbsoluteFill style={{ padding: "60px 70px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 26 }}>
       <POV frame={frame} fps={fps}>Klientët e tu, çdo mbrëmje:</POV>
       <div style={{ position: "relative", marginTop: 10, opacity: interpolate(springIn(frame, fps, 20, SPRING), [0, 1], [0, 1]) }}>
         <ScrollGrid frame={frame} />
         <div style={{ position: "absolute", right: -46, bottom: 54, width: 380, transform: "rotate(3deg)" }}><Bubble who="buyer" text="ku ishte ai fustani i kuq?? 😩" s={springIn(frame, fps, 70, SPRING)} /></div>
       </div>
-      <div style={{ marginTop: "auto", opacity: interpolate(springIn(frame, fps, 150, SPRING), [0, 1], [0, 1]) }}>
+      <div style={{ marginTop: 48, opacity: interpolate(springIn(frame, fps, 150, SPRING), [0, 1], [0, 1]) }}>
         <KineticWords text="45 min scroll. 0 blerje." frame={frame} fps={fps} delay={150} highlight="0" style={{ ...H2(64, "#fff") }} />
       </div>
     </AbsoluteFill>
@@ -277,7 +277,7 @@ export const FinalLaunch06ClientDm: React.FC = () => {
   const frame = useCurrentFrame(); const { fps } = useVideoConfig(); ensureClash();
   const cut = 198; const b = (d: number) => springIn(frame, fps, cut + d, SPRING);
   const dark = (
-    <AbsoluteFill style={{ padding: "150px 70px 200px", display: "flex", flexDirection: "column", gap: 20 }}>
+    <AbsoluteFill style={{ padding: "60px 70px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 20 }}>
       <div style={{ display: "flex", justifyContent: "center" }}><POV frame={frame} fps={fps}>Klienti yt, për të blerë 1 gjë:</POV></div>
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 22 }}>
         <Bubble who="buyer" text="Sa kushton?" s={springIn(frame, fps, 30, SPRING)} />
@@ -286,7 +286,7 @@ export const FinalLaunch06ClientDm: React.FC = () => {
         <Bubble who="buyer" text="Si paguaj — kartë a cash?" s={springIn(frame, fps, 102, SPRING)} />
         <Bubble who="buyer" text="A bëni dërgesa?" s={springIn(frame, fps, 126, SPRING)} />
       </div>
-      <div style={{ marginTop: "auto", opacity: interpolate(springIn(frame, fps, 152, SPRING), [0, 1], [0, 1]) }}>
+      <div style={{ marginTop: 48, opacity: interpolate(springIn(frame, fps, 152, SPRING), [0, 1], [0, 1]) }}>
         <KineticWords text="5 pyetje për 1 blerje. 😮‍💨" frame={frame} fps={fps} delay={152} highlight="5" style={{ ...H2(60, "#fff") }} />
       </div>
     </AbsoluteFill>
