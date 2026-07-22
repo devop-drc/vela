@@ -116,4 +116,4 @@ premium kit (`src/compositions/marketing/nextgen/kitv2.tsx`) and motion primitiv
 - [x] **#3** `LaunchDashboard` — light reel · live dashboard · **COMPLETED** (counter hook / real dashboard+order / one-tap toggle / CTA)
 - [x] **#4** `LaunchLocal` — dark still · built for Albania · **COMPLETED** (4 feature cards: card·shumë monedha / COD / postat lokale / shqip e para)
 - [x] **#5** `LaunchFuture` — dark reel · future value · **COMPLETED** (multi-channel orbit / glass value stack / growth graph / CTA)
-- [ ] **#6** `LaunchOffer` — light still · lead-gen offer
+- [x] **#6** `LaunchOffer` — light still · lead-gen offer · **COMPLETED** (offer badge / gradient FALAS / 4 benefits / gradient CTA · liquid-glass card)

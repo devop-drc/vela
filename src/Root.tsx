@@ -41,6 +41,7 @@ import { LaunchStepsCover, LaunchSteps1, LaunchSteps2, LaunchSteps3, STEP_W, STE
 import { LaunchDashboard, LAUNCH_DASH_FRAMES } from "./compositions/campaign/LaunchDashboard";
 import { LaunchLocal, LOCAL_W, LOCAL_H, LOCAL_FRAMES } from "./compositions/campaign/LaunchLocal";
 import { LaunchFuture, LAUNCH_FUTURE_FRAMES } from "./compositions/campaign/LaunchFuture";
+import { LaunchOffer, OFFER_W, OFFER_H, OFFER_FRAMES } from "./compositions/campaign/LaunchOffer";
 import { getVideoMetadata } from "@remotion/media-utils";
 
 const common = { fps: VIDEO.fps, width: VIDEO.width, height: VIDEO.height };
@@ -173,6 +174,7 @@ export const RemotionRoot = () => (
     <Composition id="LaunchDashboard" component={LaunchDashboard} durationInFrames={LAUNCH_DASH_FRAMES} {...story} />
     <Composition id="LaunchLocal" component={LaunchLocal} durationInFrames={LOCAL_FRAMES} fps={30} width={LOCAL_W} height={LOCAL_H} />
     <Composition id="LaunchFuture" component={LaunchFuture} durationInFrames={LAUNCH_FUTURE_FRAMES} {...story} />
+    <Composition id="LaunchOffer" component={LaunchOffer} durationInFrames={OFFER_FRAMES} fps={30} width={OFFER_W} height={OFFER_H} />
 
     {/* ── Rebuilt look — proofs (Nightfall dark hero · Daybreak cream editorial) ── */}
     <Composition id="NightfallProof" component={NightfallProof} durationInFrames={NIGHTFALL_FRAMES} {...story} />
