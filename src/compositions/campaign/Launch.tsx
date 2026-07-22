@@ -7,7 +7,7 @@
 import React from "react";
 import { AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { springIn, float, pulse } from "../../lib/motion";
-import { BRAND, CLASH, INTER, AuroraDark, Shimmer, GlareChip, ShipWhite, glassDark, ensureClash } from "../marketing/nextgen/kitv2";
+import { BRAND, CLASH, INTER, AuroraDark, Shimmer, GlareChip, ShipWhite, glassDark, KineticWords, ensureClash } from "../marketing/nextgen/kitv2";
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 const SPRING = { damping: 14, mass: 1.05, stiffness: 130 }; // weighty, small punch
@@ -110,17 +110,13 @@ export const LaunchDmToShop: React.FC = () => {
         {/* localized dark glow behind the headline so bubbles stay visible as chaos */}
         <AbsoluteFill style={{ background: `radial-gradient(58% 20% at 50% 71%, rgba(9,6,11,${scrim}) 0%, transparent 72%)` }} />
         <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", padding: "0 90px 470px" }}>
-          <div style={{ ...H, fontSize: 100, ...blurIn(frame, fps, 28) }}>
-            Nga <Shimmer frame={frame}>kaosi</Shimmer><br />në DM…
-          </div>
+          <KineticWords text="Nga kaosi në DM…" frame={frame} fps={fps} delay={24} highlight="kaosi" style={{ ...H, fontSize: 104, maxWidth: 900 }} />
         </AbsoluteFill>
       </AbsoluteFill>
 
       {/* ── Scene 2 · Transformation ── */}
       <AbsoluteFill style={{ opacity: s2o, alignItems: "center", justifyContent: "center", gap: 56, padding: "150px 60px 200px" }}>
-        <div style={{ ...H, ...blurIn(frame, fps, 84) }}>
-          Vela lexon postimet.<br />Krijon dyqanin<br /><Shimmer frame={frame}>automatikisht.</Shimmer>
-        </div>
+        <KineticWords text="Vela lexon postimet. Krijon dyqanin automatikisht." frame={frame} fps={fps} delay={84} highlight="automatikisht" style={{ ...H, maxWidth: 900 }} />
         <div style={{ transform: `translateY(${float(frame, 7, 34)}px)` }}>
           <ProductCard frame={frame} fps={fps} base={84} />
         </div>
@@ -128,8 +124,9 @@ export const LaunchDmToShop: React.FC = () => {
 
       {/* ── Scene 3 · Order & payment ── */}
       <AbsoluteFill style={{ opacity: s3o, alignItems: "center", justifyContent: "center", gap: 40, padding: "170px 70px 200px" }}>
-        <div style={{ ...H, fontSize: 72, ...blurIn(frame, fps, 192) }}>
-          Pagesa me kartë ose cash.<br /><span style={{ color: "rgba(255,255,255,0.6)", fontSize: 52 }}>Pa mundim. Pa kod.</span>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+          <KineticWords text="Pagesa me kartë ose cash." frame={frame} fps={fps} delay={192} highlight="cash" style={{ ...H, fontSize: 72, maxWidth: 900 }} />
+          <KineticWords text="Pa mundim. Pa kod." frame={frame} fps={fps} delay={208} style={{ ...H, fontSize: 52, color: "rgba(255,255,255,0.6)" }} />
         </div>
         <div style={{ width: 720, display: "flex", flexDirection: "column", gap: 18 }}>
           <PayRow title="Kartë · RaiAccept" sub="Shumë monedha · RaiAccept" icon="💳" selected o={springIn(frame, fps, 206, SPRING)} />
@@ -147,7 +144,7 @@ export const LaunchDmToShop: React.FC = () => {
       {/* ── Scene 4 · CTA ── */}
       <AbsoluteFill style={{ opacity: s4o, alignItems: "center", justifyContent: "center", gap: 44, padding: "0 90px" }}>
         <ShipWhite size={190} style={{ transform: `translateY(${float(frame, 10, 26)}px)`, filter: "drop-shadow(0 30px 70px rgba(127,29,59,0.6))" }} />
-        <div style={{ ...H, fontSize: 92 }}>Ti poston. <Shimmer frame={frame}>Vela shet.</Shimmer></div>
+        <KineticWords text="Ti poston. Vela shet." frame={frame} fps={fps} delay={276} highlight="shet" style={{ ...H, fontSize: 92, maxWidth: 900 }} />
         <div style={{ transform: `scale(${ctaPulse})` }}><GlareChip frame={frame} fontSize={46}>Kthe Instagramin në dyqan →</GlareChip></div>
         <div style={{ fontFamily: CLASH, fontWeight: 600, fontSize: 38, color: "rgba(255,255,255,0.85)", transform: `translateY(${-point}px)` }}>Nise falas sot · vela.al</div>
       </AbsoluteFill>

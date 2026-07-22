@@ -173,6 +173,49 @@ export const popIn = (frame: number, fps: number, delay = 0, rise = 46) => {
   return { opacity: interpolate(s, [0, 1], [0, 1], clamp), transform: `translateY(${(1 - s) * rise}px) scale(${0.94 + 0.06 * Math.min(s, 1)})` };
 };
 
+/* ── Kinetic typography ────────────────────────────────────────────────
+   Premium studio-style reveals: each WORD rises from behind its own mask on a
+   weighty stagger; one keyword can be gradient-shimmered + scale-emphasised.
+   This makes type the animated hero, not a static overlay. */
+export const KineticWords: React.FC<{
+  text: string;
+  frame: number;
+  fps: number;
+  delay?: number;
+  stagger?: number;
+  highlight?: string;
+  style?: React.CSSProperties;
+}> = ({ text, frame, fps, delay = 0, stagger = 3.2, highlight, style }) => {
+  const words = text.split(" ");
+  const norm = (w: string) => w.replace(/[.,…!?]/g, "").toLowerCase();
+  const hi = highlight ? norm(highlight) : null;
+  return (
+    <span style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "flex-end", columnGap: "0.26em", rowGap: "0.04em", ...style }}>
+      {words.map((w, i) => {
+        const s = springIn(frame, fps, delay + i * stagger, POP);
+        const isHi = hi && norm(w) === hi;
+        return (
+          <span key={i} style={{ display: "inline-block", overflow: "hidden", paddingBottom: "0.1em", marginBottom: "-0.1em" }}>
+            <span style={{ display: "inline-block", transform: `translateY(${(1 - s) * 118}%) scale(${isHi ? 0.9 + 0.1 * Math.min(s, 1) : 1})`, transformOrigin: "left bottom" }}>
+              {isHi ? <Shimmer frame={frame}>{w}</Shimmer> : w}
+            </span>
+          </span>
+        );
+      })}
+    </span>
+  );
+};
+
+/** Character-by-character reveal for short, punchy words. */
+export const KineticChars: React.FC<{ text: string; frame: number; fps: number; delay?: number; stagger?: number; style?: React.CSSProperties }> = ({ text, frame, fps, delay = 0, stagger = 1.6, style }) => (
+  <span style={{ display: "inline-flex", ...style }}>
+    {text.split("").map((c, i) => {
+      const s = springIn(frame, fps, delay + i * stagger, POP);
+      return <span key={i} style={{ display: "inline-block", overflow: "hidden", paddingBottom: "0.1em", marginBottom: "-0.1em" }}><span style={{ display: "inline-block", transform: `translateY(${(1 - s) * 118}%)`, whiteSpace: "pre" }}>{c}</span></span>;
+    })}
+  </span>
+);
+
 export const useAnim = () => {
   ensureClash();
   const frame = useCurrentFrame();
