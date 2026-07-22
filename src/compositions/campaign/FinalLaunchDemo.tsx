@@ -42,7 +42,12 @@ export const FinalLaunch25AppDemo: React.FC = () => {
         return (
           <AbsoluteFill key={i} style={{ opacity: op, alignItems: "center", justifyContent: "center", gap: 54, padding: "0 70px" }}>
             <div style={{ opacity: lab, transform: `translateY(${(1 - lab) * 30}px)`, ...H(58, "#fff"), maxWidth: 900 }}>{s.label}</div>
-            <FloatShot src={shot(s.src)} frame={frame} width={s.w} kind={s.kind as "browser" | "phone"} url={s.url} />
+            {/* 3D perspective: the UI card tilts in from depth, then gently sways. */}
+            <div style={{ perspective: 1700 }}>
+              <div style={{ transformStyle: "preserve-3d", opacity: lab, transform: `rotateY(${(-7 - (1 - lab) * 17) + Math.sin((frame - s.in) / 44) * 3}deg) rotateX(${3.5 + (1 - lab) * 7 + Math.cos((frame - s.in) / 52) * 1.5}deg) translateY(${(1 - lab) * 56}px) scale(${0.9 + lab * 0.1})`, filter: `drop-shadow(0 60px 120px rgba(0,0,0,0.55))` }}>
+                <FloatShot src={shot(s.src)} frame={frame} width={s.w} kind={s.kind as "browser" | "phone"} url={s.url} />
+              </div>
+            </div>
           </AbsoluteFill>
         );
       })}
