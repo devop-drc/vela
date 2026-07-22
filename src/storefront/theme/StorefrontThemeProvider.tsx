@@ -70,9 +70,11 @@ interface Props {
   config: StorefrontConfig;
   children: ReactNode;
   className?: string;
+  /** True when rendered inside the Studio's live-preview iframe (?preview=1). */
+  isPreview?: boolean;
 }
 
-export const StorefrontThemeProvider = ({ config: rawConfig, children, className }: Props) => {
+export const StorefrontThemeProvider = ({ config: rawConfig, children, className, isPreview = false }: Props) => {
   const rootRef = useRef<HTMLDivElement>(null);
 
   const prefersDark = usePrefersDark();
@@ -98,7 +100,12 @@ export const StorefrontThemeProvider = ({ config: rawConfig, children, className
 
     const showInstantly = () => els.forEach((el) => el.classList.add('is-visible'));
     const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!config.effects.scrollReveal || config.effects.motion === 'none' || reduced) {
+    // In the Studio's live preview, skip the GSAP scroll-reveal entirely. It
+    // otherwise tears down and rebuilds the whole ScrollTrigger system (+ a
+    // page-wide ScrollTrigger.refresh) on EVERY token edit — the reported
+    // sluggishness. Content still shows instantly here; the published storefront
+    // (isPreview=false) keeps the full reveal with correct re-runs on navigation.
+    if (isPreview || !config.effects.scrollReveal || config.effects.motion === 'none' || reduced) {
       showInstantly();
       return;
     }

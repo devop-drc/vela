@@ -29,7 +29,11 @@ const Chrome = () => {
 
   // Preview bridge: when embedded as ?preview=1, accept live config from the
   // editor via postMessage and apply it instantly (no reload).
-  const isPreview = typeof window !== 'undefined' && new URLSearchParams(location.search).get('preview') === '1';
+  // Preview is STICKY for the iframe's lifetime. Once the editor loads us with
+  // ?preview=1, internal storefront navigations (product/cart/footer links) drop
+  // the query string — re-deriving from location.search would then flip us back
+  // to the live/applied theme mid-edit. Capture once so the draft keeps applying.
+  const [isPreview] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === '1');
   const [previewConfig, setPreviewConfig] = useState<StorefrontConfig | null>(null);
   // Dedup incoming config so the editor's heartbeat only re-renders (and re-inits
   // GSAP) when something actually changed.
@@ -162,7 +166,7 @@ const Chrome = () => {
   const navReserve = config.layout.nav.mobileBottomBar ? 'pb-[calc(5rem+var(--sab,0px))] md:pb-0' : '';
 
   return (
-    <StorefrontThemeProvider config={config} className="min-h-screen flex flex-col">
+    <StorefrontThemeProvider config={config} isPreview={isPreview} className="min-h-screen flex flex-col">
       {sidebarNav ? (
         <>
           {/* Mobile keeps the top header; desktop navigation lives in the rail. */}
