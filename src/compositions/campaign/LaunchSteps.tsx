@@ -7,10 +7,10 @@
 import React from "react";
 import { AbsoluteFill, Img, staticFile, useCurrentFrame } from "remotion";
 import { Instagram, Check, CreditCard, Banknote, Zap } from "lucide-react";
-import { BRAND, CLASH, INTER, CREAM, INK, CreamBase, Shimmer, ShipColored, ensureClash } from "../marketing/nextgen/kitv2";
+import { BRAND, CLASH, INTER, CREAM, INK, CreamBase, Shimmer, ShipColored, glassLight, ensureClash } from "../marketing/nextgen/kitv2";
 
 const GRAD = "linear-gradient(115deg,#7F1D3B,#A31234 40%,#FF2E4D 75%,#F59E0B 115%)";
-const CARD: React.CSSProperties = { background: "#fff", border: "1px solid #EDE4E1", borderRadius: 30, boxShadow: "0 1px 2px rgba(120,20,40,.05),0 26px 60px -30px rgba(120,20,40,.16)" };
+const CARD: React.CSSProperties = { ...glassLight, borderRadius: 30 };
 const useF = () => { ensureClash(); return useCurrentFrame(); };
 
 const Frame: React.FC<{ children: React.ReactNode; frame: number }> = ({ children, frame }) => (

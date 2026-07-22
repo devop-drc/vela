@@ -7,10 +7,10 @@
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { springIn, float } from "../../lib/motion";
-import { BRAND, CLASH, INTER, INK, CreamBase, Shimmer, FloatShot, GlareChip, ShipColored, shot, scene, kenBurns, ensureClash } from "../marketing/nextgen/kitv2";
+import { BRAND, CLASH, INTER, INK, CreamBase, Shimmer, FloatShot, GlareChip, ShipColored, shot, scene, kenBurns, glassLight, ensureClash } from "../marketing/nextgen/kitv2";
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
-const SPRING = { damping: 16, mass: 0.8, stiffness: 120 };
+const SPRING = { damping: 14, mass: 1.05, stiffness: 130 }; // weighty, small punch
 const H: (size: number) => React.CSSProperties = (size) => ({ fontFamily: CLASH, fontWeight: 700, fontSize: size, lineHeight: 1.04, letterSpacing: "-0.02em", color: INK, textAlign: "center", margin: 0 });
 
 export const LAUNCH_DASH_FRAMES = 10 * 30; // 300
@@ -52,7 +52,7 @@ export const LaunchDashboard: React.FC = () => {
           <FloatShot src={shot("01-dashboard.png")} frame={frame} zoom={kenBurns(frame, 60, 192, 1.0, 1.06)} width={880} url="vela.al/paneli" />
           {/* live "new order" toast springs in over the panel */}
           <div style={{ position: "absolute", right: -24, top: 150, opacity: toast, transform: `translateX(${(1 - toast) * 120}px)` }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 20, padding: "24px 30px", borderRadius: 24, background: "#fff", border: "1px solid #EDE4E1", boxShadow: "0 40px 90px -40px rgba(120,20,40,.3)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 20, padding: "24px 30px", borderRadius: 24, ...glassLight }}>
               <span style={{ width: 56, height: 56, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(16,185,129,0.15)", fontSize: 28 }}>🎉</span>
               <div><div style={{ fontFamily: CLASH, fontWeight: 600, fontSize: 32, color: INK }}>Porosi e re!</div><div style={{ fontFamily: INTER, fontSize: 24, color: BRAND.muted }}>+ALL 37,000 · me kartë</div></div>
             </div>
@@ -63,7 +63,7 @@ export const LaunchDashboard: React.FC = () => {
       {/* ── Scene 3 · One-tap management ── */}
       <AbsoluteFill style={{ opacity: s3.opacity, transform: `scale(${s3.scale})`, alignItems: "center", justifyContent: "center", gap: 50, padding: "0 80px" }}>
         <div style={H(72)}>Menaxho gjithçka<br /><Shimmer frame={frame}>me një klik.</Shimmer></div>
-        <div style={{ width: 760, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "40px 48px", borderRadius: 30, background: "#fff", border: "1px solid #EDE4E1", boxShadow: "0 26px 60px -30px rgba(120,20,40,.16)" }}>
+        <div style={{ width: 760, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "40px 48px", borderRadius: 30, ...glassLight }}>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
             <span style={{ width: 18, height: 18, borderRadius: 999, background: "#10B981", boxShadow: `0 0 ${knob * 26}px rgba(16,185,129,${knob})` }} />
             <span style={{ fontFamily: CLASH, fontWeight: 600, fontSize: 44, color: INK }}>Dyqani është Aktiv</span>

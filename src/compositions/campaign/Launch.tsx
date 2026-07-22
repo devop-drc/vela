@@ -7,10 +7,10 @@
 import React from "react";
 import { AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { springIn, float, pulse } from "../../lib/motion";
-import { BRAND, CLASH, INTER, AuroraDark, Shimmer, GlareChip, ShipWhite, ensureClash } from "../marketing/nextgen/kitv2";
+import { BRAND, CLASH, INTER, AuroraDark, Shimmer, GlareChip, ShipWhite, glassDark, ensureClash } from "../marketing/nextgen/kitv2";
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
-const SPRING = { damping: 16, mass: 0.8, stiffness: 120 };
+const SPRING = { damping: 14, mass: 1.05, stiffness: 130 }; // weighty, small punch
 /** Blur-reveal for display type: blur 14→0, y 40→0, scale .94→1. */
 const blurIn = (frame: number, fps: number, delay: number) => {
   const s = springIn(frame, fps, delay, SPRING);
@@ -44,7 +44,7 @@ const ProductCard: React.FC<{ frame: number; fps: number; base: number }> = ({ f
   const chip = springIn(frame, fps, base + 50, SPRING); // status
   const row = (o: number, y = 22) => ({ opacity: o, transform: `translateY(${(1 - o) * y}px)` });
   return (
-    <div style={{ width: 620, borderRadius: 30, overflow: "hidden", background: "rgba(31,15,23,0.92)", border: "1px solid rgba(255,46,77,0.35)", boxShadow: "0 60px 130px -50px rgba(0,0,0,0.85)" }}>
+    <div style={{ width: 620, borderRadius: 30, overflow: "hidden", ...glassDark, border: "1px solid rgba(255,46,77,0.35)" }}>
       <div style={{ position: "relative", height: 380, overflow: "hidden" }}>
         <Img src={staticFile("campaign/sneaker.jpg")} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         <span style={{ position: "absolute", left: 20, top: 20, display: "inline-flex", alignItems: "center", gap: 10, padding: "8px 18px", borderRadius: 999, background: "rgba(20,10,14,0.7)", color: "#fff", fontFamily: CLASH, fontWeight: 600, fontSize: 24 }}>◎ Postim IG</span>
@@ -68,7 +68,7 @@ const ProductCard: React.FC<{ frame: number; fps: number; base: number }> = ({ f
 const PayRow: React.FC<{ title: string; sub: string; icon: string; selected?: boolean; o: number }> = ({ title, sub, icon, selected, o }) => (
   <div style={{
     display: "flex", alignItems: "center", gap: 20, padding: "24px 28px", borderRadius: 22,
-    background: "rgba(31,15,23,0.9)", border: selected ? `2px solid ${BRAND.yellow}` : "1px solid rgba(255,255,255,0.14)",
+    ...glassDark, ...(selected ? { border: `2px solid ${BRAND.yellow}`, boxShadow: `${glassDark.boxShadow}, 0 0 40px -8px rgba(250,204,21,0.4)` } : {}),
     opacity: o, transform: `translateX(${(1 - o) * -30}px)`,
   }}>
     <span style={{ width: 60, height: 60, borderRadius: 16, display: "grid", placeItems: "center", background: selected ? "rgba(250,204,21,0.16)" : "rgba(255,255,255,0.08)", fontSize: 30 }}>{icon}</span>
@@ -137,7 +137,7 @@ export const LaunchDmToShop: React.FC = () => {
         </div>
         {/* order toast springs down */}
         <div style={{ position: "absolute", top: 150, left: "50%", width: 720, transform: `translateX(-50%) translateY(${(1 - springIn(frame, fps, 236, SPRING)) * -60}px)`, opacity: springIn(frame, fps, 236, SPRING) }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 22, padding: "26px 32px", borderRadius: 24, background: "rgba(31,15,23,0.96)", border: "1px solid rgba(61,220,132,0.4)", boxShadow: "0 40px 90px -40px rgba(0,0,0,0.8)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 22, padding: "26px 32px", borderRadius: 24, ...glassDark, border: "1px solid rgba(61,220,132,0.45)" }}>
             <span style={{ width: 60, height: 60, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(61,220,132,0.18)", fontSize: 30 }}>🎉</span>
             <div><div style={{ fontFamily: CLASH, fontWeight: 600, fontSize: 34, color: "#fff" }}>Porosi e re!</div><div style={{ fontFamily: INTER, fontSize: 26, color: "rgba(255,255,255,0.6)" }}>ALL 4,760 · Erion Kola, Tiranë</div></div>
           </div>

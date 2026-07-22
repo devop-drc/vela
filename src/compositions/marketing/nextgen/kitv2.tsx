@@ -108,8 +108,11 @@ export const kenBurns = (frame: number, start: number, end: number, from = 1.0, 
 export const FloatShot: React.FC<{ src: string; frame: number; zoom: number; width?: number; kind?: "browser" | "phone"; url?: string }> = ({ src, frame, zoom, width = 820, kind = "browser", url = "vela.al" }) => {
   const drift = Math.sin(frame / 40) * 8;
   const dark = kind === "browser" ? "#1E1014" : "#0B0710";
+  // `zoom` scales the WHOLE device (frame + UI) as one unit — a clean push-in
+  // that never crops the app UI (previously the screenshot was scaled inside a
+  // clipped frame, cutting off edges).
   return (
-    <div style={{ width, borderRadius: kind === "phone" ? 54 : 30, overflow: "hidden", background: dark, border: "2px solid rgba(255,255,255,0.14)", boxShadow: "0 70px 150px -50px rgba(0,0,0,0.85)", transform: `translateY(${drift}px)` }}>
+    <div style={{ width, borderRadius: kind === "phone" ? 54 : 30, overflow: "hidden", background: dark, border: "2px solid rgba(255,255,255,0.14)", boxShadow: "0 70px 150px -50px rgba(0,0,0,0.85)", transform: `scale(${zoom}) translateY(${drift}px)`, transformOrigin: "center" }}>
       {kind === "browser" && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "18px 24px", background: "rgba(255,255,255,0.05)" }}>
           <span style={{ width: 14, height: 14, borderRadius: 999, background: "#ff5f57" }} />
@@ -118,9 +121,7 @@ export const FloatShot: React.FC<{ src: string; frame: number; zoom: number; wid
           <span style={{ marginLeft: 18, padding: "6px 22px", borderRadius: 999, background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)", fontSize: 22, fontFamily: CLASH }}>{url}</span>
         </div>
       )}
-      <div style={{ overflow: "hidden" }}>
-        <Img src={src} style={{ width: "100%", display: "block", transform: `scale(${zoom})`, transformOrigin: "center top" }} />
-      </div>
+      <Img src={src} style={{ width: "100%", display: "block" }} />
     </div>
   );
 };
@@ -134,6 +135,42 @@ export const GlareChip: React.FC<{ children: React.ReactNode; frame: number; fon
       <span style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg, transparent 38%, rgba(255,255,255,0.4) 50%, transparent 62%)", transform: `translateX(${sweep}%) skewX(-8deg)` }} />
     </div>
   );
+};
+
+/* ── iOS-style liquid glass ────────────────────────────────────────────
+   Translucent, backdrop-blurred surfaces with a bright specular edge so cards
+   read as frosted glass floating over the aurora/cream — not flat panels. */
+export const glassDark: React.CSSProperties = {
+  background: "rgba(28,18,26,0.48)",
+  backdropFilter: "blur(30px) saturate(1.7)",
+  WebkitBackdropFilter: "blur(30px) saturate(1.7)",
+  border: "1px solid rgba(255,255,255,0.16)",
+  boxShadow: "inset 0 1.5px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.28), 0 44px 90px -44px rgba(0,0,0,0.7)",
+};
+export const glassLight: React.CSSProperties = {
+  background: "rgba(255,255,255,0.5)",
+  backdropFilter: "blur(30px) saturate(1.6)",
+  WebkitBackdropFilter: "blur(30px) saturate(1.6)",
+  border: "1px solid rgba(255,255,255,0.85)",
+  boxShadow: "inset 0 1.5px 0 rgba(255,255,255,0.95), 0 32px 66px -34px rgba(120,20,40,0.2)",
+};
+/** Liquid-glass surface with a soft top-left specular sheen. */
+export const LiquidGlass: React.FC<{ dark?: boolean; radius?: number; style?: React.CSSProperties; children: React.ReactNode }> = ({ dark = true, radius = 28, style, children }) => (
+  <div style={{ position: "relative", borderRadius: radius, overflow: "hidden", ...(dark ? glassDark : glassLight), ...style }}>
+    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: dark
+      ? "radial-gradient(130% 80% at 18% -12%, rgba(255,255,255,0.18), transparent 52%)"
+      : "radial-gradient(130% 80% at 18% -12%, rgba(255,255,255,0.9), transparent 52%)" }} />
+    <div style={{ position: "relative", zIndex: 1, height: "100%" }}>{children}</div>
+  </div>
+);
+
+/* ── weighty, punchy (but subtle) spring ───────────────────────────────
+   Higher mass + a touch of overshoot = things arrive with weight and settle. */
+export const POP = { damping: 14, mass: 1.05, stiffness: 130 };
+/** Entrance: y-rise + a small scale pop, driven by the weighty spring. */
+export const popIn = (frame: number, fps: number, delay = 0, rise = 46) => {
+  const s = springIn(frame, fps, delay, POP);
+  return { opacity: interpolate(s, [0, 1], [0, 1], clamp), transform: `translateY(${(1 - s) * rise}px) scale(${0.94 + 0.06 * Math.min(s, 1)})` };
 };
 
 export const useAnim = () => {
