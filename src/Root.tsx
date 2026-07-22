@@ -46,7 +46,7 @@ import { FinalLaunch01DmPrice, FINAL_DM_FRAMES, FinalLaunch02Haggle, FINAL_HAGGL
 import { FinalLaunch07Split, FinalLaunch08DmMeme, FinalLaunch09Stat, STILL_FRAMES } from "./compositions/campaign/FinalLaunchStills";
 import { FinalLaunch10HowItWorks, WAVE2_HIW_FRAMES, FinalLaunch11Manifesto, FinalLaunch12WhyVela, WAVE2_WHY_FRAMES, FinalLaunch13WeListen, WAVE2_LISTEN_FRAMES, FinalLaunch14Stats, WAVE2_STATS_FRAMES, FinalLaunch15TimeCalc, WAVE2_TIME_FRAMES } from "./compositions/campaign/FinalLaunchWave2";
 import { POST_FRAMES, FinalLaunch16Search, FinalLaunch17Shop247, FinalLaunch18Currency, FinalLaunch19Checkout, FinalLaunch20CarCover, FinalLaunch21CarR1, FinalLaunch22CarR2, FinalLaunch23CarR3, FinalLaunch24CarCta } from "./compositions/campaign/FinalLaunchPosts";
-import { FinalLaunch25AppDemo, DEMO_FRAMES } from "./compositions/campaign/FinalLaunchDemo";
+import { FinalLaunch25AppDemo, DEMO_FRAMES, FinalLaunch29Themes, THEMES_FRAMES } from "./compositions/campaign/FinalLaunchDemo";
 import { FinalLaunch26AutoProduct, FEAT_AUTO_FRAMES, FinalLaunch27Storefront, FEAT_SHOP_FRAMES } from "./compositions/campaign/FinalLaunchFeatures";
 import { VAR_FRAMES, CoverFL01, CoverFL02, CoverFL03, CoverFL04, CoverFL05, CoverFL06, CoverFL10, CoverFL12, CoverFL13, CoverFL14, CoverFL15, CoverFL25, CoverFL26, CoverFL27, SqSearch, SqShop247, SqCurrency, SqCheckout, SqManifesto } from "./compositions/campaign/FinalLaunchVariants";
 import { getVideoMetadata } from "@remotion/media-utils";
@@ -208,6 +208,7 @@ export const RemotionRoot = () => (
     <Composition id="FinalLaunch23CarR3" component={FinalLaunch23CarR3} durationInFrames={POST_FRAMES} fps={30} width={1080} height={1350} />
     <Composition id="FinalLaunch24CarCta" component={FinalLaunch24CarCta} durationInFrames={POST_FRAMES} fps={30} width={1080} height={1350} />
     <Composition id="FinalLaunch25AppDemo" component={FinalLaunch25AppDemo} durationInFrames={DEMO_FRAMES} {...story} />
+    <Composition id="FinalLaunch29Themes" component={FinalLaunch29Themes} durationInFrames={THEMES_FRAMES} {...story} />
     <Composition id="FinalLaunch26AutoProduct" component={FinalLaunch26AutoProduct} durationInFrames={FEAT_AUTO_FRAMES} {...story} />
     <Composition id="FinalLaunch27Storefront" component={FinalLaunch27Storefront} durationInFrames={FEAT_SHOP_FRAMES} {...story} />
     {/* ── Reels covers (1080×1920, 1:1-safe centre) ── */}
