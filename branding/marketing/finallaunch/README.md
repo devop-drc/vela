@@ -73,6 +73,31 @@ Hashtag base (SQ): `#Vela #DyqaniYt #ShitjeOnline #Instagram #Shqipëri #BiznesS
 
 ---
 
+## Wave 2 — beyond the memes
+
+Broader angles: clear/educational, aspirational, brand-story, and product-demo.
+
+**Reels**
+- **`FinalLaunch10HowItWorks`** — Vela në 3 hapa (Lidh IG → Postimet bëhen produkte → Klientët blejnë).
+  > **Kthe Instagramin në dyqan — në 3 hapa.** Pa kod, pa DM. **vela.al**
+- **`FinalLaunch12WhyVela`** — the name story + purpose.
+  > **Pse "Vela"?** Vela = velat e anijes. Biznesi yt është anija; ne jemi era që të çon përpara. **vela.al**
+- **`FinalLaunch13WeListen`** — client-centric; feedback & requests welcome.
+  > **Vela ndërtohet me ju.** Kërkesat tuaja → veçoritë tona. Dëgjojmë, zgjidhim, përmirësohemi çdo ditë. Na trego çfarë të duhet → **vela.al**
+- **`FinalLaunch14Stats`** — "Sipas statistikave…" online-presence value.
+  > **8 nga 10 klientë kërkojnë online para se të blejnë.** Pa dyqan online, je i padukshëm. Prania online = më shumë klientë, 24/7, besim. **vela.al**
+- **`FinalLaunch15TimeCalc`** — Sa kushton koha jote? (~50h/muaj në DM).
+  > **~50 orë në muaj, humbur në DM.** Vela ta kthen kohën — klientët blejnë vetë. **vela.al**
+- **`FinalLaunch25AppDemo`** — cinematic cuts through the real app UI.
+  > **Kjo është Vela.** Dyqani, produktet, porositë dhe paneli — gjithçka në një vend. Provo falas → **vela.al**
+
+**Posts (1080×1350)**
+- **`FinalLaunch11Manifesto`** — *Ti nuk je qendër mesazhesh. Ti je biznes.* · **vela.al**
+- **`FinalLaunch16Search` / `17Shop247` / `18Currency` / `19Checkout`** — feature spotlights (Kërkim & filtra · Shitje 24/7 · Çdo monedhë · Blerje me 1 klik).
+- **`FinalLaunch20CarCover` … `24CarCta`** — "3 arsye" carousel (cover → Zero DM · Shitje 24/7 · Gjithçka automatike → CTA). Upload the 5 in numeric order as one IG carousel.
+
+---
+
 ## Rendering
 
 Reels (MP4) and stills (PNG). Run from repo root.
