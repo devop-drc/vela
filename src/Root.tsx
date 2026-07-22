@@ -47,6 +47,8 @@ import { FinalLaunch07Split, FinalLaunch08DmMeme, FinalLaunch09Stat, STILL_FRAME
 import { FinalLaunch10HowItWorks, WAVE2_HIW_FRAMES, FinalLaunch11Manifesto, FinalLaunch12WhyVela, WAVE2_WHY_FRAMES, FinalLaunch13WeListen, WAVE2_LISTEN_FRAMES, FinalLaunch14Stats, WAVE2_STATS_FRAMES, FinalLaunch15TimeCalc, WAVE2_TIME_FRAMES } from "./compositions/campaign/FinalLaunchWave2";
 import { POST_FRAMES, FinalLaunch16Search, FinalLaunch17Shop247, FinalLaunch18Currency, FinalLaunch19Checkout, FinalLaunch20CarCover, FinalLaunch21CarR1, FinalLaunch22CarR2, FinalLaunch23CarR3, FinalLaunch24CarCta } from "./compositions/campaign/FinalLaunchPosts";
 import { FinalLaunch25AppDemo, DEMO_FRAMES } from "./compositions/campaign/FinalLaunchDemo";
+import { FinalLaunch26AutoProduct, FEAT_AUTO_FRAMES, FinalLaunch27Storefront, FEAT_SHOP_FRAMES } from "./compositions/campaign/FinalLaunchFeatures";
+import { VAR_FRAMES, CoverFL01, CoverFL02, CoverFL03, CoverFL04, CoverFL05, CoverFL06, CoverFL10, CoverFL12, CoverFL13, CoverFL14, CoverFL15, CoverFL25, CoverFL26, CoverFL27, SqSearch, SqShop247, SqCurrency, SqCheckout, SqManifesto } from "./compositions/campaign/FinalLaunchVariants";
 import { getVideoMetadata } from "@remotion/media-utils";
 
 const common = { fps: VIDEO.fps, width: VIDEO.width, height: VIDEO.height };
@@ -205,6 +207,29 @@ export const RemotionRoot = () => (
     <Composition id="FinalLaunch23CarR3" component={FinalLaunch23CarR3} durationInFrames={POST_FRAMES} fps={30} width={1080} height={1350} />
     <Composition id="FinalLaunch24CarCta" component={FinalLaunch24CarCta} durationInFrames={POST_FRAMES} fps={30} width={1080} height={1350} />
     <Composition id="FinalLaunch25AppDemo" component={FinalLaunch25AppDemo} durationInFrames={DEMO_FRAMES} {...story} />
+    <Composition id="FinalLaunch26AutoProduct" component={FinalLaunch26AutoProduct} durationInFrames={FEAT_AUTO_FRAMES} {...story} />
+    <Composition id="FinalLaunch27Storefront" component={FinalLaunch27Storefront} durationInFrames={FEAT_SHOP_FRAMES} {...story} />
+    {/* ── Reels covers (1080×1920, 1:1-safe centre) ── */}
+    <Composition id="CoverFL01" component={CoverFL01} durationInFrames={VAR_FRAMES} {...story} />
+    <Composition id="CoverFL02" component={CoverFL02} durationInFrames={VAR_FRAMES} {...story} />
+    <Composition id="CoverFL03" component={CoverFL03} durationInFrames={VAR_FRAMES} {...story} />
+    <Composition id="CoverFL04" component={CoverFL04} durationInFrames={VAR_FRAMES} {...story} />
+    <Composition id="CoverFL05" component={CoverFL05} durationInFrames={VAR_FRAMES} {...story} />
+    <Composition id="CoverFL06" component={CoverFL06} durationInFrames={VAR_FRAMES} {...story} />
+    <Composition id="CoverFL10" component={CoverFL10} durationInFrames={VAR_FRAMES} {...story} />
+    <Composition id="CoverFL12" component={CoverFL12} durationInFrames={VAR_FRAMES} {...story} />
+    <Composition id="CoverFL13" component={CoverFL13} durationInFrames={VAR_FRAMES} {...story} />
+    <Composition id="CoverFL14" component={CoverFL14} durationInFrames={VAR_FRAMES} {...story} />
+    <Composition id="CoverFL15" component={CoverFL15} durationInFrames={VAR_FRAMES} {...story} />
+    <Composition id="CoverFL25" component={CoverFL25} durationInFrames={VAR_FRAMES} {...story} />
+    <Composition id="CoverFL26" component={CoverFL26} durationInFrames={VAR_FRAMES} {...story} />
+    <Composition id="CoverFL27" component={CoverFL27} durationInFrames={VAR_FRAMES} {...story} />
+    {/* ── 1:1 square variants (1080×1080) ── */}
+    <Composition id="SqSearch" component={SqSearch} durationInFrames={VAR_FRAMES} fps={30} width={1080} height={1080} />
+    <Composition id="SqShop247" component={SqShop247} durationInFrames={VAR_FRAMES} fps={30} width={1080} height={1080} />
+    <Composition id="SqCurrency" component={SqCurrency} durationInFrames={VAR_FRAMES} fps={30} width={1080} height={1080} />
+    <Composition id="SqCheckout" component={SqCheckout} durationInFrames={VAR_FRAMES} fps={30} width={1080} height={1080} />
+    <Composition id="SqManifesto" component={SqManifesto} durationInFrames={VAR_FRAMES} fps={30} width={1080} height={1080} />
 
     {/* ── Rebuilt look — proofs (Nightfall dark hero · Daybreak cream editorial) ── */}
     <Composition id="NightfallProof" component={NightfallProof} durationInFrames={NIGHTFALL_FRAMES} {...story} />
