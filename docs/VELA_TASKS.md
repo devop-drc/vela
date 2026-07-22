@@ -16,9 +16,9 @@ Living tracker for the current batch of requests. `[x]` done & committed · `[ ]
 - [x] Answered: auto-archive IG post on stock-out = NOT possible via IG API; repost-on-restock = feasible
 
 ## 🎬 Marketing — TODO
-- [ ] **05 ClientScroll rework** — use the real IG theme filled with products; seamlessly loop **only the product grid** (past the profile header), not the whole page looping back
+- [x] **05 ClientScroll rework** — loops the real product grid only (header/nav cropped), seamless. (Demo candle image broken — fix that product's photo.)
 - [ ] **25 AppDemo** — more dynamic animation + **3D perspective** on the UI cards
-- [ ] **Out-of-stock reel** — customer asks about an out-of-stock product → Vela shows live "Jashtë stokut" + notify-me + auto stock (accurate; no false auto-archive claim)
+- [x] **Out-of-stock reel** (28) — customer asks → "…u shit" (lost sale) → Vela shows live "Jashtë stokut" + auto stock (accurate; no false auto-archive claim)
 - [ ] **Themes reel** — familiar **Instagram theme vs custom design**, using **real UI/screenshots**
 - [ ] **Real UI everywhere** — prefer real app/landing screenshots over mock UI in the reels
 - [ ] **Text wrapping** — no split/awkward multi-line headers across all reels (covers done; apply `text-wrap: balance` to remaining headlines)
@@ -26,7 +26,7 @@ Living tracker for the current batch of requests. `[x]` done & committed · `[ ]
 - [ ] **Clean re-capture** of IG storefront (fix broken candle image + sticky-nav-baked-mid-page artifact)
 
 ## 🛠️ App / Landing — TODO
-- [ ] **Storefront page transitions** — clean fade/slide on route change between storefront pages
+- [x] **Storefront page transitions** — soft fade + up-slide on route change (reuses GSAP Reveal; reduced-motion + motion:'none' aware; preview-safe)
 - [ ] **Hero film** — 3D perspectives for the UI demos + nicer storefront screenshot (custom + IG theme)
 - [ ] **Repost-on-restock** automation — when stock goes 0→positive, auto-publish a fresh IG post w/ new caption (needs design review before wiring to real publish; rate limits)
 - [ ] **New app screenshots** — capture nicer custom + IG theme (owner set up their theme; capture the *public* storefront — no login needed on my side)
