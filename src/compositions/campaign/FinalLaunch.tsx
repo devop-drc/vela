@@ -246,13 +246,18 @@ export const FinalLaunch04OldLek: React.FC = () => {
 };
 
 /* ══════════════════════ 05 · Client POV: scroll pafund vs filtro ══════════════════════ */
+// Real Instagram-theme storefront (dyqani.yt) scrolling in a phone frame.
+// Seamless endless loop: two identical copies, wrap at exactly one image height → no stutter.
+const IG_W = 452, IG_H = Math.round(452 * 1191 / 430); // preserve the 430×1191 aspect
 const ScrollGrid: React.FC<{ frame: number }> = ({ frame }) => {
-  const imgs = ["sneaker.jpg", "dress.jpg", "bag.jpg", "dress.jpg", "sneaker.jpg", "bag.jpg", "sneaker.jpg", "dress.jpg", "bag.jpg", "dress.jpg"];
-  const y = -((frame * 16) % 720);
+  const y = -((frame * 14) % IG_H); // fast, smooth, seamless
   return (
-    <div style={{ width: 460, height: 700, borderRadius: 54, overflow: "hidden", background: "#0B0710", border: "2px solid rgba(255,255,255,0.14)", padding: 12, boxShadow: "0 60px 130px -50px rgba(0,0,0,0.8)" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, transform: `translateY(${y}px)` }}>
-        {imgs.concat(imgs).map((n, i) => <Img key={i} src={staticFile(`campaign/${n}`)} style={{ width: "100%", height: 210, objectFit: "cover", borderRadius: 12 }} />)}
+    <div style={{ width: 476, height: 720, borderRadius: 54, overflow: "hidden", background: "#000", border: "3px solid rgba(20,14,18,0.9)", padding: 12, boxShadow: "0 60px 130px -50px rgba(0,0,0,0.85)" }}>
+      <div style={{ borderRadius: 42, overflow: "hidden", height: "100%", background: "#fff" }}>
+        <div style={{ transform: `translateY(${y}px)`, willChange: "transform" }}>
+          <Img src={staticFile("campaign/ig-storefront.png")} style={{ width: IG_W, height: IG_H, display: "block" }} />
+          <Img src={staticFile("campaign/ig-storefront.png")} style={{ width: IG_W, height: IG_H, display: "block" }} />
+        </div>
       </div>
     </div>
   );
