@@ -19,6 +19,24 @@ import { Cart, CartUIProvider, useCartUI } from '../components/Cart';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { sft, getVisitorLang } from '../lib/visitorPrefs';
+import { Reveal } from '@/lib/anim';
+
+// Page transition for storefront route changes: a soft fade + small upward
+// slide, keyed on pathname so the entrance replays on every navigation
+// (Home → Products → Product → Cart → Orders). Reuses the app-wide GSAP Reveal,
+// which already skips animation under prefers-reduced-motion. Only the inner
+// page content animates — the chrome + StorefrontThemeProvider stay mounted, so
+// the Studio preview's postMessage/theme wiring is never remounted or disturbed.
+// `enabled=false` (config.effects.motion === 'none') opts out entirely.
+const AnimatedOutlet = ({ enabled }: { enabled: boolean }) => {
+  const location = useLocation();
+  if (!enabled) return <Outlet />;
+  return (
+    <Reveal playKey={location.pathname} from="up" duration={0.32}>
+      <Outlet />
+    </Reveal>
+  );
+};
 
 const Chrome = () => {
   const { shopDetails, appearanceSettings, products } = useStorefront();
@@ -159,6 +177,8 @@ const Chrome = () => {
   if (location.pathname.includes('/instagramShop')) return null;
 
   const sidebarNav = config.layout.nav.desktop === 'sidebar';
+  // Animate page swaps unless the merchant disabled motion for the storefront.
+  const pageMotion = config.effects.motion !== 'none';
   // Only reserve space for the mobile bottom bar when it's actually shown
   // (otherwise every page has ~80px of dead space in hamburger mode). The
   // reserve lives BELOW the footer — on main it left the footer itself
@@ -175,7 +195,7 @@ const Chrome = () => {
             <SidebarNav onOpenCart={openCart} />
             <div className="flex min-w-0 flex-1 flex-col">
               <main className="flex-1">
-                <Outlet />
+                <AnimatedOutlet enabled={pageMotion} />
               </main>
               <div className={navReserve}><Footer /></div>
             </div>
@@ -185,7 +205,7 @@ const Chrome = () => {
         <>
           <Header onOpenCart={openCart} />
           <main className="flex-1">
-            <Outlet />
+            <AnimatedOutlet enabled={pageMotion} />
           </main>
           <div className={navReserve}><Footer /></div>
         </>
