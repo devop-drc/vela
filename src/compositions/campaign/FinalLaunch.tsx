@@ -65,7 +65,7 @@ export const FinalLaunch01DmPrice: React.FC = () => {
               <Bubble who="buyer" text="…po jemi në DM 💀" s={springIn(frame, fps, 120, SPRING)} />
             </div>
             <div style={{ marginTop: 48, opacity: interpolate(springIn(frame, fps, 150, SPRING), [0, 1], [0, 1]) }}>
-              <KineticWords text="Klasika shqiptare." frame={frame} fps={fps} delay={150} highlight="shqiptare" style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 70, color: "#fff", letterSpacing: "-0.02em" }} />
+              <KineticWords text="Kështu humben klientët." frame={frame} fps={fps} delay={150} highlight="humben" style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 70, color: "#fff", letterSpacing: "-0.02em" }} />
             </div>
           </AbsoluteFill>
         </AbsoluteFill>
@@ -88,7 +88,7 @@ export const FinalLaunch01DmPrice: React.FC = () => {
             <div style={{ opacity: b(44), transform: `translateY(${(1 - b(44)) * 30}px)` }}>
               <GlareChip frame={frame} fontSize={44}>Dyqani yt falas → vela.al</GlareChip>
             </div>
-            <div style={{ opacity: b(58), fontFamily: CLASH, fontWeight: 600, fontSize: 34, color: BRAND.muted, transform: `translateY(${-point}px)` }}>Pa "çmimi në DM". Kurrë më.</div>
+            <div style={{ opacity: b(58), fontFamily: CLASH, fontWeight: 600, fontSize: 34, color: BRAND.muted, transform: `translateY(${-point}px)` }}>Klientët blejnë vetë — pa asnjë DM.</div>
           </AbsoluteFill>
         </AbsoluteFill>
       )}
@@ -145,19 +145,19 @@ export const FinalLaunch02Haggle: React.FC = () => {
         <Bubble who="buyer" text="3,000 e lëmë, hajde 🤝" s={springIn(frame, fps, 134, SPRING)} />
       </div>
       <div style={{ marginTop: 48, opacity: interpolate(springIn(frame, fps, 160, SPRING), [0, 1], [0, 1]) }}>
-        <KineticWords text="Dyqani s'bën pazar." frame={frame} fps={fps} delay={160} highlight="pazar" style={{ ...H2(70, "#fff") }} />
+        <KineticWords text="Pazar që s'mbaron kurrë." frame={frame} fps={fps} delay={160} highlight="kurrë" style={{ ...H2(70, "#fff") }} />
       </div>
     </AbsoluteFill>
   );
   const light = (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 46, padding: "150px 70px" }}>
-      <KineticWords text="Çmimi është çmim." frame={frame} fps={fps} delay={cut - 4} highlight="çmim" style={{ ...H2(70), maxWidth: 900 }} />
+      <KineticWords text="Çmim fiks, pa pazar." frame={frame} fps={fps} delay={cut - 4} highlight="fiks" style={{ ...H2(70), maxWidth: 900 }} />
       <div style={{ width: 560, ...glassLight, borderRadius: 28, padding: "34px 40px", display: "flex", flexDirection: "column", gap: 20, opacity: b(24), transform: `translateY(${(1 - b(24)) * 60}px)` }}>
         <div style={{ position: "relative", display: "flex", justifyContent: "space-between", fontFamily: CLASH, fontWeight: 600, fontSize: 34, color: INK }}><span>Fustan liri</span><span>4,500 L</span></div>
         <div style={{ position: "relative", background: "linear-gradient(115deg,#A31234,#FF2E4D)", color: "#fff", borderRadius: 16, textAlign: "center", padding: "20px 0", fontFamily: CLASH, fontWeight: 600, fontSize: 34 }}>Paguaj 4,500 L</div>
         <div style={{ position: "relative", textAlign: "center", color: "#10893E", fontWeight: 800, fontFamily: CLASH, fontSize: 30 }}>Porosia u krye ✓</div>
       </div>
-      <PayCTA frame={frame} fps={fps} cut={cut} cta="Shit pa pazar → vela.al" sub="Karta nuk bën pazar." />
+      <PayCTA frame={frame} fps={fps} cut={cut} cta="Shit pa pazar → vela.al" sub="Kartë ose cash — pagesa në sekonda." />
     </AbsoluteFill>
   );
   return <Stage frame={frame} cut={cut} dark={dark} light={light} />;
@@ -186,7 +186,7 @@ export const FinalLaunch03PovNoShop: React.FC = () => {
   );
   const light = (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 40, padding: "150px 70px" }}>
-      <KineticWords text="Vela i kthen postimet në dyqan." frame={frame} fps={fps} delay={cut - 4} highlight="dyqan" style={{ ...H2(64), maxWidth: 900 }} />
+      <KineticWords text="Postimet e tua shesin 24/7." frame={frame} fps={fps} delay={cut - 4} highlight="24/7" style={{ ...H2(64), maxWidth: 900 }} />
       {[["Ana nga Tirana", "3,500 L"], ["Sara nga Vlora", "6,900 L"]].map(([n, a], i) => (
         <div key={i} style={{ width: 620, ...glassLight, borderRadius: 24, padding: "24px 30px", display: "flex", alignItems: "center", gap: 20, opacity: b(20 + i * 14), transform: `translateY(${(1 - b(20 + i * 14)) * 50}px)` }}>
           <span style={{ position: "relative", width: 56, height: 56, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(16,185,129,0.16)", fontSize: 28 }}>🎉</span>
@@ -222,7 +222,7 @@ export const FinalLaunch04OldLek: React.FC = () => {
         <div style={{ position: "relative", fontFamily: CLASH, fontWeight: 700, fontSize: 96, color: BRAND.wine, textAlign: "center" }}>4,760 L</div>
         <div style={{ position: "relative", fontFamily: INTER, fontSize: 30, color: BRAND.muted, textAlign: "center", marginTop: 6 }}>ose 46 € · ose 50 $</div>
       </div>
-      <PayCTA frame={frame} fps={fps} cut={cut} cta="Pa kalkulator → vela.al" sub="Lekë, Euro, Dollarë." />
+      <PayCTA frame={frame} fps={fps} cut={cut} cta="Fillo falas → vela.al" sub="Lekë, Euro, Dollarë — pa kalkulator." />
     </AbsoluteFill>
   );
   return <Stage frame={frame} cut={cut} dark={dark} light={light} />;
@@ -264,7 +264,7 @@ export const FinalLaunch05ClientScroll: React.FC = () => {
         <div style={{ display: "flex", gap: 12 }}>{["Fustane", "Kuqe", "Masa M"].map((c, i) => <span key={c} style={{ padding: "14px 28px", borderRadius: 999, fontFamily: CLASH, fontWeight: 600, fontSize: 26, ...(i === 1 ? { background: "linear-gradient(115deg,#A31234,#FF2E4D)", color: "#fff" } : { ...glassLight, color: INK }) }}>{c}</span>)}</div>
       </div>
       <MiniCard img="dress.jpg" name="Fustan i kuq" price="3,500 L" width={440} style={{ opacity: b(40), transform: `translateY(${(1 - b(40)) * 50}px)` } as any} />
-      <PayCTA frame={frame} fps={fps} cut={cut} cta="Klientët blejnë vetë → vela.al" sub="E gjejnë në 3 sekonda." />
+      <PayCTA frame={frame} fps={fps} cut={cut} cta="Klientët blejnë vetë → vela.al" sub="Gjejnë çfarë duan në sekonda." />
     </AbsoluteFill>
   );
   return <Stage frame={frame} cut={cut} dark={dark} light={light} />;
@@ -302,7 +302,7 @@ export const FinalLaunch06ClientDm: React.FC = () => {
           </div>
         ))}
       </div>
-      <PayCTA frame={frame} fps={fps} cut={cut} cta="Blerje pa DM → vela.al" sub="Klienti klikon. Ti paketon." />
+      <PayCTA frame={frame} fps={fps} cut={cut} cta="Blerje pa DM → vela.al" sub="Pagesa, dërgesa dhe stoku — automatike." />
     </AbsoluteFill>
   );
   return <Stage frame={frame} cut={cut} dark={dark} light={light} />;
