@@ -206,30 +206,40 @@ export const FinalLaunch04OldLek: React.FC = () => {
   const frame = useCurrentFrame(); const { fps } = useVideoConfig(); ensureClash();
   const cut = 186;
   const dark = (
-    <AbsoluteFill style={{ padding: "60px 70px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 28 }}>
-      <div style={{ opacity: interpolate(springIn(frame, fps, 4, SPRING), [0, 1], [0, 1]) }}><POV frame={frame} fps={fps}>Çmimi në Shqipëri 🤯</POV></div>
-      <div style={{ ...H2(104, "#fff"), opacity: interpolate(springIn(frame, fps, 34, SPRING), [0, 1], [0, 1]), transform: `scale(${0.9 + 0.1 * Math.min(springIn(frame, fps, 34, SPRING), 1)})` }}>"1 MILION lekë?!"</div>
-      {frame >= 74 && <div style={{ ...H2(52, "#FACC15"), maxWidth: 940 }}>1 milion të vjetra = 100 mijë të reja</div>}
-      {frame >= 108 && <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center", opacity: interpolate(springIn(frame, fps, 108, SPRING), [0, 1], [0, 1]) }}>
-        {["≈ 1,000 €", "≈ 862 £", "🤯"].map((t) => <span key={t} style={{ padding: "12px 28px", borderRadius: 999, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.16)", fontFamily: CLASH, fontWeight: 700, fontSize: 40, color: "#fff" }}>{t}</span>)}
-      </div>}
-      {frame >= 150 && <div style={{ opacity: interpolate(springIn(frame, fps, 150, SPRING), [0, 1], [0, 1]) }}><KineticWords text="Provim matematike çdo herë 💀" frame={frame} fps={fps} delay={150} highlight="matematike" style={{ ...H2(46, "rgba(255,255,255,0.85)") }} /></div>}
+    <AbsoluteFill style={{ padding: "60px 70px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 18 }}>
+      <div style={{ display: "flex", justifyContent: "center" }}><POV frame={frame} fps={fps}>Kur pyet për çmimin në Shqipëri 🤯</POV></div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 20 }}>
+        <Bubble who="buyer" text="Sa kushton kjo çantë?" s={springIn(frame, fps, 28, SPRING)} />
+        <Bubble who="seller" text="1 milion lekë" s={springIn(frame, fps, 52, SPRING)} />
+        <Bubble who="buyer" text="1 MILION?? 😱" s={springIn(frame, fps, 80, SPRING)} />
+        <Bubble who="seller" text="Të vjetra! Pra 100 mijë 😅" s={springIn(frame, fps, 106, SPRING)} />
+        <Bubble who="buyer" text="Po në euro sa vjen?? 🫠" s={springIn(frame, fps, 134, SPRING)} />
+      </div>
+      <div style={{ marginTop: 44, opacity: interpolate(springIn(frame, fps, 160, SPRING), [0, 1], [0, 1]) }}>
+        <KineticWords text="I njëjti çmim. Kaos i plotë." frame={frame} fps={fps} delay={160} highlight="Kaos" style={{ ...H2(64, "#fff") }} />
+      </div>
     </AbsoluteFill>
   );
   const b = (d: number) => springIn(frame, fps, cut + d, SPRING);
   const light = (
-    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 38, padding: "120px 70px" }}>
-      <KineticWords text="Vela i konverton — automatikisht." frame={frame} fps={fps} delay={cut - 4} highlight="automatikisht" style={{ ...H2(56), maxWidth: 920 }} />
-      <div style={{ ...glassLight, borderRadius: 30, padding: "36px 50px", width: 640, opacity: b(24), transform: `translateY(${(1 - b(24)) * 60}px)` }}>
-        <div style={{ position: "relative", fontFamily: CLASH, fontWeight: 700, fontSize: 92, color: BRAND.wine, textAlign: "center", lineHeight: 1 }}>100,000 L</div>
-        <div style={{ position: "relative", fontFamily: INTER, fontSize: 26, color: BRAND.muted, textAlign: "center", marginTop: 4 }}>lekë të reja</div>
-        <div style={{ position: "relative", height: 1, background: "rgba(0,0,0,0.1)", margin: "22px 0" }} />
-        {[["Euro", "≈ 1,000 €"], ["Paund", "≈ 862 £"]].map(([name, v]) => (
-          <div key={v} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: CLASH, fontWeight: 600, fontSize: 40, color: INK, padding: "6px 0" }}><span>{name}</span><span>{v}</span></div>
-        ))}
-        <div style={{ position: "relative", marginTop: 18, textAlign: "center", fontFamily: CLASH, fontWeight: 700, fontSize: 26, color: "#10893E" }}>🔄 Konvertim automatik, në kohë reale</div>
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 34, padding: "120px 70px" }}>
+      <KineticWords text="Një çmim. Zero konfuzion." frame={frame} fps={fps} delay={cut - 4} highlight="Zero" style={{ ...H2(68), maxWidth: 900 }} />
+      <div style={{ width: 580, borderRadius: 32, overflow: "hidden", ...glassLight, opacity: b(22), transform: `translateY(${(1 - b(22)) * 56}px)` }}>
+        <Img src={staticFile("campaign/bag.jpg")} style={{ width: "100%", height: 320, objectFit: "cover", display: "block" }} />
+        <div style={{ position: "relative", padding: "26px 32px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontFamily: CLASH, fontWeight: 600, fontSize: 36, color: INK }}>Çantë lëkure</span>
+            <span style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 46, color: BRAND.wine }}>100,000 L</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 18, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 24, color: "#10893E", background: "rgba(16,185,129,0.12)", borderRadius: 999, padding: "8px 18px" }}>🔄 Automatik</span>
+            <span style={{ fontFamily: CLASH, fontWeight: 600, fontSize: 32, color: BRAND.muted }}>= 1,000 €</span>
+            <span style={{ fontFamily: CLASH, fontWeight: 600, fontSize: 32, color: BRAND.muted }}>= 862 £</span>
+          </div>
+        </div>
       </div>
-      <PayCTA frame={frame} fps={fps} cut={cut} cta="Çmime pa kokëçarje → vela.al" sub="Klienti sheh çmimin në monedhën e vet." />
+      <div style={{ opacity: b(44), fontFamily: INTER, fontSize: 34, color: BRAND.muted, textAlign: "center", maxWidth: 820 }}>Klienti e sheh në monedhën e vet — pa pyetur askënd.</div>
+      <div style={{ opacity: b(58), transform: `translateY(${(1 - b(58)) * 30}px)` }}><GlareChip frame={frame} fontSize={44}>Çmime të qarta → vela.al</GlareChip></div>
     </AbsoluteFill>
   );
   return <Stage frame={frame} cut={cut} dark={dark} light={light} />;
