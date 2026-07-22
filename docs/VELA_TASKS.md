@@ -21,10 +21,10 @@ Living tracker for the current batch of requests. `[x]` done & committed · `[ ]
 - [x] **Custom-theme screenshot** — captured `/shop/velaeshop` products page (real custom design)
 - [x] **Out-of-stock reel** (28) — customer asks → "…u shit" (lost sale) → Vela shows live "Jashtë stokut" + auto stock (accurate; no false auto-archive claim)
 - [x] **Themes reel** — familiar **Instagram theme vs custom design**, using **real UI/screenshots**
-- [ ] **Real UI everywhere** — prefer real app/landing screenshots over mock UI in the reels
-- [ ] **Text wrapping** — no split/awkward multi-line headers across all reels (covers done; apply `text-wrap: balance` to remaining headlines)
-- [ ] **IG shop-name font** — style the shop name in IG mockups like real Instagram
-- [ ] **Clean re-capture** of IG storefront (fix broken candle image + sticky-nav-baked-mid-page artifact)
+- [~] **Real UI everywhere** — 05/25/27/29 use real captured screenshots; meme reels keep intentional mock chat UI
+- [~] **Text wrapping** — covers fixed (`text-wrap: balance`); reel headlines use KineticWords word-wrap (balanced)
+- [x] **IG shop-name font** — mock IG username now a Helvetica system sans (authentic)
+- [~] **Clean re-capture** of IG storefront — nav fixed; candle broken only in IG-theme thumbnail (data issue on that product's photo)
 
 ## 🛠️ App / Landing — TODO
 - [x] **Storefront page transitions** — soft fade + up-slide on route change (reuses GSAP Reveal; reduced-motion + motion:'none' aware; preview-safe)
