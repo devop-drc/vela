@@ -33,6 +33,8 @@ import { FinCarousel, carSchema, carDefaults } from "./compositions/marketing/fi
 import { ProductPromo, productPromoSchema, productPromoDefaults, PROMO_FPS, PROMO_DEFAULT_FRAMES } from "./compositions/ProductPromo";
 import { HlCover, HlStory, hlSchema, hlDefaults, CleanReelConvert, CleanReelAutoPost, CleanReelPay, CleanPostImport, CleanPostStudio, CLEAN_CONVERT_FRAMES, CLEAN_AUTOPOST_FRAMES, CLEAN_PAY_FRAMES, CLEAN_IMPORT_FRAMES, CLEAN_STUDIO_FRAMES } from "./compositions/marketing/ProfileKit";
 import { C4MicroOrders, C3MicroDm, MICRO_ORDERS_FRAMES, MICRO_DM_FRAMES } from "./compositions/marketing/nextgen/Nextgen";
+import { C1MacroDark, C2MacroLight, C5BeforeAfter, MACRO_DARK_FRAMES, MACRO_LIGHT_FRAMES, BEFORE_AFTER_FRAMES } from "./compositions/marketing/nextgen/NextgenMacro";
+import { C6Matrix, C7StatCard, C8TrustProof, STILL_FRAMES } from "./compositions/marketing/nextgen/NextgenStills";
 import { getVideoMetadata } from "@remotion/media-utils";
 
 const common = { fps: VIDEO.fps, width: VIDEO.width, height: VIDEO.height };
@@ -157,8 +159,14 @@ export const RemotionRoot = () => (
     <Composition id="CleanPostImport" component={CleanPostImport} durationInFrames={CLEAN_IMPORT_FRAMES} fps={30} width={1080} height={1350} />
     <Composition id="CleanPostStudio" component={CleanPostStudio} durationInFrames={CLEAN_STUDIO_FRAMES} fps={30} width={1080} height={1350} />
     {/* ── Next-gen suite (real app UI · poster-first · marketing/NEW_CONTENT_PLAN.md) ── */}
-    <Composition id="C4MicroOrders" component={C4MicroOrders} durationInFrames={MICRO_ORDERS_FRAMES} {...story} />
+    <Composition id="C1MacroDark" component={C1MacroDark} durationInFrames={MACRO_DARK_FRAMES} {...story} />
+    <Composition id="C2MacroLight" component={C2MacroLight} durationInFrames={MACRO_LIGHT_FRAMES} {...story} />
     <Composition id="C3MicroDm" component={C3MicroDm} durationInFrames={MICRO_DM_FRAMES} {...story} />
+    <Composition id="C4MicroOrders" component={C4MicroOrders} durationInFrames={MICRO_ORDERS_FRAMES} {...story} />
+    <Composition id="C5BeforeAfter" component={C5BeforeAfter} durationInFrames={BEFORE_AFTER_FRAMES} {...story} />
+    <Composition id="C6Matrix" component={C6Matrix} durationInFrames={STILL_FRAMES} {...story} />
+    <Composition id="C7StatCard" component={C7StatCard} durationInFrames={STILL_FRAMES} {...story} />
+    <Composition id="C8TrustProof" component={C8TrustProof} durationInFrames={STILL_FRAMES} {...story} />
 
     {/* Instagram Studio motion overlay — duration follows the source video (capped at 60s, reels limit-safe). */}
     <Composition
