@@ -330,3 +330,42 @@ export const FinalLaunch06ClientDm: React.FC = () => {
   );
   return <Stage frame={frame} cut={cut} dark={dark} light={light} />;
 };
+
+/* ══════════════════════ 28 · Jashtë stokut (out-of-stock inquiry) ══════════════════════ */
+export const FINAL_OOS_FRAMES = 11 * 30; // 330
+export const FinalLaunch28OutOfStock: React.FC = () => {
+  const frame = useCurrentFrame(); const { fps } = useVideoConfig(); ensureClash();
+  const cut = 192; const b = (d: number) => springIn(frame, fps, cut + d, SPRING);
+  const dark = (
+    <AbsoluteFill style={{ padding: "60px 70px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 18 }}>
+      <div style={{ display: "flex", justifyContent: "center" }}><POV frame={frame} fps={fps}>Produkti që s'e ke më në stok 😬</POV></div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 20 }}>
+        <Bubble who="buyer" text="E keni këtë fustan? 👗" s={springIn(frame, fps, 28, SPRING)} />
+        <Bubble who="seller" text="Po, e kemi! 😊" s={springIn(frame, fps, 54, SPRING)} />
+        <Bubble who="buyer" text="Super, e dua! Sa kushton?" s={springIn(frame, fps, 82, SPRING)} />
+        <Bubble who="seller" text="...na fal, u shit 😞" s={springIn(frame, fps, 118, SPRING)} />
+      </div>
+      <div style={{ marginTop: 44, opacity: interpolate(springIn(frame, fps, 150, SPRING), [0, 1], [0, 1]) }}>
+        <KineticWords text="Klient i zhgënjyer. Shitje e humbur." frame={frame} fps={fps} delay={150} highlight="humbur" style={{ ...H2(54, "#fff") }} />
+      </div>
+    </AbsoluteFill>
+  );
+  const light = (
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 32, padding: "120px 70px" }}>
+      <KineticWords text="Vela e di stokun — vetë." frame={frame} fps={fps} delay={cut - 4} highlight="vetë" style={{ ...H2(64), maxWidth: 900 }} />
+      <div style={{ width: 520, borderRadius: 30, overflow: "hidden", ...glassLight, opacity: b(22), transform: `translateY(${(1 - b(22)) * 50}px)` }}>
+        <div style={{ position: "relative" }}>
+          <Img src={staticFile("campaign/dress.jpg")} style={{ width: "100%", height: 300, objectFit: "cover", display: "block", filter: "grayscale(0.35) brightness(0.82)" }} />
+          <div style={{ position: "absolute", top: 16, left: 16, background: "#4b5563", color: "#fff", borderRadius: 999, padding: "8px 22px", fontFamily: CLASH, fontWeight: 700, fontSize: 26 }}>Jashtë stokut</div>
+        </div>
+        <div style={{ position: "relative", padding: "22px 28px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontFamily: CLASH, fontWeight: 600, fontSize: 32, color: INK }}>Fustan mbrëmjeje</span>
+          <span style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 30, color: BRAND.muted }}>0 copë</span>
+        </div>
+      </div>
+      <div style={{ opacity: b(40), fontFamily: INTER, fontSize: 34, lineHeight: 1.36, color: BRAND.muted, textAlign: "center", maxWidth: 820 }}>Stoku përditësohet me çdo shitje. Klientët e dinë menjëherë — <b style={{ color: INK }}>ti s'premton kot</b>.</div>
+      <PayCTA frame={frame} fps={fps} cut={cut} cta="Stok gjithmonë i saktë → vela.al" />
+    </AbsoluteFill>
+  );
+  return <Stage frame={frame} cut={cut} dark={dark} light={light} />;
+};

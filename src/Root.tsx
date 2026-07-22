@@ -42,7 +42,7 @@ import { LaunchDashboard, LAUNCH_DASH_FRAMES } from "./compositions/campaign/Lau
 import { LaunchLocal, LOCAL_W, LOCAL_H, LOCAL_FRAMES } from "./compositions/campaign/LaunchLocal";
 import { LaunchFuture, LAUNCH_FUTURE_FRAMES } from "./compositions/campaign/LaunchFuture";
 import { LaunchOffer, OFFER_W, OFFER_H, OFFER_FRAMES } from "./compositions/campaign/LaunchOffer";
-import { FinalLaunch01DmPrice, FINAL_DM_FRAMES, FinalLaunch02Haggle, FINAL_HAGGLE_FRAMES, FinalLaunch03PovNoShop, FINAL_POV_FRAMES, FinalLaunch04OldLek, FINAL_LEK_FRAMES, FinalLaunch05ClientScroll, FINAL_SCROLL_FRAMES, FinalLaunch06ClientDm, FINAL_CLIENTDM_FRAMES } from "./compositions/campaign/FinalLaunch";
+import { FinalLaunch01DmPrice, FINAL_DM_FRAMES, FinalLaunch02Haggle, FINAL_HAGGLE_FRAMES, FinalLaunch03PovNoShop, FINAL_POV_FRAMES, FinalLaunch04OldLek, FINAL_LEK_FRAMES, FinalLaunch05ClientScroll, FINAL_SCROLL_FRAMES, FinalLaunch06ClientDm, FINAL_CLIENTDM_FRAMES, FinalLaunch28OutOfStock, FINAL_OOS_FRAMES } from "./compositions/campaign/FinalLaunch";
 import { FinalLaunch07Split, FinalLaunch08DmMeme, FinalLaunch09Stat, STILL_FRAMES } from "./compositions/campaign/FinalLaunchStills";
 import { FinalLaunch10HowItWorks, WAVE2_HIW_FRAMES, FinalLaunch11Manifesto, FinalLaunch12WhyVela, WAVE2_WHY_FRAMES, FinalLaunch13WeListen, WAVE2_LISTEN_FRAMES, FinalLaunch14Stats, WAVE2_STATS_FRAMES, FinalLaunch15TimeCalc, WAVE2_TIME_FRAMES } from "./compositions/campaign/FinalLaunchWave2";
 import { POST_FRAMES, FinalLaunch16Search, FinalLaunch17Shop247, FinalLaunch18Currency, FinalLaunch19Checkout, FinalLaunch20CarCover, FinalLaunch21CarR1, FinalLaunch22CarR2, FinalLaunch23CarR3, FinalLaunch24CarCta } from "./compositions/campaign/FinalLaunchPosts";
@@ -188,6 +188,7 @@ export const RemotionRoot = () => (
     <Composition id="FinalLaunch04OldLek" component={FinalLaunch04OldLek} durationInFrames={FINAL_LEK_FRAMES} {...story} />
     <Composition id="FinalLaunch05ClientScroll" component={FinalLaunch05ClientScroll} durationInFrames={FINAL_SCROLL_FRAMES} {...story} />
     <Composition id="FinalLaunch06ClientDm" component={FinalLaunch06ClientDm} durationInFrames={FINAL_CLIENTDM_FRAMES} {...story} />
+    <Composition id="FinalLaunch28OutOfStock" component={FinalLaunch28OutOfStock} durationInFrames={FINAL_OOS_FRAMES} {...story} />
     <Composition id="FinalLaunch07Split" component={FinalLaunch07Split} durationInFrames={STILL_FRAMES} fps={30} width={1080} height={1350} />
     <Composition id="FinalLaunch08DmMeme" component={FinalLaunch08DmMeme} durationInFrames={STILL_FRAMES} fps={30} width={1080} height={1350} />
     <Composition id="FinalLaunch09Stat" component={FinalLaunch09Stat} durationInFrames={STILL_FRAMES} fps={30} width={1080} height={1350} />
