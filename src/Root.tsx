@@ -44,7 +44,7 @@ import { LaunchFuture, LAUNCH_FUTURE_FRAMES } from "./compositions/campaign/Laun
 import { LaunchOffer, OFFER_W, OFFER_H, OFFER_FRAMES } from "./compositions/campaign/LaunchOffer";
 import { FinalLaunch01DmPrice, FINAL_DM_FRAMES, FinalLaunch02Haggle, FINAL_HAGGLE_FRAMES, FinalLaunch03PovNoShop, FINAL_POV_FRAMES, FinalLaunch04OldLek, FINAL_LEK_FRAMES, FinalLaunch05ClientScroll, FINAL_SCROLL_FRAMES, FinalLaunch06ClientDm, FINAL_CLIENTDM_FRAMES } from "./compositions/campaign/FinalLaunch";
 import { FinalLaunch07Split, FinalLaunch08DmMeme, FinalLaunch09Stat, STILL_FRAMES } from "./compositions/campaign/FinalLaunchStills";
-import { FinalLaunch10HowItWorks, WAVE2_HIW_FRAMES, FinalLaunch11Manifesto } from "./compositions/campaign/FinalLaunchWave2";
+import { FinalLaunch10HowItWorks, WAVE2_HIW_FRAMES, FinalLaunch11Manifesto, FinalLaunch12WhyVela, WAVE2_WHY_FRAMES, FinalLaunch13WeListen, WAVE2_LISTEN_FRAMES, FinalLaunch14Stats, WAVE2_STATS_FRAMES, FinalLaunch15TimeCalc, WAVE2_TIME_FRAMES } from "./compositions/campaign/FinalLaunchWave2";
 import { getVideoMetadata } from "@remotion/media-utils";
 
 const common = { fps: VIDEO.fps, width: VIDEO.width, height: VIDEO.height };
@@ -189,6 +189,10 @@ export const RemotionRoot = () => (
     <Composition id="FinalLaunch09Stat" component={FinalLaunch09Stat} durationInFrames={STILL_FRAMES} fps={30} width={1080} height={1350} />
     <Composition id="FinalLaunch10HowItWorks" component={FinalLaunch10HowItWorks} durationInFrames={WAVE2_HIW_FRAMES} {...story} />
     <Composition id="FinalLaunch11Manifesto" component={FinalLaunch11Manifesto} durationInFrames={STILL_FRAMES} fps={30} width={1080} height={1350} />
+    <Composition id="FinalLaunch12WhyVela" component={FinalLaunch12WhyVela} durationInFrames={WAVE2_WHY_FRAMES} {...story} />
+    <Composition id="FinalLaunch13WeListen" component={FinalLaunch13WeListen} durationInFrames={WAVE2_LISTEN_FRAMES} {...story} />
+    <Composition id="FinalLaunch14Stats" component={FinalLaunch14Stats} durationInFrames={WAVE2_STATS_FRAMES} {...story} />
+    <Composition id="FinalLaunch15TimeCalc" component={FinalLaunch15TimeCalc} durationInFrames={WAVE2_TIME_FRAMES} {...story} />
 
     {/* ── Rebuilt look — proofs (Nightfall dark hero · Daybreak cream editorial) ── */}
     <Composition id="NightfallProof" component={NightfallProof} durationInFrames={NIGHTFALL_FRAMES} {...story} />
