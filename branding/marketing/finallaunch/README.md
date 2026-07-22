@@ -22,19 +22,19 @@ Rule: marketing voice says **"sistemi/platforma"**, never "AI". Multi-currency
 ## Upload order & captions
 
 ### FinalLaunch01 — DmPrice  · *reel* · `FinalLaunch01DmPrice`
-Hook: "Çmimi në DM 🙏 … po jemi në DM 💀" → payoff: çmimi rri te produkti.
+Hook: "Çmimi në DM 🙏 … po jemi në DM 💀" (kështu humben klientët) → **çmimi te produkti, klientët blejnë vetë**.
 > **Klasika shqiptare: "çmimi në DM". 🙏**
 > Me Vela, çmimi rri te produkti — s'ka nevojë ta pyesin. Klientët shohin, klikojnë, blejnë.
 > Kthe Instagramin në dyqan → **vela.al**
 
 ### FinalLaunch02 — Haggle · *reel* · `FinalLaunch02Haggle`
-"Sa e le? 🤝" → çmimi është çmim; karta nuk bën pazar.
+"Sa e le? 🤝" (pazar që s'mbaron) → **çmim fiks, pa pazar** · kartë ose cash.
 > **"Sa e le?" 😅**
 > Pazari është traditë, po dyqani jo. Në Vela çmimi është çmim — paguan me kartë ose cash, pa lodhje.
 > **vela.al**
 
 ### FinalLaunch03 — PovNoShop · *reel* · `FinalLaunch03PovNoShop`
-"POV: shet pa dyqan → 147 DM pa përgjigje" → paneli shet ndërsa ti fle.
+"POV: shet pa dyqan → 147 DM pa përgjigje" → **postimet e tua shesin 24/7**, edhe kur ti fle.
 > **147 DM pa përgjigje. Të njihet? 😵‍💫**
 > Vela i kthen postimet në dyqan: klientët porosisin vetë, ti sheh gjithçka në një panel. Ti fle — dyqani shet.
 > **vela.al**
@@ -52,7 +52,7 @@ Klienti skrollon pafund për të gjetur → kërko, filtro, gjej.
 > **vela.al**
 
 ### FinalLaunch06 — ClientDm · *reel* · `FinalLaunch06ClientDm`
-5 pyetje në DM për 1 blerje → 1 klik, zero DM.
+5 pyetje në DM për 1 blerje → **1 klik: pagesa, dërgesa & stoku automatik**.
 > **"Sa kushton? Ku ndodheni? Si paguaj? Bëni dërgesa?" — 5 pyetje për 1 blerje. 😮‍💨**
 > Në Vela klienti klikon, ti paketon: kartë ose cash, dërgesa dhe stoku automatik. Zero DM.
 > **vela.al**
