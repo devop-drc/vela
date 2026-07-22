@@ -42,7 +42,17 @@ export const AuroraDark: React.FC<{ frame: number }> = ({ frame }) => {
           filter: "blur(120px)", opacity: 0.75,
         }}
       />
-      <AbsoluteFill style={{ background: "radial-gradient(100% 75% at 50% 32%, transparent 42%, rgba(9,6,11,0.62) 100%)" }} />
+      {/* drifting light orbs — move behind the glass so it refracts + shimmers */}
+      {[
+        { c: "rgba(255,46,77,0.30)", spd: 190, ax: 130, ay: 160, r: 440, ph: 0, cx: 28, cy: 34 },
+        { c: "rgba(250,204,21,0.20)", spd: 250, ax: 160, ay: 120, r: 360, ph: 2, cx: 76, cy: 60 },
+        { c: "rgba(163,18,52,0.32)", spd: 215, ax: 150, ay: 180, r: 420, ph: 4, cx: 50, cy: 86 },
+      ].map((o, i) => {
+        const x = Math.sin(frame / o.spd + o.ph) * o.ax;
+        const y = Math.cos(frame / (o.spd * 0.9) + o.ph) * o.ay;
+        return <div key={i} style={{ position: "absolute", width: o.r, height: o.r, borderRadius: 999, left: `calc(${o.cx}% + ${x}px)`, top: `calc(${o.cy}% + ${y}px)`, transform: "translate(-50%,-50%)", background: `radial-gradient(circle, ${o.c}, transparent 68%)`, filter: "blur(52px)" }} />;
+      })}
+      <AbsoluteFill style={{ background: "radial-gradient(100% 75% at 50% 32%, transparent 42%, rgba(9,6,11,0.58) 100%)" }} />
       <Grain opacity={0.06} blend="overlay" />
     </AbsoluteFill>
   );
@@ -55,6 +65,15 @@ export const CreamBase: React.FC<{ frame: number }> = ({ frame }) => {
     <AbsoluteFill style={{ background: CREAM }}>
       <div style={{ position: "absolute", width: 900, height: 900, borderRadius: 9999, left: -200 + d, top: -260, background: "radial-gradient(circle, rgba(163,18,52,0.06), transparent 70%)", filter: "blur(40px)" }} />
       <div style={{ position: "absolute", width: 820, height: 820, borderRadius: 9999, right: -220 - d, bottom: -200, background: "radial-gradient(circle, rgba(245,158,11,0.07), transparent 70%)", filter: "blur(40px)" }} />
+      {/* drifting orbs so the light glass shimmers too */}
+      {[
+        { c: "rgba(163,18,52,0.10)", spd: 210, ax: 140, ay: 130, r: 520, ph: 0, cx: 26, cy: 30 },
+        { c: "rgba(245,158,11,0.12)", spd: 260, ax: 160, ay: 140, r: 480, ph: 3, cx: 76, cy: 72 },
+      ].map((o, i) => {
+        const x = Math.sin(frame / o.spd + o.ph) * o.ax;
+        const y = Math.cos(frame / (o.spd * 0.9) + o.ph) * o.ay;
+        return <div key={i} style={{ position: "absolute", width: o.r, height: o.r, borderRadius: 999, left: `calc(${o.cx}% + ${x}px)`, top: `calc(${o.cy}% + ${y}px)`, transform: "translate(-50%,-50%)", background: `radial-gradient(circle, ${o.c}, transparent 68%)`, filter: "blur(48px)" }} />;
+      })}
       <Grain opacity={0.028} blend="multiply" />
     </AbsoluteFill>
   );
@@ -104,15 +123,13 @@ export const sceneFromZero = (frame: number, end: number, f = 18) => ({
 export const kenBurns = (frame: number, start: number, end: number, from = 1.0, to = 1.07) =>
   interpolate(frame, [start, end], [from, to], clamp);
 
-/** A screenshot floating in a soft frame with a slow zoom + drift (dark or light). */
-export const FloatShot: React.FC<{ src: string; frame: number; zoom: number; width?: number; kind?: "browser" | "phone"; url?: string }> = ({ src, frame, zoom, width = 820, kind = "browser", url = "vela.al" }) => {
-  const drift = Math.sin(frame / 40) * 8;
+/** A screenshot in a soft device frame with a gentle idle float — NO zoom.
+   (`zoom` kept for signature compatibility but intentionally unused.) */
+export const FloatShot: React.FC<{ src: string; frame: number; zoom?: number; width?: number; kind?: "browser" | "phone"; url?: string }> = ({ src, frame, width = 820, kind = "browser", url = "vela.al" }) => {
+  const drift = Math.sin(frame / 46) * 6;
   const dark = kind === "browser" ? "#1E1014" : "#0B0710";
-  // `zoom` scales the WHOLE device (frame + UI) as one unit — a clean push-in
-  // that never crops the app UI (previously the screenshot was scaled inside a
-  // clipped frame, cutting off edges).
   return (
-    <div style={{ width, borderRadius: kind === "phone" ? 54 : 30, overflow: "hidden", background: dark, border: "2px solid rgba(255,255,255,0.14)", boxShadow: "0 70px 150px -50px rgba(0,0,0,0.85)", transform: `scale(${zoom}) translateY(${drift}px)`, transformOrigin: "center" }}>
+    <div style={{ width, borderRadius: kind === "phone" ? 54 : 30, overflow: "hidden", background: dark, border: "2px solid rgba(255,255,255,0.14)", boxShadow: "0 70px 150px -50px rgba(0,0,0,0.85)", transform: `translateY(${drift}px)` }}>
       {kind === "browser" && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "18px 24px", background: "rgba(255,255,255,0.05)" }}>
           <span style={{ width: 14, height: 14, borderRadius: 999, background: "#ff5f57" }} />

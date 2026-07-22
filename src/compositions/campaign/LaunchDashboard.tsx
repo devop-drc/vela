@@ -7,7 +7,7 @@
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { springIn, float } from "../../lib/motion";
-import { BRAND, CLASH, INTER, INK, CreamBase, Shimmer, FloatShot, GlareChip, ShipColored, shot, scene, kenBurns, glassLight, ensureClash } from "../marketing/nextgen/kitv2";
+import { BRAND, CLASH, INTER, INK, CreamBase, Shimmer, FloatShot, GlareChip, ShipColored, shot, scene, kenBurns, glassLight, KineticWords, ensureClash } from "../marketing/nextgen/kitv2";
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 const SPRING = { damping: 14, mass: 1.05, stiffness: 130 }; // weighty, small punch
@@ -42,12 +42,15 @@ export const LaunchDashboard: React.FC = () => {
           <span style={{ width: 16, height: 16, borderRadius: 999, background: "linear-gradient(115deg,#7F1D3B,#A31234 40%,#FF2E4D 75%,#F59E0B 115%)" }} /> Paneli i shitjeve
         </div>
         <div style={{ fontFamily: CLASH, fontWeight: 700, fontSize: 150, letterSpacing: "-0.03em", color: INK, lineHeight: 1 }}>ALL {val}</div>
-        <div style={{ ...H(60), marginTop: 10 }}>Pse të presësh në DM?<br /><span style={{ color: BRAND.muted, fontSize: 44 }}>Shih si vijnë porositë <Shimmer frame={frame}>vetë.</Shimmer></span></div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, marginTop: 10 }}>
+          <KineticWords text="Pse të presësh në DM?" frame={frame} fps={fps} delay={6} style={{ ...H(60), maxWidth: 900 }} />
+          <KineticWords text="Shih si vijnë porositë vetë." frame={frame} fps={fps} delay={18} highlight="vetë" style={{ ...H(44), color: BRAND.muted, maxWidth: 900 }} />
+        </div>
       </AbsoluteFill>
 
       {/* ── Scene 2 · Real dashboard + live order ── */}
-      <AbsoluteFill style={{ opacity: s2.opacity, transform: `scale(${s2.scale})`, alignItems: "center", justifyContent: "center", gap: 50, padding: "150px 60px 190px" }}>
-        <div style={H(72)}>Shitjet, në <Shimmer frame={frame}>kohë reale.</Shimmer></div>
+      <AbsoluteFill style={{ opacity: s2.opacity, alignItems: "center", justifyContent: "center", gap: 50, padding: "150px 60px 190px" }}>
+        <KineticWords text="Shitjet, në kohë reale." frame={frame} fps={fps} delay={66} highlight="reale" style={{ ...H(72), maxWidth: 900 }} />
         <div style={{ position: "relative", transform: `translateY(${float(frame, 7, 34)}px)` }}>
           <FloatShot src={shot("01-dashboard.png")} frame={frame} zoom={kenBurns(frame, 60, 192, 1.0, 1.06)} width={880} url="vela.al/paneli" />
           {/* live "new order" toast springs in over the panel */}
@@ -61,8 +64,8 @@ export const LaunchDashboard: React.FC = () => {
       </AbsoluteFill>
 
       {/* ── Scene 3 · One-tap management ── */}
-      <AbsoluteFill style={{ opacity: s3.opacity, transform: `scale(${s3.scale})`, alignItems: "center", justifyContent: "center", gap: 50, padding: "0 80px" }}>
-        <div style={H(72)}>Menaxho gjithçka<br /><Shimmer frame={frame}>me një klik.</Shimmer></div>
+      <AbsoluteFill style={{ opacity: s3.opacity, alignItems: "center", justifyContent: "center", gap: 50, padding: "0 80px" }}>
+        <KineticWords text="Menaxho gjithçka me një klik." frame={frame} fps={fps} delay={192} highlight="klik" style={{ ...H(72), maxWidth: 820 }} />
         <div style={{ width: 760, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "40px 48px", borderRadius: 30, ...glassLight }}>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
             <span style={{ width: 18, height: 18, borderRadius: 999, background: "#10B981", boxShadow: `0 0 ${knob * 26}px rgba(16,185,129,${knob})` }} />
@@ -79,7 +82,7 @@ export const LaunchDashboard: React.FC = () => {
       {/* ── Scene 4 · CTA ── */}
       <AbsoluteFill style={{ opacity: s4, alignItems: "center", justifyContent: "center", gap: 44, padding: "0 90px" }}>
         <ShipColored size={180} style={{ transform: `translateY(${float(frame, 10, 26)}px)` }} />
-        <div style={H(84)}>Paneli yt, gjithmonë <Shimmer frame={frame}>live.</Shimmer></div>
+        <KineticWords text="Paneli yt, gjithmonë live." frame={frame} fps={fps} delay={250} highlight="live" style={{ ...H(84), maxWidth: 900 }} />
         <GlareChip frame={frame} fontSize={46}>Shto shitjet e tua sot →</GlareChip>
         <div style={{ fontFamily: CLASH, fontWeight: 600, fontSize: 38, color: BRAND.wine, transform: `translateY(${-point}px)` }}>Kthe Instagramin në dyqan · vela.al</div>
       </AbsoluteFill>

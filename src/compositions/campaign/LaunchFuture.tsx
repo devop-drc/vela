@@ -8,7 +8,7 @@ import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { Instagram, Music2, Globe, MessageCircle, ShoppingBag } from "lucide-react";
 import { springIn, float, pulse } from "../../lib/motion";
-import { BRAND, CLASH, INTER, AuroraDark, Shimmer, GlareChip, ShipWhite, glassDark, ensureClash } from "../marketing/nextgen/kitv2";
+import { BRAND, CLASH, INTER, AuroraDark, Shimmer, GlareChip, ShipWhite, glassDark, KineticWords, ensureClash } from "../marketing/nextgen/kitv2";
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 const SPRING = { damping: 14, mass: 1.05, stiffness: 130 }; // weighty, small punch
@@ -58,9 +58,7 @@ export const LaunchFuture: React.FC = () => {
       {/* ── Scene 1 · Beyond IG orbit ── */}
       <AbsoluteFill style={{ opacity: s1 }}>
         <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-start", paddingTop: 250 }}>
-          <div style={{ ...H(78), ...blurIn(frame, fps, 8), padding: "0 90px" }}>
-            <Shimmer frame={frame}>E ardhmja</Shimmer><br />nuk është vetëm në DM.
-          </div>
+          <KineticWords text="E ardhmja nuk është vetëm në DM." frame={frame} fps={fps} delay={8} highlight="ardhmja" style={{ ...H(78), maxWidth: 900, padding: "0 90px" }} />
         </AbsoluteFill>
         <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", marginTop: 220 }}>
           <div style={{ position: "relative", width: 760, height: 760 }}>
@@ -86,7 +84,7 @@ export const LaunchFuture: React.FC = () => {
 
       {/* ── Scene 2 · Future value stack ── */}
       <AbsoluteFill style={{ opacity: s2, alignItems: "center", justifyContent: "center", gap: 40, padding: "150px 70px" }}>
-        <div style={{ ...H(72), ...blurIn(frame, fps, 96) }}>Vela rritet <Shimmer frame={frame}>me ty.</Shimmer></div>
+        <KineticWords text="Vela rritet me ty." frame={frame} fps={fps} delay={96} highlight="ty" style={{ ...H(72), maxWidth: 900 }} />
         <div style={{ width: 900, display: "flex", flexDirection: "column", gap: 24 }}>
           {STACK.map(({ n, t, d }, i) => {
             const a = springIn(frame, fps, 108 + i * 9, SPRING);
@@ -111,13 +109,16 @@ export const LaunchFuture: React.FC = () => {
           <path d="M20 330 C 180 320, 300 250, 430 180 S 640 60, 740 30" fill="none" stroke="url(#gl)" strokeWidth="10" strokeLinecap="round" pathLength={1} strokeDasharray={1} strokeDashoffset={draw} />
           <circle cx="740" cy="30" r={interpolate(frame, [272, 288], [0, 16], clamp)} fill="#FACC15" />
         </svg>
-        <div style={{ ...H(78) }}>Rritu pa <Shimmer frame={frame}>kufinj.</Shimmer><br /><span style={{ color: "rgba(255,255,255,0.6)", fontSize: 46 }}>Me platformën që zhvillohet me ty.</span></div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+          <KineticWords text="Rritu pa kufinj." frame={frame} fps={fps} delay={232} highlight="kufinj" style={{ ...H(78), maxWidth: 900 }} />
+          <KineticWords text="Me platformën që zhvillohet me ty." frame={frame} fps={fps} delay={244} style={{ ...H(46), color: "rgba(255,255,255,0.6)", maxWidth: 900 }} />
+        </div>
       </AbsoluteFill>
 
       {/* ── Scene 4 · CTA ── */}
       <AbsoluteFill style={{ opacity: s4, alignItems: "center", justifyContent: "center", gap: 44, padding: "0 90px" }}>
         <ShipWhite size={200} style={{ transform: `translateY(${float(frame, 10, 26)}px)`, filter: "drop-shadow(0 30px 70px rgba(127,29,59,0.6))" }} />
-        <div style={{ ...H(90) }}>Bëhu pjesë e <Shimmer frame={frame}>së ardhmes.</Shimmer></div>
+        <KineticWords text="Bëhu pjesë e së ardhmes." frame={frame} fps={fps} delay={296} highlight="ardhmes" style={{ ...H(90), maxWidth: 900 }} />
         <GlareChip frame={frame} fontSize={46}>Nise falas sot →</GlareChip>
         <div style={{ fontFamily: CLASH, fontWeight: 600, fontSize: 38, color: "rgba(255,255,255,0.85)", transform: `translateY(${-point}px)` }}>vela.al · Kthe Instagramin në dyqan</div>
       </AbsoluteFill>
