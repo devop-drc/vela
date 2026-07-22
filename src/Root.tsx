@@ -42,7 +42,7 @@ import { LaunchDashboard, LAUNCH_DASH_FRAMES } from "./compositions/campaign/Lau
 import { LaunchLocal, LOCAL_W, LOCAL_H, LOCAL_FRAMES } from "./compositions/campaign/LaunchLocal";
 import { LaunchFuture, LAUNCH_FUTURE_FRAMES } from "./compositions/campaign/LaunchFuture";
 import { LaunchOffer, OFFER_W, OFFER_H, OFFER_FRAMES } from "./compositions/campaign/LaunchOffer";
-import { FinalLaunch01DmPrice, FINAL_DM_FRAMES } from "./compositions/campaign/FinalLaunch";
+import { FinalLaunch01DmPrice, FINAL_DM_FRAMES, FinalLaunch02Haggle, FINAL_HAGGLE_FRAMES, FinalLaunch03PovNoShop, FINAL_POV_FRAMES, FinalLaunch04OldLek, FINAL_LEK_FRAMES, FinalLaunch05ClientScroll, FINAL_SCROLL_FRAMES, FinalLaunch06ClientDm, FINAL_CLIENTDM_FRAMES } from "./compositions/campaign/FinalLaunch";
 import { getVideoMetadata } from "@remotion/media-utils";
 
 const common = { fps: VIDEO.fps, width: VIDEO.width, height: VIDEO.height };
@@ -177,6 +177,11 @@ export const RemotionRoot = () => (
     <Composition id="LaunchFuture" component={LaunchFuture} durationInFrames={LAUNCH_FUTURE_FRAMES} {...story} />
     <Composition id="LaunchOffer" component={LaunchOffer} durationInFrames={OFFER_FRAMES} fps={30} width={OFFER_W} height={OFFER_H} />
     <Composition id="FinalLaunch01DmPrice" component={FinalLaunch01DmPrice} durationInFrames={FINAL_DM_FRAMES} {...story} />
+    <Composition id="FinalLaunch02Haggle" component={FinalLaunch02Haggle} durationInFrames={FINAL_HAGGLE_FRAMES} {...story} />
+    <Composition id="FinalLaunch03PovNoShop" component={FinalLaunch03PovNoShop} durationInFrames={FINAL_POV_FRAMES} {...story} />
+    <Composition id="FinalLaunch04OldLek" component={FinalLaunch04OldLek} durationInFrames={FINAL_LEK_FRAMES} {...story} />
+    <Composition id="FinalLaunch05ClientScroll" component={FinalLaunch05ClientScroll} durationInFrames={FINAL_SCROLL_FRAMES} {...story} />
+    <Composition id="FinalLaunch06ClientDm" component={FinalLaunch06ClientDm} durationInFrames={FINAL_CLIENTDM_FRAMES} {...story} />
 
     {/* ── Rebuilt look — proofs (Nightfall dark hero · Daybreak cream editorial) ── */}
     <Composition id="NightfallProof" component={NightfallProof} durationInFrames={NIGHTFALL_FRAMES} {...story} />
