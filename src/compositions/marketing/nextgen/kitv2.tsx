@@ -16,7 +16,13 @@ export const INK = "#161016";
 const eio = { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) } as const;
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
-/** Landing-style rotating aurora on the near-black wine canvas + center vignette. */
+/** Filmic grain overlay (subtle) — kills the flat "AI-generated" look. */
+const GRAIN = "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
+export const Grain: React.FC<{ opacity?: number; blend?: "overlay" | "multiply" }> = ({ opacity = 0.05, blend = "overlay" }) => (
+  <AbsoluteFill style={{ opacity, mixBlendMode: blend, backgroundImage: GRAIN, pointerEvents: "none" }} />
+);
+
+/** Landing-style rotating aurora on the near-black wine canvas + vignette + grain. */
 export const AuroraDark: React.FC<{ frame: number }> = ({ frame }) => {
   const rot = frame * 0.14; // slow, continuous
   const rot2 = -frame * 0.1;
@@ -25,29 +31,31 @@ export const AuroraDark: React.FC<{ frame: number }> = ({ frame }) => {
       <div
         style={{
           position: "absolute", inset: "-30%",
-          background: `conic-gradient(from ${rot}deg at 50% 40%, rgba(255,46,77,0.18), rgba(250,204,21,0.12), rgba(245,158,11,0.15), rgba(200,30,60,0.11), rgba(127,29,59,0.16), rgba(255,46,77,0.18))`,
+          background: `conic-gradient(from ${rot}deg at 50% 40%, rgba(255,46,77,0.22), rgba(250,204,21,0.14), rgba(245,158,11,0.17), rgba(200,30,60,0.13), rgba(127,29,59,0.19), rgba(255,46,77,0.22))`,
           filter: "blur(110px)",
         }}
       />
       <div
         style={{
           position: "absolute", inset: "5%", borderRadius: 9999,
-          background: `conic-gradient(from ${rot2}deg at 46% 55%, rgba(250,204,21,0.10), rgba(255,46,77,0.08), rgba(163,18,52,0.12), rgba(250,204,21,0.10))`,
-          filter: "blur(120px)", opacity: 0.7,
+          background: `conic-gradient(from ${rot2}deg at 46% 55%, rgba(250,204,21,0.12), rgba(255,46,77,0.10), rgba(163,18,52,0.14), rgba(250,204,21,0.12))`,
+          filter: "blur(120px)", opacity: 0.75,
         }}
       />
-      <AbsoluteFill style={{ background: "radial-gradient(100% 75% at 50% 32%, transparent 42%, rgba(9,6,11,0.6) 100%)" }} />
+      <AbsoluteFill style={{ background: "radial-gradient(100% 75% at 50% 32%, transparent 42%, rgba(9,6,11,0.62) 100%)" }} />
+      <Grain opacity={0.06} blend="overlay" />
     </AbsoluteFill>
   );
 };
 
-/** Warm paper canvas with a whisper-soft brand wash — the Daybreak base. */
+/** Warm paper canvas with a whisper-soft brand wash + faint paper grain. */
 export const CreamBase: React.FC<{ frame: number }> = ({ frame }) => {
   const d = Math.sin(frame / 90) * 40;
   return (
     <AbsoluteFill style={{ background: CREAM }}>
       <div style={{ position: "absolute", width: 900, height: 900, borderRadius: 9999, left: -200 + d, top: -260, background: "radial-gradient(circle, rgba(163,18,52,0.06), transparent 70%)", filter: "blur(40px)" }} />
       <div style={{ position: "absolute", width: 820, height: 820, borderRadius: 9999, right: -220 - d, bottom: -200, background: "radial-gradient(circle, rgba(245,158,11,0.07), transparent 70%)", filter: "blur(40px)" }} />
+      <Grain opacity={0.028} blend="multiply" />
     </AbsoluteFill>
   );
 };

@@ -111,7 +111,7 @@ export const LaunchDmToShop: React.FC = () => {
         <AbsoluteFill style={{ background: `radial-gradient(58% 20% at 50% 71%, rgba(9,6,11,${scrim}) 0%, transparent 72%)` }} />
         <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-end", padding: "0 90px 470px" }}>
           <div style={{ ...H, fontSize: 100, ...blurIn(frame, fps, 28) }}>
-            Nga <Shimmer frame={frame}>haosi</Shimmer><br />në DM…
+            Nga <Shimmer frame={frame}>kaosi</Shimmer><br />në DM…
           </div>
         </AbsoluteFill>
       </AbsoluteFill>
