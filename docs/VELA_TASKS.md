@@ -17,7 +17,8 @@ Living tracker for the current batch of requests. `[x]` done & committed · `[ ]
 
 ## 🎬 Marketing — TODO
 - [x] **05 ClientScroll rework** — loops the real product grid only (header/nav cropped), seamless. (Demo candle image broken — fix that product's photo.)
-- [ ] **25 AppDemo** — more dynamic animation + **3D perspective** on the UI cards
+- [x] **25 AppDemo** — 3D perspective tilt + dynamic depth entrance + sway on the UI cards
+- [x] **Custom-theme screenshot** — captured `/shop/velaeshop` products page (real custom design)
 - [x] **Out-of-stock reel** (28) — customer asks → "…u shit" (lost sale) → Vela shows live "Jashtë stokut" + auto stock (accurate; no false auto-archive claim)
 - [x] **Themes reel** — familiar **Instagram theme vs custom design**, using **real UI/screenshots**
 - [ ] **Real UI everywhere** — prefer real app/landing screenshots over mock UI in the reels
