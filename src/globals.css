@@ -273,6 +273,50 @@
   .dialog-overlay {
     @apply fixed inset-0 z-50 bg-black/80 backdrop-blur-[20px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0;
   }
+
+  /* ── Phone-safe defaults for centred dialogs ──────────────────────────────
+     shadcn's DialogContent/AlertDialogContent are `w-full max-w-lg` with no
+     height cap: on a phone they sit edge-to-edge and any dialog taller than
+     the viewport gets clipped at BOTH ends (it is centred with a -50%
+     translate), leaving the header and the footer buttons unreachable.
+     These rules add a gutter, cap the height against the *visible* viewport
+     (dvh, so the collapsing browser chrome doesn't eat the footer) and let
+     the body scroll.
+
+     Scoped by the centring utility so Sheets and Drawers — also role="dialog"
+     — keep their edge-anchored layout, and kept behind the `sm` breakpoint so
+     desktop sizing (max-w-6xl, h-[90vh], …) is untouched. */
+  /* Tablets: a dialog declared in rem (max-w-2xl … max-w-6xl) runs edge-to-edge
+     the moment its max-width passes the viewport, so keep a gutter there too. */
+  @media (max-width: 1023.98px) {
+    [role="dialog"].translate-x-\[-50\%\],
+    [role="alertdialog"].translate-x-\[-50\%\] {
+      max-width: calc(100vw - 2rem);
+    }
+  }
+
+  @media (max-width: 639.98px) {
+    [role="dialog"].translate-x-\[-50\%\],
+    [role="alertdialog"].translate-x-\[-50\%\] {
+      width: calc(100vw - 1.5rem);
+      max-width: calc(100vw - 1.5rem);
+      max-height: 90vh;
+      max-height: 90dvh;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      border-radius: 0.875rem;
+    }
+    /* Keep the title clear of the absolutely-positioned close button. */
+    [role="dialog"] > .flex.flex-col.space-y-1\.5,
+    [role="alertdialog"] > .flex.flex-col.space-y-1\.5 {
+      padding-right: 1.75rem;
+    }
+    /* Stacked footer buttons have no vertical gap in the stock primitive. */
+    [role="dialog"] .flex-col-reverse.sm\:flex-row,
+    [role="alertdialog"] .flex-col-reverse.sm\:flex-row {
+      gap: 0.5rem;
+    }
+  }
   .sr-only {
     position: absolute;
     width: 1px;

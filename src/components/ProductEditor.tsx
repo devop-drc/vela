@@ -279,7 +279,7 @@ export const ProductEditor = ({ product, isOpen, onClose, onUpdate, startInEdit 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) attemptClose(); }}>
-        <DialogContent className="sm:max-w-6xl xl:max-w-[min(94vw,96rem)] max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="sm:max-w-6xl xl:max-w-[min(94vw,96rem)] max-h-[90dvh] flex flex-col p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>{t('product_editor.dialog_title', { name: product?.name })}</DialogTitle>
             <DialogDescription>{t('product_editor.dialog_desc', { name: product?.name })}</DialogDescription>

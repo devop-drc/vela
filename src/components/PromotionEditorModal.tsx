@@ -255,7 +255,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl h-[90vh] flex flex-col p-6"> {/* Reverted DialogContent padding */}
+      <DialogContent className="max-w-2xl h-[90dvh] flex flex-col p-4 sm:p-6"> {/* Reverted DialogContent padding */}
         <DialogHeader className="pb-4">
           <DialogTitle>{promotion ? t('promo_editor.edit_title') : t('promo_editor.create_title')}</DialogTitle>
           <DialogDescription>
@@ -298,7 +298,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
               </div>
 
               {promotionType === 'discount' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="discountType">{t('promo_editor.discount_type_label')}</Label>
                     <Controller
@@ -406,7 +406,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">{t('promo_editor.start_date_label')}</Label>
                   <Controller
@@ -535,7 +535,7 @@ export const PromotionEditorModal = ({ isOpen, onClose, onSave, promotion }: Pro
       </DialogContent>
 
       <Dialog open={isProductSelectorOpen} onOpenChange={setIsProductSelectorOpen}>
-        <DialogContent className="max-w-3xl h-[90vh] flex flex-col p-0">
+        <DialogContent className="max-w-3xl h-[90dvh] flex flex-col p-0">
           <DialogHeader className="p-4 border-b">
             <DialogTitle>{t('promo_editor.select_products_title')}</DialogTitle>
             <DialogDescription>{t('promo_editor.select_products_desc')}</DialogDescription>

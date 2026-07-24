@@ -109,7 +109,7 @@ export const ProductReviewsManager = ({ open, onOpenChange, productId, productNa
             description={t('reviews_mgr.no_reviews_desc')}
           />
         ) : (
-          <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
+          <div className="max-h-[60dvh] space-y-4 overflow-y-auto pr-1">
             {reviews.map((r) => (
               <div key={r.id} className="rounded-lg border p-4">
                 <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">

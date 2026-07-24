@@ -54,7 +54,7 @@ export const MediaItem = ({ src, alt, type, className, priority = false, sizes =
       sizes={proxied ? sizes : undefined}
       alt={alt}
       loading={priority ? "eager" : "lazy"}
-      fetchPriority={priority ? "high" : undefined}
+      {...(priority ? { fetchpriority: "high" } : {})}
       decoding="async"
       onError={() => { if (proxied) setUseOriginal(true); }}
       className={cn("h-full w-full object-contain", className)}

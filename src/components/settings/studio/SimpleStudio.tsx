@@ -255,18 +255,18 @@ function OnboardingWizard({ ctx, onFinish }: { ctx: WizardCtx; onFinish: () => v
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onFinish(); }}>
-      <DialogContent className="grid h-[92vh] max-w-[min(1650px,96vw)] gap-0 overflow-hidden p-0 lg:grid-cols-[minmax(0,400px)_1fr]">
+      <DialogContent className="grid h-[92dvh] max-w-[min(1650px,96vw)] gap-0 overflow-hidden p-0 lg:grid-cols-[minmax(0,400px)_1fr]">
         {/* Step content */}
         <div className="flex h-full min-h-0 flex-col">
-          <div className="space-y-1 px-6 pt-6">
+          <div className="space-y-1 px-4 pt-6 sm:px-6">
             <div className="mb-2 flex items-center gap-1.5">
               {steps.map((_, i) => <span key={i} className={cn('h-1.5 rounded-full transition-all', i === step ? 'w-6 bg-primary' : i < step ? 'w-1.5 bg-primary/50' : 'w-1.5 bg-muted')} />)}
             </div>
             <DialogTitle className="font-heading text-xl font-semibold tracking-tight">{s.title}</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">{s.blurb}</DialogDescription>
           </div>
-          <div className="flex-1 overflow-y-auto px-6 py-4">{s.body}</div>
-          <div className="flex items-center gap-2 border-t px-6 py-3">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">{s.body}</div>
+          <div className="flex items-center gap-2 border-t px-4 py-3 sm:px-6">
             {step === 0 && <button onClick={onFinish} className="text-xs font-medium text-muted-foreground hover:text-foreground">{t('studio.onboarding.skip')}</button>}
             {step > 0 && <Button variant="ghost" size="sm" onClick={() => setStep((n) => n - 1)}>{t('studio.onboarding.back')}</Button>}
             <span className="ml-auto text-[11px] text-muted-foreground">{step + 1} / {steps.length}</span>

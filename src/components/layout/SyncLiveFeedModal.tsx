@@ -122,7 +122,7 @@ export const SyncLiveFeedModal = ({ job, isOpen, onClose }: SyncLiveFeedModalPro
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-xl max-h-[80vh] flex flex-col">
+      <DialogContent className="max-w-xl max-h-[80dvh] flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             {isRunning ? (
@@ -170,7 +170,7 @@ export const SyncLiveFeedModal = ({ job, isOpen, onClose }: SyncLiveFeedModalPro
           </TabsList>
 
           <TabsContent value="products" className="flex-1 min-h-0 mt-2">
-            <ScrollArea className="h-[50vh]">
+            <ScrollArea className="h-[50dvh]">
               <div className="space-y-2 pr-3">
                   {allProducts.length === 0 && isRunning && (
                     <Reveal from="fade"
@@ -192,7 +192,7 @@ export const SyncLiveFeedModal = ({ job, isOpen, onClose }: SyncLiveFeedModalPro
           </TabsContent>
 
           <TabsContent value="created" className="flex-1 min-h-0 mt-2">
-            <ScrollArea className="h-[50vh]">
+            <ScrollArea className="h-[50dvh]">
               <div className="space-y-2 pr-3">
                 {createdItems.length === 0 ? (
                   <EmptyState compact icon={Package} title={isRunning ? t('sync.created_appearing') : t('sync.no_created')} />
@@ -206,7 +206,7 @@ export const SyncLiveFeedModal = ({ job, isOpen, onClose }: SyncLiveFeedModalPro
           </TabsContent>
 
           <TabsContent value="skipped" className="flex-1 min-h-0 mt-2">
-            <ScrollArea className="h-[50vh]">
+            <ScrollArea className="h-[50dvh]">
               <div className="space-y-2 pr-3">
                 {skippedItems.length === 0 ? (
                   <EmptyState compact icon={SkipForward} title={isRunning ? t('sync.skipped_appearing') : t('sync.no_skipped')} />

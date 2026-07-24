@@ -344,13 +344,19 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
         <form onSubmit={handleSubmit(handleSave)} className="flex-1 flex flex-col min-h-0">
           <DialogHeader className="sr-only"><DialogTitle>{t('product_edit.update_product')}</DialogTitle></DialogHeader>
           <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
-            <div className="px-4 pt-3 border-b">
-              <TabsList className="h-9">
-                <TabsTrigger value="details" className="text-sm">{t('product_edit.tab_details')}</TabsTrigger>
-                <TabsTrigger value="variants" className="text-sm">{t('product_edit.tab_variants')}</TabsTrigger>
+            {/* pr-12 on phones keeps the (nowrap) tab strip clear of the dialog's
+                absolutely-positioned close button. */}
+            <div className="border-b px-4 pr-12 pt-3 sm:pr-4">
+              <TabsList className="h-9 max-w-full">
+                <TabsTrigger value="details" className="text-xs sm:text-sm">{t('product_edit.tab_details')}</TabsTrigger>
+                <TabsTrigger value="variants" className="text-xs sm:text-sm">{t('product_edit.tab_variants')}</TabsTrigger>
               </TabsList>
             </div>
-            <ScrollArea className="flex-1 overflow-y-auto">
+            {/* Radix renders the viewport's child as `display:table`, which
+                shrink-wraps to the content's min-content width — the carousel's
+                `-ml-4` and the thumb strip's `-m-0.5` pushed that past the dialog
+                width and clipped the form's text on ≤320px screens. */}
+            <ScrollArea className="flex-1 overflow-y-auto [&>div>div]:!block">
             <div ref={revealRef} className="p-4 space-y-6">
               <TabsContent value="details" className="mt-0 space-y-6">
               <div data-reveal className="grid grid-cols-1 md:grid-cols-10 gap-6">
@@ -400,7 +406,9 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
                 </div>
                 <div className="md:col-span-6 flex flex-col space-y-4">
                   <div>
-                    <div className="flex shrink gap-4 text-sm font-medium">
+                    {/* flex-wrap: the two 165px comboboxes overflow a phone-width
+                        dialog when they are forced onto one row */}
+                    <div className="flex flex-wrap gap-2 text-sm font-medium sm:gap-4">
                       <div className="w-fit min-w-[165px]"><Controller name="category" control={control} render={({ field }) => (<CreatableCombobox options={categoryOptions} placeholder={t('product_edit.category_placeholder')} {...field} />)} /></div>
                       <div className="w-fit min-w-[165px]"><Controller name="details.type" control={control} render={({ field }) => (<CreatableCombobox options={typeOptions} placeholder={t('product_edit.type_placeholder')} {...field} />)} /></div>
                     </div>
@@ -441,7 +449,7 @@ export const ProductEditMode = ({ product, mediaItems, setMediaItems, handleImag
               
               {/* Specifications */}
               <div data-reveal className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
                     <Settings className="h-4 w-4" />
                     {t('product_edit.specifications')}

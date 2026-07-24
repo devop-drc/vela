@@ -28,11 +28,20 @@ Living tracker for the current batch of requests. `[x]` done & committed · `[ ]
 
 ## 🛠️ App / Landing — TODO
 - [x] **Storefront page transitions** — soft fade + up-slide on route change (reuses GSAP Reveal; reduced-motion + motion:'none' aware; preview-safe)
-- [ ] **⭐ NEXT (direct, fresh session) — Hero film 3D.** Rework the landing hero video's UI demos:
-  - Files: `src/compositions/HeroFilm.tsx` + `src/components/landing/story/*` (find where it renders app/storefront UI screenshots or device mockups).
-  - **3D perspective:** wrap the UI-demo cards in `perspective` + animated `rotateY/rotateX` (settle-in from depth + gentle sway), same technique as `FinalLaunch25AppDemo`/`29Themes` (`src/compositions/campaign/FinalLaunchDemo.tsx`) — reuse that pattern.
-  - **Nicer storefront screenshots (custom + IG):** captured this session and ready to drop in — `public/campaign/custom-storefront.png` (custom theme, `/shop/velaeshop` products page, 1440×900) and `public/campaign/ig-storefront.png` (IG theme mobile, 440×1320). Re-capture if the hero needs other framing (dev server on :5175; custom `/shop/velaeshop`, IG `/instagramShop/dyqani-yt`; Playwright loaded).
-  - Verify frame-by-frame (`npx remotion still src/remotion.ts HeroFilm out/verify/... --frame=N`) — it's a polished, pre-rendered landing asset; don't degrade it. If it renders to an alpha WebM, re-render per its existing pipeline.
+- [x] **Hero film 3D (v8)** — `src/compositions/HeroFilm.tsx`:
+  - **3D stage:** the browser window, cursor, click chips and order ping now ride ONE tilted plane (`Stage`, perspective 2600) — settles in from depth, then a slow yaw/pitch sway. Sharing the plane is what keeps the cursor landing on its real click targets.
+  - **New storefront shots** (`scripts/capture-hero-storefronts.mjs`, light + dark): products grid / product detail / filled checkout, all from the **velaeshop** custom theme — brand-red instead of the old default-blue dyqani-yt shots, and all three beats now come from one shop so the cuts stay continuous. Measured CART/PAY targets still match the film's existing coordinates.
+  - **IG theme:** `PhoneIG` floats the Instagram-theme storefront on a phone over the storefront beat; caption is now "Vitrina jote, live — web ose Instagram".
+  - Re-render with `node scripts/render-hero-film.mjs` (all 4 variants + mobile encodes + posters).
+- [x] **Hero video tap → fullscreen landscape** (`HeroFilmVideo.tsx`) — click/tap (or Enter/Space) TOGGLES fullscreen + landscape lock, plus a corner close button. The WRAPPER goes fullscreen (a `<video>` can't hold the close button); iOS falls back to the native video player. Fullscreen size is capped in **viewport units** — the centred grid row is content-sized, so `max-h-full` resolves cyclically and the video overflows at its intrinsic 2240×1400. Phone path carries the poster tap through to the `<video>` that mounts after it. Fullscreen swaps `object-cover`→`object-contain` and paints HeroFilm's `bakedBg` behind the alpha WebM (otherwise transparent pixels land on black). Orientation lock is Android-Chrome-only; iOS/desktop fall back to plain fullscreen.
+- [x] **App-side mobile audit (modals + elements)** — verified live against the real admin app in Chrome at 320 / 375 / 768 / 1440:
+  - **Global (globals.css)**: centred Dialog/AlertDialog content now gets a phone gutter, a `90dvh` height cap with scroll, rounded corners, a header `pr` so the title clears the ✕, and a gap between stacked footer buttons. Tablets (≤1023px) get a 2rem gutter so rem-sized dialogs (`max-w-2xl…6xl`) stop running edge-to-edge. Scoped by the centring utility so Sheets/Drawers are untouched, and gated behind `sm` so desktop is byte-for-byte unchanged (verified at 1440).
+  - Every modal-height `vh` → `dvh` (mobile browser chrome no longer eats the footer).
+  - `ProductEditMode`: Radix ScrollArea `display:table` blowout (from `-ml-4` / `-m-0.5`) clipped the form's text at 320px → viewport child forced to `block`; tab strip cleared of the ✕; specs header wraps; category/type comboboxes wrap.
+  - `ProductViewMode`: variant rows were 136px tall on a phone (fixed price/stock columns squeezed the label column) → price/stock wrap to their own line.
+  - Form grids stack on phones (Promotion editor, Announcement editor, Add-product wizard); IG post modal header wraps + stacked panes get a fixed height split; Filter drawer's ✕ back on the title row (`flex` was missing on a grid-based `DrawerHeader`).
+  - Fixed React 18 `fetchPriority` console error (`MediaItem`, `HeroFilmVideo`).
+  - Verified: 0 horizontal overflow on all 12 admin routes at 320px.
 - [ ] (skipped per owner) Repost-on-restock automation
 - [ ] **Repost-on-restock** automation — when stock goes 0→positive, auto-publish a fresh IG post w/ new caption (needs design review before wiring to real publish; rate limits)
 - [ ] **New app screenshots** — capture nicer custom + IG theme (owner set up their theme; capture the *public* storefront — no login needed on my side)
@@ -41,3 +50,9 @@ Living tracker for the current batch of requests. `[x]` done & committed · `[ ]
 - Marketing voice: "sistemi/platforma", never "AI"; multi-currency (ALL/EUR/GBP).
 - I will not type account passwords (hard rule) — screenshots use the public storefront.
 - Dev server currently running on :5175; demo storefront at `/instagramShop/dyqani-yt`.
+
+## 🔎 Found during the mobile audit — not fixed (need a decision)
+- **1000 variant rows render un-virtualized** in the product modal's variants list (~90,000px of DOM on a phone). Real perf hit on mobile; fixing means adding virtualization to `ProductViewMode` + `VariantsManager`.
+- **Floating chat/notification bubbles** sit low enough to cover filter pills / selects at rest on Products, Orders and Stock. Inherent to FABs (scrolling reveals), but worth raising them above the bottom nav.
+- **`src/components/storefront/InstagramCartModal.tsx` is dead code** and imports `SheetHeader/SheetTitle/SheetDescription/SheetFooter`, which `ui/sheet.tsx` does not export — it would crash if ever mounted. Same `flex-row`-on-a-grid header bug as the filter drawer.
+- **Storefront Studio fires 5 failed asset requests** per load (400s probing `logo.jpeg/jpg/png`, `favicon.ico/png` for shops without a logo).

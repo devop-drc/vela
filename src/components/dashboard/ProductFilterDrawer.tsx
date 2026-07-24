@@ -109,8 +109,10 @@ export const ProductFilterDrawer = ({
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose} shouldScaleBackground>
-      <DrawerContent side="bottom" className="h-[90vh] p-0 flex flex-col bg-card text-foreground rounded-t-xl">
-        <DrawerHeader className="p-4 border-b flex-row items-center justify-between flex-shrink-0">
+      <DrawerContent side="bottom" className="h-[90dvh] p-0 flex flex-col bg-card text-foreground rounded-t-xl">
+        {/* `flex` is required: DrawerHeader is a grid by default, so flex-row
+            alone left the close button stacked under the title. */}
+        <DrawerHeader className="p-4 border-b flex flex-row items-center justify-between flex-shrink-0">
           <DrawerTitle className="flex items-center gap-2 text-xl font-bold">
             <Filter className="h-6 w-6 text-primary" />
             {t('common.filters')}

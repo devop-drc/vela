@@ -126,7 +126,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-xl h-[90vh] flex flex-col p-6"> {/* Reverted DialogContent padding */}
+      <DialogContent className="max-w-xl h-[90dvh] flex flex-col p-4 sm:p-6"> {/* Reverted DialogContent padding */}
         <DialogHeader className="pb-4">
           <DialogTitle>{element ? t("announcement_editor.edit_title") : t("announcement_editor.add_title")}</DialogTitle>
           <DialogDescription>
@@ -142,7 +142,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                 {errors.message && <p className="text-sm text-destructive mt-1">{t(errors.message.message)}</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="icon_name">{t("announcement_editor.icon")}</Label>
                   <Controller
@@ -164,7 +164,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0">
+                        <PopoverContent className="w-[min(300px,calc(100vw-2.5rem))] p-0">
                           <Command>
                             <CommandInput
                               placeholder={t("announcement_editor.search_icon")}
@@ -212,7 +212,7 @@ export const StorefrontAnnouncementEditorModal = ({ isOpen, onClose, onSave, ele
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">{t("announcement_editor.start_date")}</Label>
                   <Controller

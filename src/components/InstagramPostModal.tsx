@@ -261,9 +261,9 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
   return (
     <>
       <Dialog open={true} onOpenChange={onClose}>
-        <DialogContent className="max-w-6xl h-[85vh] flex flex-col p-0">
-          <DialogHeader className="px-6 pt-5 pb-3 border-b shrink-0">
-            <div className="flex items-center justify-between">
+        <DialogContent className="max-w-6xl h-[85dvh] flex flex-col p-0">
+          <DialogHeader className="px-4 pt-5 pb-3 border-b shrink-0 sm:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <DialogTitle>{t('ig_post_modal.title')}</DialogTitle>
                 <DialogDescription className="mt-0.5">
@@ -288,9 +288,12 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
             </div>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 flex-1 min-h-0">
+          {/* Stacked on phones: the post strip gets a fixed slice of the height so
+              the details pane below it stays reachable instead of pushing out of
+              the dialog (auto grid rows would size to content). */}
+          <div className="grid grid-cols-1 grid-rows-[minmax(0,13rem)_minmax(0,1fr)] gap-0 flex-1 min-h-0 md:grid-cols-3 md:grid-rows-1">
             {/* Left: Post grid */}
-            <div className="md:col-span-1 border-r flex flex-col min-h-0">
+            <div className="md:col-span-1 border-b md:border-b-0 md:border-r flex flex-col min-h-0">
               <ScrollArea className="flex-1">
                 <div ref={gridRevealRef} className="grid grid-cols-3 gap-1 p-2">
                   {isLoadingPosts ? (
@@ -579,7 +582,7 @@ export const InstagramPostModal = ({ onClose, onImport }: InstagramPostModalProp
 
       {isImageViewerOpen && selectedPost && (
         <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
-          <DialogContent className="max-w-4xl h-[90vh] p-2 flex items-center justify-center">
+          <DialogContent className="max-w-4xl h-[90dvh] p-2 flex items-center justify-center">
             <DialogHeader className="sr-only">
               <DialogTitle>{t('ig_post_modal.post_preview')}</DialogTitle>
               <DialogDescription>{t('ig_post_modal.post_preview_desc')}</DialogDescription>

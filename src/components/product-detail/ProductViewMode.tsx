@@ -372,10 +372,12 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
               </div>
 
               <div className="rounded-lg border overflow-hidden xl:flex xl:min-h-0 xl:flex-1 xl:flex-col">
-                <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-1.5 bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider xl:shrink-0">
+                {/* Phones drop to a single label — the rows stack price/stock onto
+                    their own line there, so the 3-up header would not line up. */}
+                <div className="flex gap-2 px-3 py-1.5 bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider sm:grid sm:grid-cols-[1fr_auto_auto] xl:shrink-0">
                   <span>{t('product_view.variant')}</span>
-                  <span className="w-24 text-right">{t('product_view.price')}</span>
-                  <span className="w-28 text-right">{t('product_view.stock')}</span>
+                  <span className="hidden w-24 text-right sm:block">{t('product_view.price')}</span>
+                  <span className="hidden w-28 text-right sm:block">{t('product_view.stock')}</span>
                 </div>
                 <div className="max-h-[400px] xl:max-h-none xl:min-h-0 xl:flex-1 overflow-y-auto">
                 {filteredVariants.length === 0 ? (
@@ -388,11 +390,14 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                   const stockTone: StatusTone = v.stockTone;
                   return (
                     <div key={v.id || i} className={cn(
-                      "grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2 items-center",
+                      // On phones the two fixed columns (w-24 + w-28) leave the
+                      // option chips ~100px, wrapping every row 3 lines deep — so
+                      // wrap price/stock onto their own line instead.
+                      "flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 sm:grid sm:grid-cols-[1fr_auto_auto]",
                       i % 2 === 0 ? "bg-card" : "bg-muted/20",
                       isOOS && "opacity-50"
                     )}>
-                      <div className="flex flex-wrap gap-1.5 items-center min-w-0">
+                      <div className="flex w-full flex-wrap gap-1.5 items-center min-w-0 sm:w-auto">
                         {Object.entries(v.optVals).map(([optName, optVal]: [string, any]) => (
                           <span key={optName} className="inline-flex items-center text-xs">
                             <span className="text-muted-foreground/70 mr-1">{optName}:</span>
@@ -401,11 +406,11 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
                         ))}
                         {v.sku && <span className="text-xs text-muted-foreground/40 ml-1">{v.sku}</span>}
                       </div>
-                      <span className={cn("w-24 text-right text-sm font-medium tabular-nums", isOOS && "line-through")}>
+                      <span className={cn("text-sm font-medium tabular-nums sm:w-24 sm:text-right", isOOS && "line-through")}>
                         {formatCurrency(v.displayTotal, currencyCode)}
                       </span>
                       <button onClick={() => setStockModalOpen(true)} className={cn(
-                        "w-28 text-right text-xs font-medium flex items-center justify-end gap-1 rounded px-2 py-1 transition-colors cursor-pointer",
+                        "text-xs font-medium flex items-center gap-1 rounded px-2 py-1 transition-colors cursor-pointer sm:w-28 sm:justify-end sm:text-right",
                         stockTone === "danger" ? "text-destructive bg-destructive/10 hover:bg-destructive/20" :
                         stockTone === "warning" ? "text-warning bg-warning/10 hover:bg-warning/20" :
                         "text-success bg-success/10 hover:bg-success/20"
@@ -470,7 +475,7 @@ export const ProductViewMode = ({ product, mediaItems, onEdit, onDelete, isSubmi
 
       {/* Stock Management Modal */}
       <Dialog open={stockModalOpen} onOpenChange={(open) => { if (!open) { setStockSearch(''); setStockFilter('all'); } setStockModalOpen(open); }}>
-        <DialogContent className="max-w-xl max-h-[85vh] flex flex-col">
+        <DialogContent className="max-w-xl max-h-[85dvh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />

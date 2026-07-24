@@ -282,7 +282,7 @@ export const OrderDetailModal = ({ order, isOpen, onClose, onUpdate }: OrderDeta
             {t('order_detail.placed_on', { date: new Date(order.created_at).toLocaleDateString() })}
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[60vh] pr-6">
+        <ScrollArea className="max-h-[60dvh] pr-6">
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><User className="h-4 w-4" /> {t('order_detail.customer')}</div><p>{order.customer_name}</p></div>

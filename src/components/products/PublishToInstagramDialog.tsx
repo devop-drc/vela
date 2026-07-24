@@ -253,7 +253,7 @@ export const PublishToInstagramDialog = ({ open, onOpenChange, product, onPublis
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!publishing) onOpenChange(o); }}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Instagram className="h-5 w-5" />

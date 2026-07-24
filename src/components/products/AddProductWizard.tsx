@@ -170,7 +170,7 @@ export const AddProductWizard = ({ open, onOpenChange, onCreated }: {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!saving) { onOpenChange(o); if (!o) reset(); } }}>
-      <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-xl">
+      <DialogContent className="flex max-h-[90dvh] flex-col sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{t("wizard.title")}</DialogTitle>
           <DialogDescription>{t("wizard.description")}</DialogDescription>
@@ -199,7 +199,7 @@ export const AddProductWizard = ({ open, onOpenChange, onCreated }: {
                 <Label>{t("wizard.name")} *</Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("wizard.name_ph")} autoFocus />
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <div className="space-y-1.5">
                   <Label>{t("wizard.price")} *</Label>
                   <Input type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0" />
