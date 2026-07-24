@@ -99,22 +99,27 @@ export const OverviewChart = ({ data, dateRange, setDateRange, granularity, setG
   return (
     <Card className="shadow-sm border border-border/60 h-full flex flex-col">
       <CardHeader className="pb-2 flex-shrink-0 space-y-2">
-        {/* Row 1: period presets (scrolls on tiny screens, never wraps ugly) */}
-        <div className="-mx-1 overflow-x-auto px-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex w-max items-center gap-2">
-            <ToggleGroup type="single" variant="outline" size="sm" value={periodValue} onValueChange={applyPeriod}>
+        {/* Row 1: all range controls on ONE horizontal scroll row so the toolbar
+            stays a single line on phones (it used to wrap to 3 rows and bury the
+            chart). A right-edge fade signals it scrolls. */}
+        <div className="relative -mx-1">
+          <div className="flex items-center gap-2 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <ToggleGroup type="single" variant="outline" size="sm" value={periodValue} onValueChange={applyPeriod} className="shrink-0">
               <ToggleGroupItem value="7" aria-label={t("dashboard.last_days", { defaultValue: "Last {{count}} days", count: 7 })}>7D</ToggleGroupItem>
               <ToggleGroupItem value="30" aria-label={t("dashboard.last_days", { defaultValue: "Last {{count}} days", count: 30 })}>30D</ToggleGroupItem>
               <ToggleGroupItem value="90" aria-label={t("dashboard.last_days", { defaultValue: "Last {{count}} days", count: 90 })}>90D</ToggleGroupItem>
               <ToggleGroupItem value="6m" aria-label={t("dashboard.last_6_months", "Last 6 months")}>6M</ToggleGroupItem>
               <ToggleGroupItem value="all" aria-label={t("dashboard.all_time", "All time")}>{t("common.all")}</ToggleGroupItem>
             </ToggleGroup>
-            <ToggleGroup type="single" variant="outline" size="sm" value={granularity} onValueChange={(value: 'day' | 'month') => value && setGranularity(value)}>
+            <ToggleGroup type="single" variant="outline" size="sm" value={granularity} onValueChange={(value: 'day' | 'month') => value && setGranularity(value)} className="shrink-0">
               <ToggleGroupItem value="month" aria-label={t("dashboard.by_month", "By Month")}>{t("dashboard.month")}</ToggleGroupItem>
               <ToggleGroupItem value="day" aria-label={t("dashboard.by_day", "By Day")}>{t("dashboard.day")}</ToggleGroupItem>
             </ToggleGroup>
-            <DateRangePicker date={dateRange} onDateChange={(r) => { setPeriodValue(''); setDateRange(r); }} />
+            <div className="shrink-0">
+              <DateRangePicker date={dateRange} onDateChange={(r) => { setPeriodValue(''); setDateRange(r); }} />
+            </div>
           </div>
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-card to-transparent sm:hidden" />
         </div>
         {/* Row 2: legend chips — they ARE the series toggles (one element does
             both jobs; the old separate Legend + toggle row ate ~70px). */}
@@ -128,7 +133,7 @@ export const OverviewChart = ({ data, dateRange, setDateRange, granularity, setG
                 onClick={() => toggleSeries(s.key)}
                 aria-pressed={on}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                  "inline-flex min-h-8 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors sm:min-h-0 sm:px-2.5",
                   on ? "bg-background text-foreground shadow-sm" : "border-transparent bg-muted/60 text-muted-foreground/60 line-through"
                 )}
               >

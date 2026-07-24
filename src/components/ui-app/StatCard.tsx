@@ -87,7 +87,10 @@ export const StatCard = ({
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <p className="text-2xl font-bold leading-tight tabular-nums text-foreground">
+      {/* text-xl on phones so long currency values ("ALL 100,100") don't crowd
+          the card edge; truncate is the last-resort guard on the narrowest
+          screens. text-2xl restored from sm up. */}
+      <p className="truncate text-xl font-bold leading-tight tabular-nums text-foreground sm:text-2xl">
         {isNumeric ? (
           <span ref={countRef}>{fmt(value as number)}</span>
         ) : (
@@ -115,7 +118,7 @@ export const StatCard = ({
     </>
   );
 
-  const base = "block rounded-lg border bg-card px-4 py-3.5 shadow-sm transition-all duration-200";
+  const base = "block rounded-lg border bg-card px-3.5 py-3 shadow-sm transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] sm:px-4 sm:py-3.5";
 
   if (to) {
     return (
@@ -123,7 +126,7 @@ export const StatCard = ({
         to={to}
         className={cn(
           base,
-          "cursor-pointer outline-none hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
+          "cursor-pointer outline-none hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]",
         )}
         aria-label={`${title}: ${isNumeric ? fmt(value as number) : value}`}
       >

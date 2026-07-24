@@ -2,7 +2,7 @@ import { getStorefrontUrl } from "@/lib/storefront";
 import { useEffect, useState, useCallback, useRef, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { readCache, writeCache } from "@/lib/pageCache";
-import { Banknote, Package, Users, CreditCard, BarChart2, Zap, Star, Activity, AlertTriangle, RefreshCw } from "lucide-react";
+import { Banknote, Package, Users, CreditCard, BarChart2, Zap, Star, Activity, AlertTriangle, RefreshCw, Instagram, Inbox, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui-app/StatCard";
 import { EmptyState, StatusDot } from "@/components/ui-app";
@@ -30,10 +30,18 @@ import { subMonths, startOfMonth, endOfMonth, addDays, startOfDay, endOfDay } fr
 
 interface DashboardData {
   totalRevenue: number;
+  /** Count of Fulfilled + paid orders (the sales behind totalRevenue). */
   salesCount: number;
   activeProducts: number;
+  /** Distinct customers with >=1 completed (Fulfilled + paid) order. */
   customers: number;
   pendingOrders: number;
+  /** Brand-new orders still at 'Pending' (arrived, not yet 'Order Seen'). */
+  newOrders: number;
+  /** Orders whose payment is confirmed (paid), at any fulfilment stage. */
+  confirmedSales: number;
+  /** Instagram media/post count for the connected account. */
+  instagramPosts: number;
   chartData: { name: string; revenue: number; clients: number; orders: number }[];
 }
 
@@ -120,6 +128,18 @@ const useDashboardData = (
       return chartData;
     };
 
+    // Stat counts the summary RPC doesn't return: brand-new orders (status
+    // 'Pending' — arrived but not yet marked 'Order Seen') and confirmed sales
+    // (payment captured, at any fulfilment stage). One tiny two-column query,
+    // reused by both the RPC and the fallback paths. IG posts come from the shop.
+    let statusQuery = supabase.from('orders').select('status, payment_status').eq('business_id', businessId);
+    if (dateRange?.from) statusQuery = statusQuery.gte('created_at', startOfDay(dateRange.from).toISOString());
+    if (dateRange?.to) statusQuery = statusQuery.lte('created_at', endOfDay(dateRange.to).toISOString());
+    const { data: statusRows } = await statusQuery;
+    const newOrders = (statusRows || []).filter((o) => o.status === 'Pending').length;
+    const confirmedSales = (statusRows || []).filter((o) => o.payment_status === 'paid').length;
+    const instagramPosts = shopDetails.media_count ?? 0;
+
     // Preferred path: one aggregate RPC instead of downloading every order and
     // product. Revenue comes back as per-currency sums and is converted here
     // with convertCurrency, exactly like the per-order path did.
@@ -157,6 +177,9 @@ const useDashboardData = (
         activeProducts: summary.active_products || 0,
         customers: summary.customers || 0,
         pendingOrders: summary.pending_orders || 0,
+        newOrders,
+        confirmedSales,
+        instagramPosts,
         chartData: buildChartSeries(aggregated, chartStartDate, chartEndDate),
       };
       setData(rpcResult);
@@ -243,7 +266,7 @@ const useDashboardData = (
     }
     const chartData = buildChartSeries(aggregatedCounts, chartStartDate, chartEndDate);
 
-    const fallbackResult: DashboardData = { totalRevenue, salesCount, activeProducts, customers: uniqueCustomers, pendingOrders, chartData };
+    const fallbackResult: DashboardData = { totalRevenue, salesCount, activeProducts, customers: uniqueCustomers, pendingOrders, newOrders, confirmedSales, instagramPosts, chartData };
     setData(fallbackResult);
     if (key) writeCache(key, fallbackResult);
     setIsLoading(false);
@@ -437,22 +460,26 @@ const Index = () => {
       )}
 
       {/* Stat Cards */}
-      <div data-reveal className="grid gap-3 grid-cols-2 lg:grid-cols-4 flex-shrink-0" data-tour="stats">
+      <div data-reveal className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 flex-shrink-0" data-tour="stats">
+        {/* 1 · Total sales amount (revenue from Fulfilled+paid) + fulfilled count. */}
         <StatCard
           title={t("dashboard.total_revenue")}
           value={data.totalRevenue}
           formatValue={(n) => formatCurrency(n, shopDetails?.currency)}
+          description={t("dashboard.fulfilled_orders_count", { count: data.salesCount ?? 0, defaultValue: "{{count}} fulfilled orders" })}
           icon={Banknote}
           tone="success"
           to="/orders"
         />
+        {/* 2 · New orders — still at 'Pending' (arrived, not yet marked seen). */}
         <StatCard
-          title={t("dashboard.sales")}
-          value={data.salesCount}
-          icon={CreditCard}
+          title={t("dashboard.new_orders", "New Orders")}
+          value={data.newOrders ?? 0}
+          icon={Inbox}
           tone="info"
           to="/orders"
         />
+        {/* 3 · Active products. */}
         <StatCard
           title={t("dashboard.active_products")}
           value={data.activeProducts}
@@ -460,6 +487,23 @@ const Index = () => {
           tone="brand"
           to="/products"
         />
+        {/* 4 · Instagram posts. */}
+        <StatCard
+          title={t("dashboard.instagram_posts", "Instagram Posts")}
+          value={data.instagramPosts ?? 0}
+          icon={Instagram}
+          tone="brand"
+          to="/instagram-studio"
+        />
+        {/* 5 · Confirmed sales — payment captured, any fulfilment stage. */}
+        <StatCard
+          title={t("dashboard.confirmed_sales", "Confirmed Sales")}
+          value={data.confirmedSales ?? 0}
+          icon={CheckCircle2}
+          tone="success"
+          to="/orders"
+        />
+        {/* 6 · Unique clients with >=1 completed order. */}
         <StatCard
           title={t("dashboard.total_customers")}
           value={data.customers}
@@ -476,8 +520,8 @@ const Index = () => {
           <h2 className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5 flex-shrink-0">
             <BarChart2 className="h-3.5 w-3.5" />{t("dashboard.business_overview")}
           </h2>
-          <div className="flex-1 min-h-[320px] lg:min-h-0">
-            <Suspense fallback={<Skeleton className="h-full w-full min-h-[280px]" />}>
+          <div className="flex-1 min-h-[400px] lg:min-h-0">
+            <Suspense fallback={<Skeleton className="h-full w-full min-h-[360px]" />}>
               <OverviewChart
                 data={data.chartData}
                 dateRange={dateRange}
