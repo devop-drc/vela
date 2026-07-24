@@ -136,7 +136,10 @@ const App = () => (
   <TooltipProvider>
     <Toaster />
     <Sonner />
-    <BrowserRouter>
+    {/* v7 flags opted into early: relativeSplatPath is a no-op here (one splat
+        route, every link absolute), and startTransition just wraps navigation
+        state updates — verified against the lazy routes + prerender guard. */}
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AppContent />
     </BrowserRouter>
   </TooltipProvider>

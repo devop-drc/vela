@@ -15,6 +15,15 @@
  *   admin screens AND the storefront (captured with the customer
  *   dark-mode toggle; see scripts/capture-dark.mjs).
  *
+ * v8 adds: a shared 3D stage (the window + cursor + chips all ride one tilted
+ * plane, so click targets stay pixel-true), and the Instagram-theme storefront
+ * on a phone floating over the storefront beat.
+ *
+ * Screenshots come from scripts/capture-hero-storefronts.mjs (custom theme =
+ * the velaeshop storefront) and scripts/capture-dark.mjs (admin screens).
+ *
+ * Render everything: `node scripts/render-hero-film.mjs` — which runs:
+ *
  * Render (per theme; --scale=1.4 for retina sharpness, props via FILE):
  *   npx remotion render src/remotion.ts HeroFilm public/hero/hero-film.mp4 --codec=h264 --crf=22 --scale=1.4 --props=scripts/.film-light-baked.json
  *   npx remotion render src/remotion.ts HeroFilm public/hero/hero-film.webm --codec=vp9 --image-format=png --pixel-format=yuva420p --scale=1.4 --props=scripts/.film-light-alpha.json
@@ -100,6 +109,7 @@ type Theme = (typeof THEMES)["light"];
 const DARK_SHOTS = new Set([
   "products.png", "orders.png", "dashboard.png",
   "storefront-custom.png", "storefront-product.png", "storefront-checkout.png",
+  "storefront-ig-phone.png",
 ]);
 const shotSrc = (name: string, dark: boolean) =>
   staticFile(dark && DARK_SHOTS.has(name) ? `hero/dark/${name}` : `hero/${name}`);
@@ -116,11 +126,41 @@ const IMGS = [
 ];
 const U = (id: string, w = 400) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=70`;
 
-/* ── the living window ── */
-const Window: React.FC<{ th: Theme; url: string; children: React.ReactNode; frame: number; presence: number; progress: number }> = ({ th, url, children, frame, presence, progress }) => {
+/* ── the 3D stage ──
+   The window, the cursor and every chip anchored to it live on ONE tilted
+   plane, so click targets stay pixel-true no matter how the plane moves. It
+   settles in from depth once, then breathes: a slow yaw/pitch sway plus the
+   old vertical bob. `presence` both fades it and pushes it back into the
+   scene when a type beat or the end card takes over. */
+const Stage: React.FC<{ frame: number; presence: number; children: React.ReactNode }> = ({ frame, presence, children }) => {
   const drop = sp(frame, 4, 11);
-  const sway = Math.sin(frame / 62) * 0.45;
+  const settle = 1 - drop;
+  const away = 1 - presence;
+  const yaw = Math.sin(frame / 68) * 1.6;
+  const pitch = Math.cos(frame / 84) * 0.9;
   const bob = Math.sin(frame / 55) * 5;
+  return (
+    <AbsoluteFill style={{ perspective: 2600, perspectiveOrigin: "50% 44%" }}>
+      <AbsoluteFill
+        style={{
+          transformStyle: "preserve-3d",
+          opacity: presence * Math.min(1, drop * 1.4),
+          transform:
+            `translateY(${bob + settle * -76}px)` +
+            ` translateZ(${settle * -460 - away * 260}px)` +
+            ` rotateX(${(pitch + settle * 7.5) * presence}deg)` +
+            ` rotateY(${(yaw - settle * 10) * presence}deg)` +
+            ` scale(${0.965 + presence * 0.035})`,
+        }}
+      >
+        {children}
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/* ── the living window ── */
+const Window: React.FC<{ th: Theme; url: string; children: React.ReactNode; progress: number }> = ({ th, url, children, progress }) => {
   return (
     <div
       style={{
@@ -128,8 +168,6 @@ const Window: React.FC<{ th: Theme; url: string; children: React.ReactNode; fram
         borderRadius: 26, background: th.windowBg,
         boxShadow: th.windowShadow,
         overflow: "hidden",
-        opacity: presence * Math.min(1, drop * 1.4),
-        transform: `translateY(${bob + (1 - drop) * -90}px) rotate(${sway * presence}deg) scale(${(0.92 + presence * 0.08) * (0.96 + drop * 0.04)})`,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8, height: WIN.chrome, borderBottom: `1px solid ${th.chromeBorder}`, background: th.chromeBg, padding: "0 20px" }}>
@@ -165,6 +203,61 @@ const Caption: React.FC<{ th: Theme; text: string; local: number; dur: number }>
 const Shot: React.FC<{ src: string }> = ({ src }) => (
   <Img src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
 );
+
+/* ── Instagram-theme storefront on a phone ──
+   Floats in over the custom-theme storefront beat so one shot sells both
+   themes ("web ose Instagram"). Lives on the 3D stage, with its own extra
+   yaw so it reads as a separate object in front of the window. */
+const PhoneIG: React.FC<{ th: Theme; local: number; dur: number; dark: boolean }> = ({ th, local, dur, dark }) => {
+  const s = sp(local, 26, 13);
+  const out = clamp01((local - (dur - 16)) / 14);
+  if (s < 0.01 || out >= 1) return null;
+  const W_PH = 262;
+  const H_PH = 556;
+  const yaw = -13 + (1 - s) * 22 + Math.sin(local / 46) * 2.2;
+  const pitch = 2.5 + Math.cos(local / 58) * 1.4;
+  return (
+    <div
+      style={{
+        position: "absolute", left: 1046, top: 272, width: W_PH, height: H_PH,
+        opacity: s * (1 - out),
+        transformStyle: "preserve-3d",
+        transform: `translateZ(${120 - (1 - s) * 190}px) translateY(${(1 - s) * 70 + out * -40}px) rotateY(${yaw}deg) rotateX(${pitch}deg) scale(${0.86 + s * 0.14})`,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute", inset: 0, borderRadius: 38, padding: 8,
+          background: dark ? "#0B0509" : "#1A1114",
+          // in dark mode the bezel would melt into the storefront behind it —
+          // a brighter rim plus a wine glow keeps the phone a separate object
+          boxShadow: dark
+            ? "0 60px 120px -40px rgba(0,0,0,0.8), 0 0 0 1.5px rgba(255,255,255,0.22), 0 0 46px -6px rgba(255,46,77,0.45)"
+            : "0 60px 120px -40px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.09)",
+        }}
+      >
+        <div style={{ position: "absolute", inset: 8, borderRadius: 31, overflow: "hidden", background: "#000" }}>
+          <Img src={shotSrc("storefront-ig-phone.png", dark)} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+        </div>
+        {/* speaker slot */}
+        <div style={{ position: "absolute", top: 16, left: "50%", width: 62, height: 7, borderRadius: 99, marginLeft: -31, background: "rgba(255,255,255,0.22)" }} />
+      </div>
+      {/* label chip so the beat reads as "two themes", not a stray phone */}
+      <div
+        style={{
+          position: "absolute", left: "50%", bottom: -30, transform: "translateX(-50%)",
+          display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap",
+          background: th.glass, color: th.ink, border: th.glassBorder, borderRadius: 999,
+          padding: "8px 18px", fontSize: 17, fontWeight: 700,
+          fontFamily: "'Clash Display', Inter, sans-serif", boxShadow: th.glassShadow,
+        }}
+      >
+        <span style={{ width: 8, height: 8, borderRadius: 99, background: GRAD }} />
+        Instagram
+      </div>
+    </div>
+  );
+};
 
 /* ── cursor ── */
 type Waypoint = { f: number; x: number; y: number };
@@ -254,8 +347,11 @@ const OrderPing: React.FC<{ th: Theme; local: number; from: number; lang: "sq" |
   return (
     <div
       style={{
-        position: "absolute", top: WIN.top + WIN.chrome + 18, right: WIN.x + 18, zIndex: 52,
-        transform: `translateX(${(1 - s) * 140}px)`, opacity: s,
+        // kept well inside the window's right edge — the plane's yaw pulls that
+        // edge inward, and a ping hanging off the frame reads as a mistake
+        position: "absolute", top: WIN.top + WIN.chrome + 40, right: WIN.x + 46, zIndex: 52,
+        transformStyle: "preserve-3d",
+        transform: `translateZ(70px) translateX(${(1 - s) * 140}px)`, opacity: s,
         display: "flex", alignItems: "center", gap: 12,
         background: th.glass, border: th.glassBorder,
         borderRadius: 18, padding: "13px 20px", fontFamily: "Inter, sans-serif",
@@ -384,7 +480,10 @@ const B1: React.FC<{ th: Theme; local: number; lang: "sq" | "en" }> = ({ th, loc
     <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: th.mockPanel, fontFamily: "Inter, sans-serif" }}>
       <div style={{ width: 560, borderRadius: 28, background: th.mockCard, border: `1px solid ${th.mockBorder}`, boxShadow: "0 40px 110px -40px rgba(0,0,0,0.4)", padding: 40, opacity: card, transform: `translateY(${(1 - card) * 46}px) scale(${0.93 + card * 0.07}) rotate(${(1 - card) * -1.5}deg)` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          <Img src={staticFile("vela-icon.svg")} style={{ width: 66, height: 66, borderRadius: 18, boxShadow: "0 10px 26px -10px rgba(0,0,0,0.35)" }} />
+          <Img
+            src={staticFile("vela-icon.svg")}
+            style={{ width: 66, height: 66, borderRadius: 18, boxShadow: "0 10px 26px -10px rgba(0,0,0,0.35)" }}
+            from={-36} />
           <div>
             <div style={{ fontSize: 26, fontWeight: 700, color: th.ink }}>{t(lang, "Lidh Instagram-in", "Connect Instagram")}</div>
             <div style={{ fontSize: 17, color: th.muted }}>@dyqani.yt · 14 {t(lang, "postime produkte", "product posts")}</div>
@@ -408,7 +507,10 @@ const B1: React.FC<{ th: Theme; local: number; lang: "sq" | "en" }> = ({ th, loc
                 const pop = on ? sp(local, 52 + i * 5.5, 10) : 0;
                 return (
                   <div key={id} style={{ aspectRatio: "1", borderRadius: 10, overflow: "hidden", opacity: on ? 1 : 0.12, transform: `scale(${on ? 0.7 + pop * 0.3 : 0.85}) rotate(${on ? (1 - pop) * 8 : 0}deg)` }}>
-                    <Img src={U(id, 160)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <Img
+                      src={U(id, 160)}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      from={-65} />
                   </div>
                 );
               })}
@@ -444,7 +546,7 @@ const BEATS = (lang: "sq" | "en"): Beat[] => [
   },
   { from: 185, dur: 70, kind: "type", eyebrow: t(lang, "Nga Instagrami në dyqan", "From Instagram to a shop"), lines: [[{ text: t(lang, "Pa", "No") }, { text: t(lang, "kod.", "code."), grad: true }], [{ text: t(lang, "Pa", "No") }, { text: t(lang, "stres.", "stress."), grad: true }]] },
   { from: 255, dur: 85, kind: "ui", url: "vela.al/products", variant: "iris", cap: t(lang, "14 produkte — emra, çmime, kategori, vetë", "14 products — names, prices, categories, automatically"), shot: "products.png" },
-  { from: 340, dur: 85, kind: "ui", url: "vela.al/dyqani-yt", variant: "swing", cap: t(lang, "Vitrina jote, live", "Your storefront, live"), shot: "storefront-custom.png" },
+  { from: 340, dur: 85, kind: "ui", url: "vela.al/dyqani-yt", variant: "swing", cap: t(lang, "Vitrina jote, live — web ose Instagram", "Your storefront, live — web or Instagram"), shot: "storefront-custom.png" },
   {
     from: 425, dur: 100, kind: "ui", url: "vela.al/dyqani-yt", variant: "push", cap: t(lang, "Klientët blejnë vetë — pa mesazhe", "Customers buy on their own — no messages"),
     shot: "storefront-product.png",
@@ -529,6 +631,7 @@ export const HeroFilm: React.FC<z.infer<typeof heroFilmSchema>> = ({ lang, trans
   const windowPresence = 1 - Math.max(typePresence, endPresence);
 
   const connect = frame - 85;
+  const storefrontBeat = frame - 340;
   const productBeat = frame - 425;
   const checkoutBeat = frame - 595;
   const ordersBeat = frame - 685;
@@ -544,23 +647,38 @@ export const HeroFilm: React.FC<z.infer<typeof heroFilmSchema>> = ({ lang, trans
 
       <div style={{ opacity: 1 - loopOut }}>
         {windowPresence > 0.01 && (
-          <Window
-            th={th}
-            url={activeUi?.url ?? "vela.al"}
-            frame={frame}
-            presence={windowPresence}
-            progress={activeUi ? (frame - activeUi.from) / activeUi.dur : 0}
-          >
-            {beats.filter((b) => b.kind === "ui").map((b, i) => {
+          <Stage frame={frame} presence={windowPresence}>
+            <Window
+              th={th}
+              url={activeUi?.url ?? "vela.al"}
+              progress={activeUi ? (frame - activeUi.from) / activeUi.dur : 0}
+            >
+              {beats.filter((b) => b.kind === "ui").map((b, i) => {
+                const l = frame - b.from;
+                if (l < -16 || l >= b.dur + 2) return null;
+                return (
+                  <BeatShell key={i} local={l} dur={b.dur} variant={b.variant!}>
+                    {b.shot ? <Shot src={shotSrc(b.shot, dark)} /> : b.body!(Math.max(0, l), th)}
+                  </BeatShell>
+                );
+              })}
+            </Window>
+
+            {/* Everything anchored to the window rides the same tilted plane,
+                so the cursor keeps landing on its real target. */}
+            {storefrontBeat >= 0 && storefrontBeat < 85 && <PhoneIG th={th} local={storefrontBeat} dur={85} dark={dark} />}
+
+            {beats.map((b, i) => {
               const l = frame - b.from;
-              if (l < -16 || l >= b.dur + 2) return null;
-              return (
-                <BeatShell key={i} local={l} dur={b.dur} variant={b.variant!}>
-                  {b.shot ? <Shot src={shotSrc(b.shot, dark)} /> : b.body!(Math.max(0, l), th)}
-                </BeatShell>
-              );
+              if (b.kind !== "ui" || !b.cursor || l < 0 || l >= b.dur) return null;
+              return <CursorSim key={`c${i}`} local={l} points={b.cursor.points} clickAt={b.cursor.clickAt} />;
             })}
-          </Window>
+
+            {connect >= 0 && connect < 100 && <Burst local={connect} from={94} x={800} y={560} />}
+            {productBeat >= 0 && productBeat < 100 && <ClickChip th={th} local={productBeat} from={48} x={CART.x} y={CART.y} text={t(lang, "+1 në shportë", "+1 in cart")} />}
+            {checkoutBeat >= 0 && checkoutBeat < 90 && <ClickChip th={th} local={checkoutBeat} from={50} x={PAY.x} y={PAY.y} text={t(lang, "✓ Drejt pagesës", "✓ To payment")} />}
+            {ordersBeat >= 0 && ordersBeat < 85 && windowPresence > 0.5 && <OrderPing th={th} local={ordersBeat} from={26} lang={lang} />}
+          </Stage>
         )}
 
         {beats.filter((b) => b.kind === "type").map((b, i) => {
@@ -568,17 +686,6 @@ export const HeroFilm: React.FC<z.infer<typeof heroFilmSchema>> = ({ lang, trans
           if (l < 0 || l >= b.dur) return null;
           return <TypeBeat key={`ty${i}`} th={th} local={l} dur={b.dur} lines={b.lines!} eyebrow={b.eyebrow} />;
         })}
-
-        {beats.map((b, i) => {
-          const l = frame - b.from;
-          if (b.kind !== "ui" || !b.cursor || l < 0 || l >= b.dur) return null;
-          return <CursorSim key={`c${i}`} local={l} points={b.cursor.points} clickAt={b.cursor.clickAt} />;
-        })}
-
-        {connect >= 0 && connect < 100 && <Burst local={connect} from={94} x={800} y={560} />}
-        {productBeat >= 0 && productBeat < 100 && <ClickChip th={th} local={productBeat} from={48} x={CART.x} y={CART.y} text={t(lang, "+1 në shportë", "+1 in cart")} />}
-        {checkoutBeat >= 0 && checkoutBeat < 90 && <ClickChip th={th} local={checkoutBeat} from={50} x={PAY.x} y={PAY.y} text={t(lang, "✓ Drejt pagesës", "✓ To payment")} />}
-        {ordersBeat >= 0 && ordersBeat < 85 && windowPresence > 0.5 && <OrderPing th={th} local={ordersBeat} from={26} lang={lang} />}
 
         {beats.map((b, i) => {
           const l = frame - b.from;

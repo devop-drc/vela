@@ -13,6 +13,8 @@ i18n
       sq: { translation: sq },
     },
     fallbackLng: 'en',
+    // suppress i18next's console ad for Locize (its own documented opt-out)
+    showSupportNotice: false,
     interpolation: { escapeValue: false },
     detection: {
       order: ['localStorage', 'navigator'],
