@@ -15,6 +15,68 @@ function getGeminiUrl(model: 'flash' | 'pro' = 'flash'): string {
   return `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${GEMINI_API_KEY}`;
 }
 
+// Keyword descriptions are authored in the merchant's language and DISPLAYED
+// that way. But the classifier reasons best in English, so we render an English
+// copy here (never persisted — display stays untouched) and feed that to the
+// prompt. Best-effort: any failure falls back to the original description.
+// thinkingBudget 512 (not 0) avoids the 2.5-flash schema-truncation gotcha.
+const KW_TRANSLATE_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    items: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: { i: { type: 'INTEGER' }, en: { type: 'STRING' } },
+        required: ['i', 'en'],
+      },
+    },
+  },
+  required: ['items'],
+};
+
+async function withEnglishDescriptions(
+  keywords: { keyword: string; description: string }[],
+): Promise<Array<{ keyword: string; description: string; descriptionEn?: string }>> {
+  const need = keywords
+    .map((k, idx) => ({ idx, text: (k.description || '').trim() }))
+    .filter((k) => k.text.length > 0);
+  if (!GEMINI_API_KEY || need.length === 0) return keywords;
+
+  try {
+    const prompt = `Translate each keyword description into concise, natural ENGLISH suitable as an extraction hint (e.g. "Price in Albanian Lek", "Size of the product"). If a description is already English, return it lightly cleaned. Keep brand/model names and units as-is. Keep it short (max ~12 words). Return every index exactly once.\n${JSON.stringify(need.map((n) => ({ i: n.idx, text: n.text })))}`;
+
+    const res = await fetch(getGeminiUrl('flash'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0,
+          responseMimeType: 'application/json',
+          responseSchema: KW_TRANSLATE_SCHEMA,
+          thinkingConfig: { thinkingBudget: 512 },
+        },
+      }),
+    });
+    if (!res.ok) return keywords;
+    const data = await res.json();
+    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!raw) return keywords;
+    const parsed = JSON.parse(raw);
+    const enByIdx = new Map<number, string>();
+    for (const it of parsed?.items || []) {
+      if (typeof it?.i === 'number' && typeof it?.en === 'string' && it.en.trim()) {
+        enByIdx.set(it.i, it.en.trim());
+      }
+    }
+    return keywords.map((k, idx) => ({ ...k, descriptionEn: enByIdx.get(idx) }));
+  } catch (e) {
+    console.error('keyword description translation failed (using originals):', e);
+    return keywords;
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -36,7 +98,11 @@ async function getUserContext(supabaseAdmin: any, userId: string): Promise<{ key
   ]);
   if (keywordsRes.error) throw keywordsRes.error;
   if (recentRes.error) console.error("Could not fetch recent products for context:", recentRes.error);
-  const entry = { t: Date.now(), keywords: keywordsRes.data || [], similarProducts: recentRes.data || [] };
+  // Translate the (merchant-language) descriptions to English ONCE per cache
+  // fill; the English copy is what the prompt uses. Cached for CONTEXT_TTL_MS so
+  // a whole sync pays for this at most once every couple of minutes.
+  const keywords = await withEnglishDescriptions(keywordsRes.data || []);
+  const entry = { t: Date.now(), keywords, similarProducts: recentRes.data || [] };
   contextCache.set(userId, entry);
   if (contextCache.size > 200) contextCache.delete(contextCache.keys().next().value);
   return entry;

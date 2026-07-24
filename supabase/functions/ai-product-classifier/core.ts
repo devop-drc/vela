@@ -229,7 +229,10 @@ export const parseMultiProducts = (
 /* ── prompt ───────────────────────────────────────────────────────────── */
 export const getClassifierPrompt = (
   caption: string,
-  keywords: { keyword: string; description: string }[],
+  // descriptionEn is an English rendering of the merchant-language description,
+  // filled in upstream so the model always reasons in English. Falls back to
+  // the original description when translation is unavailable.
+  keywords: { keyword: string; description: string; descriptionEn?: string }[],
   similarProducts: Array<{ name: string; category?: string; details?: { type?: string } }>,
 ) => {
   const similarProductsContext = similarProducts.length > 0 ? `
@@ -306,7 +309,7 @@ ${similarProducts.map((p) => `- ${p.name} (Category: ${p.category}${p.details?.t
 
   **User-Defined Keywords (IMPORTANT — use these to extract data):**
   ${keywords.length > 0 ? `The user has defined these keywords/symbols that appear in their captions. When you find any of these in the caption, use the description to understand what follows and extract it as a specification or option accordingly.
-${keywords.map((k) => `- When you see "${k.keyword}" in the caption: ${k.description}`).join('\n')}` : 'No custom keywords provided.'}
+${keywords.map((k) => `- When you see "${k.keyword}" in the caption: ${k.descriptionEn || k.description}`).join('\n')}` : 'No custom keywords provided.'}
 
   ${similarProductsContext}
 
