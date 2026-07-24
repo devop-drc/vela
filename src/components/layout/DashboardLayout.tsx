@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Reveal } from "@/lib/anim";
 import { useShop } from "@/contexts/ShopContext";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { ProcessesWidget } from "./ProcessesWidget";
 import NotificationSidebar from "./NotificationSidebar";
 import { VelaChat } from "@/components/VelaChat";
@@ -63,6 +63,37 @@ const DashboardLayout = () => {
     return () => {
       if (typeof w.cancelIdleCallback === "function") w.cancelIdleCallback(id);
       else clearTimeout(id);
+    };
+  }, []);
+
+  // Mobile: the floating chat/bell dock sits over page content. Rather than
+  // permanently obscuring whatever is in the bottom-right corner (promotion
+  // actions, filter toggles, list rows), hide it while the user scrolls DOWN
+  // (reading) and reveal it on scroll UP (the natural "I want to act" gesture)
+  // — the standard native pattern. Always visible near the very top.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [dockHidden, setDockHidden] = useState(false);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let last = el.scrollTop;
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const y = el.scrollTop;
+        const dy = y - last;
+        if (y < 80) setDockHidden(false);
+        else if (dy > 6) setDockHidden(true);
+        else if (dy < -6) setDockHidden(false);
+        last = y;
+      });
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      if (raf) cancelAnimationFrame(raf);
     };
   }, []);
 
@@ -160,7 +191,7 @@ const DashboardLayout = () => {
     >
       <div id="background-overlay" className="fixed inset-0 z-[-1] transition-colors" />
       <Sidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
-      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden transition-all duration-300">
+      <div ref={scrollRef} className="flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden transition-all duration-300">
         <Header title={title} />
         {/* pb-24 clears the mobile BottomNav + floating dock; md resets it. */}
         {/* Mobile pb clears the bottom tab bar (5rem) AND the floating chat/
@@ -173,7 +204,12 @@ const DashboardLayout = () => {
           full pages (/chat, /notifications) — the buttons navigate, and each
           hides on its own page. Slightly smaller on phones so the dock covers
           less content. */}
-      <div className="fixed bottom-24 right-4 z-50 flex items-center gap-2 md:bottom-4 max-md:origin-bottom-right max-md:scale-[0.85]">
+      <div
+        className={cn(
+          "fixed bottom-24 right-4 z-50 flex items-center gap-2 md:bottom-4 max-md:origin-bottom-right max-md:scale-[0.85] max-md:transition-all max-md:duration-300",
+          dockHidden && "max-md:pointer-events-none max-md:translate-y-32 max-md:opacity-0"
+        )}
+      >
         <div className="hidden md:block"><VelaChat /></div>
         {location.pathname !== '/chat' && (
           <Link

@@ -55,13 +55,18 @@ export const KeywordsTable = ({ keywords, onInlineUpdate, onDelete }: KeywordsTa
     if (e.key === "Escape") cancelEdit();
   };
 
+  // table-fixed so the table respects the phone width (the shadcn wrapper would
+  // otherwise let an auto table take its preferred width and scroll). The
+  // keyword column gets a fixed slice wide enough for the single-line chip
+  // (never wrapped — hard to read otherwise); the description column absorbs the
+  // rest and wraps.
   return (
-    <Table>
+    <Table className="w-full table-fixed">
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[180px]">{t("keywords.keyword_col")}</TableHead>
+          <TableHead className="w-[36%] sm:w-[180px]">{t("keywords.keyword_col")}</TableHead>
           <TableHead>{t("keywords.description_col")}</TableHead>
-          <TableHead className="text-right w-[80px]">{t("promotions.actions")}</TableHead>
+          <TableHead className="w-[44px] text-right sm:w-[80px]">{t("promotions.actions")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -97,7 +102,7 @@ export const KeywordsTable = ({ keywords, onInlineUpdate, onDelete }: KeywordsTa
                       title={t("keywords.click_to_edit")}
                       onClick={() => startEdit(kw, "keyword")}
                     >
-                      <span className="font-mono text-sm bg-muted px-1.5 py-0.5 rounded transition-colors group-hover/cell:bg-muted/80">
+                      <span className="whitespace-nowrap rounded bg-muted px-1.5 py-0.5 font-mono text-xs transition-colors group-hover/cell:bg-muted/80 sm:text-sm">
                         {kw.keyword}
                       </span>
                       <Pencil className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/cell:opacity-100" />
@@ -126,11 +131,11 @@ export const KeywordsTable = ({ keywords, onInlineUpdate, onDelete }: KeywordsTa
                   ) : (
                     <button
                       type="button"
-                      className="group/cell -mx-1 flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left transition-colors hover:bg-muted/50"
+                      className="group/cell -mx-1 flex w-full min-w-0 items-center gap-1.5 rounded px-1 py-0.5 text-left transition-colors hover:bg-muted/50"
                       title={t("keywords.click_to_edit")}
                       onClick={() => startEdit(kw, "description")}
                     >
-                      <span className="text-sm text-muted-foreground transition-colors group-hover/cell:text-foreground">
+                      <span className="min-w-0 break-words text-sm text-muted-foreground transition-colors group-hover/cell:text-foreground">
                         {kw.description}
                       </span>
                       <Pencil className="ml-auto h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/cell:opacity-100" />

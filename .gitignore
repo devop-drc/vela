@@ -47,3 +47,9 @@ branding/marketing/*.zip
 instagramApi/
 .playwright-mcp/
 ig-studio-full.png
+
+# Agent tooling (impeccable/skills installs) + local audit screenshots
+.agents/
+.codex/
+skills-lock.json
+audit/

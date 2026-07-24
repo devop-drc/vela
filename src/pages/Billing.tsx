@@ -30,7 +30,10 @@ import { cn } from "@/lib/utils";
 const BRAND = "brand-gradient";
 /** Single definition of the signature brand-gradient CTA styling (used by 4 CTAs). */
 const BRAND_CTA = cn("text-white hover:opacity-90", BRAND);
-const fmt = (n: number) => n.toLocaleString("en-US");
+// Round every frame: the count-up tween feeds fractional intermediates, and
+// without this the price flashes ugly decimals ("3,289.292") on the way to
+// its clean integer. ALL is a zero-decimal currency.
+const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 
 /** Soft status wash for the hero card, derived from a semantic tone (dark-safe). */
 const TONE_WASH: Record<StatusTone, string> = {

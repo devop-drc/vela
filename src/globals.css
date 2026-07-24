@@ -122,6 +122,12 @@
   h1, h2, h3, h4, h5, h6 {
     /* Clash Display reads best at medium weight with tight tracking. */
     @apply font-heading font-medium tracking-tight;
+    /* tracking-tight shrinks the space glyph too, so on bold multi-word
+       headings the words visually merge ("Welcomeback", "PamjeLive"). A small
+       positive word-spacing restores the gaps WITHOUT loosening the letters —
+       and, because `tracking-tight` only sets letter-spacing, this survives the
+       per-component `tracking-tight` overrides. em-based so it scales with size. */
+    word-spacing: 0.06em;
     /* Balance short headings so they don't leave a lonely last word. */
     text-wrap: balance;
   }

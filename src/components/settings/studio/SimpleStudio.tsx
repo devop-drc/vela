@@ -109,7 +109,12 @@ function Choices({ label, kind, options, value, onChange, cols = 3 }: {
   return (
     <div className="space-y-1.5">
       {label && <p className="text-xs font-medium text-muted-foreground">{label}</p>}
-      <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` }}>
+      {/* 2-up on phones (full `cols` on >=sm) so labels stop truncating to
+          "Structure…" / "Professio…" at 4-across on a 375px screen. */}
+      <div
+        className="grid grid-cols-2 gap-1.5 sm:[grid-template-columns:repeat(var(--choices-cols),minmax(0,1fr))]"
+        style={{ ['--choices-cols' as any]: cols }}
+      >
         {options.map((o) => (
           <button key={String(o.value)} type="button" onClick={() => onChange(o.value)}
             className={cn('flex flex-col gap-1 rounded-lg border p-1.5 text-center transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring',
